@@ -8,7 +8,8 @@
     "Q" : [0.309601, 0.690399],
     "state" : "[4, 0]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -16,7 +17,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[3, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     }
   ],
   "edges" : [
@@ -37,7 +39,8 @@
     "Q" : [0.246135, 0.753865],
     "state" : "[4, 0]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -45,7 +48,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[3, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -53,7 +57,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[2, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     }
   ],
   "edges" : [
@@ -81,7 +86,8 @@
     "Q" : [0.214402, 0.785598],
     "state" : "[4, 0]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -89,7 +95,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[3, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -97,7 +104,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[2, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -105,7 +113,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[1, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     }
   ],
   "edges" : [
@@ -140,7 +149,8 @@
     "Q" : [0.171522, 0.828478],
     "state" : "[4, 0]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -148,7 +158,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -156,7 +167,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[2, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -164,7 +176,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[1, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -172,7 +185,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -214,7 +228,8 @@
     "Q" : [0.142935, 0.857065],
     "state" : "[4, 0]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -222,7 +237,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -230,7 +246,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -238,7 +255,8 @@
     "Q" : [0.119203, 0.880797],
     "state" : "[1, 1]",
     "provably_winning" : "00",
-    "provably_losing" : "00"
+    "provably_losing" : "00",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -246,7 +264,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -295,7 +314,8 @@
     "Q" : [0.122516, 0.877484],
     "state" : "[4, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -303,7 +323,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -311,7 +332,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -319,7 +341,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[1, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -327,7 +350,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -383,7 +407,8 @@
     "Q" : [0.107201, 0.892799],
     "state" : "[4, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -391,7 +416,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -399,7 +425,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -407,7 +434,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[1, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -415,7 +443,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -471,7 +500,8 @@
     "Q" : [0.0952899, 0.90471],
     "state" : "[4, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -479,7 +509,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -487,7 +518,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -495,7 +527,8 @@
     "Q" : [0.0596015, 0.940399],
     "state" : "[1, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -503,7 +536,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -559,7 +593,8 @@
     "Q" : [0.0857609, 0.914239],
     "state" : "[4, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -567,7 +602,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -575,7 +611,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -583,7 +620,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[1, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -591,7 +629,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
@@ -647,7 +686,8 @@
     "Q" : [0.0779644, 0.922036],
     "state" : "[4, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 0
     },
     {
     "index" : 1,
@@ -655,7 +695,8 @@
     "Q" : [0.0298007, 0.970199],
     "state" : "[3, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 2,
@@ -663,7 +704,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[2, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 3,
@@ -671,7 +713,8 @@
     "Q" : [0.0397343, 0.960266],
     "state" : "[1, 1]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : 1
     },
     {
     "index" : 4,
@@ -679,7 +722,8 @@
     "Q" : [0, 1],
     "state" : "[0, 0]",
     "provably_winning" : "01",
-    "provably_losing" : "10"
+    "provably_losing" : "10",
+    "active_seat" : -1
     }
   ],
   "edges" : [
