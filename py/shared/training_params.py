@@ -123,9 +123,6 @@ class TrainingParams:
     minibatches_per_epoch: int = 2048
     minibatch_size: int = 256
     window_size_function: WindowSizeFunction = None
-    momentum: float = 0.9
-    weight_decay: float = 6e-5
-    learning_rate: float = 6e-5
 
     def __post_init__(self):
         attrs = {f.name: getattr(self, f.name) for f in fields(self)}
@@ -141,9 +138,6 @@ class TrainingParams:
             target_sample_rate=args.target_sample_rate,
             minibatches_per_epoch=args.minibatches_per_epoch,
             minibatch_size=args.minibatch_size,
-            momentum=args.momentum,
-            weight_decay=args.weight_decay,
-            learning_rate=args.learning_rate,
         )
 
     @staticmethod
@@ -163,12 +157,6 @@ class TrainingParams:
                            help='minibatches per epoch (default: %(default)s)')
         group.add_argument('--minibatch-size', type=int, default=defaults.minibatch_size,
                            help='minibatch size (default: %(default)s)')
-        group.add_argument('--momentum', type=float, default=defaults.momentum,
-                           help='momentum (default: %(default)s)')
-        group.add_argument('--weight-decay', type=float, default=defaults.weight_decay,
-                           help='weight decay (default: %(default)s)')
-        group.add_argument('--learning-rate', type=float, default=defaults.learning_rate,
-                           help='learning rate (default: %(default)s)')
 
     def add_to_cmd(self, cmd: List[str], defaults: Optional['TrainingParams']=None):
         if defaults is None:
@@ -181,9 +169,3 @@ class TrainingParams:
             cmd.extend(['--minibatches-per-epoch', str(self.minibatches_per_epoch)])
         if self.minibatch_size != defaults.minibatch_size:
             cmd.extend(['--minibatch-size', str(self.minibatch_size)])
-        if self.momentum != defaults.momentum:
-            cmd.extend(['--momentum', str(self.momentum)])
-        if self.weight_decay != defaults.weight_decay:
-            cmd.extend(['--weight-decay', str(self.weight_decay)])
-        if self.learning_rate != defaults.learning_rate:
-            cmd.extend(['--learning-rate', str(self.learning_rate)])

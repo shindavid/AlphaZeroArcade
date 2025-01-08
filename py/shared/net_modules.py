@@ -206,6 +206,24 @@ class ResBlockWithGlobalPooling(nn.Module):
         return x + out
 
 
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, board_size, dropout=0.):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(board_size, d_model)
+        position = torch.arange(0, board_size, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        # pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+
 class TransformerBlock(nn.Module):
     def __init__(self, input_shape: Shape, embed_dim: int, n_heads: int, n_layers: int,
                  n_output_channels: int):
@@ -218,8 +236,9 @@ class TransformerBlock(nn.Module):
         self.input_embed = nn.Linear(n_input_channels, embed_dim)
 
         # Absolute position embedding
-        self.positional_embedding = nn.Parameter(torch.zeros(1, board_size, embed_dim))
-
+        # self.positional_embedding = nn.Parameter(torch.zeros(1, board_size, embed_dim))
+        self.positional_embedding = PositionalEncoding(embed_dim, board_size, dropout=0.)
+        
         # Transformer encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=n_heads)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
@@ -235,16 +254,17 @@ class TransformerBlock(nn.Module):
 
         # Apply input embedding and add positional encoding
         x = self.input_embed(x)  # (B, H * W, E)
-        x = x + self.positional_embedding  # (B, H * W, E)
+        x = self.positional_embedding(x)  # (B, H * W, E)
 
         # Pass through transformer
-        x = self.transformer_encoder(x)  # (B, H * W, E)
+        x = x.permute(1, 0, 2)
+        x = self.transformer_encoder(x)  # (H * W, B, E)
 
         # Project output back to the number of channels needed by the heads
-        x = self.output_projection(x)  # (B, H * W, n_output_channels)
+        x = self.output_projection(x)  # (H * W, B, n_output_channels)
 
         # Make the tensor contiguous and reshape back to (B, n_output_channels, H, W)
-        x = x.permute(0, 2, 1).contiguous().view(B, -1, H, W)  # (B, n_output_channels, H, W)
+        x = x.permute(1, 2, 0).contiguous().view(B, -1, H, W)  # (B, n_output_channels, H, W)
 
         return x
 
@@ -562,6 +582,12 @@ class ModuleSpec:
 
 
 @dataclass
+class OptimizerSpec:
+    type: str
+    kwargs: dict = field(default_factory=dict)
+
+
+@dataclass
 class ModelConfig:
     shape_info_dict: ShapeInfoDict
     stem: Optional[ModuleSpec]
@@ -569,6 +595,7 @@ class ModelConfig:
     heads: List[ModuleSpec]
     neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
+    opt: OptimizerSpec
 
     def validate(self):
         for spec in [self.stem, self.neck] + self.blocks + self.heads:

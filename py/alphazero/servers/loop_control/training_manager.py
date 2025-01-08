@@ -1,13 +1,12 @@
 from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 
-from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
-from shared.net_modules import Model
+from shared.net_modules import Model, ModelConfig
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 
@@ -130,7 +129,7 @@ class TrainingManager:
             self._master_list_slice.set_bounds(cursor, start, end, gen)
             cursor.close()
 
-    def _load_last_checkpoint(self):
+    def _load_last_checkpoint(self, model_cfg: ModelConfig):
         """
         If a prior checkpoint exists, does the following:
 
@@ -154,9 +153,9 @@ class TrainingManager:
             checkpoint = torch.load(tmp_checkpoint_filename, weights_only=False)
             self._net = Model.load_from_checkpoint(checkpoint)
 
-        self._init_net_and_opt()
+        self._init_net_and_opt(model_cfg)
 
-    def _init_net_and_opt(self):
+    def _init_net_and_opt(self, model_cfg: ModelConfig):
         """
         Assumes that self._net has been initialized, and that self._opt has not.
 
@@ -167,12 +166,9 @@ class TrainingManager:
         self._net.cuda(device=self._controller.params.cuda_device)
         self._net.train()
 
-        training_params = self._controller.training_params
-        learning_rate = training_params.learning_rate
-        momentum = training_params.momentum
-        weight_decay = training_params.weight_decay
-        self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
-                              weight_decay=weight_decay)
+        opt_cls = getattr(optim, model_cfg.opt.type)
+        opt_kwargs = model_cfg.opt.kwargs
+        self._opt = opt_cls(self._net.parameters(), **opt_kwargs)
 
         # TODO: SWA, cyclic learning rate
 
@@ -182,13 +178,16 @@ class TrainingManager:
 
         organizer = self._controller.organizer
         checkpoint_info = organizer.get_latest_checkpoint_info()
+
+        game_spec = self._controller.game_spec
+        shape_info_dict = self._game_log_reader.shape_info_dict
+        model_cfg = game_spec.model_configs[self._controller.params.model_cfg](shape_info_dict)
+
         if checkpoint_info is None:
-            shape_info_dict = self._game_log_reader.shape_info_dict
-            model_cfg = self._controller.params.model_cfg
-            self._net = Model(self._controller.game_spec.model_configs[model_cfg](shape_info_dict))
-            self._init_net_and_opt()
+            self._net = Model(model_cfg)
+            self._init_net_and_opt(model_cfg)
         else:
-            self._load_last_checkpoint()
+            self._load_last_checkpoint(model_cfg)
 
         logger.info('Model parameter counts:')
         pcounts = self._net.get_parameter_counts()
