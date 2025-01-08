@@ -18,7 +18,8 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
     apt-get install -y \
       sudo gosu ack wget curl rsync unzip vim git cmake gcc-12 g++-12 python3-pip \
       ninja-build software-properties-common libeigen3-dev libncurses5-dev \
-      python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux && \
+      python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux \
+      graphviz graphviz-dev && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -28,13 +29,6 @@ RUN add-apt-repository -y ppa:mhier/libboost-latest && \
     apt-get install -y \
       libboost-json1.81-dev libboost-program-options1.81-dev \
       libboost-filesystem1.81-dev libboost-log1.81-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install graphviz
-RUN apt-get update && \
-    apt-get install -y \
-      graphviz \
-      graphviz-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Update alternatives for gcc/g++
