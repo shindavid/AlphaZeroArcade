@@ -18,7 +18,8 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
     apt-get install -y \
       sudo gosu ack wget curl rsync unzip vim git cmake gcc-12 g++-12 python3-pip \
       ninja-build software-properties-common libeigen3-dev libncurses5-dev \
-      python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux && \
+      python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux \
+      graphviz graphviz-dev && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +37,7 @@ RUN for tool in gcc g++; do \
     done
 
 # Python dependencies
-RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
+RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging pygraphviz
 
 # Configure SQLite
 RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
