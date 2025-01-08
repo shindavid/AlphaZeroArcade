@@ -42,7 +42,7 @@ def main():
     log_filename = os.path.join(DirectoryOrganizer(run_params).logs_dir, 'loop-controller.log')
     configure_logger(filename=log_filename, params=logging_params)
 
-    logger.info(f'**** Starting loop-controller ****')
+    logger.info('**** Starting loop-controller ****')
 
     server = LoopController(params, training_params, run_params, build_params)
     server.run()

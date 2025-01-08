@@ -11,6 +11,7 @@ from shared.net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 
+import logging
 import os
 import shutil
 import tempfile
@@ -143,7 +144,7 @@ class TrainingManager:
 
         gen = checkpoint_info.generation
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
-        logger.info(f'Loading checkpoint: {checkpoint_filename}')
+        logger.info('Loading checkpoint: %s', checkpoint_filename)
 
         # copying the checkpoint to somewhere local first seems to bypass some sort of
         # filesystem issue
@@ -220,8 +221,8 @@ class TrainingManager:
                                   self._game_log_reader)
 
         logger.info('******************************')
-        logger.info(f'Train gen:{gen}')
-        dataset.announce_sampling(logger.info)
+        logger.info('Train gen:%s', gen)
+        dataset.announce_sampling(logging.INFO)
 
         n_minibatches = self._controller.training_params.minibatches_per_epoch
 
@@ -260,9 +261,9 @@ class TrainingManager:
                 # the whole process is shutting down.
                 return
 
-            stats.dump(logger.info)
-            logger.info(f'Gen {gen} training complete')
-            trainer.dump_timing_stats(logger.info)
+            stats.dump(logging.INFO)
+            logger.info('Gen %s training complete', gen)
+            trainer.dump_timing_stats(logging.INFO)
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
@@ -320,5 +321,5 @@ class TrainingManager:
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
         self._latest_gen = gen
-        logger.info(f'Checkpoint saved: {checkpoint_filename}')
-        logger.info(f'Model saved: {model_filename}')
+        logger.info('Checkpoint saved: %s', checkpoint_filename)
+        logger.info('Model saved: %s', model_filename)

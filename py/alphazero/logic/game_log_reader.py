@@ -121,7 +121,7 @@ class GameLogReader:
             shape = tuple([info.dims[j] for j in range(info.num_dims)])
             shape_info = ShapeInfo(name=name, target_index=info.target_index, shape=shape)
             shape_info_dict[name] = shape_info
-            logger.debug(f'ShapeInfo: {name} -> {shape_info}')
+            logger.debug('ShapeInfo: %s -> %s', name, shape_info)
             i += 1
 
         lib.free_shape_info_array(shape_info_arr)

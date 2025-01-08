@@ -68,19 +68,19 @@ class SelfPlayManager:
         if self._checkpoint <= self._master_list_length:
             return
 
-        logger.info(f'Waiting for more training data... (current={self._master_list_length}, '
-                    f'needed={self._checkpoint})')
+        logger.info('Waiting for more training data... (current=%s, needed=%s)',
+                    self._master_list_length, self._checkpoint)
 
         with self._ready_lock:
             for conn in self._ready_conns:
                 if not conn.aux.get('launched', False):
                     self._launch_self_play(conn)
 
-        logger.debug(f'Unhijacking all self-play tables...')
+        logger.debug('Unhijacking all self-play tables...')
         self._controller.unhijack_all_self_play_tables()
         with self._checkpoint_lock:
             self._checkpoint_cond.wait_for(lambda: self._master_list_length >= self._checkpoint)
-        logger.debug(f'Hijacking all self-play tables...')
+        logger.debug('Hijacking all self-play tables...')
         self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
@@ -137,9 +137,9 @@ class SelfPlayManager:
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if msg_type != 'log' and logger.isEnabledFor(logging.DEBUG):
+        if msg_type != 'log':
             # no need to double-log log-messages
-            logger.debug(f'self-play-server received json message: {msg}')
+            logger.debug('self-play-server received json message: %s', msg)
 
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
@@ -150,15 +150,15 @@ class SelfPlayManager:
         elif msg_type == 'gen0-complete':
             self._handle_gen0_complete()
         else:
-            logger.warning(f'self-play-server: unknown message type: {msg}')
+            logger.warning('self-play-server: unknown message type: %s', msg)
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
 
-        if msg_type != 'game' and logger.isEnabledFor(logging.DEBUG):
+        if msg_type != 'game':
             # logging every game is too spammy
-            logger.debug(f'self-play-worker received json message: {msg}')
+            logger.debug('self-play-worker received json message: %s', msg)
 
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
@@ -175,7 +175,7 @@ class SelfPlayManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warning(f'self-play-worker: unknown message type: {msg}')
+            logger.warning('self-play-worker: unknown message type: %s', msg)
         return False
 
     def _set_gen0_completion(self, complete: bool, log=True):
@@ -190,7 +190,7 @@ class SelfPlayManager:
             logger.info('Gen-0 self-play complete!')
 
     def _launch_gen0_self_play(self, conn: ClientConnection, num_rows: int):
-        logger.info(f'Requesting {conn} to perform gen-0 self-play...')
+        logger.info('Requesting %s to perform gen-0 self-play...', conn)
 
         data = {
             'type': 'start-gen0',
@@ -210,7 +210,7 @@ class SelfPlayManager:
             'type': 'start',
         }
 
-        logger.info(f'Requesting {conn} to launch self-play...')
+        logger.info('Requesting %s to launch self-play...', conn)
         conn.socket.send_json(data)
 
         conn.aux['launched'] = True
@@ -229,13 +229,13 @@ class SelfPlayManager:
                 time.sleep(3600)  # 1 hour
                 self._restart(conn)
         except SocketSendException:
-            logger.warning(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning('Error sending to %s - worker likely disconnected', conn)
         except:
-            logger.error(f'Unexpected error managing restart loop for {conn}', exc_info=True)
+            logger.error('Unexpected error managing restart loop for %s', conn, exc_info=True)
             self._controller.request_shutdown(1)
 
     def _restart(self, conn: ClientConnection):
-        logger.info(f'Restarting self-play for {conn}...')
+        logger.info('Restarting self-play for %s...', conn)
         data = {
             'type': 'restart',
         }
@@ -270,13 +270,13 @@ class SelfPlayManager:
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
-            logger.warning(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning('Error sending to %s - worker likely disconnected', conn)
         except:
-            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
             self._controller.request_shutdown(1)
 
     def _pause(self, conn: ClientConnection):
-        logger.debug(f'Pausing {conn}...')
+        logger.debug('Pausing %s...', conn)
         data = {
             'type': 'pause',
         }
@@ -287,10 +287,10 @@ class SelfPlayManager:
         with cond:
             cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
 
-        logger.debug(f'Pause of {conn} complete!')
+        logger.debug('Pause of %s complete!', conn)
 
     def _unpause(self, conn: ClientConnection):
-        logger.debug(f'Unpausing {conn}...')
+        logger.debug('Unpausing %s...', conn)
         data = {
             'type': 'unpause',
         }
@@ -301,7 +301,7 @@ class SelfPlayManager:
         with cond:
             cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
 
-        logger.debug(f'Unpause of {conn} complete!')
+        logger.debug('Unpause of %s complete!', conn)
 
     def _handle_pause_ack(self, conn: ClientConnection):
         cond = conn.aux['ack_cond']
@@ -446,7 +446,7 @@ class SelfPlayManager:
                     self._checkpoint_cond.notify_all()
 
         if done:
-            logger.info(f'Client {client_id} has finished self-play')
+            logger.info('Client %s has finished self-play', client_id)
             conn.socket.send_json({'type': 'quit'})
 
     def _flush_pending_games_helper(self, cursor: sqlite3.Cursor, gen: Generation,

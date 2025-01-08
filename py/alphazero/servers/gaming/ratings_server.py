@@ -101,7 +101,7 @@ class RatingsServer:
                         'Loop controller likely shut down.', exc_info=True)
             self._shutdown_manager.request_shutdown(0)
         except:
-            logger.error(f'Unexpected error in recv_loop():', exc_info=True)
+            logger.error('Unexpected error in recv_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _send_ready(self):
@@ -110,7 +110,7 @@ class RatingsServer:
 
     def _handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'ratings-server received json message: {msg}')
+            logger.debug('ratings-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
@@ -119,23 +119,23 @@ class RatingsServer:
             self._quit()
             return True
         else:
-            raise Exception(f'Unknown message type: {msg_type}')
+            raise Exception('Unknown message type: %s', msg_type)
         return False
 
     def _handle_match_request(self, msg: JsonDict):
         thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
-                                  name=f'run-match')
+                                  name='run-match')
         thread.start()
 
     def _quit(self):
-        logger.info(f'Received quit command')
+        logger.info('Received quit command')
         self._shutdown_manager.request_shutdown(0)
 
     def _run_match(self, msg: JsonDict):
         try:
             self._run_match_helper(msg)
         except:
-            logger.error(f'Unexpected error in run-match:', exc_info=True)
+            logger.error('Unexpected error in run-match:', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _run_match_helper(self, msg: JsonDict):
@@ -174,7 +174,7 @@ class RatingsServer:
         ref_name = RatingsServer._get_reference_player_name(ref_strength)
 
         proc = subprocess_util.Popen(cmd)
-        logger.info(f'Running {mcts_name} vs {ref_name} match [{proc.pid}]: {cmd}')
+        logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, proc.pid, cmd)
         stdout_buffer = []
         self._log_forwarder.forward_output(
             'ratings-worker', proc, stdout_buffer, close_remote_log=False)
@@ -183,7 +183,7 @@ class RatingsServer:
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout_buffer)
-        logger.info(f'Match result: {record.get(0)}')
+        logger.info('Match result: %s', record.get(0))
 
         self._running = False
 

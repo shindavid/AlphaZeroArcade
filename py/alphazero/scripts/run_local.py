@@ -105,7 +105,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
     cmd = ' '.join(map(quote, cmd))
-    logger.info(f'Launching self-play server: {cmd}')
+    logger.info('Launching self-play server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
@@ -129,7 +129,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
     cmd = ' '.join(map(quote, cmd))
-    logger.info(f'Launching ratings server: {cmd}')
+    logger.info('Launching ratings server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
@@ -159,7 +159,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     training_params.add_to_cmd(cmd, default_training_params)
 
     cmd = ' '.join(map(quote, cmd))
-    logger.info(f'Launching loop controller: {cmd}')
+    logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
 
@@ -211,19 +211,21 @@ def main():
                 loop = False
                 if proc.returncode != 0:
                     print('*' * 80)
-                    logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+                    logger.error('%s process %s exited with code %s', descr, proc.pid,
+                                 proc.returncode)
                     print('*' * 80)
                     if proc.stderr is not None:
                         print(proc.stderr.read())
                 else:
                     print('*' * 80)
-                    logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+                    logger.error('%s process %s exited with code %s', descr, proc.pid,
+                                 proc.returncode)
             time.sleep(1)
     finally:
         for descr, proc in procs:
             if proc.poll() is None:
                 proc.terminate()
-                logger.info(f'Terminated {descr} process {proc.pid}')
+                logger.info('Terminated %s process %s', descr, proc.pid)
 
 
 if __name__ == '__main__':

@@ -39,7 +39,7 @@ class RemoteLoggingManager:
             f = open(filename, 'a')
             subdict[src] = f
 
-        logger.debug(f'Opened log file: {filename}')
+        logger.debug('Opened log file: %s', filename)
         return f
 
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
@@ -57,7 +57,7 @@ class RemoteLoggingManager:
             return
         for f in subdict.values():
             f.close()
-            logger.debug(f'Closed log file: {f.name}')
+            logger.debug('Closed log file: %s', f.name)
 
     def close_log_file(self, msg: JsonDict, client_id: ClientId):
         close_log = msg['close_log']
@@ -76,4 +76,4 @@ class RemoteLoggingManager:
                 self._log_files.pop(client_id)
 
         f.close()
-        logger.debug(f'Closed log file: {f.name}')
+        logger.debug('Closed log file: %s', f.name)

@@ -53,7 +53,7 @@ class TrainingSubStats:
     def loss(self):
         return self.loss_num / self.den if self.den else 0.0
 
-    def dump(self, total_loss, print_fn=print):
+    def dump(self, total_loss, log_level):
         output = [self.descr.rjust(TrainingSubStats.max_descr_len)]
 
         loss = self.loss()
@@ -62,7 +62,7 @@ class TrainingSubStats:
         output.append(' loss: %8.6f * %6.3f = %8.6f [%6.3f%%]' % (
             loss, weight, loss * weight, loss_pct))
 
-        print_fn(''.join(output))
+        logger.log(log_level, ''.join(output))
 
     def to_json(self):
         return {
@@ -71,10 +71,10 @@ class TrainingSubStats:
             }
 
     @staticmethod
-    def dump_total_loss(total_loss, print_fn=print):
+    def dump_total_loss(total_loss, log_level):
         output = ['total'.rjust(TrainingSubStats.max_descr_len)]
         output.append(' loss:                   = %8.6f' % total_loss)
-        print_fn(''.join(output))
+        logger.log(log_level, ''.join(output))
 
 
 class TrainingStats:
@@ -98,15 +98,18 @@ class TrainingStats:
         for results, substats in zip(results_list, self.substats_list):
             substats.update(results)
 
-    def dump(self, print_fn=print):
+    def dump(self, log_level):
+        if logger.level > log_level:
+            return
+
         total_loss = 0
         for substats in self.substats_list:
             total_loss += substats.loss() * substats.loss_weight
 
         for substats in self.substats_list:
-            substats.dump(total_loss, print_fn=print_fn)
+            substats.dump(total_loss, log_level)
 
-        TrainingSubStats.dump_total_loss(total_loss, print_fn=print_fn)
+        TrainingSubStats.dump_total_loss(total_loss, log_level)
 
     def to_json(self):
         substats = { s.name: s.to_json() for s in self.substats_list }
@@ -220,8 +223,11 @@ class NetTrainer:
 
         return stats
 
-    def dump_timing_stats(self, print_fn=print):
+    def dump_timing_stats(self, log_level):
+        if logger.level > log_level:
+            return
+
         total_time = time.time() - self.t0
         data_loading_time = total_time - self.for_loop_time
-        print_fn(f'Data loading time: {data_loading_time:10.3f} seconds')
-        print_fn(f'Training time:     {self.for_loop_time:10.3f} seconds')
+        logger.log(log_level, 'Data loading time: %10.3f seconds', data_loading_time)
+        logger.log(log_level, 'Training time:     %10.3f seconds', self.for_loop_time)

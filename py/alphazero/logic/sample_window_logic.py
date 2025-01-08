@@ -85,9 +85,11 @@ def get_required_dataset_size(params: TrainingParams, prev_window: Window):
     rhs = lambda n: n * r + (t - r) * f(n)
 
     lo = b
+    rhs_lo = rhs(lo)
 
-    logger.debug(f'get_required_dataset_size() a={a} b={b} r={r} s={s} t={t} lhs={lhs} rhs(lo)={rhs(lo)}')
-    if lhs <= rhs(lo):
+    logger.debug('get_required_dataset_size() a=%s b=%s r=%s s=%s t=%s lhs=%s rhs(lo)=%s',
+                 a, b, r, s, t, lhs, rhs_lo)
+    if lhs <= rhs_lo:
         return b
 
     hi = b + 2*(b-a)  # 2 prev_window lengths should usually be enough

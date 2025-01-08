@@ -50,7 +50,7 @@ class GpuContentionManager:
                 for other_table in subtable.values():
                     if other_table.gpu_id != gpu_id:
                         assert other_table.has_highest_priority(Domain.TRAINING), other_table
-                        logger.debug(f'Performing training switcheroo: {table} -> {other_table}')
+                        logger.debug('Performing training switcheroo: %s -> %s', table, other_table)
                         return other_table
             return table
 
@@ -88,7 +88,7 @@ class GpuContentionManager:
                             (table.active(Domain.TRAINING), table.active(Domain.SELF_PLAY)))
 
         table = ratings_tables[0]
-        logger.debug(f'Prioritizing ratings for {table}')
+        logger.debug('Prioritizing ratings for %s', table)
         table.prioritize_ratings()
 
     def hijack_all_self_play_tables(self):

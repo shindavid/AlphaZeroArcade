@@ -61,8 +61,8 @@ class SessionData:
         self._client_id = client_id
 
         log_forwarder.launch()
-        logger.info(f'**** Starting {role.value} ****')
-        logger.info(f'Received client id assignment: {client_id}')
+        logger.info('**** Starting %s ****', role.value)
+        logger.info('Received client id assignment: %s', client_id)
 
     @property
     def socket(self) -> Socket:

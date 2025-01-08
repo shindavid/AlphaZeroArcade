@@ -63,7 +63,8 @@ class DatabaseConnectionPool:
             conn = self._conn_dict.get(thread_id, None)
             if conn is None:
                 n = len(self._conn_dict) + 1
-                logger.debug(f"Creating new connection: db_filename={self._db_filename} thread={thread_name} ({n})")
+                logger.debug("Creating new connection: db_filename=%s thread=%s (%s)",
+                             self._db_filename, thread_name, n)
                 conn = self._create_connection()
                 self._conn_dict[thread_id] = conn
             return conn
@@ -90,8 +91,8 @@ class DatabaseConnectionPool:
 
 
 def copy_db(source_filename: str, target_filename: str, where_clause: str):
-    logger.info(f"Copying database from {source_filename} to {target_filename} "
-                f"with where clause: {where_clause}")
+    logger.info("Copying database from %s to %s with where clause: %s", source_filename,
+                target_filename, where_clause)
     conn = sqlite3.connect(source_filename)
     conn.execute(f"ATTACH DATABASE '{target_filename}' AS target_db")
 
@@ -103,7 +104,7 @@ def copy_db(source_filename: str, target_filename: str, where_clause: str):
         if table == 'sqlite_sequence':
             continue
 
-        logger.info(f"Copying table {table}...")
+        logger.info("Copying table %s...", table)
         sql_target = sql.replace('CREATE TABLE', 'CREATE TABLE target_db.')
         conn.execute(sql_target)
         conn.execute(
@@ -112,7 +113,7 @@ def copy_db(source_filename: str, target_filename: str, where_clause: str):
     # Next, copy triggers
     cursor.execute(f'SELECT name, sql FROM sqlite_master WHERE type="trigger"')
     for name, sql in cursor.fetchall():
-        logger.info(f"Copying trigger {name}...")
+        logger.info("Copying trigger %s...", name)
         sql_target = sql.replace('CREATE TRIGGER ', f'CREATE TRIGGER target_db.')
         conn.execute(sql_target)
 

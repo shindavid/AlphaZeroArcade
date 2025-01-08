@@ -51,7 +51,7 @@ class RatingsManager:
         conn.aux['status'] = ServerStatus.BLOCKED
 
         self._start()
-        logger.info(f'Starting ratings-recv-loop for {conn}...')
+        logger.info('Starting ratings-recv-loop for %s...', conn)
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'ratings-server',
             disconnect_handler=self._handle_server_disconnect)
@@ -91,9 +91,9 @@ class RatingsManager:
         current_rate = num / den
 
         elevate = current_rate < target_rate
-        logger.debug(f'Ratings elevate-priority:{elevate} (latest={latest_gen}, '
-                     f'dict_len={dict_len}, in_progress={rating_in_progress} '
-                     f'current={current_rate:.2f}, target={target_rate:.2f})')
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
         self._controller.set_ratings_priority(elevate)
 
     def _start(self):
@@ -104,7 +104,7 @@ class RatingsManager:
             self._load_past_data()
 
     def _load_past_data(self):
-        logger.info(f'Loading past ratings data...')
+        logger.info('Loading past ratings data...')
         conn = self._controller.ratings_db_conn_pool.get_connection()
         c = conn.cursor()
         res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE tag = ?',
@@ -228,16 +228,16 @@ class RatingsManager:
                 # We do not release the lock here. The lock is released either when a gen is
                 # fully rated, or when the server disconnects.
         except SocketSendException:
-            logger.warning(f'Error sending to {conn} - server likely disconnected')
+            logger.warning('Error sending to %s - server likely disconnected', conn)
         except:
-            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
             self._controller.request_shutdown(1)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if msg_type != 'log' and logger.isEnabledFor(logging.DEBUG):
+        if msg_type != 'log':
             # no need to double-log log-messages
-            logger.debug(f'ratings-server received json message: {msg}')
+            logger.debug('ratings-server received json message: %s', msg)
 
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
@@ -248,14 +248,12 @@ class RatingsManager:
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:
-            logger.warning(f'ratings-server: unknown message type: {msg}')
+            logger.warning('ratings-server: unknown message type: %s', msg)
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'ratings-worker received json message: {msg}')
+        logger.debug('ratings-worker received json message: %s', msg)
 
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
@@ -268,7 +266,7 @@ class RatingsManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warning(f'ratings-worker: unknown message type: {msg}')
+            logger.warning('ratings-worker: unknown message type: %s', msg)
         return False
 
     def _handle_ready(self, conn: ClientConnection):
@@ -327,13 +325,13 @@ class RatingsManager:
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
-            logger.warning(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning('Error sending to %s - worker likely disconnected', conn)
         except:
-            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
             self._controller.request_shutdown(1)
 
     def _pause(self, conn: ClientConnection):
-        logger.debug(f'Pausing {conn}...')
+        logger.debug('Pausing %s...', conn)
         data = {
             'type': 'pause',
         }
@@ -344,10 +342,10 @@ class RatingsManager:
         with cond:
             cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
 
-        logger.debug(f'Pause of {conn} complete!')
+        logger.debug('Pause of %s complete!', conn)
 
     def _unpause(self, conn: ClientConnection):
-        logger.debug(f'Unpausing {conn}...')
+        logger.debug('Unpausing %s...', conn)
         data = {
             'type': 'unpause',
         }
@@ -358,7 +356,7 @@ class RatingsManager:
         with cond:
             cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
 
-        logger.debug(f'Unpause of {conn} complete!')
+        logger.debug('Unpause of %s complete!', conn)
 
     def _handle_pause_ack(self, conn: ClientConnection):
         cond = conn.aux['ack_cond']
@@ -444,13 +442,13 @@ class RatingsManager:
         latest_gen = self._controller.latest_gen()
         assert latest_gen > 0, latest_gen
 
-        logger.debug(f'Getting next gen to rate, latest_gen={latest_gen}...')
+        logger.debug('Getting next gen to rate, latest_gen=%s...', latest_gen)
         with self._lock:
             taken_gens = [g for g, r in self._rating_data_dict.items()
                           if r.rating is not None or r.owner is not None]
             taken_gens.sort()
         if not taken_gens:
-            logger.debug(f'No gens yet rated, rating latest ({latest_gen})...')
+            logger.debug('No gens yet rated, rating latest (%s)...', latest_gen)
             return latest_gen
 
         max_taken_gen = taken_gens[-1]
@@ -460,34 +458,37 @@ class RatingsManager:
 
         latest_gap_threshold = 10
         if latest_gap >= latest_gap_threshold:
-            logger.debug(f'{latest_gap_threshold}+ gap to latest, rating latest ({latest_gen})...')
+            logger.debug('%s+ gap to latest, rating latest (%s)...', latest_gap_threshold,
+                         latest_gen)
             return latest_gen
 
         if taken_gens[0] > 1:
-            logger.debug(f'Gen-1 not yet rated, rating it...')
+            logger.debug('Gen-1 not yet rated, rating it...')
             return 1
 
         assert latest_gen != 1, latest_gen
 
         if len(taken_gens) == 1:
-            logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
+            logger.debug('No existing gaps, rating latest (%s)...', latest_gen)
             return latest_gen
 
         left, right = find_largest_gap(taken_gens)
         gap = right - left
         if 2 * latest_gap >= gap:
             logger.debug(
-                f'Large gap to latest, rating latest={latest_gen} '
-                f'(biggest-gap:[{left}, {right}], latest-gap:[{max_taken_gen}, {latest_gen}])...')
+                'Large gap to latest, rating latest=%s '
+                '(biggest-gap:[%s, %s], latest-gap:[%s, %s])...',
+                latest_gen, left, right, max_taken_gen, latest_gap)
             return latest_gen
 
         assert max(gap, latest_gap) > 1, (gap, latest_gap)
 
         if left + 1 == right:
             assert latest_gen > right, (latest_gen, right)
-            logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
+            logger.debug('No existing gaps, rating latest (%s)...', latest_gen)
             return latest_gen
 
         mid = (left + right) // 2
-        logger.debug(f'Rating gen {mid} (biggest-gap:[{left}, {right}], latest={latest_gen})...')
+        logger.debug('Rating gen %s (biggest-gap:[%s, %s], latest=%s)...',
+                     mid, left, right, latest_gen)
         return mid

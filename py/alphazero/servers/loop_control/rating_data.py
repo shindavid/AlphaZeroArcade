@@ -130,8 +130,10 @@ class RatingData:
         adjustment = 0.5 * (w1 - w2) / (w1 + w2)
         strength = midpoint + spread_factor * adjustment
 
-        logger.debug(f'Interpolating bounds for gen={self.mcts_gen} match_data={match_data}: '
-                     f'({x1}: {w1}, {x2}: {w2}) -> {midpoint} + {spread_factor} * {adjustment} = {strength}')
+        logger.debug('Interpolating bounds for gen=%s match_data=%s: '
+                     '(%s: %s, %s: %s) -> %s + %s * %s = %s',
+                     self.mcts_gen, match_data, x1, w1, x2, w2, midpoint, spread_factor, adjustment,
+                     strength)
 
         assert x1 <= strength <= x2, (x1, strength, x2, match_data)
         return strength
@@ -160,9 +162,9 @@ class RatingData:
         if self.rating is not None:
             return None
 
-        logger.debug(f'Getting next strength to test for gen={self.mcts_gen}: '
-                     f'est={self.est_rating}, '
-                     f'bounds=({self.rating_lower_bound}, {self.rating_upper_bound})')
+        logger.debug('Getting next strength to test for gen=%s: est=%s, bounds=(%s, %s)',
+                     self.mcts_gen, self.est_rating, self.rating_lower_bound,
+                     self.rating_upper_bound)
 
         match_data = self.filtered_match_data()
 

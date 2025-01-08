@@ -91,12 +91,12 @@ class SelfPlayServer:
                         'Loop controller likely shut down.', exc_info=True)
             self._shutdown_manager.request_shutdown(0)
         except:
-            logger.error(f'Unexpected error in recv_loop():', exc_info=True)
+            logger.error('Unexpected error in recv_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'self-play-server received json message: {msg}')
+            logger.debug('self-play-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'start-gen0':
@@ -109,7 +109,7 @@ class SelfPlayServer:
             self._quit()
             return True
         else:
-            raise Exception(f'Unknown message type: {msg_type}')
+            raise Exception('Unknown message type: %s', msg_type)
         return False
 
     def _send_ready(self):
@@ -130,18 +130,18 @@ class SelfPlayServer:
             thread = threading.Thread(target=self._restart_helper, daemon=True, name=f'restart')
             thread.start()
         except:
-            logger.error(f'Error in restart:', exc_info=True)
+            logger.error('Error in restart:', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _quit(self):
-        logger.info(f'Received quit command')
+        logger.info('Received quit command')
         self._shutdown_manager.request_shutdown(0)
 
     def _start_gen0(self, msg: JsonDict):
         try:
             self._start_gen0_helper(msg)
         except:
-            logger.error(f'Error in start_gen0:', exc_info=True)
+            logger.error('Error in start_gen0:', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _start_gen0_helper(self, msg):
@@ -193,10 +193,10 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         proc = subprocess_util.Popen(self_play_cmd)
-        logger.info(f'Running gen-0 self-play [{proc.pid}]: {self_play_cmd}')
+        logger.info('Running gen-0 self-play [%s]: %s', proc.pid, self_play_cmd)
         self._log_forwarder.forward_output('gen0-self-play-worker', proc)
 
-        logger.info(f'Gen-0 self-play complete!')
+        logger.info('Gen-0 self-play complete!')
         self._running = False
 
         data = {
@@ -208,7 +208,7 @@ class SelfPlayServer:
         try:
             self._start_helper()
         except:
-            logger.error(f'Error in start:', exc_info=True)
+            logger.error('Error in start:', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _start_helper(self):
@@ -253,15 +253,15 @@ class SelfPlayServer:
 
         proc = subprocess_util.Popen(self_play_cmd)
         self._proc = proc
-        logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
+        logger.info('Running self-play [%s]: %s', proc.pid, self_play_cmd)
         self._log_forwarder.forward_output('self-play-worker', proc)
 
     def _restart_helper(self):
         proc = self._proc
         assert proc is not None
 
-        logger.info(f'Restarting self-play process')
-        logger.info(f'Killing [{proc.pid}]...')
+        logger.info('Restarting self-play process')
+        logger.info('Killing [%s]...', proc.pid)
         self._log_forwarder.disable_next_returncode_check()
         self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick

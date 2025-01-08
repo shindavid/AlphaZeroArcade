@@ -106,7 +106,7 @@ class LogForwarder:
             self._skip_next_returncode_check = False
             return
         if proc.returncode:
-            logger.error(f'Process failed with return code {proc.returncode}')
+            logger.error('Process failed with return code %s', proc.returncode)
             for line in stderr_buffer:
                 logger.error(line.strip())
             raise Exception()
@@ -129,7 +129,7 @@ class LogForwarder:
             logger.warning('Loop controller appears to have disconnected, shutting down...')
             self._shutdown_manager.request_shutdown(0)
         except:
-            logger.error(f'Unexpected error in log_loop(src={src}):', exc_info=True)
+            logger.error('Unexpected error in log_loop(src=%s):', src, exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _forward_output_thread(self, src: str, stream, q: queue.Queue, buf=None):
@@ -141,5 +141,5 @@ class LogForwarder:
                 if buf is not None:
                     buf.append(line)
         except:
-            logger.error(f'Unexpected error in _forward_output_thread({src}):', exc_info=True)
+            logger.error('Unexpected error in _forward_output_thread(%s):', src, exc_info=True)
             self._shutdown_manager.request_shutdown(1)

@@ -193,7 +193,7 @@ class LoopController(LoopControllerInterface):
         self._remote_logging_manager.close_log_file(msg, conn.client_id)
 
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
-        logger.debug(f'Broadcasting weights (gen={gen}) to {conn}')
+        logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
         data = {
             'type': 'reload-weights',

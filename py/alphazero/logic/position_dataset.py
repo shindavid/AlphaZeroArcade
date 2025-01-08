@@ -17,6 +17,7 @@ produces GamesDataset objects, which correspond to a window W of M.
 """
 from alphazero.logic.game_log_reader import GameLogReader
 from shared.net_modules import ShapeInfo
+from util.logging_util import get_logger
 
 import numpy as np
 import os
@@ -24,6 +25,9 @@ import sqlite3
 from torch.utils.data import Dataset
 
 from typing import List, Optional
+
+
+logger = get_logger()
 
 
 pos_dtype = np.dtype([('client_id', 'i4'),
@@ -106,7 +110,10 @@ class PositionDataset(Dataset):
         self._input_shape_info: ShapeInfo = game_log_reader.shape_info_dict['input']
         self._target_shape_infos: List[ShapeInfo] = []
 
-    def announce_sampling(self, print_func):
+    def announce_sampling(self, log_level):
+        if logger.level > log_level:
+            return
+
         dataset_size = len(self)
         n_total_positions = self._positions.end_index
         first_gen = self._positions[0]['gen']
@@ -116,7 +123,7 @@ class PositionDataset(Dataset):
             gen_str = f'gen {first_gen}'
         else:
             gen_str = f'gens {first_gen} to {last_gen}'
-        print_func(
+        logger.log(log_level,
             'Sampling from %s of %s (%.1f%%) positions (%s)' %
             (dataset_size, n_total_positions, 100. * dataset_size / n_total_positions, gen_str))
 
