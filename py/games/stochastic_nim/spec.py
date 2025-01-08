@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
 
@@ -55,6 +55,8 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
             'value': 1.5,
             'action_value': 1.0,
         },
+
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
     )
 
 
