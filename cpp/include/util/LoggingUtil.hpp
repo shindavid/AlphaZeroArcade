@@ -13,20 +13,21 @@
 
 namespace util {
 
-namespace logging {
+struct Logging {
 
 struct Params {
   std::string log_filename;
   bool debug = false;
+  bool omit_timestamps = false;
 
   auto make_options_description();
 };
 
-void init(const Params&);
+static void init(const Params&);
 
-constexpr int kTimestampPrefixLength = 27;  // "2024-03-12 17:13:11.259615 "
+static int kTimestampPrefixLength;
 
-}  // namespace logging
+};  // Logging
 
 }  // namespace util
 

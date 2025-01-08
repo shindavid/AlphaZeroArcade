@@ -10,9 +10,7 @@
 
 namespace util {
 
-namespace logging {
-
-inline auto Params::make_options_description() {
+inline auto Logging::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -23,9 +21,9 @@ inline auto Params::make_options_description() {
           po::value<std::string>(&log_filename),
           "log filename. If specified, logs to the file in addition to stdout")
       .template add_flag<"debug", "no-debug">(&debug, "enable debug logging",
-                                              "disable debug logging");
+                                              "disable debug logging")
+      .template add_flag<"omit-timestamps", "include-timestamps">(
+        &omit_timestamps, "omit timestamps", "include timestamps");
 }
-
-}  // namespace logging
 
 }  // namespace util

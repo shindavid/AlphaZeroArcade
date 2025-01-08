@@ -30,7 +30,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     namespace po2 = boost_util::program_options;
 
     Args args;
-    util::logging::Params log_params;
+    util::Logging::Params log_params;
     util::Random::Params random_params;
     core::LoopControllerClient::Params loop_controller_params;
     typename GameServerProxy::Params game_server_proxy_params;
@@ -60,7 +60,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       return 0;
     }
 
-    util::logging::init(log_params);
+    util::Logging::init(log_params);
     util::Random::init(random_params);
 
     LOG_INFO << "Starting process " << getpid();

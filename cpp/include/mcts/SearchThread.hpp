@@ -62,13 +62,8 @@ class SearchThread {
 
   void start();
   int thread_id() const { return thread_id_; }
-  std::string thread_id_whitespace() const {
-    return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
-  }
-  std::string break_plus_thread_id_whitespace() const {
-    int n = util::logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_;
-    return "\n" + util::make_whitespace(n);
-  }
+  const std::string& thread_id_whitespace() const { return thread_id_whitespace_; }
+  const std::string& break_plus_thread_id_whitespace() const { return break_plus_thread_id_whitespace_; }
 
   void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
@@ -150,6 +145,9 @@ class SearchThread {
   profiler_t profiler_;
   const int thread_id_;
   func_t post_visit_func_ = []() {};
+
+  std::string thread_id_whitespace_;
+  std::string break_plus_thread_id_whitespace_;
 
   FRIEND_GTEST(SearchThreadTest, init_root_node);
   FRIEND_GTEST(SearchThreadTest, something_else);

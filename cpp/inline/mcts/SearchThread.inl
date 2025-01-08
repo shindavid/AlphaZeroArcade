@@ -22,7 +22,11 @@ inline SearchThread<Game>::SearchThread(SharedData* shared_data,
     : shared_data_(shared_data),
       nn_eval_service_(nn_eval_service),
       manager_params_(manager_params),
-      thread_id_(thread_id) {}
+      thread_id_(thread_id) {
+  thread_id_whitespace_ = util::make_whitespace(kThreadWhitespaceLength * thread_id_);
+  break_plus_thread_id_whitespace_ = "\n" + util::make_whitespace(
+    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_);
+}
 
 template <core::concepts::Game Game>
 inline SearchThread<Game>::~SearchThread() {
