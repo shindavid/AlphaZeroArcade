@@ -93,14 +93,18 @@ class Node {
   // We make the StateData a base-class of stable_data_t because (1) the state is stable, and
   // (2) if STORE_STATES is not enabled, we get an empty base-class optimization.
   struct stable_data_t : public StateData {
-    stable_data_t(const StateHistory&);  // for non-terminal nodes
+    stable_data_t(const StateHistory&, core::seat_index_t active_seat);  // for non-terminal nodes
     stable_data_t(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
     ValueTensor VT;
     ActionMask valid_action_mask;
     int num_valid_actions;
     core::action_mode_t action_mode;
-    core::seat_index_t current_player;
+
+    // active_seat is usually the current player, who is about to make a move
+    // if this is a chance node, active_seat is the player who just made a move
+    core::seat_index_t active_seat;
+
     bool terminal;
     bool VT_valid;
     bool is_chance_node;
@@ -208,8 +212,8 @@ class Node {
     mutable std::mutex map_mutex_;
   };
 
-  Node(LookupTable*, const StateHistory&);  // for non-terminal nodes
-  Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
+  Node(LookupTable*, const StateHistory&, core::seat_index_t active_seat);  // for non-terminal
+  Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;

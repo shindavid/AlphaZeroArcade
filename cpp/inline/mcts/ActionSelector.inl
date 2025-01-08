@@ -8,7 +8,7 @@ template <core::concepts::Game Game>
 inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
                                             const SearchParams& search_params, const Node* node,
                                             bool is_root)
-    : cp(node->stable_data().current_player),
+    : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_actions),
       Q(P.rows()),
       PW(P.rows()),
@@ -42,9 +42,9 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     Node* child = node->get_child(edge);
     if (child) {
       const auto& child_stats = child->stats();
-      Q(i) = child_stats.Q(cp);
-      PW(i) = child_stats.provably_winning[cp];
-      PL(i) = child_stats.provably_losing[cp];
+      Q(i) = child_stats.Q(seat);
+      PW(i) = child_stats.provably_winning[seat];
+      PL(i) = child_stats.provably_losing[seat];
       RN(i) = child_stats.RN;
       VN(i) = child_stats.VN;
 
@@ -67,7 +67,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = node->stats();  // no struct copy, not needed here
-    float PV = stats.Q(cp);
+    float PV = stats.Q(seat);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;
     float cFPU = disableFPU ? 0.0 : params.cFPU;

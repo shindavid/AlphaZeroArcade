@@ -203,7 +203,7 @@ class NNEvaluationService
     ActionValueTensor action_values;
     eval_ptr_data_t eval_ptr_data;
     core::action_mode_t action_mode;
-    core::seat_index_t current_player;
+    core::seat_index_t active_seat;
   };
 
   struct batch_data_t {

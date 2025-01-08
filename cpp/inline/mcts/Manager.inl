@@ -167,7 +167,7 @@ Manager<Game>::search(const SearchParams& params) {
   load_action_symmetries(root, &actions[0]);
   root->write_results(params_, inv_sym, results_);
   results_.policy_target = results_.counts;
-  results_.provably_lost = stats.provably_losing[stable_data.current_player];
+  results_.provably_lost = stats.provably_losing[stable_data.active_seat];
   results_.trivial = root->trivial();
   if (params_.forced_playouts && add_noise) {
     prune_policy_target(params, inv_sym);

@@ -6,7 +6,8 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
+inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
+                                                core::seat_index_t as)
     : StateData(history.current()) {
   VT.setZero();  // to be set lazily
   VT_valid = false;
@@ -14,7 +15,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   num_valid_actions = valid_action_mask.count();
   action_mode = Game::Rules::get_action_mode(history.current());
   is_chance_node = Game::Rules::is_chance_mode(action_mode);
-  current_player = Game::Rules::get_current_player(history.current());
+  active_seat = as;
   terminal = false;
 }
 
@@ -26,7 +27,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
   VT_valid = true;
   num_valid_actions = 0;
   action_mode = -1;
-  current_player = -1;
+  active_seat = -1;
   terminal = true;
   is_chance_node = false;
 }
@@ -179,8 +180,8 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-Node<Game>::Node(LookupTable* table, const StateHistory& history)
-    : stable_data_(history),
+Node<Game>::Node(LookupTable* table, const StateHistory& history, core::seat_index_t active_seat)
+    : stable_data_(history, active_seat),
       lookup_table_(table),
       mutex_id_(table->get_random_mutex_id()) {}
 
@@ -196,7 +197,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
-  core::seat_index_t cp = stable_data().current_player;
+  core::seat_index_t seat = stable_data().active_seat;
+  util::debug_assert(seat >= 0 && seat < kNumPlayers);
 
   auto& counts = results.counts;
   auto& action_values = results.action_values;
@@ -208,8 +210,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   Q.setZero();
   Q_sq.setZero();
 
-  bool provably_winning = stats_.provably_winning[cp];
-  bool provably_losing = stats_.provably_losing[cp];
+  bool provably_winning = stats_.provably_winning[seat];
+  bool provably_losing = stats_.provably_losing[seat];
 
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
@@ -222,22 +224,22 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     if (!child) continue;
 
     const auto& stats = child->stats();
-    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
+    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[seat]) {
       modified_count = 0;
-    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
+    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[seat]) {
       modified_count = 0;
     }
 
     if (modified_count) {
       counts(action) = modified_count;
-      Q(action) = stats.Q(cp);
-      Q_sq(action) = stats.Q_sq(cp);
+      Q(action) = stats.Q(seat);
+      Q_sq(action) = stats.Q_sq(seat);
     }
 
     const auto& stable_data = child->stable_data();
     util::release_assert(stable_data.VT_valid);
     ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
-    action_values(action) = VA(cp);
+    action_values(action) = VA(seat);
   }
 }
 
@@ -283,7 +285,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     }
 
   } else {
-    core::seat_index_t cp = stable_data().current_player;
+    core::seat_index_t seat = stable_data().active_seat;
+    util::debug_assert(seat >= 0 && seat < kNumPlayers);
 
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
@@ -305,7 +308,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
         Q_sq_sum += child_stats.Q_sq * e;
       }
 
-      cp_has_winning_move |= child_stats.provably_winning[cp];
+      cp_has_winning_move |= child_stats.provably_winning[seat];
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
       num_children++;
@@ -332,9 +335,9 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     if (num_valid_actions == 0) {
       // terminal state, provably_winning/losing are already set by instruction
     } else if (cp_has_winning_move) {
-      stats_.provably_winning[cp] = true;
+      stats_.provably_winning[seat] = true;
       stats_.provably_losing.set();
-      stats_.provably_losing[cp] = false;
+      stats_.provably_losing[seat] = false;
     } else if (num_children == num_valid_actions) {
       stats_.provably_winning = all_provably_winning;
       stats_.provably_losing = all_provably_losing;

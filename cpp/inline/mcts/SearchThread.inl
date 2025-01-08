@@ -181,11 +181,11 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     Node* child = lookup_table.get_node(edge->child_index);
 
     ValueTensor game_outcome;
-    if (Game::Rules::is_terminal(raw_history_.current(), node->stable_data().current_player,
+    if (Game::Rules::is_terminal(raw_history_.current(), node->stable_data().active_seat,
                                  raw_edge_action, game_outcome)) {
       new (child) Node(&lookup_table, canonical_history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, canonical_history);
+      new (child) Node(&lookup_table, canonical_history);  // TODO
     }
     child->initialize_edges();
     shared_data_->lookup_table.insert_node(mcts_key, edge->child_index);
@@ -265,7 +265,7 @@ void SearchThread<Game>::print_visit_info(Node* node) {
   if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace() << "visit " << search_path_str()
-       << " cp=" << (int)node->stable_data().current_player;
+       << " seat=" << (int)node->stable_data().active_seat;
     LOG_INFO << ss.str();
   }
 }
@@ -503,12 +503,12 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     Game::Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
     bool terminal = Game::Rules::is_terminal(
-        history->current(), parent->stable_data().current_player, last_action, game_outcome);
+        history->current(), parent->stable_data().active_seat, last_action, game_outcome);
 
     if (terminal) {
       new (child) Node(&lookup_table, *history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, *history);
+      new (child) Node(&lookup_table, *history);  // TODO
     }
 
     search_path_.emplace_back(child, nullptr);
@@ -659,7 +659,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     std::ostringstream ss;
     ss << thread_id_whitespace();
 
-    core::seat_index_t cp = node->stable_data().current_player;
+    core::seat_index_t seat = node->stable_data().active_seat;
 
     int n_actions = node->stable_data().num_valid_actions;
 
@@ -668,7 +668,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;
-      CP(p) = p == cp;
+      CP(p) = p == seat;
     }
 
     std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
@@ -676,7 +676,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     eigen_util::PrintArrayFormatMap fmt_map1;
     fmt_map1["Seat"] = [&](float x) { return std::to_string(int(x)); };
-    fmt_map1["CurP"] = [&](float x) { return std::string(x == cp ? "*" : ""); };
+    fmt_map1["CurP"] = [&](float x) { return std::string(x == seat ? "*" : ""); };
 
     std::stringstream ss1;
     eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);

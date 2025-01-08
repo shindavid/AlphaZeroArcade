@@ -10,7 +10,7 @@ template <core::concepts::Game Game>
 NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
                                  const ActionValueTensor& raw_action_values,
                                  const ActionMask& valid_actions, group::element_t sym,
-                                 core::seat_index_t cp, core::action_mode_t mode)
+                                 core::seat_index_t active_seat, core::action_mode_t mode)
     : dynamic_array_(2, valid_actions.count()) {
   ValueTensor value = raw_value;
   PolicyTensor policy = raw_policy;
@@ -18,7 +18,7 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
 
   // value prediction is from current-player's POV, so rotate it
   value = eigen_util::softmax(value);
-  Game::GameResults::right_rotate(value, cp);
+  Game::GameResults::right_rotate(value, active_seat);
 
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
   Game::Symmetries::apply(policy, inv_sym, mode);

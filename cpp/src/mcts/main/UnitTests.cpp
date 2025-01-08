@@ -45,7 +45,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
     for (NNEvaluationRequest::Item& item : request.items()) {
       ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
-      core::seat_index_t cp = item.node()->stable_data().current_player;
+      core::seat_index_t seat = item.node()->stable_data().active_seat;
       core::action_mode_t mode = item.node()->action_mode();
 
       const Nim::State& state = item.cur_state();
@@ -75,7 +75,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
       }
 
       item.set_eval(std::make_shared<NNEvaluation>(value, policy, action_values, valid_actions, sym,
-                                                   cp, mode));
+                                                   seat, mode));
     }
   }
 
