@@ -52,7 +52,7 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
             'action_value': 1.0,
         },
 
-        opt=OptimizerSpec(type='SGD', kwargs={'lr': 6e-5, 'weight_decay': 6e-5, 'momentum': 0.9}),
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
     )
 
 

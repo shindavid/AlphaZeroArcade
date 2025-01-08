@@ -62,7 +62,7 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
             'opp_policy': 0.15,
         },
 
-        opt=OptimizerSpec(type='SGD', kwargs={'lr': 6e-5, 'weight_decay': 6e-5, 'momentum': 0.9}),
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
     )
 
 
@@ -128,7 +128,7 @@ class Connect4Spec(GameSpec):
     model_configs = {
         'b7_c128': b7_c128,
         'transformer': transformer,
-        'default': transformer,
+        'default': b7_c128,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
 

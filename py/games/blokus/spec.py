@@ -91,7 +91,7 @@ def b20_c128(shape_info_dict: ShapeInfoDict):
             'unplayed_pieces': 0.3,
         },
 
-        opt=OptimizerSpec(type='SGD', kwargs={'lr': 6e-5, 'weight_decay': 6e-5, 'momentum': 0.9}),
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
     )
 
 
