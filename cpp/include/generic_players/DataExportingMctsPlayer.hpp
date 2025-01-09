@@ -41,6 +41,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using base_t::base_t;
 
   ActionResponse get_action_response(const ActionRequest& request) override;
+  ActionValueTensor* prehandle_chance_event() override;
 
  protected:
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);

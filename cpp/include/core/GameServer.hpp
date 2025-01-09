@@ -33,6 +33,7 @@ class GameServer {
   using TrainingInfo = Game::Types::TrainingInfo;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;

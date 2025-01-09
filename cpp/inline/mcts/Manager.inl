@@ -101,7 +101,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
   core::action_mode_t mode = shared_data_.get_current_action_mode();
   shared_data_.update_state(action);
   shared_data_.root_softmax_temperature.step();
-  stop_search_threads();
+  stop_search_threads();  // stop pondering
   node_pool_index_t root_index = shared_data_.root_info.node_index;
   if (root_index < 0) return;
 
@@ -109,7 +109,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
   Game::Symmetries::apply(transformed_action, sym, mode);
 
   Node* root = shared_data_.lookup_table.get_node(root_index);
-  root_index = root->lookup_child_by_action(transformed_action);
+  root_index = root->lookup_child_by_action(transformed_action);  // tree reuse
   if (root_index < 0) {
     shared_data_.root_info.node_index = -1;
     return;
@@ -118,14 +118,14 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
   shared_data_.root_info.node_index = root_index;
 
   if (params_.enable_pondering) {
-    start_search_threads(pondering_search_params_);
+    start_search_threads(pondering_search_params_);  // resume pondering
   }
 }
 
 template <core::concepts::Game Game>
 inline const typename Manager<Game>::SearchResults*
 Manager<Game>::search(const SearchParams& params) {
-  stop_search_threads();
+  stop_search_threads();  // stop pondering
 
   bool add_noise = params.full_search && params_.dirichlet_mult > 0;
   shared_data_.init_root_info(add_noise);
@@ -184,6 +184,49 @@ Manager<Game>::search(const SearchParams& params) {
   results_.action_mode = mode;
 
   return &results_;
+}
+
+/*
+ * Here, we do a skimmed-down version of Manager::search()
+ */
+template <core::concepts::Game Game>
+inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
+  action_values.setZero();
+  stop_search_threads();  // stop pondering
+
+  shared_data_.init_root_info(false);
+  auto& root_info = shared_data_.root_info;
+
+  // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
+  // which will expand all the root's children.
+  constexpr int tree_size_limit = 0;
+  constexpr bool full_search = true;
+  constexpr bool ponder = false;
+  SearchParams params{tree_size_limit, full_search, ponder};
+
+  start_search_threads(params);
+  wait_for_search_threads();
+
+  Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
+  const auto& stable_data = root->stable_data();
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = root_info.canonical_sym;
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
+
+  util::release_assert(Game::Rules::is_chance_mode(mode));
+
+  int i = 0;
+  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
+    auto* edge = root->get_edge(i);
+    Game::Symmetries::apply(action, inv_sym, mode);
+    action_values(action) = edge->child_V_estimate;
+    i++;
+  }
+
+  if (params_.enable_pondering) {
+    start_search_threads(pondering_search_params_);  // resume pondering
+  }
 }
 
 template <core::concepts::Game Game>

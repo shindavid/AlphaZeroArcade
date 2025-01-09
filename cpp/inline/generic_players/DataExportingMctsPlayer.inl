@@ -15,6 +15,9 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 
   GameLogWriter_sptr game_log = this->get_game_log();
   bool use_for_training = game_log && search_mode == core::kFull;
+
+  // TODO: if we have chance-events between player-events, we should compute this bool
+  // differently.
   bool previous_used_for_training =
       game_log && game_log->was_previous_entry_used_for_policy_training();
 
@@ -41,6 +44,25 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   }
 
   return response;
+}
+
+template <core::concepts::Game Game>
+typename DataExportingMctsPlayer<Game>::ActionValueTensor*
+DataExportingMctsPlayer<Game>::prehandle_chance_event() {
+  // So that only one player outputs the action values.
+  if (!this->owns_shared_data_) {
+    return nullptr;
+  }
+
+  // Sample chance events at the same frequency as we do for player events. This seems right, as it
+  // ensures that chance events are represented in the training data proportionally to how often
+  // they occur in the game.
+  if (this->get_random_search_mode() != core::kFull) {
+    return nullptr;
+  }
+
+  this->get_manager()->load_root_action_values(action_values_target_);
+  return &action_values_target_;
 }
 
 template <core::concepts::Game Game>

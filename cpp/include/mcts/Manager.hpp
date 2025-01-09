@@ -35,6 +35,7 @@ class Manager {
   using node_pool_index_t = Node::node_pool_index_t;
   using edge_t = Node::edge_t;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
@@ -60,6 +61,7 @@ class Manager {
   void clear();
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
   const SearchResults* search(const SearchParams& params);
+  void load_root_action_values(ActionValueTensor& action_values);
 
   void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();

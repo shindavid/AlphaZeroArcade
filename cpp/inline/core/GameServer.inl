@@ -321,11 +321,21 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     bool terminal = false;
 
     if (Rules::is_chance_mode(action_mode)) {
+      ActionValueTensor* action_values = nullptr;
+      for (auto player2 : players) {
+        ActionValueTensor* action_values2 = player2->prehandle_chance_event();
+        if (!noisy_mode && action_values2) {
+          util::release_assert(!action_values,
+                               "Clashing chance-event training info from different players");
+          action_values = action_values2;
+        }
+      }
+
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
       action = eigen_util::sample(chance_dist);
       if (game_log) {
-        // TODO: AV-target should be nullptr iff noisy_mode is true
-        game_log->add(state_history.current(), action, active_seat, nullptr, nullptr, true);
+        game_log->add(state_history.current(), action, active_seat, nullptr,
+                      action_values, action_values);
       }
 
       Rules::apply(state_history, action);
