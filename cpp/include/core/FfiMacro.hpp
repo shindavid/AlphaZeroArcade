@@ -4,6 +4,8 @@
 
 #define FFI_MACRO(Game)                                                                    \
   using GameLog = core::GameLog<Game>;                                                     \
+  using State = Game::State;                                                               \
+  using GameTensor = Game::InputTensorizor::Tensor;                                        \
                                                                                            \
   extern "C" {                                                                             \
                                                                                            \
@@ -25,6 +27,11 @@
               target_masks);                                                               \
   }                                                                                        \
                                                                                            \
+  float* Game_tensorize(State* state) {                                                    \
+    GameTensor* tensor = new GameTensor();                                                 \
+    *tensor = Game::InputTensorizor::tensorize(state, state);                              \
+    return tensor->data();                                                                 \
+  }                                                                                        \
   void init() { Game::static_init(); }                                                     \
                                                                                            \
   }  // extern "C"

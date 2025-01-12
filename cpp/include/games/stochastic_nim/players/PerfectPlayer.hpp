@@ -12,7 +12,8 @@ namespace stochastic_nim {
 class PerfectStrategy {
  public:
   PerfectStrategy();
-  float get_state_value(int stones_left) const { return Qb[stones_left]; }
+  float get_state_value_before(int stones_left) const { return Qa[stones_left]; }
+  float get_state_value_after(int stones_left) const { return Qb[stones_left]; }
   int get_optimal_action(int stones_left) const;
 
  private:

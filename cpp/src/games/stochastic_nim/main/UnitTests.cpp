@@ -89,12 +89,12 @@ TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
 
 TEST_F(PerfectStrategyTest, verify_state_values) {
   PerfectStrategy strategy = get_strategy();
-  EXPECT_NEAR(strategy.get_state_value(5), 0.16, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(4), 0.04, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(3), 0.0, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(2), 0.5, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(1), 0.8, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(0), 1.0, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(5), 0.16, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(4), 0.04, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(3), 0.0, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(2), 0.5, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(1), 0.8, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(0), 1.0, 1e-6);
   EXPECT_EQ(strategy.get_optimal_action(6), stochastic_nim::kTake1);
   EXPECT_EQ(strategy.get_optimal_action(5), stochastic_nim::kTake3);
   EXPECT_EQ(strategy.get_optimal_action(4), stochastic_nim::kTake3);
@@ -277,12 +277,13 @@ TEST(StochasticNimGameTest, tensorize) {
 void print_perfert_strategy_info() {
   stochastic_nim::PerfectStrategy strategy;
   for (int i = stochastic_nim::kStartingStones; i > 0; --i) {
-    std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1 << std::endl;
+    std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1
+              << " V: " << strategy.get_state_value_before(i) << std::endl;
 
     for (int j = 0; j < stochastic_nim::kMaxStonesToTake; ++j) {
       std::cout << "  Take " << j + 1;
       if (i - j - 1 >= 0) {
-        std::cout << " Value: " << strategy.get_state_value(i - j - 1) << std::endl;
+        std::cout << " Value: " << strategy.get_state_value_after(i - j - 1) << std::endl;
       } else {
         std::cout << " Value: N/A" << std::endl;
       }

@@ -212,15 +212,21 @@ inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_val
 
   core::action_mode_t mode = root->action_mode();
   group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   util::release_assert(Game::Rules::is_chance_mode(mode));
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
     auto* edge = root->get_edge(i);
-    Game::Symmetries::apply(action, inv_sym, mode);
-    action_values(action) = edge->child_V_estimate;
+    core::action_t transformed_action = action;
+    Game::Symmetries::apply(transformed_action, sym, mode);
+    node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
+    if (child_node_index < 0) {
+      action_values(action) = edge->child_V_estimate;
+    } else {
+      Node* child = shared_data_.lookup_table.get_node(child_node_index);
+      action_values(action) = child->stable_data().VT(stable_data.active_seat);
+    }
     i++;
   }
 
