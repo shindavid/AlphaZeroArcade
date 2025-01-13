@@ -12,7 +12,8 @@ namespace stochastic_nim {
 class PerfectStrategy {
  public:
   PerfectStrategy();
-  float get_state_value(int stones_left) const { return Qb[stones_left]; }
+  float get_state_value_before(int stones_left) const { return Qa[stones_left]; }
+  float get_state_value_after(int stones_left) const { return Qb[stones_left]; }
   int get_optimal_action(int stones_left) const;
 
  private:
@@ -35,14 +36,25 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
  public:
   using base_t = core::AbstractPlayer<stochastic_nim::Game>;
 
-  PerfectPlayer(const PerfectStrategy* strategy) : strategy_(strategy) {}
-  ActionResponse get_action_response(const State&, const ActionMask&) override;
+  struct Params {
+    /*
+     * The strength parameter controls how well the player plays. It is either 0 (random) or
+     * 1 (perfect).
+     */
+    int strength = 1;
+    bool verbose = false;
+    auto make_options_description();
+  };
+
+  PerfectPlayer(const Params& params, const PerfectStrategy* strategy)
+      : params_(params), strategy_(strategy) {}
+  ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
+  const Params params_;
   const PerfectStrategy* strategy_;
 };
 
 } // namespace stochastic_nim
 
-#include <inline/games/stochastic_nim/PerfectPlayer.inl>
-
+#include <inline/games/stochastic_nim/players/PerfectPlayer.inl>

@@ -75,10 +75,7 @@ class TicTacToeSpec(GameSpec):
     # leads to CPU-starving, so we drop it.
     training_options = {
         '-p': 16,
-    }
-
-    training_player_options = {
-        '-r': 2,
+        '--mean-noisy-moves': 2,
     }
 
     rating_options = {

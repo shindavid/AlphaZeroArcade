@@ -217,7 +217,8 @@ void GameServerProxy<Game>::PlayerThread::run() {
     if (!active_) break;
 
     ready_to_get_action_ = false;
-    send_action_packet(player_->get_action_response(history_.current(), valid_actions_));
+    ActionRequest request(history_.current(), valid_actions_);
+    send_action_packet(player_->get_action_response(request));
   }
 }
 

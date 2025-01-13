@@ -21,7 +21,7 @@ struct ActionSelector {
   ActionSelector(const ManagerParams& manager_params, const SearchParams& search_params,
             const Node* node, bool is_root);
 
-  core::seat_index_t cp;
+  core::seat_index_t seat;
   LocalPolicyArray P;
   LocalPolicyArray Q;    // (virtualized) value
   LocalPolicyArray PW;   // provably-winning

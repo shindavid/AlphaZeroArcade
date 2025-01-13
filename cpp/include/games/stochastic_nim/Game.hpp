@@ -75,14 +75,13 @@ struct Game {
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);
     }
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr) {
-      throw std::runtime_error("Not implemented");
+      ss << compact_state_repr(state) << std::endl;
     }
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
-                                   const Types::SearchResults&) {
-      throw std::runtime_error("Not implemented");
-    }
+    static void print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
+                                   const Types::SearchResults& results);
+
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
       ss << "p" << state.current_player;
@@ -95,8 +94,9 @@ struct Game {
   };
 
   struct InputTensorizor {
-    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<stochastic_nim::kStartingStonesBitWidth + 2>>;
+    // tensor is of the format {binary encoding of stones_left, current_mode}
+    constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
     using MCTSKey = State;
     using EvalKey = State;
 
@@ -130,4 +130,3 @@ struct hash<stochastic_nim::Game::State> {
 static_assert(core::concepts::Game<stochastic_nim::Game>);
 
 #include <inline/games/stochastic_nim/Game.inl>
-

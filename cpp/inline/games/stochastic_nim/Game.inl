@@ -53,14 +53,8 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
   if (state.stones_left == 0) {
-    core::seat_index_t last_player_;
-    if (last_player == -1) {
-      last_player_ = 1 - get_current_player(state);
-    } else {
-      last_player_ = last_player;
-    }
     outcome.setZero();
-    outcome(last_player_) = 1;
+    outcome(last_player) = 1;
     return true;
   }
   return false;
@@ -94,11 +88,52 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   Iter state = cur;
 
   for (int i = 0; i < stochastic_nim::kStartingStonesBitWidth; ++i) {
-    tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
+    tensor(0, i, 0) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(stochastic_nim::kStartingStonesBitWidth) = state->current_player;
-  tensor(stochastic_nim::kStartingStonesBitWidth + 1) = state->current_mode;
+  tensor(0, stochastic_nim::kStartingStonesBitWidth, 0) = state->current_mode;
   return tensor;
 }
-}  // namespace stochastic_nim
 
+inline void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
+                               const Types::SearchResults& results) {
+  const auto& valid_actions = results.valid_actions;
+  const auto& mcts_counts = results.counts;
+  const auto& net_policy = results.policy_prior;
+  const auto& win_rates = results.win_rates;
+  const auto& net_value = results.value_prior;
+
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)", 100 * net_value(0),
+                 100 * net_value(1));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)", 100 * net_value(1),
+                 100 * net_value(0));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",
+                 100 * win_rates(0), 100 * win_rates(1));
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %10s %8s %8s\n", "Col", "Prior", "Posterior",
+                 "Count", "Action");
+
+  int count = 0;
+  for (int i = 0; i < stochastic_nim::kMaxStonesToTake; ++i) {
+    count += mcts_counts(i);
+  }
+
+  for (int i = 0; i < stochastic_nim::kMaxStonesToTake; ++i) {
+    if (valid_actions[i]) {
+      cx +=
+          snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %10.3f %8.3f %8.3f\n", i + 1,
+                   net_policy(i), (float)mcts_counts(i) / count, mcts_counts(i), action_policy(i));
+    } else {
+      cx += snprintf(buffer + cx, buf_size - cx, "%3d\n", i + 1);
+    }
+  }
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
+}
+
+}  // namespace stochastic_nim

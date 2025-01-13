@@ -128,6 +128,7 @@ class SearchThread {
 
   group::element_t canonical_sym_;
   StateHistory raw_history_;
+  core::seat_index_t active_seat_;
 
   /*
    * These variables would more naturally be declared as local variables in the contexts in which

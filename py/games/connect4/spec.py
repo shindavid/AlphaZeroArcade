@@ -138,8 +138,8 @@ class Connect4Spec(GameSpec):
         minibatch_size=100,
     )
 
-    training_player_options = {
-        '-r': 2,
+    training_options = {
+        '--mean-noisy-moves': 2,
     }
 
     rating_player_options = {

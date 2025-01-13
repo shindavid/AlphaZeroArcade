@@ -5,6 +5,7 @@ from games.blokus.spec import Blokus
 from games.connect4.spec import Connect4
 from games.othello.spec import Othello
 from games.tictactoe.spec import TicTacToe
+from games.stochastic_nim.spec import StochasticNim
 
 
 ALL_GAME_SPECS = [
@@ -12,6 +13,7 @@ ALL_GAME_SPECS = [
     Connect4,
     Othello,
     TicTacToe,
+    StochasticNim,
 ]
 
 GAME_SPECS_BY_NAME = {game.name: game for game in ALL_GAME_SPECS}

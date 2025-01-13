@@ -25,6 +25,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
   using Player = AbstractPlayer<Game>;
@@ -61,7 +62,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
   void start_game() override;
   void receive_state_change(seat_index_t, const State&, action_t) override;
-  ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const ValueTensor&) override;
 
  private:

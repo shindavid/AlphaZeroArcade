@@ -44,10 +44,30 @@ struct GameTypes {
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
+  /*
+   * Whenever use_for_training is true, policy_target and action_values_target should be non-null.
+   *
+   * The reverse, however, is not true: we can have use_for_training false, but have a non-null
+   * policy_target. The reason for this is subtle: it's because we have an opponent-reply-policy
+   * target. If we sample position 10 of the game, then we want to export the policy target for
+   * position 11 (the opponent's reply), even if we don't sample position 11.
+   */
   struct TrainingInfo {
     PolicyTensor* policy_target = nullptr;
     ActionValueTensor* action_values_target = nullptr;
     bool use_for_training = false;
+  };
+
+  struct ActionRequest {
+    ActionRequest(const State& s, const ActionMask& va, bool pn = false)
+        : state(s), valid_actions(va), play_noisily(pn) {}
+
+    const State& state;
+    const ActionMask& valid_actions;
+
+    // If set to true, the player is being asked to play noisily, in order to add opening diversity.
+    // Each player is free to interpret this in their own way.
+    bool play_noisily;
   };
 
   /*
@@ -104,6 +124,7 @@ struct GameTypes {
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
     const ActionValueTensor* action_values;
+    const seat_index_t active_seat;
   };
 };
 

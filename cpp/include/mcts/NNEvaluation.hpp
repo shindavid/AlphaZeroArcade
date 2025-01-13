@@ -29,14 +29,14 @@ class NNEvaluation {
    *
    * 1. Transform from logit space to probability space via softmax()
    * 2. Undo applied symmetry (sym) where appropriate
-   * 3. Rotate value to align with the current player (cp)
+   * 3. Rotate value to align with the active seat
    *
    * These tensors are then stored as data members.
    */
   NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
                const ActionValueTensor& raw_action_values,
-               const ActionMask& valid_actions, group::element_t sym, core::seat_index_t cp,
-               core::action_mode_t mode);
+               const ActionMask& valid_actions, group::element_t sym,
+               core::seat_index_t active_seat, core::action_mode_t mode);
 
   // This constructor is used by create_uniform(). We would declare this as private if we could,
   // but can't because std::make_shared<> needs to call it.

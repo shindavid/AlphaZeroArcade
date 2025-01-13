@@ -31,6 +31,7 @@ class MctsPlayerTest : public ::testing::Test {
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
   using State = Game::State;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionMask = Game::Types::ActionMask;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using Rules = Game::Rules;
@@ -79,7 +80,8 @@ class MctsPlayerTest : public ::testing::Test {
         mcts_player_->get_manager()->shared_data()->root_info.history_array[group::kIdentity];
     ActionMask valid_actions = Rules::get_legal_moves(state_history);
 
-    core::SearchMode search_mode = mcts_player_->choose_search_mode();
+    ActionRequest request(state_history.current(), valid_actions);
+    core::SearchMode search_mode = mcts_player_->choose_search_mode(request);
     const SearchResults* search_result = mcts_player_->mcts_search(search_mode);
 
     PolicyTensor modified_policy =

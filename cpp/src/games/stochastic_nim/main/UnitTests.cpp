@@ -1,5 +1,5 @@
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/PerfectPlayer.hpp>
+#include <games/stochastic_nim/players/PerfectPlayer.hpp>
 
 #include <gtest/gtest.h>
 
@@ -9,9 +9,10 @@ using Game = stochastic_nim::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
+using ActionRequest = Game::Types::ActionRequest;
+using ChanceDistribution = Game::Types::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
-using Types = Game::Types;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 
@@ -23,11 +24,12 @@ class PerfectPlayerTest : public testing::Test {
   using ActionMask = PerfectPlayer::ActionMask;
 
  public:
-  PerfectPlayerTest() : player_(&strategy_) {}
+  PerfectPlayerTest() : player_(PerfectPlayer::Params(1, false), &strategy_) {}
 
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
-    return player_.get_action_response(state, valid_actions).action;
+    ActionRequest request(state, valid_actions);
+    return player_.get_action_response(request).action;
   }
 
  private:
@@ -85,14 +87,14 @@ TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
   EXPECT_THROW(get_action_response(state), util::Exception);
 }
 
-TEST_F(PerfectStrategyTest, 4_stones) {
+TEST_F(PerfectStrategyTest, verify_state_values) {
   PerfectStrategy strategy = get_strategy();
-  EXPECT_NEAR(strategy.get_state_value(5), 0.16, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(4), 0.04, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(3), 0.0, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(2), 0.5, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(1), 0.8, 1e-6);
-  EXPECT_NEAR(strategy.get_state_value(0), 1.0, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(5), 0.16, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(4), 0.04, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(3), 0.0, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(2), 0.5, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(1), 0.8, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value_after(0), 1.0, 1e-6);
   EXPECT_EQ(strategy.get_optimal_action(6), stochastic_nim::kTake1);
   EXPECT_EQ(strategy.get_optimal_action(5), stochastic_nim::kTake3);
   EXPECT_EQ(strategy.get_optimal_action(4), stochastic_nim::kTake3);
@@ -175,7 +177,7 @@ TEST(StochasticNimGameTest, ChanceMove) {
 
     Rules::apply(history, stochastic_nim::kTake3);
 
-    Types::PolicyTensor dist = Rules::get_chance_distribution(history.current());
+    PolicyTensor dist = Rules::get_chance_distribution(history.current());
     core::action_t chance_action = eigen_util::sample(dist);
     Rules::apply(history, chance_action);
 
@@ -249,7 +251,7 @@ TEST(StochasticNimGameTest, MoveProbMass) {
   state.current_player = 0;
   state.current_mode = stochastic_nim::kChanceMode;
   history.update(state);
-  Game::Types::ChanceDistribution dist = Rules::get_chance_distribution(state);
+  ChanceDistribution dist = Rules::get_chance_distribution(state);
 
   EXPECT_NEAR(dist(0), 0.2, 1e-6);
   EXPECT_NEAR(dist(1), 0.8, 1e-6);
@@ -272,8 +274,25 @@ TEST(StochasticNimGameTest, tensorize) {
   }
 }
 
+void print_perfert_strategy_info() {
+  stochastic_nim::PerfectStrategy strategy;
+  for (int i = stochastic_nim::kStartingStones; i > 0; --i) {
+    std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1
+              << " V: " << strategy.get_state_value_before(i) << std::endl;
+
+    for (int j = 0; j < stochastic_nim::kMaxStonesToTake; ++j) {
+      std::cout << "  Take " << j + 1;
+      if (i - j - 1 >= 0) {
+        std::cout << " Value: " << strategy.get_state_value_after(i - j - 1) << std::endl;
+      } else {
+        std::cout << " Value: N/A" << std::endl;
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv) {
+  print_perfert_strategy_info();
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-

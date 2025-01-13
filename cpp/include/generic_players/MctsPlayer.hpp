@@ -35,7 +35,6 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int num_fast_iters;
     int num_full_iters;
     float full_pct;
-    float mean_raw_moves = 0.0;
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
     float move_temperature_half_life = 0.5 * Game::MctsConfiguration::kOpeningLength;
@@ -52,6 +51,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using State = Game::State;
   using IO = Game::IO;
   using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -74,7 +74,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   MctsManager* get_manager() const { return &shared_data_->manager; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
@@ -82,7 +82,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
  protected:
   auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
   const SearchResults* mcts_search(core::SearchMode search_mode) const;
-  core::SearchMode choose_search_mode() const;
+  core::SearchMode choose_search_mode(const ActionRequest& request) const;
   ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                             const ActionMask& valid_actions) const;
 
@@ -104,7 +104,6 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   VerboseInfo* verbose_info_ = nullptr;
   const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
-  int move_count_ = 0;
 
   template<core::concepts::Game> friend class MctsPlayerTest;
 };
