@@ -27,11 +27,11 @@
               target_masks);                                                               \
   }                                                                                        \
                                                                                            \
-  float* Game_tensorize(State* state) {                                                    \
-    GameTensor* tensor = new GameTensor();                                                 \
-    *tensor = Game::InputTensorizor::tensorize(state, state);                              \
-    return tensor->data();                                                                 \
+  void Game_tensorize(State* state, float* input_values) {                                 \
+    auto input = Game::InputTensorizor::tensorize(state, state);                           \
+    std::memcpy(input_values, input.data(), input.size() * sizeof(float));                 \
   }                                                                                        \
+                                                                                           \
   void init() { Game::static_init(); }                                                     \
                                                                                            \
   }  // extern "C"

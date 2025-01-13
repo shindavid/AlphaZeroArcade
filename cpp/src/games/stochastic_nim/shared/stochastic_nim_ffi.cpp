@@ -9,9 +9,15 @@ State* Game_new_state(int stones_left, int mode) {
   return new State(stones_left, stochastic_nim::kPlayer0, mode);
 }
 
+void Game_delete_state(State* state) {
+  delete state;
+}
+
 using PerfectStrategy = stochastic_nim::PerfectStrategy;
 
 PerfectStrategy* PerfectStrategy_new() { return new PerfectStrategy(); }
+
+void PerfectStrategy_delete(PerfectStrategy* strategy) { delete strategy; }
 
 float get_state_value_before(PerfectStrategy* strategy, int stones_left) {
   return strategy->get_state_value_before(stones_left);
