@@ -20,4 +20,8 @@ float get_state_value_before(PerfectStrategy* strategy, int stones_left) {
 float get_state_value_after(PerfectStrategy* strategy, int stones_left) {
   return strategy->get_state_value_after(stones_left);
 }
+
+int get_optimal_action(PerfectStrategy* strategy, int stones_left) {
+  return strategy->get_optimal_action(stones_left);
+}
 } // extern "C"
