@@ -239,25 +239,21 @@ void GameLog<Game>::replay() const {
     Game::IO::print_state(std::cout, pos, last_action);
     std::cout << "active seat: " << (int)active_seat << std::endl;
 
-    ActionValueTensor action_values_target;
-    bool action_values_valid = get_action_values(mem_offset, action_values_target);
+    if (i < n - 1) {
+      ActionValueTensor action_values_target;
+      bool action_values_valid = get_action_values(i, action_values_target);
 
-    if (action_values_valid) {
-      std::cout << "AVs: ";
-      for (int j = 0; j < action_values_target.size(); ++j) {
-        std::cout << action_values_target(j) << " ";
-      }
-      std::cout << std::endl;
-    }
-
-    PolicyTensor policy;
-    bool policy_valid = get_policy(mem_offset, policy);
-    if (policy_valid) {
-      for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
-        if (policy(a) > 0) {
-          char p = a == action ? '*' : ' ';
-          std::string s = Game::IO::action_to_str(a, mode);
-          printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
+      action_t action = get_prev_action(i + 1);
+      PolicyTensor policy;
+      bool policy_valid = get_policy(i, policy);
+      if (policy_valid || action_values_valid) {
+        printf("  %3s  %8s %8s\n", "a", "policy", "AV");
+        for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
+          if (policy(a) > 0) {
+            char p = a == action ? '*' : ' ';
+            std::string s = Game::IO::action_to_str(a, mode);
+            printf("%c %3s: %.6f %.6f\n", p, s.c_str(), policy(a), action_values_target(a));
+          }
         }
       }
     }
