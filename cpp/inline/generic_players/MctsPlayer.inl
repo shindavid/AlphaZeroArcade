@@ -353,15 +353,27 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
 
   ValueArray net_value_array;
   ValueArray player_array;
-  for (int i = 0; i < Constants::kNumPlayers; i++) {
-    player_array(i) = i;
-    net_value_array(i) = net_value(i);
+  if (net_value.size() == Constants::kNumPlayers) {
+    for (int i = 0; i < Constants::kNumPlayers; i++) {
+      player_array(i) = i;
+      net_value_array(i) = net_value(i);
+    }
+    auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(player_array, net_value_array, win_rates));
+    std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
+    eigen_util::print_array(std::cout, data, columns, nullptr);
+  } else {
+    ValueArray net_draw_array;
+    for (int i = 0; i < Constants::kNumPlayers; i++) {
+      player_array(i) = i;
+      net_value_array(i) = net_value(i);
+      net_draw_array(i) = net_value(Constants::kNumPlayers);
+    }
+    std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
+    auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array, win_rates));
+    eigen_util::print_array(std::cout, data, columns, nullptr);
   }
-
-  std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
-  auto data = eigen_util::sort_rows(
-      eigen_util::concatenate_columns(player_array, net_value_array, win_rates));
-  eigen_util::print_array(std::cout, data, columns, nullptr);
 
   if (!Rules::is_chance_mode(results.action_mode)) {
     int num_valid = valid_actions.count();
@@ -406,7 +418,6 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
         std::cout << std::endl;
       }
     }
-
     std::cout << "******************************" << std::endl;
   }
 }
