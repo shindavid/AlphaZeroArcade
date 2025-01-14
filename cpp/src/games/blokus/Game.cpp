@@ -189,68 +189,6 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
   os << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& action_policy,
-                                  const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
-  const auto& mcts_counts = results.counts;
-  const auto& net_policy = results.policy_prior;
-  const auto& win_rates = results.win_rates;
-  const auto& net_value = results.value_prior;
-
-  constexpr int buf_size = 4096;
-  char buffer[buf_size];
-  int cx = 0;
-
-  static std::string color_strs[kNumColors] = {
-      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
-
-  for (color_t c = 0; c < kNumColors; ++c) {
-    cx += snprintf(buffer + cx, buf_size - cx, "%s: %6.3f%% -> %6.3f%%\n", color_strs[c].c_str(),
-                   100 * net_value(c), 100 * win_rates(c));
-  }
-  cx += snprintf(buffer + cx, buf_size - cx, "\n");
-
-  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
-  using tuple_t = decltype(tuple0);
-  using tuple_array_t = std::array<tuple_t, Types::kMaxNumActions>;
-  tuple_array_t tuples;
-  int i = 0;
-  for (int a = 0; a < Types::kMaxNumActions; ++a) {
-    if (valid_actions[a]) {
-      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
-      i++;
-    }
-  }
-  int num_actions = i;
-
-  std::sort(tuples.begin(), tuples.begin() + num_actions);
-  std::reverse(tuples.begin(), tuples.begin() + num_actions);
-
-  int num_rows = 10;
-  cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  for (i = 0; i < std::min(num_rows, num_actions); ++i) {
-    const auto& tuple = tuples[i];
-
-    float count = std::get<0>(tuple);
-    auto action_p = std::get<1>(tuple);
-    auto net_p = std::get<2>(tuple);
-    int action = std::get<3>(tuple);
-
-    std::string action_str = action_to_str(action, results.action_mode);
-    cx += snprintf(buffer + cx, buf_size - cx, "%4s %8.3f %8.3f %8.3f\n", action_str.c_str(), net_p,
-                   count, action_p);
-  }
-  for (i = num_actions; i < num_rows; ++i) {
-    cx += snprintf(buffer + cx, buf_size - cx, "\n");
-  }
-
-  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
-  os << buffer << std::endl;
-}
-
 Game::State Game::IO::load(const std::string& str, int pass_count) {
   State state;
   Rules::init_state(state);
