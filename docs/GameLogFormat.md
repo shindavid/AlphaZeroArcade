@@ -10,22 +10,22 @@ Currently each file contains one game log. The log is recorded in a binary forma
 
 ```
 1. Header
-2. Game outcome
-3. Sampled indices
-4. Actions
-5. Policy target indices
-6. Base states
-7. Dense policy target
-8. Sparse policy target entries
+2. Final game state
+3. Game outcome
+4. Sampled indices
+5. Memory offsets
+6. Records
 ```
 
-The first two sections are of fixed-size.
+Sections 1-3 are of fixed-size.
 
-The remaining sections each contain a variable number of a section-specific fixed-size struct. The header contains the variable numbers,
-allowing one to read the `k`-th element of any of those sections by just reading the header, computing an offset, and then
-scanning to that offset.
+Sections 4 and 5 contain a variable number of fixed-size elements. The header specifies how many of each.
 
-Each section is padded with zeros so that it fits in a multiple of 16 bytes.
+Finally, section 6 contains a variable number of variable-sized elements, one per nonterminal state of the game.
+Because they are variable-sized, we require memory-offset information to have O(1) random-access to the $k$'th
+element. This offset information lives in section 5.
+
+Each section, except for the last, is padded with zeros so that it fits in a multiple of 16 bytes.
 
 Below are details about each section.
 
@@ -33,7 +33,11 @@ Below are details about each section.
 
 Struct definition: `core::GameLogBase::Header` in `cpp/include/core/GameLog.hpp`.
 
-The header includes counts which dictate the size of the other sections.
+The header includes counts which dictate the size of sections 4 and 5.
+
+## Final game state
+
+The final state of the game when the game ends.
 
 ## Game outcome
 
@@ -51,51 +55,19 @@ $p\cdot k$, where:
 * $p$ is the percentage of positions that are evaluated in "full-search" mode (see KataGo paper section 3.1)
 * $k$ is the length of the game
 
-## Actions
+## Memory offsets
 
-An array of the actions taken in the game. Each action is represented as a 32-bit int.
-The number of actions is generally one less than the number of states recorded (the terminal state
-does not have an associated action).
+Consists of an array of `int32_t` entries. The $k$'th entry specifies the memory-offset, in bytes, for the $k$'th
+record in the **Records** section, relative to the start of the **Records** section.
 
-## Policy target indices
+## Records
 
-Struct definition: `core::GameLogBase::policy_target_index_t` in `cpp/include/core/GameLog.hpp`.
+Consists of $n$ records. Each record consists of 3 components, concatenated together:
 
-For each recorded non-terminal position of the game, there is a corresponding `policy_target_index_t`. This is a compact
-struct detailing where to find the data needed to reconstruct the policy target. There are three possibilities:
+1. A `core::GameLog<Game>::Record` object
+2. The first $a$ bytes of a `core::GameLog<Game>::TensorData` object specifying the policy-target, if recorded.
+3. The first $b$ bytes of a `core::GameLog<Game>::TensorData` object specifying the action-values-target, if recorded.
 
-- Policy target not recorded (i.e., no sampled position needs this target for a training target)
-- Policy target recorded in _dense_ format (i.e., as a `float[N]` where `N` is the global number of possible actions in the game)
-- Policy target recorded in _sparse_ format (i.e., as an array of (float, offset) pairs for the nonzero entries of the policy target)
-
-The `policy_target_index_t` struct either provides an int offset into the dense policy target section, or an int pair (start, end)
-into the sparse policy target entry section.
-
-The decision of whether to record a policy target in dense or sparse format is made dynamically at time of write, based on
-the number of bytes that a sparse encoding would require.
-
-## Base states
-
-Each game has a game-specific `State` class. This is a POD struct representing a game state snapshot. See: [GameConcept.md](GameConcept.md) for details.
-
-This section contains an array of `State` objects, for all states encountered in the game, whether sampled or not, including the
-terminal state of the game.
-
-When constructing the neural network input for a given (state-index, sym-index) from a game log, the ffi library loads the log file into memory,
-reads the header to determine section memory offsets, and does a `reinterpret_cast<State>()` to the appropriate location in this section
-to recover a `State`. In games where previous state history is included in the neural network input, the prior states can be found
-in the preceding block of memory (thus avoiding the need to redundantly record recent-history).
-
-The ffi library API includes a bool `apply_symmetry` parameter. When set to the default value of `true`, this `reinterpret_cast`'ed `State`
-is transformed via a randomly selected symmetry.
-
-## Dense policy targets
-
-This section contains policy targets that are recorded in dense format. This is simply as an `Eigen::TensorFixedSize`, which is equivalent in byte-representation
-to a `float[kNumGlobalActions]`.
-
-## Sparse policy target entries
-
-Struct definition: `core::GameLogBase::sparse_policy_entry_t` in `cpp/include/core/GameLog.hpp`.
-
-This section contains (float, offset) pairs. A contiguous block of them encodes a given sparse policy target.
+For the `TensorData` objects, they can be recorded in a sparse-format, which has a variable-length. The object has
+sufficient size to represent the tensor in dense-format, but if the sparse-format is used, then only enough of the
+object is stored on disk to capture the full representation.
