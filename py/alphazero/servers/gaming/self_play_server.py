@@ -92,8 +92,7 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('self-play-server received json message: %s', msg)
+        logger.debug('self-play-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'start-gen0':

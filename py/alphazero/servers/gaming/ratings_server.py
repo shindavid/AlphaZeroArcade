@@ -106,8 +106,7 @@ class RatingsServer:
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('ratings-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
