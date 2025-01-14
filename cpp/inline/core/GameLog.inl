@@ -237,13 +237,13 @@ void GameLog<Game>::replay() const {
     action_t action = record.action;
 
     Game::IO::print_state(std::cout, pos, last_action);
-    std::cout << "active seat: " << (int)active_seat << std::endl;
+    std::cout << " seat: " << (int)active_seat << std::endl;
 
     if (i < n - 1) {
       ActionValueTensor action_values_target;
-      bool action_values_valid = get_action_values(i, action_values_target);
+      bool action_values_valid = get_action_values(mem_offset, action_values_target);
       PolicyTensor policy;
-      bool policy_valid = get_policy(i, policy);
+      bool policy_valid = get_policy(mem_offset, policy);
       if (policy_valid || action_values_valid) {
         printf("  %3s  %8s %8s\n", "a", "policy", "AV");
         for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {

@@ -111,10 +111,6 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr) {
       throw std::runtime_error("Not implemented");
     }
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
-                                   const Types::SearchResults&) {
-      throw std::runtime_error("Not implemented");
-    }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
       ss << "[" << state.stones_left << ", " << state.current_player << "]";
