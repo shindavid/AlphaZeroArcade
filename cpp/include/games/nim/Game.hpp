@@ -102,7 +102,7 @@ struct Game {
     }
   };
 
-  struct IO : public core::IOBase<Types, State> {
+  struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);

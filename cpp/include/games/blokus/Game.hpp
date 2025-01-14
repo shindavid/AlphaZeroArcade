@@ -70,7 +70,7 @@ class Game {
     static GameResults::Tensor compute_outcome(const State& state);
   };
 
-  struct IO : public core::IOBase<Types, State> {
+  struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,

@@ -70,7 +70,7 @@ struct Game {
     static Types::ChanceDistribution get_chance_distribution(const State& state);
   };
 
-  struct IO : public core::IOBase<Types, Rules> {
+  struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);

@@ -51,6 +51,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   using State = Game::State;
   using IO = Game::IO;
+  using Rules = Game::Rules;
+  using Constants = Game::Constants;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
@@ -86,6 +88,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   core::SearchMode choose_search_mode(const ActionRequest& request) const;
   ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                             const ActionMask& valid_actions) const;
+  void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                          const SearchResults& results) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;
