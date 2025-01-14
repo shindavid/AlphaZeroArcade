@@ -19,7 +19,6 @@ concept GameIO = requires(std::ostream& ss, const State& state,
   { GI::print_state(ss, state, core::action_t{}, player_name_array_ptr) };
   { GI::print_state(ss, state, core::action_t{}) };
   { GI::print_state(ss, state) };
-  { GI::print_mcts_results(ss, policy_tensor, search_results) };
   // compact_state_repr is used in testing and debugging
   // SearchLog requires Game to have implemented state_repr in IO
   // Some MCTS tests require this to be implemented

@@ -70,17 +70,17 @@ struct Game {
     static Types::ChanceDistribution get_chance_distribution(const State& state);
   };
 
-  struct IO : public core::IOBase<Types, State> {
+  struct IO : public core::IOBase<Types, State, Constants, Rules> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);
     }
     static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr) {
-      ss << compact_state_repr(state) << std::endl;
+      ss << compact_state_repr(state);
     }
-    static void print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
-                                   const Types::SearchResults& results);
+    // static void print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
+    //                                const Types::SearchResults& results);
 
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;

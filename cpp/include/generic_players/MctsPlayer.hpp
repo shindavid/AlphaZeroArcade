@@ -40,6 +40,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     float move_temperature_half_life = 0.5 * Game::MctsConfiguration::kOpeningLength;
     float LCB_z_score = 2.0;
     bool verbose = false;
+    int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
   using MctsManager = mcts::Manager<Game>;

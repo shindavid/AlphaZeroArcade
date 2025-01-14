@@ -74,7 +74,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
           po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
           "z-score for LCB. If zero, disable LCB")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "mcts player verbose mode");
+                                           "mcts player verbose mode")
+      .template add_option<"verbose-num-rows-to-display", 'r'>(
+          po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
+          "mcts player number of rows to display in verbose mode");
 }
 
 template <core::concepts::Game Game>
@@ -336,7 +339,7 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   std::cout << std::endl << "CPU pos eval:" << std::endl;
-  IO::print_mcts_results(std::cout, action_policy, mcts_results);
+  IO::print_mcts_results(std::cout, action_policy, mcts_results, params_.verbose_num_rows_to_display);
 }
 
 }  // namespace generic
