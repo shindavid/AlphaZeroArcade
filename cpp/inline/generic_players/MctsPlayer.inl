@@ -339,7 +339,8 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   std::cout << std::endl << "CPU pos eval:" << std::endl;
-  IO::print_mcts_results(std::cout, action_policy, mcts_results, params_.verbose_num_rows_to_display);
+  IO::print_mcts_results(std::cout, action_policy, mcts_results, Game::IO::action_to_str,
+                         params_.verbose_num_rows_to_display);
 }
 
 }  // namespace generic
