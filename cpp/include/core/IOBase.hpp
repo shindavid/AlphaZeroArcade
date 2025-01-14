@@ -1,6 +1,4 @@
 #pragma once
-#include <util/EigenUtil.hpp>
-#include <Eigen/Core>
 
 namespace core {
 
