@@ -39,8 +39,9 @@ GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
     return;
   }
 
-  int n = eigen_util::count(tensor);
-  if (n <= kSparseCapacity) {
+  int num_nonzero_entries = eigen_util::count(tensor);
+  if (num_nonzero_entries <= kSparseCapacity) {
+    int n = num_nonzero_entries;
     encoding = 2 * n;
     for (int i = 0; i < n; ++i) {
       sparse_tensor_entry_t s;
@@ -49,6 +50,8 @@ GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
       data.sparse_repr.x[i] = s;
     }
   } else {
+    int n = tensor.size();
+    util::release_assert(n <= kDenseCapacity);
     encoding = -n;
     std::copy(tensor.data(), tensor.data() + n, data.dense_repr.x);
   }
