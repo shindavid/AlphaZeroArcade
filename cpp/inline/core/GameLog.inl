@@ -39,21 +39,27 @@ GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
     return;
   }
 
+  constexpr int N = PolicyTensor::Dimensions::total_size;
   int num_nonzero_entries = eigen_util::count(tensor);
+
+  const auto* src = tensor.data();
   if (num_nonzero_entries <= kSparseCapacity) {
     int n = num_nonzero_entries;
     encoding = 2 * n;
-    for (int i = 0; i < n; ++i) {
-      sparse_tensor_entry_t s;
-      s.offset = i;
-      s.probability = tensor(i);
-      data.sparse_repr.x[i] = s;
+    auto* dst = data.sparse_repr.x;
+
+    int w = 0;
+    for (int r = 0; r < N; ++r) {
+      if (src[r]) {
+        dst[w].offset = r;
+        dst[w].probability = src[r];
+        ++w;
+      }
     }
   } else {
-    int n = tensor.size();
-    util::release_assert(n <= kDenseCapacity);
-    encoding = -n;
-    std::copy(tensor.data(), tensor.data() + n, data.dense_repr.x);
+    encoding = -N;
+    auto* dst = data.dense_repr.x;
+    std::copy(src, src + N, dst);
   }
 }
 
@@ -389,13 +395,11 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   util::release_assert(terminal_added_);
   int num_entries = entries_.size();
 
-  std::vector<Record> records;
   std::vector<pos_index_t> sampled_indices;
   std::vector<mem_offset_t> mem_offsets;
   std::ostringstream data_stream;
 
   sampled_indices.reserve(sample_count_);
-  records.reserve(num_entries);
   mem_offsets.reserve(num_entries);
 
   mem_offset_t mem_offset = 0;

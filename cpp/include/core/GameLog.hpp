@@ -85,8 +85,8 @@ class GameLog : public GameLogBase {
   };
 
   struct TensorData {
-    static constexpr int kDenseCapacity = Game::Types::kMaxNumActions;
-    static constexpr int kSparseCapacity = Game::Types::kMaxNumActions / 2;
+    static constexpr int kDenseCapacity = PolicyTensor::Dimensions::total_size;
+    static constexpr int kSparseCapacity = PolicyTensor::Dimensions::total_size / 2;
 
     TensorData(bool valid, const PolicyTensor&);
     int write_to(std::ostream&) const;
