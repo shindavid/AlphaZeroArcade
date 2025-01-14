@@ -303,7 +303,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   if (params.mean_noisy_moves) {
     num_noisy_starting_moves = util::Random::exponential(1.0 / params.mean_noisy_moves);
   }
-  int move_number = 0;
+  int move_number = 0;  // tracks player-actions, not chance-events
   bool noisy_mode = move_number < num_noisy_starting_moves;
 
   StateHistory state_history;
@@ -349,6 +349,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
     } else {
       noisy_mode = move_number < num_noisy_starting_moves;
+      move_number++;
 
       active_seat = Rules::get_current_player(state_history.current());
       Player* player = players[active_seat];
