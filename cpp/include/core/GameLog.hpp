@@ -25,26 +25,22 @@ struct GameLogBase {
 
   struct Header {
     uint32_t num_samples = 0;
-    uint32_t num_positions = 0;  // includes terminal positions
-    uint32_t num_dense_policies = 0;
-    uint32_t num_sparse_policy_entries = 0;
-    uint32_t num_dense_action_values = 0;
-    uint32_t num_sparse_action_values_entries = 0;
+    uint32_t num_positions = 0;  // excludes terminal position
     uint64_t extra = 0;  // leave extra space for future use (version numbering, etc.)
   };
-  static_assert(sizeof(Header) == 32);
+  static_assert(sizeof(Header) == 16);
 
   using pos_index_t = int32_t;
+  using mem_offset_t = int32_t;
 
-  struct tensor_index_t {
-    // If start < end, then the representation is sparse, and entries [start, end) of
-    // the sparse_tensor_entry_t region represent the sparse tensor.
-    // Else, if start == end >= 0, then start is the index into the dense tensor region.
-    // Else, if start == end < 0, then there is no policy target.
-    // Any other start/end pair is invalid.
-    int16_t start;
-    int16_t end;
-  };
+  // tensor_encoding_t
+  //
+  // Used in TensorData. A value of t indicates that the TensorData::data field contains 4*abs(t)
+  // bytes of data.
+  //
+  // A negative value indicates that a dense tensor is stored, and a positive value indicates that a
+  // sparse tensor is stored.
+  using tensor_encoding_t = int32_t;
 
   struct sparse_tensor_entry_t {
     int32_t offset;
@@ -58,17 +54,11 @@ struct GameLogBase {
  * GameLog file format is as follows:
  *
  * [Header]
+ * [State]                              // final state
  * [ValueTensor]                        // game result
  * [pos_index_t...]                     // indices of sampled positions
- * [action_t...]
- * [seat_index_t...]                    // seat index with which the position is associated
- * [tensor_index_t...]                  // indices into policy target tensor data
- * [tensor_index_t...]                  // indices into action-value tensor data
- * [Game::State...]                     // all positions, whether sampled or not
- * [Game::Types::PolicyTensor...]       // data for densely represented policy targets
- * [sparse_tensor_entry_t...]           // data for sparsely represented policy targets
- * [Game::Types::ActionValueTensor...]  // data for densely represented action value targets
- * [sparse_tensor_entry_t...]           // data for sparsely represented action value targets
+ * [mem_offset_t...]                    // memory-offsets into the DATA region
+ * [DATA]                               // differently-sized sections of data
  *
  * Each section is aligned to 8 bytes.
  */
@@ -87,6 +77,53 @@ class GameLog : public GameLogBase {
   using ValueTensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
+  struct Record {
+    State position;
+    seat_index_t active_seat;
+    action_mode_t action_mode;
+    action_t action;
+  };
+
+  struct TensorData {
+    static constexpr int kDenseCapacity = Game::Types::kMaxNumActions;
+    static constexpr int kSparseCapacity = Game::Types::kMaxNumActions / 2;
+
+    TensorData(bool valid, const PolicyTensor&);
+    int write_to(std::ostream&) const;
+    int size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+    bool load(PolicyTensor&) const;  // return true if valid tensor
+
+    struct dense_data_t {
+      float x[kDenseCapacity];
+    };
+
+    struct sparse_data_t {
+      sparse_tensor_entry_t x[kSparseCapacity];
+    };
+    static_assert(sizeof(sparse_data_t) == 8 * kSparseCapacity);
+
+    union data_t {
+      dense_data_t dense_repr;
+      sparse_data_t sparse_repr;
+    };
+
+    tensor_encoding_t encoding;
+    data_t data;
+  };
+  static_assert(sizeof(TensorData) ==
+                sizeof(tensor_encoding_t) + sizeof(typename TensorData::data_t));
+
+  struct FileLayout {
+    FileLayout(const Header&);
+
+    int header;
+    int final_state;
+    int outcome;
+    int sampled_indices_start;
+    int mem_offsets_start;
+    int records_start;
+  };
+
   GameLog(const char* filename);
   ~GameLog();
 
@@ -96,75 +133,49 @@ class GameLog : public GameLogBase {
             float** target_arrays, bool** target_masks) const;
 
   void replay() const;
-  int num_sampled_positions() const;
+  int num_sampled_positions() const { return header().num_samples; }
 
  private:
   char* get_buffer() const;
-  Header& header();
   const Header& header() const;
 
-  int num_positions() const;
-  int num_non_terminal_positions() const;
-  int num_dense_policies() const;
-  int num_sparse_policy_entries() const;
-  int num_dense_action_values() const;
-  int num_sparse_action_values_entries() const;
+  int num_positions() const { return header().num_positions; }
 
-  static constexpr int header_start_mem_offset();
-  static constexpr int outcome_start_mem_offset();
-  static constexpr int sampled_indices_start_mem_offset();
-  int action_start_mem_offset() const;
-  int seat_index_start_mem_offset() const;
-  int policy_target_index_start_mem_offset() const;
-  int action_values_target_index_start_mem_offset() const;
-  int state_start_mem_offset() const;
-  int dense_policy_start_mem_offset() const;
-  int sparse_policy_entry_start_mem_offset() const;
-  int dense_action_values_start_mem_offset() const;
-  int sparse_action_values_entry_start_mem_offset() const;
+  // Populates passed-in tensor and returns true iff a valid tensor is available.
+  bool get_policy(mem_offset_t mem_offset, PolicyTensor&) const;
 
-  const action_t* action_start_ptr() const;
-  const seat_index_t* seat_index_start_ptr() const;
-  const tensor_index_t* policy_target_index_start_ptr() const;
-  const tensor_index_t* action_values_target_index_start_ptr() const;
-  const State* state_start_ptr() const;
-  const PolicyTensor* dense_policy_start_ptr() const;
-  const sparse_tensor_entry_t* sparse_policy_entry_start_ptr() const;
-  const ActionValueTensor* dense_action_values_start_ptr() const;
-  const sparse_tensor_entry_t* sparse_action_values_entry_start_ptr() const;
-  const pos_index_t* sampled_indices_start_ptr() const;
+  // Populates passed-in tensor and returns true iff a valid tensor is available.
+  bool get_action_values(mem_offset_t mem_offset, ActionValueTensor&) const;
 
-  seat_index_t get_active_seat(int state_index) const;
-  bool get_policy(int state_index, PolicyTensor&) const;  // return true iff valid
-  bool get_action_values(int state_index, ActionValueTensor&) const;  // return true iff valid
-  const State* get_state(int state_index) const;
-  action_t get_prev_action(int state_index) const;
-  ValueTensor get_outcome() const;
+  const State& get_final_state() const;
+  const ValueTensor& get_outcome() const;
   pos_index_t get_pos_index(int sample_index) const;
+  const Record& get_record(mem_offset_t mem_offset) const;
+  mem_offset_t get_mem_offset(int state_index) const;
 
   const std::string filename_;
   char* const buffer_ = nullptr;
-  const int action_start_mem_offset_;
-  const int seat_index_start_mem_offset_;
-  const int policy_target_index_start_mem_offset_;
-  const int action_values_target_index_start_mem_offset_;
-  const int state_start_mem_offset_;
-  const int dense_policy_start_mem_offset_;
-  const int sparse_policy_entry_start_mem_offset_;
-  const int dense_action_values_start_mem_offset_;
-  const int sparse_action_values_entry_start_mem_offset_;
+  FileLayout layout_;
 };
 
 template <concepts::Game Game>
 class GameLogWriter {
  public:
+  using GameLog = core::GameLog<Game>;
+  using Header = GameLog::Header;
+  using Record = GameLog::Record;
+  using TensorData = GameLog::TensorData;
+
+  using mem_offset_t = GameLogBase::mem_offset_t;
+  using pos_index_t = GameLogBase::pos_index_t;
+  using tensor_encoding_t = GameLogBase::tensor_encoding_t;
+  using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
+
   using Rules = Game::Rules;
   using State = Game::State;
   using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using tensor_index_t = GameLogBase::tensor_index_t;
-  using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
 
   struct Entry {
     State position;
@@ -175,7 +186,6 @@ class GameLogWriter {
     bool use_for_training;
     bool policy_target_is_valid;
     bool action_values_are_valid;
-    bool terminal;
   };
   using entry_vector_t = std::vector<Entry*>;
 
@@ -193,15 +203,11 @@ class GameLogWriter {
   int64_t start_timestamp() const { return start_timestamp_; }
 
  private:
-  template<typename T>
-  static void write_section(std::ostream& os, const T* t, int count=1);
-
-  template <eigen_util::concepts::FTensor Tensor>
-  static tensor_index_t write_target(
-      const Tensor& target, std::vector<Tensor>& dense_tensors,
-      std::vector<sparse_tensor_entry_t>& sparse_tensor_entries);
+  template <typename T>
+  static int write_section(std::ostream& os, const T* t, int count=1, bool pad=true);
 
   entry_vector_t entries_;
+  State final_state_;
   ValueTensor outcome_;
   const game_id_t id_;
   const int64_t start_timestamp_;

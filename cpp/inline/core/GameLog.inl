@@ -33,18 +33,75 @@ inline constexpr int GameLogBase::align(int offset) {
 }
 
 template <concepts::Game Game>
+GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
+  if (!valid) {
+    encoding = 0;
+    return;
+  }
+
+  int n = eigen_util::count(tensor);
+  if (n <= kSparseCapacity) {
+    encoding = 2 * n;
+    for (int i = 0; i < n; ++i) {
+      sparse_tensor_entry_t s;
+      s.offset = i;
+      s.probability = tensor(i);
+      data.sparse_repr.x[i] = s;
+    }
+  } else {
+    encoding = -n;
+    std::copy(tensor.data(), tensor.data() + n, data.dense_repr.x);
+  }
+}
+
+template <concepts::Game Game>
+int GameLog<Game>::TensorData::write_to(std::ostream& os) const {
+  int s = size();
+  os.write(reinterpret_cast<const char*>(this), s);
+  return s;
+}
+
+template <concepts::Game Game>
+bool GameLog<Game>::TensorData::load(PolicyTensor& tensor) const {
+  if (encoding == 0) {
+    // no policy target
+    return false;
+  }
+
+  if (encoding < 0) {
+    // dense format
+    int n = -encoding;
+    const float* src = &data.dense_repr.x[0];
+    float* dst = tensor.data();
+    std::copy(src, src + n, dst);
+  } else {
+    // sparse format
+    int n = encoding / 2;
+    tensor.setZero();
+
+    for (int i = 0; i < n; ++i) {
+      sparse_tensor_entry_t s = data.sparse_repr.x[i];
+      tensor(s.offset) = s.probability;
+    }
+  }
+  return true;
+}
+
+template <concepts::Game Game>
+GameLog<Game>::FileLayout::FileLayout(const Header& h) {
+  header = 0;
+  final_state = align(0 + sizeof(Header));
+  outcome = align(final_state + sizeof(State));
+  sampled_indices_start = align(outcome + sizeof(ValueTensor));
+  mem_offsets_start = align(sampled_indices_start + sizeof(pos_index_t) * h.num_samples);
+  records_start = align(mem_offsets_start + sizeof(mem_offset_t) * h.num_positions);
+}
+
+template <concepts::Game Game>
 GameLog<Game>::GameLog(const char* filename)
     : filename_(filename),
       buffer_(get_buffer()),
-      action_start_mem_offset_(action_start_mem_offset()),
-      seat_index_start_mem_offset_(seat_index_start_mem_offset()),
-      policy_target_index_start_mem_offset_(policy_target_index_start_mem_offset()),
-      action_values_target_index_start_mem_offset_(action_values_target_index_start_mem_offset()),
-      state_start_mem_offset_(state_start_mem_offset()),
-      dense_policy_start_mem_offset_(dense_policy_start_mem_offset()),
-      sparse_policy_entry_start_mem_offset_(sparse_policy_entry_start_mem_offset()),
-      dense_action_values_start_mem_offset_(dense_action_values_start_mem_offset()),
-      sparse_action_values_entry_start_mem_offset_(sparse_action_values_entry_start_mem_offset()) {
+      layout_(header()) {
   util::release_assert(num_positions() > 0, "Empty game log file: %s", filename_.c_str());
 }
 
@@ -78,46 +135,57 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
                        filename_.c_str());
 
   pos_index_t state_index = get_pos_index(index);
-  bool has_next = state_index + 1 < num_non_terminal_positions();
+  mem_offset_t mem_offset = get_mem_offset(state_index);
+  const Record& record = get_record(mem_offset);
 
-  seat_index_t active_seat = get_active_seat(state_index);
+  int num_prev_states_to_cp = std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
+  int num_states = num_prev_states_to_cp + 1;
 
-  PolicyTensor policy, next_policy;
-  bool policy_valid = get_policy(state_index, policy);
-  bool next_policy_valid = has_next && get_policy(state_index + 1, next_policy);
-
-  ActionValueTensor action_values;
-  bool action_values_valid = get_action_values(state_index, action_values);
-
-  int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
-  int num_bytes_to_cp = num_states_to_cp * sizeof(State);
-
-  State states[num_states_to_cp];
-  std::memcpy(&states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
+  State states[num_states];
+  for (int i = 0; i < num_prev_states_to_cp; ++i) {
+    int prev_state_index = state_index - num_prev_states_to_cp + i;
+    states[i] = get_record(get_mem_offset(prev_state_index)).position;
+  }
+  states[num_states - 1] = record.position;
 
   State* start_pos = &states[0];
-  State* cur_pos = &states[num_states_to_cp - 1];
-  State final_state = *get_state(num_positions() - 1);
+  State* cur_pos = &states[num_states - 1];
+  State final_state = get_final_state();
 
   group::element_t sym = 0;
   if (apply_symmetry) {
     sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
   }
 
-  action_mode_t mode = Game::Rules::get_action_mode(*cur_pos);
-
-  for (int i = 0; i < num_states_to_cp; ++i) {
+  for (int i = 0; i < num_states; ++i) {
     Game::Symmetries::apply(states[i], sym);
   }
   Game::Symmetries::apply(final_state, sym);
-  Game::Symmetries::apply(policy, sym, mode);
-  if (has_next) {
-    action_mode_t next_mode = Game::Rules::get_action_mode(*get_state(state_index + 1));
-    Game::Symmetries::apply(next_policy, sym, next_mode);
-  }
-  Game::Symmetries::apply(action_values, sym, mode);
 
-  ValueTensor outcome = get_outcome();
+  seat_index_t active_seat = record.active_seat;
+  action_mode_t mode = record.action_mode;
+
+  PolicyTensor policy;
+  bool policy_valid = get_policy(mem_offset, policy);
+  if (policy_valid) Game::Symmetries::apply(policy, sym, mode);
+
+  ActionValueTensor action_values;
+  bool action_values_valid = get_action_values(mem_offset, action_values);
+  if (action_values_valid) Game::Symmetries::apply(action_values, sym, mode);
+
+  PolicyTensor next_policy;
+  bool next_policy_valid = false;
+  bool has_next = state_index + 1 < num_positions();
+
+  if (has_next) {
+    mem_offset_t next_mem_offset = get_mem_offset(state_index + 1);
+    next_policy_valid = get_policy(next_mem_offset, next_policy);
+    if (next_policy_valid) {
+      Game::Symmetries::apply(next_policy, sym, get_record(next_mem_offset).action_mode);
+    }
+  }
+
+  const ValueTensor& outcome = get_outcome();
 
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));
@@ -149,47 +217,48 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 template <concepts::Game Game>
 void GameLog<Game>::replay() const {
   int n = num_positions();
+  action_t last_action = -1;
   for (int i = 0; i < n; ++i) {
-    const State* pos = get_state(i);
-    action_mode_t mode = Game::Rules::get_action_mode(*pos);
-    seat_index_t active_seat = get_active_seat(i);
-    action_t last_action = get_prev_action(i);
-    Game::IO::print_state(std::cout, *pos, last_action);
+    mem_offset_t mem_offset = get_mem_offset(i);
+    const Record& record = get_record(mem_offset);
+
+    const State& pos = record.position;
+    seat_index_t active_seat = record.active_seat;
+    action_mode_t mode = record.action_mode;
+    action_t action = record.action;
+
+    Game::IO::print_state(std::cout, pos, last_action);
     std::cout << "active seat: " << (int)active_seat << std::endl;
 
-    if (i < n - 1) {
-      ActionValueTensor action_values_target;
-      bool action_values_valid = get_action_values(i, action_values_target);
-      if (action_values_valid) {
-        std::cout << "AVs: ";
-        for (int j = 0; j < action_values_target.size(); ++j) {
-          std::cout << action_values_target(j) << " ";
-        }
-        std::cout << std::endl;
-      }
+    ActionValueTensor action_values_target;
+    bool action_values_valid = get_action_values(mem_offset, action_values_target);
 
-      action_t action = get_prev_action(i + 1);
-      PolicyTensor policy;
-      bool policy_valid = get_policy(i, policy);
-      if (policy_valid) {
-        for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
-          if (policy(a) > 0) {
-            char p = a == action ? '*' : ' ';
-            std::string s = Game::IO::action_to_str(a, mode);
-            printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
-          }
+    if (action_values_valid) {
+      std::cout << "AVs: ";
+      for (int j = 0; j < action_values_target.size(); ++j) {
+        std::cout << action_values_target(j) << " ";
+      }
+      std::cout << std::endl;
+    }
+
+    PolicyTensor policy;
+    bool policy_valid = get_policy(mem_offset, policy);
+    if (policy_valid) {
+      for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
+        if (policy(a) > 0) {
+          char p = a == action ? '*' : ' ';
+          std::string s = Game::IO::action_to_str(a, mode);
+          printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
         }
       }
     }
     std::cout << std::endl;
+    last_action = action;
   }
+
+  Game::IO::print_state(std::cout, get_final_state(), last_action);
   std::cout << "OUTCOME: " << std::endl;
   std::cout << get_outcome() << std::endl;
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::num_sampled_positions() const {
-  return header().num_samples;
 }
 
 template <concepts::Game Game>
@@ -216,249 +285,55 @@ char* GameLog<Game>::get_buffer() const {
 }
 
 template <concepts::Game Game>
-GameLogBase::Header& GameLog<Game>::header() {
-  return *reinterpret_cast<GameLogBase::Header*>(buffer_ + header_start_mem_offset());
-}
-
-template <concepts::Game Game>
 const GameLogBase::Header& GameLog<Game>::header() const {
-  return *reinterpret_cast<const GameLogBase::Header*>(buffer_ + header_start_mem_offset());
+  return *reinterpret_cast<const GameLogBase::Header*>(buffer_);
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_positions() const {
-  return header().num_positions;
+bool GameLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
+  int full_offset = layout_.records_start + mem_offset + sizeof(Record);
+  const TensorData* policy_data = (const TensorData*) &buffer_[full_offset];
+
+  return policy_data->load(policy);
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_non_terminal_positions() const {
-  return header().num_positions - 1;
+bool GameLog<Game>::get_action_values(mem_offset_t mem_offset,
+                                      ActionValueTensor& action_values) const {
+  int full_offset = layout_.records_start + mem_offset + sizeof(Record);
+  const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
+  full_offset += policy_data->size();
+  const TensorData* action_values_data = (const TensorData*)&buffer_[full_offset];
+
+  return action_values_data->load(action_values);
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_dense_policies() const {
-  return header().num_dense_policies;
+const typename GameLog<Game>::State& GameLog<Game>::get_final_state() const {
+  return *reinterpret_cast<State*>(buffer_ + layout_.final_state);
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_sparse_policy_entries() const {
-  return header().num_sparse_policy_entries;
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::num_dense_action_values() const {
-  return header().num_dense_action_values;
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::num_sparse_action_values_entries() const {
-  return header().num_sparse_action_values_entries;
-}
-
-template <concepts::Game Game>
-constexpr int GameLog<Game>::header_start_mem_offset() {
-  return 0;
-}
-
-template <concepts::Game Game>
-constexpr int GameLog<Game>::outcome_start_mem_offset() {
-  return header_start_mem_offset() + align(sizeof(Header));
-}
-
-template <concepts::Game Game>
-constexpr int GameLog<Game>::sampled_indices_start_mem_offset() {
-  return outcome_start_mem_offset() + align(sizeof(ValueTensor));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::action_start_mem_offset() const {
-  return sampled_indices_start_mem_offset() + align(num_sampled_positions() * sizeof(pos_index_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::seat_index_start_mem_offset() const {
-  return action_start_mem_offset_ + align(num_non_terminal_positions() * sizeof(action_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::policy_target_index_start_mem_offset() const {
-  return seat_index_start_mem_offset_ + align(num_non_terminal_positions() * sizeof(seat_index_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::action_values_target_index_start_mem_offset() const {
-  return policy_target_index_start_mem_offset_ +
-         align(num_non_terminal_positions() * sizeof(tensor_index_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::state_start_mem_offset() const {
-  return action_values_target_index_start_mem_offset_ +
-         align(num_non_terminal_positions() * sizeof(tensor_index_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::dense_policy_start_mem_offset() const {
-  return state_start_mem_offset_ + align(num_positions() * sizeof(State));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::sparse_policy_entry_start_mem_offset() const {
-  return dense_policy_start_mem_offset_ + align(num_dense_policies() * sizeof(PolicyTensor));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::dense_action_values_start_mem_offset() const {
-  return sparse_policy_entry_start_mem_offset_ +
-         align(num_sparse_policy_entries() * sizeof(sparse_tensor_entry_t));
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::sparse_action_values_entry_start_mem_offset() const {
-  return dense_action_values_start_mem_offset_ +
-         align(num_dense_action_values() * sizeof(ActionValueTensor));
-}
-
-template <concepts::Game Game>
-const action_t* GameLog<Game>::action_start_ptr() const {
-  return reinterpret_cast<action_t*>(buffer_ + action_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const seat_index_t* GameLog<Game>::seat_index_start_ptr() const {
-  return reinterpret_cast<seat_index_t*>(buffer_ + seat_index_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const GameLogBase::tensor_index_t* GameLog<Game>::policy_target_index_start_ptr() const {
-  return reinterpret_cast<tensor_index_t*>(buffer_ + policy_target_index_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const GameLogBase::tensor_index_t* GameLog<Game>::action_values_target_index_start_ptr() const {
-  return reinterpret_cast<tensor_index_t*>(buffer_ + action_values_target_index_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const typename GameLog<Game>::State* GameLog<Game>::state_start_ptr() const {
-  return reinterpret_cast<State*>(buffer_ + state_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const typename GameLog<Game>::PolicyTensor* GameLog<Game>::dense_policy_start_ptr() const {
-  return reinterpret_cast<PolicyTensor*>(buffer_ + dense_policy_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const GameLogBase::sparse_tensor_entry_t* GameLog<Game>::sparse_policy_entry_start_ptr() const {
-  return reinterpret_cast<sparse_tensor_entry_t*>(buffer_ + sparse_policy_entry_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const typename GameLog<Game>::ActionValueTensor* GameLog<Game>::dense_action_values_start_ptr()
-    const {
-  return reinterpret_cast<ActionValueTensor*>(buffer_ + dense_action_values_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const GameLogBase::sparse_tensor_entry_t* GameLog<Game>::sparse_action_values_entry_start_ptr()
-    const {
-  return reinterpret_cast<sparse_tensor_entry_t*>(buffer_ +
-                                                  sparse_action_values_entry_start_mem_offset_);
-}
-
-template <concepts::Game Game>
-const GameLogBase::pos_index_t* GameLog<Game>::sampled_indices_start_ptr() const {
-  return reinterpret_cast<pos_index_t*>(buffer_ + sampled_indices_start_mem_offset());
-}
-
-template <concepts::Game Game>
-seat_index_t GameLog<Game>::get_active_seat(int state_index) const {
-  return seat_index_start_ptr()[state_index];
-}
-
-template <concepts::Game Game>
-bool GameLog<Game>::get_policy(int state_index, PolicyTensor& policy) const {
-  tensor_index_t index = policy_target_index_start_ptr()[state_index];
-
-  if (index.start < index.end) {
-    // sparse case
-    policy.setZero();
-    const sparse_tensor_entry_t* sparse_start = sparse_policy_entry_start_ptr();
-    for (int i = index.start; i < index.end; ++i) {
-      sparse_tensor_entry_t entry = sparse_start[i];
-      policy(entry.offset) = entry.probability;
-    }
-    return true;
-  } else if (index.start == index.end) {
-    if (index.start < 0) {
-      // no policy target
-      return false;
-    } else {
-      // dense case
-      policy = dense_policy_start_ptr()[index.start];
-      return true;
-    }
-  } else {
-    throw util::Exception("Invalid policy tensor index (%d, %d) at state index %d", index.start,
-                          index.end, state_index);
-  }
-}
-
-template <concepts::Game Game>
-bool GameLog<Game>::get_action_values(int state_index, ActionValueTensor& action_values) const {
-  util::release_assert(state_index >= 0 && state_index < num_non_terminal_positions(),
-                       "Invalid state index %d", state_index);
-
-  tensor_index_t index = action_values_target_index_start_ptr()[state_index];
-
-  if (index.start < index.end) {
-    // sparse case
-    action_values.setZero();
-    const sparse_tensor_entry_t* sparse_start = sparse_action_values_entry_start_ptr();
-    for (int i = index.start; i < index.end; ++i) {
-      sparse_tensor_entry_t entry = sparse_start[i];
-      action_values.data()[entry.offset] = entry.probability;
-    }
-    return true;
-  } else if (index.start == index.end) {
-    if (index.start < 0) {
-      // no action_values target
-      return false;
-    } else {
-      // dense case
-      action_values = dense_action_values_start_ptr()[index.start];
-      return true;
-    }
-  } else {
-    throw util::Exception("Invalid action values tensor index (%d, %d) at state index %d",
-                          index.start, index.end, state_index);
-  }
-}
-
-template <concepts::Game Game>
-const typename GameLog<Game>::State* GameLog<Game>::get_state(int state_index) const {
-  return state_start_ptr() + state_index;
-}
-
-template <concepts::Game Game>
-action_t GameLog<Game>::get_prev_action(int state_index) const {
-  return state_index==0 ? -1 : action_start_ptr()[state_index-1];
-}
-
-template <concepts::Game Game>
-typename GameLog<Game>::ValueTensor GameLog<Game>::get_outcome() const {
-  return reinterpret_cast<ValueTensor*>(buffer_ + outcome_start_mem_offset())[0];
+const typename GameLog<Game>::ValueTensor& GameLog<Game>::get_outcome() const {
+  return *reinterpret_cast<ValueTensor*>(buffer_ + layout_.outcome);
 }
 
 template <concepts::Game Game>
 GameLogBase::pos_index_t GameLog<Game>::get_pos_index(int index) const {
-  if (index < 0 || index >= num_sampled_positions()) {
-    throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index, filename_.c_str(),
-                          num_sampled_positions());
-  }
+  pos_index_t* ptr = (pos_index_t*) &buffer_[layout_.sampled_indices_start];
+  return ptr[index];
+}
 
-  return sampled_indices_start_ptr()[index];
+template <concepts::Game Game>
+const typename GameLog<Game>::Record& GameLog<Game>::get_record(mem_offset_t mem_offset) const {
+  const Record* ptr = (const Record*) &buffer_[layout_.records_start + mem_offset];
+  return *ptr;
+}
+
+template <concepts::Game Game>
+typename GameLog<Game>::mem_offset_t GameLog<Game>::get_mem_offset(int state_index) const {
+  mem_offset_t* mem_offsets_ptr = (mem_offset_t*) &buffer_[layout_.mem_offsets_start];
+  return mem_offsets_ptr[state_index];
 }
 
 template <concepts::Game Game>
@@ -494,112 +369,67 @@ void GameLogWriter<Game>::add(const State& state, action_t action, seat_index_t 
   entry->use_for_training = use_for_training;
   entry->policy_target_is_valid = policy_target != nullptr;
   entry->action_values_are_valid = action_values != nullptr;
-  entry->terminal = false;
   entries_.push_back(entry);
   sample_count_ += use_for_training;
 }
 
 template <concepts::Game Game>
 void GameLogWriter<Game>::add_terminal(const State& state, const ValueTensor& outcome) {
-  if (terminal_added_) return;
+  util::release_assert(!terminal_added_);
   terminal_added_ = true;
-  Entry* entry = new Entry();
-  entry->position = state;
-  entry->policy_target.setZero();
-  entry->action_values.setZero();
-  entry->action = -1;
-  entry->use_for_training = false;
-  entry->policy_target_is_valid = false;
-  entry->action_values_are_valid = false;
-  entry->terminal = true;
-  entries_.push_back(entry);
-
+  final_state_ = state;
   outcome_ = outcome;
 }
 
 template <concepts::Game Game>
 void GameLogWriter<Game>::serialize(std::ostream& stream) const {
-  using GameLog = core::GameLog<Game>;
-  using Header = GameLog::Header;
-  using pos_index_t = GameLog::pos_index_t;
-
-  util::release_assert(!entries_.empty(), "Illegal serialization of empty GameLogWriter");
+  util::release_assert(terminal_added_);
   int num_entries = entries_.size();
-  int num_non_terminal_entries = num_entries - 1;
 
+  std::vector<Record> records;
   std::vector<pos_index_t> sampled_indices;
-  std::vector<action_t> actions;
-  std::vector<seat_index_t> seat_indices;
-  std::vector<tensor_index_t> policy_target_indices;
-  std::vector<tensor_index_t> action_values_target_indices;
-  std::vector<State> states;
-  std::vector<PolicyTensor> dense_policy_tensors;
-  std::vector<sparse_tensor_entry_t> sparse_policy_entries;
-  std::vector<ActionValueTensor> dense_action_values_tensors;
-  std::vector<sparse_tensor_entry_t> sparse_action_values_entries;
+  std::vector<mem_offset_t> mem_offsets;
+  std::ostringstream data_stream;
 
   sampled_indices.reserve(sample_count_);
-  actions.reserve(num_non_terminal_entries);
-  seat_indices.reserve(num_non_terminal_entries);
-  policy_target_indices.reserve(num_non_terminal_entries);
-  action_values_target_indices.reserve(num_non_terminal_entries);
-  states.reserve(num_entries);
-  dense_policy_tensors.reserve(num_non_terminal_entries);
-  sparse_policy_entries.reserve(1 + num_non_terminal_entries * sizeof(PolicyTensor) /
-                                        (2 * sizeof(sparse_tensor_entry_t)));
-  dense_action_values_tensors.reserve(num_non_terminal_entries);
-  sparse_action_values_entries.reserve(1 + num_non_terminal_entries * sizeof(ActionValueTensor) /
-                                               (2 * sizeof(sparse_tensor_entry_t)));
+  records.reserve(num_entries);
+  mem_offsets.reserve(num_entries);
+
+  mem_offset_t mem_offset = 0;
 
   for (int move_num = 0; move_num < num_entries; ++move_num) {
     const Entry* entry = entries_[move_num];
-    states.push_back(entry->position);
 
-    if (entry->terminal) continue;
-
+    mem_offsets.push_back(mem_offset);
     if (entry->use_for_training) {
       sampled_indices.push_back(move_num);
     }
 
-    actions.push_back(entry->action);
-    seat_indices.push_back(entry->active_seat);
+    Record record;
+    record.position = entry->position;
+    record.active_seat = entry->active_seat;
+    record.action_mode = Game::Rules::get_action_mode(entry->position);
+    record.action = entry->action;
 
-    tensor_index_t policy_target_index = {-1, -1};
-    if (entry->policy_target_is_valid) {
-      policy_target_index =
-          write_target(entry->policy_target, dense_policy_tensors, sparse_policy_entries);
-    }
-    policy_target_indices.push_back(policy_target_index);
+    TensorData policy(entry->policy_target_is_valid, entry->policy_target);
+    TensorData action_values(entry->action_values_are_valid, entry->action_values);
 
-    tensor_index_t action_values_target_index = {-1, -1};
-    if (entry->action_values_are_valid) {
-      action_values_target_index = write_target(
-          entry->action_values, dense_action_values_tensors, sparse_action_values_entries);
-    }
-    action_values_target_indices.push_back(action_values_target_index);
+    mem_offset += write_section(data_stream, &record, 1, false);
+    mem_offset += policy.write_to(data_stream);
+    mem_offset += action_values.write_to(data_stream);
   }
 
   Header header;
   header.num_samples = sample_count_;
   header.num_positions = num_entries;
-  header.num_dense_policies = dense_policy_tensors.size();
-  header.num_sparse_policy_entries = sparse_policy_entries.size();
-  header.num_dense_action_values = dense_action_values_tensors.size();
-  header.num_sparse_action_values_entries = sparse_action_values_entries.size();
   header.extra = 0;
 
   write_section(stream, &header);
+  write_section(stream, &final_state_);
   write_section(stream, &outcome_);
   write_section(stream, sampled_indices.data(), sampled_indices.size());
-  write_section(stream, actions.data(), actions.size());
-  write_section(stream, seat_indices.data(), seat_indices.size());
-  write_section(stream, policy_target_indices.data(), policy_target_indices.size());
-  write_section(stream, action_values_target_indices.data(), action_values_target_indices.size());
-  write_section(stream, states.data(), states.size());
-  write_section(stream, dense_policy_tensors.data(), dense_policy_tensors.size());
-  write_section(stream, sparse_policy_entries.data(), sparse_policy_entries.size());
-  write_section(stream, dense_action_values_tensors.data(), dense_action_values_tensors.size());
-  write_section(stream, sparse_action_values_entries.data(), sparse_action_values_entries.size());
+  write_section(stream, mem_offsets.data(), mem_offsets.size());
+  stream << data_stream.str();
 }
 
 template <concepts::Game Game>
@@ -612,62 +442,21 @@ bool GameLogWriter<Game>::was_previous_entry_used_for_policy_training() const {
 
 template <concepts::Game Game>
 template <typename T>
-void GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count) {
+int GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count, bool pad) {
   constexpr int A = GameLogBase::kAlignment;
   int n_bytes = sizeof(T) * count;
   os.write(reinterpret_cast<const char*>(t), n_bytes);
 
+  if (!pad) return n_bytes;
+
   int remainder = n_bytes % A;
+  int padding = 0;
   if (remainder) {
-    int padding = A - remainder;
+    padding = A - remainder;
     uint8_t zeroes[A] = {0};
     os.write(reinterpret_cast<const char*>(zeroes), padding);
   }
-}
-
-template <concepts::Game Game>
-template <eigen_util::concepts::FTensor Tensor>
-GameLogBase::tensor_index_t GameLogWriter<Game>::write_target(
-    const Tensor& target, std::vector<Tensor>& dense_tensors,
-    std::vector<sparse_tensor_entry_t>& sparse_tensor_entries) {
-  int num_nonzero_entries = eigen_util::count(target);
-
-  if (num_nonzero_entries == 0) {
-    return {-1, -1};
-  }
-
-  int sparse_repr_size = sizeof(sparse_tensor_entry_t) * num_nonzero_entries;
-  int dense_repr_size = sizeof(Tensor);
-
-  if (sparse_repr_size * 2 > dense_repr_size) {
-    // use dense representation
-    int index = dense_tensors.size();
-    if (index > std::numeric_limits<int16_t>::max()) {
-      throw util::Exception("Too many dense tensor entries (%d)", index);
-    }
-    int16_t index16 = index;
-    dense_tensors.push_back(target);
-    return {index16, index16};
-  }
-
-  int start = sparse_tensor_entries.size();
-
-  constexpr int N = Tensor::Dimensions::total_size;
-  const auto* data = target.data();
-  for (int i = 0; i < N; ++i) {
-    if (data[i]) {
-      sparse_tensor_entries.emplace_back(i, data[i]);
-    }
-  }
-
-  int end = sparse_tensor_entries.size();
-
-  if (end > std::numeric_limits<int16_t>::max()) {
-    throw util::Exception("Too many sparse tensor entries (%d)", end);
-  }
-  int16_t start16 = start;
-  int16_t end16 = end;
-  return {start16, end16};
+  return n_bytes + padding;
 }
 
 }  // namespace core
