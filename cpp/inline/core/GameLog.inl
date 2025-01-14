@@ -242,8 +242,6 @@ void GameLog<Game>::replay() const {
     if (i < n - 1) {
       ActionValueTensor action_values_target;
       bool action_values_valid = get_action_values(i, action_values_target);
-
-      action_t action = get_prev_action(i + 1);
       PolicyTensor policy;
       bool policy_valid = get_policy(i, policy);
       if (policy_valid || action_values_valid) {

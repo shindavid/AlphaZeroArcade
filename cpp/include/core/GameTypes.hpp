@@ -15,11 +15,10 @@
 
 namespace core {
 
-template <concepts::GameConstants GameConstants_, typename State_, concepts::GameResults GameResults,
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
   using State = State_;
-  using GameConstants = GameConstants_;
   using kNumActionsPerMode = GameConstants::kNumActionsPerMode;
   static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
