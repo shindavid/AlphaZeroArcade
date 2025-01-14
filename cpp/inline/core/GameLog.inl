@@ -237,7 +237,7 @@ void GameLog<Game>::replay() const {
     action_t action = record.action;
 
     Game::IO::print_state(std::cout, pos, last_action);
-    std::cout << " seat: " << (int)active_seat << std::endl;
+    std::cout << "\nactive seat: " << (int)active_seat << std::endl;
 
     if (i < n - 1) {
       ActionValueTensor action_values_target;
