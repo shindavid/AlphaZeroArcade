@@ -380,9 +380,12 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
     }
 
     posterior_arr = mcts_counts_arr / total_count;
-    static std::vector<std::string> columns2 = {"action", "Prior", "Posterior", "Counts", "Modified"};
-    auto data2 = eigen_util::sort_rows(eigen_util::concatenate_columns(
-        actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr, action_policy_arr));
+    static std::vector<std::string> columns2 = {"action", "Prior", "Posterior", "Counts",
+                                                "Modified"};
+    auto data2 = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
+                                        action_policy_arr),
+        3, false);
 
     core::action_mode_t mode = results.action_mode;
     eigen_util::PrintArrayFormatMap fmt_map;

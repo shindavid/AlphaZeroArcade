@@ -154,16 +154,24 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
 }
 
 template<typename Derived>
-auto sort_columns(const Eigen::ArrayBase<Derived>& array) {
+auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix, bool ascending) {
+  util::release_assert(row_ix < array.rows());
+
   using Column = std::remove_const_t<decltype(array.col(0).eval())>;
   int n = array.cols();
   Column columns[n];
   for (int i = 0; i < n; ++i) {
     columns[i] = array.col(i);
   }
-  std::sort(columns, columns + n, [](const Column& a, const Column& b) {
-    return a(0) < b(0);
-  });
+  if (ascending) {
+    std::sort(columns, columns + n, [row_ix](const Column& a, const Column& b) {
+      return a(row_ix) < b(row_ix);
+    });
+  } else {
+    std::sort(columns, columns + n, [row_ix](const Column& a, const Column& b) {
+      return a(row_ix) > b(row_ix);
+    });
+  }
 
   auto out = array.eval();
   for (int i = 0; i < n; ++i) {
@@ -173,16 +181,24 @@ auto sort_columns(const Eigen::ArrayBase<Derived>& array) {
 }
 
 template <typename Derived>
-auto sort_rows(const Eigen::ArrayBase<Derived>& array) {
+auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascending) {
+  util::release_assert(col_ix < array.cols());
+
   using Row = std::remove_const_t<decltype(array.row(0).eval())>;
   int n = array.rows();
   Row rows[n];
   for (int i = 0; i < n; ++i) {
     rows[i] = array.row(i);
   }
-  std::sort(rows, rows + n, [](const Row& a, const Row& b) {
-    return a(0) < b(0);
-  });
+  if (ascending) {
+    std::sort(rows, rows + n, [col_ix](const Row& a, const Row& b) {
+      return a(col_ix) < b(col_ix);
+    });
+  } else {
+    std::sort(rows, rows + n, [col_ix](const Row& a, const Row& b) {
+      return a(col_ix) > b(col_ix);
+    });
+  }
 
   auto out = array.eval();
   for (int i = 0; i < n; ++i) {
