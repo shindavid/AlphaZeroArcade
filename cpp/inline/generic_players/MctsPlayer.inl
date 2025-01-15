@@ -389,7 +389,9 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
 
     core::action_mode_t mode = results.action_mode;
     eigen_util::PrintArrayFormatMap fmt_map;
-    fmt_map["action"] = [&](float x) { return IO::action_to_str(x, mode); };
+    fmt_map["action"] = [&](float x) {
+      if (x == 0) return std::string("0");
+      return IO::action_to_str(x, mode); };
     eigen_util::print_array(std::cout, data2, columns2, &fmt_map);
 
     if (num_valid > num_rows) {

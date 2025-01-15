@@ -91,6 +91,8 @@ inline int sigfigs(const std::string& s) {
  * Converts a float to a string of length at most 8.
  */
 inline std::string float_to_str8(float x) {
+  if (x == 0) return "";
+
   char buf[32];
 
   std::sprintf(buf, "%.8f", x);  // Standard
