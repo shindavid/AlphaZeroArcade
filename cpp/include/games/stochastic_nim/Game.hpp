@@ -77,7 +77,7 @@ struct Game {
     }
     static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr) {
-      ss << compact_state_repr(state);
+      ss << compact_state_repr(state) << std::endl;
     }
 
     static std::string compact_state_repr(const State& state) {
