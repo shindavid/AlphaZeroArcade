@@ -350,8 +350,16 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
   const auto& net_policy = results.policy_prior;
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
+  core::action_mode_t mode = results.action_mode;
 
-  Game::GameResults::print_array(net_value, win_rates);
+  eigen_util::PrintArrayFormatMap fmt_map;
+  fmt_map["player"] = [&](core::seat_index_t x) { return IO::player_to_str(x); };
+  fmt_map["action"] = [&](float x) {
+    if (x == 0) return std::string("0");
+    return IO::action_to_str(x, mode);
+  };
+
+  Game::GameResults::print_array(net_value, win_rates, &fmt_map);
 
   if (!Rules::is_chance_mode(results.action_mode)) {
     int num_valid = valid_actions.count();
@@ -380,19 +388,12 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
     }
 
     posterior_arr = mcts_counts_arr / total_count;
-    static std::vector<std::string> columns2 = {"action", "Prior", "Posterior", "Counts",
-                                                "Modified"};
-    auto data2 = eigen_util::sort_rows(
+    static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts",
+                                               "Modified"};
+    auto data = eigen_util::sort_rows(
         eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
-                                        action_policy_arr),
-        3, false);
-
-    core::action_mode_t mode = results.action_mode;
-    eigen_util::PrintArrayFormatMap fmt_map;
-    fmt_map["action"] = [&](float x) {
-      if (x == 0) return std::string("0");
-      return IO::action_to_str(x, mode); };
-    eigen_util::print_array(std::cout, data2, columns2, &fmt_map);
+                                        action_policy_arr), 3, false);
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
 
     if (num_valid > num_rows) {
       std::cout << "... " << num_valid - num_rows << " row(s) not displayed" << std::endl;

@@ -51,7 +51,8 @@ struct WinShareResults {
     eigen_util::right_rotate(v, s);
   }
 
-  static void print_array(const Tensor& net_value, const ValueArray& win_rates) {
+  static void print_array(const Tensor& net_value, const ValueArray& win_rates,
+                          const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
     ValueArray net_value_array;
     ValueArray player_array;
     for (int i = 0; i < kNumPlayers; i++) {
@@ -60,9 +61,8 @@ struct WinShareResults {
     }
     auto data = eigen_util::concatenate_columns(player_array, net_value_array, win_rates);
     static std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
-    eigen_util::print_array(std::cout, data, columns, nullptr);
+    eigen_util::print_array(std::cout, data, columns, fmt_map);
   }
-
 };
 
 }  // namespace core

@@ -21,9 +21,9 @@ namespace concepts {
  *   length Games::Constants::kNumPlayers.
  */
 template <class GR>
-concept GameResults = requires(const typename GR::Tensor& const_tensor_ref,
-                               typename GR::Tensor& tensor_ref,
-                               const typename GR::ValueArray& win_rates) {
+concept GameResults = requires(
+    const typename GR::Tensor& const_tensor_ref, typename GR::Tensor& tensor_ref,
+    const typename GR::ValueArray& win_rates, const eigen_util::PrintArrayFormatMap* fmt_map) {
   // The maximum/minimum value that can be present in the ValueArray representation. This is used
   // for provably-winning/losing checks, and also for virtual-loss calculations.
   { util::decay_copy(GR::kMinValue) } -> std::same_as<float>;
@@ -74,7 +74,7 @@ concept GameResults = requires(const typename GR::Tensor& const_tensor_ref,
   /*
    * Print the V (from the neural net) and Q (from search updates) side by side.
    */
-  { GR::print_array(const_tensor_ref, win_rates) };
+  { GR::print_array(const_tensor_ref, win_rates, fmt_map) };
 };
 
 }  // namespace concepts

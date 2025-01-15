@@ -186,13 +186,13 @@ struct is_eigen_array : std::is_base_of<Eigen::ArrayBase<Derived>, Derived> {};
  * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
  */
 template <typename Derived>
-auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix=0, bool ascending=true);
+auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix = 0, bool ascending = true);
 
 /*
  * Accepts an Eigen::Array, and sorts the rows based on the values in the first column.
  */
 template <typename Derived>
-auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix=0, bool ascending=true);
+auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool ascending = true);
 
 /*
  * Returns a float of the same shape as the input, whose values are positive and summing to 1.
