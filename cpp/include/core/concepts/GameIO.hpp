@@ -9,11 +9,9 @@
 namespace core {
 namespace concepts {
 
-template <typename GI, typename GameTypes, typename State>
-concept GameIO = requires(std::ostream& ss, const State& state,
-                          const typename GameTypes::player_name_array_t* player_name_array_ptr,
-                          const typename GameTypes::PolicyTensor& policy_tensor,
-                          const typename GameTypes::SearchResults& search_results) {
+template <typename GI, typename GameTypes>
+concept GameIO = requires(std::ostream& ss, const GameTypes::State& state,
+                          const typename GameTypes::player_name_array_t* player_name_array_ptr) {
   { GI::action_delimiter() } -> std::same_as<std::string>;
   { GI::action_to_str(core::action_t{}, core::action_mode_t{}) } -> std::same_as<std::string>;
   { GI::print_state(ss, state, core::action_t{}, player_name_array_ptr) };
