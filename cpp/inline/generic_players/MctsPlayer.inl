@@ -395,7 +395,7 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
     if (num_valid > num_rows) {
       std::cout << "... " << num_valid - num_rows << " row(s) not displayed" << std::endl;
     } else {
-      for (int i = 0; i < params_.verbose_num_rows_to_display - num_rows; i++) {
+      for (int i = 0; i < params_.verbose_num_rows_to_display - num_rows + 1; i++) {
         std::cout << std::endl;
       }
     }
