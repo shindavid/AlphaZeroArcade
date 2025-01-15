@@ -9,7 +9,6 @@ from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
-import logging
 import subprocess
 import threading
 from typing import Optional

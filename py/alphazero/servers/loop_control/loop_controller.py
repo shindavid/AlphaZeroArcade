@@ -1,13 +1,13 @@
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
+from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
-from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
+from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
 from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
-from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
