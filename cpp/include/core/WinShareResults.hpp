@@ -59,7 +59,7 @@ struct WinShareResults {
       net_value_array(i) = net_value(i);
     }
     auto data = eigen_util::concatenate_columns(player_array, net_value_array, win_rates);
-    std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
+    static std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
     eigen_util::print_array(std::cout, data, columns, nullptr);
   }
 

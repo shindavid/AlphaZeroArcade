@@ -61,7 +61,7 @@ struct WinLossDrawResults {
     }
     auto data =
         eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array, win_rates);
-    std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
+    static std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
     eigen_util::print_array(std::cout, data, columns, nullptr);
   }
 };
