@@ -27,9 +27,9 @@
               target_masks);                                                               \
   }                                                                                        \
                                                                                            \
-  void Game_tensorize(State* state, float* input_values) {                                 \
-    auto input = Game::InputTensorizor::tensorize(state, state);                           \
-    std::memcpy(input_values, input.data(), input.size() * sizeof(float));                 \
+  void Game_tensorize(State* start_state, int num_states, float* input_values) {                 \
+    auto input = Game::InputTensorizor::tensorize(start_state, start_state + (num_states - 1));  \
+    std::copy(input.data(), input.data() + input.size(), input_values);                          \
   }                                                                                        \
                                                                                            \
   void init() { Game::static_init(); }                                                     \
