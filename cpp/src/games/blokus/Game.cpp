@@ -279,4 +279,22 @@ bool Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLog
   return true;
 }
 
+std::string Game::IO::player_to_str(core::seat_index_t player) {
+  switch (player) {
+    case blokus::kBlue:
+      return util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"),
+                                 ansi::kReset(""));
+    case blokus::kYellow:
+      return util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"),
+                                 ansi::kReset(""));
+    case blokus::kRed:
+      return util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset(""));
+    case blokus::kGreen:
+      return util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"),
+                                 ansi::kReset(""));
+    default:
+      return "?";
+  }
+}
+
 }  // namespace blokus

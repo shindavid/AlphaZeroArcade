@@ -165,4 +165,11 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   }
 }
 
+std::string Game::IO::player_to_str(core::seat_index_t player) {
+  return (player == othello::kBlack)
+             ? util::create_string("%s%s%s", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""))
+             : util::create_string("%s%s%s", ansi::kWhite(""), ansi::kCircle("0"),
+                                   ansi::kReset(""));
+}
+
 }  // namespace othello

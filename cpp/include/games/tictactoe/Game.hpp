@@ -88,6 +88,9 @@ class Game {
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action);
     }
+    static std::string player_to_str(core::seat_index_t player) {
+      return (player == tictactoe::kX) ? "X" : "O";
+    }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);

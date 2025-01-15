@@ -111,4 +111,11 @@ int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_
   return cx;
 }
 
+std::string Game::IO::player_to_str(core::seat_index_t player) {
+  return (player == c4::kRed)
+             ? util::create_string("%s%s%s", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""))
+             : util::create_string("%s%s%s", ansi::kYellow(""), ansi::kCircle("Y"),
+                                   ansi::kReset(""));
+}
+
 }  // namespace c4
