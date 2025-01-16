@@ -393,7 +393,12 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
     eigen_util::print_array(std::cout, data, columns, &fmt_map);
 
     if (num_valid > num_rows) {
-      std::cout << "... " << num_valid - num_rows << " row(s) not displayed" << std::endl;
+      int x = num_valid - num_rows;
+      if (x == 1) {
+        std::cout << "... 1 row not displayed" << std::endl;
+      } else {
+        std::cout << "... " << x << " rows not displayed" << std::endl;
+      }
     } else {
       for (int i = 0; i < params_.verbose_num_rows_to_display - num_rows + 1; i++) {
         std::cout << std::endl;
@@ -404,4 +409,3 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
 }
 
 }  // namespace generic
-
