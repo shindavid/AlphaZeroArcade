@@ -225,6 +225,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 
 template <concepts::Game Game>
 void GameLog<Game>::replay() const {
+  using Array = eigen_util::FArray<Game::Types::kMaxNumActions>;
   int n = num_positions();
   action_t last_action = -1;
   for (int i = 0; i < n; ++i) {
@@ -239,26 +240,31 @@ void GameLog<Game>::replay() const {
     Game::IO::print_state(std::cout, pos, last_action);
     std::cout << "active seat: " << (int)active_seat << std::endl;
 
-    ActionValueTensor action_values_target;
-    bool action_values_valid = get_action_values(mem_offset, action_values_target);
+    if (i < n - 1) {
+      PolicyTensor policy;
+      ActionValueTensor action_values_target;
+      bool policy_valid = get_policy(mem_offset, policy);
+      bool action_values_valid = get_action_values(mem_offset, action_values_target);
 
-    if (action_values_valid) {
-      std::cout << "AVs: ";
-      for (int j = 0; j < action_values_target.size(); ++j) {
-        std::cout << action_values_target(j) << " ";
-      }
-      std::cout << std::endl;
-    }
-
-    PolicyTensor policy;
-    bool policy_valid = get_policy(mem_offset, policy);
-    if (policy_valid) {
-      for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
-        if (policy(a) > 0) {
-          char p = a == action ? '*' : ' ';
-          std::string s = Game::IO::action_to_str(a, mode);
-          printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
+      if (policy_valid || action_values_valid) {
+        Array action_arr(policy.size());
+        Array policy_arr(policy.size());
+        Array action_values_arr(action_values_target.size());
+        util::release_assert(policy.size() == action_values_target.size());
+        for (action_t a = 0; a < policy.size(); ++a) {
+          action_arr(a) = a;
+          policy_arr(a) = policy(a);
+          action_values_arr(a) = action_values_target(a);
         }
+
+        static std::vector<std::string> columns = {"action", "policy", "action_values"};
+        auto data = eigen_util::concatenate_columns(action_arr, policy_arr, action_values_arr);
+
+        eigen_util::PrintArrayFormatMap fmt_map;
+        fmt_map["action"] = [&](float x) {
+          return std::string(x == action ? "*" : " ") + Game::IO::action_to_str(x, mode);
+        };
+        eigen_util::print_array(std::cout, data, columns, &fmt_map);
       }
     }
     std::cout << std::endl;

@@ -6,7 +6,8 @@
   "Q" : [0.5, 0.5],
   "state" : "___\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 0
   },
   {
   "index" : 1,
@@ -14,7 +15,8 @@
   "Q" : [0.5, 0.5],
   "state" : "X__\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 1
   },
   {
   "index" : 2,
@@ -22,7 +24,8 @@
   "Q" : [0.5, 0.5],
   "state" : "_X_\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 1
   },
   {
   "index" : 3,
@@ -30,7 +33,8 @@
   "Q" : [0.5, 0.5],
   "state" : "___\n_X_\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 1
   },
   {
   "index" : 4,
@@ -38,7 +42,8 @@
   "Q" : [0.5, 0.5],
   "state" : "XO_\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 0
   },
   {
   "index" : 5,
@@ -46,7 +51,8 @@
   "Q" : [0.5, 0.5],
   "state" : "OX_\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 0
   },
   {
   "index" : 6,
@@ -54,7 +60,8 @@
   "Q" : [0.5, 0.5],
   "state" : "O__\n_X_\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 0
   },
   {
   "index" : 7,
@@ -62,7 +69,8 @@
   "Q" : [0.5, 0.5],
   "state" : "X_O\n___\n___",
   "provably_winning" : "00",
-  "provably_losing" : "00"
+  "provably_losing" : "00",
+  "active_seat" : 0
   }
 ],
 "edges" : [

@@ -165,73 +165,11 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   }
 }
 
-void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
-                                  const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
-  const auto& mcts_counts = results.counts;
-  const auto& net_policy = results.policy_prior;
-  const auto& win_rates = results.win_rates;
-  const auto& net_value = results.value_prior;
-
-  constexpr int buf_size = 4096;
-  char buffer[buf_size];
-  int cx = 0;
-
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6s%s%s%s %6s%s%s%s\n", "", "", ansi::kBlue(""),
-                 ansi::kCircle("*"), ansi::kReset(""), "", ansi::kWhite(""), ansi::kCircle("0"),
-                 ansi::kReset(""));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)", 100 * net_value(0),
-                 100 * net_value(1));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(D)", 100 * net_value(2),
-                 100 * net_value(2));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)", 100 * net_value(1),
-                 100 * net_value(0));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",
-                 100 * win_rates(0), 100 * win_rates(1));
-  cx += snprintf(buffer + cx, buf_size - cx, "\n");
-
-  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
-  using tuple_t = decltype(tuple0);
-  using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
-  tuple_array_t tuples;
-  int i = 0;
-  for (int a = 0; a < othello::kNumGlobalActions; ++a) {
-    if (valid_actions[a]) {
-      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
-      i++;
-    }
-  }
-  int num_actions = i;
-
-  std::sort(tuples.begin(), tuples.begin() + num_actions);
-  std::reverse(tuples.begin(), tuples.begin() + num_actions);
-
-  int num_rows = 10;
-  cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  for (i = 0; i < std::min(num_rows, num_actions); ++i) {
-    const auto& tuple = tuples[i];
-
-    float count = std::get<0>(tuple);
-    auto action_p = std::get<1>(tuple);
-    auto net_p = std::get<2>(tuple);
-    int action = std::get<3>(tuple);
-
-    if (action == othello::kPass) {
-      cx += snprintf(buffer + cx, buf_size - cx, "%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count,
-                     action_p);
-    } else {
-      int row = action / othello::kBoardDimension;
-      int col = action % othello::kBoardDimension;
-      cx += snprintf(buffer + cx, buf_size - cx, "  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1,
-                     net_p, count, action_p);
-    }
-  }
-  for (i = num_actions; i < num_rows; ++i) {
-    cx += snprintf(buffer + cx, buf_size - cx, "\n");
-  }
-
-  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
-  ss << buffer << std::endl;
+std::string Game::IO::player_to_str(core::seat_index_t player) {
+  return (player == othello::kBlack)
+             ? util::create_string("%s%s%s", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""))
+             : util::create_string("%s%s%s", ansi::kWhite(""), ansi::kCircle("0"),
+                                   ansi::kReset(""));
 }
 
 }  // namespace othello

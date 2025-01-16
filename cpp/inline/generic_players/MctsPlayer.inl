@@ -74,7 +74,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
           po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
           "z-score for LCB. If zero, disable LCB")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "mcts player verbose mode");
+                                           "mcts player verbose mode")
+      .template add_option<"verbose-num-rows-to-display", 'r'>(
+          po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
+          "mcts player number of rows to display in verbose mode");
 }
 
 template <core::concepts::Game Game>
@@ -336,7 +339,73 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   std::cout << std::endl << "CPU pos eval:" << std::endl;
-  IO::print_mcts_results(std::cout, action_policy, mcts_results);
+  print_mcts_results(std::cout, action_policy, mcts_results);
+}
+
+template <core::concepts::Game Game>
+void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                                          const SearchResults& results) const{
+  const auto& valid_actions = results.valid_actions;
+  const auto& mcts_counts = results.counts;
+  const auto& net_policy = results.policy_prior;
+  const auto& win_rates = results.win_rates;
+  const auto& net_value = results.value_prior;
+  core::action_mode_t mode = results.action_mode;
+
+  eigen_util::PrintArrayFormatMap fmt_map;
+  fmt_map["Player"] = [&](core::seat_index_t x) { return IO::player_to_str(x); };
+  fmt_map["action"] = [&](float x) { return IO::action_to_str(x, mode); };
+
+  Game::GameResults::print_array(net_value, win_rates, &fmt_map);
+
+  if (!Rules::is_chance_mode(results.action_mode)) {
+    int num_valid = valid_actions.count();
+    int num_rows = std::min(num_valid, params_.verbose_num_rows_to_display);
+    LocalPolicyArray actions_arr(num_rows);
+    LocalPolicyArray net_policy_arr(num_rows);
+    LocalPolicyArray action_policy_arr(num_rows);
+    LocalPolicyArray mcts_counts_arr(num_rows);
+    LocalPolicyArray posterior_arr(num_rows);
+
+    float total_count = 0;
+    for (int a : bitset_util::on_indices(valid_actions)) {
+      total_count += mcts_counts(a);
+    }
+
+    int r = 0;
+    for (int a : bitset_util::on_indices(valid_actions)) {
+      actions_arr(r) = a;
+      net_policy_arr(r) = net_policy(a);
+      action_policy_arr(r) = action_policy(a);
+      mcts_counts_arr(r) = mcts_counts(a);
+      r++;
+      if (r >= params_.verbose_num_rows_to_display) {
+        break;
+      }
+    }
+
+    posterior_arr = mcts_counts_arr / total_count;
+    static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts",
+                                               "Modified"};
+    auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
+                                        action_policy_arr), 3, false);
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
+
+    if (num_valid > num_rows) {
+      int x = num_valid - num_rows;
+      if (x == 1) {
+        std::cout << "... 1 row not displayed" << std::endl;
+      } else {
+        std::cout << "... " << x << " rows not displayed" << std::endl;
+      }
+    } else {
+      for (int i = 0; i < params_.verbose_num_rows_to_display - num_rows + 1; i++) {
+        std::cout << std::endl;
+      }
+    }
+    std::cout << "******************************" << std::endl;
+  }
 }
 
 }  // namespace generic

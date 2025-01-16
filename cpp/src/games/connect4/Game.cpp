@@ -88,46 +88,6 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
-                                  const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
-  const auto& mcts_counts = results.counts;
-  const auto& net_policy = results.policy_prior;
-  const auto& win_rates = results.win_rates;
-  const auto& net_value = results.value_prior;
-
-  constexpr int buf_size = 4096;
-  char buffer[buf_size];
-  int cx = 0;
-
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6s%s%s%s %6s%s%s%s\n", "", "", ansi::kRed(""),
-                 ansi::kCircle("R"), ansi::kReset(""), "", ansi::kYellow(""), ansi::kCircle("Y"),
-                 ansi::kReset(""));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)", 100 * net_value(0),
-                 100 * net_value(1));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(D)", 100 * net_value(2),
-                 100 * net_value(2));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)", 100 * net_value(1),
-                 100 * net_value(0));
-  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",
-                 100 * win_rates(0), 100 * win_rates(1));
-  cx += snprintf(buffer + cx, buf_size - cx, "\n");
-
-  cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
-
-  for (int i = 0; i < c4::kNumColumns; ++i) {
-    if (valid_actions[i]) {
-      cx += snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i),
-                     mcts_counts(i), action_policy(i));
-    } else {
-      cx += snprintf(buffer + cx, buf_size - cx, "%3d\n", i + 1);
-    }
-  }
-
-  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
-  ss << buffer << std::endl;
-}
-
 int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
@@ -149,6 +109,13 @@ int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_
 
   cx += snprintf(buf + cx, n - cx, "|\n");
   return cx;
+}
+
+std::string Game::IO::player_to_str(core::seat_index_t player) {
+  return (player == c4::kRed)
+             ? util::create_string("%s%s%s", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""))
+             : util::create_string("%s%s%s", ansi::kYellow(""), ansi::kCircle("Y"),
+                                   ansi::kReset(""));
 }
 
 }  // namespace c4
