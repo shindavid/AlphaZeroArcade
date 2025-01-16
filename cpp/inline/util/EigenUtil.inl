@@ -493,40 +493,51 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
 
   util::release_assert(num_cols == int(column_names.size()));
 
-  std::vector<std::vector<std::string>> strs;
+  std::vector<std::vector<std::tuple<std::string, int>>> str_width_pairs;
   std::vector<int> max_widths;
-  strs.reserve(num_cols);
+  str_width_pairs.reserve(num_cols);
   max_widths.reserve(num_cols);
 
   for (int j = 0; j < num_cols; ++j) {
     const std::string& column_name = column_names[j];
-    int max_width = util::terminal_width(column_name);
+    int column_name_width = util::terminal_width(column_name);
+    int max_width = column_name_width;
 
+    bool using_default_func = true;
     std::function<std::string(float)> f = detail::float_to_str8;
     if (fmt_map) {
       auto it = fmt_map->find(column_name);
       if (it != fmt_map->end()) {
         f = it->second;
+        using_default_func = false;
       }
     }
 
-    std::vector<std::string> col_strs;
-    col_strs.reserve(num_rows + 1);
-    col_strs.push_back(column_name);
+    std::vector<std::tuple<std::string, int>> col_pairs;
+    col_pairs.reserve(num_rows + 1);
+    col_pairs.push_back(std::make_tuple(column_name, column_name_width));
     for (int i = 0; i < num_rows; ++i) {
       float x = array(i, j);
       std::string s = f(x);
-      max_width = std::max(max_width, int(util::terminal_width(s)));
-      col_strs.push_back(s);
+      int width;
+      if (using_default_func) {
+        width = s.size();  // avoid calling terminal_width for performance
+      } else {
+        width = util::terminal_width(s);
+      }
+      max_width = std::max(max_width, width);
+      col_pairs.push_back(std::make_tuple(s, width));
     }
 
-    strs.push_back(col_strs);
+    str_width_pairs.push_back(col_pairs);
     max_widths.push_back(max_width);
   }
 
   for (int i = 0; i < num_rows + 1; ++i) {
     for (int j = 0; j < num_cols; ++j) {
-      os << std::setw(max_widths[j] + (j > 0)) << strs[j][i];
+      const auto& tuple = str_width_pairs[j][i];
+      std::string whitespace(max_widths[j] - std::get<1>(tuple) + (j > 0), ' ');
+      os << whitespace << std::get<0>(tuple);
     }
     os << std::endl;
   }

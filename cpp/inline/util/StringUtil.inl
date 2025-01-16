@@ -109,13 +109,23 @@ inline bool ends_with(const std::string& value, const std::string& ending) {
 }
 
 inline size_t terminal_width(const std::string& str) {
-  // This regular expression matches ANSI escape sequences
-  std::regex ansi_escape("\033\\[[0-9;]*m");
+  // Ignore ANSI escape sequences for coloring and such
+  static const std::regex ansi_regex("\033\\[[0-9;]*m");
+  std::string cleaned_str = std::regex_replace(str, ansi_regex, "");
 
-  // Remove all escape sequences using regex
-  std::string cleaned_str = std::regex_replace(str, ansi_escape, "");
+  // Here, we assume that all unicode characters are 1 character wide. In reality, some unicode
+  // characters like some emojis and various East Asian glyphs can have more than 1 character. But
+  // we aren't using any such characters currently, and are unlikely to going forward. A more
+  // accurate solution would require more sophistication and be costlier. So we go with this
+  // simpler hack for now.
+  static const std::regex unicode_regex(
+    "[\\xC2-\\xDF][\\x80-\\xBF]"        // 2-byte sequence
+    "|[\\xE0-\\xEF][\\x80-\\xBF]{2}"    // 3-byte sequence
+    "|[\\xF0-\\xF4][\\x80-\\xBF]{3}"    // 4-byte sequence
+  );
+  cleaned_str = std::regex_replace(cleaned_str, unicode_regex, "?");
 
-  return cleaned_str.size();  // Return the size of the cleaned string
+  return cleaned_str.size();
 }
 
 }  // namespace util

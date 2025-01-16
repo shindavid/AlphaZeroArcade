@@ -510,7 +510,7 @@ TEST(eigen_util, rotate) {
 
 TEST(eigen_util, print_array) {
   constexpr int kNumRows = 6;
-  constexpr int kNumCols = 4;
+  constexpr int kNumCols = 5;
   constexpr int kMaxRows = 10;
   using Array = Eigen::Array<float, Eigen::Dynamic, kNumCols, 0, kMaxRows, kNumCols>;
 
@@ -529,22 +529,23 @@ TEST(eigen_util, print_array) {
   array(1, 3) = -0.00927465;
   array(2, 3) = 1.23456e-8;
 
-  std::vector<std::string> column_names = {"col1", "col2", "col3", "col4"};
+  std::vector<std::string> column_names = {"ansi", "col1", "col2", "col3", "col4"};
 
   eigen_util::PrintArrayFormatMap fmt_map;
+  fmt_map["ansi"] = [](float x) { return "\033[32m\u25CF\033[00m"; };  // green circle
   fmt_map["col1"] = [](float x) { return "foo" + std::to_string((int)x); };
 
   std::ostringstream ss;
   eigen_util::print_array(ss, array, column_names, &fmt_map);
 
   std::string expected_output =
-      " col1 col2 col3     col4\n"
-      " foo0  0.1  0.2 0.009275\n"
-      " foo4  0.5  0.6 -0.00927\n"
-      " foo8  0.9    1 1.235e-8\n"
-      "foo12  1.3  1.4       15\n"
-      "foo16  1.7  1.8       19\n"
-      "foo20  2.1  2.2       23\n";
+      "ansi col1 col2     col3 col4\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.2 0.009275    4\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.7 -0.00927    9\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.2 1.235e-8   14\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.7       18   19\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.2       23   24\n"
+      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.7       28   29\n";
 
   EXPECT_EQ(ss.str(), expected_output);
 }
