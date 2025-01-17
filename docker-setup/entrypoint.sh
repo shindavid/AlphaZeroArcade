@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+echo "Host *
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null" > ~/.ssh/config
+cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/id_ed25519.pub >> ~/.ssh/known_hosts
+sudo service ssh start
+
 # We install libtorch at RUNTIME, rather than at build time, for faster image-loading
 # The intended usage is for /workspace to be a persistent volume, so the libtorch installation
 # only needs to be done once, and will be available for all subsequent runs of the container.

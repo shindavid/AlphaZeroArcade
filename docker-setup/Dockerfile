@@ -1,7 +1,7 @@
 # FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.1.4"
+LABEL version="1.2.1"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -19,7 +19,7 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
       sudo gosu ack wget curl rsync unzip vim git cmake gcc-12 g++-12 python3-pip \
       ninja-build software-properties-common libeigen3-dev libncurses5-dev \
       python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux \
-      graphviz graphviz-dev && \
+      graphviz graphviz-dev openssh-server && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
