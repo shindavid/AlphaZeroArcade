@@ -18,7 +18,7 @@ MINIMUM_REQUIRED_IMAGE_VERSION = "1.2.1"
 EXPOSED_PORTS = [
     5012,  # bokeh
     8002,  # flask
-    8051, # dash
+    8051,  # dash
 ]
 
 
