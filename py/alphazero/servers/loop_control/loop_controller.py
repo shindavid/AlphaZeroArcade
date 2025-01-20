@@ -24,6 +24,7 @@ from util.sqlite3_util import DatabaseConnectionPool
 
 
 import faulthandler
+import logging
 import signal
 import socket
 import threading
@@ -235,14 +236,14 @@ class LoopController(LoopControllerInterface):
                     break
         except SocketRecvException:
             logger.warning(
-                f'Encountered SocketRecvException in {thread_name} (conn={conn}):')
+                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn)
         except SocketSendException:
             logger.warning(
-                f'Encountered SocketSendException in {thread_name} (conn={conn}):',
+                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn,
                 exc_info=True)
         except:
             logger.error(
-                f'Unexpected error in {thread_name} (conn={conn}):', exc_info=True)
+                'Unexpected error in %s (conn=%s):', thread_name, conn, exc_info=True)
             self._shutdown_manager.request_shutdown(1)
         finally:
             try:
@@ -252,13 +253,13 @@ class LoopController(LoopControllerInterface):
                 self._handle_disconnect(conn)
             except:
                 logger.error(
-                    f'Error handling disconnect in {thread_name} (conn={conn}):',
+                    'Error handling disconnect in %s (conn=%s):', thread_name, conn,
                     exc_info=True)
                 self._shutdown_manager.request_shutdown(1)
 
     def _handle_disconnect(self, conn: ClientConnection):
-        func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
-        func(f'Handling disconnect: {conn}...')
+        log_level = logging.DEBUG if conn.client_role == ClientRole.RATINGS_WORKER else logging.INFO
+        logger.log(log_level, 'Handling disconnect: %s...', conn)
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
         conn.socket.close()
