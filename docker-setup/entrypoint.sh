@@ -57,10 +57,9 @@ EOF
 
 ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
 echo "Host *
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null" > ~/.ssh/config
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts" > ~/.ssh/config
 cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
-cat ~/.ssh/id_ed25519.pub >> ~/.ssh/known_hosts
 sudo service ssh start
 
 # We install libtorch at RUNTIME, rather than at build time, for faster image-loading
