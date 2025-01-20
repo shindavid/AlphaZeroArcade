@@ -79,6 +79,15 @@ class ClientConnection:
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        return self._tuple() == other._tuple()
+
+    def __hash__(self):
+        return hash(self._tuple())
+
+    def _tuple(self):
+        return (self.client_domain, self.client_role, self.client_id, self.client_gpu_id)
+
 
 ShutdownAction = Callable[[], None]
 MsgHandler = Callable[[ClientConnection, JsonDict], bool]  # return True for loop-break

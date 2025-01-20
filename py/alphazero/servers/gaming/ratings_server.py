@@ -5,12 +5,13 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
+from util.py_util import register_signal_exception
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
-import logging
+import signal
 import threading
 
 
@@ -49,6 +50,10 @@ class RatingsServer:
         self._session_data = SessionData(params, logging_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
+
+        register_signal_exception(signal.SIGTERM)
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     def run(self):
         try:
@@ -147,6 +152,7 @@ class RatingsServer:
         binary = self._build_params.get_binary_path(self._session_data.game)
 
         log_filename = self._session_data.get_log_filename('ratings-worker')
+        self._session_data.start_log_sync(log_filename)
 
         args = {
             '-G': n_games,

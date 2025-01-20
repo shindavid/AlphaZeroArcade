@@ -5,6 +5,7 @@ from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.socket_util import Socket
+from util import ssh_util
 
 import os
 import socket
@@ -73,18 +74,36 @@ class SessionData:
         if rejection is not None:
             raise Exception(f'Handshake rejected: {rejection}')
 
-        client_id = data['client_id']
         self._game = data['game']
         self._tag = data['tag']
-        self._client_id = client_id
+        self._client_id = data['client_id']
 
-        configure_logger(params=self._logging_params, filename=self.get_log_filename(role.value))
+        ssh_pub_key = data['ssh_pub_key']
+        ssh_util.add_to_authorized_keys(ssh_pub_key)
+
+        log_filename = self.get_log_filename(role.value)
+        configure_logger(params=self._logging_params, filename=log_filename)
+        self.start_log_sync(log_filename)
         logger.info('**** Starting %s ****', role.value)
-        logger.info('Received client id assignment: %s', client_id)
+        logger.info('Received client id assignment: %s', self._client_id)
 
     def get_log_filename(self, src: str):
         return os.path.join('/home/devuser/logs', self.game, self.tag, src,
                             f'{src}-{self.client_id}.log')
+
+    def start_log_sync(self, log_filename):
+        data = {
+            'type': 'log-sync-start',
+            'log_filename': log_filename,
+        }
+        self.socket.send_json(data)
+
+    def stop_log_sync(self, log_filename):
+        data = {
+            'type': 'log-sync-stop',
+            'log_filename': log_filename,
+        }
+        self.socket.send_json(data)
 
     @property
     def socket(self) -> Socket:

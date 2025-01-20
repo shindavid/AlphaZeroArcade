@@ -7,9 +7,9 @@ from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
+from util import ssh_util
 
 from enum import Enum
-import logging
 import threading
 from typing import Optional
 
@@ -40,11 +40,13 @@ class RatingsManager:
         self._rating_data_dict: RatingDataDict = {}
 
     def add_server(self, conn: ClientConnection):
+        ssh_pub_key = ssh_util.get_pub_key()
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
             'game': self._controller.game_spec.name,
             'tag': self._controller.run_params.tag,
+            'ssh_pub_key': ssh_pub_key,
         }
         conn.socket.send_json(reply)
 
@@ -240,6 +242,10 @@ class RatingsManager:
 
         if msg_type == 'ready':
             self._handle_ready(conn)
+        elif msg_type == 'log-sync-start':
+            self._controller.start_log_sync(conn, msg['log_filename'])
+        elif msg_type == 'log-sync-stop':
+            self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:

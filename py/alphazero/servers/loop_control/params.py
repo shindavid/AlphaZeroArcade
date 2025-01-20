@@ -1,7 +1,8 @@
 from alphazero.logic import constants
 
-from dataclasses import dataclass
-from typing import List, Optional
+import argparse
+from dataclasses import dataclass, fields
+from typing import List
 
 
 @dataclass
@@ -10,15 +11,12 @@ class LoopControllerParams:
     port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     model_cfg: str = 'default'
     target_rating_rate: float = 0.1
+    ignore_sigint: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
-        return LoopControllerParams(
-            cuda_device=args.cuda_device,
-            port=args.port,
-            model_cfg=args.model_cfg,
-            target_rating_rate=args.target_rating_rate,
-        )
+        kwargs = {f.name: getattr(args, f.name) for f in fields(LoopControllerParams)}
+        return LoopControllerParams(**kwargs)
 
     @staticmethod
     def add_args(parser, include_cuda_device=True):
@@ -39,14 +37,15 @@ class LoopControllerParams:
                            'least one rating server is using a dedicated GPU. Otherwise this '
                            'parameter is used to prevent rating servers from getting starved by '
                            'self-play/training. (default: %(default).1f)')
+        group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
+                           help=argparse.SUPPRESS)
+
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
-        if self.cuda_device != defaults.cuda_device:
-            cmd.extend(['--cuda-device', self.cuda_device])
-        if self.port != defaults.port:
-            cmd.extend(['--port', str(self.port)])
-        if self.model_cfg != defaults.model_cfg:
-            cmd.extend(['--model-cfg', self.model_cfg])
-        if self.target_rating_rate != defaults.target_rating_rate:
-            cmd.extend(['--target-rating-rate', str(self.target_rating_rate)])
+        for f in fields(LoopControllerParams):
+            attr = getattr(self, f.name)
+            if attr != getattr(defaults, f.name):
+                cmd.append('--' + f.name)
+                if type(attr) != bool:
+                    cmd.append(str(getattr(self, f.name)))

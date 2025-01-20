@@ -146,3 +146,19 @@ class LoopControllerInterface(abc.ABC):
     @abc.abstractmethod
     def get_next_checkpoint(self) -> int:
         pass
+
+    @abc.abstractmethod
+    def start_log_sync(self, conn: ClientConnection, remote_filename: str):
+        pass
+
+    @abc.abstractmethod
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+        pass
+
+    @abc.abstractmethod
+    def spawn_log_sync_thread(self):
+        pass
+
+    @abc.abstractmethod
+    def wait_for_log_sync_thread(self):
+        pass

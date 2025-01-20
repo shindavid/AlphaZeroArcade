@@ -3,6 +3,7 @@ from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
+from .log_syncer import LogSyncer
 from .loop_controller_interface import LoopControllerInterface
 from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
@@ -19,6 +20,7 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
+from util.py_util import register_signal_exception
 from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -59,6 +61,7 @@ class LoopController(LoopControllerInterface):
         self._shutdown_manager = ShutdownManager()
         self._client_connection_manager = ClientConnectionManager(self)
         self._database_connection_manager = DatabaseConnectionManager(self)
+        self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
@@ -70,6 +73,10 @@ class LoopController(LoopControllerInterface):
         #
         # This is useful for diagnosing deadlocks.
         faulthandler.register(signal.SIGUSR1, all_threads=True)
+
+        register_signal_exception(signal.SIGTERM)
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     def run(self):
         """
@@ -219,6 +226,18 @@ class LoopController(LoopControllerInterface):
     def get_next_checkpoint(self) -> int:
         return self._training_manager.get_next_checkpoint()
 
+    def start_log_sync(self, conn: ClientConnection, remote_filename: str):
+        self._log_syncer.register(conn, remote_filename)
+
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+        self._log_syncer.unregister(conn, remote_filename)
+
+    def spawn_log_sync_thread(self):
+        self._log_syncer.spawn_sync_thread()
+
+    def wait_for_log_sync_thread(self):
+        self._log_syncer.wait_for_sync_thread()
+
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
             self._ratings_managers[tag] = RatingsManager(self, tag)
@@ -262,6 +281,7 @@ class LoopController(LoopControllerInterface):
         logger.log(log_level, 'Handling disconnect: %s...', conn)
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
+        self._log_syncer.unregister(conn)
         conn.socket.close()
 
     def _init_socket(self):

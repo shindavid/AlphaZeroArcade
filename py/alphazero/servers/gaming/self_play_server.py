@@ -4,11 +4,13 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
+from util.py_util import register_signal_exception
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
+import signal
 import subprocess
 import threading
 from typing import Optional
@@ -39,6 +41,10 @@ class SelfPlayServer:
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._proc: Optional[subprocess.Popen] = None
+
+        register_signal_exception(signal.SIGTERM)
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     def run(self):
         try:
@@ -159,6 +165,7 @@ class SelfPlayServer:
         player_args_str = make_args_str(player_args)
 
         log_filename = self._session_data.get_log_filename('gen0-self-play-worker')
+        self._session_data.start_log_sync(log_filename)
 
         args = {
             '-G': 0,
@@ -202,6 +209,8 @@ class SelfPlayServer:
         }
         self._session_data.socket.send_json(data)
 
+        self._session_data.stop_log_sync(log_filename)
+
     def _start(self):
         try:
             self._start_helper()
@@ -222,6 +231,7 @@ class SelfPlayServer:
         player_args_str = make_args_str(player_args)
 
         log_filename = self._session_data.get_log_filename('self-play-worker')
+        self._session_data.start_log_sync(log_filename)
 
         args = {
             '-G': 0,

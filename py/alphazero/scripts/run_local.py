@@ -54,6 +54,7 @@ class Params:
     port: int = default_loop_controller_params.port
     model_cfg: str = default_loop_controller_params.model_cfg
     target_rating_rate: float = default_loop_controller_params.target_rating_rate
+    ignore_sigint: bool = False
     rating_tag: str = ''
     num_cuda_devices_to_use: Optional[int] = None
 
@@ -96,10 +97,13 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
     cmd = [
         'py/alphazero/scripts/run_self_play_server.py',
+        '--ignore-sigint',
         '--cuda-device', cuda_device,
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
+    if params.ignore_sigint:
+        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
@@ -118,12 +122,15 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
     cmd = [
         'py/alphazero/scripts/run_ratings_server.py',
+        '--ignore-sigint',
         '--cuda-device', cuda_device,
     ]
     if default_ratings_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
     if default_ratings_server_params.rating_tag != params.rating_tag:
         cmd.extend(['--rating-tag', params.rating_tag])
+    if params.ignore_sigint:
+        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
@@ -144,6 +151,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
+        '--ignore-sigint',
         '--cuda-device', f'cuda:{cuda_device}',
         ]
     if default_loop_controller_params.port != params.port:
@@ -152,6 +160,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
+    if params.ignore_sigint:
+        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_binary_path_option=False)
@@ -184,7 +194,7 @@ def main():
     os.chdir(Repo.root())
 
     n = torch.cuda.device_count()
-    assert n > 0, 'No GPU found'
+    assert n > 0, 'No GPU found. Try exiting and relaunching run_docker.py'
 
     if params.num_cuda_devices_to_use is not None:
         n = params.num_cuda_devices_to_use
@@ -221,11 +231,22 @@ def main():
                     logger.error('%s process %s exited with code %s', descr, proc.pid,
                                  proc.returncode)
             time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info('Caught Ctrl-C')
+    except:
+        logger.error('Unexpected error:', exc_info=True)
     finally:
         for descr, proc in procs:
             if proc.poll() is None:
                 proc.terminate()
-                logger.info('Terminated %s process %s', descr, proc.pid)
+                try:
+                    proc.wait(10)
+                    logger.info('Terminated %s process %s', descr, proc.pid)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    logger.warning('Forcibly killed %s process %s due to time-out during terminate',
+                                   descr, proc.pid)
+
 
 
 if __name__ == '__main__':

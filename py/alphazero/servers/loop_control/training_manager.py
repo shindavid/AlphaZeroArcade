@@ -206,6 +206,8 @@ class TrainingManager:
         return self._net, self._opt
 
     def _train_step_helper(self, retrain_from_fork: bool):
+        self._controller.spawn_log_sync_thread()
+
         organizer = self._controller.organizer
         fork_info = organizer.fork_info
 
@@ -237,6 +239,7 @@ class TrainingManager:
         with self._lock:
             self._trainer = None
 
+        self._controller.wait_for_log_sync_thread()
         self._controller.handle_new_model()
 
     def _do_training_epoch(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
