@@ -74,9 +74,13 @@ class LoopController(LoopControllerInterface):
         # This is useful for diagnosing deadlocks.
         faulthandler.register(signal.SIGUSR1, all_threads=True)
 
-        register_signal_exception(signal.SIGTERM)
+        register_signal_exception(signal.SIGTERM,
+                                  echo_action=lambda: logger.info('Ignoring repeat SIGTERM'))
         if params.ignore_sigint:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
+        else:
+            register_signal_exception(signal.SIGINT, KeyboardInterrupt,
+                                      echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     def run(self):
         """

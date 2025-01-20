@@ -25,7 +25,7 @@ from games.game_spec import GameSpec
 import games.index as game_index
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
-from util.py_util import CustomHelpFormatter
+from util.py_util import CustomHelpFormatter, register_signal_exception
 from util.repo_util import Repo
 from util import subprocess_util
 
@@ -33,6 +33,7 @@ import argparse
 from dataclasses import dataclass, fields
 import os
 from pipes import quote
+import signal
 import subprocess
 import time
 from typing import Optional
@@ -202,6 +203,9 @@ def main():
     loop_controller_gpu = 0
     self_play_gpus = list(range(n))
     ratings_gpu = n - 1
+
+    register_signal_exception(signal.SIGINT, KeyboardInterrupt,
+                              echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     procs = []
     try:

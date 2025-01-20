@@ -4,7 +4,7 @@ import inspect
 import os
 import shutil
 import signal
-from typing import List, Type, Union
+from typing import List, Optional, Type, Union
 
 
 def is_iterable(obj):
@@ -199,10 +199,23 @@ class CustomHelpFormatter(argparse.HelpFormatter):
             return super()._format_action_invocation(action)
 
 
-def register_signal_exception(code: signal.Signals, exception_cls: Type[BaseException]=SystemExit):
+_signal_set = set()
+
+
+def register_signal_exception(code: signal.Signals, exception_cls: Type[BaseException]=SystemExit,
+                              echo_action: Optional[callable]=None):
     """
     Registers a signal handler that raises an exception of the specified class.
+
+    If echo_action is specified, then on "echos" (i.e., a follow-up signal of the same type),
+    echo_action is called instead of raising the exception.
     """
     def handler(signum, frame):
-        raise exception_cls(f'Received signal {signum}')
+        global _signal_set
+        if signum in _signal_set and echo_action is not None:
+            echo_action()
+        else:
+            _signal_set.add(signum)
+            raise exception_cls(f'Received signal {signum}')
+
     signal.signal(code, handler)

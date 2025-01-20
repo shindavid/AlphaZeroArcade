@@ -51,9 +51,13 @@ class RatingsServer:
         self._shutdown_manager = ShutdownManager()
         self._running = False
 
-        register_signal_exception(signal.SIGTERM)
+        register_signal_exception(signal.SIGTERM,
+                                  echo_action=lambda: logger.info('Ignoring repeat SIGTERM'))
         if params.ignore_sigint:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
+        else:
+            register_signal_exception(signal.SIGINT, KeyboardInterrupt,
+                                      echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     def run(self):
         try:
