@@ -1,14 +1,14 @@
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
+from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
-from .params import LoopControllerParams
+from .log_syncer import LogSyncer
 from .loop_controller_interface import LoopControllerInterface
+from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
-from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
-from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
@@ -20,16 +20,17 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
-    send_json
+from util.py_util import register_signal_exception
+from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
 
 import faulthandler
+import logging
 import signal
 import socket
 import threading
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 
 logger = get_logger()
@@ -51,6 +52,7 @@ class LoopController(LoopControllerInterface):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
+        self._run_params = run_params
         self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
@@ -59,11 +61,11 @@ class LoopController(LoopControllerInterface):
         self._shutdown_manager = ShutdownManager()
         self._client_connection_manager = ClientConnectionManager(self)
         self._database_connection_manager = DatabaseConnectionManager(self)
+        self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
-        self._remote_logging_manager = RemoteLoggingManager(self)
 
         # This line allows us to generate a per-thread stack trace by externally running:
         #
@@ -71,6 +73,10 @@ class LoopController(LoopControllerInterface):
         #
         # This is useful for diagnosing deadlocks.
         faulthandler.register(signal.SIGUSR1, all_threads=True)
+
+        register_signal_exception(signal.SIGTERM)
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     def run(self):
         """
@@ -109,6 +115,10 @@ class LoopController(LoopControllerInterface):
     @property
     def training_params(self) -> TrainingParams:
         return self._training_params
+
+    @property
+    def run_params(self) -> RunParams:
+        return self._run_params
 
     @property
     def build_params(self) -> BuildParams:
@@ -186,12 +196,6 @@ class LoopController(LoopControllerInterface):
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
-    def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
-        self._remote_logging_manager.handle_log_msg(msg, conn)
-
-    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
-        self._remote_logging_manager.close_log_file(msg, conn.client_id)
-
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
@@ -222,6 +226,18 @@ class LoopController(LoopControllerInterface):
     def get_next_checkpoint(self) -> int:
         return self._training_manager.get_next_checkpoint()
 
+    def start_log_sync(self, conn: ClientConnection, remote_filename: str):
+        self._log_syncer.register(conn, remote_filename)
+
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+        self._log_syncer.unregister(conn, remote_filename)
+
+    def spawn_log_sync_thread(self):
+        self._log_syncer.spawn_sync_thread()
+
+    def wait_for_log_sync_thread(self):
+        self._log_syncer.wait_for_sync_thread()
+
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
             self._ratings_managers[tag] = RatingsManager(self, tag)
@@ -239,14 +255,14 @@ class LoopController(LoopControllerInterface):
                     break
         except SocketRecvException:
             logger.warning(
-                f'Encountered SocketRecvException in {thread_name} (conn={conn}):')
+                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn)
         except SocketSendException:
             logger.warning(
-                f'Encountered SocketSendException in {thread_name} (conn={conn}):',
+                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn,
                 exc_info=True)
         except:
             logger.error(
-                f'Unexpected error in {thread_name} (conn={conn}):', exc_info=True)
+                'Unexpected error in %s (conn=%s):', thread_name, conn, exc_info=True)
             self._shutdown_manager.request_shutdown(1)
         finally:
             try:
@@ -256,16 +272,16 @@ class LoopController(LoopControllerInterface):
                 self._handle_disconnect(conn)
             except:
                 logger.error(
-                    f'Error handling disconnect in {thread_name} (conn={conn}):',
+                    'Error handling disconnect in %s (conn=%s):', thread_name, conn,
                     exc_info=True)
                 self._shutdown_manager.request_shutdown(1)
 
     def _handle_disconnect(self, conn: ClientConnection):
-        func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
-        func(f'Handling disconnect: {conn}...')
+        log_level = logging.DEBUG if conn.client_role == ClientRole.RATINGS_WORKER else logging.INFO
+        logger.log(log_level, 'Handling disconnect: %s...', conn)
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
-        self._remote_logging_manager.handle_disconnect(conn)
+        self._log_syncer.unregister(conn)
         conn.socket.close()
 
     def _init_socket(self):

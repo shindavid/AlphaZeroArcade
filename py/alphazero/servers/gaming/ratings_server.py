@@ -3,15 +3,15 @@ from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.log_forwarder import LogForwarder
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
+from util.py_util import register_signal_exception
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
-import logging
+import signal
 import threading
 
 
@@ -47,10 +47,13 @@ class RatingsServer:
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
-        self._session_data = SessionData(params)
+        self._session_data = SessionData(params, logging_params)
         self._shutdown_manager = ShutdownManager()
-        self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
         self._running = False
+
+        register_signal_exception(signal.SIGTERM)
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     def run(self):
         try:
@@ -74,7 +77,6 @@ class RatingsServer:
 
     def _init_socket(self):
         self._session_data.init_socket()
-        self._log_forwarder.set_socket(self._session_data.socket)
         self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
@@ -82,7 +84,7 @@ class RatingsServer:
         self._session_data.send_handshake(ClientRole.RATINGS_SERVER, aux=aux)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.RATINGS_SERVER, self._log_forwarder)
+        self._session_data.recv_handshake(ClientRole.RATINGS_SERVER)
 
     def _recv_loop(self):
         try:
@@ -109,8 +111,7 @@ class RatingsServer:
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('ratings-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
@@ -150,6 +151,9 @@ class RatingsServer:
         ps2 = self._get_reference_player_str(ref_strength)
         binary = self._build_params.get_binary_path(self._session_data.game)
 
+        log_filename = self._session_data.get_log_filename('ratings-worker')
+        self._session_data.start_log_sync(log_filename)
+
         args = {
             '-G': n_games,
             '--loop-controller-hostname': self._params.loop_controller_host,
@@ -160,6 +164,7 @@ class RatingsServer:
             '--cuda-device': self._params.cuda_device,
             '--weights-request-generation': mcts_gen,
             '--do-not-report-metrics': None,
+            '--log-filename': log_filename,
         }
         args.update(self._session_data.game_spec.rating_options)
         cmd = [
@@ -175,14 +180,12 @@ class RatingsServer:
 
         proc = subprocess_util.Popen(cmd)
         logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, proc.pid, cmd)
-        stdout_buffer = []
-        self._log_forwarder.forward_output(
-            'ratings-worker', proc, stdout_buffer, close_remote_log=False)
+        stdout = self._session_data.wait_for(proc)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
-        record = extract_match_record(stdout_buffer)
+        record = extract_match_record(stdout)
         logger.info('Match result: %s', record.get(0))
 
         self._running = False

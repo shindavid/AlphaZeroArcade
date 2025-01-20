@@ -4,9 +4,9 @@ from .loop_controller_interface import LoopControllerInterface
 from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
+from util import ssh_util
 
 from collections import defaultdict
-import logging
 import os
 import sqlite3
 import threading
@@ -84,10 +84,13 @@ class SelfPlayManager:
         self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
+        ssh_pub_key = ssh_util.get_pub_key()
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
             'game': self._controller.game_spec.name,
+            'tag': self._controller.run_params.tag,
+            'ssh_pub_key': ssh_pub_key,
         }
         conn.socket.send_json(reply)
 
@@ -124,6 +127,7 @@ class SelfPlayManager:
         # to just shut down the server.
         if not self._gen0_complete:
             raise Exception('Server disconnected before gen-0 self-play was complete')
+        self._controller.stop_log_sync(conn)
 
     def _handle_worker_disconnect(self, conn: ClientConnection):
         cond: threading.Condition = conn.aux['ack_cond']
@@ -137,16 +141,14 @@ class SelfPlayManager:
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if msg_type != 'log':
-            # no need to double-log log-messages
-            logger.debug('self-play-server received json message: %s', msg)
+        logger.debug('self-play-server received json message: %s', msg)
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'ready':
+        if msg_type == 'ready':
             self._handle_ready(conn)
-        elif msg_type == 'worker-exit':
-            self._controller.handle_worker_exit(msg, conn)
+        elif msg_type == 'log-sync-start':
+            self._controller.start_log_sync(conn, msg['log_filename'])
+        elif msg_type == 'log-sync-stop':
+            self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'gen0-complete':
             self._handle_gen0_complete()
         else:
@@ -160,9 +162,7 @@ class SelfPlayManager:
             # logging every game is too spammy
             logger.debug('self-play-worker received json message: %s', msg)
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'pause-ack':
+        if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)

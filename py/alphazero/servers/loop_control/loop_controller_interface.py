@@ -5,6 +5,7 @@ from .params import LoopControllerParams
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
     MsgHandler, ShutdownAction
+from alphazero.logic.run_params import RunParams
 from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
@@ -56,6 +57,11 @@ class LoopControllerInterface(abc.ABC):
     @property
     @abc.abstractmethod
     def training_params(self) -> TrainingParams:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def run_params(self) -> RunParams:
         pass
 
     @property
@@ -118,14 +124,6 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
-        pass
-
-    @abc.abstractmethod
-    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
-        pass
-
-    @abc.abstractmethod
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         pass
 
@@ -147,4 +145,20 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def get_next_checkpoint(self) -> int:
+        pass
+
+    @abc.abstractmethod
+    def start_log_sync(self, conn: ClientConnection, remote_filename: str):
+        pass
+
+    @abc.abstractmethod
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+        pass
+
+    @abc.abstractmethod
+    def spawn_log_sync_thread(self):
+        pass
+
+    @abc.abstractmethod
+    def wait_for_log_sync_thread(self):
         pass

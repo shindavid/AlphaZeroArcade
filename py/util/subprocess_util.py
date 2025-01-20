@@ -44,9 +44,6 @@ def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code: Optiona
     if expected_return_code not in (proc.returncode, None):
         print_fn(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
         print_fn('----------------------------')
-        print_fn('STDOUT:')
-        print_fn(stdout)
-        print_fn('----------------------------')
         print_fn('STDERR:')
         print_fn(stderr)
         print_fn('----------------------------')

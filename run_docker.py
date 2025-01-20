@@ -5,6 +5,7 @@
 from setup_common import get_env_json, get_image_label
 
 import argparse
+import os
 import shlex
 import subprocess
 from packaging import version
@@ -13,12 +14,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.resolve()
 
-MINIMUM_REQUIRED_IMAGE_VERSION = "1.1.4"
+MINIMUM_REQUIRED_IMAGE_VERSION = "1.2.3"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
     8002,  # flask
-    8051, # dash
+    8051,  # dash
 ]
 
 
@@ -72,13 +73,7 @@ def is_container_running(container_name):
 
 def execute_into_container(container_name):
     docker_cmd = ["docker", "exec", "-it", container_name, "bash"]
-    docker_cmd_str = " ".join(shlex.quote(arg) for arg in docker_cmd)
-
-    try:
-        print(f"Executing into Docker container: {docker_cmd_str}")
-        subprocess.run(docker_cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing into Docker container: {e}")
+    launch_docker_cmd(docker_cmd, run=False)
 
 
 def get_env_vars(args):
@@ -152,14 +147,40 @@ def run_container(args):
         entrypoint_cmd += "; exec bash"
         docker_cmd += ["bash", "-c", entrypoint_cmd]
 
+    launch_docker_cmd(docker_cmd, run=True)
+
+
+def launch_docker_cmd(docker_cmd, run: bool):
+    if run:
+        msg = 'Running Docker container'
+        error_msg = 'Error running Docker container'
+    else:
+        msg = 'Executing into Docker container'
+        error_msg = 'Error executing into Docker container'
+
+    # Determine if we're in a tmux session.
+    in_tmux = "TMUX" in os.environ
+
+    # If yes, read the current window name and rename to "docker"
+    old_name = None
+    if in_tmux:
+        old_name = subprocess.check_output(
+            ["tmux", "display-message", "-p", "#W"],
+            text=True).strip()
+
+        subprocess.run(["tmux", "rename-window", "docker"], check=True)
+
     docker_cmd_str = " ".join(shlex.quote(arg) for arg in docker_cmd)
 
-    # Run the docker command
     try:
-        print(f"Running Docker command: {docker_cmd_str}")
+        print(f"{msg}: {docker_cmd_str}")
         subprocess.run(docker_cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"Error running Docker container: {e}")
+        print(f"{error_msg}: {e}")
+    finally:
+        # If we renamed the window, revert it now
+        if old_name is not None:
+            subprocess.run(["tmux", "rename-window", old_name], check=True)
 
 
 def main():
