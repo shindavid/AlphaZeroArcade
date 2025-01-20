@@ -197,7 +197,7 @@ class SelfPlayServer:
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        proc = subprocess_util.Popen(self_play_cmd)
+        proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL)
         logger.info('Running gen-0 self-play [%s]: %s', proc.pid, self_play_cmd)
         self._session_data.wait_for(proc)
 
@@ -262,7 +262,7 @@ class SelfPlayServer:
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        proc = subprocess_util.Popen(self_play_cmd)
+        proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL)
         self._proc = proc
         logger.info('Running self-play [%s]: %s', proc.pid, self_play_cmd)
         self._session_data.wait_for(proc)

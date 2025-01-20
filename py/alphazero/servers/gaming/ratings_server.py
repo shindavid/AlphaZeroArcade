@@ -180,12 +180,12 @@ class RatingsServer:
 
         proc = subprocess_util.Popen(cmd)
         logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, proc.pid, cmd)
-        self._session_data.wait_for(proc)
+        stdout = self._session_data.wait_for(proc)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
-        record = extract_match_record(proc.stdout)
+        record = extract_match_record(stdout)
         logger.info('Match result: %s', record.get(0))
 
         self._running = False

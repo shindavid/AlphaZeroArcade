@@ -6,6 +6,7 @@ from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.socket_util import Socket
 from util import ssh_util
+from util import subprocess_util
 
 import os
 import socket
@@ -37,16 +38,10 @@ class SessionData:
         self._skip_next_returncode_check = True
 
     def wait_for(self, proc: subprocess.Popen):
-        proc.wait()
-
-        if self._skip_next_returncode_check:
-            self._skip_next_returncode_check = False
-            return
-        if proc.returncode:
-            logger.error(f'Process failed with return code {proc.returncode}')
-            for line in proc.stderr:
-                logger.error(line.strip())
-            raise Exception()
+        expected_rc = None if self._skip_next_returncode_check else 0
+        print_fn = logger.error
+        self._skip_next_returncode_check = False
+        return subprocess_util.wait_for(proc, expected_return_code=expected_rc, print_fn=print_fn)
 
     def init_socket(self):
         addr = (self._params.loop_controller_host, self._params.loop_controller_port)
