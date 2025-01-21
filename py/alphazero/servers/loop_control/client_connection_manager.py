@@ -55,6 +55,10 @@ class ClientConnectionManager:
         manager_id = msg.get('manager_id', None)
         client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
 
+        # TODO: see long comment in SelfRatingsServer._run_match_helper(). Consider removing
+        # self_manager_id_to_worker_id_map. I think that only exists to facilitate client-id-reuse,
+        # but with the recent logging changes, I don't think client-id-reuse serves any purpose.
+
         gpu_id = GpuId(ip_address, cuda_device)
         with self._lock:
             conns = list(self._connections)
