@@ -514,6 +514,9 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
 
   LookupTable& lookup_table = shared_data_->lookup_table;
   MCTSKey mcts_key = Game::InputTensorizor::mcts_key(*history);
+
+  // TODO: should the lookup and insert in lookup_table be done atomically? Probably? Otherwise,
+  // we can have a race-condition causing a node to be inserted twice with the same key?
   node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
 
   bool is_new_node = child_index < 0;
@@ -547,6 +550,37 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
       standard_backprop(do_virtual);
     }
   } else {
+    // TODO: in this case, we should check to see if there are sister edges that point to the same
+    // child. In this case, we can "slide" the visits and policy-mass from one edge to the other,
+    // effectively pretending that we had merged the two edges from the beginning. This should
+    // result in a more efficient search.
+    //
+    // We had something like this at some point, and for tic-tac-toe, it led to a significant
+    // improvement. But that previous implementation was inefficient for large branching factors,
+    // as it did the edge-merging up-front. This proposal only attempts edge-merges on-demand,
+    // piggy-backing existing MCGS-key-lookups for minimal additional overhead.
+    //
+    // Some technical notes on this:
+    //
+    // - At a minimum we want to slide E and adjusted_base_prob, and then mark the edge as defunct,
+    //   so that PUCT will not select it.
+    // - We can easily mutex-protect the writes, by doing this under the parent's mutex. For the
+    //   reads in ActionSelector, we can probably be unsafe. I think a reasonable order would be:
+    //
+    //   edge1->merged_edge_index = edge2_index;
+    //   edge2->adjusted_base_prob += edge1->adjusted_base_prob;
+    //   edge1->adjusted_base_prob = 0;
+    //   edge2->E += edge1->E;
+    //   edge1->E = 0;
+    //
+    //   We just have to reason carefully about the order of the reads in ActionSelector. Choosing
+    //   which edge merges into which edge can also give us more control over possible races, as
+    //   ActionSelector iterates over the edges in a specific order. More careful analysis is
+    //   needed here.
+    //
+    //   Wherever we increment an edge->E, we can check, under the parent-mutex, if
+    //   edge->merged_edge_index >= 0, and if so, increment the E of the merged edge instead, in
+    //   order to make the writes thread-safe.
     edge->child_index = child_index;
   }
 
