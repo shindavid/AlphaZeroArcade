@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# write .sqliterc:
+cat << 'EOF' >> ~/.sqliterc
+.mode column
+.headers on
+EOF
+
 cat << 'EOF' >> ~/.bashrc
 # Show git branch name with dirty bit inside parentheses
 

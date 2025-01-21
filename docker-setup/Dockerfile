@@ -1,7 +1,7 @@
 # FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.2.3"
+LABEL version="1.2.4"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -38,9 +38,6 @@ RUN for tool in gcc g++; do \
 
 # Python dependencies
 RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging pygraphviz
-
-# Configure SQLite
-RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
 
 ENV PYTHONPATH=/workspace/repo/py
 
