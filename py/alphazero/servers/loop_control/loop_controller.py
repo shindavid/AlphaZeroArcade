@@ -16,18 +16,15 @@ from alphazero.logic.custom_types import ClientConnection, ClientRole, Disconnec
     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
+from alphazero.logic.signaling import register_standard_server_signals
 from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import register_signal_exception
 from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
-
-import faulthandler
 import logging
-import signal
 import socket
 import threading
 from typing import Callable, Dict, Optional
@@ -67,20 +64,7 @@ class LoopController(LoopControllerInterface):
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
 
-        # This line allows us to generate a per-thread stack trace by externally running:
-        #
-        # kill -s SIGUSR1 <pid>
-        #
-        # This is useful for diagnosing deadlocks.
-        faulthandler.register(signal.SIGUSR1, all_threads=True)
-
-        register_signal_exception(signal.SIGTERM,
-                                  echo_action=lambda: logger.info('Ignoring repeat SIGTERM'))
-        if params.ignore_sigint:
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-        else:
-            register_signal_exception(signal.SIGINT, KeyboardInterrupt,
-                                      echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
+        register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
     def run(self):
         """

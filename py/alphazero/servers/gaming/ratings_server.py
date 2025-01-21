@@ -2,16 +2,15 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
+from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
-from util.py_util import register_signal_exception
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
-import signal
 import threading
 
 
@@ -51,13 +50,7 @@ class RatingsServer:
         self._shutdown_manager = ShutdownManager()
         self._running = False
 
-        register_signal_exception(signal.SIGTERM,
-                                  echo_action=lambda: logger.info('Ignoring repeat SIGTERM'))
-        if params.ignore_sigint:
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-        else:
-            register_signal_exception(signal.SIGINT, KeyboardInterrupt,
-                                      echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
+        register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
     def run(self):
         try:

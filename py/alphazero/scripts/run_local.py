@@ -18,6 +18,7 @@ If the local machine has multiple GPU's, more than one self-play server can be l
 """
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
+from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
@@ -25,7 +26,7 @@ from games.game_spec import GameSpec
 import games.index as game_index
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
-from util.py_util import CustomHelpFormatter, register_signal_exception
+from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
 from util import subprocess_util
 
