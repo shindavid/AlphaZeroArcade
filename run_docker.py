@@ -133,6 +133,11 @@ def run_container(args):
     user_id = subprocess.check_output(["id", "-u"], text=True).strip()
     group_id = subprocess.check_output(["id", "-g"], text=True).strip()
 
+    # TODO: add support for non-1000 users. Will require some surgery to the Dockerfile and
+    # entrypoint.sh. Need to test on both local machine and on runpod.
+    assert user_id == '1000', f"Unexpected user_id: {user_id}"
+    assert group_id == '1000', f"Unexpected group_id: {group_id}"
+
     # Build the docker run command
     docker_cmd = [
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
