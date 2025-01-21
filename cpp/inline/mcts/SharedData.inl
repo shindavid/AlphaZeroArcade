@@ -30,6 +30,24 @@ void SharedData<Game>::clear() {
 
 template <core::concepts::Game Game>
 void SharedData<Game>::update_state(core::action_t action) {
+  // TODO: this logic is currently not quite right. It assumes that the symmetry-set is constant,
+  // which is not true for games like chess where the symmetries of the game is dependent on the
+  // board state.
+  //
+  // To fix this, I think we need to track the intersection of the symmetry-set across the entire
+  // history.
+  //
+  // I also think that this loop needs to change to symmetrize the states, rather than the action.
+  // It makes no sense to symmetrize an action like a king-side-castle into 8 different versions.
+  // But we can symmetrize the state that results from the king-side-castle. By respecting the valid
+  // symmetry set that comes from the intersection, we won't actually use any of those symmetries
+  // that correspond to nonsensical states.
+  //
+  // As part of this, I think the get_canonical_symmetry() function needs to accept a history,
+  // rather than a state. The history object should probably be extended to easily compute the
+  // symmetry-set-intersection. This changes ensures that in SearchThread, we won't access a
+  // canonical history that includes nonsensical states.
+
   core::action_mode_t mode = get_current_action_mode();
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
     core::action_t transformed_action = action;
