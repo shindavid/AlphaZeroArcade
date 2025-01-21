@@ -17,10 +17,8 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
-
-    @staticmethod
-    def worker_roles():
-        return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
+    SELF_RATINGS_SERVER = 'self-ratings-server'
+    SELF_RATINGS_WORKER = 'self-ratings-worker'
 
 
 class Domain(Enum):

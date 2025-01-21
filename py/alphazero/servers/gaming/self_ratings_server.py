@@ -2,15 +2,16 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
-from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
+from util.py_util import register_signal_exception
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
+import signal
 import threading
 
 
@@ -18,31 +19,21 @@ logger = get_logger()
 
 
 @dataclass
-class RatingsServerParams(BaseParams):
-    rating_tag: str = ''
-
+class SelfRatingsServerParams(BaseParams):
     @staticmethod
-    def create(args) -> 'RatingsServerParams':
-        kwargs = {f.name: getattr(args, f.name) for f in fields(RatingsServerParams)}
-        return RatingsServerParams(**kwargs)
+    def create(args) -> 'SelfRatingsServerParams':
+        kwargs = {f.name: getattr(args, f.name) for f in fields(SelfRatingsServerParams)}
+        return SelfRatingsServerParams(**kwargs)
 
     @staticmethod
     def add_args(parser, omit_base=False):
-        defaults = RatingsServerParams()
-
-        group = parser.add_argument_group(f'RatingsServer options')
+        group = parser.add_argument_group(f'SelfRatingsServer options')
         if not omit_base:
             BaseParams.add_base_args(group)
 
-        group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
-                           help='ratings tag. Loop controller collates ratings by this str. It is '
-                           'the responsibility of the user to make sure that the same '
-                           'binary/params are used across different RatingsServer processes '
-                           'sharing the same rating-tag. (default: "%(default)s")')
 
-
-class RatingsServer:
-    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams,
+class SelfRatingsServer:
+    def __init__(self, params: SelfRatingsServerParams, logging_params: LoggingParams,
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
@@ -51,7 +42,13 @@ class RatingsServer:
         self._running = False
         self._worker_log_sync_registered = False
 
-        register_standard_server_signals(ignore_sigint=params.ignore_sigint)
+        register_signal_exception(signal.SIGTERM,
+                                  echo_action=lambda: logger.info('Ignoring repeat SIGTERM'))
+        if params.ignore_sigint:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+        else:
+            register_signal_exception(signal.SIGINT, KeyboardInterrupt,
+                                      echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     def run(self):
         try:
@@ -78,11 +75,10 @@ class RatingsServer:
         self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
-        aux = { 'tag': self._params.rating_tag, }
-        self._session_data.send_handshake(ClientRole.RATINGS_SERVER, aux=aux)
+        self._session_data.send_handshake(ClientRole.SELF_RATINGS_SERVER)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.RATINGS_SERVER)
+        self._session_data.recv_handshake(ClientRole.SELF_RATINGS_SERVER)
 
     def _recv_loop(self):
         try:
@@ -109,7 +105,7 @@ class RatingsServer:
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('self-ratings-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
@@ -141,46 +137,89 @@ class RatingsServer:
         assert not self._running
         self._running = True
 
-        mcts_gen = msg['mcts_gen']
-        ref_strength = msg['ref_strength']
+        # gen==0 means no model
+        gen1 = msg['gen1']
+        n_iters1 = msg['n_iters1']
+        gen2 = msg['gen2']
+        n_iters2 = msg['n_iters2']
         n_games = msg['n_games']
 
-        ps1 = self._get_mcts_player_str(mcts_gen)
-        ps2 = self._get_reference_player_str(ref_strength)
+        ps1 = self._get_mcts_player_str(gen1, n_iters1)
+        ps2 = self._get_mcts_player_str(gen2, n_iters2)
         binary = self._build_params.get_binary_path(self._session_data.game)
 
-        log_filename = self._session_data.get_log_filename('ratings-worker')
+        log_filename1 = self._session_data.get_log_filename('self-ratings-worker', 'a')
+        log_filename2 = self._session_data.get_log_filename('self-ratings-worker', 'b')
         if not self._worker_log_sync_registered:
-            self._session_data.start_log_sync(log_filename)
+            self._session_data.start_log_sync(log_filename1)
+            self._session_data.start_log_sync(log_filename2)
             self._worker_log_sync_registered = True
 
-        args = {
+        # TODO: We launch 2 workers from this single server. They will share the same manager-id.
+        # There is currently a check on the loop-controller side that will cause the second
+        # worker connection to be rejected. We should fix this.
+        #
+        # (dshin) I *believe* that there were 2 reasons that the loop-controller cares about
+        # manager-id's:
+        #
+        # 1. To catch code errors leading to a server mistakenly spawning multiple workers
+        #
+        # 2. To ensure all ratings-workers spawned by a single ratings server log to the same log
+        #    file.
+        #
+        # Reason 2 became outdated with the merge of the local-logging branch on 2024-01-20.
+        # Reason 1 is probably not too relevant now that this code has become more mature, but if
+        # we want to keep it, we can perhaps change it to allow up to 2 workers, either in
+        # general, or for specific client-roles.
+        base_args = {
             '-G': n_games,
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.RATINGS_WORKER.value,
-            '--manager-id': self._session_data.client_id,
-            '--ratings-tag': f'"{self._params.rating_tag}"',
+            '--client-role': ClientRole.SELF_RATINGS_WORKER.value,
+            '--manager-id': self._session_data.client_id,  # see comment above
             '--cuda-device': self._params.cuda_device,
-            '--weights-request-generation': mcts_gen,
             '--do-not-report-metrics': None,
-            '--log-filename': log_filename,
         }
-        args.update(self._session_data.game_spec.rating_options)
-        cmd = [
+
+        args1 = dict(base_args)
+        args1.update({
+            '--weights-request-generation': gen1,
+            '--log-filename': log_filename1,
+        })
+        args2 = dict(base_args)
+        args2.update({
+            '--weights-request-generation': gen2,
+            '--log-filename': log_filename2,
+        })
+
+        port = 1234  # TODO: move this to constants.py or somewhere
+
+        cmd1 = [
             binary,
+            '--port', str(port),
             '--player', f'"{ps1}"',
+        ]
+        cmd1.append(make_args_str(args1))
+        cmd1 = ' '.join(map(str, cmd1))
+
+        cmd2 = [
+            binary,
+            '--remote-port', str(port),
             '--player', f'"{ps2}"',
-            ]
-        cmd.append(make_args_str(args))
-        cmd = ' '.join(map(str, cmd))
+        ]
+        cmd2.append(make_args_str(args2))
+        cmd2 = ' '.join(map(str, cmd2))
 
-        mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
-        ref_name = RatingsServer._get_reference_player_name(ref_strength)
+        p1 = SelfRatingsServer._get_mcts_player_name(gen1, n_iters1)
+        p2 = SelfRatingsServer._get_mcts_player_name(gen2, n_iters2)
 
-        proc = subprocess_util.Popen(cmd)
-        logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, proc.pid, cmd)
-        stdout = self._session_data.wait_for(proc)
+        proc1 = subprocess_util.Popen(cmd1)
+        proc2 = subprocess_util.Popen(cmd2)
+        logger.info('Running %s vs %s match [%s] [%s]', p1, p2, proc1.pid, proc2.pid)
+        logger.info('Command 1: %s', cmd1)
+        logger.info('Command 2: %s', cmd2)
+
+        stdout = self._session_data.wait_for(proc1)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
@@ -193,41 +232,29 @@ class RatingsServer:
         data = {
             'type': 'match-result',
             'record': record.get(0).to_json(),
-            'mcts_gen': mcts_gen,
-            'ref_strength': ref_strength,
+            'gen1': gen1,
+            'gen2': gen2,
+            'n_iters1': n_iters1,
+            'n_iters2': n_iters2,
         }
 
         self._session_data.socket.send_json(data)
         self._send_ready()
 
     @staticmethod
-    def _get_mcts_player_name(gen: int):
-        return f'MCTS-{gen}'
+    def _get_mcts_player_name(gen: int, n_iters: int):
+        return f'MCTS-{gen}-{n_iters}'
 
-    def _get_mcts_player_str(self, gen: int):
-        name = RatingsServer._get_mcts_player_name(gen)
+    def _get_mcts_player_str(self, gen: int, n_iters: int):
+        name = SelfRatingsServer._get_mcts_player_name(gen, n_iters)
 
         player_args = {
             '--type': 'MCTS-C',
             '--name': name,
             '--cuda-device': self._params.cuda_device,
+            '-i': n_iters,
         }
-        player_args.update(self._session_data.game_spec.rating_player_options)
-        return make_args_str(player_args)
+        if gen == 0:
+            player_args['--no-model'] = None
 
-    @staticmethod
-    def _get_reference_player_name(strength: int):
-        return f'ref-{strength}'
-
-    def _get_reference_player_str(self, strength: int):
-        name = RatingsServer._get_reference_player_name(strength)
-        family = self._session_data.game_spec.reference_player_family
-        type_str = family.type_str
-        strength_param = family.strength_param
-
-        player_args = {
-            '--type': type_str,
-            '--name': name,
-            strength_param: strength,
-        }
         return make_args_str(player_args)
