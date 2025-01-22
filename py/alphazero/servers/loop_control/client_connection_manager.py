@@ -33,7 +33,7 @@ class ClientConnectionManager:
             while True:
                 conn = self._add_connection()
                 if conn is not None:
-                    self._controller.handle_new_client_connnection(conn)
+                    self._controller.handle_new_client_connection(conn)
         except:
             logger.error('Exception in accept_connections():', exc_info=True)
             self._controller.request_shutdown(1)

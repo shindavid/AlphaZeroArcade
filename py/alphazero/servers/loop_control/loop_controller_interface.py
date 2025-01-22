@@ -110,7 +110,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle_new_client_connnection(self, conn: ClientConnection):
+    def handle_new_client_connection(self, conn: ClientConnection):
         pass
 
     @abc.abstractmethod
