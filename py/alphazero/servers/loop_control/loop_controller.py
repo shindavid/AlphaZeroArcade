@@ -1,3 +1,4 @@
+from .benchmarking_manager import BenchmarkingManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
@@ -61,6 +62,7 @@ class LoopController(LoopControllerInterface):
         self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
+        self._benchmarking_manager = BenchmarkingManager(self)
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
 
@@ -154,6 +156,10 @@ class LoopController(LoopControllerInterface):
             self._self_play_manager.add_server(conn)
         elif client_role == ClientRole.SELF_PLAY_WORKER:
             self._self_play_manager.add_worker(conn)
+        elif client_role == ClientRole.BENCHMARKING_SERVER:
+            self._benchmarking_manager.add_server(conn)
+        elif client_role == ClientRole.BENCHMARKING_WORKER:
+            self._benchmarking_manager.add_worker(conn)
         elif client_role == ClientRole.RATINGS_SERVER:
             self._get_ratings_manager(conn.aux['tag']).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
@@ -181,6 +187,7 @@ class LoopController(LoopControllerInterface):
                          daemon=True).start()
 
     def handle_new_model(self):
+        self._benchmarking_manager.notify_of_new_model()
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
