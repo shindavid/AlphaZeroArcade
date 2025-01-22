@@ -166,6 +166,7 @@ TEST(StochasticNimGameTest, VerifyDist) {
 }
 
 TEST(StochasticNimGameTest, ChanceMove) {
+  util::Random::set_seed(1);
   if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
