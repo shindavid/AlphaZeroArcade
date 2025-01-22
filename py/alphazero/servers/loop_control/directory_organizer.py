@@ -117,9 +117,14 @@ class DirectoryOrganizer:
     def fork_info(self) -> ForkInfo:
         if not self._fork_info_loaded:
             if os.path.isfile(self.fork_info_filename):
-                self.fork_info = ForkInfo.load(self.fork_info_filename)
+                self._fork_info = ForkInfo.load(self.fork_info_filename)
             self._fork_info_loaded = True
         return self._fork_info
+
+    @fork_info.setter
+    def fork_info(self, value: ForkInfo):
+        self._fork_info = value
+        self._fork_info_loaded = True
 
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
