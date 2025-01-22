@@ -2,7 +2,7 @@ from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag
+from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
@@ -15,12 +15,6 @@ from typing import Optional
 
 
 logger = get_logger()
-
-
-class ServerStatus(Enum):
-    DISCONNECTED = 'disconnected'
-    BLOCKED = 'blocked'
-    READY = 'ready'
 
 
 class RatingsManager:
@@ -88,6 +82,19 @@ class RatingsManager:
         dict_len = len(self._rating_data_dict)
         rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
 
+        # The target_rate is the % of the generations that the ratings manager aims to rate. Its
+        # dictate is to never allow the % of rated generations to exceed this target_rate.
+        #
+        # To illustrate, if there are 2 generations and the ratings manager hasn't yet done
+        # anything, and we are using a target_rate of 10%, it *cannot* start rating anything,
+        # because doing so risks exceeding the target_rate (since 1 / 2 = 50% > 10%).
+        #
+        # In order to properly respect the target_rate, then, we need to add 1 to the numerator
+        # when calculating current_rate.
+        #
+        # If the ratings manager is currently rating something, however, then dict_len / latest_gen
+        # in fact already represents what the current_rate *would become* if the ratings manager
+        # computes another rating. So, in this case, we don't need to add 1 to the numerator.
         target_rate = self._controller.params.target_rating_rate
         num = dict_len + (0 if rating_in_progress else 1)
         den = max(1, latest_gen)

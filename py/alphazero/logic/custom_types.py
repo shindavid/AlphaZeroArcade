@@ -17,8 +17,8 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
-    SELF_RATINGS_SERVER = 'self-ratings-server'
-    SELF_RATINGS_WORKER = 'self-ratings-worker'
+    BENCHMARKING_SERVER = 'benchmarking-server'
+    BENCHMARKING_WORKER = 'benchmarking-worker'
 
 
 class Domain(Enum):
@@ -29,6 +29,7 @@ class Domain(Enum):
 
     @staticmethod
     def from_role(role: ClientRole):
+        # TODO: add BENCHMARKING_*
         if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
@@ -39,6 +40,12 @@ class Domain(Enum):
     @staticmethod
     def others(d: 'Domain') -> List['Domain']:
         return [d2 for d2 in Domain if d2 != d]
+
+
+class ServerStatus(Enum):
+    DISCONNECTED = 'disconnected'
+    BLOCKED = 'blocked'
+    READY = 'ready'
 
 
 @dataclass(frozen=True)

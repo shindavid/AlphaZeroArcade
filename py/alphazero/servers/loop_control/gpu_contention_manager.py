@@ -84,6 +84,7 @@ class GpuContentionManager:
             # elevated table already exists, just keep it
             return
 
+        # Pick a table to prioritize. We favor tables that are not used for training.
         ratings_tables.sort(key=lambda table:
                             (table.active(Domain.TRAINING), table.active(Domain.SELF_PLAY)))
 
