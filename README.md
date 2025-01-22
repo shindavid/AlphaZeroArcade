@@ -173,7 +173,7 @@ The "Ratings" item in the sidebar shows a plot like this:
 
 ![image](https://github.com/user-attachments/assets/5dd31ea2-df91-4452-9a5c-63b7bdfee48c)
 
-This curve shows how the evolution of an MCTS agent using i=100 iterations per search.
+This curve shows the evolution of an MCTS agent using i=100 iterations per search.
 
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
@@ -191,13 +191,24 @@ example, you can do this with a command like:
 
 NOTE: By way of comparison, this oft-cited blog-post [series](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
 details the efforts of a team of developers at Oracle (Prasad et al) to implement AlphaZero for Connect4. In their
-conclusion, they share the below graph, showing that their agent plays suboptimally in about 1% of positions:
+conclusion, they describe how long they needed to run their training loop for:
 
-![image](https://github.com/user-attachments/assets/e259a944-6f99-4daa-a8c6-28b6441c66dc)
+> _For us, this amounted to a reduction from 77 GPU hours down [to] **21 GPU hours**. We estimate that our original training, without the improvements mentioned here or in the previous article (such as INT8, parallel caching, etc.), would have taken over 450 GPU hours._
 
-And they write,
+As for the performance of their agent, they describe it in their introduction as making the correct move in 99.76% of positions, when
+using i=800 iterations per search.
 
-> _For us, this amounted to a reduction from 77 GPU hours down 21 GPU hours. We estimate that our original training, without the improvements mentioned here or in the previous article (such as INT8, parallel caching, etc.), would have taken over 450 GPU hours._
+To summarize:
+
+|               | AlphaZeroArcade | Oracle Devs    |
+| ------------- | --------------- | -------------- |
+| Training Time | 40 GPU-min      | 21 GPU-hours   |
+| Test Budget   | 100 MCTS iters  | 800 MCTS iters |
+| Test Accuracy | 100%            | 99.76%         |
+
+The test-accuracy comparison may not be completely apples-to-apples, as the Oracle Devs blog post series did not explain in full detail
+how they chose the population of positions that they test on. Still, the overall picture is clear: AlphaZeroArcade, by virtue of an
+efficient implementation and (more importantly) many conceptual improvements, learns much faster.
 
 ## C++ Overview
 
