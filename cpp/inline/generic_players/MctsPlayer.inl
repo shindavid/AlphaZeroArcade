@@ -294,15 +294,16 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
           policy_arr /= policy_arr.sum();
           policy_masked_arr /= policy_masked_arr.sum();
 
-          std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
-                                              "Q_sigma", "LCB", "UCB", "P*"};
+          static std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
+                                                     "Q_sigma", "LCB", "UCB", "P*"};
           auto data = eigen_util::sort_rows(
               eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr,
                                               Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
 
           core::action_mode_t mode = mcts_results->action_mode;
-          eigen_util::PrintArrayFormatMap fmt_map;
-          fmt_map["action"] = [&](float x) { return Game::IO::action_to_str(x, mode); };
+          static eigen_util::PrintArrayFormatMap fmt_map {
+            {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+          };
 
           std::cout << std::endl << "Applying LCB:" << std::endl;
           eigen_util::print_array(std::cout, data, columns, &fmt_map);
@@ -352,9 +353,10 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
   const auto& net_value = results.value_prior;
   core::action_mode_t mode = results.action_mode;
 
-  eigen_util::PrintArrayFormatMap fmt_map;
-  fmt_map["Player"] = [&](core::seat_index_t x) { return IO::player_to_str(x); };
-  fmt_map["action"] = [&](float x) { return IO::action_to_str(x, mode); };
+  static eigen_util::PrintArrayFormatMap fmt_map {
+    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
+    {"action", [&](float x) { return IO::action_to_str(x, mode); }},
+  };
 
   Game::GameResults::print_array(net_value, win_rates, &fmt_map);
 

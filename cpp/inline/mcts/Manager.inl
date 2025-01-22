@@ -347,13 +347,14 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
 
     LocalPolicyArray target = pruned / pruned.sum();
 
-    std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",  "E",
-                                        "PW",     "PL", "mE", "pruned", "target"};
+    static std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",  "E",
+                                               "PW",     "PL", "mE", "pruned", "target"};
     auto data = eigen_util::sort_rows(
         eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
-    eigen_util::PrintArrayFormatMap fmt_map;
-    fmt_map["action"] = [&](float x) { return Game::IO::action_to_str(x, mode); };
+    static eigen_util::PrintArrayFormatMap fmt_map {
+      {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+    };
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
     eigen_util::print_array(std::cout, data, columns, &fmt_map);

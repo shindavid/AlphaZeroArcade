@@ -728,12 +728,13 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
       CP(p) = p == seat;
     }
 
-    std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
     auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
 
-    eigen_util::PrintArrayFormatMap fmt_map1;
-    fmt_map1["Seat"] = [&](float x) { return std::to_string(int(x)); };
-    fmt_map1["CurP"] = [&](float x) { return std::string(x == seat ? "*" : ""); };
+    static eigen_util::PrintArrayFormatMap fmt_map1 {
+      {"Seat", [&](float x) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
+    };
 
     std::stringstream ss1;
     eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
@@ -769,15 +770,16 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
       child_addr(e) = edge->child_index;
     }
 
-    std::vector<std::string> action_columns = {"action", "P",  "Q",  "FPU", "PW",   "PL",    "E",
-                                               "mE",     "RN", "VN", "&ch", "PUCT", "argmax"};
+    static std::vector<std::string> action_columns = {
+        "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
         actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
-    eigen_util::PrintArrayFormatMap fmt_map2;
-    fmt_map2["action"] = [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); };
-    fmt_map2["&ch"] = [](float x) { return x < 0 ? std::string() : std::to_string((int)x); };
-    fmt_map2["argmax"] = [](float x) { return std::string(x == 0 ? "" : "*"); };
+    static eigen_util::PrintArrayFormatMap fmt_map2 {
+      {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+      {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
+      {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+    };
 
     std::stringstream ss2;
     eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);

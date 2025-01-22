@@ -529,11 +529,12 @@ TEST(eigen_util, print_array) {
   array(1, 3) = -0.00927465;
   array(2, 3) = 1.23456e-8;
 
-  std::vector<std::string> column_names = {"ansi", "col1", "col2", "col3", "col4"};
+  static std::vector<std::string> column_names = {"ansi", "col1", "col2", "col3", "col4"};
 
-  eigen_util::PrintArrayFormatMap fmt_map;
-  fmt_map["ansi"] = [](float x) { return "\033[32m\u25CF\033[00m"; };  // green circle
-  fmt_map["col1"] = [](float x) { return "foo" + std::to_string((int)x); };
+  static eigen_util::PrintArrayFormatMap fmt_map{
+      {"ansi", [](float x) { return "\033[32m\u25CF\033[00m"; }},  // green circle
+      {"col1", [](float x) { return "foo" + std::to_string((int)x); }},
+  };
 
   std::ostringstream ss;
   eigen_util::print_array(ss, array, column_names, &fmt_map);
