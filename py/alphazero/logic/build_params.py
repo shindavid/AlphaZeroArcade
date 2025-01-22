@@ -23,7 +23,14 @@ class BuildParams:
         if self.ffi_lib_path:
             return self.ffi_lib_path
 
-        build = 'Debug' if self.debug_build else 'Release'
+        # TODO[dshin]: The ffi-debug build does not work. This is due to some hairy issues with
+        # libtorch and dynamic library loading. For now, we will just use the Release build.
+        #
+        # My hope is to eventually retire the libtorch-dependency in favor of something like
+        # onnxruntime, in which case this problem should disappear. So I'm punting on a proper fix
+        # for now.
+        build = 'Release'
+        # build = 'Debug' if self.debug_build else 'Release'
         return f'target/{build}/lib/lib{game}.so'
 
     @staticmethod
@@ -41,14 +48,14 @@ class BuildParams:
         group = parser.add_argument_group('Build options')
 
         group.add_argument('-d', '--debug-build', action='store_true',
-                           help='use Debug binary and ffi library (default: Release)')
+                           help='use Debug binary (default: Release)')
         if add_binary_path_option:
             group.add_argument(
                 '--binary-path', help='path to binary (default: target/{Debug,Release}/bin/{game})')
         if add_ffi_lib_path_option:
             group.add_argument(
                 '--ffi-lib-path',
-                help='path to ffi library (default: target/{Debug,Release}/lib/lib{game}.so)')
+                help='path to ffi library (default: target/Release/lib/lib{game}.so)')
 
     def add_to_cmd(self, cmd: List[str], add_binary_path_option=True,
                    add_ffi_lib_path_option=True):
