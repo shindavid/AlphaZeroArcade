@@ -167,19 +167,18 @@ During-or-after a run of the loop-controller, you can launch a web dashboard to 
 
 This will print a URL that you can paste into a web browser on your local machine, which currently looks like this:
 
-![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/663d1585-5fdd-4a5f-bcae-91d211559466)
+![image](https://github.com/user-attachments/assets/baa83673-8c1e-41d9-8a2f-ac1432fc006b)
 
 The "Ratings" item in the sidebar shows a plot like this:
 
-![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/a8c1edb8-425e-4634-803f-086801aa59cd)
+![image](https://github.com/user-attachments/assets/5dd31ea2-df91-4452-9a5c-63b7bdfee48c)
 
-The dark curve corresponds to an MCTS agent using i=1600 iterations per search. The light curve corresponds to an agent
-that plays according to the raw network policy with no search.
+This curve shows how the evolution of an MCTS agent using i=100 iterations per search.
 
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
 exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
-plot thus indicates that the system attains optimal results against perfect play within 5 hours (i.e., it always wins as
+plot thus indicates that the system attains optimal results against perfect play within about **40 minutes** (i.e., it always wins as
 first player against perfect play).
 
 You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above Connect4
@@ -189,6 +188,16 @@ example, you can do this with a command like:
 ./target/Release/bin/c4 --player "--type=TUI" \
   --player "--type=MCTS-C -m /workspace/output/c4/my-first-run/models/gen-10.pt"
 ```
+
+NOTE: By way of comparison, this oft-cited blog-post [series](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
+details the efforts of a team of developers at Oracle (Prasad et al) to implement AlphaZero for Connect4. In their
+conclusion, they share the below graph, showing that their agent plays suboptimally in about 1% of positions:
+
+![image](https://github.com/user-attachments/assets/e259a944-6f99-4daa-a8c6-28b6441c66dc)
+
+And they write,
+
+> _For us, this amounted to a reduction from 77 GPU hours down 21 GPU hours. We estimate that our original training, without the improvements mentioned here or in the previous article (such as INT8, parallel caching, etc.), would have taken over 450 GPU hours._
 
 ## C++ Overview
 
