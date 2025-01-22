@@ -19,21 +19,21 @@ logger = get_logger()
 
 
 @dataclass
-class SelfRatingsServerParams(BaseParams):
+class BenchmarkingServerParams(BaseParams):
     @staticmethod
-    def create(args) -> 'SelfRatingsServerParams':
-        kwargs = {f.name: getattr(args, f.name) for f in fields(SelfRatingsServerParams)}
-        return SelfRatingsServerParams(**kwargs)
+    def create(args) -> 'BenchmarkingServerParams':
+        kwargs = {f.name: getattr(args, f.name) for f in fields(BenchmarkingServerParams)}
+        return BenchmarkingServerParams(**kwargs)
 
     @staticmethod
     def add_args(parser, omit_base=False):
-        group = parser.add_argument_group(f'SelfRatingsServer options')
+        group = parser.add_argument_group(f'BenchmarkingServer options')
         if not omit_base:
             BaseParams.add_base_args(group)
 
 
-class SelfRatingsServer:
-    def __init__(self, params: SelfRatingsServerParams, logging_params: LoggingParams,
+class BenchmarkingServer:
+    def __init__(self, params: BenchmarkingServerParams, logging_params: LoggingParams,
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
@@ -210,8 +210,8 @@ class SelfRatingsServer:
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
-        p1 = SelfRatingsServer._get_mcts_player_name(gen1, n_iters1)
-        p2 = SelfRatingsServer._get_mcts_player_name(gen2, n_iters2)
+        p1 = BenchmarkingServer._get_mcts_player_name(gen1, n_iters1)
+        p2 = BenchmarkingServer._get_mcts_player_name(gen2, n_iters2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
@@ -246,7 +246,7 @@ class SelfRatingsServer:
         return f'MCTS-{gen}-{n_iters}'
 
     def _get_mcts_player_str(self, gen: int, n_iters: int):
-        name = SelfRatingsServer._get_mcts_player_name(gen, n_iters)
+        name = BenchmarkingServer._get_mcts_player_name(gen, n_iters)
 
         player_args = {
             '--type': 'MCTS-C',
