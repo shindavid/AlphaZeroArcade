@@ -29,7 +29,6 @@ import webbrowser
 class Params:
     bokeh_port: int = 5012
     flask_port: int = 8002
-    open_in_browser: bool = True
     debug: bool = False
 
     @staticmethod
@@ -37,7 +36,6 @@ class Params:
         return Params(
             bokeh_port=args.bokeh_port,
             flask_port=args.flask_port,
-            open_in_browser=args.open_in_browser,
             debug=bool(args.debug),
         )
 
@@ -50,8 +48,6 @@ class Params:
                            help='bokeh port (default: %(default)s)')
         group.add_argument('--flask-port', type=int, default=defaults.flask_port,
                            help='flask port (default: %(default)s)')
-        group.add_argument('-o', '--open-in-browser', action='store_true',
-                            help='automatically open dashboard in web browser')
         group.add_argument('-d', '--debug', action='store_true', help='debug mode')
 
 
@@ -250,25 +246,14 @@ def bk_worker():
     server.io_loop.start()
 
 
-def open_in_browser():
-    time.sleep(0.2)
-    print('Opening dashboard in web browser...')
-    webbrowser.open(f'http://127.0.0.1:{flask_port}/')
-
-
 def main():
     Thread(target=bk_worker).start()
 
-    # TODO: detect if we are running locally or on a cloud server, and adjust the open_in_browser
-    # option and the print statement accordingly.
-    if params.open_in_browser:
-        Thread(target=open_in_browser).start()
-    else:
-        print('*********************************************************')
-        print('To view the dashboard, open a web browser and navigate to')
-        print(f'http://127.0.0.1:{flask_port}/')
-        print('*********************************************************')
-        print('')
+    print('*********************************************************')
+    print('To view the dashboard, open a web browser and navigate to')
+    print(f'http://127.0.0.1:{flask_port}/')
+    print('*********************************************************')
+    print('')
 
     app.run(host="0.0.0.0", port=flask_port)
 
