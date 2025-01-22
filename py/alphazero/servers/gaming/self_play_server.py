@@ -176,6 +176,10 @@ class SelfPlayServer:
         }
         args.update(self._session_data.game_spec.training_options)
 
+        if self._session_data.directory_organizer is not None:
+            # Needed for direct-game-log-write optimization
+            args['--self-play-dir'] = self._session_data.directory_organizer.self_play_data_dir
+
         binary = self._build_params.get_binary_path(self._session_data.game)
 
         self_play_cmd = [
@@ -240,6 +244,10 @@ class SelfPlayServer:
             '--log-filename': log_filename,
         }
         args.update(self._session_data.game_spec.training_options)
+
+        if self._session_data.directory_organizer is not None:
+            # Needed for direct-game-log-write optimization
+            args['--self-play-dir'] = self._session_data.directory_organizer.self_play_data_dir
 
         binary = self._build_params.get_binary_path(self._session_data.game)
 

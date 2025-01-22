@@ -1,6 +1,9 @@
 from .base_params import BaseParams
 
+from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientId, ClientRole
+from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
@@ -30,6 +33,7 @@ class SessionData:
         self._game = None
         self._game_spec = None
         self._tag = None
+        self._directory_organizer = None
         self._socket: Optional[Socket] = None
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
@@ -72,6 +76,10 @@ class SessionData:
         self._game = data['game']
         self._tag = data['tag']
         self._client_id = data['client_id']
+
+        if self.socket.getsockname()[0] == constants.LOCALHOST_IP:
+            run_params = RunParams(self._game, self._tag)
+            self._directory_organizer = DirectoryOrganizer(run_params)
 
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)
@@ -129,3 +137,8 @@ class SessionData:
         if self._game_spec is None:
             self._game_spec = get_game_spec(self.game)
         return self._game_spec
+
+    @property
+    def directory_organizer(self) -> Optional[DirectoryOrganizer]:
+        # Return None if the loop-controller is not running on localhost
+        return self._directory_organizer

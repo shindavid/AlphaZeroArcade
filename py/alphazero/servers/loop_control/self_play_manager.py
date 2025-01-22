@@ -405,6 +405,7 @@ class SelfPlayManager:
         rows = msg['rows']
         flush = msg['flush']
         done = msg['done']
+        no_file = msg.get('no-file', False)
 
         with self._pending_game_data_lock:
             use_data = self._master_list_length + self._n_pending_rows < self._checkpoint
@@ -427,7 +428,8 @@ class SelfPlayManager:
             # the c++ side be aware of the checkpoint.
             game_filename = None
 
-        conn.socket.recv_file(game_filename)
+        if not no_file:
+            conn.socket.recv_file(game_filename)
 
         if flush:
             metrics = msg.get('metrics', None)

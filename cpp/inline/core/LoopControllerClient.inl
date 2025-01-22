@@ -46,6 +46,9 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_hidden_option<"ratings-tag">(
           po::value<std::string>(&ratings_tag)->default_value(ratings_tag),
           "ratings tag (only relevant if client_role == ratings-worker)")
+      .template add_hidden_option<"self-play-dir">(
+          po::value<std::string>(&self_play_dir)->default_value(self_play_dir),
+          "self play directory (needed for direct-game-log-write optimization)")
       .template add_hidden_option<"manager-id">(
           po::value<int>(&manager_id)->default_value(manager_id),
           "if specified, indicates the client-id of the manager of this process")

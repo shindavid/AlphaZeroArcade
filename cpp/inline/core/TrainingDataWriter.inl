@@ -29,7 +29,16 @@ template <concepts::Game Game>
 TrainingDataWriter<Game>::TrainingDataWriter(const Params& params)
     : params_(params) {
   if (LoopControllerClient::initialized()) {
-    LoopControllerClient::get()->add_listener(this);
+    LoopControllerClient* client = LoopControllerClient::get();
+    client->add_listener(this);
+    if (client->is_loop_controller_local()) {
+      if (client->self_play_dir().empty()) {
+        LOG_WARN << "--self-play-dir not set despite using a local loop controller";
+        LOG_WARN << "Disabling direct-game-log-write optimization";
+      } else {
+        direct_game_log_write_optimization_enabled_ = true;
+      }
+    }
   }
   thread_ = new std::thread([&] { loop(); });
 }
@@ -143,7 +152,54 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
     }
     client->set_last_games_flush_ts(cur_timestamp);
   }
-  client->send_with_file(msg, ss);
+
+  // Optimization: if we are on the same machine as the loop-controller, we can write the file
+  // directly to the filesystem, rather than sending it over the TCP socket. This helps reduce
+  // socket contention, which empirically can be a bottleneck in some settings.
+  //
+  // Some technical notes:
+  //
+  // 1. The loop-controller's SelfPlayManager has the responsibility to both write the file to disk
+  //    AND to add sqlite database entries. It is important to do so in that order, in case there is
+  //    a crash in between the two operations (a file on disk without a corresponding database entry
+  //    is essentially just ignored, but a database entry without a file will lead to a crash).
+  //
+  // 2. The loop-controller's SelfPlayManager MUST be the one to do the database update, because
+  //    sqlite3 only permits a single writer to a database at a time. There are some ways around
+  //    this, but in my experience they are not worth the trouble.
+  //
+  // 3. Therefore, for this optimization, we must first write the file to disk here, and then send a
+  //    message to the loop-controller to update the database, in that order.
+  //
+  // 4. The loop-controller's SelfPlayManager will sometimes intentionally drop certain games,
+  //    skipping the filesystem-write and the database-update. Unless we copy that logic from
+  //    python into c++ (which we don't want to for code-maintenance reasons), we lose the ability
+  //    to replicate that behavior. That is ok, because again, the filesystem-write without a
+  //    database-update is essentially a drop.
+  if (direct_game_log_write_optimization_enabled_) {
+
+    // In the future, if we change the logic controlling the game filename on the python-side, we
+    // need to change this code to match the python-side. Not ideal, but it is what it is.
+    std::string directory =
+        util::create_string("%s/client-%d/gen-%d", client->self_play_dir().c_str(),
+                            client->client_id(), model_generation);
+
+    if (model_generation != last_created_dir_generation_) {
+      boost::filesystem::create_directories(directory);  // mkdir -p
+      last_created_dir_generation_ = model_generation;
+    }
+
+    std::string filename = util::create_string("%s/%ld.log", directory.c_str(), cur_timestamp);
+
+    std::ofstream file(filename);
+    file << ss.str();
+    file.close();
+
+    msg["no-file"] = true;
+    client->send(msg);
+  } else {
+    client->send_with_file(msg, ss);
+  }
 
   rows_written_ = new_rows_written;
   if (done) {

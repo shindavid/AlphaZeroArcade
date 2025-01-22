@@ -64,6 +64,9 @@ class TrainingDataWriter
   int queue_index_ = 0;
   bool closed_ = false;
   bool paused_ = false;
+  bool direct_game_log_write_optimization_enabled_ = false;
+
+  int last_created_dir_generation_ = -1;  // for direct-game-log-write optimization
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;

@@ -87,6 +87,10 @@ class ForkInfo:
 
 class DirectoryOrganizer:
     def __init__(self, args: RunParams):
+        """
+        This constructor should not actually do any filesystem reading or writing. It should just
+        set data members corresonding to expected filesystem paths.
+        """
         game = args.game
         tag = args.tag
 
@@ -106,9 +110,16 @@ class DirectoryOrganizer:
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
 
         self.fork_info_filename = os.path.join(self.base_dir, 'fork-info.json')
-        self.fork_info = None
-        if os.path.isfile(self.fork_info_filename):
-            self.fork_info = ForkInfo.load(self.fork_info_filename)
+        self._fork_info = None
+        self._fork_info_loaded = False
+
+    @property
+    def fork_info(self) -> ForkInfo:
+        if not self._fork_info_loaded:
+            if os.path.isfile(self.fork_info_filename):
+                self.fork_info = ForkInfo.load(self.fork_info_filename)
+            self._fork_info_loaded = True
+        return self._fork_info
 
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
