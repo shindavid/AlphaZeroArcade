@@ -143,7 +143,7 @@ class LoopController(LoopControllerInterface):
     def request_shutdown(self, return_code: int):
         self._shutdown_manager.request_shutdown(return_code)
 
-    def handle_new_client_connnection(self, conn: ClientConnection):
+    def handle_new_client_connection(self, conn: ClientConnection):
         """
         Dispatches to a manager to handle a new client connection. The manager will spawn a new
         thread.
