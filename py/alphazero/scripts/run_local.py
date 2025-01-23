@@ -56,7 +56,6 @@ class Params:
     port: int = default_loop_controller_params.port
     model_cfg: str = default_loop_controller_params.model_cfg
     target_rating_rate: float = default_loop_controller_params.target_rating_rate
-    ignore_sigint: bool = False
     rating_tag: str = ''
     num_cuda_devices_to_use: Optional[int] = None
 
@@ -104,8 +103,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-    if params.ignore_sigint:
-        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
@@ -131,8 +128,6 @@ def launch_ratings_server(params_dict, cuda_device: int):
         cmd.extend(['--loop_controller_port', str(params.port)])
     if default_ratings_server_params.rating_tag != params.rating_tag:
         cmd.extend(['--rating-tag', params.rating_tag])
-    if params.ignore_sigint:
-        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
@@ -162,8 +157,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
-    if params.ignore_sigint:
-        cmd.append('--ignore-sigint')
 
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_binary_path_option=False)
