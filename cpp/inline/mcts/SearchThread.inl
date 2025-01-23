@@ -86,10 +86,10 @@ Node<Game>* SearchThread<Game>::init_root_node() {
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index_t index,
-                                          Node* node) {
+typename SearchThread<Game>::node_pool_index_t
+SearchThread<Game>::init_node(StateHistory* history, node_pool_index_t index, Node* node) {
+  bool is_root = (node == shared_data_->get_root_node());
   if (!node->is_terminal()) {
-    bool is_root = (node == shared_data_->get_root_node());
     bool eval_all_children = manager_params_->force_evaluate_all_root_children && is_root &&
                              shared_data_->search_params.full_search;
 
@@ -130,7 +130,8 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
   }
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*history);
-  shared_data_->lookup_table.insert_node(mcts_key, index);
+  bool overwrite = is_root;
+  return shared_data_->lookup_table.insert_node(mcts_key, index, overwrite);
 }
 
 template <core::concepts::Game Game>
@@ -200,7 +201,8 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
       new (child) Node(&lookup_table, canonical_history, child_active_seat);
     }
     child->initialize_edges();
-    shared_data_->lookup_table.insert_node(mcts_key, edge->child_index);
+    bool overwrite = false;
+    shared_data_->lookup_table.insert_node(mcts_key, edge->child_index, overwrite);
 
     State canonical_child_state = canonical_history.current();
     canonical_history.undo();
@@ -428,6 +430,31 @@ inline void SearchThread<Game>::virtual_backprop() {
 }
 
 template <core::concepts::Game Game>
+void SearchThread<Game>::undo_virtual_backprop() {
+  // NOTE: this is not an exact undo of virtual_backprop(), since the search_path_ is modified in
+  // between the two calls.
+  profiler_.record(SearchThreadRegion::kUndoVirtualBackprop);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
+  }
+
+  util::release_assert(!search_path_.empty());
+
+  for (int i = search_path_.size() - 1; i >= 0; --i) {
+    edge_t* edge = search_path_[i].edge;
+    Node* node = search_path_[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E--;
+      node->stats().VN--;
+    });
+  }
+  validate_search_path();
+}
+
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
@@ -459,7 +486,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::standard_backprop(bool undo_virtual) {
-  profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
+  profiler_.record(SearchThreadRegion::kStandardBackprop);
 
   Node* last_node = search_path_.back().node;
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
@@ -491,6 +518,8 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::short_circuit_backprop() {
+  profiler_.record(SearchThreadRegion::kShortCircuitBackprop);
+
   if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
@@ -515,14 +544,25 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
   LookupTable& lookup_table = shared_data_->lookup_table;
   MCTSKey mcts_key = Game::InputTensorizor::mcts_key(*history);
 
-  // TODO: should the lookup and insert in lookup_table be done atomically? Probably? Otherwise,
-  // we can have a race-condition causing a node to be inserted twice with the same key?
+  // NOTE: we do a lookup_node() call here, and then later, inside init_node(), we do a
+  // corresponding insert_node() call. This is analagous to:
+  //
+  // if key not in dict:
+  //   ...
+  //   dict[key] = value
+  //
+  // If there are multiple search threads, this represents a potential race-condition. The
+  // straightforward solution is to hold a mutex during that entire sequence of operations. However,
+  // this would hold the mutex for far too long.
+  //
+  // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
+  // keeps the first init_node() and "unwinds" the second one.
   node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
 
   bool is_new_node = child_index < 0;
   if (is_new_node) {
-    edge->child_index = lookup_table.alloc_node();
-    Node* child = lookup_table.get_node(edge->child_index);
+    child_index = lookup_table.alloc_node();
+    Node* child = lookup_table.get_node(child_index);
 
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
@@ -543,13 +583,30 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     if (do_virtual) {
       virtual_backprop();
     }
-    init_node(history, edge->child_index, child);
-    if (terminal) {
-      pure_backprop(Game::GameResults::to_value_array(child->stable_data().VT));
+    edge->child_index = init_node(history, child_index, child);
+    if (child_index != edge->child_index) {
+      // This means that we hit the race-condition described above. We need to "unwind" the second
+      // init_node() call, and instead use the first one.
+      //
+      // Note that all the work done in constructing child is effectively discarded. We don't
+      // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
+      // when the lookup_table is defragmented.
+      search_path_.pop_back();
+      if (do_virtual) {
+        undo_virtual_backprop();
+      }
+      is_new_node = false;
+      child_index = edge->child_index;
     } else {
-      standard_backprop(do_virtual);
+      if (terminal) {
+        pure_backprop(Game::GameResults::to_value_array(child->stable_data().VT));
+      } else {
+        standard_backprop(do_virtual);
+      }
     }
-  } else {
+  }
+
+  if (!is_new_node) {
     // TODO: in this case, we should check to see if there are sister edges that point to the same
     // child. In this case, we can "slide" the visits and policy-mass from one edge to the other,
     // effectively pretending that we had merged the two edges from the beginning. This should

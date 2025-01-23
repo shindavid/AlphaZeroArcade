@@ -185,7 +185,16 @@ class Node {
     void clear();
 
     void defragment(node_pool_index_t& root_index);
-    void insert_node(const MCTSKey&, node_pool_index_t);
+
+    // Inserts a mapping from k to v.
+    //
+    // If overwrite is true, the mapping is inserted regardless of whether k is already in the map.
+    // Else, the mapping is only inserted if k is not already in the map.
+    //
+    // Returns the value that k maps to after the operation.
+    node_pool_index_t insert_node(const MCTSKey& k, node_pool_index_t v, bool overwrite);
+
+    // Returns the value that k maps to, or -1 if k is not in the map.
     node_pool_index_t lookup_node(const MCTSKey&) const;
 
     node_pool_index_t alloc_node() { return node_pool_.alloc(1); }

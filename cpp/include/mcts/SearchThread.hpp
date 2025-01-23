@@ -83,7 +83,7 @@ class SearchThread {
 
   void wait_for_activation() const;
   Node* init_root_node();
-  void init_node(StateHistory*, node_pool_index_t, Node* node);
+  node_pool_index_t init_node(StateHistory*, node_pool_index_t, Node* node);
   void expand_all_children(Node*, NNEvaluationRequest* request=nullptr);
   void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
@@ -93,6 +93,7 @@ class SearchThread {
   void visit(Node* node);
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
+  void undo_virtual_backprop();
   void pure_backprop(const ValueArray& value);
   void standard_backprop(bool undo_virtual);
   void short_circuit_backprop();

@@ -158,9 +158,16 @@ void Node<Game>::LookupTable::defragment(node_pool_index_t& root_index) {
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value) {
+typename Node<Game>::node_pool_index_t
+Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value, bool overwrite) {
   std::lock_guard lock(map_mutex_);
-  map_[key] = value;
+  if (overwrite) {
+    map_[key] = value;
+    return value;
+  } else {
+    auto result = map_.emplace(key, value);
+    return result.first->second;
+  }
 }
 
 template <core::concepts::Game Game>
