@@ -41,6 +41,7 @@ class SelfPlayServer:
         self._running = False
         self._proc: Optional[subprocess.Popen] = None
 
+        self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
     def run(self):
@@ -51,6 +52,22 @@ class SelfPlayServer:
             logger.info('Caught Ctrl-C')
         finally:
             self._shutdown_manager.shutdown()
+
+    def _shutdown(self):
+        logger.info('Shutting down self-play server...')
+        try:
+            self._session_data.socket.close()
+        except:
+            pass
+
+        if self._proc is not None:
+            try:
+                self._proc.terminate()
+                subprocess_util.wait_for(self._proc, expected_return_code=None)
+                logger.info('Terminated ratings-worker process %s', self._proc.pid)
+            except:
+                pass
+        logger.info('Self-play server shutdown complete!')
 
     def _main_loop(self):
         try:
@@ -65,7 +82,6 @@ class SelfPlayServer:
 
     def _init_socket(self):
         self._session_data.init_socket()
-        self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
         self._session_data.send_handshake(ClientRole.SELF_PLAY_SERVER)
@@ -199,8 +215,10 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL)
+        self._proc = proc
         logger.info('Running gen-0 self-play [%s]: %s', proc.pid, self_play_cmd)
         self._session_data.wait_for(proc)
+        self._proc = None
 
         logger.info('Gen-0 self-play complete!')
         self._running = False
@@ -271,6 +289,7 @@ class SelfPlayServer:
         self._proc = proc
         logger.info('Running self-play [%s]: %s', proc.pid, self_play_cmd)
         self._session_data.wait_for(proc)
+        self._proc = None
 
     def _restart_helper(self):
         proc = self._proc
@@ -281,6 +300,7 @@ class SelfPlayServer:
         self._session_data.disable_next_returncode_check()
         self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
+        self._proc = None
         self._running = False
 
         self._start_helper()

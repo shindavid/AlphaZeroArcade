@@ -11,7 +11,9 @@ from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
+import subprocess
 import threading
+from typing import Optional
 
 
 logger = get_logger()
@@ -50,7 +52,9 @@ class RatingsServer:
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._worker_log_sync_registered = False
+        self._proc: Optional[subprocess.Popen] = None
 
+        self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
     def run(self):
@@ -61,6 +65,22 @@ class RatingsServer:
             logger.info('Caught Ctrl-C')
         finally:
             self._shutdown_manager.shutdown()
+
+    def _shutdown(self):
+        logger.info('Shutting down ratings server...')
+        try:
+            self._session_data.socket.close()
+        except:
+            pass
+
+        if self._proc is not None:
+            try:
+                self._proc.terminate()
+                subprocess_util.wait_for(self._proc, expected_return_code=None)
+                logger.info('Terminated ratings-worker process %s', self._proc.pid)
+            except:
+                pass
+        logger.info('Ratings server shutdown complete!')
 
     def _main_loop(self):
         try:
@@ -75,7 +95,6 @@ class RatingsServer:
 
     def _init_socket(self):
         self._session_data.init_socket()
-        self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
         aux = { 'tag': self._params.rating_tag, }
@@ -178,9 +197,10 @@ class RatingsServer:
         mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
         ref_name = RatingsServer._get_reference_player_name(ref_strength)
 
-        proc = subprocess_util.Popen(cmd)
-        logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, proc.pid, cmd)
-        stdout = self._session_data.wait_for(proc)
+        self._proc = subprocess_util.Popen(cmd)
+        logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, self._proc.pid, cmd)
+        stdout = self._session_data.wait_for(self._proc)
+        self._proc = None
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
