@@ -200,12 +200,6 @@ class SelfPlayManager:
         conn.socket.send_json(data)
 
     def _launch_self_play(self, conn: ClientConnection):
-        organizer = self._controller.organizer
-        gen = organizer.get_latest_model_generation()
-        model_filename = organizer.get_model_filename(gen)
-        assert gen > 0, gen
-        assert os.path.isfile(model_filename), model_filename
-
         data = {
             'type': 'start',
         }
