@@ -9,6 +9,7 @@ BASE_DIR/  # /workspace/output/game/tag/
         ratings.db
         self-play.db
         training.db
+        benchmarking.db
     self-play-data/
         client-0/
             gen-0/  # uses implicit dummy uniform model
@@ -108,6 +109,7 @@ class DirectoryOrganizer:
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
+        self.benchmarking_db_filename = os.path.join(self.databases_dir, 'benchmarking.db')
 
         self.fork_info_filename = os.path.join(self.base_dir, 'fork-info.json')
         self._fork_info = None
@@ -233,6 +235,7 @@ class DirectoryOrganizer:
 
     def copy_databases(self, target: 'DirectoryOrganizer', retrain_models: bool,
                        last_gen: Optional[Generation]):
+        # TODO: need to copy over benchmarking.db as well
         shutil.copyfile(self.clients_db_filename, target.clients_db_filename)
 
         if not retrain_models:

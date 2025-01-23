@@ -32,7 +32,8 @@ class Domain(Enum):
         # TODO: add BENCHMARKING_*
         if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
             return Domain.SELF_PLAY
-        elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
+        elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER,\
+            ClientRole.BENCHMARKING_SERVER, ClientRole.BENCHMARKING_WORKER):
             return Domain.RATINGS
         else:
             raise ValueError(f'Unexpected role: {role}')

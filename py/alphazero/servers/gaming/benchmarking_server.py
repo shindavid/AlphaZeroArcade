@@ -68,10 +68,10 @@ class BenchmarkingServer:
         self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
-        self._session_data.send_handshake(ClientRole.SELF_RATINGS_SERVER)
+        self._session_data.send_handshake(ClientRole.BENCHMARKING_SERVER)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.SELF_RATINGS_SERVER)
+        self._session_data.recv_handshake(ClientRole.BENCHMARKING_SERVER)
 
     def _recv_loop(self):
         try:
@@ -168,7 +168,7 @@ class BenchmarkingServer:
             '-G': n_games,
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.SELF_RATINGS_WORKER.value,
+            '--client-role': ClientRole.BENCHMARKING_WORKER.value,
             '--manager-id': self._session_data.client_id,  # see comment above
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,

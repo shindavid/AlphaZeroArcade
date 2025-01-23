@@ -17,6 +17,8 @@ class DatabaseConnectionManager:
             organizer.training_db_filename, constants.TRAINING_TABLE_CREATE_CMDS)
         self.ratings_db_conn_pool = DatabaseConnectionPool(
             organizer.ratings_db_filename, constants.RATINGS_TABLE_CREATE_CMDS)
+        self.benchmarking_db_conn_pool = DatabaseConnectionPool(
+            organizer.benchmarking_db_filename, constants.BENCHMARKING_TABLE_CREATE_CMDS)
 
     def _pools(self):
         pools = [
