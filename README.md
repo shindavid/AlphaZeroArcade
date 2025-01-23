@@ -200,11 +200,11 @@ using i=800 iterations per search.
 
 To summarize:
 
-|               | AlphaZeroArcade | Oracle Devs    |
-| ------------- | --------------- | -------------- |
-| Training Time | 40 GPU-min      | 21 GPU-hours   |
-| Test Budget   | 100 MCTS iters  | 800 MCTS iters |
-| Test Accuracy | 100%            | 99.76%         |
+|               | AlphaZeroArcade     | Oracle Devs         |
+| ------------- | ------------------- | ------------------- |
+| Training Time | 40 GPU-min          | 21 GPU-hours        |
+| Test Budget   | 100 MCTS-iters/move | 800 MCTS-iters/move |
+| Test Accuracy | 100%                | 99.76%              |
 
 The test-accuracy comparison may not be completely apples-to-apples, as the Oracle Devs blog post series did not explain in full detail
 how they chose the population of positions that they test on. Still, the overall picture is clear: AlphaZeroArcade, by virtue of an
