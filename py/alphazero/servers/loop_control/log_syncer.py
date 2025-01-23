@@ -174,11 +174,12 @@ class LogSyncer:
             f"devuser@{ip_addr}:{remote_file}",
             local_file
         ]
+        cmd_str = " ".join(cmd)
         logger.debug(f"Syncing remote '{remote_file}' from {ip_addr} -> '{local_file}'")
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
+            subprocess.run(cmd, check=True, capture_output=True, preexec_fn=os.setsid)
         except subprocess.CalledProcessError as e:
-            logger.error(f"Rsync failed for remote '{remote_file}' on {ip_addr}: {e}")
+            logger.error("Rsync failed [%s]: %s", cmd_str, e.stderr.decode('utf-8'))
 
     def _sync_one_locked(self, conn: ClientConnection, remote_file: str, local_file: str):
         """
