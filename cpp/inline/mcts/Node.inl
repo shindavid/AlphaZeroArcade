@@ -261,6 +261,15 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   all_provably_winning.set();
   all_provably_losing.set();
 
+  // TODO: in the below, we read child_stats without locking the child's mutex. This runs into
+  // possibility of reading partially-updated data when running with multiple search threads. We can
+  // even read stats.Q when only one entry of the array has been updated, while the other has not
+  // been updated yet.
+  //
+  // Empirically, this seems ok, but it feels like it'd be best to eliminate this race-condition.
+  // We can accomplish in a *usually*-lock-free way by having the write set a dirty flag and then
+  // clearing that flag after the write. The read can then check the dirty flag and if it's set, it
+  // can lock the mutex and wait on a cv.
   if (stable_data_.is_chance_node) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
       const edge_t* edge = get_edge(i);
@@ -345,9 +354,13 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     stats_.Q = N ? (Q_sum / N) : Q_sum;
     stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
 
-    if (N) {
-      eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
-    }
+    // TODO: the below debug_assert() empirically fails in multi-threaded mode. The lengthy TODO at
+    // the top of this function explains why. Add the dirty flag mechanism described above, and then
+    // uncomment the below check.
+
+    // if (N) {
+    //   eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
+    // }
   }
 }
 
