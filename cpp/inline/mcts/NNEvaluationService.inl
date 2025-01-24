@@ -306,6 +306,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
   batch_metadata_.reserve_index = 0;
   batch_metadata_.commit_count = 0;
   batch_metadata_.accepting_reservations = true;
+
+  batch_metadata_lock.unlock();
   cv_evaluate_.notify_all();
 }
 

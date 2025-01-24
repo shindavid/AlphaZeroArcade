@@ -263,6 +263,7 @@ template <core::concepts::Game Game>
 inline void SearchThread<Game>::deactivate() const {
   std::unique_lock lock(shared_data_->search_mutex);
   shared_data_->active_search_threads[thread_id_] = 0;
+  lock.unlock();
   shared_data_->cv_search_off.notify_all();
 }
 
