@@ -246,7 +246,9 @@ inline void SearchThread<Game>::perform_visits() {
   active_seat_ = root_info.active_seat;
 
   Node* root = init_root_node();
-  while (root->get_stats_unsafely().total_count() <= shared_data_->search_params.tree_size_limit) {
+
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     search_path_.emplace_back(root, nullptr);
     visit(root);
@@ -356,7 +358,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       Node* child = shared_data_->lookup_table.get_node(edge->child_index);
       search_path_.emplace_back(child, nullptr);
       int edge_count = edge->E;
-      int child_count = child->get_stats_unsafely().RN;
+      int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
       if (edge_count < child_count) {
         short_circuit_backprop();
       } else {
@@ -378,7 +380,7 @@ inline void SearchThread<Game>::visit(Node* node) {
   if (child) {
     search_path_.emplace_back(child, nullptr);
     int edge_count = edge->E;
-    int child_count = child->get_stats_unsafely().RN;
+    int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
     if (edge_count < child_count) {
       short_circuit_backprop();
       return;
@@ -418,8 +420,8 @@ inline void SearchThread<Game>::virtual_backprop() {
   util::release_assert(!search_path_.empty());
   Node* last_node = search_path_.back().node;
 
-  last_node->update_stats(multithreaded_, [&] {
-    last_node->get_stats_unsafely().VN++;  // not actually unsafe since we hold the mutex
+  last_node->update_stats([&] {
+    last_node->stats().VN++;  // thread-safe because executed under mutex
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -427,9 +429,9 @@ inline void SearchThread<Game>::virtual_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats(multithreaded_, [&] {
+    node->update_stats([&] {
       edge->E++;
-      node->get_stats_unsafely().VN++;  // not actually unsafe since we hold the mutex
+      node->stats().VN++;  // thread-safe because executed under mutex
     });
   }
   validate_search_path();
@@ -452,9 +454,9 @@ void SearchThread<Game>::undo_virtual_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats(multithreaded_, [&] {
+    node->update_stats([&] {
       edge->E--;
-      node->get_stats_unsafely().VN--;  // not actually unsafe since we hold the mutex
+      node->stats().VN--;  // thread-safe because executed under mutex
     });
   }
   validate_search_path();
@@ -472,8 +474,8 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   util::release_assert(!search_path_.empty());
   Node* last_node = search_path_.back().node;
 
-  last_node->update_stats(multithreaded_, [&] {
-    auto& stats = last_node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+  last_node->update_stats([&] {
+    auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, true);
     stats.RN++;
   });
@@ -483,9 +485,9 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats(multithreaded_, [&] {
+    node->update_stats([&] {
       edge->E++;
-      node->get_stats_unsafely().RN++;  // not actually unsafe since we hold the mutex
+      node->stats().RN++;  // thread-safe because executed under mutex
     });
   }
   validate_search_path();
@@ -503,8 +505,8 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
              << value.transpose();
   }
 
-  last_node->update_stats(multithreaded_, [&] {
-    auto& stats = last_node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+  last_node->update_stats([&] {
+    auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, false);
     stats.RN++;
     stats.VN -= undo_virtual;
@@ -515,9 +517,9 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats(multithreaded_, [&] {
+    node->update_stats([&] {
       edge->E += !undo_virtual;
-      auto& stats = node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+      auto& stats = node->stats();  // thread-safe because executed under mutex
       stats.RN++;
       stats.VN -= undo_virtual;
     });
@@ -538,9 +540,9 @@ void SearchThread<Game>::short_circuit_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats(multithreaded_, [&] {
+    node->update_stats([&] {
       edge->E++;
-      node->get_stats_unsafely().RN++;  // not actually unsafe since we hold the mutex
+      node->stats().RN++;  // thread-safe because executed under mutex
     });
   }
   validate_search_path();
@@ -789,7 +791,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     int n_actions = node->stable_data().num_valid_actions;
 
     ValueArray players;
-    ValueArray nQ = node->get_stats_copy_safely().Q;
+    ValueArray nQ = node->stats().Q;
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;

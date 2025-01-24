@@ -110,29 +110,8 @@ class Node {
     bool is_chance_node;
   };
 
-  /*
-   * Thread-safety policy:
-   *
-   * When writing, we must perform the following steps, in order:
-   *
-   * 1. Lock the mutex
-   * 2. Set the dirty flag to true
-   * 3. Write the data
-   * 4. Set the dirty flag to false
-   * 5. Unlock the mutex
-   * 6. Notify any waiting threads
-   *
-   * When reading, we have the choice of using get_stats_unsafely() or get_stats_copy_safely().
-   *
-   * - get_stats_copy_safely() behaves *as-if* it grabs the mutex and then returns a copy of the
-   *   this->stats_. By taking advantage of the fact that all writers use the above
-   *   mark-dirty/modify/unmark-dirty pattern, the method will usually avoid actually grabbing the
-   *   mutex, but this is hidden from the caller as an implementation detail.
-   *
-   * - get_stats_unsafely() returns a reference to the stats object. This is generally
-   *   thread-unsafe. Please see the documentation for get_stats_unsafely() for details on intended
-   *   usage.
-   */
+  // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some
+  // exceptions on reads, when we read a single atomically-writable member of stats_.
   struct stats_t {
     int total_count() const { return RN + VN; }
     void init_q(const ValueArray&, bool pure);
@@ -145,7 +124,6 @@ class Node {
     ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;       // real count
     int VN = 0;       // virtual count
-    bool dirty = false;
 
     // TODO: generalize these fields to utility lower/upper bounds
     player_bitset_t provably_winning;
@@ -244,16 +222,14 @@ class Node {
                      SearchResults& results) const;
 
   template <typename MutexProtectedFunc>
-  void update_stats(bool multithreaded, MutexProtectedFunc);
+  void update_stats(MutexProtectedFunc);
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
 
-  // get_stats_unsafely() returns a reference to the stats object. This CAN be unsafe because the
-  // stats object might be in the process of being updated by another thread.
-  //
-  // In order to use this, the caller must ensure that one of the following is true:
+  // stats() returns a reference to the stats object, WITHOUT acquiring the mutex. In order to use
+  // this function properly, the caller must ensure that one of the following is true:
   //
   // 1. The context is single-threaded,
   //
@@ -264,15 +240,11 @@ class Node {
   // or,
   //
   // 3. The caller is ok with the possibility of a race-condition with a writer.
-  const stats_t& get_stats_unsafely() const { return stats_; }
-  stats_t& get_stats_unsafely() { return stats_; }
+  const stats_t& stats() const { return stats_; }
+  stats_t& stats() { return stats_; }
 
-  // get_stats_copy_safely() returns a copy of the stats object. It is made thread-safe by
-  // obtaining the mutex associated with the node before making the copy. For performance reasons,
-  // it only obtains the mutex if necessary; this is a subset of all cases by virtue of the fact
-  // that updates to the stats object are always done under a careful mark-dirty/modify/unmark-dirty
-  // pattern.
-  stats_t get_stats_copy_safely() const;
+  // Acquires the mutex and returns a copy of the stats object.
+  stats_t stats_safe() const;
 
   bool is_terminal() const { return stable_data_.terminal; }
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }

@@ -69,7 +69,7 @@ void SharedData<Game>::init_root_info(bool add_noise) {
     util::release_assert(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
     new (root) Node(&lookup_table, canonical_history, active_seat);
-    root->get_stats_unsafely().RN++;  // not actually unsafe since single-threaded here
+    root->stats().RN++;  // thread-safe since single-threaded here
   }
 }
 

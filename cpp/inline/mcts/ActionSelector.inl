@@ -41,7 +41,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
 
     Node* child = node->get_child(edge);
     if (child) {
-      const auto child_stats = child->get_stats_copy_safely();  // make a copy
+      const auto child_stats = child->stats_safe();  // make a copy
       Q(i) = child_stats.Q(seat);
       PW(i) = child_stats.provably_winning[seat];
       PL(i) = child_stats.provably_losing[seat];
@@ -66,7 +66,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     /*
      * Again, we do NOT grab the stats_mutex here!
      */
-    const auto stats = node->get_stats_copy_safely();  // make a copy
+    const auto stats = node->stats_safe();  // make a copy
     float PV = stats.Q(seat);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;

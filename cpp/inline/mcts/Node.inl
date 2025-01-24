@@ -237,8 +237,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   Q.setZero();
   Q_sq.setZero();
 
-  // not actually unsafe since single-threaded
-  const auto& parent_stats = this->get_stats_unsafely();
+  const auto& parent_stats = this->stats();  // thread-safe because single-threaded here
 
   bool provably_winning = parent_stats.provably_winning[seat];
   bool provably_losing = parent_stats.provably_losing[seat];
@@ -254,7 +253,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     if (!child) continue;
 
     // not actually unsafe since single-threaded
-    const auto& child_stats = child->get_stats_unsafely();
+    const auto& child_stats = child->stats();  // thread-safe because single-threaded here
     if (params.avoid_proven_losers && !provably_losing && child_stats.provably_losing[seat]) {
       modified_count = 0;
     } else if (params.exploit_proven_winners && provably_winning &&
@@ -277,7 +276,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
-void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
+void Node<Game>::update_stats(MutexProtectedFunc func) {
   std::unique_lock lock(mutex());
   func();
   lock.unlock();
@@ -301,7 +300,7 @@ void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
       if (!child) {
         break;
       }
-      const auto child_stats = child->get_stats_copy_safely();  // make a copy
+      const auto child_stats = child->stats_safe();  // make a copy
       Q_sum += child_stats.Q * edge->base_prob;
       Q_sq_sum += child_stats.Q_sq * edge->base_prob;
       N++;
@@ -312,17 +311,10 @@ void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
     if (N == stable_data_.num_valid_actions) {
       lock.lock();
 
-      stats_.dirty = true;
       stats_.Q = Q_sum;
       stats_.Q_sq = Q_sq_sum;
       stats_.provably_winning = all_provably_winning;
       stats_.provably_losing = all_provably_losing;
-      stats_.dirty = false;
-
-      if (multithreaded) {
-        lock.unlock();
-        cv().notify_all();
-      }
     }
 
   } else {
@@ -340,7 +332,7 @@ void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
         skipped = true;
         continue;
       }
-      const auto child_stats = child->get_stats_copy_safely();  // make a copy
+      const auto child_stats = child->stats_safe();  // make a copy
       if (child_stats.RN > 0) {
         int e = edge->E;
         N += e;
@@ -373,20 +365,13 @@ void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
 
     lock.lock();
 
-    stats_.dirty = true;
     stats_.Q = Q;
     stats_.Q_sq = Q_sq;
     stats_.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
                                 cp_has_winning_move, stable_data_);
-    stats_.dirty = false;
 
     if (N) {
       eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
-    }
-
-    if (multithreaded) {
-      lock.unlock();
-      cv().notify_all();
     }
   }
 }
@@ -406,21 +391,13 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-typename Node<Game>::stats_t Node<Game>::get_stats_copy_safely() const {
-  stats_t stats = stats_;  // copy
-
-  if (stats.dirty) {
-    // Should be relatively rare. We need to grab the mutex and wait for the dirty flag to clear
-    std::unique_lock lock(mutex());
-    cv().wait(lock, [&] {
-      if (!stats.dirty) {
-        stats = stats_;  // copy
-        return true;
-      }
-      return false;
-    });
-  }
-  return stats;
+typename Node<Game>::stats_t Node<Game>::stats_safe() const {
+  // NOTE[dshin]: I attempted a version of this that attempted a lock-free read, resorting to a
+  // the mutex only when a set dirty-bit was found on the copied stats. Contrary to my expectations,
+  // this was slightly but clearly slower than the current version. I don't really understand why
+  // this might be, but it's not worth investigating further at this time.
+  std::unique_lock lock(mutex());
+  return stats_;
 }
 
 template <core::concepts::Game Game>
@@ -522,13 +499,13 @@ void Node<Game>::validate_state() const {
     util::debug_assert(edge->E >= 0);
   }
 
-  // Make a copy. Not actually unsafe since we hold the mutex
-  const auto stats = get_stats_unsafely();
+  const auto stats_copy = stats();  // thread-safe because we hold the mutex
   lock.unlock();
 
-  util::debug_assert(N == stats.RN + stats.VN, "[%p] %d != %d + %d", this, N, stats.RN, stats.VN);
-  util::debug_assert(stats.RN >= 0);
-  util::debug_assert(stats.VN >= 0);
+  util::debug_assert(N == stats_copy.RN + stats_copy.VN, "[%p] %d != %d + %d", this, N,
+                     stats_copy.RN, stats_copy.VN);
+  util::debug_assert(stats_copy.RN >= 0);
+  util::debug_assert(stats_copy.VN >= 0);
 }
 
 }  // namespace mcts
