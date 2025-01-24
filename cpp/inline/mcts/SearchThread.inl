@@ -22,7 +22,8 @@ inline SearchThread<Game>::SearchThread(SharedData* shared_data,
     : shared_data_(shared_data),
       nn_eval_service_(nn_eval_service),
       manager_params_(manager_params),
-      thread_id_(thread_id) {
+      thread_id_(thread_id),
+      multithreaded_(manager_params->num_search_threads > 1) {
   thread_id_whitespace_ = util::make_whitespace(kThreadWhitespaceLength * thread_id_);
   break_plus_thread_id_whitespace_ = util::create_string("\n%s", util::make_whitespace(
     util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_).c_str());
@@ -245,7 +246,7 @@ inline void SearchThread<Game>::perform_visits() {
   active_seat_ = root_info.active_seat;
 
   Node* root = init_root_node();
-  while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
+  while (root->get_stats_unsafely().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     search_path_.emplace_back(root, nullptr);
     visit(root);
@@ -344,7 +345,9 @@ inline void SearchThread<Game>::visit(Node* node) {
 
       if (expand(state_history, node, edge)) return;
     } else if (edge->state == Node::kMidExpansion) {
-      node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+      if (multithreaded_) {
+        node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+      }
     } else if (edge->state == Node::kPreExpanded) {
       edge->state = Node::kMidExpansion;
       lock.unlock();
@@ -353,7 +356,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       Node* child = shared_data_->lookup_table.get_node(edge->child_index);
       search_path_.emplace_back(child, nullptr);
       int edge_count = edge->E;
-      int child_count = child->stats().RN;
+      int child_count = child->get_stats_unsafely().RN;
       if (edge_count < child_count) {
         short_circuit_backprop();
       } else {
@@ -362,8 +365,10 @@ inline void SearchThread<Game>::visit(Node* node) {
 
       lock.lock();
       edge->state = Node::kExpanded;
-      lock.unlock();
-      node->cv().notify_all();
+      if (multithreaded_) {
+        lock.unlock();
+        node->cv().notify_all();
+      }
       return;
     }
   }
@@ -373,7 +378,7 @@ inline void SearchThread<Game>::visit(Node* node) {
   if (child) {
     search_path_.emplace_back(child, nullptr);
     int edge_count = edge->E;
-    int child_count = child->stats().RN;
+    int child_count = child->get_stats_unsafely().RN;
     if (edge_count < child_count) {
       short_circuit_backprop();
       return;
@@ -413,8 +418,8 @@ inline void SearchThread<Game>::virtual_backprop() {
   util::release_assert(!search_path_.empty());
   Node* last_node = search_path_.back().node;
 
-  last_node->update_stats([&] {
-    last_node->stats().VN++;
+  last_node->update_stats(multithreaded_, [&] {
+    last_node->get_stats_unsafely().VN++;  // not actually unsafe since we hold the mutex
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -422,9 +427,9 @@ inline void SearchThread<Game>::virtual_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    node->update_stats(multithreaded_, [&] {
       edge->E++;
-      node->stats().VN++;
+      node->get_stats_unsafely().VN++;  // not actually unsafe since we hold the mutex
     });
   }
   validate_search_path();
@@ -447,9 +452,9 @@ void SearchThread<Game>::undo_virtual_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    node->update_stats(multithreaded_, [&] {
       edge->E--;
-      node->stats().VN--;
+      node->get_stats_unsafely().VN--;  // not actually unsafe since we hold the mutex
     });
   }
   validate_search_path();
@@ -467,9 +472,10 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   util::release_assert(!search_path_.empty());
   Node* last_node = search_path_.back().node;
 
-  last_node->update_stats([&] {
-    last_node->stats().init_q(value, true);
-    last_node->stats().RN++;
+  last_node->update_stats(multithreaded_, [&] {
+    auto& stats = last_node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+    stats.init_q(value, true);
+    stats.RN++;
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -477,9 +483,9 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    node->update_stats(multithreaded_, [&] {
       edge->E++;
-      node->stats().RN++;
+      node->get_stats_unsafely().RN++;  // not actually unsafe since we hold the mutex
     });
   }
   validate_search_path();
@@ -497,10 +503,11 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
              << value.transpose();
   }
 
-  last_node->update_stats([&] {
-    last_node->stats().init_q(value, false);
-    last_node->stats().RN++;
-    last_node->stats().VN -= undo_virtual;
+  last_node->update_stats(multithreaded_, [&] {
+    auto& stats = last_node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+    stats.init_q(value, false);
+    stats.RN++;
+    stats.VN -= undo_virtual;
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -508,10 +515,11 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    node->update_stats(multithreaded_, [&] {
       edge->E += !undo_virtual;
-      node->stats().RN++;
-      node->stats().VN -= undo_virtual;
+      auto& stats = node->get_stats_unsafely();  // not actually unsafe since we hold the mutex
+      stats.RN++;
+      stats.VN -= undo_virtual;
     });
   }
   validate_search_path();
@@ -530,9 +538,9 @@ void SearchThread<Game>::short_circuit_backprop() {
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    node->update_stats(multithreaded_, [&] {
       edge->E++;
-      node->stats().RN++;
+      node->get_stats_unsafely().RN++;  // not actually unsafe since we hold the mutex
     });
   }
   validate_search_path();
@@ -645,9 +653,11 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
   std::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
   edge->state = Node::kExpanded;
-  lock.unlock();
 
-  parent->cv().notify_all();
+  if (multithreaded_) {
+    lock.unlock();
+    parent->cv().notify_all();
+  }
   return is_new_node;
 }
 
@@ -779,7 +789,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     int n_actions = node->stable_data().num_valid_actions;
 
     ValueArray players;
-    const ValueArray& nQ = node->stats().Q;
+    ValueArray nQ = node->get_stats_copy_safely().Q;
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;

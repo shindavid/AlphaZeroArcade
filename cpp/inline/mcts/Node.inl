@@ -47,6 +47,26 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
 }
 
 template <core::concepts::Game Game>
+void Node<Game>::stats_t::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
+                                               const player_bitset_t& all_actions_provably_losing,
+                                               int num_expanded_children, bool cp_has_winning_move,
+                                               const stable_data_t& sdata) {
+  int num_valid_actions = sdata.num_valid_actions;
+  core::seat_index_t seat = sdata.active_seat;
+
+  if (num_valid_actions == 0) {
+    // terminal state, provably_winning/losing should already be set
+  } else if (cp_has_winning_move) {
+    provably_winning[seat] = true;
+    provably_losing.set();
+    provably_losing[seat] = false;
+  } else if (num_expanded_children == num_valid_actions) {
+    provably_winning = all_actions_provably_winning;
+    provably_losing = all_actions_provably_losing;
+  }
+}
+
+template <core::concepts::Game Game>
 Node<Game>::LookupTable::Defragmenter::Defragmenter(LookupTable* table)
     : table_(table),
       node_bitset_(table->node_pool_.size()),
@@ -217,8 +237,11 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   Q.setZero();
   Q_sq.setZero();
 
-  bool provably_winning = stats_.provably_winning[seat];
-  bool provably_losing = stats_.provably_losing[seat];
+  // not actually unsafe since single-threaded
+  const auto& parent_stats = this->get_stats_unsafely();
+
+  bool provably_winning = parent_stats.provably_winning[seat];
+  bool provably_losing = parent_stats.provably_losing[seat];
 
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
@@ -230,17 +253,19 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     const Node* child = get_child(edge);
     if (!child) continue;
 
-    const auto& stats = child->stats();
-    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[seat]) {
+    // not actually unsafe since single-threaded
+    const auto& child_stats = child->get_stats_unsafely();
+    if (params.avoid_proven_losers && !provably_losing && child_stats.provably_losing[seat]) {
       modified_count = 0;
-    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[seat]) {
+    } else if (params.exploit_proven_winners && provably_winning &&
+               !child_stats.provably_winning[seat]) {
       modified_count = 0;
     }
 
     if (modified_count) {
       counts(action) = modified_count;
-      Q(action) = stats.Q(seat);
-      Q_sq(action) = stats.Q_sq(seat);
+      Q(action) = child_stats.Q(seat);
+      Q_sq(action) = child_stats.Q_sq(seat);
     }
 
     const auto& stable_data = child->stable_data();
@@ -252,7 +277,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
-void Node<Game>::update_stats(MutexProtectedFunc func) {
+void Node<Game>::update_stats(bool multithreaded, MutexProtectedFunc func) {
   std::unique_lock lock(mutex());
   func();
   lock.unlock();
@@ -268,15 +293,6 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   all_provably_winning.set();
   all_provably_losing.set();
 
-  // TODO: in the below, we read child_stats without locking the child's mutex. This runs into
-  // possibility of reading partially-updated data when running with multiple search threads. We can
-  // even read stats.Q when only one entry of the array has been updated, while the other has not
-  // been updated yet.
-  //
-  // Empirically, this seems ok, but it feels like it'd be best to eliminate this race-condition.
-  // We can accomplish in a *usually*-lock-free way by having the write set a dirty flag and then
-  // clearing that flag after the write. The read can then check the dirty flag and if it's set, it
-  // can lock the mutex and wait on a cv.
   if (stable_data_.is_chance_node) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
       const edge_t* edge = get_edge(i);
@@ -285,7 +301,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
       if (!child) {
         break;
       }
-      const auto& child_stats = child->stats();
+      const auto child_stats = child->get_stats_copy_safely();  // make a copy
       Q_sum += child_stats.Q * edge->base_prob;
       Q_sq_sum += child_stats.Q_sq * edge->base_prob;
       N++;
@@ -294,10 +310,19 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
       all_provably_losing &= child_stats.provably_losing;
     }
     if (N == stable_data_.num_valid_actions) {
+      lock.lock();
+
+      stats_.dirty = true;
       stats_.Q = Q_sum;
       stats_.Q_sq = Q_sq_sum;
       stats_.provably_winning = all_provably_winning;
       stats_.provably_losing = all_provably_losing;
+      stats_.dirty = false;
+
+      if (multithreaded) {
+        lock.unlock();
+        cv().notify_all();
+      }
     }
 
   } else {
@@ -315,7 +340,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
         skipped = true;
         continue;
       }
-      const auto& child_stats = child->stats();
+      const auto child_stats = child->get_stats_copy_safely();  // make a copy
       if (child_stats.RN > 0) {
         int e = edge->E;
         N += e;
@@ -343,31 +368,26 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
       eigen_util::debug_assert_is_valid_prob_distr(VA);
     }
 
+    auto Q = N ? (Q_sum / N) : Q_sum;
+    auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+
     lock.lock();
 
-    // incorporate bounds from children
-    int num_valid_actions = stable_data_.num_valid_actions;
-    if (num_valid_actions == 0) {
-      // terminal state, provably_winning/losing are already set by instruction
-    } else if (cp_has_winning_move) {
-      stats_.provably_winning[seat] = true;
-      stats_.provably_losing.set();
-      stats_.provably_losing[seat] = false;
-    } else if (num_children == num_valid_actions) {
-      stats_.provably_winning = all_provably_winning;
-      stats_.provably_losing = all_provably_losing;
+    stats_.dirty = true;
+    stats_.Q = Q;
+    stats_.Q_sq = Q_sq;
+    stats_.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
+                                cp_has_winning_move, stable_data_);
+    stats_.dirty = false;
+
+    if (N) {
+      eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
     }
 
-    stats_.Q = N ? (Q_sum / N) : Q_sum;
-    stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
-
-    // TODO: the below debug_assert() empirically fails in multi-threaded mode. The lengthy TODO at
-    // the top of this function explains why. Add the dirty flag mechanism described above, and then
-    // uncomment the below check.
-
-    // if (N) {
-    //   eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
-    // }
+    if (multithreaded) {
+      lock.unlock();
+      cv().notify_all();
+    }
   }
 }
 
@@ -383,6 +403,24 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
     ++i;
   }
   return -1;
+}
+
+template <core::concepts::Game Game>
+typename Node<Game>::stats_t Node<Game>::get_stats_copy_safely() const {
+  stats_t stats = stats_;  // copy
+
+  if (stats.dirty) {
+    // Should be relatively rare. We need to grab the mutex and wait for the dirty flag to clear
+    std::unique_lock lock(mutex());
+    cv().wait(lock, [&] {
+      if (!stats.dirty) {
+        stats = stats_;  // copy
+        return true;
+      }
+      return false;
+    });
+  }
+  return stats;
 }
 
 template <core::concepts::Game Game>
@@ -416,6 +454,8 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   stable_data_.VT = VT;
   stable_data_.VT_valid = true;
 
+  // No need to worry about thread-safety when modifying edges or stats below, since no other
+  // threads can access this node until after load_eval() returns
   for (int i = 0; i < n; ++i) {
     edge_t* edge = get_edge(i);
     edge->base_prob = P_raw[i];
@@ -482,10 +522,13 @@ void Node<Game>::validate_state() const {
     util::debug_assert(edge->E >= 0);
   }
 
-  util::debug_assert(N == stats_.RN + stats_.VN, "[%p] %d != %d + %d", this, N, stats_.RN,
-                     stats_.VN);
-  util::debug_assert(stats_.RN >= 0);
-  util::debug_assert(stats_.VN >= 0);
+  // Make a copy. Not actually unsafe since we hold the mutex
+  const auto stats = get_stats_unsafely();
+  lock.unlock();
+
+  util::debug_assert(N == stats.RN + stats.VN, "[%p] %d != %d + %d", this, N, stats.RN, stats.VN);
+  util::debug_assert(stats.RN >= 0);
+  util::debug_assert(stats.VN >= 0);
 }
 
 }  // namespace mcts

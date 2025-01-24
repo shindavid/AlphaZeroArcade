@@ -111,25 +111,41 @@ class Node {
   };
 
   /*
-   * Thread-safety policy: mutex on writes, not on reads.
+   * Thread-safety policy:
    *
-   * Note that for the non-primitive members (i.e., the members of type ValueArray), the writes are
-   * not guaranteed to be atomic. A non-mutex-protected-read may encounter partially-updated arrays
-   * when reading such members. Furthermore, there are no guarantees in this implementation of the
-   * order of member-updates when writing, meaning that non-mutex-protected-reads might encounter
-   * states where some of the members have been updated while other have not.
+   * When writing, we must perform the following steps, in order:
    *
-   * Despite the above caveats, we can still read without a mutex, since all usages are ok with
-   * arbitrarily-partially written data.
+   * 1. Lock the mutex
+   * 2. Set the dirty flag to true
+   * 3. Write the data
+   * 4. Set the dirty flag to false
+   * 5. Unlock the mutex
+   * 6. Notify any waiting threads
+   *
+   * When reading, we have the choice of using get_stats_unsafely() or get_stats_copy_safely().
+   *
+   * - get_stats_copy_safely() behaves *as-if* it grabs the mutex and then returns a copy of the
+   *   this->stats_. By taking advantage of the fact that all writers use the above
+   *   mark-dirty/modify/unmark-dirty pattern, the method will usually avoid actually grabbing the
+   *   mutex, but this is hidden from the caller as an implementation detail.
+   *
+   * - get_stats_unsafely() returns a reference to the stats object. This is generally
+   *   thread-unsafe. Please see the documentation for get_stats_unsafely() for details on intended
+   *   usage.
    */
   struct stats_t {
     int total_count() const { return RN + VN; }
     void init_q(const ValueArray&, bool pure);
+    void update_provable_bits(const player_bitset_t& all_actions_provably_winning,
+                              const player_bitset_t& all_actions_provably_losing,
+                              int num_expanded_children, bool cp_has_winning_move,
+                              const stable_data_t&);
 
     ValueArray Q;     // excludes virtual loss
     ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;       // real count
     int VN = 0;       // virtual count
+    bool dirty = false;
 
     // TODO: generalize these fields to utility lower/upper bounds
     player_bitset_t provably_winning;
@@ -228,18 +244,41 @@ class Node {
                      SearchResults& results) const;
 
   template <typename MutexProtectedFunc>
-  void update_stats(MutexProtectedFunc);
+  void update_stats(bool multithreaded, MutexProtectedFunc);
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
-  const stats_t& stats() const { return stats_; }
-  stats_t& stats() { return stats_; }
+
+  // get_stats_unsafely() returns a reference to the stats object. This CAN be unsafe because the
+  // stats object might be in the process of being updated by another thread.
+  //
+  // In order to use this, the caller must ensure that one of the following is true:
+  //
+  // 1. The context is single-threaded,
+  //
+  // or,
+  //
+  // 2. The usage of the stats reference falls within the scope of the node's mutex,
+  //
+  // or,
+  //
+  // 3. The caller is ok with the possibility of a race-condition with a writer.
+  const stats_t& get_stats_unsafely() const { return stats_; }
+  stats_t& get_stats_unsafely() { return stats_; }
+
+  // get_stats_copy_safely() returns a copy of the stats object. It is made thread-safe by
+  // obtaining the mutex associated with the node before making the copy. For performance reasons,
+  // it only obtains the mutex if necessary; this is a subset of all cases by virtue of the fact
+  // that updates to the stats object are always done under a careful mark-dirty/modify/unmark-dirty
+  // pattern.
+  stats_t get_stats_copy_safely() const;
+
   bool is_terminal() const { return stable_data_.terminal; }
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
   std::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
-  std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
+  std::condition_variable& cv() const { return lookup_table_->get_cv(mutex_id_); }
 
   void initialize_edges();
 
@@ -262,7 +301,13 @@ class Node {
   stable_data_t stable_data_;
   LookupTable* lookup_table_;
   stats_t stats_;
+
+  // Each Node has an int mutex_id_, rather than an actual mutex. This is for 2 reasons:
+  //
+  // 1. Allows multiple Node's to share the same mutex
+  // 2. Allows for the Node object to copied and moved around (which is needed for defragmentation)
   int mutex_id_;
+
   edge_pool_index_t first_edge_index_ = -1;
   int child_expand_count_ = 0;
   bool trivial_ = false;  // set to true if all actions discovered to be symmetrically equivalent

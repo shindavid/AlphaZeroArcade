@@ -141,7 +141,7 @@ Manager<Game>::search(const SearchParams& params) {
   shared_data_.lookup_table.defragment(root_info.node_index);
   Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
-  const auto& stats = root->stats();
+  const auto& stats = root->get_stats_unsafely();  // not actually unsafe since single-threaded here
 
   core::action_mode_t mode = root->action_mode();
   group::element_t sym = root_info.canonical_sym;

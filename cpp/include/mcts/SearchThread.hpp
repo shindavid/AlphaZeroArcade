@@ -146,6 +146,7 @@ class SearchThread {
   search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
+  const bool multithreaded_;
   func_t post_visit_func_ = []() {};
 
   std::string thread_id_whitespace_;

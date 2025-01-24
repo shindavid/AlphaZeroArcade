@@ -56,8 +56,9 @@ void SearchLog<Game>::build_graph(Graph& graph) {
   for (auto [key, node_ix] : *map) {
     const Node* node = shared_data_->lookup_table.get_node(node_ix);
     const State* state = node->stable_data().get_state();
-    graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::compact_state_repr(*state),
-                   node->stats().provably_winning, node->stats().provably_losing,
+    const auto stats = node->get_stats_copy_safely();  // make a copy
+    graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
+                   stats.provably_winning, stats.provably_losing,
                    node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
