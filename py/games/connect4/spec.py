@@ -142,6 +142,10 @@ class Connect4Spec(GameSpec):
         '--mean-noisy-moves': 2,
     }
 
+    # NOTE: we set -n4 for the rating player NOT because it improves performance (it actually
+    # worsens it), but so that we end up regularly stress-testing the multithreaded aspects of the
+    # MCTS code. The idea is that if we accidentally break the multithreading logic, we hopefully
+    # notice something is off during c4 test runs.
     rating_player_options = {
         '-i': 100,
         '-n': 4,
