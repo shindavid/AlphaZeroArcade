@@ -152,7 +152,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: Optional[str] = None):
         pass
 
     @abc.abstractmethod

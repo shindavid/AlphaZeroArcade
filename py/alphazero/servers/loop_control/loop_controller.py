@@ -217,7 +217,7 @@ class LoopController(LoopControllerInterface):
     def start_log_sync(self, conn: ClientConnection, remote_filename: str):
         self._log_syncer.register(conn, remote_filename)
 
-    def stop_log_sync(self, conn: ClientConnection, remote_filename: str):
+    def stop_log_sync(self, conn: ClientConnection, remote_filename: Optional[str] = None):
         self._log_syncer.unregister(conn, remote_filename)
 
     def spawn_log_sync_thread(self):
