@@ -173,6 +173,8 @@ The "Ratings" item in the sidebar shows a plot like this:
 
 ![image](https://github.com/user-attachments/assets/5dd31ea2-df91-4452-9a5c-63b7bdfee48c)
 
+This run was performed on my laptop, a Dell Mobile Precision Workstation 7680 equipped with an NVIDIA RTX 5000 Ada Generation GPU.
+
 This curve shows the evolution of an MCTS agent using i=100 iterations per search.
 
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
