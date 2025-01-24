@@ -283,9 +283,9 @@ void debug_assert_is_valid_prob_distr(const T& distr, float eps = 1e-5);
 // Helper functions for debug_assert_is_valid_prob_distr, pulled out for testing.
 // Performs check regardless of whether it is a release or debug build.
 template <concepts::FTensor Tensor>
-void assert_is_valid_prob_distr(const Tensor& distr, float eps);
+void assert_is_valid_prob_distr(const Tensor& distr, float eps = 1e-5);
 template <typename Derived>
-void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float eps);
+void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float eps = 1e-5);
 
 /*
  * Convenience methods that return scalars.
