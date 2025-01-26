@@ -53,7 +53,8 @@ class ClientConnectionManager:
         cuda_device = msg.get('cuda_device', '')
         aux = msg.get('aux', None)
         manager_id = msg.get('manager_id', None)
-        client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
+        # client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
+        client_id = None
 
         # TODO: see long comment in BenchmarkingServer._run_match_helper(). Consider removing
         # self_manager_id_to_worker_id_map. I think that only exists to facilitate client-id-reuse,

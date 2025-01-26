@@ -53,6 +53,7 @@ class BenchmarkingServer:
             self._shutdown_manager.shutdown()
 
     def _main_loop(self):
+        # import pdb; pdb.set_trace()
         try:
             self._init_socket()
             self._send_handshake()
@@ -136,6 +137,8 @@ class BenchmarkingServer:
         gen2 = msg['gen2']
         n_iters2 = msg['n_iters2']
         n_games = msg['n_games']
+
+        print(f'*****************Running match: gen1={gen1}, n_iters1={n_iters1}, gen2={gen2}, n_iters2={n_iters2}, n_games={n_games}')
 
         ps1 = self._get_mcts_player_str(gen1, n_iters1)
         ps2 = self._get_mcts_player_str(gen2, n_iters2)
