@@ -260,7 +260,7 @@ void GameLog<Game>::replay() const {
         static std::vector<std::string> columns = {"action", "policy", "action_values"};
         auto data = eigen_util::concatenate_columns(action_arr, policy_arr, action_values_arr);
 
-        static eigen_util::PrintArrayFormatMap fmt_map{
+        eigen_util::PrintArrayFormatMap fmt_map{
             {"action",
              [&](float x) {
                return std::string(x == action ? "*" : " ") + Game::IO::action_to_str(x, mode);

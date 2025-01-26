@@ -801,7 +801,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
     auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
 
-    static eigen_util::PrintArrayFormatMap fmt_map1 {
+    eigen_util::PrintArrayFormatMap fmt_map1 {
       {"Seat", [&](float x) { return std::to_string(int(x)); }},
       {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
     };
@@ -845,7 +845,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
         actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
-    static eigen_util::PrintArrayFormatMap fmt_map2 {
+    eigen_util::PrintArrayFormatMap fmt_map2 {
       {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
       {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
       {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},

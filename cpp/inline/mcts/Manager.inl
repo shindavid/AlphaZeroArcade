@@ -352,7 +352,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
     auto data = eigen_util::sort_rows(
         eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
-    static eigen_util::PrintArrayFormatMap fmt_map {
+    eigen_util::PrintArrayFormatMap fmt_map {
       {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
     };
 
