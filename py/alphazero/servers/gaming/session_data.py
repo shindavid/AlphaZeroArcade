@@ -37,6 +37,7 @@ class SessionData:
         self._socket: Optional[Socket] = None
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
+        self._log_sync_set = set()
 
     def disable_next_returncode_check(self):
         self._skip_next_returncode_check = True
@@ -85,7 +86,7 @@ class SessionData:
         ssh_util.add_to_authorized_keys(ssh_pub_key)
 
         log_filename = self.get_log_filename(role.value)
-        configure_logger(params=self._logging_params, filename=log_filename)
+        configure_logger(params=self._logging_params, filename=log_filename, mode='w')
         self.start_log_sync(log_filename)
         logger.info('**** Starting %s ****', role.value)
         logger.info('Received client id assignment: %s', self._client_id)
@@ -95,13 +96,26 @@ class SessionData:
                             f'{src}-{self.client_id}.log')
 
     def start_log_sync(self, log_filename):
+        """
+        Starts syncing the log file with the loop controller.
+
+        Returns False if the log file is already being synced, and True otherwise
+        """
+        if log_filename in self._log_sync_set:
+            return False
+
+        self._log_sync_set.add(log_filename)
         data = {
             'type': 'log-sync-start',
             'log_filename': log_filename,
         }
         self.socket.send_json(data)
+        return True
 
     def stop_log_sync(self, log_filename):
+        if log_filename in self._log_sync_set:
+            self._log_sync_set.remove(log_filename)
+
         data = {
             'type': 'log-sync-stop',
             'log_filename': log_filename,

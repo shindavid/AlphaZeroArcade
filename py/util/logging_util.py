@@ -64,7 +64,7 @@ class NonErrorStreamHandler(logging.StreamHandler):
 
 
 def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
-                     queue_stream: Optional[QueueStream]=None,
+                     queue_stream: Optional[QueueStream]=None, mode='a',
                      prefix='', logger_name=DEFAULT_LOGGER_NAME):
     """
     Configures the logger. A log level of INFO is used by default. If debug is True, then a log
@@ -74,7 +74,8 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
 
     This logger writes error() calls to stderr, and info()/warning() calls to stdout.
 
-    If filename is provided, then the logger will additionally log to the file.
+    If filename is provided, then the logger will additionally log to the file, using the specified
+    mode: 'a' (default) or 'w'.
 
     If queue_stream is provided, then the logger will additionally log to the queue. The expectation
     is that the queue will be consumed by a separate thread.
@@ -97,7 +98,7 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
         directory = os.path.dirname(filename)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        file_handler = logging.FileHandler(filename)
+        file_handler = logging.FileHandler(filename, mode=mode)
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

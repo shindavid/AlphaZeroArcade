@@ -168,7 +168,7 @@ class RatingsServer:
         binary = self._build_params.get_binary_path(self._session_data.game)
 
         log_filename = self._session_data.get_log_filename('ratings-worker')
-        self._session_data.start_log_sync(log_filename)
+        append_mode = not self._session_data.start_log_sync(log_filename)
 
         args = {
             '-G': n_games,
@@ -182,6 +182,8 @@ class RatingsServer:
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
+        if append_mode:
+            args['--log-append-mode'] = None
         args.update(self._session_data.game_spec.rating_options)
         cmd = [
             binary,

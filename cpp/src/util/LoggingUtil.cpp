@@ -31,8 +31,9 @@ void Logging::init(const Params& params) {
   boost::log::add_console_log(std::cout, keywords::auto_flush = true, keywords::format = format);
 
   if (!params.log_filename.empty()) {
+    auto open_mode = params.append_mode ? std::ios_base::app : std::ios_base::out;
     boost::log::add_file_log(keywords::file_name = params.log_filename.c_str(),
-                             keywords::auto_flush = true, keywords::open_mode = std::ios_base::app,
+                             keywords::auto_flush = true, keywords::open_mode = open_mode,
                              keywords::format = format);
   }
   if (params.debug) {

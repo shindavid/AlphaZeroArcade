@@ -40,7 +40,7 @@ def main():
     build_params = BuildParams.create(args)
 
     log_filename = os.path.join(DirectoryOrganizer(run_params).logs_dir, 'loop-controller.log')
-    configure_logger(filename=log_filename, params=logging_params)
+    configure_logger(filename=log_filename, params=logging_params, mode='a')
 
     logger.info('**** Starting loop-controller ****')
 

@@ -18,6 +18,7 @@ struct Logging {
 struct Params {
   std::string log_filename;
   bool debug = false;
+  bool append_mode = false;
   bool omit_timestamps = false;
 
   auto make_options_description();
