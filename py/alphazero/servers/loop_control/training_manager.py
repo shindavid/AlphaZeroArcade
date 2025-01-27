@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from .gpu_contention_table import GpuContentionTable
-from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
@@ -10,23 +11,26 @@ from shared.net_modules import Model, ModelConfig
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 
+import torch
+from torch import optim
+from torch.utils.data import DataLoader
+
 import logging
 import os
 import shutil
 import tempfile
 import threading
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
 
-import torch
-from torch import optim
-from torch.utils.data import DataLoader
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
 
 
 class TrainingManager:
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         """
         Some members are initialized lazily in setup(). This is because those values require
         database access, and we don't want to do that in __init__.

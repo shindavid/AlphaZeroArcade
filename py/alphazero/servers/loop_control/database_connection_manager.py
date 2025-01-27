@@ -1,12 +1,17 @@
-from .loop_controller_interface import LoopControllerInterface
+from __future__ import annotations
 
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ThreadId
 from util.sqlite3_util import DatabaseConnectionPool
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
+
 
 class DatabaseConnectionManager:
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         organizer = controller.organizer
 
         self.clients_db_conn_pool = DatabaseConnectionPool(

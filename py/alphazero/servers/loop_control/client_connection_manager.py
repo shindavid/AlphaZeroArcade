@@ -1,4 +1,4 @@
-from .loop_controller_interface import LoopControllerInterface
+from __future__ import annotations
 
 from alphazero.logic.custom_types import ClientConnection, ClientRole, Domain, GpuId
 from util.logging_util import get_logger
@@ -6,14 +6,17 @@ from util.socket_util import recv_json, Socket
 
 import logging
 import threading
-from typing import List
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
 
 
 class ClientConnectionManager:
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         self._controller = controller
         self._connections: List[ClientConnection] = []
         self._manager_id_to_worker_id_map = {}

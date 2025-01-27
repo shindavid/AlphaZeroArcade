@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 from .gpu_contention_table import GpuContentionTable
-from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import Domain, GpuId
 from util.logging_util import get_logger
 
 from collections import defaultdict
 import threading
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
@@ -21,7 +25,7 @@ class GpuContentionManager:
     """
     Manages contention for GPUs.
     """
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         self._self_play_hijacked = True
         self._controller = controller
         self._table_lock = threading.Lock()

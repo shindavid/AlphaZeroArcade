@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from .gpu_contention_table import GpuContentionTable
-from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from util.logging_util import get_logger
@@ -11,14 +12,17 @@ import os
 import sqlite3
 import threading
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
 
 
 class SelfPlayManager:
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         self._controller = controller
 
         self._gen0_complete = False

@@ -1,4 +1,4 @@
-from .loop_controller_interface import LoopControllerInterface
+from __future__ import annotations
 
 from alphazero.logic.custom_types import ClientConnection
 from util.logging_util import get_logger
@@ -7,7 +7,10 @@ from collections import defaultdict
 import os
 import subprocess
 import threading
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
@@ -17,7 +20,7 @@ class LogSyncer:
     """
     LogSyncer syncs remote logs from one or more hosts to the local filesystem.
     """
-    def __init__(self, controller: LoopControllerInterface):
+    def __init__(self, controller: LoopController):
         self._controller = controller
         self._sync_map = defaultdict(dict)  # ClientConnection -> remote_filename -> local_filename
         self._lock = threading.Lock()

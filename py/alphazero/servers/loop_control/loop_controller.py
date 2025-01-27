@@ -4,7 +4,6 @@ from .directory_organizer import DirectoryOrganizer
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
-from .loop_controller_interface import LoopControllerInterface
 from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
 from .self_play_manager import SelfPlayManager
@@ -33,7 +32,7 @@ from typing import Callable, Dict, Optional
 logger = get_logger()
 
 
-class LoopController(LoopControllerInterface):
+class LoopController:
     """
     The LoopController is a server that acts as the "brains" of the AlphaZero system. It performs
     the neural network training, and also coordinates the activity of external servers.

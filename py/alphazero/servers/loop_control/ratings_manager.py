@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from .gpu_contention_table import GpuContentionTable
-from .loop_controller_interface import LoopControllerInterface
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
 from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag
@@ -11,7 +12,10 @@ from util import ssh_util
 
 from enum import Enum
 import threading
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .loop_controller import LoopController
 
 
 logger = get_logger()
@@ -27,7 +31,7 @@ class RatingsManager:
     """
     A separate RatingsManager is created for each rating-tag.
     """
-    def __init__(self, controller: LoopControllerInterface, tag: RatingTag):
+    def __init__(self, controller: LoopController, tag: RatingTag):
         self._tag = tag
         self._controller = controller
 
