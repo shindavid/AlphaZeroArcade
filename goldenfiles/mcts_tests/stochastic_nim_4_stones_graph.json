@@ -3,7 +3,7 @@
   {
   "index" : 0,
   "N" : 101,
-  "Q" : [0.772569, 0.227432],
+  "Q" : [0.756596, 0.243404],
   "state" : "p0@4",
   "provably_winning" : "00",
   "provably_losing" : "00",
@@ -20,8 +20,8 @@
   },
   {
   "index" : 2,
-  "N" : 5,
-  "Q" : [0.5, 0.5],
+  "N" : 16,
+  "Q" : [0.615, 0.385],
   "state" : "p0*@2",
   "provably_winning" : "00",
   "provably_losing" : "00",
@@ -29,8 +29,8 @@
   },
   {
   "index" : 3,
-  "N" : 90,
-  "Q" : [0.805882, 0.194118],
+  "N" : 79,
+  "Q" : [0.804762, 0.195238],
   "state" : "p0*@1",
   "provably_winning" : "00",
   "provably_losing" : "00",
@@ -38,8 +38,8 @@
   },
   {
   "index" : 4,
-  "N" : 17,
-  "Q" : [0.0294118, 0.970588],
+  "N" : 21,
+  "Q" : [0.0238095, 0.97619],
   "state" : "p1@1",
   "provably_winning" : "01",
   "provably_losing" : "10",
@@ -47,16 +47,7 @@
   },
   {
   "index" : 5,
-  "N" : 1,
-  "Q" : [0.5, 0.5],
-  "state" : "p1@2",
-  "provably_winning" : "00",
-  "provably_losing" : "00",
-  "active_seat" : 1
-  },
-  {
-  "index" : 6,
-  "N" : 72,
+  "N" : 57,
   "Q" : [1, 0],
   "state" : "p1@0",
   "provably_winning" : "10",
@@ -64,8 +55,26 @@
   "active_seat" : -1
   },
   {
+  "index" : 6,
+  "N" : 5,
+  "Q" : [0.2, 0.8],
+  "state" : "p1@2",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
   "index" : 7,
-  "N" : 16,
+  "N" : 1,
+  "Q" : [0.5, 0.5],
+  "state" : "p1*@1",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 8,
+  "N" : 20,
   "Q" : [0, 1],
   "state" : "p1*@0",
   "provably_winning" : "01",
@@ -85,29 +94,36 @@
   "index" : 1,
   "from" : 0,
   "to" : 2,
-  "E" : 5,
+  "E" : 16,
   "action" : 1
   },
   {
   "index" : 2,
   "from" : 0,
   "to" : 3,
-  "E" : 90,
+  "E" : 79,
   "action" : 2
   },
   {
   "index" : 4,
   "from" : 1,
-  "to" : 5,
-  "E" : 1,
+  "to" : 6,
+  "E" : 2,
   "action" : 1
   },
   {
   "index" : 5,
   "from" : 1,
   "to" : 4,
-  "E" : 3,
+  "E" : 2,
   "action" : 2
+  },
+  {
+  "index" : 6,
+  "from" : 2,
+  "to" : 6,
+  "E" : 5,
+  "action" : 0
   },
   {
   "index" : 7,
@@ -119,30 +135,44 @@
   {
   "index" : 8,
   "from" : 2,
-  "to" : 6,
-  "E" : 2,
+  "to" : 5,
+  "E" : 8,
   "action" : 2
   },
   {
   "index" : 9,
   "from" : 3,
   "to" : 4,
-  "E" : 17,
+  "E" : 21,
   "action" : 0
   },
   {
   "index" : 10,
   "from" : 3,
-  "to" : 6,
-  "E" : 72,
+  "to" : 5,
+  "E" : 57,
   "action" : 1
   },
   {
   "index" : 11,
   "from" : 4,
-  "to" : 7,
-  "E" : 16,
+  "to" : 8,
+  "E" : 20,
   "action" : 0
+  },
+  {
+  "index" : 12,
+  "from" : 6,
+  "to" : 7,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 13,
+  "from" : 6,
+  "to" : 8,
+  "E" : 3,
+  "action" : 1
   }
 ]
 }
