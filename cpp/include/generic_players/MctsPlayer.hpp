@@ -70,7 +70,6 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   };
   using SharedData_sptr = std::shared_ptr<SharedData>;
 
-  // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, SharedData_sptr, bool owns_shared_data);
   ~MctsPlayer();
 

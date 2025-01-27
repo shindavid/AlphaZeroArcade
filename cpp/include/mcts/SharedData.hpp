@@ -4,6 +4,7 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
+#include <mcts/TypeDefs.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
 
@@ -43,7 +44,7 @@ struct SharedData {
     core::seat_index_t active_seat = -1;
   };
 
-  SharedData(const ManagerParams& manager_params, int mgr_id);
+  SharedData(mutex_cv_vec_sptr_t mutex_pool, const ManagerParams& manager_params, int mgr_id);
   SharedData(const SharedData&) = delete;
   SharedData& operator=(const SharedData&) = delete;
 

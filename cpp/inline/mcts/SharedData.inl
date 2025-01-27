@@ -3,11 +3,12 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-SharedData<Game>::SharedData(const ManagerParams& manager_params, int mgr_id)
+SharedData<Game>::SharedData(mutex_cv_vec_sptr_t mutex_pool, const ManagerParams& manager_params,
+                             int mgr_id)
     : root_softmax_temperature(manager_params.starting_root_softmax_temperature,
                                manager_params.ending_root_softmax_temperature,
                                manager_params.root_softmax_temperature_half_life),
-      lookup_table(manager_params.num_search_threads > 1),
+      lookup_table(mutex_pool),
       manager_id(mgr_id) {
   active_search_threads.resize(manager_params.num_search_threads);
 }

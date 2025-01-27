@@ -16,11 +16,12 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
+Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool,
+                       const ManagerParams& params, NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
-      shared_data_(params, next_instance_id_++) {
+      shared_data_(mutex_cv_pool, params, next_instance_id_++) {
   namespace bf = boost::filesystem;
 
   if (mcts::kEnableProfiling) {
@@ -57,6 +58,15 @@ inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBa
     search_threads_.push_back(thread);
   }
 }
+
+template <core::concepts::Game Game>
+Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
+    : Manager(true, std::make_shared<mutex_cv_vec_t>(1), params, service) {}
+
+template <core::concepts::Game Game>
+Manager<Game>::Manager(mutex_cv_vec_sptr_t& mutex_cv_pool, const ManagerParams& params,
+                       NNEvaluationServiceBase* service)
+    : Manager(true, mutex_cv_pool, params, service) {}
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {

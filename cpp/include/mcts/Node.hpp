@@ -147,8 +147,6 @@ class Node {
 
   class LookupTable {
    public:
-    static constexpr int kDefaultMutexPoolSize = 256;
-
     class Defragmenter {
      public:
       Defragmenter(LookupTable* table);
@@ -172,7 +170,7 @@ class Node {
       index_vec_t edge_index_remappings_;
     };
 
-    LookupTable(bool multithreaded_mode);
+    LookupTable(mutex_cv_vec_sptr_t mutex_cv_pool);
     LookupTable(const LookupTable&) = delete;
     LookupTable& operator=(const LookupTable&) = delete;
 
@@ -202,16 +200,16 @@ class Node {
     const map_t* map() const { return &map_; }
 
     int get_random_mutex_id() const;
-    std::mutex& get_mutex(int mutex_id) { return mutex_pool_[mutex_id]; }
-    std::condition_variable& get_cv(int mutex_id) { return cv_pool_[mutex_id]; }
+    std::mutex& get_mutex(int mutex_id);
+    std::condition_variable& get_cv(int mutex_id);
 
    private:
     friend class Defragmenter;
     map_t map_;
     util::AllocPool<Edge> edge_pool_;
     util::AllocPool<Node> node_pool_;
-    std::vector<std::mutex> mutex_pool_;
-    std::vector<std::condition_variable> cv_pool_;
+    mutex_cv_vec_sptr_t mutex_cv_pool_;
+    const int mutex_cv_pool_size_;
     mutable std::mutex map_mutex_;
   };
 

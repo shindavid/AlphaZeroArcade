@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include <core/BasicTypes.hpp>
@@ -14,6 +15,7 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
+#include <mcts/TypeDefs.hpp>
 
 namespace mcts {
 
@@ -49,8 +51,14 @@ class Manager {
    *
    * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
    * for testing.
+   *
+   * Can optionally pass a mutex_cv_pool to be used by the nodes. If not provided, the Manager will
+   * create a separate single-element mutex-pool.
    */
   Manager(const ManagerParams& params, NNEvaluationServiceBase* service=nullptr);
+  Manager(mutex_cv_vec_sptr_t& mutex_cv_pool, const ManagerParams& params,
+          NNEvaluationServiceBase* service = nullptr);
+
   ~Manager();
 
   const ManagerParams& params() const { return params_; }
@@ -76,6 +84,9 @@ class Manager {
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
+
+  Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool,
+          const ManagerParams& params, NNEvaluationServiceBase* service);
 
   void announce_shutdown();
   void load_action_symmetries(Node* root, core::action_t* actions);

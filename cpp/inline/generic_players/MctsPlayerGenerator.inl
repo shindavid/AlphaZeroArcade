@@ -34,6 +34,20 @@ void MctsPlayerGeneratorBase<Game>::end_session() {
   }
 }
 
+template <core::concepts::Game Game>
+typename MctsPlayerGeneratorBase<Game>::SharedData_sptr
+MctsPlayerGeneratorBase<Game>::generate_shared_data() {
+  if (manager_params_.num_search_threads == 1) {
+    return std::make_shared<SharedData>(manager_params_);
+  } else {
+    if (!common_mutex_cv_pool_.get()) {
+      common_mutex_cv_pool_ = std::make_shared<mcts::mutex_cv_vec_t>(kDefaultMutexPoolSize);
+    }
+    return std::make_shared<SharedData>(common_mutex_cv_pool_, manager_params_);
+  }
+}
+
+
 // CompetitiveMctsPlayerGenerator
 
 template <core::concepts::Game Game>

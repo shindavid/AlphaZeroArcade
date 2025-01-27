@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -12,12 +13,15 @@
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
+#include <mcts/TypeDefs.hpp>
 
 namespace generic {
 
 template <core::concepts::Game Game>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
+  static constexpr int kDefaultMutexPoolSize = 1024;
+
   using MctsManagerParams = mcts::ManagerParams<Game>;
   using MctsManager = mcts::Manager<Game>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
@@ -37,6 +41,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
 
  protected:
   virtual BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) = 0;
+  SharedData_sptr generate_shared_data();
 
   void validate_params();
 
@@ -48,6 +53,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   static shared_data_map_t shared_data_cache_;
 
   MctsManagerParams manager_params_;
+  mcts::mutex_cv_vec_sptr_t common_mutex_cv_pool_;  // only used in multi-threaded mode
 };
 
 template <core::concepts::Game Game>

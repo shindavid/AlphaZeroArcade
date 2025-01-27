@@ -157,9 +157,9 @@ void Node<Game>::LookupTable::Defragmenter::init_remapping(index_vec_t& remappin
 }
 
 template <core::concepts::Game Game>
-Node<Game>::LookupTable::LookupTable(bool multithreaded_mode)
-    : mutex_pool_(multithreaded_mode ? kDefaultMutexPoolSize : 1),
-      cv_pool_(multithreaded_mode ? kDefaultMutexPoolSize : 1) {}
+Node<Game>::LookupTable::LookupTable(mcts::mutex_cv_vec_sptr_t mutex_cv_pool)
+    : mutex_cv_pool_(mutex_cv_pool)
+    , mutex_cv_pool_size_(mutex_cv_pool->size()) {}
 
 template <core::concepts::Game Game>
 void Node<Game>::LookupTable::clear() {
@@ -203,7 +203,17 @@ typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::lookup_node(
 
 template <core::concepts::Game Game>
 int Node<Game>::LookupTable::get_random_mutex_id() const {
-  return util::Random::uniform_sample(0, (int)mutex_pool_.size());
+  return mutex_cv_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_cv_pool_size_);
+}
+
+template <core::concepts::Game Game>
+std::mutex& Node<Game>::LookupTable::get_mutex(int mutex_id) {
+  return (*mutex_cv_pool_)[mutex_id].mutex;
+}
+
+template <core::concepts::Game Game>
+std::condition_variable& Node<Game>::LookupTable::get_cv(int mutex_id) {
+  return (*mutex_cv_pool_)[mutex_id].cv;
 }
 
 template <core::concepts::Game Game>
