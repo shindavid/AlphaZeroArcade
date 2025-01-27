@@ -45,6 +45,7 @@ class TrainingManager:
         self._trainer = None
         self._net = None
         self._opt = None
+        self._model_counts_dumped = False
 
         self._last_sample_window: Optional[Window] = None  # initialized lazily
         self._latest_gen: Generation = 0
@@ -193,20 +194,6 @@ class TrainingManager:
         else:
             self._load_last_checkpoint(model_cfg)
 
-        logger.info('Model parameter counts:')
-        pcounts = self._net.get_parameter_counts()
-        longest_name_len = max(len(name) for name in pcounts)
-        total_count = sum(pcounts.values())
-        count_len = len(str(total_count))
-
-        #    stem:   2308 [14.7%]
-        #  blocks: 206792 [82.3%]
-        # ...
-
-        fmt = f'{{:<{longest_name_len}}} : {{:>{count_len}}} [{{:>5.1f}}%]'
-        for name, count in pcounts.items():
-            pct = 100 * count / total_count
-            logger.info(fmt.format(name, count, pct))
         return self._net, self._opt
 
     def _train_step_helper(self, retrain_from_fork: bool):
@@ -246,6 +233,27 @@ class TrainingManager:
         self._controller.wait_for_log_sync_thread()
         self._controller.handle_new_model()
 
+    def _dump_model_counts(self):
+        if self._model_counts_dumped:
+            return
+
+        logger.info('Model parameter counts:')
+        pcounts = self._net.get_parameter_counts()
+        longest_name_len = max(len(name) for name in pcounts)
+        total_count = sum(pcounts.values())
+        count_len = len(str(total_count))
+
+        #    stem:   2308 [14.7%]
+        #  blocks: 206792 [82.3%]
+        # ...
+
+        fmt = f'{{:<{longest_name_len}}} : {{:>{count_len}}} [{{:>5.1f}}%]'
+        for name, count in pcounts.items():
+            pct = 100 * count / total_count
+            logger.info(fmt.format(name, count, pct))
+
+        self._model_counts_dumped = True
+
     def _do_training_epoch(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
         try:
             training_params = self._controller.training_params
@@ -259,6 +267,7 @@ class TrainingManager:
                 shuffle=True)
 
             net, optimizer = self._get_net_and_optimizer()
+            self._dump_model_counts()
 
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
 
