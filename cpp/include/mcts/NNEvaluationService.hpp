@@ -144,10 +144,10 @@ class NNEvaluationService
 
   void end_session() override;
 
-  core::perf_stats_t get_perf_stats() override;
+  core::PerfStats get_perf_stats() override;
 
  private:
-  struct index_reservation_t {
+  struct IndexReservation {
     int start_index;
     int num_indices;
   };
@@ -165,7 +165,7 @@ class NNEvaluationService
   void check_cache(const NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
 
   void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  index_reservation_t make_reservation(const NNEvaluationRequest&, int count,
+  IndexReservation make_reservation(const NNEvaluationRequest&, int count,
                                        std::unique_lock<std::mutex>&);
   void tensorize_and_transform_input(const NNEvaluationRequest& request, const RequestItem& item,
                                      int reserve_index);
@@ -185,7 +185,7 @@ class NNEvaluationService
 
   bool active() const { return num_connections_; }
 
-  struct eval_ptr_data_t {
+  struct EvalPtrData {
     NNEvaluation_asptr eval_ptr;
 
     cache_key_t cache_key;
@@ -193,7 +193,7 @@ class NNEvaluationService
     group::element_t sym;
   };
 
-  struct tensor_group_t {
+  struct TensorGroup {
     void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
                           torch::Tensor& torch_action_value);
 
@@ -201,17 +201,17 @@ class NNEvaluationService
     PolicyTensor policy;
     ValueTensor value;
     ActionValueTensor action_values;
-    eval_ptr_data_t eval_ptr_data;
+    EvalPtrData eval_ptr_data;
     core::action_mode_t action_mode;
     core::seat_index_t active_seat;
   };
 
-  struct batch_data_t {
-    batch_data_t(int batch_size);
+  struct BatchData {
+    BatchData(int batch_size);
     void copy_input_to(int num_rows, DynamicInputTensor& full_input);
 
     std::mutex mutex;
-    std::vector<tensor_group_t> tensor_groups_;
+    std::vector<TensorGroup> tensor_groups_;
   };
 
   static instance_map_t instance_map_;
@@ -233,7 +233,7 @@ class NNEvaluationService
 
   core::NeuralNet net_;
 
-  batch_data_t batch_data_;
+  BatchData batch_data_;
 
   core::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;
@@ -246,7 +246,7 @@ class NNEvaluationService
   const std::chrono::nanoseconds timeout_duration_;
 
   time_point_t deadline_;
-  struct batch_metadata_t {
+  struct BatchMetadata {
     std::mutex mutex;
     int reserve_index = 0;
     int commit_count = 0;
@@ -257,7 +257,7 @@ class NNEvaluationService
                                  unread_count, accepting_reservations);
     }
   };
-  batch_metadata_t batch_metadata_;
+  BatchMetadata batch_metadata_;
 
   bool session_ended_ = false;
   int num_connections_ = 0;
@@ -268,7 +268,7 @@ class NNEvaluationService
   std::mutex pause_mutex_;
   std::condition_variable cv_paused_;
 
-  core::perf_stats_t perf_stats_;
+  core::PerfStats perf_stats_;
   mutable std::mutex perf_stats_mutex_;
 };
 

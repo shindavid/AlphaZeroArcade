@@ -64,7 +64,7 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::init_socket() {
   int n = seat_generators_.size();
   for (int i = 0; i < n; ++i) {
-    seat_generator_t& seat_generator = seat_generators_[i];
+    SeatGenerator& seat_generator = seat_generators_[i];
     seat_index_t seat = seat_generator.seat;
     PlayerGenerator* gen = seat_generator.gen;
 

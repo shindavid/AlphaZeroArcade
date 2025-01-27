@@ -80,7 +80,7 @@ class LoopControllerClient {
   void request_weights();
   void handle_pause_receipt();
   void handle_unpause_receipt();
-  perf_stats_t get_perf_stats() const;
+  PerfStats get_perf_stats() const;
 
   int64_t get_last_games_flush_ts() const { return last_games_flush_ts_; }
   bool ready_for_games_flush(int64_t ts) const {

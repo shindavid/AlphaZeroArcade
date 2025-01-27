@@ -34,7 +34,7 @@ class SearchThread {
   using ActionSelector = mcts::ActionSelector<Game>;
   using SharedData = mcts::SharedData<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
-  using edge_t = Node::edge_t;
+  using Edge = Node::Edge;
   using node_pool_index_t = Node::node_pool_index_t;
   using StateHistoryArray = SharedData::StateHistoryArray;
   using LookupTable = Node::LookupTable;
@@ -74,12 +74,12 @@ class SearchThread {
   void set_post_visit_func(func_t f) { post_visit_func_ = f; }
 
  private:
-  struct visitation_t {
+  struct Visitation {
     Node* node;
-    edge_t* edge;  // emanates from node, possibly nullptr
+    Edge* edge;  // emanates from node, possibly nullptr
   };
 
-  using search_path_t = std::vector<visitation_t>;
+  using search_path_t = std::vector<Visitation>;
 
   void wait_for_activation() const;
   Node* init_root_node();
@@ -97,7 +97,7 @@ class SearchThread {
   void pure_backprop(const ValueArray& value);
   void standard_backprop(bool undo_virtual);
   void short_circuit_backprop();
-  bool expand(StateHistory*, Node*, edge_t*);  // returns true if a new node was expanded
+  bool expand(StateHistory*, Node*, Edge*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
   void calc_canonical_state_data();
 
@@ -135,13 +135,13 @@ class SearchThread {
    * These variables would more naturally be declared as local variables in the contexts in which
    * they are used, but they are declared here to avoid repeated allocation/deallocation.
    */
-  struct pseudo_local_vars_t {
+  struct PseudoLocalVars {
     StateHistory canonical_history;
     item_vec_t request_items;
     StateHistoryArray root_history_array;
   };
 
-  pseudo_local_vars_t pseudo_local_vars_;
+  PseudoLocalVars pseudo_local_vars_;
 
   search_path_t search_path_;
   profiler_t profiler_;

@@ -14,13 +14,13 @@ namespace io {
 using file_descriptor_t = int;
 using port_t = int;
 
-struct host_port_t {
+struct HostPort {
   std::string host;
   port_t port;
 
   auto tie() const { return std::tie(host, port); }
-  bool operator<(const host_port_t& other) const { return tie() < other.tie(); }
-  bool operator==(const host_port_t& other) const { return tie() == other.tie(); }
+  bool operator<(const HostPort& other) const { return tie() < other.tie(); }
+  bool operator==(const HostPort& other) const { return tie() == other.tie(); }
 };
 
 /*

@@ -49,12 +49,12 @@ class AllocPool {
   void add_block();
 
   static constexpr int kNumBlocks = 64 - N;
-  using block_t = char*;
+  using Block = char*;
 
   uint64_t size_ = 0;
   int num_blocks_ = 2;
   mutable std::mutex mutex_;
-  block_t blocks_[kNumBlocks] = {};
+  Block blocks_[kNumBlocks] = {};
 };
 
 }  // namespace util

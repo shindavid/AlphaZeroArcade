@@ -61,7 +61,7 @@ concept PacketPayload = requires(PayloadType p) {
 
 struct Registration {
   static constexpr PacketHeader::Type kType = PacketHeader::kRegistration;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char player_name[kMaxNameLength + 1];  // +1 for null terminator
   };
 
@@ -73,17 +73,17 @@ struct Registration {
   int remaining_requests;
   int max_simultaneous_games;
   seat_index_t requested_seat;  // negative = random seat
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct RegistrationResponse {
   static constexpr PacketHeader::Type kType = PacketHeader::kRegistrationResponse;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char player_name[kMaxNameLength + 1];  // +1 for null terminator
   };
 
   player_id_t player_id;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct GameThreadInitialization {
@@ -98,7 +98,7 @@ struct GameThreadInitializationResponse {
 
 struct StartGame {
   static constexpr PacketHeader::Type kType = PacketHeader::kStartGame;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char player_names[kSerializationLimit];  // names separated by null terminators
   };
 
@@ -116,51 +116,51 @@ struct StartGame {
   game_thread_id_t game_thread_id;
   player_id_t player_id;
   seat_index_t seat_assignment;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct StateChange {
   static constexpr PacketHeader::Type kType = PacketHeader::kStateChange;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char buf[kSerializationLimit];
   };
 
   game_thread_id_t game_thread_id;
   player_id_t player_id;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct ActionPrompt {
   static constexpr PacketHeader::Type kType = PacketHeader::kActionPrompt;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char buf[kSerializationLimit];
   };
 
   game_thread_id_t game_thread_id;
   player_id_t player_id;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct ActionDecision {
   static constexpr PacketHeader::Type kType = PacketHeader::kActionDecision;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char buf[kSerializationLimit];
   };
 
   game_thread_id_t game_thread_id;
   player_id_t player_id;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 struct EndGame {
   static constexpr PacketHeader::Type kType = PacketHeader::kEndGame;
-  struct dynamic_size_section_t {
+  struct DynamicSizeSection {
     char buf[kSerializationLimit];
   };
 
   game_thread_id_t game_thread_id;
   player_id_t player_id;
-  dynamic_size_section_t dynamic_size_section;
+  DynamicSizeSection dynamic_size_section;
 };
 
 using PayloadTypeList = mp::TypeList<Registration, RegistrationResponse, GameThreadInitialization,

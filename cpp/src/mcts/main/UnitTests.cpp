@@ -92,7 +92,7 @@ class ManagerTest : public testing::Test {
   using StateHistory = Game::StateHistory;
   using SearchThread = mcts::SearchThread<Game>;
   using action_t = core::action_t;
-  using edge_t = mcts::Node<Game>::edge_t;
+  using Edge = mcts::Node<Game>::Edge;
   using LookupTable = mcts::Node<Game>::LookupTable;
   using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
   using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;

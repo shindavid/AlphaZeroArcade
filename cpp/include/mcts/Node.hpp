@@ -20,7 +20,7 @@ namespace mcts {
  *
  * StateData<Game, true> is a class that stores a game state.
  *
- * Node::stable_data_t inherits from StateData, with the bool argument set to true only if the
+ * Node::StableData inherits from StateData, with the bool argument set to true only if the
  * macro STORE_STATES is enabled.
  *
  * This allows for us to store the game state in the Node object, which is useful for debugging and
@@ -47,11 +47,11 @@ struct StateData<Game, true> {
 /*
  * A Node consists of n=3 main data member:
  *
- * stable_data_t: write-once data that is fixed for the lifetime of the node
- * stats_t: values that get updated throughout MCTS via backpropagation
- * edge_t[]: edges to children nodes, needed for tree traversal
+ * StableData: write-once data that is fixed for the lifetime of the node
+ * Stats: values that get updated throughout MCTS via backpropagation
+ * Edge[]: edges to children nodes, needed for tree traversal
  *
- * The last one, edge_t[], is represented by a single index into a pool of edges.
+ * The last one, Edge[], is represented by a single index into a pool of edges.
  *
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
@@ -90,11 +90,11 @@ class Node {
       IS_MACRO_ENABLED(STORE_STATES) || Game::MctsConfiguration::kStoreStates;
   using StateData = mcts::StateData<Game, kStoreStates>;
 
-  // We make the StateData a base-class of stable_data_t because (1) the state is stable, and
+  // We make the StateData a base-class of StableData because (1) the state is stable, and
   // (2) if STORE_STATES is not enabled, we get an empty base-class optimization.
-  struct stable_data_t : public StateData {
-    stable_data_t(const StateHistory&, core::seat_index_t active_seat);  // for non-terminal nodes
-    stable_data_t(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
+  struct StableData : public StateData {
+    StableData(const StateHistory&, core::seat_index_t active_seat);  // for non-terminal nodes
+    StableData(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
     ValueTensor VT;
     ActionMask valid_action_mask;
@@ -112,13 +112,13 @@ class Node {
 
   // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some
   // exceptions on reads, when we read a single atomically-writable member of stats_.
-  struct stats_t {
+  struct Stats {
     int total_count() const { return RN + VN; }
     void init_q(const ValueArray&, bool pure);
     void update_provable_bits(const player_bitset_t& all_actions_provably_winning,
                               const player_bitset_t& all_actions_provably_losing,
                               int num_expanded_children, bool cp_has_winning_move,
-                              const stable_data_t&);
+                              const StableData&);
 
     ValueArray Q;     // excludes virtual loss
     ValueArray Q_sq;  // excludes virtual loss
@@ -131,9 +131,9 @@ class Node {
   };
 
   /*
-   * An edge_t corresponds to an action that can be taken from this node.
+   * An Edge corresponds to an action that can be taken from this node.
    */
-  struct edge_t {
+  struct Edge {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
@@ -195,8 +195,8 @@ class Node {
     edge_pool_index_t alloc_edges(int k) { return edge_pool_.alloc(k); }
     const Node* get_node(node_pool_index_t index) const { return &node_pool_[index]; }
     Node* get_node(node_pool_index_t index) { return &node_pool_[index]; }
-    const edge_t* get_edge(edge_pool_index_t index) const { return &edge_pool_[index]; }
-    edge_t* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
+    const Edge* get_edge(edge_pool_index_t index) const { return &edge_pool_[index]; }
+    Edge* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
 
     using map_t = std::unordered_map<MCTSKey, node_pool_index_t>;
     const map_t* map() const { return &map_; }
@@ -208,7 +208,7 @@ class Node {
    private:
     friend class Defragmenter;
     map_t map_;
-    util::AllocPool<edge_t> edge_pool_;
+    util::AllocPool<Edge> edge_pool_;
     util::AllocPool<Node> node_pool_;
     std::vector<std::mutex> mutex_pool_;
     std::vector<std::condition_variable> cv_pool_;
@@ -226,7 +226,7 @@ class Node {
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 
-  const stable_data_t& stable_data() const { return stable_data_; }
+  const StableData& stable_data() const { return stable_data_; }
 
   // stats() returns a reference to the stats object, WITHOUT acquiring the mutex. In order to use
   // this function properly, the caller must ensure that one of the following is true:
@@ -240,11 +240,11 @@ class Node {
   // or,
   //
   // 3. The caller is ok with the possibility of a race-condition with a writer.
-  const stats_t& stats() const { return stats_; }
-  stats_t& stats() { return stats_; }
+  const Stats& stats() const { return stats_; }
+  Stats& stats() { return stats_; }
 
   // Acquires the mutex and returns a copy of the stats object.
-  stats_t stats_safe() const;
+  Stats stats_safe() const;
 
   bool is_terminal() const { return stable_data_.terminal; }
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
@@ -259,10 +259,10 @@ class Node {
 
   bool all_children_edges_initialized() const;
   bool edges_initialized() const { return first_edge_index_ != -1; }
-  edge_t* get_edge(int i) const;
+  Edge* get_edge(int i) const;
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
-  Node* get_child(const edge_t* edge) const;
+  Node* get_child(const Edge* edge) const;
   void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
 
@@ -270,9 +270,9 @@ class Node {
   void validate_state() const;
 
  private:
-  stable_data_t stable_data_;
+  StableData stable_data_;
   LookupTable* lookup_table_;
-  stats_t stats_;
+  Stats stats_;
 
   // Each Node has an int mutex_id_, rather than an actual mutex. This is for 2 reasons:
   //

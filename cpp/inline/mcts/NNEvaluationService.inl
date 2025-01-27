@@ -110,7 +110,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(
 }
 
 template <core::concepts::Game Game>
-inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
+inline void NNEvaluationService<Game>::TensorGroup::load_output_from(
     int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
     torch::Tensor& torch_action_value) {
   constexpr size_t policy_size = PolicyShape::total_size;
@@ -127,17 +127,17 @@ inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
 }
 
 template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::batch_data_t::batch_data_t(int batch_size)
+inline NNEvaluationService<Game>::BatchData::BatchData(int batch_size)
     : tensor_groups_(batch_size) {}
 
 template <core::concepts::Game Game>
-inline void NNEvaluationService<Game>::batch_data_t::copy_input_to(
+inline void NNEvaluationService<Game>::BatchData::copy_input_to(
     int num_rows, DynamicInputTensor& full_input) {
   float* full_input_data = full_input.data();
   constexpr size_t input_size = InputShape::total_size;
   int r = 0;
   for (int row = 0; row < num_rows; row++) {
-    const tensor_group_t& group = tensor_groups_[row];
+    const TensorGroup& group = tensor_groups_[row];
     memcpy(full_input_data + r, group.input.data(), input_size * sizeof(float));
     r += input_size;
   }
@@ -171,7 +171,7 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
 
     std::unique_lock<std::mutex> metadata_lock(batch_metadata_.mutex);
     wait_until_batch_reservable(request, metadata_lock);
-    index_reservation_t reservation = make_reservation(request, my_claim_count, metadata_lock);
+    IndexReservation reservation = make_reservation(request, my_claim_count, metadata_lock);
     metadata_lock.unlock();
 
     int reservation_count = 0;
@@ -232,10 +232,10 @@ void NNEvaluationService<Game>::end_session() {
 }
 
 template <core::concepts::Game Game>
-core::perf_stats_t NNEvaluationService<Game>::get_perf_stats() {
+core::PerfStats NNEvaluationService<Game>::get_perf_stats() {
   std::unique_lock lock(perf_stats_mutex_);
-  core::perf_stats_t perf_stats_copy = perf_stats_;
-  new (&perf_stats_) core::perf_stats_t();
+  core::PerfStats perf_stats_copy = perf_stats_;
+  new (&perf_stats_) core::PerfStats();
   lock.unlock();
 
   return perf_stats_copy;
@@ -272,9 +272,9 @@ void NNEvaluationService<Game>::batch_evaluate() {
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
-    tensor_group_t& group = batch_data_.tensor_groups_[i];
+    TensorGroup& group = batch_data_.tensor_groups_[i];
     group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
-    eval_ptr_data_t& edata = group.eval_ptr_data;
+    EvalPtrData& edata = group.eval_ptr_data;
 
     edata.eval_ptr.store(
         std::make_shared<NNEvaluation>(group.value, group.policy, group.action_values,
@@ -286,7 +286,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   profiler_.record(NNEvaluationServiceRegion::kFinishingUp);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
-    const eval_ptr_data_t& edata = batch_data_.tensor_groups_[i].eval_ptr_data;
+    const EvalPtrData& edata = batch_data_.tensor_groups_[i].eval_ptr_data;
     cache_.insert(edata.cache_key, edata.eval_ptr);
   }
   cache_lock.unlock();
@@ -382,7 +382,7 @@ void NNEvaluationService<Game>::wait_until_batch_reservable(
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::index_reservation_t
+typename NNEvaluationService<Game>::IndexReservation
 NNEvaluationService<Game>::make_reservation(const NNEvaluationRequest& request, int count,
                                             std::unique_lock<std::mutex>& metadata_lock) {
   request.thread_profiler()->record(SearchThreadRegion::kMisc);
@@ -412,7 +412,7 @@ NNEvaluationService<Game>::make_reservation(const NNEvaluationRequest& request, 
    * The significance of not yet being committed is that the service thread won't yet proceed with
    * model eval.
    */
-  return index_reservation_t{start_index, num_indices};
+  return IndexReservation{start_index, num_indices};
 }
 
 template <core::concepts::Game Game>
@@ -443,7 +443,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
 
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
-  tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
+  TensorGroup& group = batch_data_.tensor_groups_[reserve_index];
   group.input = input;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;

@@ -42,7 +42,7 @@ struct GameLogBase {
   // sparse tensor is stored.
   using tensor_encoding_t = int32_t;
 
-  struct sparse_tensor_entry_t {
+  struct SparseTensorEntry {
     int32_t offset;
     float probability;
   };
@@ -93,18 +93,18 @@ class GameLog : public GameLogBase {
     int size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
     bool load(PolicyTensor&) const;  // return true if valid tensor
 
-    struct dense_data_t {
+    struct DenseData {
       float x[kDenseCapacity];
     };
 
-    struct sparse_data_t {
-      sparse_tensor_entry_t x[kSparseCapacity];
+    struct SparseData {
+      SparseTensorEntry x[kSparseCapacity];
     };
-    static_assert(sizeof(sparse_data_t) == 8 * kSparseCapacity);
+    static_assert(sizeof(SparseData) == 8 * kSparseCapacity);
 
     union data_t {
-      dense_data_t dense_repr;
-      sparse_data_t sparse_repr;
+      DenseData dense_repr;
+      SparseData sparse_repr;
     };
 
     tensor_encoding_t encoding;
@@ -169,7 +169,7 @@ class GameLogWriter {
   using mem_offset_t = GameLogBase::mem_offset_t;
   using pos_index_t = GameLogBase::pos_index_t;
   using tensor_encoding_t = GameLogBase::tensor_encoding_t;
-  using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
+  using SparseTensorEntry = GameLogBase::SparseTensorEntry;
 
   using Rules = Game::Rules;
   using State = Game::State;

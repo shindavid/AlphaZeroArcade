@@ -49,35 +49,35 @@ class GameServer {
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
 
   /*
-   * A player_instantiation_t is instantiated from a registration_t. See registration_t for more
-   * detail.
+   * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
+   * more detail.
    */
-  struct player_instantiation_t {
+  struct PlayerInstantiation {
     Player* player = nullptr;
     seat_index_t seat = -1;      // -1 means random seat
     player_id_t player_id = -1;  // order in which player was registered
   };
-  using player_instantiation_array_t = std::array<player_instantiation_t, kNumPlayers>;
+  using player_instantiation_array_t = std::array<PlayerInstantiation, kNumPlayers>;
 
   /*
-   * A registration_t gives birth to a player_instantiation_t.
+   * A PlayerRegistration gives birth to a PlayerInstantiation.
    *
-   * The difference is that a registration_t has a player-*generating-function*, rather than a
+   * The difference is that a PlayerRegistration has a player-*generating-function*, rather than a
    * player. This is needed because when multiple GameThread's are launched, each needs to
    * instantiate its own Player. This requires the GameServer API to demand passing in a
    * player-*generator*, as opposed to a player, so that each spawned GameThread can create its own
    * player.
    */
-  struct registration_t {
+  struct PlayerRegistration {
     PlayerGenerator* gen = nullptr;
     seat_index_t seat = -1;      // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
-    player_instantiation_t instantiate(game_thread_id_t id) const {
+    PlayerInstantiation instantiate(game_thread_id_t id) const {
       return {gen->generate_with_name(id), seat, player_id};
     }
   };
-  using registration_vec_t = std::vector<registration_t>;
+  using registration_vec_t = std::vector<PlayerRegistration>;
 
   struct Params {
     auto make_options_description();

@@ -10,19 +10,19 @@
 namespace core {
 
 template <int kMaxNumActions, group::concepts::FiniteGroup Group>
-void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<item_t>& items) {
+void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<Item>& items) {
   int num_items = items.size();
   std::sort(items.begin(), items.begin() + num_items);
 
   // items is now a pseudo-list of sets [S_1, S_2, ...], where S_i is a set of symmetrically
   // equivalent actions, and where each S_i is sorted in increasing order
 
-  struct pair_t {
-    auto operator<=>(const pair_t&) const = default;
+  struct Pair {
+    auto operator<=>(const Pair&) const = default;
     core::action_t action;
     int cluster_start_index;
   };
-  using pair_array_t = std::array<pair_t, kMaxNumActions>;
+  using pair_array_t = std::array<Pair, kMaxNumActions>;
 
   pair_array_t pair_array;
   int num_pairs = 0;

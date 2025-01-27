@@ -20,8 +20,8 @@ void Game::Rules::init_state(State& state) {
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
-  const State::core_t& core = state.core;
-  const State::aux_t& aux = state.aux;
+  const State::Core& core = state.core;
+  const State::Aux& aux = state.aux;
 
   color_t color = core.cur_color;
 
@@ -85,8 +85,8 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     state.validate_aux();
   }
 
-  State::core_t& core = state.core;
-  State::aux_t& aux = state.aux;
+  State::Core& core = state.core;
+  State::Aux& aux = state.aux;
 
   color_t color = core.cur_color;
   if (!core.partial_move.valid()) {

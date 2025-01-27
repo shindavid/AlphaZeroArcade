@@ -123,7 +123,7 @@ SearchThread<Game>::init_node(StateHistory* history, node_pool_index_t index, No
       using ChanceDistribution = Game::Types::ChanceDistribution;
       ChanceDistribution chance_dist = Game::Rules::get_chance_distribution(history->current());
       for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
-        edge_t* edge = node->get_edge(i);
+        Edge* edge = node->get_edge(i);
         core::action_t action = edge->action;
         edge->base_prob = chance_dist(action);
       }
@@ -146,7 +146,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
   for (int e = 0; e < n_actions; e++) {
-    edge_t* edge = node->get_edge(e);
+    Edge* edge = node->get_edge(e);
     if (edge->child_index >= 0) continue;
 
     // reorient edge->action into raw-orientation
@@ -308,7 +308,7 @@ inline void SearchThread<Game>::visit(Node* node) {
     child_index = get_best_child_index(node);
   }
 
-  edge_t* edge = node->get_edge(child_index);
+  Edge* edge = node->get_edge(child_index);
   search_path_.back().edge = edge;
   bool applied_action = false;
   group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
@@ -425,7 +425,7 @@ inline void SearchThread<Game>::virtual_backprop() {
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
+    Edge* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -450,7 +450,7 @@ void SearchThread<Game>::undo_virtual_backprop() {
   util::release_assert(!search_path_.empty());
 
   for (int i = search_path_.size() - 1; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
+    Edge* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -481,7 +481,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
+    Edge* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -513,7 +513,7 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
+    Edge* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -536,7 +536,7 @@ void SearchThread<Game>::short_circuit_backprop() {
   }
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
+    Edge* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -549,7 +549,7 @@ void SearchThread<Game>::short_circuit_backprop() {
 }
 
 template <core::concepts::Game Game>
-bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edge) {
+bool SearchThread<Game>::expand(StateHistory* history, Node* parent, Edge* edge) {
   profiler_.record(SearchThreadRegion::kExpand);
 
   LookupTable& lookup_table = shared_data_->lookup_table;
@@ -669,7 +669,7 @@ std::string SearchThread<Game>::search_path_str() const {
   group::element_t cur_sym = Group::inverse(shared_data_->root_info.canonical_sym);
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
-  for (const visitation_t& visitation : search_path_) {
+  for (const Visitation& visitation : search_path_) {
     if (!visitation.edge) continue;
     core::action_mode_t mode = visitation.node->action_mode();
     core::action_t action = visitation.edge->action;
@@ -689,8 +689,8 @@ void SearchThread<Game>::calc_canonical_state_data() {
     pseudo_local_vars_.canonical_history = shared_data_->root_info.history_array[canonical_sym_];
     group::element_t cur_canonical_sym = shared_data_->root_info.canonical_sym;
     group::element_t leaf_canonical_sym = canonical_sym_;
-    for (const visitation_t& visitation : search_path_) {
-      edge_t* edge = visitation.edge;
+    for (const Visitation& visitation : search_path_) {
+      Edge* edge = visitation.edge;
       core::action_mode_t mode = visitation.node->action_mode();
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));

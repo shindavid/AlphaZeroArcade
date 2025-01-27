@@ -201,11 +201,11 @@ class TuiPrompt {
  private:
   static constexpr int kNumLines = 7;
 
-  struct block_t {
+  struct Block {
     int width;
     std::ostringstream lines[kNumLines];
   };
-  using block_vec_t = std::vector<block_t>;
+  using block_vec_t = std::vector<Block>;
 
   block_vec_t blocks_;
 };

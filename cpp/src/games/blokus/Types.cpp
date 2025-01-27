@@ -236,7 +236,7 @@ void TuiPrompt::print() {
   std::ostringstream print_lines[kNumLines];
 
   int cur_width = 0;
-  for (const block_t& block : blocks_) {
+  for (const Block& block : blocks_) {
     int potential_width = cur_width + block.width;
     if (potential_width >= width) {
       for (auto& line : print_lines) {
@@ -280,7 +280,7 @@ void PieceOrientation::write_to(TuiPrompt& prompt, color_t color, int label) con
   };
   const char* color_str = color_strs[color];
 
-  TuiPrompt::block_t& block = prompt.blocks_.emplace_back();
+  TuiPrompt::Block& block = prompt.blocks_.emplace_back();
   block.width = std::max((int)label_str.size(), 2 * width) + 1;
   for (int r = 0; r < height; ++r) {
     std::ostringstream& line = block.lines[r + 2];

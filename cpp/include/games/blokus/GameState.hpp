@@ -8,11 +8,11 @@
 namespace blokus {
 
 /*
- * GameState is split internally into two parts: core_t and aux_t.
+ * GameState is split internally into two parts: Core and Aux.
  *
- * core_t unamgibuously represents the game state.
+ * Core unamgibuously represents the game state.
  *
- * aux_t contains additional information that can be computed from core_t, but is stored for
+ * Aux contains additional information that can be computed from Core, but is stored for
  * efficiency.
  *
  * TODO: use Zobrist-hashing to speed-up hashing.
@@ -36,9 +36,9 @@ struct GameState {
    */
   void validate_aux() const;
 
-  // core_t unambiguously represents the game state.
-  struct core_t {
-    auto operator<=>(const core_t& other) const = default;
+  // Core unambiguously represents the game state.
+  struct Core {
+    auto operator<=>(const Core& other) const = default;
     BitBoard occupied_locations[kNumColors];
 
     color_t cur_color;
@@ -56,15 +56,15 @@ struct GameState {
   // TODO: consider moving some of these members into StateHistory. The ones that support
   // tensorization should stay here, but the ones that only facilitate rules-calculations can
   // be moved to StateHistory to reduce the disk footprint of game logs.
-  struct aux_t {
-    auto operator<=>(const aux_t&) const = default;
+  struct Aux {
+    auto operator<=>(const Aux&) const = default;
     PieceMask played_pieces[kNumColors];
     BitBoard unplayable_locations[kNumColors];
     BitBoard corner_locations[kNumColors];
   };
 
-  core_t core;
-  aux_t aux;
+  Core core;
+  Aux aux;
 };
 
 }  // namespace blokus

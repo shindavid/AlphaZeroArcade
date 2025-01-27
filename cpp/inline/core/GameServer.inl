@@ -177,7 +177,7 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_random_seat_indices() {
   std::bitset<kNumPlayers> fixed_seat_indices;
-  for (registration_t& reg : registrations_) {
+  for (PlayerRegistration& reg : registrations_) {
     if (reg.seat >= 0) {
       fixed_seat_indices.set(reg.seat);
     }
@@ -430,9 +430,9 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
     shared_data_.register_player(-1, gen, true);
   }
 
-  std::vector<registration_t*> remote_player_registrations;
+  std::vector<PlayerRegistration*> remote_player_registrations;
   for (int r = 0; r < shared_data_.num_registrations(); ++r) {
-    registration_t& reg = shared_data_.registration_templates()[r];
+    PlayerRegistration& reg = shared_data_.registration_templates()[r];
     if (dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen)) {
       util::clean_assert(reg.seat < 0, "Cannot specify --seat= when using --type=Remote");
       remote_player_registrations.push_back(&reg);

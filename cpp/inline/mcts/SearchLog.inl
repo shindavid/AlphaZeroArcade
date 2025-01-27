@@ -3,7 +3,7 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
+inline boost::json::object SearchLog<Game>::LogNode::to_json() const {
   boost::json::object node_json;
   node_json["index"] = index;
   node_json["N"] = N;
@@ -22,7 +22,7 @@ inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
 }
 
 template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::log_edge_t::to_json() const {
+inline boost::json::object SearchLog<Game>::LogEdge::to_json() const {
   boost::json::object edge_json;
   edge_json["index"] = index;
   edge_json["from"] = from;
@@ -49,7 +49,7 @@ inline std::string SearchLog<Game>::last_graph_json_str() {
 template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
-  using edge_t = mcts::Node<Game>::edge_t;
+  using Edge = mcts::Node<Game>::Edge;
   using Node = mcts::Node<Game>;
   auto map = shared_data_->lookup_table.map();
 
@@ -61,7 +61,7 @@ void SearchLog<Game>::build_graph(Graph& graph) {
                    stats.provably_winning, stats.provably_losing,
                    node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
-      edge_t* edge = node->get_edge(i);
+      Edge* edge = node->get_edge(i);
 
       if (edge->child_index == -1) {
         continue;

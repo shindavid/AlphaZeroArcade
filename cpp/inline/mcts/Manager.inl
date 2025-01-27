@@ -268,12 +268,12 @@ template <core::concepts::Game Game>
 inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* actions) {
   const auto& stable_data = root->stable_data();
 
-  using item_t = ActionSymmetryTable::item_t;
-  std::vector<item_t> items;
+  using Item = ActionSymmetryTable::Item;
+  std::vector<Item> items;
   items.reserve(stable_data.num_valid_actions);
 
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    edge_t* edge = root->get_edge(e);
+    Edge* edge = root->get_edge(e);
     if (edge->child_index < 0) continue;
     items.emplace_back(edge->child_index, actions[e]);
   }
@@ -312,7 +312,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {
-    edge_t* edge = root->get_edge(i);
+    Edge* edge = root->get_edge(i);
     if (mE(i) == 0) {
       results_.policy_target(edge->action) = 0;
       continue;

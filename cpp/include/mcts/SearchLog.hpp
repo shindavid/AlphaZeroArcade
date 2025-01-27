@@ -22,7 +22,7 @@ class SearchLog {
  public:
   SearchLog(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
 
-  struct log_node_t {
+  struct LogNode {
     node_index_t index;
     int N;
     ValueArray Q;
@@ -34,7 +34,7 @@ class SearchLog {
     boost::json::object to_json() const;
   };
 
-  struct log_edge_t {
+  struct LogEdge {
     edge_index_t index;
     node_index_t from;
     node_index_t to;
@@ -47,9 +47,9 @@ class SearchLog {
    public:
     void sort_by_index() {
       std::sort(nodes.begin(), nodes.end(),
-                [](const log_node_t& a, const log_node_t& b) { return a.index < b.index; });
+                [](const LogNode& a, const LogNode& b) { return a.index < b.index; });
       std::sort(edges.begin(), edges.end(),
-                [](const log_edge_t& a, const log_edge_t& b) { return a.index < b.index; });
+                [](const LogEdge& a, const LogEdge& b) { return a.index < b.index; });
     }
 
     boost::json::object graph_repr() const;
@@ -66,8 +66,8 @@ class SearchLog {
     }
 
    private:
-    std::vector<log_node_t> nodes;
-    std::vector<log_edge_t> edges;
+    std::vector<LogNode> nodes;
+    std::vector<LogEdge> edges;
   };
 
   void update();

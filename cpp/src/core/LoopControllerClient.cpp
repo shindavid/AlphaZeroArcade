@@ -53,8 +53,8 @@ void LoopControllerClient::handle_unpause_receipt() {
   }
 }
 
-perf_stats_t LoopControllerClient::get_perf_stats() const {
-  perf_stats_t stats;
+PerfStats LoopControllerClient::get_perf_stats() const {
+  PerfStats stats;
 
   for (auto listener : metrics_request_listeners_) {
     stats += listener->get_perf_stats();
@@ -144,7 +144,7 @@ void LoopControllerClient::send_metrics() {
     return;
   }
 
-  perf_stats_t stats = get_perf_stats();
+  PerfStats stats = get_perf_stats();
   if (stats.empty()) {
     return;
   }

@@ -33,7 +33,7 @@ class Manager {
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
   using node_pool_index_t = Node::node_pool_index_t;
-  using edge_t = Node::edge_t;
+  using Edge = Node::Edge;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 

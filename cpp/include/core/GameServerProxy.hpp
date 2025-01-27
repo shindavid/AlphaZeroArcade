@@ -34,11 +34,11 @@ class GameServerProxy {
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
 
-  struct seat_generator_t {
+  struct SeatGenerator {
     seat_index_t seat;
     PlayerGenerator* gen;
   };
-  using seat_generator_vec_t = std::vector<seat_generator_t>;
+  using seat_generator_vec_t = std::vector<SeatGenerator>;
 
   struct Params {
     auto make_options_description();

@@ -37,8 +37,8 @@ class KeyValueDumper {
 
   static KeyValueDumper* instance_;
 
-  using pair_t = std::pair<std::string, std::string>;
-  using vec_t = std::vector<pair_t>;
+  using Pair = std::pair<std::string, std::string>;
+  using vec_t = std::vector<Pair>;
 
   vec_t vec_;
 };

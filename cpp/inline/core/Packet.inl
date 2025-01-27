@@ -59,7 +59,7 @@ void Packet<PacketPayload>::set_player_name(const std::string& name) {
 
 template <concepts::PacketPayload PacketPayload>
 void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
-  constexpr int orig_size = sizeof(typename PacketPayload::dynamic_size_section_t);
+  constexpr int orig_size = sizeof(typename PacketPayload::DynamicSizeSection);
   if (buf_size < 0 || buf_size > orig_size) {
     throw util::Exception(
         "Packet<%d>::set_dynamic_section_size() invalid buf_size (%d) orig_size=%d",

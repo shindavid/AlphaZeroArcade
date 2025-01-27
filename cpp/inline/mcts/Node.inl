@@ -6,7 +6,7 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
+inline Node<Game>::StableData::StableData(const StateHistory& history,
                                                 core::seat_index_t as)
     : StateData(history.current()) {
   VT.setZero();  // to be set lazily
@@ -20,7 +20,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
 }
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
+inline Node<Game>::StableData::StableData(const StateHistory& history,
                                                 const ValueTensor& game_outcome)
     : StateData(history.current()) {
   VT = game_outcome;
@@ -33,7 +33,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
+void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
   Q = value;
   Q_sq = value * value;
   if (pure) {
@@ -47,10 +47,10 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::stats_t::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
+void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
                                                const player_bitset_t& all_actions_provably_losing,
                                                int num_expanded_children, bool cp_has_winning_move,
-                                               const stable_data_t& sdata) {
+                                               const StableData& sdata) {
   int num_valid_actions = sdata.num_valid_actions;
   core::seat_index_t seat = sdata.active_seat;
 
@@ -131,7 +131,7 @@ void Node<Game>::LookupTable::Defragmenter::remap_helper(node_pool_index_t n,
   int n_edges = node->stable_data().num_valid_actions;
 
   for (int e = 0; e < n_edges; ++e) {
-    edge_t* edge = node->get_edge(e);
+    Edge* edge = node->get_edge(e);
     if (edge->child_index < 0) continue;
     remap_helper(edge->child_index, processed_nodes);
     edge->child_index = node_index_remappings_[edge->child_index];
@@ -243,7 +243,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   bool provably_losing = parent_stats.provably_losing[seat];
 
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
-    const edge_t* edge = get_edge(i);
+    const Edge* edge = get_edge(i);
     core::action_t action = edge->action;
 
     int count = edge->E;
@@ -294,7 +294,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
   if (stable_data_.is_chance_node) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
-      const edge_t* edge = get_edge(i);
+      const Edge* edge = get_edge(i);
       const Node* child = get_child(edge);
 
       if (!child) {
@@ -326,7 +326,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
     bool skipped = false;
     for (int i = 0; i < stable_data().num_valid_actions; i++) {
-      const edge_t* edge = get_edge(i);
+      const Edge* edge = get_edge(i);
       const Node* child = get_child(edge);
       if (!child) {
         skipped = true;
@@ -391,7 +391,7 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-typename Node<Game>::stats_t Node<Game>::stats_safe() const {
+typename Node<Game>::Stats Node<Game>::stats_safe() const {
   // NOTE[dshin]: I attempted a version of this that attempted a lock-free read, resorting to a
   // the mutex only when a set dirty-bit was found on the copied stats. Contrary to my expectations,
   // this was slightly but clearly slower than the current version. I don't really understand why
@@ -408,8 +408,8 @@ void Node<Game>::initialize_edges() {
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
-    edge_t* edge = get_edge(i);
-    new (edge) edge_t();
+    Edge* edge = get_edge(i);
+    new (edge) Edge();
     edge->action = action;
     i++;
   }
@@ -434,7 +434,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   // No need to worry about thread-safety when modifying edges or stats below, since no other
   // threads can access this node until after load_eval() returns
   for (int i = 0; i < n; ++i) {
-    edge_t* edge = get_edge(i);
+    Edge* edge = get_edge(i);
     edge->base_prob = P_raw[i];
     edge->adjusted_base_prob = P_adjusted[i];
     edge->child_V_estimate = child_V[i];
@@ -458,13 +458,13 @@ bool Node<Game>::all_children_edges_initialized() const {
 }
 
 template <core::concepts::Game Game>
-typename Node<Game>::edge_t* Node<Game>::get_edge(int i) const {
+typename Node<Game>::Edge* Node<Game>::get_edge(int i) const {
   util::debug_assert(first_edge_index_ != -1);
   return lookup_table_->get_edge(first_edge_index_ + i);
 }
 
 template <core::concepts::Game Game>
-Node<Game>* Node<Game>::get_child(const edge_t* edge) const {
+Node<Game>* Node<Game>::get_child(const Edge* edge) const {
   if (edge->child_index < 0) return nullptr;
   return lookup_table_->get_node(edge->child_index);
 }

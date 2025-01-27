@@ -64,7 +64,7 @@ typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::p
                          seat, player_str.c_str());
     }
 
-    player_generator_seat_t player_generator_seat;
+    PlayerGeneratorSeat player_generator_seat;
     player_generator_seat.generator = parse_helper(player_str, name, tokens);
     player_generator_seat.seat = seat;
 

@@ -2,7 +2,7 @@
 
 namespace core {
 
-inline perf_stats_t& perf_stats_t::operator+=(const perf_stats_t& other) {
+inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
   cache_hits += other.cache_hits;
   cache_misses += other.cache_misses;
   positions_evaluated += other.positions_evaluated;
@@ -11,7 +11,7 @@ inline perf_stats_t& perf_stats_t::operator+=(const perf_stats_t& other) {
   return *this;
 }
 
-inline boost::json::object perf_stats_t::to_json() const {
+inline boost::json::object PerfStats::to_json() const {
   boost::json::object obj;
   obj["cache_hits"] = cache_hits;
   obj["cache_misses"] = cache_misses;

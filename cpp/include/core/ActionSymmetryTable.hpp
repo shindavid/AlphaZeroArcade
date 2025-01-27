@@ -24,8 +24,8 @@ class ActionSymmetryTable {
   using action_array_t = std::array<core::action_t, kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<Eigen::Sizes<kMaxNumActions>>;
 
-  struct item_t {
-    auto operator<=>(const item_t&) const = default;
+  struct Item {
+    auto operator<=>(const Item&) const = default;
     util::pool_index_t equivalence_class;
     core::action_t action;
   };
@@ -42,7 +42,7 @@ class ActionSymmetryTable {
    * Any entry that is less than the previous entry is considered the start of a new equivalence
    * class. If a -1 value is encountered, it is considered the end of the array.
    */
-  void load(std::vector<item_t>& items);
+  void load(std::vector<Item>& items);
 
   /*
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of

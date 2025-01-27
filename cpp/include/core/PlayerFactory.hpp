@@ -48,11 +48,11 @@ class PlayerFactory {
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using PlayerSubfactoryBase = core::PlayerSubfactoryBase<Game>;
 
-  struct player_generator_seat_t {
+  struct PlayerGeneratorSeat {
     PlayerGenerator* generator = nullptr;
     int seat = -1;
   };
-  using player_generator_seat_vec_t = std::vector<player_generator_seat_t>;
+  using player_generator_seat_vec_t = std::vector<PlayerGeneratorSeat>;
   using player_generator_vec_t = std::vector<PlayerGenerator*>;
   using player_subfactory_vec_t = std::vector<PlayerSubfactoryBase*>;
 

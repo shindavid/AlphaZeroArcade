@@ -89,7 +89,7 @@ bool GameLog<Game>::TensorData::load(PolicyTensor& tensor) const {
     tensor.setZero();
 
     for (int i = 0; i < n; ++i) {
-      sparse_tensor_entry_t s = data.sparse_repr.x[i];
+      SparseTensorEntry s = data.sparse_repr.x[i];
       tensor(s.offset) = s.probability;
     }
   }

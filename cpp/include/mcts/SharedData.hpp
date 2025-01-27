@@ -35,7 +35,7 @@ struct SharedData {
 
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
 
-  struct root_info_t {
+  struct RootInfo {
     StateHistoryArray history_array;
 
     group::element_t canonical_sym = -1;
@@ -62,7 +62,7 @@ struct SharedData {
   std::condition_variable cv_search_on, cv_search_off;
   boost::dynamic_bitset<> active_search_threads;
   LookupTable lookup_table;
-  root_info_t root_info;
+  RootInfo root_info;
 
   SearchParams search_params;
   const int manager_id = -1;
