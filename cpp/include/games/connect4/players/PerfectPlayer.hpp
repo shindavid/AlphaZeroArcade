@@ -54,9 +54,9 @@ class PerfectOracle {
    *
    * If s > 0, then the move wins in s moves against perfect counter-play.
    *
-   * If the position is winning, the member best_score is set to the positive score closest to zero.
-   * If the position is losing, the member best_score is set to the negative score closest to zero.
-   * If the position is drawn, the member best_score is set to 0.
+   * If the position is winning, best_score is set to the positive score closest to zero.
+   * If the position is losing, best_score is set to the negative score furthest to zero.
+   * If the position is drawn, best_score is set to 0.
    */
   struct QueryResult {
     static constexpr int kIllegalMoveScore = -1000;
@@ -95,6 +95,17 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
      * look-ahead depth. More specifically, the agent will choose randomly among all moves that can
      * force a win within <strength> moves, if such moves exist; otherwise, it will choose randomly
      * among all moves that can avoid a loss within <strength> moves, if such moves exist.
+     *
+     * When the agent knows that is it losing, it will choose randomly among all moves that can
+     * delay the loss the longest.
+     *
+     * NOTE[dshin]: I experimented with changing the behavior of the agent when it knows it is
+     * losing. Instead of choosing uniformly randomly among the slowest losses, I tried something
+     * that will yield a little more variety: choose among all actions, with a probability
+     * proportional to the 2^k, where k is the number of moves it takes to lose against optimal
+     * play. This is a little more interesting, but empirically, it makes the agent clearly
+     * weaker against imperfect MCTS agents. So ultimately I decided to stick with the uniform
+     * random choice among the slowest losses, to make the agent as strong as possible.
      */
     int strength = 21;
     bool verbose = false;
