@@ -17,6 +17,7 @@ This script launches 1 server of each type on the local machine, using the above
 If the local machine has multiple GPU's, more than one self-play server can be launched.
 """
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
@@ -83,6 +84,7 @@ def load_args():
     default_training_params = None if game_spec is None else game_spec.training_params
     TrainingParams.add_args(parser, defaults=default_training_params)
     Params.add_args(parser)
+    DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
 
@@ -91,6 +93,7 @@ def load_args():
 
 def launch_self_play_server(params_dict, cuda_device: int):
     params = params_dict['Params']
+    docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
 
@@ -104,6 +107,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
 
+    docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
@@ -114,6 +118,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
 def launch_ratings_server(params_dict, cuda_device: int):
     params = params_dict['Params']
+    docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
 
@@ -129,6 +134,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     if default_ratings_server_params.rating_tag != params.rating_tag:
         cmd.extend(['--rating-tag', params.rating_tag])
 
+    docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
@@ -143,6 +149,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     game_spec = game_index.get_game_spec(run_params.game)
     default_training_params = game_spec.training_params
     training_params = params_dict['TrainingParams']
+    docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
 
@@ -158,6 +165,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
 
+    docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, add_binary_path_option=False)
     run_params.add_to_cmd(cmd)
@@ -170,16 +178,22 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
 def main():
     args, game_spec = load_args()
+
+    docker_params = DockerParams.create(args)
     run_params = RunParams.create(args)
     training_params = TrainingParams.create(args)
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
 
+    if not docker_params.skip_image_version_check:
+        validate_docker_image()
+
     params_dict = {
         'RunParams': run_params,
         'TrainingParams': training_params,
         'Params': params,
+        'DockerParams': docker_params,
         'LoggingParams': logging_params,
         'BuildParams': build_params,
         }

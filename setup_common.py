@@ -1,13 +1,22 @@
 # This file should not depend on any repo python files outside of the top-level directory.
+#
+# We keep this file at the top-level directory, rather than inside py/, to avoid PYTHONPATH-related
+# import issues for scripts that are executed outside of a docker container, such as run_docker.py
+# and setup_wizard.py.
+#
+# For scripts that executed inside of a docker container, we can be sure that the PYTHONPATH is
+# correctly set up to include the py/ directory.
 
 import json
 import os
+from packaging import version
 import subprocess
 
 
 LOCAL_DOCKER_IMAGE = 'a0a'
 DOCKER_HUB_IMAGE = 'dshin83/alphazeroarcade'
 LATEST_DOCKER_HUB_IMAGE = f'{DOCKER_HUB_IMAGE}:latest'
+MINIMUM_REQUIRED_IMAGE_VERSION = "2.1.0"
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')
@@ -44,3 +53,12 @@ def get_image_label(image_name, label_key):
     if not result:
         return None
     return result
+
+
+def is_version_ok(version_str):
+    """
+    Check if a given version string is at least the minimum required version.
+    """
+    if version_str is None:
+        return False
+    return version.parse(version_str) >= version.parse(MINIMUM_REQUIRED_IMAGE_VERSION)

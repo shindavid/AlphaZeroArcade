@@ -2,19 +2,17 @@
 
 # This file should not depend on any repo python files outside of the top-level directory.
 
-from setup_common import get_env_json, get_image_label
+from setup_common import MINIMUM_REQUIRED_IMAGE_VERSION, get_env_json, get_image_label, \
+    is_version_ok
 
 import argparse
 import os
 import shlex
 import subprocess
-from packaging import version
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.resolve()
-
-MINIMUM_REQUIRED_IMAGE_VERSION = "1.2.3"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
@@ -23,24 +21,13 @@ EXPOSED_PORTS = [
 ]
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", '--skip-image-version-check', action='store_true',
-                        help='skip image version check')
-    parser.add_argument("-d", '--docker-image',
-                        help='name of the docker image to use (default: comes from .env.json)')
-    parser.add_argument("-i", '--instance-name', default='a0a_instance',
-                        help='name of the instance to run (default: %(default)s)')
-    return parser.parse_args()
-
-
 def check_image_version(image_name):
     min_version = MINIMUM_REQUIRED_IMAGE_VERSION
     image_version = get_image_label(image_name, 'version')
 
     # Check if the image version is at least MINIMUM_REQUIRED_IMAGE_VERSION
 
-    if image_version is None or version.parse(image_version) < version.parse(min_version):
+    if not is_version_ok(image_version):
         if image_version is None:
             print('Your docker image appears out of date.')
         else:
@@ -52,6 +39,17 @@ def check_image_version(image_name):
         return False
 
     return True
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", '--skip-image-version-check', action='store_true',
+                        help='skip image version check')
+    parser.add_argument("-d", '--docker-image',
+                        help='name of the docker image to use (default: comes from .env.json)')
+    parser.add_argument("-i", '--instance-name', default='a0a_instance',
+                        help='name of the instance to run (default: %(default)s)')
+    return parser.parse_args()
 
 
 def is_container_running(container_name):

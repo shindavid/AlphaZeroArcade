@@ -13,6 +13,7 @@ to increase the number of MCTS simulations.
 import argparse
 
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.servers.gaming.self_play_server import SelfPlayServer, SelfPlayServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
@@ -22,6 +23,7 @@ def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
     SelfPlayServerParams.add_args(parser)
+    DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser, add_ffi_lib_path_option=False)
 
@@ -31,8 +33,12 @@ def load_args():
 def main():
     args = load_args()
     params = SelfPlayServerParams.create(args)
+    docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+
+    if not docker_params.skip_image_version_check:
+        validate_docker_image()
 
     server = SelfPlayServer(params, logging_params, build_params)
     server.run()
