@@ -259,6 +259,7 @@ class BenchmarkingServer:
             '--cuda-device': self._params.cuda_device,
             '-i': n_iters,
             '-m': self._get_model_path(gen),
+            '-n': 1,
         }
         if gen == 0:
             player_args['--no-model'] = None
