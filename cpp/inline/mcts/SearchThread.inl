@@ -677,7 +677,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
   int argmax_index;
 
-  if (search_params.tree_size_limit == 1) {
+  if (search_params.tree_size_limit <= 1) {
     // net-only, use P
     P.maxCoeff(&argmax_index);
   } else {
