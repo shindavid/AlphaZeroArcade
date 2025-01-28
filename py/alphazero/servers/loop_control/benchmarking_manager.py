@@ -266,6 +266,8 @@ class BenchmarkingManager:
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'benchmark-result':
             self._handle_benchmark_result(msg, conn)
+        elif msg_type == 'model-request':
+            self._handle_model_request(msg, conn)
         else:
             logger.warning('ratings-server: unknown message type: %s', msg)
         return False
@@ -291,6 +293,12 @@ class BenchmarkingManager:
         with status_cond:
             conn.aux['status'] = ServerStatus.DISCONNECTED
             status_cond.notify_all()
+
+    def _handle_model_request(self, msg: JsonDict, conn: ClientConnection):
+        gen = msg['gen']
+        assert gen <= self._controller.latest_gen(), (gen, self._controller.latest_gen())
+
+        self._controller.broadcast_weights(conn, gen)
 
     def _manage_server(self, conn: ClientConnection):
         try:

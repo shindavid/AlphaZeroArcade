@@ -6,13 +6,14 @@ from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.socket_util import JsonDict, SocketRecvException, SocketSendException, recv_file
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
-import threading
+from pathlib import Path
 from typing import Dict
+import threading
 
 logger = get_logger()
 
@@ -111,6 +112,8 @@ class BenchmarkingServer:
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
+        elif msg_type == 'reload-weights':
+            self._handle_receive_model(msg)
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -267,12 +270,22 @@ class BenchmarkingServer:
 
     def _request_model_if_not_exists(self, gen: Generation):
         with self._lock:
-            if gen not in self._requested_models:
-                self._requested_models[gen] = ModelFileStatus.REQUESTED
-                self._session_data.socket.send_json({
-                    'type': 'model-request',
-                    'gen': gen,
-                })
+            if (gen not in self._requested_models):
+                if Path(self._get_model_path(gen)).exists():
+                    self._requested_models[gen] = ModelFileStatus.READY
+                else:
+                    self._requested_models[gen] = ModelFileStatus.REQUESTED
+                    self._session_data.socket.send_json({
+                        'type': 'model-request',
+                        'gen': gen,
+                    })
             else:
                 self._model_file_cv.wait_for(lambda: self._requested_models[gen] == ModelFileStatus.READY)
+
+    def _handle_receive_model(self, msg: JsonDict):
+        gen = msg['gen']
+        recv_file(self._session_data.socket, self._get_model_path(gen))
+        with self._lock:
+            self._requested_models[gen] = ModelFileStatus.READY
+            self._model_file_cv.notify_all()
 
