@@ -1,5 +1,5 @@
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.custom_types import ClientRole, Generation
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -12,10 +12,14 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import threading
-
+from typing import Dict
 
 logger = get_logger()
 
+@dataclass
+class ModelFileStatus:
+    READY = 'ready'
+    REQUESTED = 'requested'
 
 @dataclass
 class BenchmarkingServerParams(BaseParams):
@@ -40,6 +44,9 @@ class BenchmarkingServer:
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._worker_log_sync_registered = False
+        self._requested_models : Dict[Generation, ModelFileStatus] = {}
+        self._lock = threading.Lock()
+        self._model_file_cv = threading.Condition(self._lock)
 
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
@@ -122,6 +129,7 @@ class BenchmarkingServer:
 
     def _run_match(self, msg: JsonDict):
         try:
+            # self._request_model_if_not_exists(msg)
             self._run_match_helper(msg)
         except:
             logger.error('Unexpected error in run-match:', exc_info=True)
@@ -144,8 +152,8 @@ class BenchmarkingServer:
         ps2 = self._get_mcts_player_str(gen2, n_iters2)
         binary = self._build_params.get_binary_path(self._session_data.game)
 
-        log_filename1 = self._session_data.get_log_filename('self-ratings-worker', 'a')
-        log_filename2 = self._session_data.get_log_filename('self-ratings-worker', 'b')
+        log_filename1 = self._session_data.get_log_filename('self-benchmarking-worker', 'a')
+        log_filename2 = self._session_data.get_log_filename('self-benchmarking-worker', 'b')
         if not self._worker_log_sync_registered:
             self._session_data.start_log_sync(log_filename1)
             self._session_data.start_log_sync(log_filename2)
@@ -169,22 +177,20 @@ class BenchmarkingServer:
         # general, or for specific client-roles.
         base_args = {
             '-G': n_games,
-            '--loop-controller-hostname': self._params.loop_controller_host,
-            '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.BENCHMARKING_WORKER.value,
-            '--manager-id': self._session_data.client_id,  # see comment above
+            # '--loop-controller-hostname': self._params.loop_controller_host,
+            # '--loop-controller-port': self._params.loop_controller_port,
+            # '--client-role': ClientRole.BENCHMARKING_WORKER.value,
+            # '--manager-id': self._session_data.client_id,  # see comment above
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,
         }
 
         args1 = dict(base_args)
         args1.update({
-            '--weights-request-generation': gen1,
             '--log-filename': log_filename1,
         })
         args2 = dict(base_args)
         args2.update({
-            '--weights-request-generation': gen2,
             '--log-filename': log_filename2,
         })
 
@@ -226,7 +232,7 @@ class BenchmarkingServer:
         self._running = False
 
         data = {
-            'type': 'match-result',
+            'type': 'benchmark-result',
             'record': record.get(0).to_json(),
             'gen1': gen1,
             'gen2': gen2,
@@ -249,8 +255,24 @@ class BenchmarkingServer:
             '--name': name,
             '--cuda-device': self._params.cuda_device,
             '-i': n_iters,
+            '-m': self._get_model_path(gen),
         }
         if gen == 0:
             player_args['--no-model'] = None
 
         return make_args_str(player_args)
+
+    def _get_model_path(self, gen: int) -> str:
+        return f'output/{self._session_data.game}/{self._session_data.tag}/models/gen-{gen}.pt'
+
+    def _request_model_if_not_exists(self, gen: Generation):
+        with self._lock:
+            if gen not in self._requested_models:
+                self._requested_models[gen] = ModelFileStatus.REQUESTED
+                self._session_data.socket.send_json({
+                    'type': 'model-request',
+                    'gen': gen,
+                })
+            else:
+                self._model_file_cv.wait_for(lambda: self._requested_models[gen] == ModelFileStatus.READY)
+

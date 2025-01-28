@@ -23,8 +23,6 @@ N_GAMES = 100
 class Agent:
     gen: int
     n_iters: int
-    cur_rating: Optional[float] = None
-
 
 class BenchmarkingManager:
     def __init__(self, controller: LoopControllerInterface):
@@ -266,8 +264,8 @@ class BenchmarkingManager:
             self._controller.start_log_sync(conn, msg['log_filename'])
         elif msg_type == 'log-sync-stop':
             self._controller.stop_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'match-result':
-            self._handle_match_result(msg, conn)
+        elif msg_type == 'benchmark-result':
+            self._handle_benchmark_result(msg, conn)
         else:
             logger.warning('ratings-server: unknown message type: %s', msg)
         return False
@@ -351,28 +349,19 @@ class BenchmarkingManager:
         cutoffs = np.concatenate([cutoffs + 1, [0]])
         agents = [Agent(gen=i, n_iters=0) for i in range(0, n + 1)]
         intervals = [agents[cutoffs[i + 1] : (cutoffs[i])] for i in range(len(cutoffs)) if i!= len(cutoffs) - 1]
-        print(intervals)
-        rep = []
+
+        commitee = []
         for i in intervals:
-            rep.append(sorted(i, key=lambda x: (self.G.degree(x) if x in self.G.nodes else 0, x.gen, -x.n_iters))[-1])
-        print(rep)
-        # gen = conn.aux.get('gen', None)
-        # if gen is None:
-        #     gen = self._get_next_gen_to_benchmark()
-        #     conn.aux['gen'] = gen
+            commitee.append(sorted(i, key=lambda x: (self.G.degree(x) if x in self.G.nodes else 0, x.gen, -x.n_iters))[-1])
 
-        # rating_data = self._get_rating_data(conn, gen)
-        # assert rating_data.rating is None
-        # strength = rating_data.get_next_opponent_to_test()
-        # assert strength is not None
+        rep = commitee[0]
 
-        # Agent? here
         data = {
             'type': 'match-request',
             'gen1': n,
-            'gen2': rep[0].gen,
+            'gen2': rep.gen,
             'n_iters1': 0,
-            'n_iters2': rep[0].n_iters,
+            'n_iters2': rep.n_iters,
             'n_games': N_GAMES,
         }
         conn.socket.send_json(data)
@@ -449,29 +438,40 @@ class BenchmarkingManager:
                      mid, left, right, latest_gen)
         return mid
 
-    def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
-        mcts_gen = msg['mcts_gen']
-        ref_strength = msg['ref_strength']
+    def _handle_benchmark_result(self, msg: JsonDict, conn: ClientConnection):
+        gen1 = msg['gen1']
+        gen2 = msg['gen2']
+        n_iters1 = msg['n_iters1']
+        n_iters2 = msg['n_iters2']
+        agent1 = Agent(gen=gen1, n_iters=n_iters1)
+        agent2 = Agent(gen=gen2, n_iters=n_iters2)
         record = WinLossDrawCounts.from_json(msg['record'])
 
-        rating = None
         with self._lock:
-            rating_data = self._rating_data_dict[mcts_gen]
-            assert rating_data.owner == conn.client_id
-            assert conn.aux.get('gen', None) == mcts_gen
-            rating_data.add_result(ref_strength, record)
+            if agent1 not in self.G.nodes:
+                ix1 = len(self.G.nodes)
+                self.G.add_node(agent1, ix=ix1)
+                self._expand_matrix(agent1)
+            else:
+                ix1 = self.G.nodes[agent1]['ix']
 
-            updated_record = rating_data.match_data[ref_strength]
-            rating = rating_data.rating
-            if rating is not None:
-                conn.aux.pop('gen')
-                rating_data.owner = None
+            if agent2 not in self.G.nodes:
+                ix2 = len(self.G.nodes)
+                self.G.add_node(agent2, ix=ix2)
+                self._expand_matrix(agent2)
+            else:
+                ix2 = self.G.nodes[agent2]['ix']
 
-        with self._controller.ratings_db_conn_pool.db_lock:
-            self._commit_counts(mcts_gen, ref_strength, updated_record)
-            if rating is not None:
-                self._commit_rating(mcts_gen, rating)
+            if not self.G.has_edge(agent1, agent2):
+                self.G.add_edge(agent1, agent2)
 
-        if rating is not None:
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-            table.release_lock(conn.client_domain)
+            self._W_matrix[ix1, ix2] += record.win + 0.5 * record.draw
+            self._W_matrix[ix2, ix1] += record.loss + 0.5 * record.draw
+
+            print(self._W_matrix)
+
+    def _expand_matrix(self, agent: Agent):
+        n = self._W_matrix.shape[0]
+        new_matrix = np.zeros((n + 1, n + 1), dtype=float)
+        new_matrix[:n, :n] = self._W_matrix
+        self._W_matrix = new_matrix
