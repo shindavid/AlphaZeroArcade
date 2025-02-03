@@ -72,8 +72,8 @@ def update_graph(index, graph_snapshots):
     for u, v, data in G.edges(data=True):
         x0, y0 = pos[u]
         x1, y1 = pos[v]
-        xm = x0 * 0.8 + x1 * 0.2
-        ym = y0 * 0.8 + y1 * 0.2
+        xm = x0 * 0.5 + x1 * 0.5
+        ym = y0 * 0.5 + y1 * 0.5
 
         if (u, v) in new_edges:
             edge_color = 'red'
@@ -119,7 +119,8 @@ def update_graph(index, graph_snapshots):
         else:
             node_colors.append('lightgray')
 
-        label = f"({node}) N: {data['N']} seat: {data['active_seat']}<br>{data['state']}<br>"
+        state = data['state'].replace('\n', '<br>')
+        label = f"({node}) N: {data['N']} seat: {data['active_seat']}<br>{state}<br>"
         label += f"Q: [{float(data['Q'][0]):.2f}, {float(data['Q'][1]):.2f}]<br>"
         label += f"W: [{data['provably_winning']}] L: [{data['provably_losing']}]"
         node_text.append(label)
@@ -149,6 +150,9 @@ def update_graph(index, graph_snapshots):
                            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
                        )
 
+    figure.update_layout(
+        font_family="Courier New"
+    )
     return figure
 
 if __name__ == '__main__':
