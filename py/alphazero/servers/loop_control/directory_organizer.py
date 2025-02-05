@@ -3,12 +3,26 @@ The DirectoryOrganizer class provides structured access to the contents of an al
 Below is a diagram of the directory structure.
 
 BASE_DIR/  # /workspace/output/game/tag/
-    stdout.txt
+    checkpoints/
+        gen-1.pt
+        gen-2.pt
+        ...
     databases/
         clients.db
         ratings.db
         self-play.db
         training.db
+    logs/
+        loop-controller.log
+        self-play-server/
+            ...
+        self-play-worker/
+            ...
+        ...
+    models/
+        gen-1.pt
+        gen-2.pt
+        ...
     self-play-data/
         client-0/
             gen-0/  # uses implicit dummy uniform model
@@ -23,14 +37,6 @@ BASE_DIR/  # /workspace/output/game/tag/
             gen-3/
                 ...
             ...
-        ...
-    models/
-        gen-1.pt
-        gen-2.pt
-        ...
-    checkpoints/
-        gen-1.pt
-        gen-2.pt
         ...
 """
 from alphazero.logic.custom_types import Generation
