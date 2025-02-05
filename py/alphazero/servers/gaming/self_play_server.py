@@ -194,7 +194,7 @@ class SelfPlayServer:
 
         if self._session_data.directory_organizer is not None:
             # Needed for direct-game-log-write optimization
-            args['--self-play-dir'] = self._session_data.directory_organizer.self_play_data_dir
+            args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
         binary = self._build_params.get_binary_path(self._session_data.game)
 
@@ -265,7 +265,7 @@ class SelfPlayServer:
 
         if self._session_data.directory_organizer is not None:
             # Needed for direct-game-log-write optimization
-            args['--self-play-dir'] = self._session_data.directory_organizer.self_play_data_dir
+            args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
         binary = self._build_params.get_binary_path(self._session_data.game)
 

@@ -45,7 +45,7 @@ class LoopControllerClient {
     std::string client_role;  // must be specified if port is specified
     std::string ratings_tag;
     std::string cuda_device = "cuda:0";
-    std::string self_play_dir;  // needed for direct-game-log-write optimization
+    std::string output_base_dir;  // needed for direct-game-log-write optimization
     int manager_id = -1;
     int weights_request_generation = -1;
     bool report_metrics = true;
@@ -64,7 +64,7 @@ class LoopControllerClient {
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
   const std::string& ratings_tag() const { return params_.ratings_tag; }
-  const std::string& self_play_dir() const { return params_.self_play_dir; }
+  const std::string& output_base_dir() const { return params_.output_base_dir; }
   bool report_metrics() const { return params_.report_metrics; }
   bool is_loop_controller_local() const {  return params_.loop_controller_hostname == "localhost"; }
 

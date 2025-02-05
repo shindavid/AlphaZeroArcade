@@ -415,8 +415,7 @@ class SelfPlayManager:
         if use_data:
             organizer = self._controller.organizer
             # json msg is immediately followed by the game file
-            game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
-                                    f'gen-{gen}')
+            game_dir = organizer.get_self_play_data_dir(client_id, gen)
             os.makedirs(game_dir, exist_ok=True)
             game_filename = os.path.join(game_dir, f'{end_timestamp}.log')
         else:

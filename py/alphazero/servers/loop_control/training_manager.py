@@ -142,11 +142,10 @@ class TrainingManager:
         - Sets self._opt
         """
         organizer = self._controller.organizer
-        checkpoint_info = organizer.get_latest_checkpoint_info()
-        if checkpoint_info is None:
+        gen = organizer.get_last_checkpointed_generation()
+        if gen is None:
             return
 
-        gen = checkpoint_info.generation
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
         logger.info('Loading checkpoint: %s', checkpoint_filename)
 
@@ -182,13 +181,13 @@ class TrainingManager:
             return self._net, self._opt
 
         organizer = self._controller.organizer
-        checkpoint_info = organizer.get_latest_checkpoint_info()
+        checkpoint_gen = organizer.get_last_checkpointed_generation()
 
         game_spec = self._controller.game_spec
         shape_info_dict = self._game_log_reader.shape_info_dict
         model_cfg = game_spec.model_configs[self._controller.params.model_cfg](shape_info_dict)
 
-        if checkpoint_info is None:
+        if checkpoint_gen is None:
             self._net = Model(model_cfg)
             self._init_net_and_opt(model_cfg)
         else:
@@ -326,6 +325,7 @@ class TrainingManager:
     def _save_model(self, gen: Generation, net: Model):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
+        os.makedirs(os.path.dirname(checkpoint_filename), exist_ok=True)
         model_filename = organizer.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
         tmp_model_filename = make_hidden_filename(model_filename)
