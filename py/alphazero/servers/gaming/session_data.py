@@ -43,10 +43,15 @@ class SessionData:
         self._skip_next_returncode_check = True
 
     def wait_for(self, proc: subprocess.Popen):
-        expected_rc = None if self._skip_next_returncode_check else 0
-        print_fn = logger.error
-        self._skip_next_returncode_check = False
-        return subprocess_util.wait_for(proc, expected_return_code=expected_rc, print_fn=print_fn)
+        stdout, stderr = proc.communicate()
+        if self._skip_next_returncode_check:
+            self._skip_next_returncode_check = False
+        elif proc.returncode:
+            logger.error(f'Process failed with return code {proc.returncode}')
+            for line in stderr:
+                logger.error(line.strip())
+            raise Exception()
+        return stdout
 
     def init_socket(self):
         addr = (self._params.loop_controller_host, self._params.loop_controller_port)
