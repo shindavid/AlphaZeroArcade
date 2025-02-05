@@ -25,6 +25,13 @@ class Agent:
     def __repr__(self):
         return f'{self.gen}-{self.n_iters}'
 
+@dataclass
+class Match:
+    agent1: Agent
+    agent2: Agent
+    n_games: int
+    result: WinLossDrawCounts = None
+
 def get_anchor_numbers(gen: int) -> List[int]:
     return np.power(2, np.log2(gen).astype(int)) - np.power(2, np.arange(np.log2(gen).astype(int) + 1))
 
@@ -37,7 +44,7 @@ def get_anchor_gens(gen: int) -> List[int]:
     gens = np.concatenate([np.array([gen]), close_gens, get_anchor_numbers(gen)])
     return sorted(gens)
 
-def get_matches(gen: int) -> List[int]:
+def get_anchor_matches(gen: int) -> List[List[int]]:
     matches = []
     for i in range(1, np.log2(gen).astype(int) + 1):
       a = get_anchor_gens(np.power(2, i).astype(int))
@@ -76,7 +83,12 @@ def get_mcts_player_str(gen: int, n_iters: int):
 
     return make_args_str(player_args)
 
-def run_match_helper(agent1: Agent, agent2: Agent, n_games=100):
+def run_match_helper(match: Match, binary):
+    agent1 = match.agent1
+    agent2 = match.agent2
+    n_games = match.n_games
+    if n_games < 1:
+        return WinLossDrawCounts()
 
     ps1 = get_mcts_player_str(agent1.gen, agent1.n_iters)
     ps2 = get_mcts_player_str(agent2.gen, agent2.n_iters)
@@ -127,6 +139,7 @@ class BenchmarkCommittee:
       self.G = nx.Graph()
       database = self.get_database_path(game, tag, database_name)
       self.benchmarking_db_conn_pool = DatabaseConnectionPool(database, constants.BENCHMARKING_TABLE_CREATE_CMDS)
+      self.binary = self.get_binary_path(game)
       self.ratings = None
       self.load_past_data()
 
@@ -151,22 +164,14 @@ class BenchmarkCommittee:
         for gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws in res.fetchall():
             agent1 = Agent(gen=gen1, n_iters=gen_iters1)
             agent2 = Agent(gen=gen2, n_iters=gen_iters2)
-            if agent1 not in self.G.nodes:
-                ix1 = len(self.G.nodes)
-                self.G.add_node(agent1, ix=ix1)
-                self.expand_matrix()
-            else:
-                ix1 = self.G.nodes[agent1]['ix']
+            num_games = gen1_wins + gen2_wins + draws
+            ix1, _ = self.add_agent(agent1)
+            ix2, _ = self.add_agent(agent2)
 
-            if agent2 not in self.G.nodes:
-                ix2 = len(self.G.nodes)
-                self.G.add_node(agent2, ix=ix2)
-                self.expand_matrix()
+            if self.G.has_edge(agent1, agent2):
+                self.G[agent1][agent2]['num_games'] += num_games
             else:
-                ix2 = self.G.nodes[agent2]['ix']
-
-            if not self.G.has_edge(agent1, agent2):
-                self.G.add_edge(agent1, agent2)
+                self.G.add_edge(agent1, agent2, num_games=num_games)
 
             counts = WinLossDrawCounts(gen1_wins, gen2_wins, draws)
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
@@ -178,9 +183,10 @@ class BenchmarkCommittee:
         gen2 = agent2.gen
         n_iters1 = agent1.n_iters
         n_iters2 = agent2.n_iters
-        match_tuple = (tag, gen1, gen2, n_iters1, n_iters2, record.win, record.loss, record.draw)
+        match_tuple = (gen1, gen2, n_iters1, n_iters2, record.win, record.loss, record.draw)
         c = conn.cursor()
-        c.execute('INSERT INTO matches VALUES (?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
+        c.execute('INSERT INTO matches (gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws) \
+                  VALUES (?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
     def add_agent(self, agent: Agent):
@@ -193,21 +199,35 @@ class BenchmarkCommittee:
             ix = self.G.nodes[agent]['ix']
             return ix, False
 
-    def play_matches(self, gen: int, n_iters: int):
-        matches = get_matches(gen)
-        for (x, y) in tqdm(matches):
-            agent1 = Agent(gen=x, n_iters=n_iters)
-            ix1, _ = self.add_agent(agent1)
+    def gen_matches_from_latest(self, latest_gen: int, n_iters: int, n_games: int):
+        gen_matches = get_anchor_matches(latest_gen)
+        matches = []
+        for gen1, gen2 in gen_matches:
+            agent1 = Agent(gen=gen1, n_iters=n_iters)
+            agent2 = Agent(gen=gen2, n_iters=n_iters)
+            match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
+            matches.append(match)
+        return matches
 
-            agent2 = Agent(gen=y, n_iters=n_iters)
-            ix2, _ = self.add_agent(agent2)
+    def play_matches(self, matches: List[Match], additional=False):
+      for match in tqdm(matches):
+        ix1, _ = self.add_agent(match.agent1)
+        ix2, _ = self.add_agent(match.agent2)
 
-            if not self.G.has_edge(agent1, agent2):
-                self.G.add_edge(agent1, agent2)
-                result = run_match_helper(agent1, agent2)
-                self.W_matrix[ix1, ix2] += result.win + 0.5 * result.draw
-                self.W_matrix[ix2, ix1] += result.loss + 0.5 * result.draw
-                self.commit_counts(agent1, agent2, result)
+        if self.G.has_edge(match.agent1, match.agent2):
+          if not additional:
+            n_games_played = self.G[match.agent1][match.agent2]['num_games']
+            match.n_games = match.n_games - n_games_played
+          if match.n_games < 1:
+            continue
+        else:
+          self.G.add_edge(match.agent1, match.agent2, num_games=0)
+
+        result = run_match_helper(match, self.binary)
+        self.W_matrix[ix1, ix2] += result.win + 0.5 * result.draw
+        self.W_matrix[ix2, ix1] += result.loss + 0.5 * result.draw
+        self.G[match.agent1][match.agent2]['num_games'] += match.n_games
+        self.commit_counts(match.agent1, match.agent2, result)
 
     def compute_ratings(self):
         ratings = compute_ratings(self.W_matrix)
@@ -228,8 +248,8 @@ if __name__ == '__main__':
     tag = 'benchmark'
     database_name = 'benchmarking'
     committee = BenchmarkCommittee(game, tag, database_name)
-    committee.play_matches(512, 1)
-    committee.play_matches(512, 100)
+    committee.play_matches(committee.gen_matches_from_latest(latest_gen=512, n_iters=1, n_games=100))
+    committee.play_matches(committee.gen_matches_from_latest(latest_gen=512, n_iters=100, n_games=100))
     committee.compute_ratings()
 
     ratings = committee.ratings
@@ -261,7 +281,7 @@ if __name__ == '__main__':
     num_of_gens = []
     num_of_nodes = []
     for i in range(21):
-        m = get_matches(2**i)
+        m = get_anchor_matches(2**i)
         num_of_matches.append(len(m))
         num_of_gens.append(2**i)
         num_of_nodes.append(len(np.unique(m)))
