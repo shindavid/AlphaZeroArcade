@@ -103,3 +103,18 @@ RATINGS_TABLE_CREATE_CMDS = [
 
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (tag, mcts_gen)""",
 ]
+
+BENCHMARKING_TABLE_CREATE_CMDS = [
+    """CREATE TABLE IF NOT EXISTS matches (
+            tag TEXT,
+            gen1 INT,
+            gen2 INT,
+            gen_iters1 INT,
+            gen_iters2 INT,
+            gen1_wins INT,
+            gen2_wins INT,
+            draws INT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (tag, gen1, gen2, gen_iters1, gen_iters2)""",
+]
