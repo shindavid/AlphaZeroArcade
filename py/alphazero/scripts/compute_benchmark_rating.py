@@ -10,7 +10,7 @@ from networkx.drawing.nx_agraph import graphviz_layout
 from tqdm import tqdm
 
 from itertools import combinations, product
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 from dataclasses import dataclass
@@ -159,10 +159,15 @@ class BenchmarkCommittee:
         self.commit_counts(match.agent1, match.agent2, result)
 
     def compute_ratings(self):
-        ratings = compute_ratings(self.W_matrix).tolist()
+        eps = 1e-5
+        W = self.W_matrix + eps
+        np.fill_diagonal(W, 0)
+
+        ratings = compute_ratings(W).tolist()
         self.ratings = {agent: ratings[ix] for agent, ix in self.G.nodes(data='ix')}
 
-    def subcommittee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None) -> 'BenchmarkCommittee':
+    def sub_committee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None, \
+        exclude_edges: List[Tuple[Agent, Agent]]=None) -> 'BenchmarkCommittee':
         sub_committee = BenchmarkCommittee(self.game, self.tag, load_past_data=False)
         for node in self.G.nodes:
             if include_agents and exclude_agents:
@@ -177,6 +182,10 @@ class BenchmarkCommittee:
         for edge in self.G.edges:
             if exclude_agents and (edge[0] in exclude_agents or edge[1] in exclude_agents):
                 continue
+
+            if exclude_edges and (edge[0], edge[1]) in exclude_edges:
+                continue
+
             if not include_agents or (edge[0] in include_agents and edge[1] in include_agents):
                 ix1 = self.G.nodes[edge[0]]['ix']
                 ix2 = self.G.nodes[edge[1]]['ix']
