@@ -44,22 +44,30 @@ class Match:
     agent2: Agent
     n_games: int
 
+@dataclass
+class CommitteeData:
+    W_matrix: np.ndarray
+    G: nx.Graph
 
 class BenchmarkCommittee:
-    def __init__(self, game, tag, database_name):
+    def __init__(self, game, tag, load_past_data: bool=False):
         self.game = game
         self.tag = tag
+
         self.W_matrix = np.zeros((0, 0), dtype=float)
         self.G = nx.Graph()
-        database = self.get_database_path(game, tag, database_name)
-        self.benchmarking_db_conn_pool = DatabaseConnectionPool(database, constants.BENCHMARKING_TABLE_CREATE_CMDS)
+
+        database_filepath = self.get_database_path(game, tag)
+        self.benchmarking_db_conn_pool = DatabaseConnectionPool(database_filepath, \
+            constants.BENCHMARKING_TABLE_CREATE_CMDS)
         self.binary = self.get_binary_path(game)
         self.ratings = None
-        self.load_past_data()
+        if load_past_data:
+            self.load_past_data()
 
     @staticmethod
-    def get_database_path(game, tag, database_name):
-        return f'/workspace/repo/output/{game}/{tag}/{database_name}.db'
+    def get_database_path(game, tag):
+        return f'/workspace/repo/output/{game}/{tag}/benchmarking.db'
 
     @staticmethod
     def get_binary_path(game):
@@ -79,8 +87,8 @@ class BenchmarkCommittee:
             agent1 = BenchmarkCommittee.load_database_row(gen1, gen_iters1)
             agent2 = BenchmarkCommittee.load_database_row(gen2, gen_iters2)
             num_games = gen1_wins + gen2_wins + draws
-            ix1, _ = self.add_agent(agent1)
-            ix2, _ = self.add_agent(agent2)
+            ix1, _ = self.add_agent_node(agent1)
+            ix2, _ = self.add_agent_node(agent2)
 
             if self.G.has_edge(agent1, agent2):
                 self.G[agent1][agent2]['num_games'] += num_games
@@ -101,15 +109,16 @@ class BenchmarkCommittee:
                   VALUES (?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def add_agent(self, agent: MCTSAgent):
+    def add_agent_node(self, agent: MCTSAgent):
         if agent not in self.G.nodes:
             ix = len(self.G.nodes)
             self.G.add_node(agent, ix=ix)
             self.expand_matrix()
-            return ix, True
+            is_new_node = True
         else:
             ix = self.G.nodes[agent]['ix']
-            return ix, False
+            is_new_node = False
+        return ix, is_new_node
 
     def gen_matches_from_latest(self, latest_gen: int, n_iters: int, n_games: int):
         gen_matches = BenchmarkCommittee.get_anchor_matches(latest_gen)
@@ -130,8 +139,9 @@ class BenchmarkCommittee:
 
     def play_matches(self, matches: List[Match], additional=False):
       for match in tqdm(matches):
-        ix1, _ = self.add_agent(match.agent1)
-        ix2, _ = self.add_agent(match.agent2)
+        ix1, is_new_node1 = self.add_agent_node(match.agent1)
+        ix2, is_new_node2 = self.add_agent_node(match.agent2)
+        assert not is_new_node1 and not is_new_node2
 
         if self.G.has_edge(match.agent1, match.agent2):
           if not additional:
@@ -151,6 +161,32 @@ class BenchmarkCommittee:
     def compute_ratings(self):
         ratings = compute_ratings(self.W_matrix).tolist()
         self.ratings = {agent: ratings[ix] for agent, ix in self.G.nodes(data='ix')}
+
+    def subcommittee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None) -> 'BenchmarkCommittee':
+        sub_committee = BenchmarkCommittee(self.game, self.tag, load_past_data=False)
+        for node in self.G.nodes:
+            if include_agents and exclude_agents:
+                assert not (node in include_agents and node in exclude_agents)
+            if exclude_agents and node in exclude_agents:
+                continue
+            if not include_agents or node in include_agents:
+                ix, is_new_node = sub_committee.add_agent_node(node)
+                assert is_new_node
+                assert sub_committee.W_matrix.shape[0] == ix + 1, f'{sub_committee.W_matrix.shape[0]} != {ix + 1}'
+
+        for edge in self.G.edges:
+            if exclude_agents and (edge[0] in exclude_agents or edge[1] in exclude_agents):
+                continue
+            if not include_agents or (edge[0] in include_agents and edge[1] in include_agents):
+                ix1 = self.G.nodes[edge[0]]['ix']
+                ix2 = self.G.nodes[edge[1]]['ix']
+                sub_ix1 = sub_committee.G.nodes[edge[0]]['ix']
+                sub_ix2 = sub_committee.G.nodes[edge[1]]['ix']
+                sub_committee.G.add_edge(edge[0], edge[1], num_games=self.G[edge[0]][edge[1]]['num_games'])
+                sub_committee.W_matrix[sub_ix1, sub_ix2] = self.W_matrix[ix1, ix2]
+                sub_committee.W_matrix[sub_ix2, sub_ix1] = self.W_matrix[ix2, ix1]
+
+        return sub_committee
 
     @staticmethod
     def get_anchor_numbers(gen: int) -> List[int]:
@@ -303,14 +339,15 @@ def save_ratings_plt(agents, ratings, filename: str):
 if __name__ == '__main__':
     game = 'c4'
     tag = 'benchmark'
-    database_name = 'benchmarking'
-    n_games = 20
-    committee = BenchmarkCommittee(game, tag, database_name)
-    committee.play_matches(committee.gen_matches_from_latest(latest_gen=8, n_iters=0, n_games=n_games))
+    n_games = 1
+    committee = BenchmarkCommittee(game, tag, load_past_data=True)
     committee.compute_ratings()
-    save_ratings_plt(committee.ratings.keys(), committee.ratings.values(), 'final_ratings.png')
 
+    i0_agents = [agent for agent in  committee.G.nodes if isinstance(agent, MCTSAgent) and agent.n_iters == 0]
+    i100_agents = [agent for agent in  committee.G.nodes if isinstance(agent, MCTSAgent) and agent.n_iters == 100]
+    perfect_agents = [agent for agent in  committee.G.nodes if isinstance(agent, PerfectAgent)]
 
+    sub_committee1 = committee.subcommittee(include_agents=[RandomAgent()] + i0_agents)
 
     labels = {node: f"{node.gen}" for node in committee.G.nodes}
     nx.draw(committee.G, pos, with_labels=False, node_size=100)
