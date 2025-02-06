@@ -188,11 +188,13 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
     for (int a : bitset_util::on_indices(valid_actions_subset)) {
       policy(a) = mcts_results->policy_prior(a);
     }
+  } else if (search_params_[search_mode].tree_size_limit <= 1) {
+    policy = mcts_results->policy_prior;
   } else {
     policy = counts;
   }
 
-  if (search_mode != core::kRawPolicy) {
+  if (search_mode != core::kRawPolicy && search_params_[search_mode].tree_size_limit > 1) {
     if (params_.LCB_z_score) {
       Q_sum = mcts_results->Q * policy;
       Q_sq_sum = mcts_results->Q_sq * policy;
