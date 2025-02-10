@@ -4,6 +4,7 @@ from .directory_organizer import DirectoryOrganizer
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
+from .output_dir_syncer import OutputDirSyncer
 from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
 from .self_play_manager import SelfPlayManager
@@ -20,13 +21,17 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
+from util.py_util import untar_remote_file_to_local_directory
 from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
 import logging
+import os
+import shutil
 import socket
+import subprocess
 import threading
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 
 logger = get_logger()
@@ -52,7 +57,32 @@ class LoopController:
         self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
-        self._organizer = DirectoryOrganizer(run_params)
+
+        # On cloud setups like runpod.io or GCP, we typically have access to two filesystems:
+        #
+        # 1. A fast local filesystem, which is wiped after each session.
+        # 2. A slow network filesystem, whose contents persist across sessions.
+        #
+        # On such setups, we work with the local filesystem, assumed to be available at
+        # /home/devuser/, and periodically sync to the network filesystem, assumed to be available
+        # at /workspace/.
+        #
+        # On other setups, we solely work on /workspace/, which is assumed to be the local
+        # filesystem.
+        #
+        # For now, we detect whether we are on a cloud setup (referred to as an "ephemeral local
+        # disk env") by checking if /home/devuser and /workspace are on the same filesystem. If we
+        # encounter environments where this does not work as intended, we can rethink this.
+        home_dev_user_fs = os.stat('/home/devuser').st_dev
+        workspace_fs = os.stat('/workspace').st_dev
+        self._on_ephemeral_local_disk_env = (home_dev_user_fs != workspace_fs)
+
+        if self._on_ephemeral_local_disk_env:
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser')
+            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        else:
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            self._persistent_organizer = None
 
         self._shutdown_manager = ShutdownManager()
         self._client_connection_manager = ClientConnectionManager(self)
@@ -62,6 +92,10 @@ class LoopController:
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
+
+        # OutputDirSyncer must be the LAST constructed sub-manager, to ensure proper shutdown
+        # sequencing
+        self._output_dir_syncer = OutputDirSyncer(self)
 
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
@@ -76,6 +110,10 @@ class LoopController:
             logger.info('Caught Ctrl-C')
         finally:
             self._shutdown_manager.shutdown()
+
+    @property
+    def on_ephemeral_local_disk_env(self) -> bool:
+        return self._on_ephemeral_local_disk_env
 
     @property
     def socket(self) -> socket.socket:
@@ -94,6 +132,11 @@ class LoopController:
     @property
     def organizer(self) -> DirectoryOrganizer:
         return self._organizer
+
+    @property
+    def persistent_organizer(self) -> DirectoryOrganizer:
+        assert self._persistent_organizer is not None
+        return self._persistent_organizer
 
     @property
     def params(self) -> LoopControllerParams:
@@ -126,6 +169,9 @@ class LoopController:
     @property
     def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.ratings_db_conn_pool
+
+    def db_conn_pools(self) -> List[DatabaseConnectionPool]:
+        return self._database_connection_manager.pools()
 
     def latest_gen(self) -> Generation:
         return self._training_manager.latest_gen()
@@ -280,13 +326,64 @@ class LoopController:
 
         self.register_shutdown_action(lambda: self._socket.close())
 
+    def _setup_output_dir(self):
+        self._organizer.makedirs()
+        if self._on_ephemeral_local_disk_env:
+            if not self._load_prior_run():
+                self._persistent_organizer.makedirs()
+
+    def _load_prior_run(self):
+        assert self._on_ephemeral_local_disk_env
+
+        if not os.path.isdir(self._persistent_organizer.base_dir):
+            return False
+
+        logger.info('Loading prior run from %s...', self._persistent_organizer.base_dir)
+
+        # First, copy database files
+        logger.info('Copying database files...')
+        shutil.copytree(self._persistent_organizer.databases_dir, self._organizer.databases_dir,
+                        dirs_exist_ok=True)
+
+        # Next, copy all model files, as they are required for ratings runs
+        logger.info('Copying model files...')
+        shutil.copytree(self._persistent_organizer.models_dir, self._organizer.models_dir,
+                        dirs_exist_ok=True)
+
+        # Next, copy self-play-data. We only need to copy generations that might be used for
+        # future training epochs.
+        last_gen = self._persistent_organizer.get_latest_self_play_generation(default=0)
+        gen = self._training_manager.get_oldest_required_gen()
+        logger.info(f'Copying self-play data from gen {gen} to {last_gen}...')
+        while gen <= last_gen:
+            # copy .tar file and unpack it to the local self-play-data directory
+            src_tar = self._persistent_organizer.get_self_play_data_dir(gen) + '.tar'
+
+            if not os.path.isfile(src_tar):
+                gen += 1
+                continue  # there can be gaps in self-play gens, so continue here, not break
+
+            dst_dir = self._organizer.self_play_data_dir
+            untar_remote_file_to_local_directory(src_tar, dst_dir)
+            gen += 1
+
+        # Copy the most recent checkpoint
+        checkpoint_gen = self._persistent_organizer.get_last_checkpointed_generation()
+        if checkpoint_gen is not None:
+            checkpoint_filename = self._persistent_organizer.get_checkpoint_filename(checkpoint_gen)
+            shutil.copy(checkpoint_filename, self._organizer.checkpoints_dir)
+
+        logger.info('Prior run load complete!')
+        return True
+
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
-            self._organizer.makedirs()
+            self._setup_output_dir()
             self._init_socket()
             self._self_play_manager.setup()
             self._training_manager.setup()
+            self._output_dir_syncer.start()
             self._client_connection_manager.start()
 
             if self._organizer.requires_retraining():

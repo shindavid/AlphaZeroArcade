@@ -1,31 +1,36 @@
 """
-The DirectoryOrganizer class provides structured access to the contents of an alphzero directory.
+The DirectoryOrganizer class provides structured access to the contents of an alphazero directory.
 Below is a diagram of the directory structure.
 
-BASE_DIR/  # /workspace/output/game/tag/
+BASE_DIR/  # $OUTPUT_DIR/game/tag/
+    checkpoints/
+        gen-1.pt
+        gen-2.pt
+        ...
     databases/
         clients.db
         ratings.db
         self-play.db
         training.db
-    gens/
-        gen-1/
-            checkpoint.pt
-            model.pt
-            self-play/
-                client-1/
-                    {timestamp}.log
-                    ...
-                client-2/
-                    ...
-        gen-2/
-            ...
-        ...
     logs/
         loop-controller.log
         self-play-server/
             ...
         self-play-worker/
+            ...
+        ...
+    models/
+        gen-1.pt
+        gen-2.pt
+        ...
+    self-play-data/
+        gen-0/  # uses implicit dummy uniform model
+            client-4/
+                {timestamp}.log
+                ...
+        gen-1/
+            client-5/
+                ...
             ...
         ...
 """
@@ -82,7 +87,7 @@ class ForkInfo:
 
 
 class DirectoryOrganizer:
-    def __init__(self, args: RunParams):
+    def __init__(self, args: RunParams, base_dir_root='/home/devuser'):
         """
         This constructor should not actually do any filesystem reading or writing. It should just
         set data members corresonding to expected filesystem paths.
@@ -90,13 +95,15 @@ class DirectoryOrganizer:
         game = args.game
         tag = args.tag
 
-        self.game = game
-        self.tag = tag
+        self.args = args
 
-        self.base_dir = os.path.join('/workspace/output', game, tag)
+        self.base_dir_root = base_dir_root
+        self.base_dir = os.path.join(base_dir_root, 'output', game, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
-        self.gens_dir = os.path.join(self.base_dir, 'gens')
+        self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
+        self.models_dir = os.path.join(self.base_dir, 'models')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
+        self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
@@ -106,6 +113,14 @@ class DirectoryOrganizer:
         self.fork_info_filename = os.path.join(self.base_dir, 'fork-info.json')
         self._fork_info = None
         self._fork_info_loaded = False
+
+    @property
+    def game(self) -> str:
+        return self.args.game
+
+    @property
+    def tag(self) -> str:
+        return self.args.tag
 
     @property
     def fork_info(self) -> ForkInfo:
@@ -126,17 +141,16 @@ class DirectoryOrganizer:
     def makedirs(self):
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
-        os.makedirs(self.gens_dir, exist_ok=True)
+        os.makedirs(self.self_play_data_dir, exist_ok=True)
+        os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
-
-    def _get_gens_dir(self, gen: Generation) -> str:
-        return os.path.join(self.gens_dir, f'gen-{gen}')
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
 
     def get_model_filename(self, gen: Generation) -> str:
-        return os.path.join(self._get_gens_dir(gen), 'model.pt')
+        return os.path.join(self.models_dir, f'gen-{gen}.pt')
 
     def get_checkpoint_filename(self, gen: Generation) -> str:
-        return os.path.join(self._get_gens_dir(gen), 'checkpoint.pt')
+        return os.path.join(self.checkpoints_dir, f'gen-{gen}.pt')
 
     @staticmethod
     def get_ordered_subpaths(path: str) -> List[str]:
@@ -149,30 +163,26 @@ class DirectoryOrganizer:
         return os.path.join(path, subpaths[-1]) if subpaths else None
 
     @staticmethod
-    def get_latest_info(path: str) -> Optional[PathInfo]:
+    def _get_latest_generation(path: str, default=None) -> Optional[Generation]:
         subpaths = DirectoryOrganizer.get_ordered_subpaths(path)
         if not subpaths:
-            return None
-        return PathInfo(subpaths[-1])
+            return default
+        return PathInfo(subpaths[-1]).generation
 
-    def _get_latest_generation(self, filename: str, default=None) -> Optional[Generation]:
-        subpaths = DirectoryOrganizer.get_ordered_subpaths(self.gens_dir)
-        for subpath in reversed(subpaths[-2:]):
-            assert subpath.startswith('gen-'), f'Unexpected subpath: {subpath}'
-            full_path = os.path.join(self.gens_dir, subpath, filename)
-            if os.path.isfile(full_path):
-                gen = int(subpath.split('-')[1])
-                return gen
-        return default
+    def get_last_checkpointed_generation(self, default=None) -> Optional[Generation]:
+        return DirectoryOrganizer._get_latest_generation(self.checkpoints_dir, default=default)
 
-    def get_last_checkpointed_generation(self) -> Optional[Generation]:
-        return self._get_latest_generation('checkpoint.pt')
+    def get_latest_model_generation(self, default=None) -> Optional[Generation]:
+        return DirectoryOrganizer._get_latest_generation(self.checkpoints_dir, default=default)
 
-    def get_latest_model_generation(self) -> Generation:
-        return self._get_latest_generation('model.pt', default=0)
+    def get_latest_self_play_generation(self, default=None) -> Optional[Generation]:
+        return DirectoryOrganizer._get_latest_generation(self.self_play_data_dir, default=default)
 
-    def get_self_play_data_dir(self, client_id: ClientId, gen: Generation) -> str:
-        return os.path.join(self._get_gens_dir(gen), f'self-play/client-{client_id}')
+    def get_self_play_data_dir(self, gen: Generation, client_id: Optional[ClientId]=None) -> str:
+        gen_dir = os.path.join(self.self_play_data_dir, f'gen-{gen}')
+        if client_id is None:
+            return gen_dir
+        return os.path.join(gen_dir, f'client-{client_id}')
 
     def get_any_self_play_data_filename(self, gen: Optional[Generation]) -> Optional[str]:
         """
@@ -183,13 +193,13 @@ class DirectoryOrganizer:
         If no self-play data filename exists, returns None
         """
         if gen is None:
-            gen = self.get_latest_model_generation()
+            gen = self.get_latest_model_generation(default=0)
 
-        self_play_dir = os.path.join(self._get_gens_dir(gen), 'self-play')
-        for client_subdir in os.listdir(self_play_dir):
+        gen_dir = os.path.join(self.self_play_data_dir, f'gen-{gen}')
+        for client_subdir in os.listdir(self.self_play_data_dir):
             if not client_subdir.startswith('client-'):
                 continue
-            client_dir = os.path.join(self_play_dir, client_subdir)
+            client_dir = os.path.join(gen_dir, client_subdir)
             if os.path.isdir(client_dir):
                 data_files = os.listdir(client_dir)
                 if data_files:
@@ -199,38 +209,38 @@ class DirectoryOrganizer:
             return None
         return self.get_any_self_play_data_filename(gen - 1)
 
-    def copy_self_play_data(self, target: 'DirectoryOrganizer', last_gen: Optional[Generation]):
-        for gen_subdir in os.listdir(self.gens_dir):
+    def copy_self_play_data(self, target: 'DirectoryOrganizer',
+                            last_gen: Optional[Generation]=None):
+        for gen_subdir in os.listdir(self.self_play_data_dir):
             assert gen_subdir.startswith('gen-'), f'Unexpected subpath: {gen_subdir}'
             gen = int(gen_subdir.split('-')[1])
             if gen > last_gen:
                 continue
-            src_gen_dir = os.path.join(self.gens_dir, gen_subdir)
+            src_gen_dir = os.path.join(self.self_play_data_dir, gen_subdir)
             src_self_play_dir = os.path.join(src_gen_dir, 'self-play')
 
-            dst_gen_dir = os.path.join(target.gens_dir, gen_subdir)
+            dst_gen_dir = os.path.join(target.self_play_data_dir, gen_subdir)
             dst_self_play_dir = os.path.join(dst_gen_dir, 'self-play')
             os.makedirs(dst_self_play_dir, exist_ok=True)
 
             shutil.copytree(src_self_play_dir, dst_self_play_dir)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
-                                    last_gen: Optional[Generation]):
+                                    last_gen: Optional[Generation]=None):
         if last_gen is None:
-            last_gen = self.get_latest_model_generation()
+            last_gen = self.get_latest_model_generation(default=0)
 
         for gen in range(1, last_gen + 1):
             model_filename = self.get_model_filename(gen)
             target_model_filename = target.get_model_filename(gen)
-            os.makedirs(os.path.dirname(target_model_filename), exist_ok=True)
             shutil.copyfile(model_filename, target_model_filename)
 
             checkpoint_filename = self.get_checkpoint_filename(gen)
             target_checkpoint_filename = target.get_checkpoint_filename(gen)
             shutil.copyfile(checkpoint_filename, target_checkpoint_filename)
 
-    def copy_databases(self, target: 'DirectoryOrganizer', retrain_models: bool,
-                       last_gen: Optional[Generation]):
+    def copy_databases(self, target: 'DirectoryOrganizer', retrain_models: bool=False,
+                       last_gen: Optional[Generation]=None):
         shutil.copyfile(self.clients_db_filename, target.clients_db_filename)
 
         if not retrain_models:

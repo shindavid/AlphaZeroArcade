@@ -4,7 +4,7 @@ from alphazero.logic import constants
 from alphazero.logic.custom_types import ThreadId
 from util.sqlite3_util import DatabaseConnectionPool
 
-from typing import TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -23,7 +23,7 @@ class DatabaseConnectionManager:
         self.ratings_db_conn_pool = DatabaseConnectionPool(
             organizer.ratings_db_filename, constants.RATINGS_TABLE_CREATE_CMDS)
 
-    def _pools(self):
+    def pools(self) -> List[DatabaseConnectionPool]:
         pools = [
             self.clients_db_conn_pool,
             self.self_play_db_conn_pool,
@@ -33,5 +33,5 @@ class DatabaseConnectionManager:
         return pools
 
     def close_db_conns(self, thread_id: ThreadId):
-        for pool in self._pools():
+        for pool in self.pools():
             pool.close_connections(thread_id)

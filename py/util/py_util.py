@@ -3,6 +3,8 @@ import hashlib
 import inspect
 import os
 import shutil
+import subprocess
+import tempfile
 from typing import List, Union
 
 
@@ -58,6 +60,40 @@ def sha256sum_helper(filename):
         while n := f.readinto(mv):
             h.update(mv[:n])
     return h.hexdigest()
+
+
+def tar_and_remotely_copy(src_dir, dst_tar):
+    """
+    Tar up `src_dir` and copy the tar file to `dst_tar`. Optimizes for the case that `dst_tar` is
+    on a network filesystem.
+    """
+    # Generate a unique temporary tar file path
+    fd, local_tar = tempfile.mkstemp(suffix=".tar", prefix="tarcopy_", dir="/tmp")
+    os.close(fd)  # Close the open file descriptor
+
+    try:
+        subprocess.run(["tar", "-cf", local_tar, "-C", os.path.dirname(src_dir),
+                        os.path.basename(src_dir)], check=True)
+        shutil.copy2(local_tar, dst_tar)
+    finally:
+        if os.path.exists(local_tar):
+            os.remove(local_tar)
+
+
+def untar_remote_file_to_local_directory(src_tar, dst_dir):
+    """
+    Extracts the tar archive `src_tar` into `dst_dir`. Optimizes for the case that `src_tar` is on a
+    network filesystem.
+    """
+    fd, local_tar = tempfile.mkstemp(suffix=".tar", prefix="untar_", dir="/tmp")
+    os.close(fd)
+    shutil.copy2(src_tar, local_tar)
+
+    try:
+        subprocess.run(["tar", "-xf", local_tar, "-C", dst_dir], check=True)
+    finally:
+        if os.path.exists(local_tar):
+            os.remove(local_tar)
 
 
 def make_hidden_filename(filename):

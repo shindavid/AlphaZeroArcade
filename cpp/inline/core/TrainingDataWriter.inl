@@ -181,7 +181,7 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
     // In the future, if we change the logic controlling the game filename on the python-side, we
     // need to change this code to match the python-side. Not ideal, but it is what it is.
     std::string directory =
-        util::create_string("%s/gens/gen-%d/self-play/client-%d", client->output_base_dir().c_str(),
+        util::create_string("%s/self-play-data/gen-%d/client-%d", client->output_base_dir().c_str(),
                             model_generation, client->client_id());
 
     if (model_generation != last_created_dir_generation_) {

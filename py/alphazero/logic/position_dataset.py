@@ -153,7 +153,7 @@ class PositionDataset(Dataset):
     def _get_filename(self, client_id: int, gen: int, end_ts: int) -> str:
         use_forked_dir = client_id <= self._positions.max_forked_client_id
         base_dir = self._forked_base_dir if use_forked_dir else self._base_dir
-        return os.path.join(base_dir, 'gens', f'gen-{gen}', 'self-play', f'client-{client_id}',
+        return os.path.join(base_dir, 'self-play-data', f'gen-{gen}', f'client-{client_id}',
                             f'{end_ts}.log')
 
     def __len__(self):

@@ -51,6 +51,31 @@ class TrainingManager:
         self._latest_gen: Generation = 0
         self._master_list_slice = PositionListSlice()
 
+    @property
+    def last_sample_window(self) -> Window:
+        assert self._last_sample_window is not None
+        return self._last_sample_window
+
+    def get_oldest_required_gen(self) -> Generation:
+        """
+        Returns the generation corresponding to self.last_sample_window.start.
+
+        The significance of this generation is that when loading a run from persistent storage to
+        local storage, we only need to load data from this generation onwards.
+        """
+        last_sample_window = self._load_last_sample_window()
+
+        with self._controller.self_play_db_conn_pool.db_lock:
+            cursor = self._controller.self_play_db_conn_pool.get_cursor()
+            start = last_sample_window.start
+            where_clause = f'cumulative_augmented_positions <= {start}'
+            cursor.execute(f'SELECT gen FROM games WHERE {where_clause} ORDER BY id LIMIT 1')
+            row = cursor.fetchone()
+            cursor.close()
+        if row is None:
+            return 0
+        return row[0]
+
     def latest_gen(self) -> Generation:
         return self._latest_gen
 
@@ -59,7 +84,7 @@ class TrainingManager:
         Performs some lazy initialization that can't be done in __init__.
         """
         self._last_sample_window = self._load_last_sample_window()
-        self._latest_gen = self._controller.organizer.get_latest_model_generation()
+        self._latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
 
         if self._controller.organizer.fork_info is not None:
             max_forked_client_id = self._controller.organizer.fork_info.max_client_id
@@ -202,7 +227,7 @@ class TrainingManager:
         fork_info = organizer.fork_info
 
         forked_base_dir = None if fork_info is None else fork_info.forked_base_dir
-        gen = organizer.get_latest_model_generation() + 1
+        gen = organizer.get_latest_model_generation(default=0) + 1
         if retrain_from_fork:
             self._extend_master_list_from_fork(gen)
         else:
@@ -325,7 +350,6 @@ class TrainingManager:
     def _save_model(self, gen: Generation, net: Model):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
-        os.makedirs(os.path.dirname(checkpoint_filename), exist_ok=True)
         model_filename = organizer.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
         tmp_model_filename = make_hidden_filename(model_filename)

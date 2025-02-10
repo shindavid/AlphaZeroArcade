@@ -95,6 +95,7 @@ class SelfPlayManager:
             'game': self._controller.game_spec.name,
             'tag': self._controller.run_params.tag,
             'ssh_pub_key': ssh_pub_key,
+            'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
         }
         conn.socket.send_json(reply)
 
@@ -415,7 +416,7 @@ class SelfPlayManager:
         if use_data:
             organizer = self._controller.organizer
             # json msg is immediately followed by the game file
-            game_dir = organizer.get_self_play_data_dir(client_id, gen)
+            game_dir = organizer.get_self_play_data_dir(gen, client_id)
             os.makedirs(game_dir, exist_ok=True)
             game_filename = os.path.join(game_dir, f'{end_timestamp}.log')
         else:

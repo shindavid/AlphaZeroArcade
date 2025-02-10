@@ -51,6 +51,7 @@ class RatingsManager:
             'game': self._controller.game_spec.name,
             'tag': self._controller.run_params.tag,
             'ssh_pub_key': ssh_pub_key,
+            'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
         }
         conn.socket.send_json(reply)
 

@@ -84,8 +84,13 @@ class SessionData:
         self._client_id = data['client_id']
 
         if self.socket.getsockname()[0] == constants.LOCALHOST_IP:
+            on_ephemeral_local_disk_env = data['on_ephemeral_local_disk_env']
             run_params = RunParams(self._game, self._tag)
-            self._directory_organizer = DirectoryOrganizer(run_params)
+            if on_ephemeral_local_disk_env:
+                self._directory_organizer = DirectoryOrganizer(run_params)
+            else:
+                self._directory_organizer = DirectoryOrganizer(run_params,
+                                                               base_dir_root='/workspace')
 
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)

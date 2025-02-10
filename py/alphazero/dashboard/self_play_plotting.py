@@ -22,7 +22,7 @@ def create_self_play_figure(game: str, tags: List[str]):
     data_list: List[SelfPlayData] = []
     for tag in tags:
         run_params = RunParams(game, tag)
-        organizer = DirectoryOrganizer(run_params)
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
         conn = sqlite3.connect(organizer.self_play_db_filename)
         data = SelfPlayData(conn, tag)
