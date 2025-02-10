@@ -327,10 +327,10 @@ class LoopController:
         self.register_shutdown_action(lambda: self._socket.close())
 
     def _setup_output_dir(self):
-        self._organizer.makedirs()
+        self._organizer.dir_setup()
         if self._on_ephemeral_local_disk_env:
             if not self._load_prior_run():
-                self._persistent_organizer.makedirs()
+                self._persistent_organizer.dir_setup()
 
     def _load_prior_run(self):
         assert self._on_ephemeral_local_disk_env

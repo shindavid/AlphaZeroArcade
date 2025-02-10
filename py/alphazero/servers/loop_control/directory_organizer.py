@@ -3,6 +3,7 @@ The DirectoryOrganizer class provides structured access to the contents of an al
 Below is a diagram of the directory structure.
 
 BASE_DIR/  # $OUTPUT_DIR/game/tag/
+    version_file
     checkpoints/
         gen-1.pt
         gen-2.pt
@@ -45,6 +46,15 @@ import os
 import shutil
 import sqlite3
 from typing import Dict, List, Optional, Tuple
+
+
+# VERSION is stored in the version_file in the base directory
+#
+# Any time we make any changes that cause existing output/ directories to be incompatible with the
+# current code, we should increment VERSION.
+#
+# This should be a last resort that we try to avoid, but it's here in case we need it.
+VERSION = 1
 
 
 class PathInfo:
@@ -104,13 +114,16 @@ class DirectoryOrganizer:
         self.models_dir = os.path.join(self.base_dir, 'models')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
+        self.misc_dir = os.path.join(self.base_dir, 'misc')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
 
-        self.fork_info_filename = os.path.join(self.base_dir, 'fork-info.json')
+        self.version_filename = os.path.join(self.misc_dir, 'version_file')
+
+        self.fork_info_filename = os.path.join(self.misc_dir, 'fork-info.json')
         self._fork_info = None
         self._fork_info_loaded = False
 
@@ -135,16 +148,46 @@ class DirectoryOrganizer:
         self._fork_info = value
         self._fork_info_loaded = True
 
+    def version_check(self):
+        """
+        Checks that the version file matches VERSION. A nonexistent misc/ directory indicates that
+        the dir hasn't been setup yet, which is a passing check. But if the misc/ directory exists
+        while the version file doesn't, that is a failing check.
+
+        Returns True if the check passes, and False if it fails.
+        """
+        if not os.path.exists(self.misc_dir):
+            return True
+
+        if os.path.isfile(self.version_filename):
+            try:
+                with open(self.version_filename, 'r') as f:
+                    version = int(f.read())
+                    if version == VERSION:
+                        return True
+            except:
+                pass
+
+        return False
+
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def makedirs(self):
+    def dir_setup(self):
+        """
+        Performs initial setup of the directory structure.
+        """
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
+        os.makedirs(self.misc_dir, exist_ok=True)
+
+        if not os.path.isfile(self.version_filename):
+            with open(self.version_filename, 'w') as f:
+                f.write(str(VERSION))
 
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.pt')

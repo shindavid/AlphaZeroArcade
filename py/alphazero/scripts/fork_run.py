@@ -94,7 +94,7 @@ def main():
         if last_gen <= 0:
             raise ValueError('last-self-play-gen must be greater than 0')
 
-    to_organizer.makedirs()
+    to_organizer.dir_setup()
 
     if hard_fork:
         logger.info('Copying self-play data...')
