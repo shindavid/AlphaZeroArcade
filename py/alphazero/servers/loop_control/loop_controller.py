@@ -329,16 +329,16 @@ class LoopController:
     def _setup_output_dir(self):
         self._organizer.dir_setup()
         if self._on_ephemeral_local_disk_env:
-            if not self._load_prior_run():
+            if not self._restore_prior_run():
                 self._persistent_organizer.dir_setup()
 
-    def _load_prior_run(self):
+    def _restore_prior_run(self):
         assert self._on_ephemeral_local_disk_env
 
         if not os.path.isdir(self._persistent_organizer.base_dir):
             return False
 
-        logger.info('Loading prior run from %s...', self._persistent_organizer.base_dir)
+        logger.info('Restoring prior run from %s...', self._persistent_organizer.base_dir)
 
         # First, copy database files
         logger.info('Copying database files...')
@@ -373,7 +373,7 @@ class LoopController:
             checkpoint_filename = self._persistent_organizer.get_checkpoint_filename(checkpoint_gen)
             shutil.copy(checkpoint_filename, self._organizer.checkpoints_dir)
 
-        logger.info('Prior run load complete!')
+        logger.info('Prior run restoration complete!')
         return True
 
     def _main_loop(self):
