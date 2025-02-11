@@ -115,27 +115,13 @@ BENCHMARKING_TABLE_CREATE_CMDS = [
             gen2_wins INT,
             draws INT
             )""",
-]
-
-EVALUATION_TABLE_CREATE_CMDS = [
-    """CREATE TABLE IF NOT EXISTS matches (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            gen1 INT,
-            gen2 INT,
-            gen_iters1 INT,
-            gen_iters2 INT,
-            gen1_wins INT,
-            gen2_wins INT,
-            draws INT
-            )""",
 
     """CREATE TABLE IF NOT EXISTS ratings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             gen INT,
             n_iters INT,
             rating FLOAT,
+            benchmark_tag TEXT,
             benchmark_agents TEXT
             )""",
-
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (tag, mcts_gen)""",
 ]

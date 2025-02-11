@@ -394,8 +394,19 @@ class Evaluation:
         y_values = interp_table[1]
         x = eval_sub_committee.ratings[test_agent]
         test_rating = np.interp(x, x_values, y_values)
-
+        self.commit_rating(test_agent, test_rating, representatives)
         return test_rating
+
+    def commit_rating(self, agent, rating, benchmark_agents):
+        conn = self.eval.benchmarking_db_conn_pool.get_connection()
+        gen, n_iters = BenchmarkCommittee.make_database_row(agent)
+        benchmark_tag = self.benchmark_committee._organizer.tag
+        benchmark_agents_str = ', '.join([str(a) for a in benchmark_agents])
+        match_tuple = (gen, n_iters, rating, benchmark_tag, benchmark_agents_str)
+        c = conn.cursor()
+        c.execute('INSERT INTO ratings (gen, n_iters, rating, benchmark_tag, benchmark_agents) \
+                  VALUES (?, ?, ?, ?, ?)', match_tuple)
+        conn.commit()
 
 def save_ratings_plt(agents, ratings, filename: str):
     agent_labels = np.array(list(agents)).astype(str)
@@ -411,10 +422,16 @@ if __name__ == '__main__':
     game = 'c4'
     tag = 'benchmark'
     n_games = 100
-    organzier = DirectoryOrganizer(game, tag, db_name='evaluation')
-    committee = BenchmarkCommittee(organzier, load_past_data=True)
+    organzier = DirectoryOrganizer(game, tag)
+    benchmark_committee = BenchmarkCommittee(organzier, load_past_data=True)
     matches = BenchmarkCommittee.get_matches(0, 128, n_iters=100, freq=4, n_games=n_games)
-    committee.play_matches(matches)
-    committee.compute_ratings()
+    benchmark_committee.play_matches(matches)
+    benchmark_committee.compute_ratings()
 
-    evaluation = Evaluation(organzier, committee)
+    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation')
+    evaluation = Evaluation(eval_organizer, benchmark_committee)
+    test_agents = [MCTSAgent(gen=i, n_iters=0) for i in range(1, 751)]
+
+    for test_agent in tqdm(test_agents):
+        test_rating = evaluation.evalute_against_benchmark(test_agent, 4)
+        print(f'{test_agent}: {test_rating}')
