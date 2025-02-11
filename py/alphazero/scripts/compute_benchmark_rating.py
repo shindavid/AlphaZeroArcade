@@ -126,24 +126,6 @@ class BenchmarkCommittee:
         return ix, is_new_node
 
     @staticmethod
-    def gen_matches_from_latest(latest_gen: int, n_iters: int, n_games: int):
-        gen_matches = BenchmarkCommittee.get_anchor_matches(latest_gen)
-        matches = []
-        for gen1, gen2 in gen_matches:
-            if gen1 == 0:
-                agent1 = RandomAgent()
-            else:
-                agent1 = MCTSAgent(gen=gen1, n_iters=n_iters)
-
-            if gen2 == 0:
-                agent2 = RandomAgent()
-            else:
-                agent2 = MCTSAgent(gen=gen2, n_iters=n_iters)
-            match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
-            matches.append(match)
-        return matches
-
-    @staticmethod
     def get_matches(gen_start, gen_end, n_iters=100, freq=1, n_games=100):
         gens = range(gen_start, gen_end + 1, freq)
         matches = []
@@ -225,32 +207,6 @@ class BenchmarkCommittee:
                 sub_committee.W_matrix[sub_ix2, sub_ix1] = self.W_matrix[ix2, ix1]
 
         return sub_committee
-
-    @staticmethod
-    def get_anchor_numbers(gen: int) -> List[int]:
-        return np.power(2, np.log2(gen).astype(int)) - np.power(2, np.arange(np.log2(gen).astype(int) + 1))
-
-    @staticmethod
-    def get_anchor_gens(gen: int) -> List[int]:
-        log = np.log2(gen).astype(int)
-        gen_dist = gen - np.power(2, log)
-        close_gens = np.array([])
-        if gen_dist > 0:
-            close_gens = gen - np.power(2, np.arange(np.log2(gen_dist).astype(int) + 1))
-        gens = np.concatenate([np.array([gen]), close_gens, BenchmarkCommittee.get_anchor_numbers(gen)]).astype(int).tolist()
-        return sorted(gens)
-
-    @staticmethod
-    def get_anchor_matches(gen: int) -> List[List[int]]:
-        matches = []
-        for i in range(1, np.log2(gen).astype(int) + 1):
-            a = BenchmarkCommittee.get_anchor_gens(np.power(2, i).astype(int))
-            m = list(combinations(a, 2))
-            matches += m
-        a = BenchmarkCommittee.get_anchor_gens(gen)
-        m = list(combinations(a, 2))
-        matches += m
-        return np.unique(np.array(matches), axis=0).astype(int).tolist()
 
     def get_model_path(self, gen: int) -> str:
         return os.path.join(self._organizer.model_dir, f'gen-{gen}.pt')
