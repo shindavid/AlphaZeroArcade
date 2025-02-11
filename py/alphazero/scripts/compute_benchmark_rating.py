@@ -1,4 +1,4 @@
-from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, extract_match_record
+from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, extract_match_record, BETA_SCALE_FACTOR
 from alphazero.logic import constants
 from util.str_util import make_args_str
 from util import subprocess_util
@@ -386,14 +386,45 @@ class Evaluation:
         self.eval.play_matches(matches, additional=True)
         eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + representatives)
         eval_sub_committee.compute_ratings()
+        test_group_elo_ratings = eval_sub_committee.ratings
+        test_rating = self.interpolate_ratings(test_agent, test_group_elo_ratings)
+        self.commit_rating(test_agent, test_rating, representatives)
+        return test_rating
 
-        interp_table = {v: self.benchmark_committee.ratings[k] for k, v in eval_sub_committee.ratings.items() if k != test_agent}
+    def interpolate_ratings(self, test_agent: Agent, test_group_elo_ratings: Dict[Agent, float]):
+        interp_table = {v: self.benchmark_committee.ratings[k] for k, v in test_group_elo_ratings.items() if k != test_agent}
         interp_table = sorted(interp_table.items(), key=lambda x: x[1])
         interp_table = list(zip(*interp_table))
         x_values = interp_table[0]
         y_values = interp_table[1]
-        x = eval_sub_committee.ratings[test_agent]
+        x = test_group_elo_ratings[test_agent]
         test_rating = np.interp(x, x_values, y_values)
+        return test_rating
+
+    def evaluate_adaptive(self, test_agent: Agent, n_games: int=4, n_steps: int=10):
+        representatives = []
+        init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
+        init_match = Match(test_agent, init_benchmark_agent, n_games)
+        self.eval.play_matches([init_match], additional=True)
+        representatives.append(init_benchmark_agent)
+        for _ in range(n_steps):
+            eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + list(self.benchmark_committee.G.nodes))
+            eval_sub_committee.compute_ratings()
+            eval_ratings = eval_sub_committee.ratings
+            p = {agent: 1/(1 + np.exp((rating - eval_ratings[test_agent])/BETA_SCALE_FACTOR)) \
+                for agent, rating in eval_ratings.items() if agent != test_agent}
+            p = sorted(p.items(), key=lambda x: x[1] * (1 - x[1]))
+            next_agent = p[-1][0]
+            next_match = Match(test_agent, next_agent, n_games)
+            self.eval.play_matches([next_match], additional=True)
+            representatives.append(next_agent)
+
+            if len(representatives) >= 3 and \
+                representatives[-1] == representatives[-2] == representatives[-3]:
+                break
+
+        test_group_elo_ratings = eval_sub_committee.ratings
+        test_rating = self.interpolate_ratings(test_agent, test_group_elo_ratings)
         self.commit_rating(test_agent, test_rating, representatives)
         return test_rating
 
@@ -428,10 +459,11 @@ if __name__ == '__main__':
     benchmark_committee.play_matches(matches)
     benchmark_committee.compute_ratings()
 
-    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation')
+    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i100')
     evaluation = Evaluation(eval_organizer, benchmark_committee)
-    test_agents = [MCTSAgent(gen=i, n_iters=0) for i in range(1, 751)]
+    test_agents = [MCTSAgent(gen=i, n_iters=100) for i in range(1, 129)]
 
     for test_agent in tqdm(test_agents):
-        test_rating = evaluation.evalute_against_benchmark(test_agent, 4)
+        # test_rating = evaluation.evalute_against_benchmark(test_agent, 4)
+        test_rating = evaluation.evaluate_adaptive(test_agent, n_games=4, n_steps=32)
         print(f'{test_agent}: {test_rating}')
