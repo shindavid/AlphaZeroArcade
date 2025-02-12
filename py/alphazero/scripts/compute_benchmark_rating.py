@@ -211,16 +211,28 @@ class BenchmarkCommittee:
     def get_model_path(self, gen: int) -> str:
         return os.path.join(self._organizer.model_dir, f'gen-{gen}.pt')
 
-    def get_mcts_player_str(self, agent: MCTSAgent):
+    def get_mcts_player_str(self, agent: MCTSAgent, set_temp_zero=False):
         gen = agent.gen
         n_iters = agent.n_iters
-        player_args = {
-            '--type': 'MCTS-C',
-            '--name': str(agent),
-            '-i': n_iters,
-            '-m': self.get_model_path(gen),
-            '-n': 1,
-        }
+
+        if set_temp_zero:
+            player_args = {
+                '--type': 'MCTS-C',
+                '--name': str(agent),
+                '-i': n_iters,
+                '-m': self.get_model_path(gen),
+                '-n': 1,
+                '--starting-move-temp': 0,
+                '--ending-move-temp': 0,
+            }
+        else:
+            player_args = {
+                '--type': 'MCTS-C',
+                '--name': str(agent),
+                '-i': n_iters,
+                '-m': self.get_model_path(gen),
+                '-n': 1,
+            }
         return make_args_str(player_args)
 
     @staticmethod
@@ -244,9 +256,9 @@ class BenchmarkCommittee:
         }
         return make_args_str(player_args)
 
-    def get_player_str(self, agent: Agent):
+    def get_player_str(self, agent: Agent, mcts_temp_zero=False):
         if isinstance(agent, MCTSAgent):
-            return self.get_mcts_player_str(agent)
+            return self.get_mcts_player_str(agent, mcts_temp_zero)
         elif isinstance(agent, PerfectAgent):
             return BenchmarkCommittee.get_reference_player_str(agent)
         elif isinstance(agent, RandomAgent):
@@ -277,7 +289,7 @@ class BenchmarkCommittee:
         if n_games < 1:
             return WinLossDrawCounts()
 
-        ps1 = self.get_player_str(agent1)
+        ps1 = self.get_player_str(agent1, mcts_temp_zero=True)
         ps2 = self.get_player_str(agent2)
 
         base_args = {
@@ -305,6 +317,9 @@ class BenchmarkCommittee:
         ]
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
+
+        print(cmd1)
+        print(cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
@@ -415,11 +430,11 @@ if __name__ == '__main__':
     benchmark_committee.play_matches(matches)
     benchmark_committee.compute_ratings()
 
-    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i100')
+    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i0_10agnets')
     evaluation = Evaluation(eval_organizer, benchmark_committee)
-    test_agents = [MCTSAgent(gen=i, n_iters=100) for i in range(1, 129)]
+    test_agents = [MCTSAgent(gen=i, n_iters=0) for i in range(1, 257)]
 
     for test_agent in tqdm(test_agents):
-        # test_rating = evaluation.evalute_against_benchmark(test_agent, 4)
-        test_rating = evaluation.evaluate_adaptive(test_agent, n_games=4, n_steps=32)
+        test_rating = evaluation.evalute_against_benchmark(test_agent, 10)
+        # test_rating = evaluation.evaluate_adaptive(test_agent, n_games=4, n_steps=32)
         print(f'{test_agent}: {test_rating}')
