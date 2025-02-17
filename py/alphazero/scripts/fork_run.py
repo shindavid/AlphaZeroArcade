@@ -10,14 +10,11 @@ Usage:
 
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
-from shared.training_params import TrainingParams
 import games.index as game_index
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import configure_logger, get_logger
 
 import argparse
 import os
-import sys
 
 
 logger = get_logger()

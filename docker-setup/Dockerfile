@@ -1,5 +1,4 @@
-# FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
-FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -35,25 +34,39 @@ RUN for tool in gcc g++; do \
     done
 
 # Python dependencies
-RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging pygraphviz
+#
+# Technically, we don't need the google stuff within the Docker container, as it's only used
+# externally. But it's common to attach vscode to the container, and having the google stuff
+# installed allows for better code completion when working with the Docker-external code.
+RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib \
+    bokeh scipy flask plotly dash packaging pygraphviz google-cloud-compute \
+    google-api-python-client torch torchvision torchaudio
+
+# Install libtorch
+ARG LIBTORCH_VERSION="libtorch-cxx11-abi-shared-with-deps-2.6.0+cu126"
+ARG LIBTORCH_BASE_DIR="/usr/local"
+ARG LIBTORCH_DIR="${LIBTORCH_BASE_DIR}/${LIBTORCH_VERSION}"
+RUN LIBTORCH_VERSION_ESCAPED="$(echo "$LIBTORCH_VERSION" | sed 's/+/%2B/g')" && \
+    LIBTORCH_URL="https://download.pytorch.org/libtorch/cu126/${LIBTORCH_VERSION_ESCAPED}.zip" && \
+    wget -O /tmp/libtorch.zip "${LIBTORCH_URL}" && \
+    unzip -q /tmp/libtorch.zip -d "${LIBTORCH_BASE_DIR}" && \
+    mv "${LIBTORCH_BASE_DIR}/libtorch" "${LIBTORCH_DIR}" && \
+    ln -s "${LIBTORCH_DIR}" "${LIBTORCH_BASE_DIR}/libtorch" && \
+    rm /tmp/libtorch.zip
+
+ENV LIBTORCH_CPP_DIR="${LIBTORCH_BASE_DIR}/libtorch"
 
 ENV PYTHONPATH=/workspace/repo/py
 
-RUN groupadd -g 1000 devgroup && \
-    useradd -u 1000 -g devgroup devuser && \
-    echo "devuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+COPY devuser-setup.sh /usr/local/bin/devuser-setup.sh
+RUN chmod +x /usr/local/bin/devuser-setup.sh
 
-RUN mkdir -p /home/devuser && chown devuser:devgroup /home/devuser
-RUN mkdir -p /workspace && chown devuser:devgroup /workspace
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Copy entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
-ARG VERSION="2.1.0"
+ARG VERSION="3.1.0"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
-WORKDIR /workspace/repo
-
-CMD ["/start.sh"]
+CMD ["/bin/bash"]

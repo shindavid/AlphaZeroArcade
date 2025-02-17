@@ -107,12 +107,9 @@ def run_container(args):
         if not check_image_version(docker_image):
             return
 
-    libtorch_dir = REPO_ROOT / "libtorch"
-    libtorch_dir.mkdir(exist_ok=True)
-
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo", '-v', f"{libtorch_dir}:/workspace/libtorch"]
-    post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    post_mount_cmds = []
 
     # Check if output_dir is inside REPO_ROOT
     if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
@@ -131,42 +128,17 @@ def run_container(args):
     user_id = subprocess.check_output(["id", "-u"], text=True).strip()
     group_id = subprocess.check_output(["id", "-g"], text=True).strip()
 
-    if (user_id, group_id) != ('1000', '1000'):
-        # TODO: add support for non-1000 users. Will require some surgery to the Dockerfile and
-        # entrypoint.sh. Need to test on both local machine and on runpod.
-        #
-        # For now, just print the below warning.
-
-        user = subprocess.check_output(["id", "-un"], text=True).strip()
-        group = subprocess.check_output(["id", "-gn"], text=True).strip()
-
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-        print(CRED, end='')
-
-        print('#' * 70)
-        print('# %-66s #' % 'WARNING!')
-        if user_id != '1000':
-            print('# %-66s #' % f'Your user id ({user}:{user_id}) is not 1000.')
-        if group_id != '1000':
-            print('# %-66s #' % f'The group id ({group}:{group_id}) is not 1000.')
-
-        'As a result, outside of the docker container, you might need sudo permissions'
-        print('# %-66s #' % 'As a result, outside of the docker container, you might need sudo')
-        print('# %-66s #' % 'permissions to delete/modify files/dirs written inside this docker')
-        print('# %-66s #' % 'container. This includes directories like output/ and target/.')
-        print('#' * 70)
-        print(CEND, end='')
-
     # Build the docker run command
     docker_cmd = [
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
-        '--user', '1000:1000',
+        "-e", f"HOST_UID={user_id}",
+        "-e", f"HOST_GID={group_id}",
+        "-e", "USERNAME=devuser",
+        "-e", "LOCAL=true",
     ] + ports_strs + mounts + [
         docker_image
     ]
 
-    # Add post-mount commands as the container's entrypoint
     if post_mount_cmds:
         entrypoint_cmd = " && ".join(post_mount_cmds)
         entrypoint_cmd += "; exec bash"
