@@ -21,11 +21,6 @@ import random
 
 logger = get_logger()
 
-@dataclass
-class CommitteeData:
-    W_matrix: np.ndarray
-    G: nx.Graph
-
 class DirectoryOrganizer:
     def __init__(self, game, tag, db_name=None):
         self.game = game
@@ -71,23 +66,6 @@ class BenchmarkCommittee:
             counts = WinLossDrawCounts(gen1_wins, gen2_wins, draws)
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
-
-    def _add_agent_node(self, agent: Agent) -> int:
-        if agent not in self.G.nodes:
-            ix = len(self.G.nodes)
-            self.G.add_node(agent, ix=ix)
-            self._expand_matrix()
-            is_new_node = True
-        else:
-            ix = self.G.nodes[agent]['ix']
-            is_new_node = False
-        return ix, is_new_node
-
-    def _expand_matrix(self):
-        n = self.W_matrix.shape[0]
-        new_matrix = np.zeros((n + 1, n + 1), dtype=float)
-        new_matrix[:n, :n] = self.W_matrix
-        self.W_matrix = new_matrix
 
     def play_matches(self, matches: List[Match], additional=False):
       for match in tqdm(matches):
@@ -150,6 +128,23 @@ class BenchmarkCommittee:
 
         return sub_committee
 
+    def _add_agent_node(self, agent: Agent) -> int:
+        if agent not in self.G.nodes:
+            ix = len(self.G.nodes)
+            self.G.add_node(agent, ix=ix)
+            self._expand_matrix()
+            is_new_node = True
+        else:
+            ix = self.G.nodes[agent]['ix']
+            is_new_node = False
+        return ix, is_new_node
+
+    def _expand_matrix(self):
+        n = self.W_matrix.shape[0]
+        new_matrix = np.zeros((n + 1, n + 1), dtype=float)
+        new_matrix[:n, :n] = self.W_matrix
+        self.W_matrix = new_matrix
+
 class Evaluation:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_committee: BenchmarkCommittee):
         self._organizer = organizer
@@ -205,7 +200,6 @@ if __name__ == '__main__':
 
     eval_organizer = DirectoryOrganizer(game, tag, db_name='test_eval')
     evaluation = Evaluation(eval_organizer, benchmark_committee)
-    # test_agents = [MCTSAgent(gen=i, n_iters=1) for i in range(128, 0, -1)]
     test_agents = [MCTSAgent(gen=128, n_iters=1, model_dir=organzier.model_dir)]
     for test_agent in tqdm(test_agents):
         test_rating = evaluation.evaluate(test_agent, n_games=10, n_steps=10)
