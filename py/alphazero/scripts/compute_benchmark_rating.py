@@ -52,10 +52,13 @@ class CommitteeData:
     G: nx.Graph
 
 class DirectoryOrganizer:
-    def __init__(self, game, tag, db_name='benchmark'):
+    def __init__(self, game, tag, db_name=None):
         self.game = game
         self.tag = tag
-        self.db_name = db_name
+        if db_name is None:
+            self.db_name = 'benchmark'
+        else:
+            self.db_name = db_name
 
         self.base_dir = os.path.join('/workspace/repo')
         self.output_dir = os.path.join(self.base_dir, 'output', game, tag)
@@ -290,7 +293,7 @@ class BenchmarkCommittee:
             return WinLossDrawCounts()
 
         ps1 = self.get_player_str(agent1, mcts_temp_zero=True)
-        ps2 = self.get_player_str(agent2)
+        ps2 = self.get_player_str(agent2, mcts_temp_zero=True)
 
         base_args = {
             '-G': n_games,
@@ -399,6 +402,29 @@ class Evaluation:
         self.commit_rating(test_agent, test_rating, representatives)
         return test_rating
 
+    def evaluate_sampling(self, test_agent: Agent, n_games: int=4, n_steps: int=10):
+        representatives = []
+        init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
+        init_match = Match(test_agent, init_benchmark_agent, n_games)
+        self.eval.play_matches([init_match], additional=True)
+        representatives.append(init_benchmark_agent)
+        for _ in range(n_steps):
+            eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + list(self.benchmark_committee.G.nodes))
+            eval_sub_committee.compute_ratings()
+            eval_ratings = eval_sub_committee.ratings
+            p = {agent: 1/(1 + np.exp((rating - eval_ratings[test_agent])/BETA_SCALE_FACTOR)) \
+                for agent, rating in eval_ratings.items() if agent != test_agent}
+            weights = {agent: p * (1 - p) for agent, p in p.items()}
+            next_agent = random.choices(list(weights.keys()), weights=list(weights.values()))[0]
+            next_match = Match(test_agent, next_agent, n_games)
+            self.eval.play_matches([next_match], additional=True)
+            representatives.append(next_agent)
+
+        test_group_elo_ratings = eval_sub_committee.ratings
+        test_rating = self.interpolate_ratings(test_agent, test_group_elo_ratings)
+        self.commit_rating(test_agent, test_rating, representatives)
+        return test_rating
+
     def commit_rating(self, agent, rating, benchmark_agents):
         conn = self.eval.benchmarking_db_conn_pool.get_connection()
         gen, n_iters = BenchmarkCommittee.make_database_row(agent)
@@ -424,17 +450,18 @@ if __name__ == '__main__':
     game = 'c4'
     tag = 'benchmark'
     n_games = 100
-    organzier = DirectoryOrganizer(game, tag)
+    organzier = DirectoryOrganizer(game, tag, db_name='benchmark')
     benchmark_committee = BenchmarkCommittee(organzier, load_past_data=True)
     matches = BenchmarkCommittee.get_matches(0, 128, n_iters=100, freq=4, n_games=n_games)
     benchmark_committee.play_matches(matches)
     benchmark_committee.compute_ratings()
 
-    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i0_10agnets')
+    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i1_force_eval_children')
     evaluation = Evaluation(eval_organizer, benchmark_committee)
-    test_agents = [MCTSAgent(gen=i, n_iters=0) for i in range(1, 257)]
+    test_agents = [MCTSAgent(gen=i, n_iters=1) for i in range(128, 0, -1)]
 
     for test_agent in tqdm(test_agents):
-        test_rating = evaluation.evalute_against_benchmark(test_agent, 10)
+        # test_rating = evaluation.evalute_against_benchmark(test_agent, 10)
         # test_rating = evaluation.evaluate_adaptive(test_agent, n_games=4, n_steps=32)
+        test_rating = evaluation.evaluate_sampling(test_agent, n_games=10, n_steps=10)
         print(f'{test_agent}: {test_rating}')
