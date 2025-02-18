@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
 
-# This is to be run as root, with the user passed as an argument
+rm -rf ~/*
+rm -rf ~/.*
 
-USER=$1
-
-userdel -r $USER
-
-apt-get clean
-rm -rf /var/lib/apt/lists/*
-rm -rf /var/log/*.gz
-truncate -s 0 /var/log/syslog
-
-rm -rf ~/.ssh
-rm -f ~/.bash_history
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo rm -rf /var/log/*.gz
+sudo truncate -s 0 /var/log/syslog

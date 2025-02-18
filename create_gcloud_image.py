@@ -17,7 +17,6 @@ from setup_common import LATEST_DOCKER_HUB_IMAGE
 
 import argparse
 from dataclasses import dataclass, fields
-import getpass
 import subprocess
 import time
 
@@ -31,9 +30,17 @@ class Params:
 
     machine_type: str = "n1-standard-8"
 
-    # It's ok to over-provision the boot disk size, as it's only temporary, and as the image will be
-    # trimmed down to the actual size of the data.
-    boot_disk_size_gb: int = 100
+    # It's ok to over-provision the boot disk size, as it's only temporary, and as the long-term
+    # storage cost of the image is only based on the archive size (i.e., the amount of space
+    # occupied by the image).
+    #
+    # Bigger as better, as disk throughput scales with disk size. Empirically, we only actually use
+    # about 17G.
+    #
+    # The cost of 200G of pd-ssd disk-space is about $34/month, with the timed used rounded up to
+    # the nearest multiple of 0.1 seconds. Currently, this script takes about 17minutes, so this
+    # translates to less than 2 cents in disk cost.
+    boot_disk_size_gb: int = 200
     boot_disk_type: str = "pd-ssd"
 
     staging_instance_name: str = 'staging-instance'
@@ -120,7 +127,8 @@ def create_staging_instance(params: Params):
         time.sleep(sleep_time)
         try:
             subprocess.run([
-                "gcloud", "compute", "ssh", instance_name, "--zone", zone, "--command", "exit"
+                "gcloud", "compute", "ssh", f"stager@{instance_name}", "--zone", zone, "--command",
+                "exit",
             ], check=True, capture_output=True)
             success = True
             break
@@ -151,13 +159,13 @@ def configure_staging_instance(params: Params):
     # Copy the setup script to the staging instance
     subprocess.run([
         "gcloud", "compute", "scp", "gcp_staging_instance_setup.sh",
-        f"{params.staging_instance_name}:~/"
+        f"stager@{params.staging_instance_name}:~/"
     ], check=True)
 
     # Run the setup script on the staging instance
     subprocess.run([
-        "gcloud", "compute", "ssh", params.staging_instance_name,
-        "--command", "bash gcp_staging_instance_setup.sh"
+        "gcloud", "compute", "ssh", f"stager@{params.staging_instance_name}",
+        "--command", "bash gcp_staging_instance_setup.sh",
     ], check=True)
 
     print('✅ Setup script ran successfully!')
@@ -165,8 +173,8 @@ def configure_staging_instance(params: Params):
 
     # Pull the docker image on the staging instance
     subprocess.run([
-        "gcloud", "compute", "ssh", params.staging_instance_name,
-        "--command", f"docker pull {params.docker_image}"
+        "gcloud", "compute", "ssh", f"stager@{params.staging_instance_name}",
+        "--command", f"docker pull {params.docker_image}",
     ], check=True)
 
     # TODO: if params.add_gpu_to_staging_instance is True, perform some tests to verify that the GPU
@@ -175,14 +183,12 @@ def configure_staging_instance(params: Params):
     # Copy the cleanup script to the staging instance
     subprocess.run([
         "gcloud", "compute", "scp", "gcp_staging_instance_cleanup.sh",
-        f"{params.staging_instance_name}:~/"
+        f"stager@{params.staging_instance_name}:~/"
     ], check=True)
 
-    # Run the cleanup script on the staging instance as root:
-    user = getpass.getuser()
     subprocess.run([
-        "gcloud", "compute", "ssh", params.staging_instance_name,
-        "--command", f"sudo bash gcp_staging_instance_cleanup.sh {user}"
+        "gcloud", "compute", "ssh", f"stager@{params.staging_instance_name}",
+        "--command", f"bash gcp_staging_instance_cleanup.sh"
     ], check=True)
 
     print('✅ Cleanup script ran successfully!')
