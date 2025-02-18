@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, List
+from typing import Callable, List, Union
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket

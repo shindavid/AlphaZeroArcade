@@ -1,4 +1,5 @@
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, extract_match_record, BETA_SCALE_FACTOR
+from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, RandomAgent
 from alphazero.logic import constants
 from util.str_util import make_args_str
 from util import subprocess_util
@@ -18,27 +19,6 @@ import os
 import random
 
 logger = get_logger()
-
-@dataclass(frozen=True)
-class MCTSAgent:
-    gen: int = 0
-    n_iters: int = 0
-
-    def __repr__(self):
-        return f'{self.gen}-{self.n_iters}'
-
-@dataclass(frozen=True)
-class PerfectAgent:
-    strength: int = 0
-    def __repr__(self):
-        return f'Perfect-{self.strength}'
-
-@dataclass(frozen=True)
-class RandomAgent:
-    def __repr__(self):
-        return 'Random'
-
-Agent = Union[MCTSAgent, PerfectAgent, RandomAgent]
 
 @dataclass
 class Match:
@@ -456,12 +436,10 @@ if __name__ == '__main__':
     benchmark_committee.play_matches(matches)
     benchmark_committee.compute_ratings()
 
-    eval_organizer = DirectoryOrganizer(game, tag, db_name='evaluation_i1_force_eval_children')
+    eval_organizer = DirectoryOrganizer(game, tag, db_name='test_eval')
     evaluation = Evaluation(eval_organizer, benchmark_committee)
-    test_agents = [MCTSAgent(gen=i, n_iters=1) for i in range(128, 0, -1)]
-
+    # test_agents = [MCTSAgent(gen=i, n_iters=1) for i in range(128, 0, -1)]
+    test_agents = [MCTSAgent(gen=128, n_iters=1)]
     for test_agent in tqdm(test_agents):
-        # test_rating = evaluation.evalute_against_benchmark(test_agent, 10)
-        # test_rating = evaluation.evaluate_adaptive(test_agent, n_games=4, n_steps=32)
         test_rating = evaluation.evaluate_sampling(test_agent, n_games=10, n_steps=10)
         print(f'{test_agent}: {test_rating}')
