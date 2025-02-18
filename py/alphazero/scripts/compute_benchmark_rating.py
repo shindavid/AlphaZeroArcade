@@ -1,23 +1,16 @@
-from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, BETA_SCALE_FACTOR
 from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, RandomAgent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.rating_db import RatingDB
-from alphazero.logic import constants
-from util.str_util import make_args_str
-
+from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, BETA_SCALE_FACTOR
 from util.logging_util import get_logger
 
-
 import networkx as nx
-from networkx.drawing.nx_agraph import graphviz_layout
+import numpy as np
 from tqdm import tqdm
 
-from typing import List, Dict, Union, Tuple
-import matplotlib.pyplot as plt
-import numpy as np
-from dataclasses import dataclass
 import os
 import random
+from typing import List, Dict, Tuple
 
 logger = get_logger()
 
@@ -68,7 +61,7 @@ class BenchmarkCommittee:
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
     def play_matches(self, matches: List[Match], additional=False):
-      for match in tqdm(matches):
+      for match in matches:
         ix1, _ = self._add_agent_node(match.agent1)
         ix2, _ = self._add_agent_node(match.agent2)
 
@@ -164,7 +157,7 @@ class Evaluation:
         test_rating = np.interp(x, x_values, y_values)
         return test_rating
 
-    def evaluate(self, test_agent: Agent, n_games: int=4, n_steps: int=10):
+    def evaluate(self, test_agent: Agent, n_games: int=10, n_steps: int=10):
         representatives = []
         init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
         init_match = Match(test_agent, init_benchmark_agent, n_games)
