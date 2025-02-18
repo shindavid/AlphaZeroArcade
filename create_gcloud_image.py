@@ -4,29 +4,35 @@
 Creates a custom GCP image, to be used for instance creation. Only the GCP project owner (dshin)
 needs to run this script. Other users, as long as they are part of the AlphaZeroArcade GCP project,
 can launch instances from the custom image.
+
+Many of the steps of this script invoke the gcloud CLI directly, rather than using the python client
+library. This is because the python client library does not provide as much detail in the error
+messages, which makes it harder to debug issues. Besides, the gcloud CLI is identical across
+platforms (such as Windows, Mac, and Linux), so doing it this way is more portable. Finally, the
+CLI is much simpler and easier to use than the python client library.
 """
 
 from gcloud_common import Help
 from setup_common import LATEST_DOCKER_HUB_IMAGE
 
-from google.cloud import compute_v1
-from googleapiclient import discovery
-import google.auth
-from google.oauth2 import service_account
-
 import argparse
 from dataclasses import dataclass, fields
+import getpass
+import subprocess
 import time
 
 
 @dataclass
 class Params:
     add_gpu_to_staging_instance: bool = False
-    docker_image: str = LATEST_DOCKER_HUB_IMAGE
+    docker_image: str = 'dshin83/alphazeroarcade:3.1.0'  # TODO: replace w/ LATEST_DOCKER_HUB_IMAGE
     image_name: str = ''
     image_family: str = 'alphazero-arcade'
 
     machine_type: str = "n1-standard-8"
+
+    # It's ok to over-provision the boot disk size, as it's only temporary, and as the image will be
+    # trimmed down to the actual size of the data.
     boot_disk_size_gb: int = 100
     boot_disk_type: str = "pd-ssd"
 
@@ -85,128 +91,115 @@ def create_staging_instance(params: Params):
 
     print(f"Creating instance {instance_name}...")
 
-    # instance_client = compute_v1.InstancesClient()
-
-    # disk = compute_v1.AttachedDisk()
-    # disk.initialize_params = compute_v1.AttachedDiskInitializeParams(
-    #     source_image="projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
-    #     disk_size_gb=boot_disk_size_gb,
-    #     disk_type=f"zones/{zone}/diskTypes/{boot_disk_type}",
-    # )
-    # disk.auto_delete = True
-    # disk.boot = True
-
-    # network_interface = compute_v1.NetworkInterface()
-    # network_interface.name = "default"
-
-    # instance = compute_v1.Instance(
-    #     name=instance_name,
-    #     machine_type=f"zones/{zone}/machineTypes/{machine_type}",
-    #     disks=[disk],
-    #     network_interfaces=[network_interface],
-    # )
-
-    # operation = instance_client.insert(
-    #     project=project, zone=zone, instance_resource=instance
-    # )
-    # operation.result()
-    # print(f"Instance {instance_name} created successfully!")
-
-    # credentials = service_account.Credentials.from_service_account_file(
-    #     'path/to/your-service-account-key.json'
-    # )
-
-    credentials, project = google.auth.default()
-    compute = discovery.build('compute', 'v1', credentials=credentials)
-
-    # --machine-type=n1-standard-4
-    machine_type = f"zones/{zone}/machineTypes/n1-standard-4"
-
-    # OPTIONAL: Add a GPU to the instance - useful for ad-hoc testing of staging instance
-    # --accelerator type=nvidia-tesla-t4,count=1
-    guest_accelerators = []
+    cmd = [
+        "gcloud", "compute", "instances", "create", instance_name,
+        f"--zone={zone}",
+        f"--machine-type={machine_type}",
+        "--image-family=ubuntu-2204-lts",
+        "--image-project=ubuntu-os-cloud",
+        f"--boot-disk-size={boot_disk_size_gb}",
+        f"--boot-disk-type={boot_disk_type}",
+        "--boot-disk-auto-delete",
+        "--maintenance-policy=TERMINATE",
+    ]
     if params.add_gpu_to_staging_instance:
-        guest_accelerators = [{
-            "acceleratorType": f"projects/{project}/zones/{zone}/acceleratorTypes/nvidia-tesla-t4",
-            "acceleratorCount": 1
-        }]
+        cmd.extend([
+            "--accelerator=type=nvidia-tesla-t4,count=1"
+        ])
 
-    # --maintenance-policy=TERMINATE
-    scheduling = {
-        "onHostMaintenance": "TERMINATE",
-        "automaticRestart": False
-    }
+    subprocess.run(cmd, check=True)
 
-    # --image-family=ubuntu-2204-lts
-    # --image-project=ubuntu-os-cloud
-    # --boot-disk-auto-delete
-    # --boot-disk-size=<boot_disk_size_gb>
-    # --boot-disk-type=pd-ssd
-    disks = [
-        {
-            "boot": True,
-            "autoDelete": True,
-            "initializeParams": {
-                "sourceImage": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
-                "diskSizeGb": boot_disk_size_gb,
-                "diskType": f"projects/{project}/zones/{zone}/diskTypes/{boot_disk_type}"
-            }
-        }
-    ]
+    print(f"Instance {instance_name} created successfully!")
+    print('Waiting until ssh access is available...')
 
-    # Minimal network interface to give the instance internet access
-    network_interfaces = [
-        {
-            "network": "global/networks/default",
-            "accessConfigs": [
-                {"type": "ONE_TO_ONE_NAT", "name": "External NAT"}
-            ]
-        }
-    ]
+    # do a simple loop with 5 second sleep to wait for ssh access
+    timeout = 60
+    sleep_time = 5
+    success = False
+    for _ in range(timeout // sleep_time):
+        time.sleep(sleep_time)
+        try:
+            subprocess.run([
+                "gcloud", "compute", "ssh", instance_name, "--zone", zone, "--command", "exit"
+            ], check=True, capture_output=True)
+            success = True
+            break
+        except subprocess.CalledProcessError:
+            pass
 
-    # Build the instance config
-    instance_body = {
-        "name": instance_name,
-        "machineType": machine_type,
-        "guestAccelerators": guest_accelerators,
-        "scheduling": scheduling,
-        "disks": disks,
-        "networkInterfaces": network_interfaces
-        # Optionally add 'metadata', 'serviceAccounts', etc. here
-    }
-
-    request = compute.instances().insert(
-        project=project,
-        zone=zone,
-        body=instance_body
-    )
-    response = request.execute()
-
-    print("Instance creation response:", response)
+    if not success:
+        print(f'❌ SSH access not available after {timeout} seconds! Exiting...')
+        exit(1)
+    else:
+        print('✅ SSH access available!')
 
 
 def configure_staging_instance(params: Params):
     """
     Step 2: Configure the staging instance
 
-    - Set up swap space
-    - Docker setup
+    NOTE: for ssh agent forwarding, we will want to run via:
+
+    docker run -it --rm \
+        -v $SSH_AUTH_SOCK:/ssh-agent \
+        -e SSH_AUTH_SOCK=/ssh-agent \
+        yourimage:latest
     """
-    print('TODO: Configure the staging instance as needed.')
+
+    print(f"Configuring instance {params.staging_instance_name}...")
+
+    # Copy the setup script to the staging instance
+    subprocess.run([
+        "gcloud", "compute", "scp", "gcp_staging_instance_setup.sh",
+        f"{params.staging_instance_name}:~/"
+    ], check=True)
+
+    # Run the setup script on the staging instance
+    subprocess.run([
+        "gcloud", "compute", "ssh", params.staging_instance_name,
+        "--command", "bash gcp_staging_instance_setup.sh"
+    ], check=True)
+
+    print('✅ Setup script ran successfully!')
+    print(f"Pulling docker image {params.docker_image} on the staging instance...")
+
+    # Pull the docker image on the staging instance
+    subprocess.run([
+        "gcloud", "compute", "ssh", params.staging_instance_name,
+        "--command", f"docker pull {params.docker_image}"
+    ], check=True)
+
+    # TODO: if params.add_gpu_to_staging_instance is True, perform some tests to verify that the GPU
+    # is working correctly.
+
+    # Copy the cleanup script to the staging instance
+    subprocess.run([
+        "gcloud", "compute", "scp", "gcp_staging_instance_cleanup.sh",
+        f"{params.staging_instance_name}:~/"
+    ], check=True)
+
+    # Run the cleanup script on the staging instance as root:
+    user = getpass.getuser()
+    subprocess.run([
+        "gcloud", "compute", "ssh", params.staging_instance_name,
+        "--command", f"sudo bash gcp_staging_instance_cleanup.sh {user}"
+    ], check=True)
+
+    print('✅ Cleanup script ran successfully!')
 
 
 def stop_staging_instance(params: Params):
     """
     Step 3: Stop the staging instance.
     """
-    project = params.project
     instance_name = params.staging_instance_name
     zone = params.staging_zone
     print(f"Stopping instance {instance_name}. This could take up to 5 minutes...")
 
-    instance_client = compute_v1.InstancesClient()
-    operation = instance_client.stop(project=project, zone=zone, instance=instance_name)
-    operation.result()
+    subprocess.run([
+        "gcloud", "compute", "instances", "stop", instance_name,
+        f"--zone={zone}"
+    ], check=True)
 
     print(f"Instance {instance_name} stopped successfully!")
 
@@ -214,24 +207,39 @@ def stop_staging_instance(params: Params):
 def create_custom_image(params: Params):
     """
     Step 4: Create an image from the stopped staging instance.
+
+    Cmd:
+
+    gcloud compute images create <CUSTOM_IMAGE_NAME> \
+    --source-disk <STAGING_INSTANCE_NAME> \
+    --source-disk-zone <YOUR_ZONE> \
+    --family <OPTIONAL_IMAGE_FAMILY> \
+    --description "Ubuntu 22.04 with NVIDIA driver, container toolkit, Docker, etc."
+
+    Subsequent cmd to launch instance using this image:
+
+    gcloud compute instances create <NEW_VM_NAME> \
+    --zone=<YOUR_ZONE> \
+    --image=<CUSTOM_IMAGE_NAME> \
+    --machine-type=n1-standard-4 \
+    --accelerator type=nvidia-tesla-t4,count=1 \
+    --maintenance-policy=TERMINATE
     """
-    project = params.project
     image_name = params.image_name
     image_family = params.image_family
     zone = params.staging_zone
     instance_name = params.staging_instance_name
+    docker_image = params.docker_image
 
     print(f"Creating custom image {image_name}. This could take up to 5 minutes..")
 
-    image_client = compute_v1.ImagesClient()
-    image = compute_v1.Image(
-        name=image_name,
-        source_disk=f"projects/{project}/zones/{zone}/disks/{instance_name}",
-        family=image_family,
-    )
-
-    operation = image_client.insert(project=project, image_resource=image)
-    operation.result()
+    subprocess.run([
+        "gcloud", "compute", "images", "create", image_name,
+        f"--source-disk={instance_name}",
+        f"--source-disk-zone={zone}",
+        f"--family={image_family}",
+        "--description", f"AlphaZeroArcade with Docker image {docker_image}"
+    ], check=True)
 
     print(f"Custom image {image_name} created successfully!")
 
@@ -240,32 +248,16 @@ def delete_instance(params: Params):
     """
     Step 4: Delete the staging instance after imaging.
     """
-    project = params.project
     zone = params.staging_zone
     instance_name = params.staging_instance_name
     print(f"Deleting instance {instance_name}...")
 
-    instance_client = compute_v1.InstancesClient()
-    operation = instance_client.delete(project=project, zone=zone, instance=instance_name)
-    operation.result()
+    subprocess.run([
+        "gcloud", "compute", "instances", "delete", instance_name,
+        f"--zone={zone}", "--quiet",
+    ], check=True)
 
     print(f"Instance {instance_name} deleted successfully!")
-
-
-def delete_disk(params: Params):
-    """
-    Step 5: Delete the Persistent Disk after imaging.
-    """
-    project = params.project
-    zone = params.staging_zone
-    instance_name = params.staging_instance_name
-    print(f"Deleting persistent disk {instance_name}...")
-
-    disk_client = compute_v1.DisksClient()
-    operation = disk_client.delete(project=project, zone=zone, disk=instance_name)
-    operation.result()
-
-    print(f"Persistent disk {instance_name} deleted successfully!")
 
 
 def main():
@@ -273,10 +265,11 @@ def main():
 
     create_staging_instance(params)
     configure_staging_instance(params)
-    # stop_staging_instance(params)
-    # create_custom_image(params)
-    # delete_instance(params)
-    # print('✅ Successfully created custom image!')
+    stop_staging_instance(params)
+    create_custom_image(params)
+    delete_instance(params)
+    print('✅ Successfully created custom image!')
+
 
 if __name__ == "__main__":
     main()
