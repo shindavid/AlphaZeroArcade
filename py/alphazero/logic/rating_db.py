@@ -58,3 +58,4 @@ class RatingDB:
         c.execute('INSERT INTO ratings (gen, n_iters, rating, benchmark_tag, benchmark_agents) \
                   VALUES (?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
+
