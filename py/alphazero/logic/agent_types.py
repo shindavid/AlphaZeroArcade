@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import os
 
-
 class Agent(ABC):
     """
     Base class for agents. All agents must implment make_player_str() for generating
@@ -14,7 +13,6 @@ class Agent(ABC):
     @abstractmethod
     def make_player_str(self):
         pass
-
 
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
@@ -74,3 +72,4 @@ class UniformAgent(Agent):
             '--no-model': None,
         }
         return make_args_str(player_args)
+

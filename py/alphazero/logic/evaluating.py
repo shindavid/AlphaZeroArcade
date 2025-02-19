@@ -11,7 +11,6 @@ import numpy as np
 from typing import Dict
 import random
 
-
 class Evaluation:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_committee: BenchmarkCommittee,\
         db_name, binary: str=None):
@@ -58,3 +57,4 @@ class Evaluation:
         test_rating = self.interpolate_ratings(test_agent, test_group_elo_ratings)
         self.eval.rating_db.commit_rating(test_agent, test_rating, representatives, self._organizer.tag)
         return test_rating
+
