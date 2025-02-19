@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, RandomAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, UniformAgent
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from util import subprocess_util
 from util.logging_util import get_logger
@@ -23,12 +23,12 @@ class MatchRunner:
         matches = []
         for gen1, gen2 in combinations(gens, 2):
             if gen1 == 0:
-                agent1 = RandomAgent(n_iters=n_iters)
+                agent1 = UniformAgent(n_iters=n_iters)
             else:
                 agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, model_dir=model_dir)
 
             if gen2 == 0:
-                agent2 = RandomAgent(n_iters=n_iters)
+                agent2 = UniformAgent(n_iters=n_iters)
             else:
                 agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, model_dir=model_dir)
             match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
@@ -71,9 +71,6 @@ class MatchRunner:
         ]
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
-
-        print(cmd1)
-        print(cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)

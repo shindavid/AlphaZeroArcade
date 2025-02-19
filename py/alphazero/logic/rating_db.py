@@ -1,5 +1,5 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, PerfectAgent, RandomAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, PerfectAgent, UniformAgent, MCTSAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -18,7 +18,7 @@ class RatingDB:
         if gen == -1:
             return PerfectAgent(strength=n_iters)
         elif gen == 0:
-            return RandomAgent(n_iters=n_iters)
+            return UniformAgent(n_iters=n_iters)
         else:
             return MCTSAgent(gen=gen, n_iters=n_iters, model_dir=model_dir)
 
@@ -28,7 +28,7 @@ class RatingDB:
             return agent.gen, agent.n_iters
         elif isinstance(agent, PerfectAgent):
             return -1, agent.strength
-        elif isinstance(agent, RandomAgent):
+        elif isinstance(agent, UniformAgent):
             return 0, agent.n_iters
 
     def fetchall(self) -> List:
