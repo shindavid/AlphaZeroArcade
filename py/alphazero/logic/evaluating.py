@@ -55,12 +55,12 @@ class Evaluation:
 
     def evaluate(self, test_agent: Agent, n_games: int=10, n_steps: int=10) -> float:
         representatives = []
-        init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
+        init_benchmark_agent = random.choice(list(self.benchmark_committee.agent_ix.keys()))
         init_match = Match(test_agent, init_benchmark_agent, n_games)
         self.eval.play_matches([init_match], additional=True)
         representatives.append(init_benchmark_agent)
         for _ in tqdm(range(n_steps)):
-            eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + list(self.benchmark_committee.G.nodes))
+            eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + list(self.benchmark_committee.agent_ix.keys()))
             eval_sub_committee.compute_ratings()
             eval_ratings = eval_sub_committee.ratings
             p = {agent: 1/(1 + np.exp((rating - eval_ratings[test_agent])/BETA_SCALE_FACTOR)) \
