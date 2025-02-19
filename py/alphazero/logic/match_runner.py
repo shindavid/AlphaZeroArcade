@@ -1,5 +1,6 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, UniformAgent
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
 from util.logging_util import get_logger
 from util.str_util import make_args_str
@@ -18,19 +19,19 @@ class Match:
 class MatchRunner:
     @staticmethod
     def linspace_matches(gen_start: int, gen_end: int, n_iters: int=100, freq:int =1,\
-      n_games: int =100, model_dir: str=None):
+      n_games: int =100, organizer: DirectoryOrganizer=None):
         gens = range(gen_start, gen_end + 1, freq)
         matches = []
         for gen1, gen2 in combinations(gens, 2):
             if gen1 == 0:
                 agent1 = UniformAgent(n_iters=n_iters)
             else:
-                agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, model_dir=model_dir)
+                agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, organizer=organizer)
 
             if gen2 == 0:
                 agent2 = UniformAgent(n_iters=n_iters)
             else:
-                agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, model_dir=model_dir)
+                agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, organizer=organizer)
             match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
             matches.append(match)
         return matches

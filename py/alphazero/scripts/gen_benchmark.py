@@ -1,6 +1,7 @@
-from alphazero.logic.benchmarking import DirectoryOrganizer, BenchmarkCommittee
+from alphazero.logic.benchmarking import  BenchmarkCommittee
 from alphazero.logic.match_runner import MatchRunner
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from util.py_util import CustomHelpFormatter
 
@@ -24,10 +25,10 @@ def main():
     args = load_args()
     run_params = RunParams.create(args)
     n_games = args.n_games
-    organizer = DirectoryOrganizer(run_params.game, run_params.tag, db_name=args.db_name)
-    benchmark_committee = BenchmarkCommittee(organizer, load_past_data=True)
+    organizer = DirectoryOrganizer(run_params)
+    benchmark_committee = BenchmarkCommittee(organizer, args.db_name, load_past_data=True)
     matches = MatchRunner.linspace_matches(args.gen_start, args.gen_end, n_iters=args.n_iters, freq=args.freq, n_games=n_games, \
-        model_dir=organizer.model_dir)
+        organizer=organizer)
     benchmark_committee.play_matches(matches)
     ratings = benchmark_committee.compute_ratings()
     print(ratings)

@@ -14,13 +14,13 @@ class RatingDB:
         self.db_conn_pool = DatabaseConnectionPool(db_path, constants.BENCHMARKING_TABLE_CREATE_CMDS)
 
     @staticmethod
-    def build_agent_from_row(gen, n_iters, model_dir: str=None) -> Agent:
+    def build_agent_from_row(gen, n_iters, organizer: str=None) -> Agent:
         if gen == -1:
             return PerfectAgent(strength=n_iters)
         elif gen == 0:
             return UniformAgent(n_iters=n_iters)
         else:
-            return MCTSAgent(gen=gen, n_iters=n_iters, model_dir=model_dir)
+            return MCTSAgent(gen=gen, n_iters=n_iters, organizer=organizer)
 
     @staticmethod
     def get_gen_iter_from_agent(agent: Agent):

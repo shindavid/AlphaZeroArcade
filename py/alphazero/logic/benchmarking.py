@@ -2,6 +2,7 @@ from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 
 import networkx as nx
@@ -13,39 +14,28 @@ from typing import List, Tuple
 
 logger = get_logger()
 
-class DirectoryOrganizer:
-    def __init__(self, game, tag, db_name=None):
-        self.game = game
-        self.tag = tag
-        if db_name is None:
-            self.db_name = 'benchmark'
-        else:
-            self.db_name = db_name
-
-        self.base_dir = os.path.join('/workspace/repo')
-        self.output_dir = os.path.join(self.base_dir, 'output', game, tag)
-        self.db_dir = os.path.join(self.output_dir, 'databases')
-        self.binary = os.path.join(self.base_dir, 'target/Release/bin', game)
-        self.model_dir = os.path.join(self.output_dir, 'models')
-
 class BenchmarkCommittee:
-    def __init__(self, organzier: DirectoryOrganizer, load_past_data: bool=False):
+    def __init__(self, organzier: DirectoryOrganizer, db_name, binary: str=None,\
+        load_past_data: bool=False):
+
         self._organizer = organzier
+        self.db_name = db_name
 
         self.W_matrix = np.zeros((0, 0), dtype=float)
         self.G = nx.Graph()
 
-        self.rating_db = RatingDB(self._organizer.db_dir, self._organizer.db_name)
-        self.binary = self._organizer.binary
+        self.rating_db = RatingDB(self._organizer.databases_dir, self.db_name)
+        self.binary = binary if binary else 'target/Release/bin/' + self._organizer.game
         self.ratings = None
+
         if load_past_data:
             self.load_past_data()
 
     def load_past_data(self):
         rows = self.rating_db.fetchall()
         for gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws in rows:
-            agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1, model_dir=self._organizer.model_dir)
-            agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2, model_dir=self._organizer.model_dir)
+            agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1, organizer=self._organizer)
+            agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2, organizer=self._organizer)
             num_games = gen1_wins + gen2_wins + draws
             ix1, _ = self._add_agent_node(agent1)
             ix2, _ = self._add_agent_node(agent2)
@@ -60,24 +50,25 @@ class BenchmarkCommittee:
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
     def play_matches(self, matches: List[Match], additional=False):
-      for match in tqdm(matches):
-        ix1, _ = self._add_agent_node(match.agent1)
-        ix2, _ = self._add_agent_node(match.agent2)
+        iterator = tqdm(matches) if len(matches) > 1 else matches
+        for match in iterator:
+            ix1, _ = self._add_agent_node(match.agent1)
+            ix2, _ = self._add_agent_node(match.agent2)
 
-        if self.G.has_edge(match.agent1, match.agent2):
-          if not additional:
-            n_games_played = self.G.edges[(match.agent1, match.agent2)]['n_games']
-            match.n_games = match.n_games - n_games_played
-          if match.n_games < 1:
-            continue
-        else:
-          self.G.add_edge(match.agent1, match.agent2, n_games=0)
+            if self.G.has_edge(match.agent1, match.agent2):
+                if not additional:
+                    n_games_played = self.G.edges[(match.agent1, match.agent2)]['n_games']
+                    match.n_games = match.n_games - n_games_played
+                if match.n_games < 1:
+                    continue
+            else:
+                self.G.add_edge(match.agent1, match.agent2, n_games=0)
 
-        result = MatchRunner.run_match_helper(match, self.binary)
-        self.W_matrix[ix1, ix2] += result.win + 0.5 * result.draw
-        self.W_matrix[ix2, ix1] += result.loss + 0.5 * result.draw
-        self.G[match.agent1][match.agent2]['n_games'] += match.n_games
-        self.rating_db.commit_counts(match.agent1, match.agent2, result)
+            result = MatchRunner.run_match_helper(match, self.binary)
+            self.W_matrix[ix1, ix2] += result.win + 0.5 * result.draw
+            self.W_matrix[ix2, ix1] += result.loss + 0.5 * result.draw
+            self.G[match.agent1][match.agent2]['n_games'] += match.n_games
+            self.rating_db.commit_counts(match.agent1, match.agent2, result)
 
     def compute_ratings(self):
         assert not nx.is_empty(self.G)
@@ -87,12 +78,14 @@ class BenchmarkCommittee:
         return self.ratings
 
     def sub_committee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None, \
-        exclude_edges: List[Tuple[Agent, Agent]]=None, organizer: DirectoryOrganizer=None)\
+        exclude_edges: List[Tuple[Agent, Agent]]=None, organizer: DirectoryOrganizer=None,\
+            db_name: str=None, binary: str=None)\
             -> 'BenchmarkCommittee':
-        if organizer:
-            sub_committee = BenchmarkCommittee(organizer, load_past_data=False)
-        else:
-            sub_committee = BenchmarkCommittee(self._organizer, load_past_data=False)
+
+        new_organizer = organizer if organizer else self._organizer
+        new_db_name = db_name if db_name else self.db_name
+        new_binary = binary if binary else self.binary
+        sub_committee = BenchmarkCommittee(new_organizer, new_db_name, new_binary, load_past_data=False)
 
         for node in self.G.nodes:
             if include_agents and exclude_agents:
@@ -139,12 +132,3 @@ class BenchmarkCommittee:
         new_matrix[:n, :n] = self.W_matrix
         self.W_matrix = new_matrix
 
-if __name__ == '__main__':
-
-
-    eval_organizer = DirectoryOrganizer(game, tag, db_name='test_eval')
-    evaluation = Evaluation(eval_organizer, benchmark_committee)
-    test_agents = [MCTSAgent(gen=128, n_iters=1, model_dir=organzier.model_dir)]
-    for test_agent in tqdm(test_agents):
-        test_rating = evaluation.evaluate(test_agent, n_games=10, n_steps=10)
-        print(f'{test_agent}: {test_rating}')
