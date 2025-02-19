@@ -86,3 +86,4 @@ class MatchRunner:
         record = extract_match_record(stdout)
         logger.info('Match result: %s', record.get(0))
         return record.get(0)
+
