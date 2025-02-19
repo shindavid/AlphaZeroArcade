@@ -1,7 +1,7 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, RandomAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.rating_db import RatingDB
-from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings, BETA_SCALE_FACTOR
+from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from util.logging_util import get_logger
 
 import networkx as nx
@@ -9,8 +9,7 @@ import numpy as np
 from tqdm import tqdm
 
 import os
-import random
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 logger = get_logger()
 
@@ -61,7 +60,7 @@ class BenchmarkCommittee:
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
     def play_matches(self, matches: List[Match], additional=False):
-      for match in matches:
+      for match in tqdm(matches):
         ix1, _ = self._add_agent_node(match.agent1)
         ix2, _ = self._add_agent_node(match.agent2)
 
@@ -81,6 +80,7 @@ class BenchmarkCommittee:
         self.rating_db.commit_counts(match.agent1, match.agent2, result)
 
     def compute_ratings(self):
+        assert not nx.is_empty(self.G)
         assert nx.is_connected(self.G)
         ratings = compute_ratings(self.W_matrix).tolist()
         self.ratings = {agent: ratings[ix] for agent, ix in self.G.nodes(data='ix')}
@@ -138,58 +138,8 @@ class BenchmarkCommittee:
         new_matrix[:n, :n] = self.W_matrix
         self.W_matrix = new_matrix
 
-class Evaluation:
-    def __init__(self, organizer: DirectoryOrganizer, benchmark_committee: BenchmarkCommittee):
-        self._organizer = organizer
-        self.benchmark_committee = benchmark_committee
-        assert self.benchmark_committee.ratings is not None
-        self.rating_db = RatingDB(self._organizer.db_dir, self._organizer.db_name)
-        self.eval = self.benchmark_committee.sub_committee(organizer=self._organizer)
-        self.benchmark_ratings = dict(sorted(self.benchmark_committee.ratings.items(), key=lambda x: x[1]))
-
-    def interpolate_ratings(self, test_agent: Agent, test_group_elo_ratings: Dict[Agent, float]):
-        interp_table = {v: self.benchmark_committee.ratings[k] for k, v in test_group_elo_ratings.items() if k != test_agent}
-        interp_table = sorted(interp_table.items(), key=lambda x: x[1])
-        interp_table = list(zip(*interp_table))
-        x_values = interp_table[0]
-        y_values = interp_table[1]
-        x = test_group_elo_ratings[test_agent]
-        test_rating = np.interp(x, x_values, y_values)
-        return test_rating
-
-    def evaluate(self, test_agent: Agent, n_games: int=10, n_steps: int=10):
-        representatives = []
-        init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
-        init_match = Match(test_agent, init_benchmark_agent, n_games)
-        self.eval.play_matches([init_match], additional=True)
-        representatives.append(init_benchmark_agent)
-        for _ in range(n_steps):
-            eval_sub_committee = self.eval.sub_committee(include_agents=[test_agent] + list(self.benchmark_committee.G.nodes))
-            eval_sub_committee.compute_ratings()
-            eval_ratings = eval_sub_committee.ratings
-            p = {agent: 1/(1 + np.exp((rating - eval_ratings[test_agent])/BETA_SCALE_FACTOR)) \
-                for agent, rating in eval_ratings.items() if agent != test_agent}
-            weights = {agent: p * (1 - p) for agent, p in p.items()}
-            next_agent = random.choices(list(weights.keys()), weights=list(weights.values()))[0]
-            next_match = Match(test_agent, next_agent, n_games)
-            self.eval.play_matches([next_match], additional=True)
-            representatives.append(next_agent)
-
-        test_group_elo_ratings = eval_sub_committee.ratings
-        test_rating = self.interpolate_ratings(test_agent, test_group_elo_ratings)
-        self.eval.rating_db.commit_rating(test_agent, test_rating, representatives, self._organizer.tag)
-        return test_rating
-
 if __name__ == '__main__':
-    game = 'c4'
-    tag = 'benchmark'
-    n_games = 100
-    organzier = DirectoryOrganizer(game, tag, db_name='benchmark')
-    benchmark_committee = BenchmarkCommittee(organzier, load_past_data=True)
-    matches = MatchRunner.linspace_matches(0, 128, n_iters=100, freq=4, n_games=n_games, \
-        model_dir=organzier.model_dir)
-    benchmark_committee.play_matches(matches)
-    benchmark_committee.compute_ratings()
+
 
     eval_organizer = DirectoryOrganizer(game, tag, db_name='test_eval')
     evaluation = Evaluation(eval_organizer, benchmark_committee)

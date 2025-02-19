@@ -1,7 +1,6 @@
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
-from typing import Union
 from abc import ABC, abstractmethod
 import os
 
@@ -44,7 +43,7 @@ class MCTSAgent(Agent):
         return os.path.join(self.model_dir, f'gen-{self.gen}.pt')
 
 @dataclass(frozen=True)
-class PerfectAgent:
+class PerfectAgent(Agent):
     strength: int = 0
     def __repr__(self):
         return f'Perfect-{self.strength}'
@@ -59,11 +58,11 @@ class PerfectAgent:
         return make_args_str(player_args)
 
 @dataclass(frozen=True)
-class RandomAgent:
+class UniformAgent(Agent):
     n_iters: int = 0
 
     def __repr__(self):
-        return f'Random-{self.n_iters}'
+        return f'Uniform-{self.n_iters}'
 
     def make_player_str(self, set_temp_zero: bool=False) -> str:
         player_args = {
@@ -74,5 +73,3 @@ class RandomAgent:
             '--no-model': None,
         }
         return make_args_str(player_args)
-
-Agent = Union[MCTSAgent, PerfectAgent, RandomAgent]
