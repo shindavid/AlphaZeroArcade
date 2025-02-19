@@ -3,6 +3,7 @@
 # This file should not depend on any repo python files outside of the top-level directory.
 
 from gcloud_common import Help
+from setup_common import get_env_json, update_env_json
 
 import json
 import os
@@ -209,6 +210,52 @@ def gcloud_check_gpu_quota():
     raise SetupException()
 
 
+def gcloud_check_persistent_disk():
+    """
+    Configures the persistent disk the user will use for this project.
+    """
+    env = get_env_json()
+    default_disk_name = env.get('GCP_PERSISTENT_DISK', 'alphazero-arcade-disk')
+    prompt = f'Please enter the name of your gcloud disk [{default_disk_name}]: '
+    disk_name = input(prompt).strip()
+    if not disk_name:
+        disk_name = default_disk_name
+
+    cmd = ["gcloud", "compute", "disks", "describe", disk_name]
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        print(f'Disk {disk_name} does not exist.')
+        print('')
+        print('You are now required to create a gcloud disk for long-term data storage.')
+        print('It will cost approximately $0.04 per GB per month.')
+        print('Time usage is rounded up to the nearest 0.1 seconds.')
+        print('In the future, we may make this disk optional, but for now, it is required.')
+        print('')
+        create_disk = input(f'Would you like to create disk {disk_name}? (Y/n): ')
+        if create_disk.strip().lower() not in ('y', ''):
+            print('Ok, good-bye!')
+            raise SetupException()
+
+        default_disk_size_gb = 2000
+        disk_size_gb = input(f'Enter disk size in GB (default: {default_disk_size_gb}): ')
+        if not disk_size_gb:
+            disk_size_gb = default_disk_size_gb
+
+        cmd = ["gcloud", "compute", "disks", "create", disk_name, f'--size={disk_size_gb}GB']
+        result = subprocess.run(cmd, capture_output=True)
+        if result.returncode != 0:
+            print(f'❌ Failed to create disk {disk_name}.')
+            print(result.stderr.decode())
+            raise SetupException()
+
+        print(f'✅ Disk {disk_name} created successfully.')
+
+    # TODO: validate that the disk zone matches the default zone
+
+    update_env_json({'GCP_PERSISTENT_DISK': disk_name})
+    print(f'✅ Disk {disk_name} set as default.')
+
+
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade GCP setup wizard...')
@@ -222,6 +269,7 @@ def main():
         gcloud_check_project()
         gcloud_check_region_and_zone()
         gcloud_check_gpu_quota()
+        gcloud_check_persistent_disk()
         print('*' * 80)
         print('✅ GCP setup wizard completed successfully!')
     except KeyboardInterrupt:

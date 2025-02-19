@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from gcloud.common import get_gcloud_project
+from gcloud_common import get_gcloud_project
 
 from google.cloud import compute_v1
 

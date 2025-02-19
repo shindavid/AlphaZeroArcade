@@ -12,7 +12,7 @@ platforms (such as Windows, Mac, and Linux), so doing it this way is more portab
 CLI is much simpler and easier to use than the python client library.
 """
 
-from gcloud_common import Help
+from gcloud_common import Defaults, Help, get_gcloud_zone
 from setup_common import LATEST_DOCKER_HUB_IMAGE
 
 import argparse
@@ -26,9 +26,8 @@ class Params:
     add_gpu_to_staging_instance: bool = False
     docker_image: str = 'dshin83/alphazeroarcade:3.1.0'  # TODO: replace w/ LATEST_DOCKER_HUB_IMAGE
     image_name: str = ''
-    image_family: str = 'alphazero-arcade'
-
-    machine_type: str = "n1-standard-8"
+    image_family: str = Defaults.image_family
+    machine_type: str = Defaults.machine_type
 
     # It's ok to over-provision the boot disk size, as it's only temporary, and as the long-term
     # storage cost of the image is only based on the archive size (i.e., the amount of space
@@ -44,7 +43,7 @@ class Params:
     boot_disk_type: str = "pd-ssd"
 
     staging_instance_name: str = 'staging-instance'
-    staging_zone = 'asia-northeast3-b'  # Seoul
+    staging_zone: str = get_gcloud_zone()
 
     @staticmethod
     def create(args) -> 'Params':

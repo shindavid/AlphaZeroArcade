@@ -1,4 +1,12 @@
 import subprocess
+from typing import Optional
+
+
+class Defaults:
+    username = 'devuser'
+    image_family = 'alphazero-arcade'
+    machine_type = 'n1-standard-8'
+    gpu_type = 'nvidia-tesla-t4'
 
 
 class Help:
@@ -13,5 +21,17 @@ class Help:
     quotas_iam_admin_url = 'https://console.cloud.google.com/iam-admin/quotas'
 
 
-def get_gcloud_project():
-    return subprocess.check_output(["gcloud", "config", "get-value", "project"], text=True).strip()
+def get_config_value(key: str) -> Optional[str]:
+    try:
+        cmd = ["gcloud", "config", "get-value", key]
+        return subprocess.check_output(cmd, text=True).strip()
+    except:
+        return None
+
+
+def get_gcloud_project() -> Optional[str]:
+    return get_config_value("project")
+
+
+def get_gcloud_zone() -> Optional[str]:
+    return get_config_value("compute/zone")
