@@ -6,7 +6,8 @@ from util.logging_util import get_logger
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
-from itertools import combinations, product
+from itertools import combinations
+from typing import List
 
 logger = get_logger()
 
@@ -18,8 +19,11 @@ class Match:
 
 class MatchRunner:
     @staticmethod
-    def linspace_matches(gen_start: int, gen_end: int, n_iters: int=100, freq:int =1,\
-      n_games: int =100, organizer: DirectoryOrganizer=None):
+    def linspace_matches(gen_start: int, gen_end: int, n_iters: int=100, freq: int=1,\
+        n_games: int=100, organizer: DirectoryOrganizer=None) -> List[Match]:
+        """
+        Generate a list of matches between agents of different generations based on linear spacing.
+        """
         gens = range(gen_start, gen_end + 1, freq)
         matches = []
         for gen1, gen2 in combinations(gens, 2):
@@ -37,7 +41,12 @@ class MatchRunner:
         return matches
 
     @staticmethod
-    def run_match_helper(match: Match, binary):
+    def run_match_helper(match: Match, binary) -> WinLossDrawCounts:
+        """
+        Run a match between two agents and return the results by running two subprocesses
+        of C++ binaries.
+        """
+        #TODO: add support for running different binaries
         agent1 = match.agent1
         agent2 = match.agent2
         n_games = match.n_games

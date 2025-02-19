@@ -15,6 +15,19 @@ from typing import List, Tuple
 logger = get_logger()
 
 class BenchmarkCommittee:
+    """
+    Manages a collection of Agents, their pairwise matches, and rating calculations.
+
+    This class tracks agents in a networkx.Graph (self.G) where each node is an
+    Agent and edges represent the matches played between those agents. It also keeps
+    a dense result matrix (self.W_matrix) of shape (N, N), where N is the number
+    of unique agents in the committee. For agents i and j, W_matrix[i, j]
+    records the total "partial wins" of agent i over agent j (i.e., wins plus half
+    of the draws). The class can load past match data from a database and incrementally
+    update it by scheduling and playing new matches.
+
+    """
+
     def __init__(self, organzier: DirectoryOrganizer, db_name, binary: str=None,\
         load_past_data: bool=False):
 
@@ -81,6 +94,39 @@ class BenchmarkCommittee:
         exclude_edges: List[Tuple[Agent, Agent]]=None, organizer: DirectoryOrganizer=None,\
             db_name: str=None, binary: str=None)\
             -> 'BenchmarkCommittee':
+        """
+        Create a new BenchmarkCommittee for a subset of agents and edges.
+
+        This method filters the current committee's agents and edges based on the
+        optional lists provided, then constructs a new committee with the filtered data.
+        Any match results in `W_matrix` are copied over for agents (and edges) that remain.
+
+        Args:
+            include_agents (List[Agent], optional):
+                If provided, only these agents (and edges between them) are considered.
+                Defaults to including all agents if not specified.
+            exclude_agents (List[Agent], optional):
+                If provided, these agents (and edges involving them) are excluded from
+                the new committee.
+            exclude_edges (List[Tuple[Agent, Agent]], optional):
+                A list of edges to exclude (in addition to those filtered out by agent
+                exclusion). Each tuple is (agentA, agentB). Defaults to None.
+            organizer (DirectoryOrganizer, optional):
+                A different `DirectoryOrganizer` for the new sub-committee. If omitted,
+                the current committee's organizer is reused.
+            db_name (str, optional):
+                If provided, name of a new database for the sub-committee. Otherwise,
+                the current committee's db_name is used.
+            binary (str, optional):
+                An alternate path to the game executable for the sub-committee. If omitted,
+                the current binary is reused.
+
+        Returns:
+            BenchmarkCommittee:
+                A new `BenchmarkCommittee` instance containing only the filtered subset
+                of agents and edges. Its rating matrix and graph contain data
+                corresponding to the included set of agents.
+        """
 
         new_organizer = organizer if organizer else self._organizer
         new_db_name = db_name if db_name else self.db_name
