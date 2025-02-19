@@ -1,5 +1,6 @@
+from alphazero.logic.agent_types import MCTSAgent, UniformAgent
 from alphazero.logic.benchmarking import  BenchmarkCommittee
-from alphazero.logic.match_runner import MatchRunner
+from alphazero.logic.match_runner import MatchRunner, Match
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
@@ -13,9 +14,9 @@ def load_args():
     RunParams.add_args(parser)
     parser.add_argument('--db_name', type=str, default='benchmark', help='Database name')
     parser.add_argument('--n_games', type=int, default=100, help='Number of games per match')
-    parser.add_argument('--gen_start', type=int, default=0, help='Starting generation for match scheduling')
-    parser.add_argument('--gen_end', type=int, default=128, help='Ending generation for match scheduling')
-    parser.add_argument('--freq', type=int, default=4, help='Frequency of picking generations for match scheduling')
+    # parser.add_argument('--gen_start', type=int, default=0, help='Starting generation for match scheduling')
+    # parser.add_argument('--gen_end', type=int, default=128, help='Ending generation for match scheduling')
+    # parser.add_argument('--freq', type=int, default=4, help='Frequency of picking generations for match scheduling')
     parser.add_argument("-i", '--n_iters', type=int, default=100, help='Number of MCTS iterations')
     return parser.parse_args()
 
@@ -27,9 +28,13 @@ def main():
     n_games = args.n_games
     organizer = DirectoryOrganizer(run_params)
     benchmark_committee = BenchmarkCommittee(organizer, args.db_name, load_past_data=True)
-    matches = MatchRunner.linspace_matches(args.gen_start, args.gen_end, n_iters=args.n_iters, freq=args.freq, n_games=n_games, \
-        organizer=organizer)
-    benchmark_committee.play_matches(matches)
+    last_gen = organizer.get_latest_model_generation()
+    last_agent = MCTSAgent(gen=last_gen, n_iters=args.n_iters, organizer=organizer)
+    uniform_agent = UniformAgent(n_iters=args.n_iters)
+    init_match = Match(uniform_agent, last_agent, n_games)
+    # matches = MatchRunner.linspace_matches(args.gen_start, args.gen_end, n_iters=args.n_iters, freq=args.freq, n_games=n_games, \
+    #     organizer=organizer)
+    benchmark_committee.play_matches([init_match])
     ratings = benchmark_committee.compute_ratings()
     print(ratings)
 
