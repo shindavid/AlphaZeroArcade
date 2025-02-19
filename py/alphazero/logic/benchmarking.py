@@ -1,16 +1,15 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent
+from alphazero.logic.agent_types import Agent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from util.graph_util import transitive_closure
 from util.logging_util import get_logger
 
-import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
-import os
-from typing import List, Tuple
+from typing import List
 
 logger = get_logger()
 
@@ -35,7 +34,7 @@ class BenchmarkCommittee:
         self.db_name = db_name
 
         self.W_matrix = np.zeros((0, 0), dtype=float)
-        self.G = nx.Graph()
+        self.agent_ix = {}
 
         self.rating_db = RatingDB(self._organizer.databases_dir, self.db_name)
         self.binary = binary if binary else 'target/Release/bin/' + self._organizer.game
@@ -49,14 +48,8 @@ class BenchmarkCommittee:
         for gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws in rows:
             agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1, organizer=self._organizer)
             agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2, organizer=self._organizer)
-            num_games = gen1_wins + gen2_wins + draws
             ix1, _ = self._add_agent_node(agent1)
             ix2, _ = self._add_agent_node(agent2)
-
-            if self.G.has_edge(agent1, agent2):
-                self.G.edges[(agent1, agent2)]['n_games'] += num_games
-            else:
-                self.G.add_edge(agent1, agent2, n_games=num_games)
 
             counts = WinLossDrawCounts(gen1_wins, gen2_wins, draws)
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
@@ -68,38 +61,34 @@ class BenchmarkCommittee:
             ix1, _ = self._add_agent_node(match.agent1)
             ix2, _ = self._add_agent_node(match.agent2)
 
-            if self.G.has_edge(match.agent1, match.agent2):
+            if self.W_matrix[ix1, ix2] > 0 or self.W_matrix[ix2, ix1] > 0:
                 if not additional:
-                    n_games_played = self.G.edges[(match.agent1, match.agent2)]['n_games']
+                    n_games_played = self.W_matrix[ix1, ix2] + self.W_matrix[ix2, ix1]
                     match.n_games = match.n_games - n_games_played
                 if match.n_games < 1:
                     continue
-            else:
-                self.G.add_edge(match.agent1, match.agent2, n_games=0)
 
             result = MatchRunner.run_match_helper(match, self.binary)
             self.W_matrix[ix1, ix2] += result.win + 0.5 * result.draw
             self.W_matrix[ix2, ix1] += result.loss + 0.5 * result.draw
-            self.G[match.agent1][match.agent2]['n_games'] += match.n_games
             self.rating_db.commit_counts(match.agent1, match.agent2, result)
 
     def compute_ratings(self):
-        assert not nx.is_empty(self.G)
-        assert nx.is_connected(self.G)
+        assert self.W_matrix.shape[0] > 0
+        assert np.all(transitive_closure(self.W_matrix))
         ratings = compute_ratings(self.W_matrix).tolist()
-        self.ratings = {agent: ratings[ix] for agent, ix in self.G.nodes(data='ix')}
+        self.ratings = {agent: ratings[ix] for agent, ix in self.agent_ix.items()}
         return self.ratings
 
     def sub_committee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None, \
-        exclude_edges: List[Tuple[Agent, Agent]]=None, organizer: DirectoryOrganizer=None,\
-            db_name: str=None, binary: str=None)\
-            -> 'BenchmarkCommittee':
+        organizer: DirectoryOrganizer=None, db_name: str=None, binary: str=None)\
+        -> 'BenchmarkCommittee':
         """
-        Create a new BenchmarkCommittee for a subset of agents and edges.
+        Create a new BenchmarkCommittee for a subset of agents.
 
-        This method filters the current committee's agents and edges based on the
+        This method filters the current committee's agents based on the
         optional lists provided, then constructs a new committee with the filtered data.
-        Any match results in `W_matrix` are copied over for agents (and edges) that remain.
+        Any match results in W_matrix are copied over for agents that remain.
 
         Args:
             include_agents (List[Agent], optional):
@@ -108,9 +97,6 @@ class BenchmarkCommittee:
             exclude_agents (List[Agent], optional):
                 If provided, these agents (and edges involving them) are excluded from
                 the new committee.
-            exclude_edges (List[Tuple[Agent, Agent]], optional):
-                A list of edges to exclude (in addition to those filtered out by agent
-                exclusion). Each tuple is (agentA, agentB). Defaults to None.
             organizer (DirectoryOrganizer, optional):
                 A different `DirectoryOrganizer` for the new sub-committee. If omitted,
                 the current committee's organizer is reused.
@@ -124,8 +110,7 @@ class BenchmarkCommittee:
         Returns:
             BenchmarkCommittee:
                 A new `BenchmarkCommittee` instance containing only the filtered subset
-                of agents and edges. Its rating matrix and graph contain data
-                corresponding to the included set of agents.
+                of agents.
         """
 
         new_organizer = organizer if organizer else self._organizer
@@ -133,42 +118,32 @@ class BenchmarkCommittee:
         new_binary = binary if binary else self.binary
         sub_committee = BenchmarkCommittee(new_organizer, new_db_name, new_binary, load_past_data=False)
 
-        for node in self.G.nodes:
+        for agent in self.agent_ix:
             if include_agents and exclude_agents:
-                assert not (node in include_agents and node in exclude_agents)
-            if exclude_agents and node in exclude_agents:
+                assert not (agent in include_agents and agent in exclude_agents)
+            if exclude_agents and agent in exclude_agents:
                 continue
-            if not include_agents or node in include_agents:
-                ix, is_new_node = sub_committee._add_agent_node(node)
+            if not include_agents or agent in include_agents:
+                new_ix, is_new_node = sub_committee._add_agent_node(agent)
                 assert is_new_node
-                assert sub_committee.W_matrix.shape[0] == ix + 1, f'{sub_committee.W_matrix.shape[0]} != {ix + 1}'
+                assert sub_committee.W_matrix.shape[0] == new_ix + 1
 
-        for edge in self.G.edges:
-            if exclude_agents and (edge[0] in exclude_agents or edge[1] in exclude_agents):
-                continue
-
-            if exclude_edges and (edge[0], edge[1]) in exclude_edges:
-                continue
-
-            if not include_agents or (edge[0] in include_agents and edge[1] in include_agents):
-                ix1 = self.G.nodes[edge[0]]['ix']
-                ix2 = self.G.nodes[edge[1]]['ix']
-                sub_ix1 = sub_committee.G.nodes[edge[0]]['ix']
-                sub_ix2 = sub_committee.G.nodes[edge[1]]['ix']
-                sub_committee.G.add_edge(edge[0], edge[1], n_games=self.W_matrix[ix1, ix2] + self.W_matrix[ix2, ix1])
-                sub_committee.W_matrix[sub_ix1, sub_ix2] = self.W_matrix[ix1, ix2]
-                sub_committee.W_matrix[sub_ix2, sub_ix1] = self.W_matrix[ix2, ix1]
+        for agent_i, i in sub_committee.agent_ix.items():
+            for agent_j, j in sub_committee.agent_ix.items():
+                old_i = self.agent_ix[agent_i]
+                old_j = self.agent_ix[agent_j]
+                sub_committee.W_matrix[i, j] = self.W_matrix[old_i, old_j]
 
         return sub_committee
 
     def _add_agent_node(self, agent: Agent) -> int:
-        if agent not in self.G.nodes:
-            ix = len(self.G.nodes)
-            self.G.add_node(agent, ix=ix)
+        if agent not in self.agent_ix:
+            ix = len(self.agent_ix)
+            self.agent_ix[agent] = ix
             self._expand_matrix()
             is_new_node = True
         else:
-            ix = self.G.nodes[agent]['ix']
+            ix = self.agent_ix[agent]
             is_new_node = False
         return ix, is_new_node
 
