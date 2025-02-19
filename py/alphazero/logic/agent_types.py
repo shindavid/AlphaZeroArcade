@@ -1,3 +1,4 @@
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
@@ -19,7 +20,7 @@ class Agent(ABC):
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: int = 0
-    model_dir: str = None
+    organizer: DirectoryOrganizer = None
 
     def __repr__(self):
         return f'{self.gen}-{self.n_iters}'
@@ -40,7 +41,7 @@ class MCTSAgent(Agent):
         return make_args_str(player_args)
 
     def get_model_path(self) -> str:
-        return os.path.join(self.model_dir, f'gen-{self.gen}.pt')
+        return os.path.join(self.organizer.models_dir, f'gen-{self.gen}.pt')
 
 @dataclass(frozen=True)
 class PerfectAgent(Agent):
