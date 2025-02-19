@@ -12,6 +12,15 @@ from typing import Dict
 import random
 
 class Evaluation:
+    """
+    Evaluates test agents against a benchmark committee.
+
+    This class uses a reference BenchmarkCommittee that has already computed
+    ratings for a set of benchmark Agents. It then creates a sub-committee for
+    playing additional matches involving a new test , saves the match results to its own
+    database, and finally returns an interpolated rating for the test Agent
+    on the original benchmark's rating scale.
+    """
     def __init__(self, organizer: DirectoryOrganizer, benchmark_committee: BenchmarkCommittee,\
         db_name, binary: str=None):
 
@@ -25,7 +34,16 @@ class Evaluation:
             db_name=self.db_name, binary=self.binary)
         self.benchmark_ratings = dict(sorted(self.benchmark_committee.ratings.items(), key=lambda x: x[1]))
 
-    def interpolate_ratings(self, test_agent: Agent, test_group_elo_ratings: Dict[Agent, float]):
+    def interpolate_ratings(self, test_agent: Agent, test_group_elo_ratings: Dict[Agent, float])\
+        -> float:
+        """
+        Interpolates the test agent's rating from a local sub-committee scale to the original
+        benchmark committee's rating scale.
+
+        The approach maps the test agent's rating in test_group_elo_ratings onto the known
+        benchmark rating scale by linear interpolation.
+        """
+
         interp_table = {v: self.benchmark_committee.ratings[k] for k, v in test_group_elo_ratings.items() if k != test_agent}
         interp_table = sorted(interp_table.items(), key=lambda x: x[1])
         interp_table = list(zip(*interp_table))
@@ -35,7 +53,7 @@ class Evaluation:
         test_rating = np.interp(x, x_values, y_values)
         return test_rating
 
-    def evaluate(self, test_agent: Agent, n_games: int=10, n_steps: int=10):
+    def evaluate(self, test_agent: Agent, n_games: int=10, n_steps: int=10) -> float:
         representatives = []
         init_benchmark_agent = random.choice(list(self.benchmark_committee.G.nodes))
         init_match = Match(test_agent, init_benchmark_agent, n_games)

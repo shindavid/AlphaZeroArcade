@@ -58,6 +58,10 @@ class PerfectAgent(Agent):
 
 @dataclass(frozen=True)
 class UniformAgent(Agent):
+    """
+    An agent that plays according to a uniform distribution over legal moves. It still uses
+    MCTS to select moves, but it does not use a model. Therefore, it has the parameter n_iters.
+    """
     n_iters: int = 0
 
     def __repr__(self):
