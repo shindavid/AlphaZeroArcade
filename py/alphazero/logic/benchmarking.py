@@ -84,6 +84,7 @@ class BenchmarkCommittee:
         assert nx.is_connected(self.G)
         ratings = compute_ratings(self.W_matrix).tolist()
         self.ratings = {agent: ratings[ix] for agent, ix in self.G.nodes(data='ix')}
+        return self.ratings
 
     def sub_committee(self, include_agents: List[Agent]=None, exclude_agents: List[Agent]=None, \
         exclude_edges: List[Tuple[Agent, Agent]]=None, organizer: DirectoryOrganizer=None)\
