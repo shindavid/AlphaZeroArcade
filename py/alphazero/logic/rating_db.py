@@ -1,51 +1,134 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, PerfectAgent, UniformAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
-from typing import List
-import os
+from dataclasses import dataclass
+from typing import Iterator, Tuple
+
+
+@dataclass
+class AgentEntry:
+    gen: int
+    n_iters: int
+    set_temp_zero: bool
+    binary_filename: str
+    model_filename: str
+
+
+@dataclass
+class Entry:
+    gen1: int
+    gen2: int
+    gen_iters1: int
+    gen_iters2: int
+    gen1_wins: int
+    gen2_wins: int
+    draws: int
+    binary1: str
+    binary2: str
+    model_file1: str
+    model_file2: str
+    is_zero_temp1: bool
+    is_zero_temp2: bool
+
 
 class RatingDB:
     def __init__(self, db_filename: str):
         self.db_filename = db_filename
         self.db_conn_pool = DatabaseConnectionPool(db_filename,\
-            constants.BENCHMARKING_TABLE_CREATE_CMDS)
+            constants.ARENA_TABLE_CREATE_CMDS)
 
     @staticmethod
-    def build_agent_from_row(gen, n_iters, organizer: str=None) -> Agent:
-        if gen == -1:
-            return PerfectAgent(strength=n_iters)
-        elif gen == 0:
-            return UniformAgent(n_iters=n_iters)
+    def entry_to_agent_entries(entry: Entry) -> Tuple[AgentEntry, AgentEntry]:
+        agent1 = AgentEntry(entry.gen1,
+                            entry.gen_iters1,
+                            entry.is_zero_temp1,
+                            entry.binary1,
+                            entry.model_file1)
+        agent2 = AgentEntry(entry.gen2,
+                            entry.gen_iters2,
+                            entry.is_zero_temp2,
+                            entry.binary2,
+                            entry.model_file2)
+        return agent1, agent2
+
+    @staticmethod
+    def entry_to_counts(entry: Entry) -> WinLossDrawCounts:
+        return WinLossDrawCounts(entry.gen1_wins, entry.gen2_wins, entry.draws)
+
+    @staticmethod
+    def build_agents_from_entry(entry: AgentEntry) -> Agent:
+        if entry.gen == -1:
+            type_str, strength_param = entry.model_filename.split('-')
+            strength = entry.n_iters
+            binary_filename = entry.binary_filename
+            return ReferenceAgent(type_str,
+                                  strength_param,
+                                  strength,
+                                  binary_filename)
         else:
-            return MCTSAgent(gen=gen, n_iters=n_iters, organizer=organizer)
+            return MCTSAgent(entry.gen,
+                             entry.n_iters,
+                             entry.set_temp_zero,
+                             entry.binary_filename,
+                             entry.model_filename)
 
     @staticmethod
-    def get_gen_iter_from_agent(agent: Agent):
+    def get_entry_from_agent(agent: Agent):
         if isinstance(agent, MCTSAgent):
-            return agent.gen, agent.n_iters
-        elif isinstance(agent, PerfectAgent):
-            return -1, agent.strength
-        elif isinstance(agent, UniformAgent):
-            return 0, agent.n_iters
+            gen = agent.gen
+            n_iters = agent.n_iters
+            set_temp_zero = agent.set_temp_zero
+            binary_filename = agent.binary_filename
+            model_filename = agent.model_filename
+        elif isinstance(agent, ReferenceAgent):
+            gen = -1
+            n_iters = agent.strength
+            set_temp_zero = None
+            binary_filename = agent.binary_filename
+            model_filename = f'{agent.type_str}-{agent.strength_param}'
+        return Entry(gen, n_iters, set_temp_zero, binary_filename, model_filename)
 
-    def fetchall(self) -> List:
+    def fetchall(self) -> Iterator[Agent, Agent, WinLossDrawCounts]:
         conn = self.db_conn_pool.get_connection()
-        c = conn.cursor()
-        res = c.execute('SELECT gen1, gen2, gen_iters1, gen_iters2, \
-          gen1_wins, gen2_wins, draws FROM matches')
-        rows = res.fetchall()
-        return rows
+        try:
+            c = conn.cursor()
+            c.execute('SELECT gen1, gen2, gen_iters1, gen_iters2, \
+                gen1_wins, gen2_wins, draws, binary1, binary2, model_file1, model_file2, \
+                    is_zero_temp1, is_zero_temp2 FROM matches')
+            for row in c:
+                agent_entry1, agent_entry2 = RatingDB.entry_to_agent_entries(Entry(*row))
+                agent1 = RatingDB.build_agents_from_entry(agent_entry1)
+                agent2 = RatingDB.build_agents_from_entry(agent_entry2)
+                counts = RatingDB.entry_to_counts(Entry(*row))
+                yield agent1, agent2, counts
+
+        finally:
+            conn.close()
 
     def commit_counts(self, agent1: Agent, agent2: Agent, record: WinLossDrawCounts):
         conn = self.db_conn_pool.get_connection()
-        gen1, n_iters1 = RatingDB.get_gen_iter_from_agent(agent1)
-        gen2, n_iters2 = RatingDB.get_gen_iter_from_agent(agent2)
-        match_tuple = (gen1, gen2, n_iters1, n_iters2, record.win, record.loss, record.draw)
+        entry1: AgentEntry = RatingDB.get_entry_from_agent(agent1)
+        entry2: AgentEntry = RatingDB.get_entry_from_agent(agent2)
+        match_tuple = (entry1.gen,
+                       entry2.gen,
+                       entry1.n_iters,
+                       entry2.n_iters,
+                       record.win,
+                       record.loss,
+                       record.draw,
+                       entry1.binary_filename,
+                       entry2.binary_filename,
+                       entry1.model_filename,
+                       entry2.model_filename,
+                       entry1.set_temp_zero,
+                       entry2.set_temp_zero)
         c = conn.cursor()
-        c.execute('INSERT INTO matches (gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws) \
-                  VALUES (?, ?, ?, ?, ?, ?, ?)', match_tuple)
+        c.execute('INSERT INTO matches \
+            (gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws, \
+                binary1, binary2, model_file1, model_file2, is_zero_temp1, is_zero_temp2) \
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
     def commit_rating(self, agent, rating, benchmark_agents, benchmark_tag):

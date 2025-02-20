@@ -24,6 +24,7 @@ class MCTSAgent(Agent):
     set_temp_zero: bool = False
     binary_filename: str = None
     model_filename: str = None
+
     def __repr__(self):
         return f'{self.gen}-{self.n_iters}'
 
@@ -52,14 +53,16 @@ class ReferenceAgent(Agent):
     type_str: str
     strength_param: str
     strength: int
+    binary_filename: str = None
 
     def __repr__(self):
         return f'{self.type_str}-{self.strength}'
 
     def make_player_str(self) -> str:
         player_args = {
-            '--type': 'Perfect',
+            '--type': self.type_str,
             '--name': self.__repr__(),
             f'--{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
+

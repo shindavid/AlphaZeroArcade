@@ -117,7 +117,9 @@ ARENA_TABLE_CREATE_CMDS = [
             binary1 TEXT,
             binary2 TEXT,
             model_file1 TEXT,
-            model_file2 TEXT
+            model_file2 TEXT,
+            is_zero_temp1 INT,
+            is_zero_temp2 INT
             )""",
 
     """CREATE TABLE IF NOT EXISTS ratings (
