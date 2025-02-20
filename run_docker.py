@@ -149,8 +149,37 @@ def run_container(args):
 
 def run_container_gcp(args):
     output_dir = '/persistent-disk/output'
+    os.makedirs(output_dir, exist_ok=True)
+
     docker_image = args.docker_image
-    pass
+    if not docker_image:
+        docker_image = os.getenv['DEFAULT_DOCKER_IMAGE']
+
+    if not args.skip_image_version_check:
+        if not check_image_version(docker_image):
+            return
+
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
+              '-v', f"{output_dir}:/workspace/output"]
+
+    ports_strs = []
+    for port in EXPOSED_PORTS:
+        ports_strs += ['-p', f"{port}:{port}"]
+
+    user_id = subprocess.check_output(["id", "-u"], text=True).strip()
+    group_id = subprocess.check_output(["id", "-g"], text=True).strip()
+
+    # Build the docker run command
+    docker_cmd = [
+        "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
+        "-e", f"HOST_UID={user_id}",
+        "-e", f"HOST_GID={group_id}",
+        "-e", "USERNAME=devuser",
+    ] + ports_strs + mounts + [
+        docker_image
+    ]
+
+    launch_docker_cmd(docker_cmd, run=True)
 
 
 def launch_docker_cmd(docker_cmd, run: bool):

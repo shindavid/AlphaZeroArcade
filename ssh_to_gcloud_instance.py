@@ -15,6 +15,9 @@ from setup_common import get_env_json
 
 import argparse
 from dataclasses import dataclass, fields
+import os
+from pathlib import Path
+import shlex
 import subprocess
 
 
@@ -56,14 +59,29 @@ def load_args() -> Params:
 def main():
     params = load_args()
 
-    # First cp gcloud/.bashrc to the instance
+    # chdir to the directory of this script
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    # First, do an initial ssh to the instance to do the following:
+    #
+    # 1. Run "sudo usermod -aG docker $USER"
+    # 2. Copy gcloud/default_bashrc to ~/.bashrc
+    #
+    # Ideally, these are executed only once when the user is created on the instance. But I couldn't
+    # get that to work properly, so I'm doing it here.
+
+    default_bashrc_str = Path('gcloud/default_bashrc').read_text().strip()
+
     cmd = [
-        'gcloud', 'compute', 'scp', f'gcloud/default_bashrc',
-        f'{params.username}@{params.instance}:~/.bashrc',
-        f'--zone={params.zone}',
+        "gcloud", "compute", "ssh", f"{params.username}@{params.instance}",
+        f"--zone={params.zone}",
+        "--command",
+        f"sudo usermod -aG docker $USER; echo {shlex.quote(default_bashrc_str)} > ~/.bashrc"
     ]
-    cmd_str = ' '.join(cmd)
-    print(f'Running: {cmd_str}')
+
+    cmd_str = " ".join(cmd)
+    print(f"Running: {cmd_str}")
+
     subprocess.run(cmd, check=True, capture_output=True)
 
     cmd = [

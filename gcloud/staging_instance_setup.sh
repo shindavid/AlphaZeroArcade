@@ -77,14 +77,14 @@ EOF
 
 # Non-escaped-write
 sudo tee -a /opt/project/bashrc_extras > /dev/null << EOF
-DEFAULT_DOCKER_IMAGE=$DOCKER_IMAGE
+export DEFAULT_DOCKER_IMAGE=$DOCKER_IMAGE
 EOF
 
 # Escaped write
 sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
 
 # So that we can detect if we're in a GCP environment
-GCP=1
+export GCP=1
 
 # Show git branch name with dirty bit inside parentheses
 
