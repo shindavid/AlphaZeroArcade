@@ -63,6 +63,7 @@ pip3 install --upgrade packaging
 # -Override PS1 to be more informative
 # -If root owns /persistent-disk, sudo chown it to $USER
 # -If root owns /local-ssd, sudo chown it to $USER
+sudo mkdir -p /opt/project
 sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
 
 ##########################
