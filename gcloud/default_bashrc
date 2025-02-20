@@ -1,0 +1,4 @@
+# Default bashrc to be used by GCP instances
+
+source /etc/skel/.bashrc
+source /opt/project/bashrc_extras

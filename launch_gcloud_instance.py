@@ -84,6 +84,7 @@ def main():
         '--maintenance-policy=TERMINATE',
         # TODO: preemptible option
         '--metadata-from-file=startup-script=gcp_instance_startup.sh',
+        f'--image-project={Defaults.a0a_project}',
     ]
 
     if params.image_name:
@@ -99,13 +100,14 @@ def main():
     print('')
     print('Press enter to continue...')
     input()
+    print('Launching. This may take a few minutes...')
     subprocess.run(cmd, check=True)
     print('')
     print('✅ Successfully launched gcloud instance!')
     print('')
     print('To connect to this instance, please run:')
     print('')
-    print(f'./ssh_to_gcloud_instance.py -i {params.name}')
+    print('./ssh_to_gcloud_instance.py')
     print('')
     print('To monitor, please visit: https://console.cloud.google.com/compute/instances')
     print('')

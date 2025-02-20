@@ -11,7 +11,7 @@ CLI is much simpler and easier to use than the python client library.
 """
 
 from gcloud_common import Defaults, get_gcloud_zone
-from setup_common import get_env_json, update_env_json
+from setup_common import get_env_json
 
 import argparse
 from dataclasses import dataclass, fields
@@ -20,7 +20,7 @@ import subprocess
 
 @dataclass
 class Params:
-    username = Defaults.username
+    username: str = Defaults.username
     instance: str = get_env_json().get('GCP_INSTANCE', None)
     zone: str = get_gcloud_zone()
 
@@ -56,42 +56,24 @@ def load_args() -> Params:
 def main():
     params = load_args()
 
+    # First cp gcloud/.bashrc to the instance
     cmd = [
-        'gcloud', 'compute', 'instances', 'create', params.name,
+        'gcloud', 'compute', 'scp', f'gcloud/default_bashrc',
+        f'{params.username}@{params.instance}:~/.bashrc',
         f'--zone={params.zone}',
-        f'--machine-type={params.machine_type}',
-        f'--accelerator=type={params.gpu_type},count={params.gpu_count}',
-        f'--disk=name={params.disk_name},mode={params.disk_mode}',
-        '--local-ssd=interface=nvme',  # TODO: options for this
-        '--maintenance-policy=TERMINATE',
-        # TODO: preemptible option
-        '--metadata-from-file=startup-script=gcp_instance_startup.sh',
+    ]
+    cmd_str = ' '.join(cmd)
+    print(f'Running: {cmd_str}')
+    subprocess.run(cmd, check=True, capture_output=True)
+
+    cmd = [
+        'gcloud', 'compute', 'ssh', f'{params.username}@{params.instance}',
+        f'--zone={params.zone}',
     ]
 
-    if params.image_name:
-        cmd.append(f'--image={params.image_name}')
-    else:
-        cmd.append(f'--image-family={params.image_family}')
-
     cmd_str = ' '.join(cmd)
-    print(f'About to run command: {cmd_str}')
-    print('')
-    print('TODO: provide an estimate of the hourly cost of this instance.')
-    print('TODO: warn user to delete the instance when done.')
-    print('')
-    print('Press enter to continue...')
-    input()
+    print(f'Running: {cmd_str}')
     subprocess.run(cmd, check=True)
-    print('')
-    print('✅ Successfully launched gcloud instance!')
-    print('')
-    print('To connect to this instance, please run:')
-    print('')
-    print(f'./ssh_to_gcloud_instance.py -i {params.name}')
-    print('')
-    print('To monitor, please visit: https://console.cloud.google.com/compute/instances')
-    print('')
-    update_env_json({'GCP_INSTANCE': params.name})
 
 
 if __name__ == "__main__":

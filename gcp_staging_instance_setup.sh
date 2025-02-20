@@ -63,7 +63,12 @@ pip3 install --upgrade packaging
 # -Override PS1 to be more informative
 # -If root owns /persistent-disk, sudo chown it to $USER
 # -If root owns /local-ssd, sudo chown it to $USER
-cat << 'EOF' >> /etc/skel/.bashrc
+sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
+
+##########################
+# AlphaZeroArcade extras #
+##########################
+
 # Show git branch name with dirty bit inside parentheses
 
 # Variables to cache Git state
@@ -105,23 +110,13 @@ PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[0
   fi
 )\[\033[00m\]\$ '
 
-# enable color support of ls and also add handy aliases
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-fi
-
 # chown /persistent-disk and /local-ssd if root owns them
 if [ "$(stat -c %U /persistent-disk)" = "root" ]; then
-    sudo chown $USER:(id -gn $USER) /persistent-disk
+    sudo chown $USER:$(id -gn $USER) /persistent-disk
 fi
 
 if [ "$(stat -c %U /local-ssd)" = "root" ]; then
-    sudo chown $USER:(id -gn $USER) /local-ssd
+    sudo chown $USER:$(id -gn $USER) /local-ssd
 fi
 
 EOF
