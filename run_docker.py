@@ -109,7 +109,10 @@ def run_container(args):
 
     output_dir = Path(output_dir)
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
-    post_mount_cmds = ['mkdir -p ~/scratch']
+    post_mount_cmds = [
+        'mkdir -p ~/scratch',
+        # 'ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519',
+        ]
 
     # Check if output_dir is inside REPO_ROOT
     if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
@@ -134,15 +137,14 @@ def run_container(args):
         "-e", f"HOST_UID={user_id}",
         "-e", f"HOST_GID={group_id}",
         "-e", "USERNAME=devuser",
-        "-e", "LOCAL=true",
+        "-e", "PLATFORM=native",
     ] + ports_strs + mounts + [
         docker_image
     ]
 
-    if post_mount_cmds:
-        entrypoint_cmd = " && ".join(post_mount_cmds)
-        entrypoint_cmd += "; exec bash"
-        docker_cmd += ["bash", "-c", entrypoint_cmd]
+    entrypoint_cmd = " && ".join(post_mount_cmds)
+    entrypoint_cmd += "; exec bash"
+    docker_cmd += ["bash", "-c", entrypoint_cmd]
 
     launch_docker_cmd(docker_cmd, run=True)
 
@@ -177,6 +179,7 @@ def run_container_gcp(args):
         "-e", f"HOST_UID={user_id}",
         "-e", f"HOST_GID={group_id}",
         "-e", "USERNAME=devuser",
+        "-e", "PLATFORM=gcp",
     ] + ports_strs + mounts + [
         docker_image
     ]
@@ -223,12 +226,15 @@ def main():
     if is_container_running(args.instance_name):
         execute_into_container(args.instance_name)
     else:
-        gcp = os.getenv('GCP', None)
+        platform = os.getenv('A0A_PLATFORM', 'native')
 
-        if gcp is None:
+        if platform == 'native':
             run_container(args)
-        else:
+        elif platform == 'gcp':
             run_container_gcp(args)
+        else:
+            print(f"Unknown platform: {platform}")
+            return
 
 
 if __name__ == "__main__":

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-GCP=1
-
 if [[ -b /dev/sdb ]] && ! mountpoint -q /persistent-disk; then
     sudo mkfs.ext4 -F /dev/sdb
     sudo mkdir -p /persistent-disk

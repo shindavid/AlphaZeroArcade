@@ -84,7 +84,7 @@ EOF
 sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
 
 # So that we can detect if we're in a GCP environment
-export GCP=1
+export A0A_PLATFORM=gcp
 
 # Show git branch name with dirty bit inside parentheses
 
@@ -134,11 +134,6 @@ fi
 
 if [ "$(stat -c %U /local-ssd)" = "root" ]; then
     sudo chown $USER:$(id -gn $USER) /local-ssd
-fi
-
-# set up ssh keys
-if [[ ! -f ~/.ssh/id_ed25519 ]]; then
-    ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
 fi
 
 EOF

@@ -3,6 +3,13 @@ set -e
 
 echo "Setting up devuser environment in home: $HOME"
 
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+echo "Host *
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts" > ~/.ssh/config
+cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+sudo service ssh start
+
 # write .sqliterc:
 cat << 'EOF' >> ~/.sqliterc
 .mode column
