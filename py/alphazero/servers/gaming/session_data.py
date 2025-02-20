@@ -102,7 +102,7 @@ class SessionData:
         logger.info('Received client id assignment: %s', self._client_id)
 
     def get_log_filename(self, src: str):
-        return os.path.join('/home/devuser/logs', self.game, self.tag, src,
+        return os.path.join('/home/devuser/scratch/logs', self.game, self.tag, src,
                             f'{src}-{self.client_id}.log')
 
     def start_log_sync(self, log_filename):

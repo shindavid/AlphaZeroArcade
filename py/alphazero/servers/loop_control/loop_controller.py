@@ -61,24 +61,24 @@ class LoopController:
         # On cloud setups like runpod.io or GCP, we typically have access to two filesystems:
         #
         # 1. A fast local filesystem, which is wiped after each session.
-        # 2. A slow network filesystem, whose contents persist across sessions.
+        # 2. A slow persistent filesystem, whose contents persist across sessions.
         #
         # On such setups, we work with the local filesystem, assumed to be available at
-        # /home/devuser/, and periodically sync to the network filesystem, assumed to be available
+        # ~/scratch/, and periodically sync to the persistent filesystem, assumed to be available
         # at /workspace/.
         #
         # On other setups, we solely work on /workspace/, which is assumed to be the local
         # filesystem.
         #
         # For now, we detect whether we are on a cloud setup (referred to as an "ephemeral local
-        # disk env") by checking if /home/devuser and /workspace are on the same filesystem. If we
+        # disk env") by checking if ~/scratch and /workspace are on the same filesystem. If we
         # encounter environments where this does not work as intended, we can rethink this.
-        home_dev_user_fs = os.stat('/home/devuser').st_dev
+        scratch_fs = os.stat('/home/devuser/scratch').st_dev
         workspace_fs = os.stat('/workspace').st_dev
-        self._on_ephemeral_local_disk_env = (home_dev_user_fs != workspace_fs)
+        self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs)
 
         if self._on_ephemeral_local_disk_env:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
             self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
         else:
             self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')

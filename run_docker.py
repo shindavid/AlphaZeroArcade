@@ -70,7 +70,7 @@ def is_container_running(container_name):
 
 
 def execute_into_container(container_name):
-    docker_cmd = ["docker", "exec", "-it", container_name, "bash"]
+    docker_cmd = ["docker", "exec", "-it", container_name, 'gosu', 'devuser', 'bash']
     launch_docker_cmd(docker_cmd, run=False)
 
 
@@ -109,7 +109,7 @@ def run_container(args):
 
     output_dir = Path(output_dir)
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
-    post_mount_cmds = []
+    post_mount_cmds = ['mkdir -p ~/scratch']
 
     # Check if output_dir is inside REPO_ROOT
     if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
@@ -160,7 +160,9 @@ def run_container_gcp(args):
             return
 
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
-              '-v', f"{output_dir}:/workspace/output"]
+              '-v', f"{output_dir}:/workspace/output",
+              '-v', "/local-ssd:~/scratch",
+              ]
 
     ports_strs = []
     for port in EXPOSED_PORTS:

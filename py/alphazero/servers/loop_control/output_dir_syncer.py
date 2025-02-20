@@ -24,15 +24,14 @@ class OutputDirSyncer:
     filesystem is typically significantly faster.
 
     In such environments, we configure the network filesystem to be mounted at /workspace, while
-    /home/devuser maps to the local filesystem. Our general workflow is to do all our work on the
+    ~/scratch maps to the local filesystem. Our general workflow is to do all our work on the
     local filesystem, and syncing to the network filesystem to facilitate restarts and post-run
     analysis. On restarts, we copy the network filesystem contents back to the local filesystem.
 
     We want such syncing mechanics to happen automatically behind-the-scenes, transparent to the
     user. This is the purpose of the OutputDirSyncer class.
 
-    On non-cloud-compute-environments, the OutputDirSyncer is a no-op: we simply soft-link a
-    directory on /workspace to /home/devuser for consistency.
+    On non-cloud-compute-environments, the OutputDirSyncer is a no-op.
 
     On cloud-compute-environments, the OutputDirSyncer behaves by syncing the local filesystem to
     the network filesystem periodically, in a separate thread. The syncing operation needs to be

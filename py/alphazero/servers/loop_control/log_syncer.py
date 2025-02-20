@@ -34,7 +34,7 @@ class LogSyncer:
         """
         tokens = remote_log_filename.split('/')
 
-        # Remote log format: /home/devuser/logs/{game}/{tag}/{src}/{src}-{client_id}.log
+        # Remote log format: .../logs/{game}/{tag}/{src}/{src}-{client_id}.log
         game = tokens[-4]
         tag = tokens[-3]
         src = tokens[-2]

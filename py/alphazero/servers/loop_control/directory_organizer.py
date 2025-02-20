@@ -97,7 +97,7 @@ class ForkInfo:
 
 
 class DirectoryOrganizer:
-    def __init__(self, args: RunParams, base_dir_root='/home/devuser'):
+    def __init__(self, args: RunParams, base_dir_root='/home/devuser/scratch'):
         """
         This constructor should not actually do any filesystem reading or writing. It should just
         set data members corresonding to expected filesystem paths.
