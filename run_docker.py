@@ -162,7 +162,7 @@ def run_container_gcp(args):
 
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
               '-v', f"{output_dir}:/workspace/output",
-              '-v', "/local-ssd:/home/devuser/scratch",
+              '-v', "/local-ssd:/scratch",
               ]
     post_mount_cmds = [
         f"ln -sf /scratch ~/scratch",
