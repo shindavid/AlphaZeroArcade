@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument("-s", '--skip-image-version-check', action='store_true',
                         help='skip image version check')
     parser.add_argument("-d", '--docker-image',
-                        help='name of the docker image to use (default: comes from .env.json)')
+                        help='name of the docker image to use (optional)')
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
@@ -147,6 +147,12 @@ def run_container(args):
     launch_docker_cmd(docker_cmd, run=True)
 
 
+def run_container_gcp(args):
+    output_dir = '/persistent-disk/output'
+    docker_image = args.docker_image
+    pass
+
+
 def launch_docker_cmd(docker_cmd, run: bool):
     if run:
         msg = 'Running Docker container'
@@ -186,7 +192,12 @@ def main():
     if is_container_running(args.instance_name):
         execute_into_container(args.instance_name)
     else:
-        run_container(args)
+        gcp = os.getenv('GCP', None)
+
+        if gcp is None:
+            run_container(args)
+        else:
+            run_container_gcp(args)
 
 
 if __name__ == "__main__":

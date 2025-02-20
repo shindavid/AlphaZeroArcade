@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# docker-image is passed in as first argument
+DOCKER_IMAGE=$1
+
 sudo apt-get update && sudo apt-get upgrade -y
 
 # Set up 32G swap
@@ -64,11 +67,24 @@ pip3 install --upgrade packaging
 # -If root owns /persistent-disk, sudo chown it to $USER
 # -If root owns /local-ssd, sudo chown it to $USER
 sudo mkdir -p /opt/project
-sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
 
+# Escaped write
+sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
 ##########################
 # AlphaZeroArcade extras #
 ##########################
+EOF
+
+# Non-escaped-write
+sudo tee -a /opt/project/bashrc_extras > /dev/null << EOF
+DEFAULT_DOCKER_IMAGE=$DOCKER_IMAGE
+EOF
+
+# Escaped write
+sudo tee -a /opt/project/bashrc_extras > /dev/null << 'EOF'
+
+# So that we can detect if we're in a GCP environment
+GCP=1
 
 # Show git branch name with dirty bit inside parentheses
 

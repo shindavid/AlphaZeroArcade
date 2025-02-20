@@ -164,7 +164,7 @@ def configure_staging_instance(params: Params):
     # Run the setup script on the staging instance
     subprocess.run([
         "gcloud", "compute", "ssh", f"stager@{params.staging_instance_name}",
-        "--command", "bash staging_instance_setup.sh",
+        "--command", f"bash staging_instance_setup.sh {params.docker_image}",
     ], check=True)
 
     print('✅ Setup script ran successfully!')
