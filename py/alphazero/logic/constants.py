@@ -104,7 +104,7 @@ RATINGS_TABLE_CREATE_CMDS = [
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (tag, mcts_gen)""",
 ]
 
-BENCHMARKING_TABLE_CREATE_CMDS = [
+ARENA_TABLE_CREATE_CMDS = [
     """CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             gen1 INT,
@@ -113,7 +113,11 @@ BENCHMARKING_TABLE_CREATE_CMDS = [
             gen_iters2 INT,
             gen1_wins INT,
             gen2_wins INT,
-            draws INT
+            draws INT,
+            binary1 TEXT,
+            binary2 TEXT,
+            model_file1 TEXT,
+            model_file2 TEXT
             )""",
 
     """CREATE TABLE IF NOT EXISTS ratings (

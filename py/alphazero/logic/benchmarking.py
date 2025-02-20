@@ -9,11 +9,13 @@ from util.logging_util import get_logger
 import numpy as np
 from tqdm import tqdm
 
-from typing import List
+from typing import List, Dict
+
 
 logger = get_logger()
 
-class BenchmarkCommittee:
+
+class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
 
@@ -25,6 +27,12 @@ class BenchmarkCommittee:
     of the draws). The class can load past match data from a database and incrementally
     update it by scheduling and playing new matches.
 
+    At any point, we will have R reference agents and M mcts agents.
+
+    self.W_matrix: np.ndarray of shape (R+M, R+M)
+    self.agents_lookup: Dict[Agent, int] of size R+M
+    self.mcts_agents: List[MctsAgent] of size M, sorted by gen
+    self.ratings: List[float] of size R+M
     """
 
     def __init__(self, organzier: DirectoryOrganizer, db_name, binary: str=None,\
@@ -33,27 +41,89 @@ class BenchmarkCommittee:
         self._organizer = organzier
         self.db_name = db_name
 
-        self.W_matrix = np.zeros((0, 0), dtype=float)
-        self.agent_ix = {}
+        self.arena = Arena()
 
-        self.rating_db = RatingDB(self._organizer.databases_dir, self.db_name)
+        self.W_matrix = np.zeros((0, 0), dtype=float)
+        self.agent_ix: Dict[Agent, int] = {}
+
+        self.rating_db = RatingDB(self._organizer.benchmark_db_filename)
         self.binary = binary if binary else 'target/Release/bin/' + self._organizer.game
-        self.ratings = None
+        self.ratings = None  # 1D np.ndarray
 
         if load_past_data:
             self.load_past_data()
 
     def load_past_data(self):
+        # rows = self.rating_db.fetchall()
+        # for gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws in rows:
+        #     agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1)
+        #     agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2)
+        #     ix1, _ = self._add_agent_node(agent1)
+        #     ix2, _ = self._add_agent_node(agent2)
+
+        #     counts = WinLossDrawCounts(gen1_wins, gen2_wins, draws)
+        #     self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
+        #     self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+
+        wld_dict = {}
         rows = self.rating_db.fetchall()
         for gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws in rows:
-            agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1, organizer=self._organizer)
-            agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2, organizer=self._organizer)
-            ix1, _ = self._add_agent_node(agent1)
-            ix2, _ = self._add_agent_node(agent2)
+            agent1 = RatingDB.build_agent_from_row(gen1, gen_iters1)
+            agent2 = RatingDB.build_agent_from_row(gen2, gen_iters2)
+            ix1, _ = self._add_agent_node(agent1, expand=False)
+            ix2, _ = self._add_agent_node(agent2, expand=False)
 
             counts = WinLossDrawCounts(gen1_wins, gen2_wins, draws)
+            wld_dict[(ix1, ix2)] = counts
+
+        self._init_W_matrix(len(self.agent_ix))
+        for (ix1, ix2), counts in wld_dict.items():
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+
+    def run(self):
+        while True:
+            match = self.get_next_match()
+            if match is None:
+                break
+            self.run_match(match)
+
+    def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
+        """
+        At any point, the sorted list of mcts-ratings looks like:
+
+        gen_1, rating_1
+        gen_2, rating_2
+        ...
+        gen_n, rating_n
+
+        with rating_1 <= rating_2 <= ... <= rating_n
+
+        Among all i in the range [1...n] with the property that g_i + 1 < G_i, identifies the one
+        for which rating_{i_1} - rating_i is maximal, and returns the corresponding gap.
+
+        Here,
+
+        g_i = min(gen_i, gen_{i+1})
+        G_i = max(gen_i, gen_{i+1})
+
+        If no such i exists, returns None.
+
+        NOTE: if we want to do partial-gens (i.e., use -i/--num-mcts-iters), then we can change this
+        appropriately.
+        """
+        pass
+
+    def get_next_match(self):
+        if self.no_matches_yet():
+            last_gen = self.organizer.get_latest_model_generation()
+            return self.create_match(0, last_gen)
+
+        gap = self.get_biggest_mcts_ratings_gap()
+        if gap is None or gap.elo_differential < self.elo_threshold:
+            return None
+
+        return self.create_match(gap.left_gen, gap.right_gen)
 
     def play_matches(self, matches: List[Match], additional=False):
         iterator = tqdm(matches) if len(matches) > 1 else matches
@@ -136,20 +206,5 @@ class BenchmarkCommittee:
 
         return sub_committee
 
-    def _add_agent_node(self, agent: Agent) -> int:
-        if agent not in self.agent_ix:
-            ix = len(self.agent_ix)
-            self.agent_ix[agent] = ix
-            self._expand_matrix()
-            is_new_node = True
-        else:
-            ix = self.agent_ix[agent]
-            is_new_node = False
-        return ix, is_new_node
 
-    def _expand_matrix(self):
-        n = self.W_matrix.shape[0]
-        new_matrix = np.zeros((n + 1, n + 1), dtype=float)
-        new_matrix[:n, :n] = self.W_matrix
-        self.W_matrix = new_matrix
 

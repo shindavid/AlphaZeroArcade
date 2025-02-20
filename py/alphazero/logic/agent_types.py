@@ -1,9 +1,11 @@
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.str_util import make_args_str
 
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 import os
+from typing import Dict
+
 
 class Agent(ABC):
     """
@@ -11,69 +13,53 @@ class Agent(ABC):
     command-line arguments for the player.
     """
     @abstractmethod
-    def make_player_str(self):
+    def make_player_str(self, organizer: DirectoryOrganizer):
         pass
+
 
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: int = 0
-    organizer: DirectoryOrganizer = None
-
+    set_temp_zero: bool = False
+    binary_filename: str = None
+    model_filename: str = None
     def __repr__(self):
         return f'{self.gen}-{self.n_iters}'
 
-    def make_player_str(self, set_temp_zero: bool=False) -> str:
+    def make_player_str(self) -> str:
         player_args = {
             '--type': 'MCTS-C',
             '--name': self.__repr__(),
             '-i': self.n_iters,
-            '-m': self.get_model_path(),
             '-n': 1,
         }
 
-        if set_temp_zero:
+        if self.gen == 0:
+            player_args['--no-model'] = None
+        else:
+            player_args['-m'] = self.model_filename
+
+        if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0
             player_args['--ending-move-temp'] = 0
 
         return make_args_str(player_args)
 
-    def get_model_path(self) -> str:
-        return os.path.join(self.organizer.models_dir, f'gen-{self.gen}.pt')
 
 @dataclass(frozen=True)
-class PerfectAgent(Agent):
-    strength: int = 0
-    def __repr__(self):
-        return f'Perfect-{self.strength}'
+class ReferenceAgent(Agent):
+    type_str: str
+    strength_param: str
+    strength: int
 
-    def make_player_str(self, set_temp_zero: bool=False) -> str:
-        strength = self.strength
+    def __repr__(self):
+        return f'{self.type_str}-{self.strength}'
+
+    def make_player_str(self) -> str:
         player_args = {
             '--type': 'Perfect',
             '--name': self.__repr__(),
-            '--strength': strength,
+            f'--{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
-
-@dataclass(frozen=True)
-class UniformAgent(Agent):
-    """
-    An agent that plays according to a uniform distribution over legal moves. It still uses
-    MCTS to select moves, but it does not use a model. Therefore, it has the parameter n_iters.
-    """
-    n_iters: int = 0
-
-    def __repr__(self):
-        return f'Uniform-{self.n_iters}'
-
-    def make_player_str(self, set_temp_zero: bool=False) -> str:
-        player_args = {
-            '--type': 'MCTS-C',
-            '--name': self.__repr__(),
-            '-i': self.n_iters,
-            '-n': 1,
-            '--no-model': None,
-        }
-        return make_args_str(player_args)
-

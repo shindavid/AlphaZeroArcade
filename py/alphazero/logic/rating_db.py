@@ -7,11 +7,10 @@ from typing import List
 import os
 
 class RatingDB:
-    def __init__(self, db_dir: str, db_name: str=None):
-        self.db_dir = db_dir
-        self.db_name = db_name
-        db_path = os.path.join(db_dir, db_name + '.db')
-        self.db_conn_pool = DatabaseConnectionPool(db_path, constants.BENCHMARKING_TABLE_CREATE_CMDS)
+    def __init__(self, db_filename: str):
+        self.db_filename = db_filename
+        self.db_conn_pool = DatabaseConnectionPool(db_filename,\
+            constants.BENCHMARKING_TABLE_CREATE_CMDS)
 
     @staticmethod
     def build_agent_from_row(gen, n_iters, organizer: str=None) -> Agent:

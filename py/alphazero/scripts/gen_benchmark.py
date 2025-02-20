@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import MCTSAgent, UniformAgent
-from alphazero.logic.benchmarking import  BenchmarkCommittee
+from alphazero.logic.benchmarking import  Benchmarker
 from alphazero.logic.match_runner import MatchRunner, Match
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -27,14 +27,8 @@ def main():
     run_params = RunParams.create(args)
     n_games = args.n_games
     organizer = DirectoryOrganizer(run_params)
-    benchmark_committee = BenchmarkCommittee(organizer, args.db_name, load_past_data=True)
-    last_gen = organizer.get_latest_model_generation()
-    last_agent = MCTSAgent(gen=last_gen, n_iters=args.n_iters, organizer=organizer)
-    uniform_agent = UniformAgent(n_iters=args.n_iters)
-    init_match = Match(uniform_agent, last_agent, n_games)
-    # matches = MatchRunner.linspace_matches(args.gen_start, args.gen_end, n_iters=args.n_iters, freq=args.freq, n_games=n_games, \
-    #     organizer=organizer)
-    benchmark_committee.play_matches([init_match])
+    benchmark_committee = Benchmarker(organizer, args.db_name, load_past_data=True)
+    benchmark_committee.run()
     ratings = benchmark_committee.compute_ratings()
     print(ratings)
 
