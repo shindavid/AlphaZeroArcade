@@ -32,6 +32,8 @@ class Params:
     disk_name: str = get_env_json().get('GCP_PERSISTENT_DISK', None)
     disk_mode: str = 'rw'
 
+    preemptible: bool = False
+
     @staticmethod
     def create(args) -> 'Params':
         kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
@@ -63,6 +65,8 @@ class Params:
                            help='Name of the disk to attach (default: %(default)s)')
         group.add_argument('-D', '--disk-mode', default=defaults.disk_mode,
                            help='Disk mode to attach (default: %(default)s)')
+        group.add_argument('-p', '--preemptible', action='store_true',
+                           help='Create a preemptible instance')
 
 
 def load_args() -> Params:
@@ -82,10 +86,12 @@ def main():
         f'--disk=name={params.disk_name},mode={params.disk_mode}',
         '--local-ssd=interface=nvme',  # TODO: options for this
         '--maintenance-policy=TERMINATE',
-        # TODO: preemptible option
         '--metadata-from-file=startup-script=gcloud/instance_startup.sh',
         f'--image-project={Defaults.a0a_project}',
     ]
+
+    if params.preemptible:
+        cmd.append('--preemptible')
 
     if params.image_name:
         cmd.append(f'--image={params.image_name}')
