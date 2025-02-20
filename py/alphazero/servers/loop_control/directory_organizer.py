@@ -120,6 +120,8 @@ class DirectoryOrganizer:
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
+        self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
+        self.binary_filename = os.path.join(self.base_dir, game)
 
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
 
