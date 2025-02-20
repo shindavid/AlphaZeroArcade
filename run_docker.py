@@ -111,7 +111,6 @@ def run_container(args):
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
     post_mount_cmds = [
         'mkdir -p ~/scratch',
-        # 'ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519',
         ]
 
     # Check if output_dir is inside REPO_ROOT
@@ -155,7 +154,7 @@ def run_container_gcp(args):
 
     docker_image = args.docker_image
     if not docker_image:
-        docker_image = os.getenv['DEFAULT_DOCKER_IMAGE']
+        docker_image = os.getenv('DEFAULT_DOCKER_IMAGE')
 
     if not args.skip_image_version_check:
         if not check_image_version(docker_image):
@@ -163,8 +162,11 @@ def run_container_gcp(args):
 
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
               '-v', f"{output_dir}:/workspace/output",
-              '-v', "/local-ssd:~/scratch",
+              '-v', "/local-ssd:/home/devuser/scratch",
               ]
+    post_mount_cmds = [
+        f"ln -sf /scratch ~/scratch",
+        ]
 
     ports_strs = []
     for port in EXPOSED_PORTS:
@@ -183,6 +185,10 @@ def run_container_gcp(args):
     ] + ports_strs + mounts + [
         docker_image
     ]
+
+    entrypoint_cmd = " && ".join(post_mount_cmds)
+    entrypoint_cmd += "; exec bash"
+    docker_cmd += ["bash", "-c", entrypoint_cmd]
 
     launch_docker_cmd(docker_cmd, run=True)
 
