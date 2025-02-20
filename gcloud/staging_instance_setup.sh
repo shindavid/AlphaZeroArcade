@@ -136,4 +136,9 @@ if [ "$(stat -c %U /local-ssd)" = "root" ]; then
     sudo chown $USER:$(id -gn $USER) /local-ssd
 fi
 
+# set up ssh keys
+if [[ ! -f ~/.ssh/id_ed25519 ]]; then
+    ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+fi
+
 EOF

@@ -17,6 +17,7 @@ fi
 echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 if [ "$LOCAL" = "true" ]; then
+  ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
   mkdir -p /workspace
   chown $USERNAME:$USERNAME /workspace
 fi
