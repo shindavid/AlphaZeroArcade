@@ -157,7 +157,7 @@ def configure_staging_instance(params: Params):
 
     # Copy the setup script to the staging instance
     subprocess.run([
-        "gcloud", "compute", "scp", "gcp_staging_instance_setup.sh",
+        "gcloud", "compute", "scp", "gcloud/gcp_staging_instance_setup.sh",
         f"stager@{params.staging_instance_name}:~/"
     ], check=True)
 
@@ -181,7 +181,7 @@ def configure_staging_instance(params: Params):
 
     # Copy the cleanup script to the staging instance
     subprocess.run([
-        "gcloud", "compute", "scp", "gcp_staging_instance_cleanup.sh",
+        "gcloud", "compute", "scp", "gcloud/gcp_staging_instance_cleanup.sh",
         f"stager@{params.staging_instance_name}:~/"
     ], check=True)
 

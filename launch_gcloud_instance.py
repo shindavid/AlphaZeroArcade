@@ -83,7 +83,7 @@ def main():
         '--local-ssd=interface=nvme',  # TODO: options for this
         '--maintenance-policy=TERMINATE',
         # TODO: preemptible option
-        '--metadata-from-file=startup-script=gcp_instance_startup.sh',
+        '--metadata-from-file=startup-script=gcloud/gcp_instance_startup.sh',
         f'--image-project={Defaults.a0a_project}',
     ]
 
