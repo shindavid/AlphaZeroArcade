@@ -94,7 +94,7 @@ def main():
             if i == retry_count - 1:
                 print(f'Giving up after {retry_count} retries!')
                 raise e
-            print("Cmd failed. This might be because he instance is still starting up.")
+            print("Cmd failed. This might be because the instance is still starting up.")
             print(f"Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
 
