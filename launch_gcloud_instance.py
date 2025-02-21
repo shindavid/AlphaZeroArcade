@@ -15,7 +15,9 @@ from setup_common import get_env_json, update_env_json
 
 import argparse
 from dataclasses import dataclass, fields
+import shlex
 import subprocess
+from typing import Optional
 
 
 @dataclass
@@ -26,7 +28,7 @@ class Params:
     name: str = 'compute-instance'
     zone: str = get_gcloud_zone()
     machine_type: str = Defaults.machine_type
-    gpu_type: str = Defaults.gpu_type
+    gpu_type: Optional[str] = Defaults.gpu_type
     gpu_count: int = 1
 
     disk_name: str = get_env_json().get('GCP_PERSISTENT_DISK', None)
@@ -58,9 +60,11 @@ class Params:
         group.add_argument('-m', '--machine-type', default=defaults.machine_type,
                            help='Machine type to create the instance with (default: %(default)s)')
         group.add_argument('-g', '--gpu-type', default=defaults.gpu_type,
-                           help='GPU type to create the instance with (default: %(default)s)')
-        group.add_argument('-c', '--gpu-count', default=defaults.gpu_count,
-                           help='Number of GPUs to create the instance with (default: %(default)s)')
+                           help='GPU type to create the instance with (default: %(default)s). '
+                                'This is only needed for machine types that lack a GPU by default.')
+        group.add_argument('-c', '--gpu-count', default=defaults.gpu_count, type=int,
+                           help='Number of GPUs to create the instance with (default: %(default)s).'
+                                ' Only used if -g/--gpu-type is specified.')
         group.add_argument('-d', '--disk-name', default=defaults.disk_name,
                            help='Name of the disk to attach (default: %(default)s)')
         group.add_argument('-D', '--disk-mode', default=defaults.disk_mode,
@@ -82,13 +86,15 @@ def main():
         'gcloud', 'compute', 'instances', 'create', params.name,
         f'--zone={params.zone}',
         f'--machine-type={params.machine_type}',
-        f'--accelerator=type={params.gpu_type},count={params.gpu_count}',
-        f'--disk=name={params.disk_name},mode={params.disk_mode}',
+        f'--disk=name={params.disk_name},mode={params.disk_mode},boot=no,auto-delete=no',
         '--local-ssd=interface=nvme',  # TODO: options for this
         '--maintenance-policy=TERMINATE',
         '--metadata-from-file=startup-script=gcloud/instance_startup.sh',
         f'--image-project={Defaults.a0a_project}',
     ]
+
+    if params.gpu_type:
+        cmd.append(f'--accelerator=type={params.gpu_type},count={params.gpu_count}')
 
     if params.preemptible:
         cmd.append('--preemptible')
@@ -98,7 +104,7 @@ def main():
     else:
         cmd.append(f'--image-family={params.image_family}')
 
-    cmd_str = ' '.join(cmd)
+    cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
     print(f'About to run command: {cmd_str}')
     print('')
     print('TODO: provide an estimate of the hourly cost of this instance.')

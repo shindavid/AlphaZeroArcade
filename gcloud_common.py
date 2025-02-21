@@ -6,8 +6,8 @@ class Defaults:
     username = 'devuser'
     image_family = 'alphazero-arcade'
     a0a_project = 'nimble-chess-450406-q7'
-    machine_type = 'n1-standard-8'
-    gpu_type = 'nvidia-tesla-t4'
+    machine_type = 'a2-highgpu-1g'
+    gpu_type = None
 
 
 class Help:

@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 import shlex
 import subprocess
+import time
 
 
 @dataclass
@@ -79,17 +80,30 @@ def main():
         f"sudo usermod -aG docker $USER; echo {shlex.quote(default_bashrc_str)} > ~/.bashrc"
     ]
 
-    cmd_str = " ".join(cmd)
+    cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
     print(f"Running: {cmd_str}")
 
-    subprocess.run(cmd, check=True, capture_output=True)
+    # Retry a few times in case the instance is not ready yet.
+    retry_count = 5
+    sleep_time = 5
+    for i in range(retry_count):
+        try:
+            subprocess.run(cmd, check=True, capture_output=True)
+            break
+        except subprocess.CalledProcessError as e:
+            if i == retry_count - 1:
+                print(f'Giving up after {retry_count} retries!')
+                raise e
+            print("Cmd failed. This might be because he instance is still starting up.")
+            print(f"Retrying in {sleep_time} seconds...")
+            time.sleep(sleep_time)
 
     cmd = [
         'gcloud', 'compute', 'ssh', f'{params.username}@{params.instance}',
         f'--zone={params.zone}',
     ]
 
-    cmd_str = ' '.join(cmd)
+    cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
     print(f'Running: {cmd_str}')
     subprocess.run(cmd, check=True)
 

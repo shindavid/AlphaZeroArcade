@@ -5,13 +5,6 @@ DOCKER_IMAGE=$1
 
 sudo apt-get update && sudo apt-get upgrade -y
 
-# Set up 32G swap
-sudo fallocate -l 32G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
-
 # NVIDIA Driver
 sudo apt-get install -y linux-headers-$(uname -r)
 curl https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin \
