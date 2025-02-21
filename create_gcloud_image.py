@@ -24,7 +24,7 @@ import time
 @dataclass
 class Params:
     add_gpu_to_staging_instance: bool = False
-    docker_image: str = 'dshin83/alphazeroarcade:3.3.0'  # TODO: replace w/ LATEST_DOCKER_HUB_IMAGE
+    docker_image: str = LATEST_DOCKER_HUB_IMAGE
     image_name: str = ''
     image_family: str = Defaults.image_family
     machine_type: str = Defaults.machine_type
