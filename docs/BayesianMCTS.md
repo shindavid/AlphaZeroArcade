@@ -75,8 +75,8 @@ This is a very strange way to implement this function! It begs many questions:
 Let us build a better `update_posterior()` method.
 
 It will be useful to introduce another statistic: a measure of the _uncertainty_ of `Q`. We will call this `U` (for "uncertainty"). 
-Intuitively, we want it to estimate how much change we expect in `Q` if we perform another visit to the node. That is, if $R$
-is a random variable corresponding to the amount that `n.stats.Q` will change by on the next visit to node `n`, we want
+Intuitively, we want it to estimate how much change we expect in `Q` if we perform more visits to the node. That is, if $R$
+is a random variable corresponding to the amount that `n.stats.Q` will change by on the next $k$ visits to node `n`, we want
 `n.stats.U` to correspond to the variance of $R$. We want `U` to be initialized by a neural network estimate, and we want
 to derive a precise update rule  for `U` - the details of this should be flushed out later.
 
