@@ -21,5 +21,7 @@ if [ "$PLATFORM" = "native" ]; then
   chown $USERNAME:$USERNAME /workspace
 fi
 
+service ssh start
+
 gosu "$USERNAME" /usr/local/bin/devuser-setup.sh
 exec gosu "$USERNAME" "$@"

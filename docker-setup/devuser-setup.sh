@@ -8,7 +8,6 @@ echo "Host *
     StrictHostKeyChecking accept-new
     UserKnownHostsFile ~/.ssh/known_hosts" > ~/.ssh/config
 cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
-sudo service ssh start
 
 # write .sqliterc:
 cat << 'EOF' >> ~/.sqliterc
