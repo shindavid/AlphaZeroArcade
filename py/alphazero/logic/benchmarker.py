@@ -88,7 +88,7 @@ class Benchmarker:
 
         mcts_ratings = r[mcts_agent_ix]
         # primary key is mcts_agent_gens, secondary key is mcts_ratings
-        sorted_ix = np.lexsort((mcts_ratings, mcts_agent_gens))
+        sorted_ix = np.argsort(mcts_agent_gens)
         gaps = np.abs(np.diff(mcts_ratings[sorted_ix]))
 
         sorted_gap_ix = np.argsort(gaps)[::-1]
