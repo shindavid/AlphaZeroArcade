@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, PerfectAgent, UniformAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
@@ -27,21 +27,19 @@ class MatchRunner:
         gens = range(gen_start, gen_end + 1, freq)
         matches = []
         for gen1, gen2 in combinations(gens, 2):
-            if gen1 == 0:
-                agent1 = UniformAgent(n_iters=n_iters)
-            else:
-                agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, organizer=organizer)
+            agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, set_temp_zero=True, \
+                binary_filename=organizer.binary_filename, \
+                    model_filename=organizer.get_model_filename(gen1))
 
-            if gen2 == 0:
-                agent2 = UniformAgent(n_iters=n_iters)
-            else:
-                agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, organizer=organizer)
+            agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, set_temp_zero=True, \
+                binary_filename=organizer.binary_filename, \
+                    model_filename=organizer.get_model_filename(gen2))
             match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
             matches.append(match)
         return matches
 
     @staticmethod
-    def run_match_helper(match: Match, binary) -> WinLossDrawCounts:
+    def run_match_helper(match: Match) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -53,8 +51,8 @@ class MatchRunner:
         if n_games < 1:
             return WinLossDrawCounts()
 
-        ps1 = agent1.make_player_str(set_temp_zero=True)
-        ps2 = agent2.make_player_str(set_temp_zero=True)
+        ps1 = agent1.make_player_str()
+        ps2 = agent2.make_player_str()
 
         base_args = {
             '-G': n_games,
@@ -67,7 +65,7 @@ class MatchRunner:
         port = 1234  # TODO: move this to constants.py or somewhere
 
         cmd1 = [
-            binary,
+            agent1.binary_filename,
             '--port', str(port),
             '--player', f'"{ps1}"',
         ]
@@ -75,12 +73,15 @@ class MatchRunner:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            binary,
+            agent2.binary_filename,
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
+
+        print(cmd1)
+        print(cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)

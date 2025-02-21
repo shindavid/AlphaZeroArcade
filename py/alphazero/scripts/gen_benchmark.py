@@ -1,9 +1,8 @@
-from alphazero.logic.agent_types import MCTSAgent, UniformAgent
-from alphazero.logic.benchmarking import  Benchmarker
+from alphazero.logic.agent_types import MCTSAgent, ReferenceAgent
+from alphazero.logic.benchmarker import  Benchmarker
 from alphazero.logic.match_runner import MatchRunner, Match
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from games.game_spec import GameSpec
 from util.py_util import CustomHelpFormatter
 
 from typing import Optional

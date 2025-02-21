@@ -42,10 +42,10 @@ class Benchmarker:
 
     def run(self, n_iters: int=100, elo_threshold: int=100):
         while True:
-            match = self.get_next_match(n_iters, elo_threshold)
-            if match is None:
+            matches = self.get_next_matches(n_iters, elo_threshold)
+            if matches is None:
                 break
-            self.arena.play_matches([match])
+            self.arena.play_matches(matches)
             self.compute_ratings()
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
@@ -73,35 +73,41 @@ class Benchmarker:
         appropriately.
         """
         r = self.ratings.copy()
-        mcts_agent_ix = [i for i, agent in self.arena.agents_lookup.items() if agent not in self.ref_agents]
-        mcts_ratings = r[mcts_agent_ix]
-        sorted_ix = np.argsort(mcts_ratings)
-        gaps = np.diff(mcts_ratings[sorted_ix])
-        max_gap_ix = np.argmax(gaps)
-        max_gap = gaps[max_gap_ix]
-        left_gen = sorted_ix[max_gap_ix]
-        right_gen = sorted_ix[max_gap_ix + 1]
+        mcts_agent_gens, mcts_agent_ix = zip(*[(agent.gen, ix) for agent, ix in \
+            self.arena.agents_lookup.items() if agent not in self.ref_agents])
+        mcts_agent_gens = np.array(mcts_agent_gens)
+        mcts_agent_ix = np.array(mcts_agent_ix)
 
-        if left_gen + 1 < right_gen:
-            return RatingsGap(left_gen, right_gen, max_gap)
+        mcts_ratings = r[mcts_agent_ix]
+        sorted_ix = np.lexsort((mcts_agent_gens, mcts_ratings))
+        gaps = np.diff(mcts_ratings[sorted_ix])
+
+        sorted_gap_ix = np.argsort(gaps)[::-1]
+        for gap_ix in sorted_gap_ix:
+            left_gen = mcts_agent_gens[sorted_ix[gap_ix]]
+            right_gen = mcts_agent_gens[sorted_ix[gap_ix + 1]]
+            if left_gen + 1 < right_gen:
+                return RatingsGap(left_gen, right_gen, gaps[gap_ix])
 
     def compute_ratings(self, eps=1e-6):
         self.ratings = self.arena.compute_ratings(eps=eps)
 
-    def get_next_match(self, n_iters, elo_threshold, n_games: int=100):
+    def get_next_matches(self, n_iters, elo_threshold, n_games: int=100):
         if self.has_no_matches():
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
             last_gen_agent = self.build_agent(last_gen, n_iters)
-            return Match(gen0_agent, last_gen_agent, n_games=n_games)
+            return [Match(gen0_agent, last_gen_agent, n_games=n_games)]
 
         gap = self.get_biggest_mcts_ratings_gap()
         if gap is None or gap.elo_diff < elo_threshold:
             return None
-
+        mid_gen = (gap.left_gen + gap.right_gen) // 2
+        mid_agent = self.build_agent(mid_gen, n_iters)
         left_agent = self.build_agent(gap.left_gen, n_iters)
         right_agent = self.build_agent(gap.right_gen, n_iters)
-        return Match(left_agent, right_agent, n_games=n_games)
+        return [Match(left_agent, mid_agent, n_games=n_games),
+                Match(mid_agent, right_agent, n_games=n_games)]
 
     def build_agent(self, gen: int, n_iters):
         if gen == 0:

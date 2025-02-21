@@ -90,7 +90,7 @@ class RatingDB:
             model_filename = f'{agent.type_str}-{agent.strength_param}'
         return Entry(gen, n_iters, set_temp_zero, binary_filename, model_filename)
 
-    def fetchall(self) -> Iterator[Agent, Agent, WinLossDrawCounts]:
+    def fetchall(self) -> Iterator[Tuple[Agent, Agent, WinLossDrawCounts]]:
         conn = self.db_conn_pool.get_connection()
         try:
             c = conn.cursor()
