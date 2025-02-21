@@ -7,7 +7,9 @@ from setup_common import LATEST_DOCKER_HUB_IMAGE, update_env_json
 import argparse
 from pathlib import Path
 import os
+import pty
 import subprocess
+import sys
 
 
 def get_args():
@@ -19,34 +21,31 @@ def get_args():
 
 def docker_pull(image):
     print(f'Pulling {image}...')
+    cmd = ["docker", "pull", image]
 
-    # Run the docker pull command and capture the output
-    process = subprocess.Popen(
-        ["docker", "pull", image],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True  # Ensures text output (no byte decoding needed)
-    )
+    # Open a pseudo-terminal pair
+    master_fd, slave_fd = pty.openpty()
 
-    captured_output = []  # Store output lines
-    for line in process.stdout:
-        print(line, end="")  # Print dynamically for real-time feedback
-        captured_output.append(line.strip())
+    # Start the subprocess with the slave end as its stdout and stderr.
+    process = subprocess.Popen(cmd, stdout=slave_fd, stderr=slave_fd, universal_newlines=True)
+    os.close(slave_fd)  # close slave fd in the parent process
 
-    process.wait()  # Ensure process finishes
+    # Read from the master end and write to sys.stdout.
+    try:
+        while True:
+            output = os.read(master_fd, 1024)
+            if not output:
+                break
+            sys.stdout.write(output.decode())
+            sys.stdout.flush()
+    except OSError:
+        pass
+    process.wait()
 
     update_env_json({'DOCKER_IMAGE': image})
 
-    output = ''.join(captured_output)
-    # Determine if the image was updated
-    # Common indicators:
-    # - "Status: Image is up to date" means no update
-    # - "Downloaded newer image" or "Status: Downloaded newer image" means updated
-    if "Status: Image is up to date" in output:
-        print('✅ Image was already up-to-date.')
-    elif any(phrase in output for phrase in ["Downloaded newer image", "Status: Downloaded newer image"]):
-        print('✅ Successfully pulled a newer version of the image!')
-        blow_away_target_dir()
+    if process.returncode == 0:
+        print('✅ Docker pull successful.')
     else:
         # Handle unexpected output or errors
         print('❗ Unexpected output from docker pull.')

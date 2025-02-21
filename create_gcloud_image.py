@@ -18,7 +18,6 @@ from setup_common import LATEST_DOCKER_HUB_IMAGE
 import argparse
 from dataclasses import dataclass, fields
 import subprocess
-import sys
 import time
 
 
@@ -175,10 +174,7 @@ def configure_staging_instance(params: Params):
     subprocess.run([
         "gcloud", "compute", "ssh", f"stager@{params.staging_instance_name}",
         "--command", f"docker pull {params.docker_image}",
-    ],
-                   stdout=sys.stdout,  # Allow real-time display of progress
-                   stderr=sys.stderr,
-                   check=True)
+    ], check=True)
 
     # TODO: if params.add_gpu_to_staging_instance is True, perform some tests to verify that the GPU
     # is working correctly.
