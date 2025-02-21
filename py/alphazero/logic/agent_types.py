@@ -21,7 +21,7 @@ class Agent(ABC):
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: int = 0
-    set_temp_zero: bool = False
+    set_temp_zero: bool = None
     binary_filename: str = None
     model_filename: str = None
 

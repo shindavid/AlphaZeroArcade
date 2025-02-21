@@ -88,7 +88,7 @@ class RatingDB:
             set_temp_zero = None
             binary_filename = agent.binary_filename
             model_filename = f'{agent.type_str}-{agent.strength_param}'
-        return Entry(gen, n_iters, set_temp_zero, binary_filename, model_filename)
+        return AgentEntry(gen, n_iters, set_temp_zero, binary_filename, model_filename)
 
     def fetchall(self) -> Iterator[Tuple[Agent, Agent, WinLossDrawCounts]]:
         conn = self.db_conn_pool.get_connection()
@@ -131,13 +131,23 @@ class RatingDB:
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agent, rating, benchmark_agents, benchmark_tag):
+    def commit_rating(self, agent, rating, benchmark_agents=None, benchmark_tag=None):
         conn = self.db_conn_pool.get_connection()
-        gen, n_iters = RatingDB.get_gen_iter_from_agent(agent)
-        benchmark_agents_str = ', '.join([str(a) for a in benchmark_agents])
-        match_tuple = (gen, n_iters, rating, benchmark_tag, benchmark_agents_str)
+        agent_entry = RatingDB.get_entry_from_agent(agent)
+        if benchmark_agents:
+            benchmark_agents_str = ', '.join([str(a) for a in benchmark_agents])
+        else:
+            benchmark_agents_str = None
+
+        entry_tuple = (agent_entry.gen,
+                    agent_entry.n_iters,
+                    rating,
+                    benchmark_tag,
+                    benchmark_agents_str)
         c = conn.cursor()
         c.execute('INSERT INTO ratings (gen, n_iters, rating, benchmark_tag, benchmark_agents) \
-                  VALUES (?, ?, ?, ?, ?)', match_tuple)
+                VALUES (?, ?, ?, ?, ?)', entry_tuple)
         conn.commit()
+
+
 

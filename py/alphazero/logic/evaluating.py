@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import Agent
-from alphazero.logic.benchmarking import  BenchmarkCommittee
+from alphazero.logic.benchmarker import  Benchmarker
 from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import BETA_SCALE_FACTOR
 from alphazero.logic.rating_db import RatingDB

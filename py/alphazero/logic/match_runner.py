@@ -80,9 +80,6 @@ class MatchRunner:
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
-        print(cmd1)
-        print(cmd2)
-
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
 
