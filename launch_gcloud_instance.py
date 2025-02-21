@@ -28,6 +28,7 @@ class Params:
     name: str = 'compute-instance'
     zone: str = get_gcloud_zone()
     machine_type: str = Defaults.machine_type
+    ssd_disk_count: int = 1
     gpu_type: Optional[str] = Defaults.gpu_type
     gpu_count: int = 1
 
@@ -61,10 +62,12 @@ class Params:
                            help='Machine type to create the instance with (default: %(default)s)')
         group.add_argument('-g', '--gpu-type', default=defaults.gpu_type,
                            help='GPU type to create the instance with (default: %(default)s). '
-                                'This is only needed for machine types that lack a GPU by default.')
+                                'Empty-string means omit gpu.')
         group.add_argument('-c', '--gpu-count', default=defaults.gpu_count, type=int,
                            help='Number of GPUs to create the instance with (default: %(default)s).'
-                                ' Only used if -g/--gpu-type is specified.')
+                                ' Only used if -g/--gpu-type is not empty-string.')
+        group.add_argument('-s', '--ssd-disk-count', default=defaults.ssd_disk_count, type=int,
+                           help='Number of SSD disks to create the instance with (default: %(default)s)')
         group.add_argument('-d', '--disk-name', default=defaults.disk_name,
                            help='Name of the disk to attach (default: %(default)s)')
         group.add_argument('-D', '--disk-mode', default=defaults.disk_mode,
@@ -87,11 +90,13 @@ def main():
         f'--zone={params.zone}',
         f'--machine-type={params.machine_type}',
         f'--disk=name={params.disk_name},mode={params.disk_mode},boot=no,auto-delete=no',
-        '--local-ssd=interface=nvme',  # TODO: options for this
         '--maintenance-policy=TERMINATE',
         '--metadata-from-file=startup-script=gcloud/instance_startup.sh',
         f'--image-project={Defaults.a0a_project}',
     ]
+
+    for _ in range(params.ssd_disk_count):
+        cmd.append('--local-ssd=interface=nvme')
 
     if params.gpu_type:
         cmd.append(f'--accelerator=type={params.gpu_type},count={params.gpu_count}')
