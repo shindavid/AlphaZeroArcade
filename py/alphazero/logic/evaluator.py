@@ -1,4 +1,5 @@
 from alphazero.logic.agent_types import Agent
+from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import  Benchmarker
 from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import BETA_SCALE_FACTOR
@@ -14,17 +15,22 @@ import random
 
 
 class Evaluator:
-    def __init__(self):
+    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer,
+                 target_eval_percent: float=0.5):
+        self._organizer = organizer
+        self._benchmark_organizer = benchmark_organizer
+        self.target_eval_percent = target_eval_percent
         self.arena = Arena()
-        self.arena.load_past_matches(benchmark_organizer.benchmark_db_filename)
-        self.arena.load_past_matches(organizer.eval_db_filename)
+        self.arena.load_from_db(benchmark_organizer.benchmark_db_filename)
+        self.arena.load_from_db(organizer.eval_db_filename)
 
     def run(self):
         while True:
             gen = self.get_next_gen_to_eval()
             if gen is None:
                 break
-            self.eval_gen(gen)
+            rating = self.eval_gen(gen)
+            self.arena.commit_ratings_to_db(organizer.eval_db_filename, [gen], [rating])
 
     def get_next_gen_to_eval(self):
         if not self.evaluated(0):

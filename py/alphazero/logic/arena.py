@@ -3,7 +3,6 @@ from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import RatingDB
 
-from tqdm import tqdm
 import numpy as np
 
 from typing import List, Dict
@@ -33,9 +32,8 @@ class Arena:
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
     def play_matches(self, matches: List[Match], additional=False) -> WinLossDrawCounts:
-        iterator = tqdm(matches) if len(matches) > 1 else matches
         counts_list = []
-        for match in iterator:
+        for match in matches:
             ix1, _ = self._add_agent(match.agent1, expand_matrix=True)
             ix2, _ = self._add_agent(match.agent2, expand_matrix=True)
 
@@ -57,6 +55,7 @@ class Arena:
         db.commit_counts(match.agent1, match.agent2, counts)
 
     def commit_ratings_to_db(self, db_filename: str, agents: List[Agent], ratings: np.ndarray):
+        #TODO: add support for commit multiple agents in one connection
         db = RatingDB(db_filename)
         for agent, rating in zip(agents, ratings):
             db.commit_rating(agent, rating)

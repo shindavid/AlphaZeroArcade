@@ -50,9 +50,11 @@ class Benchmarker:
             counts = self.arena.play_matches(matches)
             self.compute_ratings()
             for match, count in zip(matches, counts):
-                self.arena.commit_match_to_db(self._organizer.benchmark_db_filename, match, count)
-        self.arena.commit_ratings_to_db(self._organizer.benchmark_db_filename, \
-            self.arena.agents_lookup.keys(), self.ratings)
+                self.arena.commit_match_to_db(self._organizer.benchmark_db_filename,
+                                              match, count)
+
+        self.arena.commit_ratings_to_db(self._organizer.benchmark_db_filename,
+                                        self.arena.agents_lookup.keys(), self.ratings)
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -87,7 +89,7 @@ class Benchmarker:
         mcts_ratings = r[mcts_agent_ix]
         # primary key is mcts_agent_gens, secondary key is mcts_ratings
         sorted_ix = np.lexsort((mcts_ratings, mcts_agent_gens))
-        gaps = np.diff(mcts_ratings[sorted_ix])
+        gaps = np.abs(np.diff(mcts_ratings[sorted_ix]))
 
         sorted_gap_ix = np.argsort(gaps)[::-1]
         for gap_ix in sorted_gap_ix:
@@ -118,12 +120,15 @@ class Benchmarker:
 
     def build_agent(self, gen: int, n_iters):
         if gen == 0:
-            return MCTSAgent(gen=gen, n_iters=n_iters, \
-                binary_filename=self._organizer.binary_filename)
+            return MCTSAgent(gen=gen,
+                             n_iters=n_iters,
+                             binary_filename=self._organizer.binary_filename)
         else:
-            return MCTSAgent(gen=gen, n_iters=n_iters, set_temp_zero=True, \
-                binary_filename=self._organizer.binary_filename, \
-                model_filename=self._organizer.get_model_filename(gen))
+            return MCTSAgent(gen=gen,
+                             n_iters=n_iters,
+                             set_temp_zero=True,
+                             binary_filename=self._organizer.binary_filename,
+                             model_filename=self._organizer.get_model_filename(gen))
 
     def has_no_matches(self):
         return len(self.arena.agents_lookup) < 2

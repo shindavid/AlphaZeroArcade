@@ -19,22 +19,26 @@ class Match:
 
 class MatchRunner:
     @staticmethod
-    def linspace_matches(gen_start: int, gen_end: int, n_iters: int=100, freq: int=1,\
-        n_games: int=100, organizer: DirectoryOrganizer=None) -> List[Match]:
+    def linspace_matches(gen_start: int, gen_end: int, n_iters: int=100, freq: int=1,
+                         n_games: int=100, organizer: DirectoryOrganizer=None) -> List[Match]:
         """
         Generate a list of matches between agents of different generations based on linear spacing.
         """
         gens = range(gen_start, gen_end + 1, freq)
         matches = []
         for gen1, gen2 in combinations(gens, 2):
-            agent1 = MCTSAgent(gen=gen1, n_iters=n_iters, set_temp_zero=True, \
-                binary_filename=organizer.binary_filename, \
-                    model_filename=organizer.get_model_filename(gen1))
+            agent1 = MCTSAgent(gen=gen1,
+                               n_iters=n_iters,
+                               set_temp_zero=True,
+                               binary_filename=organizer.binary_filename,
+                               model_filename=organizer.get_model_filename(gen1))
 
-            agent2 = MCTSAgent(gen=gen2, n_iters=n_iters, set_temp_zero=True, \
-                binary_filename=organizer.binary_filename, \
-                    model_filename=organizer.get_model_filename(gen2))
-            match = Match(agent1=agent1, agent2=agent2, n_games=n_games)
+            agent2 = MCTSAgent(gen=gen2,
+                               n_iters=n_iters,
+                               set_temp_zero=True,
+                               binary_filename=organizer.binary_filename,
+                               model_filename=organizer.get_model_filename(gen2))
+            match = Match(agent1, agent2, n_games)
             matches.append(match)
         return matches
 

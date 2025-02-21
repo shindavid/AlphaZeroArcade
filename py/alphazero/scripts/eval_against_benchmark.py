@@ -1,6 +1,6 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.benchmarker import DirectoryOrganizer, Benchmarker
-from alphazero.logic.evaluating import Evaluation
+from alphazero.logic.evaluator import Evaluation
 from alphazero.logic.run_params import RunParams
 
 from tqdm import tqdm

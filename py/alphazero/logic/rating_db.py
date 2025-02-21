@@ -36,8 +36,8 @@ class Entry:
 class RatingDB:
     def __init__(self, db_filename: str):
         self.db_filename = db_filename
-        self.db_conn_pool = DatabaseConnectionPool(db_filename,\
-            constants.ARENA_TABLE_CREATE_CMDS)
+        self.db_conn_pool = DatabaseConnectionPool(db_filename,
+                                                   constants.ARENA_TABLE_CREATE_CMDS)
 
     @staticmethod
     def entry_to_agent_entries(entry: Entry) -> Tuple[AgentEntry, AgentEntry]:
