@@ -19,6 +19,7 @@ def get_args():
 
 def docker_pull(image):
     print(f'Pulling {image}...')
+    print('This may take a few minutes.')
 
     # Run the docker pull command and capture the output
     result = subprocess.run(
