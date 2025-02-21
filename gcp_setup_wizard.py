@@ -138,6 +138,9 @@ def gcloud_check_region_and_zone():
             zone = suggested_zone
     else:
         default_zone = result2.stdout.decode().strip()
+        if not default_zone.startswith(region):
+            default_zone = region + '-a'
+
         zone = input(f'Enter zone (default: {default_zone}): ')
         if not zone:
             zone = default_zone
