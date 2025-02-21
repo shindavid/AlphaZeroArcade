@@ -84,8 +84,13 @@ class SessionData:
         self._client_id = data['client_id']
 
         if self.socket.getsockname()[0] == constants.LOCALHOST_IP:
+            on_ephemeral_local_disk_env = data['on_ephemeral_local_disk_env']
             run_params = RunParams(self._game, self._tag)
-            self._directory_organizer = DirectoryOrganizer(run_params)
+            if on_ephemeral_local_disk_env:
+                self._directory_organizer = DirectoryOrganizer(run_params)
+            else:
+                self._directory_organizer = DirectoryOrganizer(run_params,
+                                                               base_dir_root='/workspace')
 
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)
@@ -97,7 +102,7 @@ class SessionData:
         logger.info('Received client id assignment: %s', self._client_id)
 
     def get_log_filename(self, src: str):
-        return os.path.join('/home/devuser/logs', self.game, self.tag, src,
+        return os.path.join('/home/devuser/scratch/logs', self.game, self.tag, src,
                             f'{src}-{self.client_id}.log')
 
     def start_log_sync(self, log_filename):

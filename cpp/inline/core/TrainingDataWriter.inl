@@ -32,8 +32,8 @@ TrainingDataWriter<Game>::TrainingDataWriter(const Params& params)
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
     if (client->is_loop_controller_local()) {
-      if (client->self_play_dir().empty()) {
-        LOG_WARN << "--self-play-dir not set despite using a local loop controller";
+      if (client->output_base_dir().empty()) {
+        LOG_WARN << "--output-base-dir not set despite using a local loop controller";
         LOG_WARN << "Disabling direct-game-log-write optimization";
       } else {
         direct_game_log_write_optimization_enabled_ = true;
@@ -181,8 +181,8 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
     // In the future, if we change the logic controlling the game filename on the python-side, we
     // need to change this code to match the python-side. Not ideal, but it is what it is.
     std::string directory =
-        util::create_string("%s/client-%d/gen-%d", client->self_play_dir().c_str(),
-                            client->client_id(), model_generation);
+        util::create_string("%s/self-play-data/gen-%d/client-%d", client->output_base_dir().c_str(),
+                            model_generation, client->client_id());
 
     if (model_generation != last_created_dir_generation_) {
       boost::filesystem::create_directories(directory);  // mkdir -p

@@ -16,6 +16,7 @@ These have corresponding launcher scripts in py/alphazero/scripts/:
 This script launches 1 server of each type on the local machine, using the above launcher scripts.
 If the local machine has multiple GPU's, more than one self-play server can be launched.
 """
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
@@ -201,6 +202,14 @@ def main():
     configure_logger(params=logging_params, prefix='[main]')
 
     os.chdir(Repo.root())
+
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    if not organizer.version_check():
+        print('The following output directory is outdated:\n')
+        print(organizer.base_dir + '\n')
+        print('As a result, you cannot resume a run from this directory.')
+        print('Please try again with a new tag.')
+        return
 
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found. Try exiting and relaunching run_docker.py'

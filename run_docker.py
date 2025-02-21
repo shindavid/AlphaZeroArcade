@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument("-s", '--skip-image-version-check', action='store_true',
                         help='skip image version check')
     parser.add_argument("-d", '--docker-image',
-                        help='name of the docker image to use (default: comes from .env.json)')
+                        help='name of the docker image to use (optional)')
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
@@ -70,7 +70,7 @@ def is_container_running(container_name):
 
 
 def execute_into_container(container_name):
-    docker_cmd = ["docker", "exec", "-it", container_name, "bash"]
+    docker_cmd = ["docker", "exec", "-it", container_name, 'gosu', 'devuser', 'bash']
     launch_docker_cmd(docker_cmd, run=False)
 
 
@@ -107,12 +107,11 @@ def run_container(args):
         if not check_image_version(docker_image):
             return
 
-    libtorch_dir = REPO_ROOT / "libtorch"
-    libtorch_dir.mkdir(exist_ok=True)
-
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo", '-v', f"{libtorch_dir}:/workspace/libtorch"]
-    post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    post_mount_cmds = [
+        'mkdir -p ~/scratch',
+        ]
 
     # Check if output_dir is inside REPO_ROOT
     if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
@@ -131,46 +130,65 @@ def run_container(args):
     user_id = subprocess.check_output(["id", "-u"], text=True).strip()
     group_id = subprocess.check_output(["id", "-g"], text=True).strip()
 
-    if (user_id, group_id) != ('1000', '1000'):
-        # TODO: add support for non-1000 users. Will require some surgery to the Dockerfile and
-        # entrypoint.sh. Need to test on both local machine and on runpod.
-        #
-        # For now, just print the below warning.
-
-        user = subprocess.check_output(["id", "-un"], text=True).strip()
-        group = subprocess.check_output(["id", "-gn"], text=True).strip()
-
-        CRED = '\033[91m'
-        CEND = '\033[0m'
-        print(CRED, end='')
-
-        print('#' * 70)
-        print('# %-66s #' % 'WARNING!')
-        if user_id != '1000':
-            print('# %-66s #' % f'Your user id ({user}:{user_id}) is not 1000.')
-        if group_id != '1000':
-            print('# %-66s #' % f'The group id ({group}:{group_id}) is not 1000.')
-
-        'As a result, outside of the docker container, you might need sudo permissions'
-        print('# %-66s #' % 'As a result, outside of the docker container, you might need sudo')
-        print('# %-66s #' % 'permissions to delete/modify files/dirs written inside this docker')
-        print('# %-66s #' % 'container. This includes directories like output/ and target/.')
-        print('#' * 70)
-        print(CEND, end='')
-
     # Build the docker run command
     docker_cmd = [
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
-        '--user', '1000:1000',
+        "-e", f"HOST_UID={user_id}",
+        "-e", f"HOST_GID={group_id}",
+        "-e", "USERNAME=devuser",
+        "-e", "PLATFORM=native",
     ] + ports_strs + mounts + [
         docker_image
     ]
 
-    # Add post-mount commands as the container's entrypoint
-    if post_mount_cmds:
-        entrypoint_cmd = " && ".join(post_mount_cmds)
-        entrypoint_cmd += "; exec bash"
-        docker_cmd += ["bash", "-c", entrypoint_cmd]
+    entrypoint_cmd = " && ".join(post_mount_cmds)
+    entrypoint_cmd += "; exec bash"
+    docker_cmd += ["bash", "-c", entrypoint_cmd]
+
+    launch_docker_cmd(docker_cmd, run=True)
+
+
+def run_container_gcp(args):
+    output_dir = '/persistent-disk/output'
+    os.makedirs(output_dir, exist_ok=True)
+
+    docker_image = args.docker_image
+    if not docker_image:
+        docker_image = os.getenv('DEFAULT_DOCKER_IMAGE')
+
+    if not args.skip_image_version_check:
+        if not check_image_version(docker_image):
+            return
+
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
+              '-v', f"{output_dir}:/workspace/output",
+              '-v', "/local-ssd:/scratch",
+              ]
+    post_mount_cmds = [
+        f"ln -sf /scratch ~/scratch",
+        ]
+
+    ports_strs = []
+    for port in EXPOSED_PORTS:
+        ports_strs += ['-p', f"{port}:{port}"]
+
+    user_id = subprocess.check_output(["id", "-u"], text=True).strip()
+    group_id = subprocess.check_output(["id", "-g"], text=True).strip()
+
+    # Build the docker run command
+    docker_cmd = [
+        "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
+        "-e", f"HOST_UID={user_id}",
+        "-e", f"HOST_GID={group_id}",
+        "-e", "USERNAME=devuser",
+        "-e", "PLATFORM=gcp",
+    ] + ports_strs + mounts + [
+        docker_image
+    ]
+
+    entrypoint_cmd = " && ".join(post_mount_cmds)
+    entrypoint_cmd += "; exec bash"
+    docker_cmd += ["bash", "-c", entrypoint_cmd]
 
     launch_docker_cmd(docker_cmd, run=True)
 
@@ -214,7 +232,15 @@ def main():
     if is_container_running(args.instance_name):
         execute_into_container(args.instance_name)
     else:
-        run_container(args)
+        platform = os.getenv('A0A_PLATFORM', 'native')
+
+        if platform == 'native':
+            run_container(args)
+        elif platform == 'gcp':
+            run_container_gcp(args)
+        else:
+            print(f"Unknown platform: {platform}")
+            return
 
 
 if __name__ == "__main__":

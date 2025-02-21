@@ -85,7 +85,7 @@ all_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
 all_training_heads = []
 for tag in all_tags:
     rp = RunParams(run_params.game, tag)
-    directory_organizer = DirectoryOrganizer(rp)
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
     training_db_filename = directory_organizer.training_db_filename
     if not os.path.isfile(training_db_filename):
         continue

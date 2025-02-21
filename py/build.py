@@ -64,12 +64,6 @@ def get_targets(repo_root, target_dir, specified_targets) -> List[Target]:
         return all_targets
 
 
-def get_torch_dir():
-    torch_dir = '/workspace/libtorch/current'
-    assert os.path.isdir(torch_dir)
-    return torch_dir
-
-
 def main():
     cwd = os.getcwd()
     args = get_args()
@@ -86,7 +80,7 @@ def main():
     # build extra deps unconditionally
     run('cd extra_deps && ./build.py')
 
-    torch_dir = get_torch_dir()
+    torch_dir = os.environ.get('LIBTORCH_CPP_DIR')
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
 
     macro_defines = args.macro_defines if args.macro_defines else []

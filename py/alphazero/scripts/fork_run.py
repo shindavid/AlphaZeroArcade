@@ -10,14 +10,11 @@ Usage:
 
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
-from shared.training_params import TrainingParams
 import games.index as game_index
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import configure_logger, get_logger
 
 import argparse
 import os
-import sys
 
 
 logger = get_logger()
@@ -76,8 +73,8 @@ def main():
     from_params = RunParams(args.game, args.from_tag)
     to_params = RunParams(args.game, args.to_tag)
 
-    from_organizer = DirectoryOrganizer(from_params)
-    to_organizer = DirectoryOrganizer(to_params)
+    from_organizer = DirectoryOrganizer(from_params, base_dir_root='/workspace')
+    to_organizer = DirectoryOrganizer(to_params, base_dir_root='/workspace')
 
     if not os.path.isdir(from_organizer.base_dir):
         raise ValueError(f'From-directory does not exist: {from_organizer.base_dir}')
@@ -94,7 +91,7 @@ def main():
         if last_gen <= 0:
             raise ValueError('last-self-play-gen must be greater than 0')
 
-    to_organizer.makedirs()
+    to_organizer.dir_setup()
 
     if hard_fork:
         logger.info('Copying self-play data...')

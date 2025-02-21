@@ -1,0 +1,1 @@
+source /etc/skel/.bashrc; source /opt/project/bashrc_extras

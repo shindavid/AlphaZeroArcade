@@ -38,6 +38,10 @@ class DatabaseConnectionPool:
     def db_lock(self):
         return self._db_lock
 
+    @property
+    def db_filename(self):
+        return self._db_filename
+
     def get_cursor(self) -> sqlite3.Cursor:
         return self.get_connection().cursor()
 

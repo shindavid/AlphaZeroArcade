@@ -32,7 +32,7 @@ def create_ratings_figure(game: str, tags: List[str]):
 
 class RatingData:
     def __init__(self, run_params: RunParams, rating_tag: RatingTag):
-        organizer = DirectoryOrganizer(run_params)
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
         game_spec = game_index.get_game_spec(run_params.game)
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
@@ -68,7 +68,7 @@ class RatingData:
 
 
 def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
-    organizer = DirectoryOrganizer(run_params)
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
     db_filename = organizer.ratings_db_filename
     if not os.path.exists(db_filename):
         return []
