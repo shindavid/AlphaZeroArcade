@@ -19,21 +19,25 @@ def get_args():
 
 def docker_pull(image):
     print(f'Pulling {image}...')
-    print('This may take a few minutes.')
 
     # Run the docker pull command and capture the output
-    result = subprocess.run(
-        ['docker', 'pull', image],
+    process = subprocess.Popen(
+        ["docker", "pull", image],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True
+        text=True  # Ensures text output (no byte decoding needed)
     )
+
+    captured_output = []  # Store output lines
+    for line in process.stdout:
+        print(line, end="")  # Print dynamically for real-time feedback
+        captured_output.append(line.strip())
+
+    process.wait()  # Ensure process finishes
 
     update_env_json({'DOCKER_IMAGE': image})
 
-    output = result.stdout
-    print(output)  # Optionally print the output for debugging
-
+    output = ''.join(captured_output)
     # Determine if the image was updated
     # Common indicators:
     # - "Status: Image is up to date" means no update
