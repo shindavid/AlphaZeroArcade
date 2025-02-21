@@ -460,7 +460,7 @@ is already motivated by uncertainty in $V$, making additional dispersion potenti
 
 ### Child value predictions
 
-(Described in more detail [here](AuxValueTarget.md))
+(Described in more detail [here](ActionValueTarget.md))
 
 In our description of backpropagation and selection mechanics, we sometimes use
 $Q$ estimates for children nodes that have not yet been visited.

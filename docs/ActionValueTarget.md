@@ -1,7 +1,7 @@
 This document explores the possibility of adding an auxiliary value target, that predicts the network's
 own `V` prediction for the children of the current node.
 
-## Idea 1: Auxiliary Value Target
+## Idea 1: Action Value Target
 
 Currently, for a given node `n`, the network predicts a scalar value `V(n)` and a policy distribution `P(n)`.
 
@@ -11,11 +11,11 @@ The targets for this head can be generated during the self-play game by evaluati
 value will be available for free for all explored children. For unexplored children, it can be obtained 
 cheaply via side-channel evaluation requests.
 
-By itself, this aux-target might provide a regularizing effect that improves learning,
-similarly to how the opponent-response-policy aux-target improves learning. However, we expect this
+By itself, this action-value-target might provide a regularizing effect that improves learning,
+similarly to how the opponent-response-policy target improves learning. However, we expect this
 auxiliary head to have value in other ways - read on!
 
-## Idea 2: Use Auxiliary Value Target Predictions Instead of FPU
+## Idea 2: Use Action Value Target Predictions Instead of FPU
 
 In PUCT evaluations, when `N(c) == 0`, the `Q(c)` term is undefined. MCTS implementations thus typically employ
 an FPU (First Play Urgency) policy that provides a value for this undefined `Q(c)` term. It is known that 
@@ -89,13 +89,13 @@ and assume that in competition we would use a temperature of zero, then a deviat
 zero-temperature-move is the same thing: experiencing a chance event that causes our expected-result to 
 deviate from expectation. Deblundering similarly predicts the delta that the chance event induced and 
 corrects the value target according to that predicted delta. A difference is that deblundering uses 
-`Q` for this prediction while this idea uses aux value. Again, as suggested above, we can consider
+`Q` for this prediction while this idea uses an action-value. Again, as suggested above, we can consider
 replacing `V_c(n)` with `Q(c)`, which represents a sort of unification of the ideas.
 
-## Idea 5 (Stochastic AlphaZero only): Auxiliary Value Target Regularization at Chance Nodes
+## Idea 5 (Stochastic AlphaZero only): Action Value Target Regularization at Chance Nodes
 
 If the network is consistent with itself at chance nodes, the value at the parent should equal the 
-expected value of the children. The aux value head predicts the value of each child. This 
+expected value of the children. The aciont value head predicts the value of each child. This 
 allows us to add a loss term that encourages this equality:
 
 ```
@@ -104,7 +104,7 @@ allows us to add a loss term that encourages this equality:
 
 where `E_c` is an expectation taken with respect to the chance node's distribution for `c`.
 
-## Idea 6 - Auxiliary Value Target Regularization at Non-Chance Nodes
+## Idea 6 - Action Value Target Regularization at Non-Chance Nodes
 
 At non-chance nodes, there is a different form of consistency that we can expect.
 The value of the parent should equal the value of the child representing the opponent's

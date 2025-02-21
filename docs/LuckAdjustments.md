@@ -4,7 +4,7 @@ This document describes technical details of luck-adjustments. See [here](Nash-I
 
 ## Current Proposal
 
-At each node $n$, we have a value model, $V(n)$, and an aux-value model, $VC(n)$. The latter returns
+At each node $n$, we have a value model, $V(n)$, and an action-value model, $VC(n)$. The latter returns
 an array of value-predictions, one for each child of $n$. For notational convenience, for an evaluated parent node $n$ with child node $c$, let:
 
 ```math
