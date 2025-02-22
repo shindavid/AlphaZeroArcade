@@ -127,6 +127,9 @@ ARENA_TABLE_CREATE_CMDS = [
             gen INT,
             n_iters INT,
             rating FLOAT,
+            binary TEXT,
+            model_file TEXT,
+            is_zero_temp INT,
             benchmark_tag TEXT,
             benchmark_agents TEXT
             )""",

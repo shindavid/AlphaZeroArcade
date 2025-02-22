@@ -17,19 +17,26 @@ class Arena:
         self.W_matrix = np.zeros((0, 0), dtype=float)
         self.agents_lookup: Dict[Agent, int] = {}
 
-    def load_from_db(self, db_filename: str):
+    def load_matches_from_db(self, db_filename: str) -> List[Agent]:
         db = RatingDB(db_filename)
         wld_dict = {}
+        new_agents = []
         for agent1, agent2, counts in db.fetchall():
-            ix1, _ = self._add_agent(agent1, expand_matrix=False)
-            ix2, _ = self._add_agent(agent2, expand_matrix=False)
+            ix1, is_new_agent1 = self._add_agent(agent1, expand_matrix=False)
+            ix2, is_new_agent2 = self._add_agent(agent2, expand_matrix=False)
             wld_dict[(ix1, ix2)] = counts
+            if is_new_agent1:
+                new_agents.append(agent1)
+            if is_new_agent2:
+                new_agents.append(agent2)
 
         self._init_W_matrix(len(self.agents_lookup))
         counts: WinLossDrawCounts = WinLossDrawCounts()
         for (ix1, ix2), counts in wld_dict.items():
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+
+        return new_agents
 
     def play_matches(self, matches: List[Match], additional=False) -> WinLossDrawCounts:
         counts_list = []
@@ -63,6 +70,10 @@ class Arena:
     def compute_ratings(self, eps=1e-6) -> np.ndarray:
         ratings = compute_ratings(self.W_matrix, eps=eps)
         return ratings
+
+    def load_ratings_from_db(self, db_filename: str) -> Dict[Agent, float]:
+        db = RatingDB(db_filename)
+        return db.load_ratings()
 
     def create_subset(self, include_agents: List[Agent] = None, exclude_agents: List[Agent] = None)\
         -> 'Arena':
@@ -100,6 +111,12 @@ class Arena:
                 sub_arena.W_matrix[i, j] = self.W_matrix[old_i, old_j]
 
         return sub_arena
+
+    def opponent_ix_played_against(self, agent: Agent) -> List[int]:
+        ix = self.agents_lookup[agent]
+        vertical = np.where(self.W_matrix[:, ix] > 0)[0]
+        horizontal = np.where(self.W_matrix[ix, :] > 0)[0]
+        return list(np.union1d(vertical, horizontal))
 
     def _add_agent(self, agent: Agent, expand_matrix: bool = True) -> int:
         if agent not in self.agents_lookup:

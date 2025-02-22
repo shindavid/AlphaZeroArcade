@@ -1,8 +1,8 @@
-from alphazero.logic.agent_types import Agent
+from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.arena import Arena
-from alphazero.logic.benchmarker import  Benchmarker
+from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match
-from alphazero.logic.ratings import BETA_SCALE_FACTOR
+from alphazero.logic.ratings import win_prob
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
@@ -10,71 +10,122 @@ from tqdm import tqdm
 import numpy as np
 
 from collections import Counter
-from typing import Dict
+from typing import Dict, List
 import random
 
 
 class Evaluator:
-    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer,
-                 target_eval_percent: float=0.5):
+    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self._benchmark_organizer = benchmark_organizer
-        self.target_eval_percent = target_eval_percent
-        self.arena = Arena()
-        self.arena.load_from_db(benchmark_organizer.benchmark_db_filename)
-        self.arena.load_from_db(organizer.eval_db_filename)
+        self.benchmark = Benchmarker(benchmark_organizer, load_past_data=True)
+        self.benchmark_agents = self.benchmark.agents
 
-    def run(self):
+        self.arena = Arena()
+        agents_with_matches = self.arena.load_matches_from_db(organizer.eval_db_filename)
+        self.gens_with_matches = [agent.gen for agent in agents_with_matches]
+
+        self.evaluated_gens, self.ratings = zip(*self.arena.load_ratings_from_db(organizer.eval_db_filename))
+        self.evaluated_gens = list(self.evaluated_gens)
+        self.ratings = np.array(self.ratings)
+
+    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, n_steps: int=10):
         while True:
-            gen = self.get_next_gen_to_eval()
+            gen = self.get_next_gen_to_eval(target_eval_percent)
             if gen is None:
                 break
-            rating = self.eval_gen(gen)
-            self.arena.commit_ratings_to_db(organizer.eval_db_filename, [gen], [rating])
 
-    def get_next_gen_to_eval(self):
-        if not self.evaluated(0):
+            eval_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
+                                   binary_filename=self._organizer.binary_filename,
+                                   model_filename=self._organizer.get_model_filename(gen))
+            rating = self.eval_agent(eval_agent, n_games, n_steps)
+
+            self.arena.commit_ratings_to_db(self._organizer.eval_db_filename, [gen], [rating])
+
+    def get_next_gen_to_eval(self, target_eval_percent):
+        last_gen = self._organizer.get_latest_model_generation()
+        evaluated_percent = len(self.evaluated_gens) / (last_gen + 1)
+        if 0 not in self.evaluated_gens:
             return 0
-        if not self.evaluated(self.last_gen):
-            return self.last_gen
-
-        gap = self.get_biggest_gen_gap()  # based on generation, not rating
-        gen = (gap.left_gen + gap.right_gen) // 2
-        return gen
-
-    def eval_gen(self, gen):
-        # TODO: if resuming after loading past matches, we might already have some matches for
-        # this gen, so we can skip this estimated-rating stuff
-
-        estimated_rating = self.estimate_rating(gen)  # interpolates based on rating of left_gen and right_gen
-        opponent = self.get_committee_member_of_similar_skill(estimated_rating)
-        self.run_match(gen, opponent)  # updates ratings
-
-        # Now, play remaining committee members using variance-calc p*(1-p)
-        #
-        # Question: do we recompute ratings after each match? Doing so makes the order of the loop
-        # matter.
-        #
-        # I think we should match US Law here and prohibit "Double Jeopardy". In other words, if
-        # we ask whether to face committee member X, using the current ratings to get a probability
-        # p, and then flip our coin to say "do not run match", we cannot in the future decide to
-        # flip that coin again. Rejecting X is permanent.
-
-
-    def get_next_match(self):
-        if not self.gen0_test_complete():
-            pass
-
-        if self.no_matches_yet():
-            last_gen = self.organizer.get_latest_model_generation()
-            return self.create_match(0, last_gen)
-
-        gap = self.get_biggest_mcts_ratings_gap()
-        if gap is None or gap.elo_differential < self.elo_threshold:
+        if last_gen not in self.evaluated_gens:
+            return last_gen
+        if evaluated_percent >= target_eval_percent:
             return None
 
-        return self.create_match(gap.left_gen, gap.right_gen)
+        left_gen, right_gen = self.get_biggest_gen_gap()  # based on generation, not rating
+        if left_gen + 1 < right_gen:
+            gen = (left_gen + right_gen) // 2
+            assert gen not in self.evaluated_gens
+        return gen
 
+    def get_biggest_gen_gap(self):
+        gens = self.evaluated_gens.copy()
+        gens = np.sort(gens)
+        gaps = np.diff(gens)
+        max_gap_ix = np.argmax(gaps)
+        left_gen = gens[max_gap_ix]
+        right_gen = gens[max_gap_ix + 1]
+        return left_gen, right_gen
+
+    def eval_agent(self, eval_agent: Agent, n_games, n_steps):
+        opponent_ix_played: List[int] = [] # list of indices
+        # arena will only have matches between the test agent and benchmark agents. Test agents
+        # of a different gen will not be included in this arena. No matches between benchmark
+        # agents will be included in this arena. Arena will only have benchmark agents that have
+        # played matches against the test agent.
+        global_arena = Arena()
+
+        if isinstance(eval_agent, MCTSAgent):
+            if eval_agent.gen in self.gens_with_matches:
+                arena = self.arena.create_subset(include_agents=[eval_agent] + self.benchmark_agents)
+                ratings = arena.compute_ratings()
+                estimated_rating = ratings[arena.agents_lookup[eval_agent]]
+                opponent_ix_played = arena.opponent_ix_played_against(eval_agent)
+                n_steps -= len(opponent_ix_played)
+
+            elif len(self.evaluated_gens) >= 2:
+                estimated_rating = self.estimate_rating(eval_agent.gen)  # interpolates based on rating of left_gen and right_gen
+        else:
+            # play a random match against a benchmark agent
+            opponent_ix = np.random.choice(len(self.benchmark_agents))
+            opponent = self.benchmark_agents[opponent]
+            arena.play_matches([Match(eval_agent, opponent, n_games)], additional=False)
+            ratings = arena.compute_ratings()
+            estimated_rating = ratings[arena.agents_lookup[eval_agent]]
+            opponent_ix_played.append(opponent_ix)
+
+        p = [win_prob(estimated_rating, ratings[arena.agents_lookup[agent]]) \
+                for agent in self.benchmark_agents] # probability of testing agents against benchmark agents
+
+        var = [q * (1-q) for q in p]
+        for _ in range(n_steps):
+            opponent_ix = np.random.choice(len(self.benchmark_agents), p=var)
+            opponent = self.benchmark_agents[opponent_ix]
+            match = Match(test_agent, opponent, n_games)
+            arena.play_matches([match], additional=False)
+            ratings = arena.compute_ratings()
+            estimated_rating = ratings[arena.agents_lookup[test_agent]]
+            opponent_ix_played.append(opponent_ix)
+            p = [win_prob(estimated_rating, ratings[arena.agents_lookup[agent]]) \
+                for agent in self.benchmark_agents]
+            var = [q * (1-q) for q in p]
+
+        rating = self.interploate_ratings(arena)
+        arena.commit_ratings_to_db(self._organizer.eval_db_filename, [gen], [rating])
+
+    def estimate_rating(self, gen: int) -> float:
+        assert gen not in self.evaluated_gens
+        # find the closest gen that is less than gen and the closest gen that is greater than gen.
+        # Then interpolate the rating.
+        left_gen = max([g for g in self.evaluated_gens if g < gen])
+        right_gen = min([g for g in self.evaluated_gens if g > gen])
+        left_rating = self.ratings[self.evaluated_gens.index(left_gen)]
+        right_rating = self.ratings[self.evaluated_gens.index(right_gen)]
+        rating = np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
+        return float(rating)
+
+
+    def intepolate_ratings(self, arena):
+        pass
 
 class Evaluation:
     """

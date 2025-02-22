@@ -38,7 +38,8 @@ class Benchmarker:
         self.ref_agents: List[Agent] = []
 
         if load_past_data:
-            self.arena.load_from_db(self._organizer.benchmark_db_filename)
+            # maybe we always want to load past data?
+            self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
             if not self.has_no_matches():
                 self.compute_ratings()
 
@@ -132,6 +133,10 @@ class Benchmarker:
 
     def has_no_matches(self):
         return len(self.arena.agents_lookup) < 2
+
+    @property
+    def agents(self):
+        return list(self.arena.agents_lookup.keys())
 
 
 

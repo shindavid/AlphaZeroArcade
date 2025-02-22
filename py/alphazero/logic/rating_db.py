@@ -3,8 +3,10 @@ from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
+import numpy as np
+
 from dataclasses import dataclass
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Dict
 
 
 @dataclass
@@ -92,43 +94,40 @@ class RatingDB:
 
     def fetchall(self) -> Iterator[Tuple[Agent, Agent, WinLossDrawCounts]]:
         conn = self.db_conn_pool.get_connection()
-        try:
-            c = conn.cursor()
-            c.execute('SELECT gen1, gen2, gen_iters1, gen_iters2, \
-                gen1_wins, gen2_wins, draws, binary1, binary2, model_file1, model_file2, \
-                    is_zero_temp1, is_zero_temp2 FROM matches')
-            for row in c:
-                agent_entry1, agent_entry2 = RatingDB.entry_to_agent_entries(Entry(*row))
-                agent1 = RatingDB.build_agents_from_entry(agent_entry1)
-                agent2 = RatingDB.build_agents_from_entry(agent_entry2)
-                counts = RatingDB.entry_to_counts(Entry(*row))
-                yield agent1, agent2, counts
+        c = conn.cursor()
+        c.execute('SELECT gen1, gen2, gen_iters1, gen_iters2, \
+            gen1_wins, gen2_wins, draws, binary1, binary2, model_file1, model_file2, \
+                is_zero_temp1, is_zero_temp2 FROM matches')
+        for row in c:
+            agent_entry1, agent_entry2 = RatingDB.entry_to_agent_entries(Entry(*row))
+            agent1 = RatingDB.build_agents_from_entry(agent_entry1)
+            agent2 = RatingDB.build_agents_from_entry(agent_entry2)
+            counts = RatingDB.entry_to_counts(Entry(*row))
+            yield agent1, agent2, counts
 
-        finally:
-            conn.close()
 
     def commit_counts(self, agent1: Agent, agent2: Agent, record: WinLossDrawCounts):
         conn = self.db_conn_pool.get_connection()
         entry1: AgentEntry = RatingDB.get_entry_from_agent(agent1)
         entry2: AgentEntry = RatingDB.get_entry_from_agent(agent2)
         match_tuple = (entry1.gen,
-                       entry2.gen,
-                       entry1.n_iters,
-                       entry2.n_iters,
-                       record.win,
-                       record.loss,
-                       record.draw,
-                       entry1.binary_filename,
-                       entry2.binary_filename,
-                       entry1.model_filename,
-                       entry2.model_filename,
-                       entry1.set_temp_zero,
-                       entry2.set_temp_zero)
+                    entry2.gen,
+                    entry1.n_iters,
+                    entry2.n_iters,
+                    record.win,
+                    record.loss,
+                    record.draw,
+                    entry1.binary_filename,
+                    entry2.binary_filename,
+                    entry1.model_filename,
+                    entry2.model_filename,
+                    entry1.set_temp_zero,
+                    entry2.set_temp_zero)
         c = conn.cursor()
         c.execute('INSERT INTO matches \
             (gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws, \
                 binary1, binary2, model_file1, model_file2, is_zero_temp1, is_zero_temp2) \
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
     def commit_rating(self, agent, rating, benchmark_agents=None, benchmark_tag=None):
@@ -142,12 +141,27 @@ class RatingDB:
         entry_tuple = (agent_entry.gen,
                     agent_entry.n_iters,
                     rating,
+                    agent_entry.binary_filename,
+                    agent_entry.model_filename,
+                    agent_entry.set_temp_zero,
                     benchmark_tag,
                     benchmark_agents_str)
         c = conn.cursor()
-        c.execute('INSERT INTO ratings (gen, n_iters, rating, benchmark_tag, benchmark_agents) \
-                VALUES (?, ?, ?, ?, ?)', entry_tuple)
+        c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
+            is_zero_temp, benchmark_tag, benchmark_agents) \
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
         conn.commit()
 
+    def load_ratings(self) -> Dict[Agent, float]:
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+        c.execute('SELECT gen, n_iters, rating, binary, model_file, is_zero_temp, \
+            benchmark_tag, benchmark_agents FROM ratings')
+        ratings = {}
+        for gen, n_iters, rating, binary, model_file, set_temp_zero, _, _ in c.fetchall():
+            agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)
+            agent = RatingDB.build_agents_from_entry(agent_entry)
+            ratings[agent] = rating
+        return ratings
 
 
