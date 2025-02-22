@@ -138,6 +138,9 @@ class Benchmarker:
     def agents(self):
         return list(self.arena.agents_lookup.keys())
 
+    @property
+    def agents_lookup(self):
+        return self.arena.agents_lookup
 
 
 

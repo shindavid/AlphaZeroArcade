@@ -21,8 +21,9 @@ class Evaluator:
         self.benchmark_agents = self.benchmark.agents
 
         self.arena = Arena()
-        agents_with_matches = self.arena.load_matches_from_db(organizer.eval_db_filename)
-        self.gens_with_matches = [agent.gen for agent in agents_with_matches]
+        self.arena.load_matches_from_db(benchmark_organizer.benchmark_db_filename)
+        test_agents_with_matches = self.arena.load_matches_from_db(organizer.eval_db_filename)
+        self.gens_with_matches = [agent.gen for agent in test_agents_with_matches]
 
         self.evaluated_gens, self.ratings = zip(*self.arena.load_ratings_from_db(organizer.eval_db_filename))
         self.evaluated_gens = list(self.evaluated_gens)
@@ -66,51 +67,48 @@ class Evaluator:
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
 
-    def eval_agent(self, eval_agent: Agent, n_games, n_steps):
+    def eval_agent(self, test_agent: Agent, n_games, n_steps):
         opponent_ix_played: List[int] = [] # list of indices
         # arena will only have matches between the test agent and benchmark agents. Test agents
-        # of a different gen will not be included in this arena. No matches between benchmark
-        # agents will be included in this arena. Arena will only have benchmark agents that have
-        # played matches against the test agent.
-        global_arena = Arena()
+        # of a different gen will not be included in this arena. arena includes every benchmark agent.
+        arena = self.arena.create_subset(include_agents=[test_agent] + self.benchmark_agents)
 
-        if isinstance(eval_agent, MCTSAgent):
-            if eval_agent.gen in self.gens_with_matches:
-                arena = self.arena.create_subset(include_agents=[eval_agent] + self.benchmark_agents)
+        if isinstance(test_agent, MCTSAgent):
+            if test_agent.gen in self.gens_with_matches:
                 ratings = arena.compute_ratings()
-                estimated_rating = ratings[arena.agents_lookup[eval_agent]]
-                opponent_ix_played = arena.opponent_ix_played_against(eval_agent)
+                estimated_rating = ratings[arena.agents_lookup[test_agent]]
+                opponent_ix_played = arena.opponent_ix_played_against(test_agent)
                 n_steps -= len(opponent_ix_played)
 
             elif len(self.evaluated_gens) >= 2:
-                estimated_rating = self.estimate_rating(eval_agent.gen)  # interpolates based on rating of left_gen and right_gen
+                estimated_rating = self.estimate_rating(test_agent.gen)  # interpolates based on rating of left_gen and right_gen
         else:
             # play a random match against a benchmark agent
             opponent_ix = np.random.choice(len(self.benchmark_agents))
             opponent = self.benchmark_agents[opponent]
-            arena.play_matches([Match(eval_agent, opponent, n_games)], additional=False)
-            ratings = arena.compute_ratings()
-            estimated_rating = ratings[arena.agents_lookup[eval_agent]]
-            opponent_ix_played.append(opponent_ix)
-
-        p = [win_prob(estimated_rating, ratings[arena.agents_lookup[agent]]) \
-                for agent in self.benchmark_agents] # probability of testing agents against benchmark agents
-
-        var = [q * (1-q) for q in p]
-        for _ in range(n_steps):
-            opponent_ix = np.random.choice(len(self.benchmark_agents), p=var)
-            opponent = self.benchmark_agents[opponent_ix]
-            match = Match(test_agent, opponent, n_games)
-            arena.play_matches([match], additional=False)
+            arena.play_matches([Match(test_agent, opponent, n_games)], additional=False)
             ratings = arena.compute_ratings()
             estimated_rating = ratings[arena.agents_lookup[test_agent]]
             opponent_ix_played.append(opponent_ix)
+
+
+        for _ in tqdm(range(n_steps)):
             p = [win_prob(estimated_rating, ratings[arena.agents_lookup[agent]]) \
                 for agent in self.benchmark_agents]
-            var = [q * (1-q) for q in p]
+            var = [q * (1 - q) for q in p]
 
-        rating = self.interploate_ratings(arena)
-        arena.commit_ratings_to_db(self._organizer.eval_db_filename, [gen], [rating])
+            opponent_ix = np.random.choice(len(self.benchmark_agents), p=var)
+            opponent = self.benchmark_agents[opponent_ix]
+            match = Match(test_agent, opponent, n_games)
+            counts = arena.play_matches([match], additional=False)
+            self.arena.commit_match_to_db(self._organizer.eval_db_filename, match, counts[0])
+
+            ratings = arena.compute_ratings()
+            estimated_rating = ratings[arena.agents_lookup[test_agent]]
+            opponent_ix_played.append(opponent_ix)
+
+        rating = self.interploate_ratings(rating, arena)
+        arena.commit_ratings_to_db(self._organizer.eval_db_filename, [test_agent.gen], [rating])
 
     def estimate_rating(self, gen: int) -> float:
         assert gen not in self.evaluated_gens
@@ -123,9 +121,14 @@ class Evaluator:
         rating = np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
         return float(rating)
 
-
-    def intepolate_ratings(self, arena):
-        pass
+    def intepolate_ratings(self, estimated_rating: float, arena: Arena) -> float:
+        ratings = arena.compute_ratings()
+        x = []
+        y = []
+        for agent in self.benchmark_agents:
+            x.append(ratings[arena.agents_lookup[agent]])
+            y.append(self.benchmark.ratings[self.benchmark.agents_lookup[agent]])
+        return float(np.interp(estimated_rating, x, y))
 
 class Evaluation:
     """
