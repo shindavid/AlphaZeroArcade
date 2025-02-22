@@ -7,6 +7,7 @@ import numpy as np
 
 from dataclasses import dataclass
 from typing import Iterator, Tuple, Dict
+import os
 
 
 @dataclass
@@ -38,8 +39,16 @@ class Entry:
 class RatingDB:
     def __init__(self, db_filename: str):
         self.db_filename = db_filename
+        db_exists = os.path.exists(db_filename)
         self.db_conn_pool = DatabaseConnectionPool(db_filename,
                                                    constants.ARENA_TABLE_CREATE_CMDS)
+        if not db_exists:
+            with self.db_conn_pool.get_connection() as conn:
+                c = conn.cursor()
+                for cmd in constants.ARENA_TABLE_CREATE_CMDS:
+                    c.execute(cmd)
+                conn.commit()
+            os.chmod(db_filename, 0o666)
 
     @staticmethod
     def entry_to_agent_entries(entry: Entry) -> Tuple[AgentEntry, AgentEntry]:
@@ -61,13 +70,12 @@ class RatingDB:
 
     @staticmethod
     def build_agents_from_entry(entry: AgentEntry) -> Agent:
-        if entry.gen == -1:
+        if entry.n_iters == -1:
             type_str, strength_param = entry.model_filename.split('-')
-            strength = entry.n_iters
             binary_filename = entry.binary_filename
             return ReferenceAgent(type_str,
                                   strength_param,
-                                  strength,
+                                  entry.gen,
                                   binary_filename)
         else:
             return MCTSAgent(entry.gen,
@@ -85,8 +93,8 @@ class RatingDB:
             binary_filename = agent.binary_filename
             model_filename = agent.model_filename
         elif isinstance(agent, ReferenceAgent):
-            gen = -1
-            n_iters = agent.strength
+            gen = agent.gen
+            n_iters = -1
             set_temp_zero = None
             binary_filename = agent.binary_filename
             model_filename = f'{agent.type_str}-{agent.strength_param}'
@@ -130,7 +138,7 @@ class RatingDB:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agent, rating, benchmark_agents=None, benchmark_tag=None):
+    def commit_rating(self, agent, rating, benchmark_agents=None, is_committee=None):
         conn = self.db_conn_pool.get_connection()
         agent_entry = RatingDB.get_entry_from_agent(agent)
         if benchmark_agents:
@@ -144,11 +152,11 @@ class RatingDB:
                     agent_entry.binary_filename,
                     agent_entry.model_filename,
                     agent_entry.set_temp_zero,
-                    benchmark_tag,
+                    is_committee,
                     benchmark_agents_str)
         c = conn.cursor()
         c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
-            is_zero_temp, benchmark_tag, benchmark_agents) \
+            is_zero_temp, is_commitee, benchmark_agents) \
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
         conn.commit()
 
@@ -156,7 +164,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         c.execute('SELECT gen, n_iters, rating, binary, model_file, is_zero_temp, \
-            benchmark_tag, benchmark_agents FROM ratings')
+            is_commitee, benchmark_agents FROM ratings')
         ratings = {}
         for gen, n_iters, rating, binary, model_file, set_temp_zero, _, _ in c.fetchall():
             agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)

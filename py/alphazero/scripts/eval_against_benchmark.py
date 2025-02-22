@@ -1,5 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.benchmarker import DirectoryOrganizer, Benchmarker
+from alphazero.logic.benchmarker import DirectoryOrganizer
 from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.run_params import RunParams
 from util.py_util import CustomHelpFormatter
@@ -10,9 +9,9 @@ import argparse
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
-    parser.add_argument('--benchmark_tag', type=int, default=100, help='run tag for benchmark')
+    parser.add_argument('--benchmark_tag', type=str, default=100, help='run tag for benchmark')
     parser.add_argument('--target_eval_percent', type=float, default=1.0, help='target eval percent')
-    parser.add_argument('--n_games', type=int, default=100, help='Number of games per match')
+    parser.add_argument('--n_games', type=int, default=1000, help='Number of games per match')
     parser.add_argument('--n_steps', type=int, default=10, help='Number of steps per evaluation')
     parser.add_argument("-i", '--n_iters', type=int, default=100, help='Number of MCTS iterations')
     return parser.parse_args()

@@ -46,7 +46,7 @@ class Arena:
 
             if self.W_matrix[ix1, ix2] > 0 or self.W_matrix[ix2, ix1] > 0:
                 if not additional:
-                    n_games_played = self.W_matrix[ix1, ix2] + self.W_matrix[ix2, ix1]
+                    n_games_played = int(self.W_matrix[ix1, ix2] + self.W_matrix[ix2, ix1])
                     match.n_games = match.n_games - n_games_played
                 if match.n_games < 1:
                     continue
@@ -61,13 +61,18 @@ class Arena:
         db = RatingDB(db_filename)
         db.commit_counts(match.agent1, match.agent2, counts)
 
-    def commit_ratings_to_db(self, db_filename: str, agents: List[Agent], ratings: np.ndarray):
+    def commit_ratings_to_db(self, db_filename: str, agents: List[Agent], ratings: np.ndarray,
+                             is_committee_flags: List[str] = None):
         #TODO: add support for commit multiple agents in one connection
         db = RatingDB(db_filename)
-        for agent, rating in zip(agents, ratings):
-            db.commit_rating(agent, rating)
+        if is_committee_flags is not None:
+            for agent, rating, is_committee in zip(agents, ratings, is_committee_flags):
+                db.commit_rating(agent, rating, is_committee=is_committee)
+        else:
+            for agent, rating in zip(agents, ratings):
+                db.commit_rating(agent, rating)
 
-    def compute_ratings(self, eps=1e-6) -> np.ndarray:
+    def compute_ratings(self, eps=1e-3) -> np.ndarray:
         ratings = compute_ratings(self.W_matrix, eps=eps)
         return ratings
 
@@ -103,7 +108,7 @@ class Arena:
             if not include_agents or agent in include_agents:
                 _, is_new_node = sub_arena._add_agent(agent, expand_matrix=False)
                 assert is_new_node
-
+        sub_arena._init_W_matrix(len(sub_arena.agents_lookup))
         for agent_i, i in sub_arena.agents_lookup.items():
             for agent_j, j in sub_arena.agents_lookup.items():
                 old_i = self.agents_lookup[agent_i]
@@ -112,11 +117,15 @@ class Arena:
 
         return sub_arena
 
-    def opponent_ix_played_against(self, agent: Agent) -> List[int]:
+    def opponent_ix_played_against(self, agent: Agent) -> np.ndarray:
         ix = self.agents_lookup[agent]
         vertical = np.where(self.W_matrix[:, ix] > 0)[0]
         horizontal = np.where(self.W_matrix[ix, :] > 0)[0]
-        return list(np.union1d(vertical, horizontal))
+        return np.union1d(vertical, horizontal)
+
+    def n_games_played(self, agent: Agent):
+        ix = self.agents_lookup[agent]
+        return (np.sum(self.W_matrix[ix, :]) + np.sum(self.W_matrix[:, ix])).astype(int)
 
     def _add_agent(self, agent: Agent, expand_matrix: bool = True) -> int:
         if agent not in self.agents_lookup:
@@ -130,8 +139,11 @@ class Arena:
             is_new_node = False
         return ix, is_new_node
 
-    def _init_W_matrix(self, n: int):
-        self.W_matrix = np.zeros((n, n), dtype=float)
+    def _init_W_matrix(self, k: int):
+        n = self.W_matrix.shape[0]
+        new_matrix = np.zeros((n + k, n + k), dtype=float)
+        new_matrix[:n, :n] = self.W_matrix
+        self.W_matrix = new_matrix
 
     def _expand_matrix(self):
         n = self.W_matrix.shape[0]

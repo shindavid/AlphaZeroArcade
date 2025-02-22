@@ -52,17 +52,17 @@ class MCTSAgent(Agent):
 class ReferenceAgent(Agent):
     type_str: str
     strength_param: str
-    strength: int
+    gen: int
     binary_filename: str = None
 
     def __repr__(self):
-        return f'{self.type_str}-{self.strength}'
+        return f'{self.type_str}-{self.gen}'
 
     def make_player_str(self) -> str:
         player_args = {
             '--type': self.type_str,
             '--name': self.__repr__(),
-            f'--{self.strength_param}': self.strength,
+            f'--{self.strength_param}': self.gen,
         }
         return make_args_str(player_args)
 

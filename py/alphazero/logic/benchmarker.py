@@ -35,6 +35,7 @@ class Benchmarker:
         self._organizer = organzier
         self.arena = Arena()
         self.ratings = None  # 1D np.ndarray
+        self.committee_ix: np.ndarray = None
         self.ref_agents: List[Agent] = []
 
         if load_past_data:
@@ -42,8 +43,9 @@ class Benchmarker:
             self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
             if not self.has_no_matches():
                 self.compute_ratings()
+                self.select_committee(elo_gap=200)
 
-    def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100):
+    def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100, elo_gap: int=200):
         while True:
             matches = self.get_next_matches(n_iters, elo_threshold, n_games)
             if matches is None:
@@ -51,11 +53,10 @@ class Benchmarker:
             counts = self.arena.play_matches(matches)
             self.compute_ratings()
             for match, count in zip(matches, counts):
-                self.arena.commit_match_to_db(self._organizer.benchmark_db_filename,
-                                              match, count)
-
+                self.arena.commit_match_to_db(self._organizer.benchmark_db_filename, match, count)
+        self.is_committee = self.select_committee(elo_gap)
         self.arena.commit_ratings_to_db(self._organizer.benchmark_db_filename,
-                                        self.arena.agents_lookup.keys(), self.ratings)
+                                        self.arena.agents_lookup.keys(), self.ratings, self.is_committee)
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -133,6 +134,26 @@ class Benchmarker:
 
     def has_no_matches(self):
         return len(self.arena.agents_lookup) < 2
+
+    def select_committee(self, elo_gap):
+        ratings = self.ratings.copy()
+        max_rating = np.max(ratings)
+        min_rating = np.min(ratings)
+        committee_size = int((max_rating - min_rating) / elo_gap)
+        target_elos = np.linspace(min_rating, max_rating, committee_size)
+        selected_ix = np.array([], dtype=int)
+        for target_elo in target_elos:
+            selected_ix = np.concatenate([selected_ix, [np.argmin(np.abs(ratings - target_elo))]])
+        self.committee_ix = selected_ix
+        mask = np.zeros(len(ratings), dtype=bool)
+        mask[selected_ix] = True
+        return mask.astype(int).tolist()
+
+    def find_agent(self, gen: int):
+        for agent in self.arena.agents_lookup:
+            if isinstance(agent, MCTSAgent) and agent.gen == gen:
+                return agent
+        return None
 
     @property
     def agents(self):
