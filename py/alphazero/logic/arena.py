@@ -16,6 +16,7 @@ class Arena:
     def __init__(self):
         self.W_matrix = np.zeros((0, 0), dtype=float)
         self.agents_lookup: Dict[Agent, int] = {}
+        self.ratings: np.ndarray = np.array([])
 
     def load_matches_from_db(self, db_filename: str) -> List[Agent]:
         db = RatingDB(db_filename)
@@ -73,8 +74,8 @@ class Arena:
                 db.commit_rating(agent, rating)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
-        ratings = compute_ratings(self.W_matrix, eps=eps)
-        return ratings
+        self.ratings = compute_ratings(self.W_matrix, eps=eps)
+        return self.ratings
 
     def load_ratings_from_db(self, db_filename: str) -> Dict[Agent, float]:
         db = RatingDB(db_filename)
@@ -114,7 +115,7 @@ class Arena:
                 old_i = self.agents_lookup[agent_i]
                 old_j = self.agents_lookup[agent_j]
                 sub_arena.W_matrix[i, j] = self.W_matrix[old_i, old_j]
-
+        sub_arena.compute_ratings()
         return sub_arena
 
     def opponent_ix_played_against(self, agent: Agent) -> np.ndarray:

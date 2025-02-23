@@ -72,11 +72,10 @@ class RatingDB:
     def build_agents_from_entry(entry: AgentEntry) -> Agent:
         if entry.n_iters == -1:
             type_str, strength_param = entry.model_filename.split('-')
-            binary_filename = entry.binary_filename
-            return ReferenceAgent(type_str,
-                                  strength_param,
-                                  entry.gen,
-                                  binary_filename)
+            return ReferenceAgent(type_str=type_str,
+                                  strength_param=strength_param,
+                                  strength=entry.gen,
+                                  binary_filename=entry.binary_filename)
         else:
             return MCTSAgent(entry.gen,
                              entry.n_iters,
@@ -93,7 +92,7 @@ class RatingDB:
             binary_filename = agent.binary_filename
             model_filename = agent.model_filename
         elif isinstance(agent, ReferenceAgent):
-            gen = agent.gen
+            gen = agent.strength
             n_iters = -1
             set_temp_zero = None
             binary_filename = agent.binary_filename

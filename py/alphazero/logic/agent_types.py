@@ -16,6 +16,15 @@ class Agent(ABC):
     def make_player_str(self, organizer: DirectoryOrganizer):
         pass
 
+    @property
+    @abstractmethod
+    def version(self):
+        """
+        The numerical version of the agent that identifies it from its peers either created from
+        the same run, e.g. a generation number or different strength value for a reference agent.
+        It is used to find the left and right versions and interpolate for the estimated rating.
+        """
+        pass
 
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
@@ -47,22 +56,28 @@ class MCTSAgent(Agent):
 
         return make_args_str(player_args)
 
+    @property
+    def version(self):
+        return self.gen
 
 @dataclass(frozen=True)
 class ReferenceAgent(Agent):
     type_str: str
     strength_param: str
-    gen: int
+    strength: int
     binary_filename: str = None
 
     def __repr__(self):
-        return f'{self.type_str}-{self.gen}'
+        return f'{self.type_str}-{self.strength}'
 
     def make_player_str(self) -> str:
         player_args = {
             '--type': self.type_str,
             '--name': self.__repr__(),
-            f'--{self.strength_param}': self.gen,
+            f'--{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
 
+    @property
+    def version(self):
+        return self.strength
