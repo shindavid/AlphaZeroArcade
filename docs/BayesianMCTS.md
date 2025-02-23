@@ -114,7 +114,7 @@ Here is a plot of a matching joint distribution:
 Note that:
 
 - The mean of the projection of the distribution on the x-axis is 0.4
-- The mean of the projection of the distribution on the x-axis is 0.5
+- The mean of the projection of the distribution on the y-axis is 0.5
 - 80% of the points lie **above** the line $y=x$
 
 To stretch our brains, let's also consider a different scenario, also with two children:
@@ -138,7 +138,7 @@ Here is a plot of a matching joint distribution:
 Note that:
 
 - The mean of the projection of the distribution on the x-axis is 0.4
-- The mean of the projection of the distribution on the x-axis is 0.5
+- The mean of the projection of the distribution on the y-axis is 0.5
 - 80% of the points lie **below** the line $y=x$
 
 With these two different scenarios in mind, let us suppose that we obtain evidence that updates our belief of
