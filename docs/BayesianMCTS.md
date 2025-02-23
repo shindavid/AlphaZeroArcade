@@ -107,6 +107,41 @@ Q_2 &= 0.5
 \end{align}
 ```
 
-We then obtain evidence that updates our belief of $Q_1$ from $0.4$ to $0.6$. How should we update $\pi$?
+Here is a plot of a matching joint distribution:
+
+![image](https://github.com/user-attachments/assets/beba97e3-1654-4549-bac9-91886f9d11c5)
+
+Note that:
+
+- The mean of the projection of the distribution on the x-axis is 0.4
+- The mean of the projection of the distribution on the x-axis is 0.5
+- 80% of the points lie **above** the line $y=x$
+
+To stretch our brains, let's also consider a different scenario, also with two children:
+
+```math
+\begin{align}
+\pi &= [0.8, 0.2]  \\
+Q_1 &= 0.4  \\
+Q_2 &= 0.5
+\end{align}
+```
+
+Note the key difference: the $Q_1$ and $Q_2$ values are the same, but the policy $\pi$ is reversed:
+despite us believing that action 2 has a higher _average_ quality, we believe that action 1 is more likely
+to be better.
+
+Here is a plot of a matching joint distribution:
+
+![image](https://github.com/user-attachments/assets/127e390d-33ee-4698-9350-c21c26394692)
+
+Note that:
+
+- The mean of the projection of the distribution on the x-axis is 0.4
+- The mean of the projection of the distribution on the x-axis is 0.5
+- 80% of the points lie **below** the line $y=x$
+
+With these two different scenarios in mind, let us suppose that we obtain evidence that updates our belief of
+$Q_1$ from $0.4$ to $0.6$. How should we update $\pi$?
 
 TODO
