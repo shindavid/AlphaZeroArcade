@@ -49,6 +49,8 @@ bandit setting: to calculate my expected payout from pulling the lever of a rand
 chosen slot machine, I should compute the average of each slot machine's expected payout, weighted by
 the probability that I will choose each machine.
 
+(Note that we are letting `Q` always be in terms of the first-player's POV, for simplicity of exposition.)
+
 The remaining piece to complete the description is the `update_posterior()` method:
 
 ```
@@ -69,25 +71,42 @@ This is a very strange way to implement this function! It begs many questions:
 - When `self.stats.N == 0`, why do we throw away the prior and set the posterior to a singular distribution? Surely, that choice is not the one that optimally combines the prior with the observed data?
 - If `before.Q > after.Q`, that means that our belief of the quality of the visited child _decreased_. Why then, do we _increase_ the policy weight for this child?
 - In fact, the method does not even bother looking at `before` or `after` at all! Why not?
+- The `after` evidence might show us that a child is provably winning. Why not incorporate such evidence by collapsing the posterior?
 
 ## A Better `update_posterior()` Method
 
-Let us build a better `update_posterior()` method.
+The questions raised above suggest that we might be able to improve MCTS by substituting a better `update_posterior()` method.
+To do this well, let us lay a strong theoretical foundation.
 
-It will be useful to introduce another statistic: a measure of the _uncertainty_ of `Q`. We will call this `U` (for "uncertainty"). 
-Intuitively, we want it to estimate how much change we expect in `Q` if we perform more visits to the node. That is, if $R$
-is a random variable corresponding to the amount that `n.stats.Q` will change by on the next $k$ visits to node `n`, we want
-`n.stats.U` to correspond to the variance of $R$. We want `U` to be initialized by a neural network estimate, and we want
-to derive a precise update rule  for `U` - the details of this should be flushed out later.
+The parent has $n$ children, $c_1, c_2, \ldots, c_n$. Each child $c_i$ has a corresponding `Q` value, $Q_i$. Although this is
+a scalar, it actually represents the mean of a _distribution_, $B_i$, that represents our belief of the true quality of $c_i$.
+In turn, each distribution $B_i$ actually represents a _projection_ of some _joint_ distribution, $J$, expressible as a probability
+distribution over $\mathbb{R}^n$. The true quality of the $n$ children is expressible as a point of $x^* \in R^n$, and this implicit joint
+distribution $J$ represents our beliefs about $x^*$.
 
-Note that for nodes corresponding to terminal game states, we will have `U = 0`.
+The policy $\pi$ can be thought of as our belief of the max coordinate of $x^*$.
 
-It is not difficult to see that by checking for `U == 0`, we can have our `update_posterior()` instantaneously collapse `pi`
-upon finding forced wins, with minimax-mechanics propagating such collapses up the tree to crisply identify mate-in-N situations.
+If each $B_i$ is independent, then $\pi$ could be directly computed from the $B_i$. And, if each $B_i$ were of a constant shape
+uniquely determined by $Q_i$, then $\pi$ could be directly computed from the $Q_i$. However, this is usually far from the case, which
+is why we have a `P`-head in the first place.
 
-Let `deltaQ = after.Q - before.Q`. At a high-level, our `update_posterior()` should behave as follows:
+To summarize, the parent policy and the $n$ child `Q` values can be thought of as _projections_ of some implicit underlying
+distribution $J$ over $R^n$. When we get new evidence that alters our child `Q` beliefs, we want to, either implicitly or explicitly,
+update our belief of $J$, and then based on that, update our policy $\pi$.
 
-- If `deltaQ > 0`, we should _increase_ `pi[child_index]`, with the magnitude of the increase determined by `deltaQ / U`.
-- If `deltaQ < 0`, we should _decrease_ `pi[child_index]`, with the magnitude of the decrease determined by `deltaQ / U`.
+It immediately becomes clear that the change in child `Q` does not by itself provide enough evidence to properly update `pi`.
+Something else is needed.
+
+To simplify, let us consider a case when there are only two children. Suppose that currently, we have:
+
+```math
+\begin{align}
+\pi &= [0.2, 0.8]  \\
+Q_1 &= 2  \\
+Q_2 &= 2.1
+\end{align}
+```
+
+We then obtain evidence that updates our belief of $Q_1$ from $2$ to $3$. How should we update $\pi$?
 
 TODO
