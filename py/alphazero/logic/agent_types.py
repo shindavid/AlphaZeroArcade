@@ -26,6 +26,7 @@ class Agent(ABC):
         """
         pass
 
+
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
@@ -59,6 +60,7 @@ class MCTSAgent(Agent):
     @property
     def version(self):
         return self.gen
+
 
 @dataclass(frozen=True)
 class ReferenceAgent(Agent):

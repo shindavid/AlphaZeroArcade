@@ -7,6 +7,7 @@ import numpy as np
 
 from typing import List, Dict
 
+
 class Arena:
     """
     Arena is a data structure for storing the match results of agents. It provides functions to
