@@ -102,11 +102,11 @@ To simplify, let us consider a case when there are only two children. Suppose th
 ```math
 \begin{align}
 \pi &= [0.2, 0.8]  \\
-Q_1 &= 2  \\
-Q_2 &= 2.1
+Q_1 &= 0.4  \\
+Q_2 &= 0.5
 \end{align}
 ```
 
-We then obtain evidence that updates our belief of $Q_1$ from $2$ to $3$. How should we update $\pi$?
+We then obtain evidence that updates our belief of $Q_1$ from $0.4$ to $0.6$. How should we update $\pi$?
 
 TODO
