@@ -101,7 +101,7 @@ To simplify, let us consider a case when there are only two children. Suppose th
 
 ```math
 \begin{align}
-\pi &= [0.2, 0.8]  \\
+\pi &= [0.3, 0.7]  \\
 Q_1 &= 0.4  \\
 Q_2 &= 0.5
 \end{align}
@@ -115,13 +115,13 @@ Note that:
 
 - The mean of the projection of the distribution on the x-axis is 0.4
 - The mean of the projection of the distribution on the y-axis is 0.5
-- 80% of the points lie **above** the line $y=x$
+- 70% of the points lie **above** the line $y=x$
 
 To stretch our brains, let's also consider a different scenario, also with two children:
 
 ```math
 \begin{align}
-\pi &= [0.8, 0.2]  \\
+\pi &= [0.7, 0.3]  \\
 Q_1 &= 0.4  \\
 Q_2 &= 0.5
 \end{align}
@@ -139,7 +139,7 @@ Note that:
 
 - The mean of the projection of the distribution on the x-axis is 0.4
 - The mean of the projection of the distribution on the y-axis is 0.5
-- 80% of the points lie **below** the line $y=x$
+- 70% of the points lie **below** the line $y=x$
 
 With these two different scenarios in mind, let us suppose that we obtain evidence that updates our belief of
 $Q_1$ from $0.4$ to $0.6$. How should we update $\pi$?
