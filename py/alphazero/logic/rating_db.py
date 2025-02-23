@@ -137,13 +137,9 @@ class RatingDB:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agent, rating, benchmark_agents=None, is_committee=None):
+    def commit_rating(self, agent, rating, is_committee=None):
         conn = self.db_conn_pool.get_connection()
         agent_entry = RatingDB.get_entry_from_agent(agent)
-        if benchmark_agents:
-            benchmark_agents_str = ', '.join([str(a) for a in benchmark_agents])
-        else:
-            benchmark_agents_str = None
 
         entry_tuple = (agent_entry.gen,
                     agent_entry.n_iters,
@@ -151,21 +147,20 @@ class RatingDB:
                     agent_entry.binary_filename,
                     agent_entry.model_filename,
                     agent_entry.set_temp_zero,
-                    is_committee,
-                    benchmark_agents_str)
+                    is_committee)
         c = conn.cursor()
         c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
-            is_zero_temp, is_commitee, benchmark_agents) \
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
+            is_zero_temp, is_commitee) \
+                VALUES (?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
         conn.commit()
 
     def load_ratings(self) -> Dict[Agent, float]:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         c.execute('SELECT gen, n_iters, rating, binary, model_file, is_zero_temp, \
-            is_commitee, benchmark_agents FROM ratings')
+            is_commitee FROM ratings')
         ratings = {}
-        for gen, n_iters, rating, binary, model_file, set_temp_zero, _, _ in c.fetchall():
+        for gen, n_iters, rating, binary, model_file, set_temp_zero, _ in c.fetchall():
             agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)
             agent = RatingDB.build_agents_from_entry(agent_entry)
             ratings[agent] = rating

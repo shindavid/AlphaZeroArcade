@@ -131,6 +131,5 @@ ARENA_TABLE_CREATE_CMDS = [
             model_file TEXT,
             is_zero_temp INT,
             is_commitee INT,
-            benchmark_agents TEXT
             )""",
 ]
