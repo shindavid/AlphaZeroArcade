@@ -138,3 +138,5 @@ class Arena:
         new_matrix = np.zeros((n + k, n + k), dtype=float)
         new_matrix[:n, :n] = self.W_matrix
         self.W_matrix = new_matrix
+
+

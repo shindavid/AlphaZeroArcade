@@ -81,3 +81,4 @@ class ReferenceAgent(Agent):
     @property
     def version(self):
         return self.strength
+
