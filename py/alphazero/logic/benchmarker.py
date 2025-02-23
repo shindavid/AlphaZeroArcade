@@ -163,5 +163,3 @@ class Benchmarker:
     def agents_lookup(self):
         return self.arena.agents_lookup
 
-
-

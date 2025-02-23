@@ -30,7 +30,7 @@ def main():
     evaluator = Evaluator(organizer, organizer)
     ref_agents =[ReferenceAgent(type_str='Perfect',
                                 strength_param='strength',
-                                gen=strength,
+                                strength=strength,
                                 binary_filename=organizer.binary_filename) \
                                     for strength in range(1, 22, 5)]
     for ref_agent in ref_agents:

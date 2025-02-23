@@ -6,7 +6,7 @@ from util.sqlite3_util import DatabaseConnectionPool
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Iterator, Tuple, Dict
+from typing import Iterator, Tuple, Dict, List
 import os
 
 
@@ -137,21 +137,25 @@ class RatingDB:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agent, rating, is_committee=None):
+    def commit_rating(self, agents: List[Agent], ratings: np.ndarray, is_committee_flags: List[str]):
         conn = self.db_conn_pool.get_connection()
-        agent_entry = RatingDB.get_entry_from_agent(agent)
-
-        entry_tuple = (agent_entry.gen,
-                    agent_entry.n_iters,
-                    rating,
-                    agent_entry.binary_filename,
-                    agent_entry.model_filename,
-                    agent_entry.set_temp_zero,
-                    is_committee)
         c = conn.cursor()
-        c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
-            is_zero_temp, is_commitee) \
-                VALUES (?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
+
+        if is_committee_flags is None:
+            is_committee_flags = [None] * len(agents)
+
+        for agent, rating, is_committee in zip(agents, ratings, is_committee_flags):
+            agent_entry = RatingDB.get_entry_from_agent(agent)
+            entry_tuple = (agent_entry.gen,
+                           agent_entry.n_iters,
+                           rating,
+                           agent_entry.binary_filename,
+                           agent_entry.model_filename,
+                           agent_entry.set_temp_zero,
+                           is_committee)
+            c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
+                is_zero_temp, is_commitee) VALUES (?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
+
         conn.commit()
 
     def load_ratings(self) -> Dict[Agent, float]:
@@ -165,5 +169,4 @@ class RatingDB:
             agent = RatingDB.build_agents_from_entry(agent_entry)
             ratings[agent] = rating
         return ratings
-
 

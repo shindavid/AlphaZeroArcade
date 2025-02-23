@@ -31,8 +31,7 @@ class Arena:
             if is_new_agent2:
                 new_agents.append(agent2)
 
-        self._init_W_matrix(len(self.agents_lookup))
-        counts: WinLossDrawCounts = WinLossDrawCounts()
+        self._expand_matrix(len(self.agents_lookup))
         for (ix1, ix2), counts in wld_dict.items():
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
@@ -64,14 +63,8 @@ class Arena:
 
     def commit_ratings_to_db(self, db_filename: str, agents: List[Agent], ratings: np.ndarray,
                              is_committee_flags: List[str] = None):
-        #TODO: add support for commit multiple agents in one connection
         db = RatingDB(db_filename)
-        if is_committee_flags is not None:
-            for agent, rating, is_committee in zip(agents, ratings, is_committee_flags):
-                db.commit_rating(agent, rating, is_committee=is_committee)
-        else:
-            for agent, rating in zip(agents, ratings):
-                db.commit_rating(agent, rating)
+        db.commit_rating(agents, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
         self.ratings = compute_ratings(self.W_matrix, eps=eps)
@@ -109,7 +102,7 @@ class Arena:
             if not include_agents or agent in include_agents:
                 _, is_new_node = sub_arena._add_agent(agent, expand_matrix=False)
                 assert is_new_node
-        sub_arena._init_W_matrix(len(sub_arena.agents_lookup))
+        sub_arena._expand_matrix(len(sub_arena.agents_lookup))
         for agent_i, i in sub_arena.agents_lookup.items():
             for agent_j, j in sub_arena.agents_lookup.items():
                 old_i = self.agents_lookup[agent_i]
@@ -133,21 +126,15 @@ class Arena:
             ix = len(self.agents_lookup)
             self.agents_lookup[agent] = ix
             if expand_matrix:
-                self._expand_matrix()
+                self._expand_matrix(1)
             is_new_node = True
         else:
             ix = self.agents_lookup[agent]
             is_new_node = False
         return ix, is_new_node
 
-    def _init_W_matrix(self, k: int):
+    def _expand_matrix(self, k: int):
         n = self.W_matrix.shape[0]
         new_matrix = np.zeros((n + k, n + k), dtype=float)
-        new_matrix[:n, :n] = self.W_matrix
-        self.W_matrix = new_matrix
-
-    def _expand_matrix(self):
-        n = self.W_matrix.shape[0]
-        new_matrix = np.zeros((n + 1, n + 1), dtype=float)
         new_matrix[:n, :n] = self.W_matrix
         self.W_matrix = new_matrix

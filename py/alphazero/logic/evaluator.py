@@ -38,7 +38,7 @@ class Evaluator:
             self.evaluated_versions = [agent.version for agent in self.evaluated_agents]
             self.ratings = np.array(self.ratings)
 
-    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100):
+    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, max_version_gap: int=50):
         """
         Used for evaluating generations of MCTS agents of a run.
         """
@@ -50,7 +50,7 @@ class Evaluator:
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    binary_filename=self._organizer.binary_filename,
                                    model_filename=self._organizer.get_model_filename(gen))
-            self.eval_agent(test_agent, n_games)
+            self.eval_agent(test_agent, n_games, max_version_gap)
 
     def get_next_gen_to_eval(self, target_eval_percent):
         last_gen = self._organizer.get_latest_model_generation()
@@ -77,9 +77,11 @@ class Evaluator:
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
 
-    def eval_agent(self, test_agent: Agent, n_games):
+    def eval_agent(self, test_agent: Agent, n_games, max_version_gap: int=50):
         """
         generic evaluation function for all types of agent.
+        max_version_gap is used to determine if we can interpolate the rating given the rated
+        agents in arena.
         """
         # arena will only include the test agent and benchmark agents. Test agents
         # of a different gen will not be included in this arena. arena includes every benchmark agent.
@@ -94,7 +96,7 @@ class Evaluator:
             opponent_ix_played = arena.opponent_ix_played_against(test_agent)
             n_games -= arena.n_games_played(test_agent)
         else:
-            estimated_rating = self.estimate_rating(test_agent.version)  # interpolates based on rating of left_gen and right_gen
+            estimated_rating = self.estimate_rating(test_agent.version, max_version_gap)  # interpolates based on rating of left_gen and right_gen
 
         if not estimated_rating:
             # when there is no match record for the test agent, and we don't have appropriately close
@@ -134,11 +136,11 @@ class Evaluator:
         arena.compute_ratings(eps=1e-3)
         eval_rating = arena.ratings[arena.agents_lookup[test_agent]]
         interpolated_rating = self.interpolate_ratings(eval_rating, arena)
-        self.evaluated_versions.append(test_agent.gen)
+        self.evaluated_versions.append(test_agent.version)
         arena.commit_ratings_to_db(self._organizer.eval_db_filename, [test_agent], [interpolated_rating])
         self.ratings = np.concatenate([self.ratings, [interpolated_rating]])
 
-    def estimate_rating(self, gen: int, max_gen_gap: int = 500) -> Optional[float]:
+    def estimate_rating(self, gen: int, max_version_gap) -> Optional[float]:
         assert gen not in self.evaluated_versions
         # find the closest gen that is less than gen and the closest gen that is greater than gen.
         # Then interpolate the rating.
@@ -149,7 +151,7 @@ class Evaluator:
             return None
 
         assert left_gen < gen < right_gen
-        if right_gen - left_gen > max_gen_gap:
+        if right_gen - left_gen > max_version_gap:
             return None
         left_rating = self.ratings[self.evaluated_versions.index(left_gen)]
         right_rating = self.ratings[self.evaluated_versions.index(right_gen)]
