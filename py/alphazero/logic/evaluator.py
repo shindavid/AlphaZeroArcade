@@ -3,7 +3,6 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import win_prob
-from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 
@@ -21,7 +20,7 @@ logger = get_logger()
 class Evaluator:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self.benchmark = Benchmarker(benchmark_organizer, load_past_data=True)
+        self.benchmark = Benchmarker(benchmark_organizer)
         self.benchmark_agents = self.benchmark.agents
 
         self.arena = Arena()

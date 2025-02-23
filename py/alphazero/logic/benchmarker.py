@@ -7,7 +7,7 @@ from util.logging_util import get_logger
 import numpy as np
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import  Optional
 
 
 logger = get_logger()
@@ -23,27 +23,17 @@ class RatingsGap:
 class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
-
-    At any point, we will have R reference agents and M mcts agents.
-
-    self.W_matrix: np.ndarray of shape (R+M, R+M)
-    self.agents_lookup: Dict[Agent, int] of size R+M
-    self.mcts_agents: List[MctsAgent] of size M, sorted by gen
-    self.ratings: List[float] of size R+M
     """
-    def __init__(self, organzier: DirectoryOrganizer, load_past_data: bool=False):
+    def __init__(self, organzier: DirectoryOrganizer):
         self._organizer = organzier
         self.arena = Arena()
         self.ratings = None  # 1D np.ndarray
         self.committee_ix: np.ndarray = None
-        self.ref_agents: List[Agent] = []
 
-        if load_past_data:
-            # maybe we always want to load past data?
-            self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
-            if not self.has_no_matches():
-                self.compute_ratings()
-                self.select_committee(elo_gap=200)
+        self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
+        if not self.has_no_matches():
+            self.compute_ratings()
+            self.select_committee(elo_gap=200)
 
     def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100, elo_gap: int=200):
         while True:
@@ -84,7 +74,7 @@ class Benchmarker:
         """
         r = self.ratings.copy()
         mcts_agent_gens, mcts_agent_ix = zip(*[(agent.gen, ix) for agent, ix in \
-            self.arena.agents_lookup.items() if agent not in self.ref_agents])
+            self.arena.agents_lookup.items()])
         mcts_agent_gens = np.array(mcts_agent_gens)
         mcts_agent_ix = np.array(mcts_agent_ix)
 

@@ -23,7 +23,7 @@ def main():
     args = load_args()
     run_params = RunParams.create(args)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-    benchmark_committee = Benchmarker(organizer, load_past_data=True)
+    benchmark_committee = Benchmarker(organizer)
     benchmark_committee.run(n_iters=args.n_iters,
                             elo_threshold=args.elo_threshold,
                             n_games=args.n_games)

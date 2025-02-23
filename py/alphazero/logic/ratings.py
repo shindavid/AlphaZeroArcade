@@ -157,3 +157,4 @@ def compute_ratings(w: np.ndarray, eps: float=0.0) -> np.ndarray:
 
 def win_prob(r1: float, r2: float) -> float:
     return float(1 / (1 + np.exp((r2 - r1) / BETA_SCALE_FACTOR)))
+
