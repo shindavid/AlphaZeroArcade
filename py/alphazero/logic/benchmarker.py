@@ -27,8 +27,8 @@ class Benchmarker:
     def __init__(self, organzier: DirectoryOrganizer):
         self._organizer = organzier
         self.arena = Arena()
-        self.ratings = None  # 1D np.ndarray
-        self.committee_ix: np.ndarray = None
+        self.ratings: np.ndarray = np.array([])
+        self.committee_ix: np.ndarray = np.array([])
 
         self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
         if not self.has_no_matches():
@@ -103,6 +103,8 @@ class Benchmarker:
         if gap is None or gap.elo_diff < elo_threshold:
             return None
         mid_gen = (gap.left_gen + gap.right_gen) // 2
+
+        logger.info(f'Adding mid point: gen-{mid_gen}')
         mid_agent = self.build_agent(mid_gen, n_iters)
         left_agent = self.build_agent(gap.left_gen, n_iters)
         right_agent = self.build_agent(gap.right_gen, n_iters)

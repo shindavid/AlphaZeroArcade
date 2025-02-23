@@ -130,6 +130,6 @@ ARENA_TABLE_CREATE_CMDS = [
             binary TEXT,
             model_file TEXT,
             is_zero_temp INT,
-            is_commitee INT,
-            )""",
+            is_commitee INT
+            )"""
 ]

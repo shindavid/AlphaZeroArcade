@@ -95,6 +95,6 @@ class MatchRunner:
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
-        logger.info('Match result: %s', record.get(0))
+        logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
         return record.get(0)
 

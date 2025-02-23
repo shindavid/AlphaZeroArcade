@@ -6,12 +6,10 @@ from alphazero.logic.ratings import win_prob
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 
-from tqdm import tqdm
 from scipy.interpolate import interp1d
 import numpy as np
 
 from typing import Optional, List
-
 
 
 logger = get_logger()
@@ -37,7 +35,7 @@ class Evaluator:
             self.evaluated_versions = [agent.version for agent in self.evaluated_agents]
             self.ratings = np.array(self.ratings)
 
-    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, max_version_gap: int=50):
+    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, max_version_gap: int=500):
         """
         Used for evaluating generations of MCTS agents of a run.
         """
@@ -125,8 +123,9 @@ class Evaluator:
             strongest_ix = [np.argmax(self.benchmark.ratings)] * (n_games//10)
             indices = np.concatenate([weakest_ix, indices, strongest_ix])
             chosen_ix, num_matches = np.unique(indices, return_counts=True)
-            print(f"evaluating {test_agent}:")
-            for ix, n in tqdm(zip(chosen_ix, num_matches), total=len(chosen_ix)):
+
+            logger.info(f'evaluating {test_agent} against {len(chosen_ix)} opponents. Estimated rating: {estimated_rating}')
+            for ix, n in zip(chosen_ix, num_matches):
                 opponent = self.benchmark_agents[ix]
                 match = Match(test_agent, opponent, n)
                 counts = arena.play_matches([match], additional=True)
@@ -135,6 +134,7 @@ class Evaluator:
         arena.compute_ratings(eps=1e-3)
         eval_rating = arena.ratings[arena.agents_lookup[test_agent]]
         interpolated_rating = self.interpolate_ratings(eval_rating, arena)
+        logger.info(f'{test_agent} rating: {interpolated_rating}, before_interpolation: {eval_rating}')
         self.evaluated_versions.append(test_agent.version)
         arena.commit_ratings_to_db(self._organizer.eval_db_filename, [test_agent], [interpolated_rating])
         self.ratings = np.concatenate([self.ratings, [interpolated_rating]])

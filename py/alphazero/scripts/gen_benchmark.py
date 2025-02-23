@@ -5,6 +5,7 @@ from alphazero.logic.match_runner import MatchRunner, Match
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.py_util import CustomHelpFormatter
+from util.logging_util import get_logger, configure_logger
 
 from typing import Optional
 import argparse
@@ -18,6 +19,7 @@ def load_args():
     return parser.parse_args()
 
 def main():
+    configure_logger()
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
     args = load_args()
