@@ -120,6 +120,9 @@ class Evaluator:
 
             sample_ix = np.random.choice(len(self.benchmark.committee_ix), p=var, size=n_games)
             indices = [self.benchmark.committee_ix[ix] for ix in sample_ix]
+            weakest_ix = [np.argmin(self.benchmark.ratings)] * (n_games//10)
+            strongest_ix = [np.argmax(self.benchmark.ratings)] * (n_games//10)
+            indices = np.concatenate([weakest_ix, indices, strongest_ix])
             chosen_ix, num_matches = np.unique(indices, return_counts=True)
             print(f"evaluating {test_agent}:")
             for ix, n in tqdm(zip(chosen_ix, num_matches), total=len(chosen_ix)):
