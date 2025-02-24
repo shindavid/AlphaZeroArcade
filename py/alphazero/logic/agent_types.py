@@ -7,13 +7,21 @@ import os
 from typing import Dict
 
 
+@dataclass
 class Agent(ABC):
     """
     Base class for agents. All agents must implment make_player_str() for generating
     command-line arguments for the player.
     """
+    _ix: int = field(init=False, default=None)
+
+    def __setattr__(self, name, value):
+        if name != '_ix' and name in self.__dict__:
+                raise TypeError(f"Field '{name}' is immutable once constructed.")
+        super().__setattr__(name, value)
+
     @abstractmethod
-    def make_player_str(self, organizer: DirectoryOrganizer):
+    def make_player_str(self) -> str:
         pass
 
     @property
@@ -26,8 +34,18 @@ class Agent(ABC):
         """
         pass
 
+    @property
+    def ix(self):
+        return self._ix
 
-@dataclass(frozen=True)
+    @ix.setter
+    def ix(self, ix):
+        if self._ix is not None:
+            raise ValueError(f'ix already set to {self._ix}')
+        self._ix = ix
+
+
+@dataclass
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: int = 0
@@ -62,7 +80,7 @@ class MCTSAgent(Agent):
         return self.gen
 
 
-@dataclass(frozen=True)
+@dataclass
 class ReferenceAgent(Agent):
     type_str: str
     strength_param: str
