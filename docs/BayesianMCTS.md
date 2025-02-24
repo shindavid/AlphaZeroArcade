@@ -79,69 +79,55 @@ The questions raised above suggest that we might be able to improve MCTS by subs
 To do this well, let us lay a strong theoretical foundation.
 
 The parent has $n$ children, $c_1, c_2, \ldots, c_n$. Each child $c_i$ has a corresponding `Q` value, $Q_i$. Although this is
-a scalar, it actually represents the mean of a _distribution_, $B_i$, that represents our belief of the true quality of $c_i$.
-In turn, each distribution $B_i$ actually represents a _projection_ of some _joint_ distribution, $J$, expressible as a probability
-distribution over $\mathbb{R}^n$. The true quality of the $n$ children is expressible as a point of $x^* \in R^n$, and this implicit joint
-distribution $J$ represents our beliefs about $x^*$.
+a scalar, it actually represents the mean of a _distribution_, $D_i$, that represents our belief of the true quality of $c_i$.
+In turn, each distribution $D_i$ actually represents a _projection_ of some _joint_ distribution, $J$, expressible as a probability
+distribution over $\mathbb{R}^n$. The true quality of the $n$ children is expressible as a point of $x \in R^n$, and this implicit joint
+distribution $J$ represents our beliefs about $x$.
 
-The policy $\pi$ can be thought of as our belief of the max coordinate of $x^*$.
+The policy $\pi$ can be thought of as our belief of the max coordinate of $x$.
 
-If each $B_i$ is independent, then $\pi$ could be directly computed from the $B_i$. And, if each $B_i$ were of a constant shape
-uniquely determined by $Q_i$, then $\pi$ could be directly computed from the $Q_i$. However, this is usually far from the case, which
-is why we have a `P`-head in the first place.
+Let us start by analyzing a simple case: suppose $n=2$, and suppose that the distributions $D_1$ and $D_2$ are independent
+normal distributions of mean/variance $(\mu_1, \sigma_1^2)$ and $(\mu_2, \sigma_2^2)$, respectively. If we draw $(x_1, x_2)$ from the
+joint distribution, then the difference $x_1 - x_2$ is normally distributed with mean/variance $(\mu_1 - \mu_2, \sigma_1^2 + \sigma_2^2)$,
+and so the probability that $x_1 > x_2$ is given by:
 
-To summarize, the parent policy and the $n$ child `Q` values can be thought of as _projections_ of some implicit underlying
-distribution $J$ over $R^n$. When we get new evidence that alters our child `Q` beliefs, we want to, either implicitly or explicitly,
-update our belief of $J$, and then based on that, update our policy $\pi$.
+```math
+p = \Phi\left(\frac{\mu_1 - \mu_2}{\sqrt{\sigma_1^2 + \sigma_2^2}}\right)
+```
 
-It immediately becomes clear that the change in child `Q` does not by itself provide enough evidence to properly update `pi`.
-Something else is needed.
+We would thus have $\pi = [p, 1-p]$.
 
-To simplify, let us consider a case when there are only two children. Suppose that currently, we have:
+Suppose we receive an information update of the form:
 
 ```math
 \begin{align}
-\pi &= [0.3, 0.7]  \\
-Q_1 &= 0.4  \\
-Q_2 &= 0.5
+\mu_1 &\rightarrow \mu^{*}_1 \\ 
+\mu_2 &\rightarrow \mu^{*}_2
 \end{align}
 ```
 
-Here is a plot of a matching joint distribution:
-
-![image](https://github.com/user-attachments/assets/beba97e3-1654-4549-bac9-91886f9d11c5)
-
-Note that:
-
-- The mean of the projection of the distribution on the x-axis is 0.4
-- The mean of the projection of the distribution on the y-axis is 0.5
-- 70% of the points lie **above** the line $y=x$
-
-To stretch our brains, let's also consider a different scenario, also with two children:
+This would update our policy to $\pi = [q, 1-q]$, where:
 
 ```math
-\begin{align}
-\pi &= [0.7, 0.3]  \\
-Q_1 &= 0.4  \\
-Q_2 &= 0.5
-\end{align}
+q = \Phi\left(\frac{\mu^{*}_1 - \mu_2}{\sqrt{(\sigma^{*}_1)^2 + \sigma_2^2}}\right)
 ```
 
-Note the key difference: the $Q_1$ and $Q_2$ values are the same, but the policy $\pi$ is reversed:
-despite us believing that action 2 has a higher _average_ quality, we believe that action 1 is more likely
-to be better.
+Equivalently, we could frame this update rule as multiplying $\pi(1)$ by $\alpha$ and then normalizing $\pi$, where
 
-Here is a plot of a matching joint distribution:
+```math
+\alpha = \frac{q(1-p)}{p(1-q)}
+```
 
-![image](https://github.com/user-attachments/assets/127e390d-33ee-4698-9350-c21c26394692)
+Can we generalize this approach? Unfortunately, when we generalize beyond 2-dimensions, the problem has no known
+analytical solution ([source](https://mathoverflow.net/q/153039)). However, perhaps we can simply perform this computation
+independently against each sibling and combine the results in some way?
 
-Note that:
+One idea is to compute the $\alpha$ term against each sibling, and then multiply by all of them, followed by a normalization.
+Experimentation is needed.
 
-- The mean of the projection of the distribution on the x-axis is 0.4
-- The mean of the projection of the distribution on the y-axis is 0.5
-- 70% of the points lie **below** the line $y=x$
+TODO:
 
-With these two different scenarios in mind, let us suppose that we obtain evidence that updates our belief of
-$Q_1$ from $0.4$ to $0.6$. How should we update $\pi$?
-
-TODO
+- Discuss options for training a head to predict variance.
+- Derive update rule for variance beliefs
+- Derive a replacement for PUCT by framing the decision of which leaf to expand in terms of which leaf offers the greatest likelihood
+  of changing the root policy, based on the curent node stats.
