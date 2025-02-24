@@ -122,7 +122,7 @@ Can we generalize this approach? Unfortunately, when we generalize beyond 2-dime
 analytical solution ([source](https://mathoverflow.net/q/153039)). However, perhaps we can simply perform this computation
 independently against each sibling and combine the results in some way?
 
-One idea is to compute the $\alpha$ term against each sibling, and then multiply by all of them, followed by a normalization.
+One idea is to compute the $\alpha$ term against each sibling, and then multiply by the geometric mean of all of them, followed by a normalization.
 Experimentation is needed.
 
 TODO:
