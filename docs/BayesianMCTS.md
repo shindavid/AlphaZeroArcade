@@ -102,7 +102,7 @@ Suppose we receive an information update of the form:
 ```math
 \begin{align}
 \mu_1 &\rightarrow \mu^{*}_1 \\ 
-\mu_2 &\rightarrow \mu^{*}_2
+\sigma_1 &\rightarrow \sigma^{*}_1
 \end{align}
 ```
 
