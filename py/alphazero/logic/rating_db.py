@@ -12,28 +12,12 @@ import os
 
 @dataclass
 class AgentEntry:
+    ix: int
     gen: int
     n_iters: int
     set_temp_zero: bool
     binary_filename: str
     model_filename: str
-
-
-@dataclass
-class Entry:
-    gen1: int
-    gen2: int
-    gen_iters1: int
-    gen_iters2: int
-    gen1_wins: int
-    gen2_wins: int
-    draws: int
-    binary1: str
-    binary2: str
-    model_file1: str
-    model_file2: str
-    is_zero_temp1: bool
-    is_zero_temp2: bool
 
 
 class RatingDB:
@@ -49,24 +33,6 @@ class RatingDB:
                     c.execute(cmd)
                 conn.commit()
             os.chmod(db_filename, 0o666)
-
-    @staticmethod
-    def entry_to_agent_entries(entry: Entry) -> Tuple[AgentEntry, AgentEntry]:
-        agent1 = AgentEntry(entry.gen1,
-                            entry.gen_iters1,
-                            entry.is_zero_temp1,
-                            entry.binary1,
-                            entry.model_file1)
-        agent2 = AgentEntry(entry.gen2,
-                            entry.gen_iters2,
-                            entry.is_zero_temp2,
-                            entry.binary2,
-                            entry.model_file2)
-        return agent1, agent2
-
-    @staticmethod
-    def entry_to_counts(entry: Entry) -> WinLossDrawCounts:
-        return WinLossDrawCounts(entry.gen1_wins, entry.gen2_wins, entry.draws)
 
     @staticmethod
     def build_agents_from_entry(entry: AgentEntry) -> Agent:
@@ -86,88 +52,86 @@ class RatingDB:
     @staticmethod
     def get_entry_from_agent(agent: Agent):
         if isinstance(agent, MCTSAgent):
+            ix = agent.ix
             gen = agent.gen
             n_iters = agent.n_iters
             set_temp_zero = agent.set_temp_zero
             binary_filename = agent.binary_filename
             model_filename = agent.model_filename
         elif isinstance(agent, ReferenceAgent):
+            ix = agent.ix
             gen = agent.strength
             n_iters = -1
             set_temp_zero = None
             binary_filename = agent.binary_filename
             model_filename = f'{agent.type_str}-{agent.strength_param}'
-        return AgentEntry(gen, n_iters, set_temp_zero, binary_filename, model_filename)
+        return AgentEntry(ix, gen, n_iters, set_temp_zero, binary_filename, model_filename)
 
-    def fetchall(self) -> Iterator[Tuple[Agent, Agent, WinLossDrawCounts]]:
+    def load_agents(self) -> Dict[int, Agent]:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        c.execute('SELECT gen1, gen2, gen_iters1, gen_iters2, \
-            gen1_wins, gen2_wins, draws, binary1, binary2, model_file1, model_file2, \
-                is_zero_temp1, is_zero_temp2 FROM matches')
-        for row in c:
-            agent_entry1, agent_entry2 = RatingDB.entry_to_agent_entries(Entry(*row))
-            agent1 = RatingDB.build_agents_from_entry(agent_entry1)
-            agent2 = RatingDB.build_agents_from_entry(agent_entry2)
-            counts = RatingDB.entry_to_counts(Entry(*row))
-            yield agent1, agent2, counts
+        c.execute('SELECT ix, gen, n_iters, binary, model_file, is_zero_temp FROM agents')
 
+        agents = {}
+        for ix, gen, n_iters, binary, model_file, set_temp_zero in c.fetchall():
+            agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)
+            agent = RatingDB.build_agents_from_entry(agent_entry)
+            agent.ix = ix
+            agents[ix] = agent
+        return agents
 
-    def commit_counts(self, agent1: Agent, agent2: Agent, record: WinLossDrawCounts):
+    def fetch_all_matches(self) -> Iterator[Tuple[Agent, Agent, WinLossDrawCounts]]:
         conn = self.db_conn_pool.get_connection()
-        entry1: AgentEntry = RatingDB.get_entry_from_agent(agent1)
-        entry2: AgentEntry = RatingDB.get_entry_from_agent(agent2)
-        match_tuple = (entry1.gen,
-                    entry2.gen,
-                    entry1.n_iters,
-                    entry2.n_iters,
-                    record.win,
-                    record.loss,
-                    record.draw,
-                    entry1.binary_filename,
-                    entry2.binary_filename,
-                    entry1.model_filename,
-                    entry2.model_filename,
-                    entry1.set_temp_zero,
-                    entry2.set_temp_zero)
         c = conn.cursor()
-        c.execute('INSERT INTO matches \
-            (gen1, gen2, gen_iters1, gen_iters2, gen1_wins, gen2_wins, draws, \
-                binary1, binary2, model_file1, model_file2, is_zero_temp1, is_zero_temp2) \
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', match_tuple)
+        c.execute('SELECT ix1, ix2, ix1_wins, ix2_wins, draws FROM matches')
+        for ix1, ix2, ix1_wins, ix2_wins, draws in c:
+            counts = WinLossDrawCounts(ix1_wins, ix2_wins, draws)
+            yield ix1, ix2, counts
+
+    def load_ratings(self) -> Tuple[np.ndarray, np.ndarray]:
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+        c.execute('SELECT ix, rating, is_committee FROM ratings')
+
+        ratings = []
+        committee_ix = []
+        for ix, rating, is_committee in c.fetchall():
+            ratings.append(rating)
+            committee_ix.append(is_committee)
+        return np.array(ratings), np.array(committee_ix)
+
+    def commit_counts(self, ix1: int, ix2: int, record: WinLossDrawCounts):
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+        match_tuple = (ix1, ix2, record.win, record.loss, record.draw)
+        c.execute('INSERT INTO matches (ix1, ix2, ix1_wins, ix2_wins, draws) \
+            VALUES (?, ?, ?, ?, ?)', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agents: List[Agent], ratings: np.ndarray, is_committee_flags: List[str]):
+    def commit_rating(self, ix: List[int], ratings: np.ndarray, is_committee_flags: List[str]):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
         if is_committee_flags is None:
             is_committee_flags = [None] * len(agents)
 
-        for agent, rating, is_committee in zip(agents, ratings, is_committee_flags):
-            agent_entry = RatingDB.get_entry_from_agent(agent)
-            entry_tuple = (agent_entry.gen,
-                           agent_entry.n_iters,
-                           rating,
-                           agent_entry.binary_filename,
-                           agent_entry.model_filename,
-                           agent_entry.set_temp_zero,
-                           is_committee)
-            c.execute('INSERT INTO ratings (gen, n_iters, rating, binary, model_file, \
-                is_zero_temp, is_commitee) VALUES (?, ?, ?, ?, ?, ?, ?)',  entry_tuple)
-
+        for i, rating, is_committee in zip(ix, ratings, is_committee_flags):
+            rating_tuple = (i, rating, is_committee)
+            c.execute('INSERT INTO ratings (ix, rating, is_committee) \
+                VALUES (?, ?, ?)', rating_tuple)
         conn.commit()
 
-    def load_ratings(self) -> Dict[Agent, float]:
+    def commit_agent(self, agent: Agent):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        c.execute('SELECT gen, n_iters, rating, binary, model_file, is_zero_temp, \
-            is_commitee FROM ratings')
-        ratings = {}
-        for gen, n_iters, rating, binary, model_file, set_temp_zero, _ in c.fetchall():
-            agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)
-            agent = RatingDB.build_agents_from_entry(agent_entry)
-            ratings[agent] = rating
-        return ratings
+        agent_entry = RatingDB.get_entry_from_agent(agent)
+        agent_tuple = (agent.ix,
+                       agent_entry.gen,
+                       agent_entry.n_iters,
+                       agent_entry.binary_filename,
+                       agent_entry.model_filename,
+                       agent_entry.set_temp_zero)
+        c.execute('INSERT INTO agents (ix, gen, n_iters, binary, model_file, is_zero_temp) \
+            VALUES (?, ?, ?, ?, ?, ?)', agent_tuple)
 
 

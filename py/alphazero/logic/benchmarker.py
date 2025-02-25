@@ -35,9 +35,10 @@ class Benchmarker:
         self.load_from_db()
 
     def load_from_db(self):
-        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._database)
+        self.arena.load_agents_from_db(self._database)
         self.arena.load_matches_from_db(self._database)
-        if not self.has_no_matches():
+        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._database)
+        if not self.ratings and not self.has_no_matches():
             self.compute_ratings()
 
     def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100, elo_gap: int=200):

@@ -106,7 +106,7 @@ RATINGS_TABLE_CREATE_CMDS = [
 
 
 ARENA_TABLE_CREATE_CMDS = [
-    """CREATE TABLE IF NOT EXISTS mcts_agents (
+    """CREATE TABLE IF NOT EXISTS agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ix INT,
             gen INT,
@@ -118,7 +118,6 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT,
             ix1 INT,
             ix2 INT,
             ix1_wins INT,
