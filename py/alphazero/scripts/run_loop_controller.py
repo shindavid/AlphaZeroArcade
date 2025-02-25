@@ -53,12 +53,18 @@ def main():
         print('Please try again with a new tag.')
         return
 
-    log_filename = os.path.join(DirectoryOrganizer(run_params).logs_dir, 'loop-controller.log')
-    configure_logger(filename=log_filename, params=logging_params, mode='a')
+    server = LoopController(params, training_params, run_params, build_params)
+    log_filename = os.path.join(server.organizer.logs_dir, 'loop-controller.log')
 
+    if server.on_ephemeral_local_disk_env:
+        # first copy over the loop-controller.log from persistent to scratch. This makes it so
+        # rsyncing back from scratch to persistent effectively acts as an append operation.
+        backup = os.path.join(server.persistent_organizer.logs_dir, 'loop-controller.log')
+        os.system(f'cp {backup} {log_filename}')
+
+    configure_logger(filename=log_filename, params=logging_params, mode='a')
     logger.info('**** Starting loop-controller ****')
 
-    server = LoopController(params, training_params, run_params, build_params)
     server.run()
 
 
