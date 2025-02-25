@@ -1,0 +1,315 @@
+\documentclass[tikz]{article}
+\usepackage{tikz}
+\usetikzlibrary{trees, arrows}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{bytefield, amsfonts, amsmath}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\setlength\parindent{0pt}
+
+\newcommand{\Mod}[1]{\ (\mathrm{mod}\ #1)}
+\newcommand{\argmax}{\mathrm{argmax}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\FQ}{\mathrm{FQ}}
+\newcommand{\cross}{\times}
+
+\graphicspath{ {./images/} }
+
+\newtheorem{theorem}{Theorem}
+
+\title{Bayesian MCTS}
+\author{David Shin}
+
+\begin{document}
+
+\maketitle
+
+\section{Background: Grill et al}
+
+Grill et al\footnote{\url{https://arxiv.org/abs/2007.12509}} provided an interpretation of the mechanics of MCTS: at each node, 
+we maintain a policy. That policy is initialized with a prior, and repeatedly sharpened based on evidence observed from its descendants. \newline
+
+It is instructive to rigorously describe MCTS mechanics in terms of this interpretation. We do so using Python syntax:
+
+\begin{tcolorbox}
+\begin{verbatim}
+Policy = np.ndarray  # array of floats
+
+@dataclass
+class Stats:
+    P: Policy   # prior policy, comes from neural net
+    pi: Policy  # posterior policy, initialized to self.P
+    Q: float    # quality estimate
+    N: int      # visit count
+
+@dataclass
+class Node:
+    children: List[Node]
+    stats: Stats
+\end{verbatim}
+\end{tcolorbox}
+
+At each step, we start with a parent node, and visit one of its children. The visit of the child produces evidence, 
+which can be summarized as a pair of \texttt{Stats}: the child stats before the visit, 
+and the child stats after the visit. The evidence is used to update the parent stats. The update function looks like this:
+
+\begin{tcolorbox}
+\begin{verbatim}
+class Node:
+    ...
+    def update(self, child_index: int, before: Stats, after: Stats):
+        self.update_posterior(child_index, before, after)
+        self.stats.N += 1
+        self.stats.Q = sum(p*c.stats.Q for p, c in zip(self.stats.pi, self.children))
+\end{verbatim}
+\end{tcolorbox}
+
+The last line in the above is a natural computation to perform in a multi-armed bandit setting: 
+to calculate the expected payout from pulling the lever of a randomly selected slot machine, 
+we compute each slot machine's expected payout, and take their average, weighted by the probability of
+selecting each slot machine\footnote{Here, we always let \texttt{Q} be from a fixed player's point-of-view, for simplicity of exposition}. \newline
+
+\newpage
+
+To complete the description:
+
+\begin{tcolorbox}
+\begin{verbatim}
+class Node:
+    ...
+    def update_posterior(self, child_index: int, before: Stats, after: Stats):
+        if self.stats.N == 0:
+            self.stats.pi *= 0
+            self.stats.pi[child_index] += 1
+        else:
+            self.stats.pi[child_index] += 1 / self.stats.N
+
+        self.stats.pi /= sum(self.stats.pi)  # normalize
+\end{verbatim}
+\end{tcolorbox}
+
+This is a very strange way to implement this function! It begs many questions:
+
+\begin{itemize}
+    \item When \texttt{self.stats.N == 0}, why do we zero out the prior and set the posterior to a singular distribution\footnote{
+    There is in fact a technical reason here: without zeroing out, we would need \texttt{Q} values on unvisited children when recomputing
+    the parent \texttt{Q}, which we don't have in standard AlphaZero. In \href{https://github.com/shindavid/AlphaZeroArcade}{AlphaZeroArcade},
+    we introduced an \emph{action-value} head (\texttt{AV}) that predicts the network's own \texttt{V}-prediction of the children - this invention
+    allows us to avoid this zero-out.}?
+    Surely, that choice is not the one that optimally combines the prior with the observed data?
+    \item If \texttt{before.Q > after.Q}, that means that our belief of the quality of the visited child decreased. Why then, do we increase the policy weight for this child?
+    \item The \texttt{after} evidence might show us that a child is provably winning. Why not incorporate such evidence by collapsing the posterior?
+\end{itemize}
+
+Of course, the answer here is that MCTS was not \textit{designed} with the Grill et al interpretation in mind. Rather, it \textit{evolved} into
+its present form, and the Grill et al interpretation was \textit{discovered} after the fact. \newline
+
+This begs the question: can we do better if we use the Grill et al interpretation as our starting point, and if we design our posterior-policy update
+function from first principles?
+
+\section{A Better Posterior Policy Update}
+
+\subsection{Preliminaries}
+
+In order to design a better posterior-policy update function, let us lay a stronger foundation. \newline
+
+The parent node $p$ has $n$ children, $c_1, c_2, \ldots, c_n$. For each child, $c_i$, we have a corresponding
+quality estimate, $Q_i$.
+Although it is a scalar, it actually represents the mean of a \emph{distribution}, $D_i$, that represents our belief of the
+true quality of $c_i$\footnote{The word \emph{true} might be slightly confusing here. For a game like chess or go, the game will
+end in either a win or a loss (or a draw) - what does it mean for the ``true'' quality of a game state to be a fractional value like 0.36?
+I have some ideas on how to formalize this, but it's kind of just a philosophical quibble.}.
+In turn, each $D_i$ represents a \emph{projection} of some \emph{joint} distribution, $J$, expressible as
+a probability distribution over $\mathbb{R}^n$. The true quality of the $n$ children is expressible as a point $x \in \mathbb{R}^n$,
+and this implicit joint distribution $J$ represents our beliefs about $x$.\newline
+
+Finally, the policy $\pi$ is a prediction of the coordinate along which $x$ is maximal. In other words,
+
+$$
+\pi_k = \Pr_{x \sim J}[k = \argmax_i\ x_i]
+$$
+
+Figure \ref{Q-figure} shows how one might visualize these distributions and scalars for a parent node $p$ that has two children. 
+
+\begin{figure}[h]
+\caption{Possible illustration of the beliefs of a 2-child parent node.}
+\label{Q-figure}
+\centering
+\includegraphics[scale=0.5]{Q}
+\end{figure}
+
+\newpage 
+
+Note:
+
+\begin{itemize}
+    \item The $x$-axis corresponds to child $c_x$, and the $y$-axis corresponds to child $c_y$.
+    \item The blue dots represent the joint distribution $J$.
+    \item The marginal distributions $D_x$ and $D_y$ obtained by projecting $J$ on the $x$-axis and $y$-axis, respectively, are plotted above and to the right.
+    \item The mean of $D_x$ is $0.4$, and the mean of $D_y$ is $0.5$.
+    \item $80\%$ of the blue dots have $x<y$, and $20\%$ of the blue dots have $x>y$.
+\end{itemize}
+
+Thus, this distribution $J$ is consistent with the following beliefs:
+
+\begin{align*}
+Q_1 &= 0.4 \\
+Q_2 &= 0.5 \\
+\pi &= [0.2, 0.8]
+\end{align*}
+
+Of course, this particular $J$ is not the \emph{only} distribution satisfying those $Q$ and $\pi$ constraints. It is merely one of
+many possible such distributions. \newline
+
+The goal of our posterior policy update function is to \textbf{recompute $\pi$, given new information about $D_i$}.
+
+\subsection{Uncertainty Head}
+
+If our new information about $D_i$ is restricted to merely an updated mean, our challenge becomes apparent. There are many ways that the joint 
+distribution $J$ could change to be consistent with this new information. These different possibilities correspond to different
+resultant $\pi$ distributions. \newline
+
+Incorporating other statistical properties of the $D_i$ distributions would reduce our degrees of freedom, which could potentially
+make our search for a viable posterior-policy update-rule easier. To this end, we propose introducing a new output head, the \emph{uncertainty head} (\texttt{U}),
+that aims to predict how certain the network is in its \texttt{V} prediction. KataGo already has a head that predicts uncertainty\footnote{See \url{https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md\#uncertainty-weighted-mcts-playouts}}; our \texttt{U} head will be loosely
+similar. \newline
+
+Our goal is for the \texttt{U} head output at child $c_i$ to correspond to the variance of marginal distribution $D_i$. If we can have
+that starting point, then we can dynamically update this variance belief at each node by crafting an appropriate update-rule, analogous
+to the way that we update $Q$ at a parent based on the $Q$ of its children. \newline
+
+A bit of notational clarification is in order. For marginal distribution means, we have two different variables: $V$ represents a static prediction
+from a neural network, and $Q$ represents a dynamically updated estimate based on those $V$ predictions. Similarly, for marginal distribution
+variances, we will have two different variables: $U$ will represent a static prediction from a neural network, and $W$ will represent
+a dynamically updated estimate based on those $U$ predictions. \newline
+
+We start by deriving the $W$ update-rule. From the definition of variance, we know that a random variable $X$ satisfies,
+
+\begin{equation}
+\label{variance}    
+\Var[X] = \mathbb{E}[X^2] - \mathbb{E}[X]^2
+\end{equation}
+
+Let $D$ be the parent quality-belief distribution, with mean $Q$ and variance $W$, and let $D_i$ be the quality-belief distribution of
+child $c_i$, with mean $Q_i$ and variance $W_i$. Plugging into (\ref{variance}), we get:
+
+\begin{align*}
+W &= \mathbb{E}[D^2] - \mathbb{E}[D]^2 \\
+&= \sum_{i} \pi_i \mathbb{E}[D_i^2] - Q^2 \\
+&= \sum_{i} \pi_i (W_i + Q_i^2) - Q^2,
+\end{align*}
+
+or
+
+\begin{equation}
+\label{W-update}    
+W = \sum_{i} \pi_i (W_i + Q_i^2) - Q^2
+\end{equation}
+
+It remains to come up with a way to create training targets for the $U$ head. Loosely, our goal is to come up with a measure of how
+likely it is that the search will ``change it's mind'' about $Q$. To this end, we propose a training target for the $U$ head of:
+
+$$\hat{U} = (V - Q_{post})^2 + \lambda(V - z)^2$$
+
+Here:
+
+\begin{itemize}
+    \item $V$ is the initial quality estimate of the root, which comes from the neural network
+    \item $Q_{post}$ is the estimate of $Q$ at the root \emph{after} all MCTS iterations have been performed.
+    \item $z$ is the final game result
+    \item $\lambda$ is a hyperparameter
+\end{itemize}
+
+The core of this definition lies in the first $(V - Q_{post})^2$ term. It feels right to me, to align with the statistical notion of 
+variance. The secondary term, I feel like is necessary as a stabilizing term. This is especially the case when we think about how
+generation-0 works: it substitutes a ``dummy'' model that produces uniform predictions, in which case $V$ and $Q_{post}$ will
+typically be equal. This will cause the first term to be 0, which can cause the \texttt{U}-head to collapse towards 0. \newline
+
+Some experimentation is warranted here. 
+
+\subsection{Posterior Policy Update Rule}
+
+Let us turn our attention back to devising a posterior policy update rule. \newline
+
+To tackle this, let's start with a simpler case. Suppose there are just two children, and that the 
+distributions $D_1$ and $D_2$ are independent normal distributions of mean/variance $(\mu_1, \sigma_1^2)$ and $(\mu_2, \sigma_2^2)$, respectively.
+If we draw $(x_1, x_2)$ from the
+joint distribution, then the difference $x_1 - x_2$ is normally distributed with mean/variance $(\mu_1 - \mu_2, \sigma_1^2 + \sigma_2^2)$,
+and so the probability that $x_1 > x_2$ is given by:
+
+$$
+p = \Phi\left(\frac{\mu_1 - \mu_2}{\sqrt{\sigma_1^2 + \sigma_2^2}}\right)
+$$
+
+Thus, we would have $\pi = [p, 1-p]$. \newline
+
+Suppose we receive an information update of the form $(\mu_1, \sigma_1) \mapsto (\mu'_1, \sigma'_1)$.
+This would update our policy to $\pi = [q, 1-q]$, where:
+
+$$
+q = \Phi\left(\frac{\mu'_1 - \mu_2}{\sqrt{(\sigma'_1)^2 + \sigma_2^2}}\right)
+$$
+
+Equivalently, we could frame this update rule as multiplying $\pi(1)$ by $\alpha$ and then normalizing $\pi$, where
+
+$$
+\alpha = \frac{q(1-p)}{p(1-q)}
+$$
+
+Can we generalize this approach? Unfortunately, when we generalize beyond 2-dimensions, I believe the problem has no known
+analytical solution\footnote{According to \url{https://mathoverflow.net/q/153039}, there is no known analytical solution for an arbitrary $n$-dimensional
+Gaussian $\mathcal{N}(\boldsymbol{\mu},\boldsymbol{\Sigma})$. Our problem corresponds to the special case when $\boldsymbol{\Sigma}$ is a diagonal matrix. I \emph{believe}
+this special case also has no known analytical solution.}. However, perhaps we can simply perform this computation
+independently against each sibling and combine the results in some way? \newline
+
+One idea is to compute the $\alpha$ term against each sibling, and then multiply by the geometric mean of all of them, followed by a normalization.
+Experimentation is needed. \newline
+
+It is worth discussing \emph{why}, even in the 2-child case, we multiply by $\alpha$ rather than simply rewriting $\pi$ to $[q, 1-q]$.
+Given specific beliefs of $(\mu_1, \mu_2, \sigma_1, \sigma_2)$, we have derived above what our policy belief should be, \textit{if we assume
+that the child distributions are independent and normal}. For clarity, let us call this hypothetical policy $\pi^*$.
+In actuality, this assumption may not hold, and for that reason, we have some \textit{actual} policy belief, $\pi$, that in general might not
+equal $\pi^*$. In some sense, the difference between $\pi$ and $\pi^*$ \emph{encodes} our belief, $B$, regarding the deviation between
+the idealized assumption and reality. \newline
+
+When we incorporate the information update of $(\mu_1, \sigma_1) \mapsto (\mu'_1, \sigma'_1)$, we want to do so in
+a manner that is appropriately faithful to this belief $B$. If we simply rewrote $\pi$ to $[q, 1-q]$, that would be completely
+ignoring $B$, which is inappropriate. We therefore instead compute the \textit{multiplicative transform} ($\alpha$)
+that \textit{would} correctly transform $\pi^*$ under the assumption of independence and normality. \textit{Then}, we apply that same
+multiplicative transform $\alpha$ to our \textit{actual} $\pi$, in hopes that doing so will be sufficiently faithful to that
+belief $B$.
+
+\subsection{Terminal State Updates}
+
+One of the motivations of introducing a custom posterior policy update function was to better incorporate knowledge from terminal states. \newline
+
+A terminal state is characterized as having zero uncertainty, which in our formulation amounts to a node with $U = 0$. If we let winning
+terminal states have $Q = +\infty$, then we will find that $q=1$, and thus that $\alpha = +\infty$. Applying the Bayesian updating and
+renormalizing will collapse $\pi$ to have all its weight on the winning action, as desired. Similarly, if we let losing terminal states
+have $Q = -\infty$, then $\pi$ will collapse to zero out the losing action. The collapse will also instantly propagate up the tree via
+minimax-like mechanics. This represents a significant improvement over the slow-moving, gradual updating characterized by vanilla MCTS. \newline
+
+There is a catch, however: we typically let $Q=+1$ at terminal states, not $Q = +\infty$. Substituting $Q=+1$ does not give us the
+crisp collapsing mechanics we desire. I have to think this through, but I suspect that the solution is to put the normal distribution \textit{not}
+in the $Q$-space, but rather in a logit-space, where $Q_{min}$ is mapped to $-\infty$ and $Q_{max}$ is mapped to $+\infty$.
+
+\section{Replacing the PUCT Criterion}
+
+If we replace the posterior policy update function in MCTS, we need to also think about how to make decisions on which leaf node to expand
+at each MCTS iteration. Standard MCTS relies on the PUCT criterion for this. It also relies on Dirichlet noise to ensure sufficient
+exploration in case the policy prior underestimates the quality of a child. \newline
+
+First, it should be clear that decoupling $\pi$ from $N$ gives us much more freedom on how to solve the exploration
+that Dirichlet noise aims to solve. The standard formulation of MCTS suffers from what I call the ``Heisenburg problem``: the \textit{act}
+of trying to measure a policy changes the measurement you produce\footnote{I choose this name because of the Heisenburg Uncertainty Principle in 
+physics. I suspect some physicist will tell me that this is a bad metaphor.}! \newline
+
+As for replacing the PUCT criterion, my intuition is that we can base selection in terms of the objective of \textbf{minimizing $W$ at the root}
+(recall that $W$ is our dynamic estimate of uncertainty).
+That is, at each MCTS iteration, identify the leaf whose expansion would yield the \textit{greatest expected decrease} in $W$ at the root.
+I haven't tried to derive a formula that maps to this objective.
+
+\end{document}
