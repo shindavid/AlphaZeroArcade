@@ -56,7 +56,23 @@ class SessionData:
     def init_socket(self):
         addr = (self._params.loop_controller_host, self._params.loop_controller_port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(addr)
+
+        # run_local.py launches the servers together. The loop-controller socket might not be
+        # fully initialized by the time the other servers reach this point. So we retry a few times
+        # to connect to the loop-controller.
+        retry_count = 5
+        sleep_time = 1
+        connected = False
+        for _ in range(retry_count):
+            try:
+                sock.connect(addr)
+                connected = True
+                break
+            except:
+                time.sleep(sleep_time)
+        if not connected:
+            raise Exception(f'Failed to connect to: {addr}')
+
         self._socket = Socket(sock)
 
     def send_handshake(self, role: ClientRole, aux: Optional[dict] = None):
