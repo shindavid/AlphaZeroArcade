@@ -59,7 +59,7 @@ def gcloud_check_project():
     Set default gcloud project.
     """
 
-    default_project_name = 'AlphaZeroArcade'
+    default_project_name = 'alphazeroarcade'
 
     result = subprocess.run(["gcloud", "config", "get-value", "project"], capture_output=True)
     if result.returncode == 0:
@@ -110,14 +110,21 @@ def gcloud_check_region_and_zone():
     print('')
 
     result1 = subprocess.run(["gcloud", "config", "get-value", "compute/region"], capture_output=True)
-    if result1.returncode != 0:
+    default_region = ''
+    if result1.returncode == 0:
+        default_region = result1.stdout.decode().strip()
+
+    if not default_region:
         while True:
             region = input('Enter region: ')
             if not region:
                 continue
+            if len(region) > 1 and region[-2] == '-' and region[-1].isalpha():
+                print('It appears you entered a zone instead of a region.')
+                print('Please enter a region (e.g., us-central1).')
+                continue
             break
     else:
-        default_region = result1.stdout.decode().strip()
         region = input(f'Enter region (default: {default_region}): ')
         if not region:
             region = default_region
@@ -132,7 +139,11 @@ def gcloud_check_region_and_zone():
         print(f'✅ Region {region} set as default.')
 
     result2 = subprocess.run(["gcloud", "config", "get-value", "compute/zone"], capture_output=True)
-    if result2.returncode != 0:
+    default_zone = ''
+    if result2.returncode == 0:
+        default_zone = result2.stdout.decode().strip()
+
+    if not default_zone:
         print('Please set a default zone.')
 
         suggested_zone = region + '-a'
@@ -140,7 +151,6 @@ def gcloud_check_region_and_zone():
         if not zone:
             zone = suggested_zone
     else:
-        default_zone = result2.stdout.decode().strip()
         if not default_zone.startswith(region):
             default_zone = region + '-a'
 
