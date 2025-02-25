@@ -18,10 +18,13 @@ def check_gcloud_installation():
     """
     Check that gcloud is installed.
     """
-    result = subprocess.run(["gcloud", "version"], capture_output=True)
-    if result.returncode == 0:
-        print('✅ gcloud is installed.')
-        return
+    try:
+        result = subprocess.run(["gcloud", "version"], capture_output=True)
+        if result.returncode == 0:
+            print('✅ gcloud is installed.')
+            return
+    except FileNotFoundError:
+        pass
 
     print("❌ gcloud is not installed.")
     print("Please install gcloud before proceeding.")
