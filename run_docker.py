@@ -18,6 +18,7 @@ EXPOSED_PORTS = [
     5012,  # bokeh
     8002,  # flask
     8051,  # dash
+    8888,  # jupyter-notebook
 ]
 
 
