@@ -6,16 +6,20 @@ from util.logging_util import get_logger
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
+from enum import Enum
 from itertools import combinations
 from typing import List
 
+
 logger = get_logger()
+
 
 @dataclass
 class Match:
     agent1: Agent
     agent2: Agent
     n_games: int
+
 
 class MatchRunner:
     @staticmethod

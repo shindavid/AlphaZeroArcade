@@ -20,6 +20,16 @@ class Agent(ABC):
                 raise TypeError(f"Field '{name}' is immutable once constructed.")
         super().__setattr__(name, value)
 
+    def __eq__(self, other):
+        if not isinstance(other, Agent):
+            return NotImplemented
+        # Compare all fields except _ix
+        return all(
+            getattr(self, field.name) == getattr(other, field.name)
+            for field in self.__dataclass_fields__.values()
+            if field.name != "_ix"
+        )
+
     @abstractmethod
     def make_player_str(self) -> str:
         pass
@@ -45,7 +55,7 @@ class Agent(ABC):
         self._ix = ix
 
 
-@dataclass
+@dataclass(eq=False)
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: int = 0
@@ -80,7 +90,7 @@ class MCTSAgent(Agent):
         return self.gen
 
 
-@dataclass
+@dataclass(eq=False)
 class ReferenceAgent(Agent):
     type_str: str
     strength_param: str

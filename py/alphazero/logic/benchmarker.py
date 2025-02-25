@@ -2,12 +2,14 @@ from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.arena import Arena
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
 
-import numpy as np
-
 from dataclasses import dataclass
-from typing import  Optional
+from enum import Enum
+from itertools import combinations
+import numpy as np
+from typing import  Optional, List
 
 
 logger = get_logger()
@@ -24,29 +26,48 @@ class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
     """
-    def __init__(self, organzier: DirectoryOrganizer):
-        self._organizer = organzier
+    def __init__(self, organizer: DirectoryOrganizer):
+        self._organizer = organizer
         self.arena = Arena()
         self.ratings: np.ndarray = np.array([])
         self.committee_ix: np.ndarray = np.array([])
+        self._database = RatingDB(self._organizer.benchmark_db_filename)
+        self.load_from_db()
 
-        self.arena.load_matches_from_db(self._organizer.benchmark_db_filename)
+    def load_from_db(self):
+        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._database)
+        self.arena.load_matches_from_db(self._database)
         if not self.has_no_matches():
             self.compute_ratings()
-            self.select_committee(elo_gap=200)
 
     def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100, elo_gap: int=200):
         while True:
             matches = self.get_next_matches(n_iters, elo_threshold, n_games)
             if matches is None:
                 break
-            counts = self.arena.play_matches(matches)
+            self.arena.play_matches(matches, additional=False, db=self._database)
             self.compute_ratings()
-            for match, count in zip(matches, counts):
-                self.arena.commit_match_to_db(self._organizer.benchmark_db_filename, match, count)
-        self.is_committee = self.select_committee(elo_gap)
-        self.arena.commit_ratings_to_db(self._organizer.benchmark_db_filename,
-                                        self.arena.agents_lookup.keys(), self.ratings, self.is_committee)
+
+        is_committee = self.select_committee(elo_gap)
+        self.compute_ratings()
+        self.arena.commit_ratings_to_db(self.agents.values(), self.ratings, is_committee)
+
+    def get_next_matches(self, n_iters, elo_threshold, n_games):
+        if self.has_no_matches():
+            gen0_agent = self.build_agent(0, n_iters)
+            last_gen = self._organizer.get_latest_model_generation()
+            last_gen_agent = self.build_agent(last_gen, n_iters)
+            return [Match(gen0_agent, last_gen_agent, n_games)]
+
+        gap = self.get_biggest_mcts_ratings_gap()
+        if gap is None or gap.elo_diff < elo_threshold:
+            return None
+        mid_gen = (gap.left_gen + gap.right_gen) // 2
+
+        logger.info(f'Adding mid point: gen-{mid_gen}')
+        mid_agent = self.build_agent(mid_gen, n_iters)
+        matches = [Match(mid_agent, agent, n_games) for agent in self.agents.values()]
+        return matches
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -72,44 +93,22 @@ class Benchmarker:
         NOTE: if we want to do partial-gens (i.e., use -i/--num-mcts-iters), then we can change this
         appropriately.
         """
-        r = self.ratings.copy()
-        mcts_agent_gens, mcts_agent_ix = zip(*[(agent.gen, ix) for agent, ix in \
-            self.arena.agents_lookup.items()])
-        mcts_agent_gens = np.array(mcts_agent_gens)
-        mcts_agent_ix = np.array(mcts_agent_ix)
+        elos = self.ratings.copy()
+        gens, agent_ix = zip(*[(agent.gen, ix) for ix, agent in self.agents.items()])
+        gens = np.array(gens)
+        agent_ix = np.array(agent_ix)
 
-        mcts_ratings = r[mcts_agent_ix]
-        sorted_ix = np.argsort(mcts_agent_gens)
-        gaps = np.abs(np.diff(mcts_ratings[sorted_ix]))
-
+        sorted_ix = np.argsort(gens)
+        gaps = np.abs(np.diff(elos[sorted_ix]))
         sorted_gap_ix = np.argsort(gaps)[::-1]
         for gap_ix in sorted_gap_ix:
-            left_gen = int(mcts_agent_gens[sorted_ix[gap_ix]])
-            right_gen = int(mcts_agent_gens[sorted_ix[gap_ix + 1]])
+            left_gen = int(gens[sorted_ix[gap_ix]])
+            right_gen = int(gens[sorted_ix[gap_ix + 1]])
             if left_gen + 1 < right_gen:
                 return RatingsGap(left_gen, right_gen, float(gaps[gap_ix]))
 
-    def compute_ratings(self, eps=1e-6):
+    def compute_ratings(self, eps=1e-3):
         self.ratings = self.arena.compute_ratings(eps=eps)
-
-    def get_next_matches(self, n_iters, elo_threshold, n_games):
-        if self.has_no_matches():
-            gen0_agent = self.build_agent(0, n_iters)
-            last_gen = self._organizer.get_latest_model_generation()
-            last_gen_agent = self.build_agent(last_gen, n_iters)
-            return [Match(gen0_agent, last_gen_agent, n_games)]
-
-        gap = self.get_biggest_mcts_ratings_gap()
-        if gap is None or gap.elo_diff < elo_threshold:
-            return None
-        mid_gen = (gap.left_gen + gap.right_gen) // 2
-
-        logger.info(f'Adding mid point: gen-{mid_gen}')
-        mid_agent = self.build_agent(mid_gen, n_iters)
-        left_agent = self.build_agent(gap.left_gen, n_iters)
-        right_agent = self.build_agent(gap.right_gen, n_iters)
-        return [Match(left_agent, mid_agent, n_games),
-                Match(mid_agent, right_agent, n_games)]
 
     def build_agent(self, gen: int, n_iters):
         if gen == 0:
@@ -123,34 +122,31 @@ class Benchmarker:
                              binary_filename=self._organizer.binary_filename,
                              model_filename=self._organizer.get_model_filename(gen))
 
-    def has_no_matches(self):
-        return len(self.arena.agents_lookup) < 2
+    def select_committee(self, elo_gap) -> List[bool]:
+        elos = self.ratings.copy()
+        max_elo = np.max(elos)
+        min_elo = np.min(elos)
+        committee_size = int((max_elo - min_elo) / elo_gap)
+        target_elos = np.linspace(min_elo, max_elo, committee_size)
 
-    def select_committee(self, elo_gap):
-        ratings = self.ratings.copy()
-        max_rating = np.max(ratings)
-        min_rating = np.min(ratings)
-        committee_size = int((max_rating - min_rating) / elo_gap)
-        target_elos = np.linspace(min_rating, max_rating, committee_size)
-        selected_ix = np.array([], dtype=int)
-        for target_elo in target_elos:
-            selected_ix = np.concatenate([selected_ix, [np.argmin(np.abs(ratings - target_elo))]])
-        self.committee_ix = selected_ix
-        mask = np.zeros(len(ratings), dtype=bool)
-        mask[selected_ix] = True
+        committee_ix = []
+        j = 0
+        n = len(elos)
+        for e in target_elos:
+            while j < n - 1 and (abs(elos[j] - e) > abs(elos[j + 1] - e)):
+                j += 1
+            committee_ix.append(j)
+        committee_ix = np.array(committee_ix)
+        self.committee_ix = committee_ix
+
+        mask = np.zeros(len(elos), dtype=bool)
+        mask[committee_ix] = True
         return mask.astype(int).tolist()
 
-    def find_agent(self, gen: int):
-        for agent in self.arena.agents_lookup:
-            if isinstance(agent, MCTSAgent) and agent.gen == gen:
-                return agent
-        return None
+    def has_no_matches(self):
+        return np.sum(self.arena.W_matrix) == 0
 
     @property
     def agents(self):
-        return list(self.arena.agents_lookup.keys())
-
-    @property
-    def agents_lookup(self):
-        return self.arena.agents_lookup
+        return self.arena.agents
 
