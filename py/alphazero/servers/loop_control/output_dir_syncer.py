@@ -154,7 +154,7 @@ class OutputDirSyncer:
             gen += 1
         self._last_copied_checkpoint_gen = gen - 1
 
-        # Finally, copy self-play data
+        # Next, copy self-play data
         start_gen = first_self_play_gen_to_cp
         end_gen = self._last_copied_model_gen
         if not final:
@@ -169,17 +169,7 @@ class OutputDirSyncer:
             logger.debug("OutputDirSyncer: syncing self-play data: %s -> %s", src_dir, dst)
             tar_and_remotely_copy(src_dir, dst)
 
-    def _final_sync(self):
-        logger.info("OutputDirSyncer: beginning final sync...")
-        self._sync(final=True)
-
-        # Now copy all log files
-        #
-        # {logs_dir}/loop-controller.log is special in that we append from src to dst.
-        #
-        # For all other log files, we simply copy from src to dst.
-        #
-        # Note that logs_dir can have nested directories.
+        # Finally, copy log files
         src_dir = self._controller.organizer.logs_dir
         dst_dir = self._controller.persistent_organizer.logs_dir
 
@@ -188,12 +178,9 @@ class OutputDirSyncer:
                 src = os.path.join(root, file)
                 dst = os.path.join(dst_dir, os.path.relpath(src, src_dir))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
 
-                if file == "loop-controller.log":
-                    # Append instead of overwriting
-                    with open(src, "rb") as src_f, open(dst, "ab") as dst_f:
-                        shutil.copyfileobj(src_f, dst_f)
-                else:
-                    shutil.copyfile(src, dst)
-
+    def _final_sync(self):
+        logger.info("OutputDirSyncer: beginning final sync...")
+        self._sync(final=True)
         logger.info("OutputDirSyncer: final sync complete!")
