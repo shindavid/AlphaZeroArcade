@@ -13,7 +13,7 @@ import argparse
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
-    parser.add_argument('--elo_threshold', type=int, default=100, help='target elo diff')
+    parser.add_argument('--target_elo_gap', type=int, default=100, help='target elo gap')
     parser.add_argument('--n_games', type=int, default=100, help='Number of games per match')
     parser.add_argument("-i", '--n_iters', type=int, default=100, help='Number of MCTS iterations')
     return parser.parse_args()
@@ -27,8 +27,8 @@ def main():
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
     benchmarker = Benchmarker(organizer)
     benchmarker.run(n_iters=args.n_iters,
-                            elo_threshold=args.elo_threshold,
-                            n_games=args.n_games)
+                            n_games=args.n_games,
+                            target_elo_gap=args.target_elo_gap,)
     evaluator = Evaluator(organizer, organizer)
     ref_agents =[ReferenceAgent(type_str='Perfect',
                                 strength_param='strength',

@@ -3,6 +3,7 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import win_prob
+from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 
@@ -20,15 +21,17 @@ class Evaluator:
         self._organizer = organizer
         self.benchmark = Benchmarker(benchmark_organizer)
         self.benchmark_agents = self.benchmark.agents
+        self._db = RatingDB(self._organizer.eval_db_filename)
 
-        self.arena = Arena()
-        self.arena.load_matches_from_db(benchmark_organizer.benchmark_db_filename)
-        test_agents_with_matches = self.arena.load_matches_from_db(organizer.eval_db_filename)
-        self.versions_with_matches = [agent.version for agent in test_agents_with_matches]
-        self.arena.compute_ratings(eps=1e-3)
+        self.arena = self.benchmark.arena.clone()
+        self.arena.load_matches_from_db(organizer.eval_db_filename)
 
-        self.evaluated_versions: List[int] = []
+
+        # self.versions_with_matches = [agent.version for agent in test_agents_with_matches]
+        # self.arena.compute_ratings(eps=1e-3)
+        self.evaluated_ixs = np.array([], dtype=int)
         self.ratings: np.ndarray = np.array([])
+
         evaluated_agent_ratings = self.arena.load_ratings_from_db(organizer.eval_db_filename)
         if evaluated_agent_ratings:
             self.evaluated_agents, self.ratings = zip(*evaluated_agent_ratings.items())
@@ -170,3 +173,10 @@ class Evaluator:
         interp_func = interp1d(x, y, kind="linear", fill_value="extrapolate")
         return float(interp_func(estimated_rating))
 
+    @property
+    def agents(self):
+        return self.arena.agents
+
+    @property
+    def committee_ix(self):
+        return self.benchmark.committee_ix

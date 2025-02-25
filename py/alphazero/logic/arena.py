@@ -33,8 +33,8 @@ class Arena:
                      db: Optional[RatingDB]=None) -> WinLossDrawCounts:
         counts_list = []
         for match in matches:
-            ix1, _ = self._add_agent(match.agent1, expand_matrix=True)
-            ix2, _ = self._add_agent(match.agent2, expand_matrix=True)
+            ix1, _ = self._add_agent(match.agent1, expand_matrix=True, db=db)
+            ix2, _ = self._add_agent(match.agent2, expand_matrix=True, db=db)
 
             if self.W_matrix[ix1, ix2] > 0 or self.W_matrix[ix2, ix1] > 0:
                 if not additional:
@@ -59,8 +59,7 @@ class Arena:
         self.ratings = compute_ratings(self.W_matrix, eps=eps)
         return self.ratings
 
-    def load_ratings_from_db(self, db_filename: str) -> Dict[Agent, float]:
-        db = RatingDB(db_filename)
+    def load_ratings_from_db(self, db: RatingDB) -> Tuple[np.ndarray, np.ndarray]:
         return db.load_ratings()
 
     def clone(self, include_agents: List[Agent] = None, exclude_agents: List[Agent] = None)\
@@ -124,9 +123,8 @@ class Arena:
         self.agents[ix] = agent
         if expand_matrix:
             self._expand_matrix(1)
-
         if db:
-            db.commit_agent(agent)
+            db.commit_agent([agent])
         return ix, True
 
     def _expand_matrix(self, k: int):

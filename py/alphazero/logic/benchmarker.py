@@ -31,44 +31,58 @@ class Benchmarker:
         self.arena = Arena()
         self.ratings: np.ndarray = np.array([])
         self.committee_ix: np.ndarray = np.array([])
-        self._database = RatingDB(self._organizer.benchmark_db_filename)
+        self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
     def load_from_db(self):
-        self.arena.load_agents_from_db(self._database)
-        self.arena.load_matches_from_db(self._database)
-        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._database)
-        if not self.ratings and not self.has_no_matches():
+        self.arena.load_agents_from_db(self._db)
+        self.arena.load_matches_from_db(self._db)
+        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._db)
+        if self.ratings.size == 0 and not self.has_no_matches():
             self.compute_ratings()
 
-    def run(self, n_iters: int=100, elo_threshold: int=100, n_games: int=100, elo_gap: int=200):
+    def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
         while True:
-            matches = self.get_next_matches(n_iters, elo_threshold, n_games)
+            matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
             if matches is None:
                 break
-            self.arena.play_matches(matches, additional=False, db=self._database)
+            self.arena.play_matches(matches, additional=False, db=self._db)
             self.compute_ratings()
 
-        is_committee = self.select_committee(elo_gap)
+        is_committee = self.select_committee(target_elo_gap)
         self.compute_ratings()
-        self.arena.commit_ratings_to_db(self.agents.values(), self.ratings, is_committee)
+        self.arena.commit_ratings_to_db(self._db, self.agents.keys(), self.ratings, is_committee)
 
-    def get_next_matches(self, n_iters, elo_threshold, n_games):
+    def get_next_matches(self, n_iters, target_elo_gap, n_games):
         if self.has_no_matches():
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
             last_gen_agent = self.build_agent(last_gen, n_iters)
             return [Match(gen0_agent, last_gen_agent, n_games)]
 
-        gap = self.get_biggest_mcts_ratings_gap()
-        if gap is None or gap.elo_diff < elo_threshold:
-            return None
-        mid_gen = (gap.left_gen + gap.right_gen) // 2
+        incomplete_gen = self.incomplete_gen()
+        if incomplete_gen is not None:
+            next_gen = incomplete_gen
+            logger.info(f'Finish incomplete gen: {next_gen}')
+        else:
+            gap = self.get_biggest_mcts_ratings_gap()
+            if gap is None or gap.elo_diff < target_elo_gap:
+                return None
+            next_gen = (gap.left_gen + gap.right_gen) // 2
+            logger.info(f'Add new gen: {next_gen}, gap [{gap.left_gen}, {gap.right_gen}]: {gap.elo_diff}')
 
-        logger.info(f'Adding mid point: gen-{mid_gen}')
-        mid_agent = self.build_agent(mid_gen, n_iters)
-        matches = [Match(mid_agent, agent, n_games) for agent in self.agents.values()]
+        next_agent = self.build_agent(next_gen, n_iters)
+        matches = [Match(next_agent, agent, n_games) for agent in self.agents.values()]
         return matches
+
+    def incomplete_gen(self) -> np.ndarray:
+        played_against =(self.arena.W_matrix > 0) | (self.arena.W_matrix.T > 0)
+        opponents_played = np.sum(played_against, axis=1)
+        incomplete = np.where(opponents_played < len(self.agents) - 1)[0]
+        if (incomplete.size == 0):
+            return None
+        incomplete_ix = np.argmin(opponents_played)
+        return self.agents[incomplete_ix].gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -123,21 +137,22 @@ class Benchmarker:
                              binary_filename=self._organizer.binary_filename,
                              model_filename=self._organizer.get_model_filename(gen))
 
-    def select_committee(self, elo_gap) -> List[bool]:
+    def select_committee(self, target_elo_gap) -> List[bool]:
         elos = self.ratings.copy()
         max_elo = np.max(elos)
         min_elo = np.min(elos)
-        committee_size = int((max_elo - min_elo) / elo_gap)
+        committee_size = int((max_elo - min_elo) / target_elo_gap)
         target_elos = np.linspace(min_elo, max_elo, committee_size)
 
+        sorted_ix = np.argsort(elos)
         committee_ix = []
         j = 0
         n = len(elos)
         for e in target_elos:
-            while j < n - 1 and (abs(elos[j] - e) > abs(elos[j + 1] - e)):
+            while j < n - 1 and (abs(elos[sorted_ix[j]] - e) > abs(elos[sorted_ix[j + 1]] - e)):
                 j += 1
-            committee_ix.append(j)
-        committee_ix = np.array(committee_ix)
+            committee_ix.append(sorted_ix[j])
+        committee_ix = np.unique(committee_ix)
         self.committee_ix = committee_ix
 
         mask = np.zeros(len(elos), dtype=bool)

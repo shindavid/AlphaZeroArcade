@@ -30,7 +30,10 @@ class RatingDB:
             with self.db_conn_pool.get_connection() as conn:
                 c = conn.cursor()
                 for cmd in constants.ARENA_TABLE_CREATE_CMDS:
-                    c.execute(cmd)
+                    try:
+                        c.execute(cmd)
+                    except Exception as e:
+                        print(f"An error occurred: {e}")
                 conn.commit()
             os.chmod(db_filename, 0o666)
 
@@ -74,7 +77,7 @@ class RatingDB:
 
         agents = {}
         for ix, gen, n_iters, binary, model_file, set_temp_zero in c.fetchall():
-            agent_entry = AgentEntry(gen, n_iters, set_temp_zero, binary, model_file)
+            agent_entry = AgentEntry(ix, gen, n_iters, set_temp_zero, binary, model_file)
             agent = RatingDB.build_agents_from_entry(agent_entry)
             agent.ix = ix
             agents[ix] = agent
@@ -104,8 +107,8 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         match_tuple = (ix1, ix2, record.win, record.loss, record.draw)
-        c.execute('INSERT INTO matches (ix1, ix2, ix1_wins, ix2_wins, draws) \
-            VALUES (?, ?, ?, ?, ?)', match_tuple)
+        c.execute('''INSERT INTO matches (ix1, ix2, ix1_wins, ix2_wins, draws)
+                  VALUES (?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
     def commit_rating(self, ix: List[int], ratings: np.ndarray, is_committee_flags: List[str]):
@@ -115,23 +118,33 @@ class RatingDB:
         if is_committee_flags is None:
             is_committee_flags = [None] * len(agents)
 
+        rating_tuples = []
         for i, rating, is_committee in zip(ix, ratings, is_committee_flags):
             rating_tuple = (i, rating, is_committee)
-            c.execute('INSERT INTO ratings (ix, rating, is_committee) \
-                VALUES (?, ?, ?)', rating_tuple)
+            rating_tuples.append(rating_tuple)
+        c.executemany('''INSERT INTO ratings (ix, rating, is_committee)
+                      VALUES (?, ?, ?)
+                      ON CONFLICT(ix) DO UPDATE SET
+                      rating = excluded.rating,
+                      is_committee = excluded.is_committee''', rating_tuples)
         conn.commit()
 
-    def commit_agent(self, agent: Agent):
+    def commit_agent(self, agents: List[Agent]):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        agent_entry = RatingDB.get_entry_from_agent(agent)
-        agent_tuple = (agent.ix,
-                       agent_entry.gen,
-                       agent_entry.n_iters,
-                       agent_entry.binary_filename,
-                       agent_entry.model_filename,
-                       agent_entry.set_temp_zero)
-        c.execute('INSERT INTO agents (ix, gen, n_iters, binary, model_file, is_zero_temp) \
-            VALUES (?, ?, ?, ?, ?, ?)', agent_tuple)
+        agent_tuples = []
+        for agent in agents:
+            agent_entry = RatingDB.get_entry_from_agent(agent)
+            agent_tuple = (agent.ix,
+                        agent_entry.gen,
+                        agent_entry.n_iters,
+                        agent_entry.binary_filename,
+                        agent_entry.model_filename,
+                        agent_entry.set_temp_zero)
+            agent_tuples.append(agent_tuple)
+
+        c.executemany('''INSERT INTO agents (ix, gen, n_iters, binary, model_file, is_zero_temp)
+                      VALUES (?, ?, ?, ?, ?, ?)''', agent_tuples)
+        conn.commit()
 
 
