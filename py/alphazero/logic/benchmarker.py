@@ -6,8 +6,6 @@ from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
 
 from dataclasses import dataclass
-from enum import Enum
-from itertools import combinations
 import numpy as np
 from typing import  Optional, List
 

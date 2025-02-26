@@ -21,8 +21,8 @@ class Agent(ABC):
         super().__setattr__(name, value)
 
     def __eq__(self, other):
-        if not isinstance(other, Agent):
-            return NotImplemented
+        if not isinstance(other, type(self)):
+            return False
         # Compare all fields except _ix
         return all(
             getattr(self, field.name) == getattr(other, field.name)
@@ -104,7 +104,7 @@ class ReferenceAgent(Agent):
         player_args = {
             '--type': self.type_str,
             '--name': self.__repr__(),
-            f'--{self.strength_param}': self.strength,
+            f'{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
 

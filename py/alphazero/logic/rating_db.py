@@ -40,7 +40,7 @@ class RatingDB:
     @staticmethod
     def build_agents_from_entry(entry: AgentEntry) -> Agent:
         if entry.n_iters == -1:
-            type_str, strength_param = entry.model_filename.split('-')
+            type_str, strength_param = entry.model_filename.split('|')
             return ReferenceAgent(type_str=type_str,
                                   strength_param=strength_param,
                                   strength=entry.gen,
@@ -67,7 +67,7 @@ class RatingDB:
             n_iters = -1
             set_temp_zero = None
             binary_filename = agent.binary_filename
-            model_filename = f'{agent.type_str}-{agent.strength_param}'
+            model_filename = f'{agent.type_str}|{agent.strength_param}'
         return AgentEntry(ix, gen, n_iters, set_temp_zero, binary_filename, model_filename)
 
     def load_agents(self) -> Dict[int, Agent]:

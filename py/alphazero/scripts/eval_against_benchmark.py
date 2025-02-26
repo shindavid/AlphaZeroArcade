@@ -11,16 +11,15 @@ def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
     parser.add_argument('--benchmark_tag', type=str, default=100, help='run tag for benchmark')
-    parser.add_argument('--target_eval_percent', type=float, default=1.0, help='target eval percent')
+    parser.add_argument('--target_eval_percent', type=float, default=0.1, help='target eval percent')
     parser.add_argument('--n_games', type=int, default=1000, help='Number of games per match')
     parser.add_argument('--n_steps', type=int, default=10, help='Number of steps per evaluation')
     parser.add_argument("-i", '--n_iters', type=int, default=100, help='Number of MCTS iterations')
+    parser.add_argument('--error_threshold', type=float, default=100, help='error threshold for elo estimation')
     return parser.parse_args()
 
 def main():
     configure_logger()
-    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
-    RunParams.add_args(parser)
     args = load_args()
     run_params = RunParams.create(args)
 
@@ -31,7 +30,7 @@ def main():
 
     evaluator = Evaluator(organizer, benchmark_organizer)
     evaluator.run(n_iters=args.n_iters, target_eval_percent=args.target_eval_percent,
-                  n_games=args.n_games)
+                  n_games=args.n_games, error_threshold=args.error_threshold)
 
 if __name__ == '__main__':
     main()
