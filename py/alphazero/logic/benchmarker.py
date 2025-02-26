@@ -30,14 +30,15 @@ class Benchmarker:
         self._organizer = organizer
         self.arena = Arena()
         self.ratings: np.ndarray = np.array([])
-        self.committee_ix: np.ndarray = np.array([])
+        self.committee_ixs: np.ndarray = np.array([])
         self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
     def load_from_db(self):
         self.arena.load_agents_from_db(self._db)
         self.arena.load_matches_from_db(self._db)
-        self.ratings, self.committee_ix = self.arena.load_ratings_from_db(self._db)
+        _, self.ratings, self.committee_ixs = self.arena.load_ratings_from_db(self._db)
+        assert len(self.ratings) == len(self.agents)
         if self.ratings.size == 0 and not self.has_no_matches():
             self.compute_ratings()
 
@@ -145,18 +146,18 @@ class Benchmarker:
         target_elos = np.linspace(min_elo, max_elo, committee_size)
 
         sorted_ix = np.argsort(elos)
-        committee_ix = []
+        committee_ixs = []
         j = 0
         n = len(elos)
         for e in target_elos:
             while j < n - 1 and (abs(elos[sorted_ix[j]] - e) > abs(elos[sorted_ix[j + 1]] - e)):
                 j += 1
-            committee_ix.append(sorted_ix[j])
-        committee_ix = np.unique(committee_ix)
-        self.committee_ix = committee_ix
+            committee_ixs.append(sorted_ix[j])
+        committee_ixs = np.unique(committee_ixs)
+        self.committee_ixs = committee_ixs
 
         mask = np.zeros(len(elos), dtype=bool)
-        mask[committee_ix] = True
+        mask[committee_ixs] = True
         return mask.astype(int).tolist()
 
     def has_no_matches(self):

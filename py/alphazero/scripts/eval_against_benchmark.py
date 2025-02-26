@@ -15,7 +15,6 @@ def load_args():
     parser.add_argument('--n_games', type=int, default=1000, help='Number of games per match')
     parser.add_argument('--n_steps', type=int, default=10, help='Number of steps per evaluation')
     parser.add_argument("-i", '--n_iters', type=int, default=100, help='Number of MCTS iterations')
-    parser.add_argument('--max_version_gap', type=int, default=500, help='used for initial rating estimate')
     return parser.parse_args()
 
 def main():
@@ -32,7 +31,7 @@ def main():
 
     evaluator = Evaluator(organizer, benchmark_organizer)
     evaluator.run(n_iters=args.n_iters, target_eval_percent=args.target_eval_percent,
-                  n_games=args.n_games, max_version_gap=args.max_version_gap)
+                  n_games=args.n_games)
 
 if __name__ == '__main__':
     main()

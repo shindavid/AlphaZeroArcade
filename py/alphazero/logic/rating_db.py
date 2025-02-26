@@ -91,17 +91,20 @@ class RatingDB:
             counts = WinLossDrawCounts(ix1_wins, ix2_wins, draws)
             yield ix1, ix2, counts
 
-    def load_ratings(self) -> Tuple[np.ndarray, np.ndarray]:
+    def load_ratings(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         c.execute('SELECT ix, rating, is_committee FROM ratings')
 
+        ixs = []
         ratings = []
-        committee_ix = []
+        committee_ixs = []
         for ix, rating, is_committee in c.fetchall():
+            ixs.append(ix)
             ratings.append(rating)
-            committee_ix.append(is_committee)
-        return np.array(ratings), np.array(committee_ix)
+            committee_ixs.append(is_committee)
+        committee_ixs = np.where(np.array(committee_ixs) == 1)[0]
+        return np.array(ixs), np.array(ratings), committee_ixs
 
     def commit_counts(self, ix1: int, ix2: int, record: WinLossDrawCounts):
         conn = self.db_conn_pool.get_connection()
@@ -111,15 +114,15 @@ class RatingDB:
                   VALUES (?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
-    def commit_rating(self, ix: List[int], ratings: np.ndarray, is_committee_flags: List[str]):
+    def commit_rating(self, ixs: List[int], ratings: np.ndarray, is_committee_flags: List[str]):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
         if is_committee_flags is None:
-            is_committee_flags = [None] * len(agents)
+            is_committee_flags = [None] * len(ixs)
 
         rating_tuples = []
-        for i, rating, is_committee in zip(ix, ratings, is_committee_flags):
+        for i, rating, is_committee in zip(ixs, ratings, is_committee_flags):
             rating_tuple = (i, rating, is_committee)
             rating_tuples.append(rating_tuple)
         c.executemany('''INSERT INTO ratings (ix, rating, is_committee)

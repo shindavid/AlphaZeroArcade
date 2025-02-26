@@ -20,11 +20,18 @@ class Arena:
         self.agents: Dict[int, Agent] = {}
         self.ratings: np.ndarray = np.array([])
 
-    def load_agents_from_db(self, database: RatingDB):
-        self.agents = database.load_agents()
+    def load_agents_from_db(self, db: RatingDB):
+        agents = db.load_agents()
+        new_ix = []
+        for ix, agent in agents.items():
+            if ix not in self.agents:
+                self.agents[ix] = agent
+                new_ix.append(ix)
+            else:
+                assert self.agents[ix] == agent
+        self._expand_matrix(len(new_ix))
 
     def load_matches_from_db(self, database: RatingDB) -> List[Agent]:
-        self._expand_matrix(len(self.agents))
         for ix1, ix2, counts in database.fetch_all_matches():
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
@@ -53,7 +60,8 @@ class Arena:
 
     def commit_ratings_to_db(self, db: RatingDB, agents: List[Agent], ratings: np.ndarray,
                              is_committee_flags: List[str] = None):
-        db.commit_rating(agents, ratings, is_committee_flags=is_committee_flags)
+        ixs = [agent.ix for agent in agents]
+        db.commit_rating(ixs, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
         self.ratings = compute_ratings(self.W_matrix, eps=eps)
@@ -108,15 +116,19 @@ class Arena:
         return np.union1d(vertical, horizontal)
 
     def n_games_played(self, agent: Agent):
-        ix, is_new = self._add_agent(agent)
-        assert not is_new
+        ix = agent.ix
+        assert ix is not None
         return (np.sum(self.W_matrix[ix, :]) + np.sum(self.W_matrix[:, ix])).astype(int)
 
     def _add_agent(self, agent: Agent, expand_matrix: bool=True, db: Optional[RatingDB]=None) \
         -> Tuple[int, bool]:
 
         for ix, a in self.agents.items():
-            if a == agent:
+            if agent == a:
+                if agent.ix is None:
+                    agent.ix = ix
+                else:
+                    assert agent.ix == ix
                 return ix, False
         ix = len(self.agents)
         agent.ix = ix
