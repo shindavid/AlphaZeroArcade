@@ -62,7 +62,7 @@ RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy ma
 # up for cleanliness.                                                                          #
 ################################################################################################
 
-RUN pip3 install --ignore-installed notebook
+RUN pip3 install --ignore-installed notebook sortedcontainers
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -76,7 +76,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="3.4.1"
+ARG VERSION="3.4.2"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
