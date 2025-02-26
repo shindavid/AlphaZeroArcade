@@ -9,6 +9,7 @@ from util.logging_util import get_logger, configure_logger
 
 from typing import Optional
 import argparse
+import os
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -25,6 +26,7 @@ def main():
     args = load_args()
     run_params = RunParams.create(args)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+
     benchmarker = Benchmarker(organizer)
     benchmarker.run(n_iters=args.n_iters,
                             n_games=args.n_games,

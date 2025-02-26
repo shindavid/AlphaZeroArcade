@@ -119,6 +119,8 @@ class RatingDB:
         c = conn.cursor()
 
         if is_committee_flags is None:
+
+
             is_committee_flags = [None] * len(ixs)
 
         rating_tuples = []

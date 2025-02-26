@@ -31,8 +31,8 @@ class Arena:
                 assert self.agents[ix] == agent
         self._expand_matrix(len(new_ix))
 
-    def load_matches_from_db(self, database: RatingDB) -> List[Agent]:
-        for ix1, ix2, counts in database.fetch_all_matches():
+    def load_matches_from_db(self, db: RatingDB) -> List[Agent]:
+        for ix1, ix2, counts in db.fetch_all_matches():
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
