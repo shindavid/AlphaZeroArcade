@@ -29,6 +29,11 @@
 
 \maketitle
 
+\section{Introduction}
+
+We propose a new variant of MCTS, which we call \textit{Bayesian MCTS}. Bayesian MCTS aims to address shortcomings of standard MCTS
+by infusing it with Bayesian mechanics.
+
 \section{Background: Grill et al}
 
 Grill et al\footnote{\url{https://arxiv.org/abs/2007.12509}} provided an interpretation of the mechanics of MCTS: at each node, 
@@ -76,8 +81,6 @@ to calculate the expected payout from pulling the lever of a randomly selected s
 we compute each slot machine's expected payout, and take their average, weighted by the probability of
 selecting each slot machine\footnote{Here, we always let \texttt{Q} be from a fixed player's point-of-view, taking on values in the range $[0, 1]$, for simplicity of exposition}. \newline
 
-\newpage
-
 To complete the description:
 
 \begin{tcolorbox}
@@ -118,7 +121,7 @@ function from first principles?
 
 \subsection{Preliminaries}
 
-In order to design a better posterior-policy update function, let us lay a stronger foundation. \newline
+In order to design a better posterior-policy update function, for usage in Bayesian MCTS, let us lay a stronger foundation. \newline
 
 The parent node $p$ has $n$ children, $c_1, c_2, \ldots, c_n$. For each child, $c_i$, we have a corresponding
 quality estimate, $Q_i$.
@@ -144,8 +147,6 @@ Figure \ref{Q-figure} shows how one might visualize these distributions and scal
 \centering
 \includegraphics[scale=0.5]{Q}
 \end{figure}
-
-\newpage 
 
 Note:
 
@@ -198,7 +199,10 @@ We start by deriving the $W$ update-rule. From standard properties of variance, 
 \end{equation}
 
 Let $D$ be the parent quality-belief distribution, with mean $Q$ and variance $W$, and let $D_i$ be the quality-belief distribution of
-child $c_i$, with mean $Q_i$ and variance $W_i$. Applying (\ref{variance}) twice, we can derive:
+child $c_i$, with mean $Q_i$ and variance $W_i$. Applying (\ref{variance}) twice, we can derive our $W$ update rule\footnote{
+As noted before, AlphaZeroArcade has an \emph{action-value} head (\texttt{AV}) that provides us with $Q$ values for unexpanded children.
+In order to use this $W$ update rule, we similarly require an \emph{action-uncertainty} head (\texttt{AU}), which can similarly be
+trained to predict the output of the network's own $U$-prediction of the children.}:
 
 \begin{equation}
 \label{W-update}    
@@ -230,7 +234,7 @@ Without the $z$ term, the $\hat{U}$ targets would all be 0, which would cause th
 
 Some experimentation is warranted here. 
 
-\subsection{Posterior Policy Update Rule}
+\subsection{Posterior Policy Update Rule}\label{posterior-section}
 
 Let us turn our attention back to devising a posterior policy update rule. \newline
 
@@ -305,24 +309,55 @@ One of the motivations of introducing a custom posterior policy update function 
 A terminal state is characterized as having zero uncertainty, which in our formulation amounts to a node with $(Q, U) = (1, 0)$. For
 these values, we will find that $q=1$, and thus that $\alpha = +\infty$. Applying the Bayesian update and
 renormalizing will collapse $\pi$ to have all its weight on the winning action, as desired. Similarly, a losing terminal state maps
-to $(Q, U) = (0, 0)$, and for this, $\pi$ will collapse to zero out the losing action. The collapse will also instantly propagate up the tree via
-minimax-like mechanics. This represents a significant improvement over the slow-moving, gradually updating characterized by vanilla MCTS. \newline
+to $(Q, U) = (0, 0)$, and for this, $\pi$ will collapse to zero out the losing action. The collapse will also immediately propagate up the tree via
+mini-max-like mechanics. This represents a significant improvement over the slow-moving, gradually updating characterized by vanilla MCTS. \newline
+
+\subsection{Summary}
+
+To summarize, in Bayesian MCTS, we will maintain an additional dynamic value at each node: $W$, measuring the uncertainty in $Q$.
+Its initial value will come from the output of the network's \texttt{U} head.
+Whenever a child's stats are updated, we can update the parent's stats by the following update rules sequentially:
+
+\begin{itemize}
+    \item \textbf{$\pi$ update rule}: (as described in Section \ref{posterior-section})
+    \item \textbf{$Q$ update rule}: $Q = \sum_i \pi_i Q_i$
+    \item \textbf{$W$ update rule}: $W = \sum_i \pi_i(W_i+Q_i^2) - Q^2$
+\end{itemize}
+
+$Q$ and $W$ values for unexpanded children will come from the parent's network evaluation (the network's \texttt{AV} and \texttt{AU} heads).
+
+\newpage 
 
 \section{Replacing the PUCT Criterion}
 
-If we replace the posterior policy update function in MCTS, we need to also think about how to make decisions on which leaf node to expand
-at each MCTS iteration. Standard MCTS relies on the PUCT criterion for this. It also relies on Dirichlet noise to ensure sufficient
-exploration in case the policy prior underestimates the quality of a child. \newline
+So far, we have only discussed one component in MCTS behavior: the updating of the posterior policy. Of course, there is another
+important component: \textbf{the decision of which leaf node to expand at each MCTS iteration}. \newline
 
-First, it should be clear that decoupling $\pi$ from $N$ gives us much more freedom on how to solve the exploration
-that Dirichlet noise aims to solve. The standard formulation of MCTS suffers from what I call the ``Heisenburg problem'': the \textit{act}
-of trying to measure a policy changes the measurement you produce\footnote{I choose this name because of the Heisenburg Uncertainty Principle in 
-physics. I suspect some physicist will tell me that this is a bad metaphor.}! \newline
+Standard MCTS uses the PUCT criterion for this, a choice that is theoretically justified by the analysis of Grill et al. Despite the
+theoretical justification, some exploratory noise is required in practice because the number of iterations ($n$) is finite. Dirichlet
+noise is used for this purpose. \newline
 
-As for replacing the PUCT criterion, my intuition is that we can base selection in terms of the objective of \textbf{minimizing $W$ at the root}
-(recall that $W$ is our dynamic estimate of uncertainty).
-That is, at each MCTS iteration, identify the leaf whose expansion would yield the \textit{greatest expected decrease} in $W$ at the root.
-I haven't tried to derive a formula that maps to this objective.
+In Bayesian MCTS, we have much more freedom in how to apply exploratory noise. We could, for example, simply randomly choose a child $c$ of
+the root and make $k$ initial visits to $c$. Because we have decoupled $N$ from $\pi$, this should in principle not systematically bias $\pi$. We can
+experiment with various choices, but I expect that some variant of this may be sufficient.\newline
+
+Regarding replacing PUCT, my intuition is that we can reframe action selection in terms of the objective of \textbf{minimizing uncertainty at the root}.
+That is, at each MCTS iteration, identify the leaf whose expansion would produce the \textit{largest expected decrease} in uncertainty ($W$) at the root. \newline
+
+Let us take some preliminary steps to derive a replacement action selection criterion based on this idea. Expanding a leaf, $\ell$, will update its $(Q_\ell, W_\ell)$ values, 
+from initial values coming from the network's \texttt{AV} and \texttt{AU} heads, to new values coming from the network's \texttt{V} and \texttt{U}
+heads. This corresponds to an update $(Q_\ell, W_\ell) \mapsto (Q'_\ell, W'_\ell)$. If we have a model $\mathcal{M}$ of the \textit{expected distribution} of this update,
+then we can derive a distribution of the $(Q_p, W_p)\mapsto (Q'_p, W'_p)$ update in the leaf's parent $p$ 
+that results from sampling from $\mathcal{M}$ and applying the $Q$, $W$, and $\pi$ update rules.
+This can be performed all the way up to the root of the tree. \newline
+
+As for a model of these updates at the leaf: the change in $Q$ I think can be naturally modeled based on $W$ (again, assuming logit-normality).
+For the change in $W$, I suspect a simple fixed-shape distribution should suffice, although maybe this is worth experimenting with\footnote{Would a
+network head predicting uncertainty-of-uncertainty be overkill?}. \newline
+
+At parent nodes, an exact analytical derivation based on the update rules will surely prove intractable. So we face the challenge of devising an appropriate
+approximation, ideally in a form that allows for top-down traversal with a locally-computed criterion, as is done with PUCT. This is currently
+an open problem.
 
 \newpage
 \appendix
