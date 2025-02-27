@@ -7,13 +7,14 @@
 \usepackage{tcolorbox}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{appendix}
 
 \setlength\parindent{0pt}
 
 \newcommand{\Mod}[1]{\ (\mathrm{mod}\ #1)}
 \newcommand{\argmax}{\mathrm{argmax}}
 \newcommand{\Var}{\mathrm{Var}}
-\newcommand{\FQ}{\mathrm{FQ}}
+\newcommand{\logit}{\mathrm{logit}}
 \newcommand{\cross}{\times}
 
 \graphicspath{ {./images/} }
@@ -22,6 +23,7 @@
 
 \title{Bayesian MCTS}
 \author{David Shin}
+\date{February 24, 2025}
 
 \begin{document}
 
@@ -52,6 +54,8 @@ class Node:
 \end{verbatim}
 \end{tcolorbox}
 
+In standard MCTS implementations, we don't maintain \texttt{pi} separately from \texttt{N}, but we do so here for pedantic purposes. \newline
+
 At each step, we start with a parent node, and visit one of its children. The visit of the child produces evidence, 
 which can be summarized as a pair of \texttt{Stats}: the child stats before the visit, 
 and the child stats after the visit. The evidence is used to update the parent stats. The update function looks like this:
@@ -70,7 +74,7 @@ class Node:
 The last line in the above is a natural computation to perform in a multi-armed bandit setting: 
 to calculate the expected payout from pulling the lever of a randomly selected slot machine, 
 we compute each slot machine's expected payout, and take their average, weighted by the probability of
-selecting each slot machine\footnote{Here, we always let \texttt{Q} be from a fixed player's point-of-view, for simplicity of exposition}. \newline
+selecting each slot machine\footnote{Here, we always let \texttt{Q} be from a fixed player's point-of-view, taking on values in the range $[0, 1]$, for simplicity of exposition}. \newline
 
 \newpage
 
@@ -174,8 +178,8 @@ resultant $\pi$ distributions. \newline
 
 Incorporating other statistical properties of the $D_i$ distributions would reduce our degrees of freedom, which could potentially
 make our search for a viable posterior-policy update-rule easier. To this end, we propose introducing a new output head, the \emph{uncertainty head} (\texttt{U}),
-that aims to predict how certain the network is in its \texttt{V} prediction. KataGo already has a head that predicts uncertainty\footnote{See \url{https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md\#uncertainty-weighted-mcts-playouts}}; our \texttt{U} head will be loosely
-similar. \newline
+that aims to predict how certain the network is in its \texttt{V} prediction. KataGo already has a head that predicts uncertainty\footnote{See \url{https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md\#uncertainty-weighted-mcts-playouts}}; our \texttt{U} head will
+be based on KataGo. \newline
 
 Our goal is for the \texttt{U} head output at child $c_i$ to correspond to the variance of marginal distribution $D_i$. If we can have
 that starting point, then we can dynamically update this variance belief at each node by crafting an appropriate update-rule, analogous
@@ -186,7 +190,7 @@ from a neural network, and $Q$ represents a dynamically updated estimate based o
 variances, we will have two different variables: $U$ will represent a static prediction from a neural network, and $W$ will represent
 a dynamically updated estimate based on those $U$ predictions. \newline
 
-We start by deriving the $W$ update-rule. From the definition of variance, we know that a random variable $X$ satisfies,
+We start by deriving the $W$ update-rule. From standard properties of variance, we know that a random variable $X$ satisfies,
 
 \begin{equation}
 \label{variance}    
@@ -194,39 +198,35 @@ We start by deriving the $W$ update-rule. From the definition of variance, we kn
 \end{equation}
 
 Let $D$ be the parent quality-belief distribution, with mean $Q$ and variance $W$, and let $D_i$ be the quality-belief distribution of
-child $c_i$, with mean $Q_i$ and variance $W_i$. Plugging into (\ref{variance}), we get:
-
-\begin{align*}
-W &= \mathbb{E}[D^2] - \mathbb{E}[D]^2 \\
-&= \sum_{i} \pi_i \mathbb{E}[D_i^2] - Q^2 \\
-&= \sum_{i} \pi_i (W_i + Q_i^2) - Q^2,
-\end{align*}
-
-or
+child $c_i$, with mean $Q_i$ and variance $W_i$. Applying (\ref{variance}) twice, we can derive:
 
 \begin{equation}
 \label{W-update}    
 W = \sum_{i} \pi_i (W_i + Q_i^2) - Q^2
 \end{equation}
 
-It remains to come up with a way to create training targets for the $U$ head. Loosely, our goal is to come up with a measure of how
-likely it is that the search will ``change it's mind'' about $Q$. To this end, we propose a training target for the $U$ head of:
+It remains to come up with a way to create training targets for the $U$ head. Again, taking inspiration from KataGo, we propose
+a training target for the $U$ head of:
 
-$$\hat{U} = (V - Q_{post})^2 + \lambda(V - z)^2$$
+$$\hat{U} = (V - Q^*)^2,$$
 
-Here:
+where
+
+$$Q^* = \lambda Q_{post} + (1-\lambda)z$$
+
+for some constant $\lambda$. Here:
 
 \begin{itemize}
     \item $V$ is the initial quality estimate of the root, which comes from the neural network
     \item $Q_{post}$ is the estimate of $Q$ at the root \emph{after} all MCTS iterations have been performed.
     \item $z$ is the final game result
-    \item $\lambda$ is a hyperparameter
 \end{itemize}
-
-The core of this definition lies in the first $(V - Q_{post})^2$ term. It feels right to me, to align with the statistical notion of 
-variance. The secondary term, I feel like is necessary as a stabilizing term. This is especially the case when we think about how
-generation-0 works: it substitutes a ``dummy'' model that produces uniform predictions, in which case $V$ and $Q_{post}$ will
-typically be equal. This will cause the first term to be 0, which can cause the \texttt{U}-head to collapse towards 0. \newline
+This proposal is justified because variance is defined as the expected squared difference between a random variable and its mean.
+Our prediction $V$ is the mean, and $Q^*$ corresponds to a sample from the corresponding random variable. We define this $Q^*$
+as a blend of a short-term refinement that comes from MCTS and a ground-truth value that comes from the final game result.
+My feeling is that blending in the final game result is necessary, especially in generation-0, since AlphaZeroArcade works by
+substituting a ``dummy'' neural network that produces uniform predictions, for which we will typically have $V = Q_{post}$.
+Without the $z$ term, the $\hat{U}$ targets would all be 0, which would cause the \texttt{U}-head to collapse towards 0. \newline
 
 Some experimentation is warranted here. 
 
@@ -234,24 +234,40 @@ Some experimentation is warranted here.
 
 Let us turn our attention back to devising a posterior policy update rule. \newline
 
-To tackle this, let's start with a simpler case. Suppose there are just two children, and that the 
-distributions $D_1$ and $D_2$ are independent normal distributions of mean/variance $(\mu_1, \sigma_1^2)$ and $(\mu_2, \sigma_2^2)$, respectively.
-If we draw $(x_1, x_2)$ from the
-joint distribution, then the difference $x_1 - x_2$ is normally distributed with mean/variance $(\mu_1 - \mu_2, \sigma_1^2 + \sigma_2^2)$,
-and so the probability that $x_1 > x_2$ is given by:
+To tackle this, let us start with a simpler case. Suppose that there are only two children, and that the
+distributions $D_1$ and $D_2$ are independent \textit{logit-normal} distributions of mean/variance $(\mu_1, \sigma_1^2)$ and $(\mu_2, \sigma_2^2)$, respectively.
+By \textit{logit-normal}, we mean that the logit of the random variable is normally distributed. In other words, for some $\theta_i$ and $\omega_i$, we have:
+
+\begin{align*}
+\mathbb{E}_{x \sim D_i}[x] &= \mu_i \\
+\mathbb{E}_{x \sim D_i}[(x - \mu_i)^2] &= \sigma_i^2 \\
+\logit(D_i) &\sim \mathcal{N}(\theta_i, \omega_i^2)
+\end{align*}
+
+Given these idealized assumptions of independence and logit-normality, we can compute a good approximation to $\pi$. That
+approximation is $\pi = [p, 1-p]$, where:
 
 $$
-p = \Phi\left(\frac{\mu_1 - \mu_2}{\sqrt{\sigma_1^2 + \sigma_2^2}}\right)
+p = \Phi\left(\frac{\theta_1 - \theta_2}{\sqrt{\omega_1^2 + \omega_2^2}}\right),
 $$
 
-Thus, we would have $\pi = [p, 1-p]$. \newline
+where
 
-Suppose we receive an information update of the form $(\mu_1, \sigma_1) \mapsto (\mu'_1, \sigma'_1)$.
+\begin{eqnarray*}
+\theta_i &=& \ln{\frac{\mu_i}{1-\mu_i}} - \frac{(1 - 2\mu_i)\sigma_i^2}{2\mu_i^2(1-\mu_i)^2} \\
+\omega_i^2 &=& \frac{\sigma_i^2}{\mu_i^2(1-\mu_i)^2}
+\end{eqnarray*}
+
+(See \ref{appendix-derivations} for the derivation.) \newline
+
+Suppose that we receive an information update of the form $(\mu_1, \sigma_1) \mapsto (\mu'_1, \sigma'_1)$.
 This would update our policy to $\pi = [q, 1-q]$, where:
 
 $$
-q = \Phi\left(\frac{\mu'_1 - \mu_2}{\sqrt{(\sigma'_1)^2 + \sigma_2^2}}\right)
+q = \Phi\left(\frac{\theta'_1 - \theta_2}{\sqrt{\omega'_1^2 + \omega_2^2}}\right),
 $$
+
+with $\theta'_1$ and $\omega'_1$ defined analogously. \newline
 
 Equivalently, we could frame this update rule as multiplying $\pi(1)$ by $\alpha$ and then normalizing $\pi$, where
 
@@ -269,16 +285,16 @@ One idea is to compute the $\alpha$ term against each sibling, and then multiply
 Experimentation is needed. \newline
 
 It is worth discussing \emph{why}, even in the 2-child case, we multiply by $\alpha$ rather than simply rewriting $\pi$ to $[q, 1-q]$.
-Given specific beliefs of $(\mu_1, \mu_2, \sigma_1, \sigma_2)$, we have derived above what our policy belief should be, \textit{if we assume
-that the child distributions are independent and normal}. For clarity, let us call this hypothetical policy $\pi^*$.
-In actuality, this assumption may not hold, and for that reason, we have some \textit{actual} policy belief, $\pi$, that in general might not
-equal $\pi^*$. In some sense, the difference between $\pi$ and $\pi^*$ \emph{encodes} our belief, $B$, regarding the deviation between
+Given specific beliefs of $(\mu_1, \mu_2, \sigma_1, \sigma_2)$, we have derived above what our policy belief should be, \textit{if we make
+the idealized assumption that the child distributions are independent and logit-normal}. For clarity, let us call this hypothetical policy $\pi^*$.
+In actuality, this idealized assumption may not hold, and for that reason, we have some \textit{actual} policy belief, $\pi$, that in general might not
+equal $\pi^*$. In some sense, the difference between $\pi$ and $\pi^*$ \emph{encodes} our belief, $B$, regarding the gap between
 the idealized assumption and reality. \newline
 
 When we incorporate the information update of $(\mu_1, \sigma_1) \mapsto (\mu'_1, \sigma'_1)$, we want to do so in
 a manner that is appropriately faithful to this belief $B$. If we simply rewrote $\pi$ to $[q, 1-q]$, that would be completely
 ignoring $B$, which is inappropriate. We therefore instead compute the \textit{multiplicative transform} ($\alpha$)
-that \textit{would} correctly transform $\pi^*$ under the assumption of independence and normality. \textit{Then}, we apply that same
+that \textit{would} correctly transform $\pi^*$ under the idealized assumption. \textit{Then}, we apply that same
 multiplicative transform $\alpha$ to our \textit{actual} $\pi$, in hopes that doing so will be sufficiently faithful to that
 belief $B$.
 
@@ -286,15 +302,11 @@ belief $B$.
 
 One of the motivations of introducing a custom posterior policy update function was to better incorporate knowledge from terminal states. \newline
 
-A terminal state is characterized as having zero uncertainty, which in our formulation amounts to a node with $U = 0$. If we let winning
-terminal states have $Q = +\infty$, then we will find that $q=1$, and thus that $\alpha = +\infty$. Applying the Bayesian updating and
-renormalizing will collapse $\pi$ to have all its weight on the winning action, as desired. Similarly, if we let losing terminal states
-have $Q = -\infty$, then $\pi$ will collapse to zero out the losing action. The collapse will also instantly propagate up the tree via
-minimax-like mechanics. This represents a significant improvement over the slow-moving, gradual updating characterized by vanilla MCTS. \newline
-
-There is a catch, however: we typically let $Q=+1$ at terminal states, not $Q = +\infty$. Substituting $Q=+1$ does not give us the
-crisp collapsing mechanics we desire. I have to think this through, but I suspect that the solution is to put the normal distribution \textit{not}
-in the $Q$-space, but rather in a logit-space, where $Q_{min}$ is mapped to $-\infty$ and $Q_{max}$ is mapped to $+\infty$.
+A terminal state is characterized as having zero uncertainty, which in our formulation amounts to a node with $(Q, U) = (1, 0)$. For
+these values, we will find that $q=1$, and thus that $\alpha = +\infty$. Applying the Bayesian update and
+renormalizing will collapse $\pi$ to have all its weight on the winning action, as desired. Similarly, a losing terminal state maps
+to $(Q, U) = (0, 0)$, and for this, $\pi$ will collapse to zero out the losing action. The collapse will also instantly propagate up the tree via
+minimax-like mechanics. This represents a significant improvement over the slow-moving, gradually updating characterized by vanilla MCTS. \newline
 
 \section{Replacing the PUCT Criterion}
 
@@ -303,7 +315,7 @@ at each MCTS iteration. Standard MCTS relies on the PUCT criterion for this. It 
 exploration in case the policy prior underestimates the quality of a child. \newline
 
 First, it should be clear that decoupling $\pi$ from $N$ gives us much more freedom on how to solve the exploration
-that Dirichlet noise aims to solve. The standard formulation of MCTS suffers from what I call the ``Heisenburg problem``: the \textit{act}
+that Dirichlet noise aims to solve. The standard formulation of MCTS suffers from what I call the ``Heisenburg problem'': the \textit{act}
 of trying to measure a policy changes the measurement you produce\footnote{I choose this name because of the Heisenburg Uncertainty Principle in 
 physics. I suspect some physicist will tell me that this is a bad metaphor.}! \newline
 
@@ -311,5 +323,49 @@ As for replacing the PUCT criterion, my intuition is that we can base selection 
 (recall that $W$ is our dynamic estimate of uncertainty).
 That is, at each MCTS iteration, identify the leaf whose expansion would yield the \textit{greatest expected decrease} in $W$ at the root.
 I haven't tried to derive a formula that maps to this objective.
+
+\newpage
+\appendix
+\renewcommand{\thesection}{Appendix \Alph{section}} % Format for appendix section titles
+
+\section{Derivations}
+\label{appendix-derivations}
+
+Here we derive the policy approximation formula in the two-child case under the idealized assumption of independence and logit-normality. \newline
+
+Suppose $X$ is a random variable with mean $\mu$ and variance $\sigma^2$. Let us derive the mean and variance of $Y = f(X)$, where
+
+$$f(x) = \logit(x) = \ln{\frac{x}{1-x}}$$
+
+Note that:
+
+\begin{align*}
+f'(x) &= \frac{1}{x(1-x)} \\
+f''(x) &= -\frac{1-2x}{x^2(1-x)^2}
+\end{align*}
+
+If we assume that $\sigma^2$ is small and $X \approx \mu$, we can use a second-order Taylor approximation:
+
+$$Y = f(X) \approx f(\mu) + f'(\mu)(X-\mu) + \frac{1}{2}f''(\mu)(X-\mu)^2.$$
+
+Taking an expectation of both sides, we get:
+
+$$
+\mathbb{E}[Y] \approx f(\mu) + \frac{1}{2} f''(\mu)\sigma^2 = \ln{\frac{\mu}{1-\mu}} - \frac{(1-2\mu)\sigma^2}{2\mu^2(1-\mu)^2}
+$$
+
+Similarly, we can derive,
+
+$$
+\mathrm{Var}(Y) = \mathbb{E}[(Y - \mathbb{E}[Y])^2] \approx f'(u)^2\sigma^2 = \frac{\sigma^2}{\mu^2(1-\mu)^2}
+$$
+
+Thus, if $Y$ is indeed normally distributed as $\mathcal{N}(\theta, \omega^2)$, then we must have:
+
+\begin{align*}
+\theta &= \ln{\frac{\mu}{1-\mu}} - \frac{(1-2\mu)\sigma^2}{2\mu^2(1-\mu)^2} \\
+\omega^2 &= \frac{\sigma^2}{\mu^2(1-\mu)^2},
+\end{align*}
+as claimed.
 
 \end{document}
