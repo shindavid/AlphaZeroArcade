@@ -81,7 +81,7 @@ to calculate the expected payout from pulling the lever of a randomly selected s
 we compute each slot machine's expected payout, and take their average, weighted by the probability of
 selecting each slot machine\footnote{Here, we always let \texttt{Q} be from a fixed player's point-of-view, taking on values in the range $[0, 1]$, for simplicity of exposition}. \newline
 
-To complete the description:
+Filling in the posterior-update method completes the description:
 
 \begin{tcolorbox}
 \begin{verbatim}
@@ -98,7 +98,10 @@ class Node:
 \end{verbatim}
 \end{tcolorbox}
 
-This is a very strange way to implement this function! It begs many questions:
+Again, standard MCTS implementations do not maintain \texttt{pi} separately from \texttt{N}, so they would not include
+code that looks like the above. When the logic is expressed purely in terms of \texttt{N}, it looks more natural. When \texttt{pi}
+is forcibly extracted out, we are faced with the reality of this very unnatural-looking posterior-update function!
+It begs many questions:
 
 \begin{itemize}
     \item When \texttt{self.stats.N == 0}, why do we zero out the prior and set the posterior to a singular distribution\footnote{
@@ -344,20 +347,35 @@ experiment with various choices, but I expect that some variant of this may be s
 Regarding replacing PUCT, my intuition is that we can reframe action selection in terms of the objective of \textbf{minimizing uncertainty at the root}.
 That is, at each MCTS iteration, identify the leaf whose expansion would produce the \textit{largest expected decrease} in uncertainty ($W$) at the root. \newline
 
-Let us take some preliminary steps to derive a replacement action selection criterion based on this idea. Expanding a leaf, $\ell$, will update its $(Q_\ell, W_\ell)$ values, 
-from initial values coming from the network's \texttt{AV} and \texttt{AU} heads, to new values coming from the network's \texttt{V} and \texttt{U}
-heads. This corresponds to an update $(Q_\ell, W_\ell) \mapsto (Q'_\ell, W'_\ell)$. If we have a model $\mathcal{M}$ of the \textit{expected distribution} of this update,
-then we can derive a distribution of the $(Q_p, W_p)\mapsto (Q'_p, W'_p)$ update in the leaf's parent $p$ 
-that results from sampling from $\mathcal{M}$ and applying the $Q$, $W$, and $\pi$ update rules.
-This can be performed all the way up to the root of the tree. \newline
+Let us derive a replacement action selection criterion based on this idea. This will result in something
+computationally intractable, but the derivation will prove useful for designing something computationally feasible. \newline
 
-As for a model of these updates at the leaf: the change in $Q$ I think can be naturally modeled based on $W$ (again, assuming logit-normality).
-For the change in $W$, I suspect a simple fixed-shape distribution should suffice, although maybe this is worth experimenting with\footnote{Would a
-network head predicting uncertainty-of-uncertainty be overkill?}. \newline
+Expanding a leaf, $\ell$, will update its $(Q_\ell, W_\ell)$ values, 
+from initial values coming from the network's \texttt{AV} and \texttt{AU} heads, to new values. 
+This corresponds to an update $\Delta (Q_\ell, W_\ell)$.
+If we have a model $\mathcal{M}_\ell$ of the \textit{expected distribution} of this update,
+then we can, in principle, analytically derive a distribution of the update $\Delta(Q_p, W_p)$ that would be incurred by the leaf's parent $p$ 
+if we sample $\Delta (Q_\ell, W_\ell)$ from $\mathcal{M}_\ell$ and then apply the $Q$, $W$, and $\pi$ update rules.
+This analytical derivation can be recursively performed all the way up to the root of the tree. For the base
+case of this recursion, we need to supply a leaf model $\mathcal{M}_\ell$. For $\Delta Q$, we can
+use a logit-normal distribution parameterized by $W$. For $\Delta W$, I suspect a simple fixed-shape distribution
+should suffice; if not, we may need to resort to another network head that predicts the uncertainty of $U$. \newline
 
-At parent nodes, an exact analytical derivation based on the update rules will surely prove intractable. So we face the challenge of devising an appropriate
-approximation, ideally in a form that allows for top-down traversal with a locally-computed criterion, as is done with PUCT. This is currently
-an open problem.
+That would be the theoretically principled approach. Let us devise something practical. Here is our proposal. At the newly
+expanded leaf, $\ell$, after initializing its stats from the network output, we estimate the distribution of $\Delta(Q_\ell, W_\ell)$
+updates that $\ell$ would undergo \textbf{on the next visit to $\ell$}. This distribution can be summarized by a mean and variance.
+As we traverse up the tree, we do this at each node $n$: after updating $n$'s stats via the update rules, we estimate the
+distribution of $\Delta(Q_n, W_n)$ updates that $n$ would undergo on the next visit to $n$. This can be computed
+based on the update distributions at each of $n$'s children, which we will have precomputed for all children from
+previous visits. \newline
+
+This provides us with a per-node annotation of \textit{``how much are my $(Q, W)$ values expected to change the next time I am visited?''}.
+This in turns gives us potential for an action selection criterion. Starting at the root, $r$, we can estimate how much $(Q_r, W_r)$
+will change by visiting child $c$, for each child $c$, by using the annotation at $c$, combined with the $\pi$, $Q$, and $W$
+update rules. We can repeat this to crawl all the way down to a leaf. \newline
+
+Obviously, there are a lot of details to flush out here, but I think this is a viable high-level plan.
+
 
 \newpage
 \appendix
