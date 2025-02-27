@@ -50,6 +50,8 @@ class Benchmarker:
 
         is_committee = self.select_committee(target_elo_gap)
         self.compute_ratings()
+        if True:
+            raise Exception('TODO: fixme, return IndexedAgent list, not Agent list')
         self.arena.commit_ratings_to_db(self._db, self.agents.keys(), self.ratings, is_committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
@@ -164,4 +166,3 @@ class Benchmarker:
     @property
     def agents(self):
         return self.arena.agents
-

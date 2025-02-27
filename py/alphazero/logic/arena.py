@@ -1,12 +1,29 @@
 from alphazero.logic.agent_types import Agent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
-from alphazero.logic.rating_db import RatingDB
+from alphazero.logic.rating_db import AgentDBId, DBAgent, RatingDB
 
 from dataclasses import replace
 import numpy as np
 
-from typing import List, Dict, Tuple, Optional
+from dataclasses import dataclass
+from typing import Dict, Iterable, List, Optional, Tuple
+
+
+ArenaIndex = int  # index of an agent in an Arena
+
+
+@dataclass
+class IndexedAgent:
+    """
+    A dataclass for storing an agent with auxiliary info.
+
+    - index refers to the index of the agent in the Arena's data structures.
+    - db_id is the id of the agent in the database. This might be set after initial creation.
+    """
+    agent: Agent
+    index: ArenaIndex
+    db_id: Optional[AgentDBId] = None
 
 
 class Arena:
@@ -16,23 +33,26 @@ class Arena:
     compute ratings, and create a subset of match results.
     """
     def __init__(self):
+        # TODO: consider making these members private, as there are sensitive invariants that
+        # need to be maintained between them. Specifically, self.indexed_agents needs to be
+        # consistent with the lookup dictionaries.
         self.W_matrix = np.zeros((0, 0), dtype=float)
-        self.agents: Dict[int, Agent] = {}
+        self.indexed_agents: List[IndexedAgent] = []
+        self.agent_lookup: Dict[Agent, IndexedAgent] = {}
+        self.agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
         self.ratings: np.ndarray = np.array([])
 
     def load_agents_from_db(self, db: RatingDB):
-        agents = db.load_agents()
-        new_ix = []
-        for ix, agent in agents.items():
-            if ix not in self.agents:
-                self.agents[ix] = agent
-                new_ix.append(ix)
-            else:
-                assert self.agents[ix] == agent
-        self._expand_matrix(len(new_ix))
+        for db_agent in db.fetch_agents():
+            self._add_agent(db_agent.agent, db_id=db_agent.db_id, expand_matrix=False)
+        self._expand_matrix()
 
     def load_matches_from_db(self, db: RatingDB) -> List[Agent]:
-        for ix1, ix2, counts in db.fetch_all_matches():
+        for result in db.fetch_match_results():
+            ix1 = self.agent_lookup_db_id[result.agent_id1].index
+            ix2 = self.agent_lookup_db_id[result.agent_id2].index
+            counts = result.counts
+
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
@@ -40,8 +60,11 @@ class Arena:
                      db: Optional[RatingDB]=None) -> WinLossDrawCounts:
         counts_list = []
         for match in matches:
-            ix1, _ = self._add_agent(match.agent1, expand_matrix=True, db=db)
-            ix2, _ = self._add_agent(match.agent2, expand_matrix=True, db=db)
+            indexed_agent1 = self._add_agent(match.agent1, expand_matrix=True, db=db)
+            indexed_agent2 = self._add_agent(match.agent2, expand_matrix=True, db=db)
+
+            ix1 = indexed_agent1.index
+            ix2 = indexed_agent2.index
 
             if self.W_matrix[ix1, ix2] > 0 or self.W_matrix[ix2, ix1] > 0:
                 if not additional:
@@ -55,13 +78,15 @@ class Arena:
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
             counts_list.append(counts)
             if db:
-                db.commit_counts(ix1, ix2, counts)
+                db_id1 = indexed_agent1.db_id
+                db_id2 = indexed_agent2.db_id
+                db.commit_counts(db_id1, db_id2, counts)
         return counts_list
 
-    def commit_ratings_to_db(self, db: RatingDB, agents: List[Agent], ratings: np.ndarray,
-                             is_committee_flags: List[str] = None):
-        ixs = [agent.ix for agent in agents]
-        db.commit_rating(ixs, ratings, is_committee_flags=is_committee_flags)
+    def commit_ratings_to_db(self, db: RatingDB, agents: Iterable[IndexedAgent],
+                             ratings: np.ndarray, is_committee_flags: List[bool] = None):
+        agent_ids = [agent.db_id for agent in agents]
+        db.commit_rating(agent_ids, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
         self.ratings = compute_ratings(self.W_matrix, eps=eps)
@@ -87,6 +112,10 @@ class Arena:
                 If provided, these agents (and edges involving them) are excluded from
                 the new committee.
         """
+        if True:
+            # TODO: this becomes simpler with our Agent/IndexedAgent separation. No need to
+            # reconstruct Agent objects, can just use the existing ones.
+            raise NotImplementedError('This method is not yet implemented')
 
         sub_arena = Arena()
         old_ix = {}
@@ -100,7 +129,7 @@ class Arena:
                 new_ix, is_new_node = sub_arena._add_agent(agent_copy, expand_matrix=False)
                 old_ix[new_ix] = ix
                 assert is_new_node
-        sub_arena._expand_matrix(len(sub_arena.agents))
+        sub_arena._expand_matrix()
         n = len(sub_arena.agents)
         for i in range(n):
             for j in range(n):
@@ -120,29 +149,38 @@ class Arena:
         assert ix is not None
         return (np.sum(self.W_matrix[ix, :]) + np.sum(self.W_matrix[:, ix])).astype(int)
 
-    def _add_agent(self, agent: Agent, expand_matrix: bool=True, db: Optional[RatingDB]=None) \
-        -> Tuple[int, bool]:
+    def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
+                   expand_matrix: bool=True, db: Optional[RatingDB]=None,
+                   assert_new: bool = False) -> IndexedAgent:
+        iagent: Optional[IndexedAgent] = self.agent_lookup.get(agent, None)
+        if assert_new:
+            assert iagent is None
 
-        for ix, a in self.agents.items():
-            if agent == a:
-                if agent.ix is None:
-                    agent.ix = ix
-                else:
-                    assert agent.ix == ix
-                return ix, False
-        ix = len(self.agents)
-        agent.ix = ix
-        self.agents[ix] = agent
+        if iagent is not None:
+            return iagent
+
+        index = len(self.indexed_agents)
+        self.agent_lookup[agent] = index
+        iagent = IndexedAgent(agent, index, db_id)
+        self.indexed_agents.append(iagent)
+
         if expand_matrix:
-            self._expand_matrix(1)
+            self._expand_matrix()
         if db:
-            db.commit_agent([agent])
-        return ix, True
+            assert iagent.db_id is None
+            iagent.db_id = db.commit_agent(agent)
 
-    def _expand_matrix(self, k: int):
-        n = self.W_matrix.shape[0]
-        new_matrix = np.zeros((n + k, n + k), dtype=float)
-        new_matrix[:n, :n] = self.W_matrix
+        assert iagent.db_id is not None
+        self.agent_lookup_db_id[iagent.db_id] = iagent
+
+        return iagent
+
+    def _expand_matrix(self):
+        n_old = self.W_matrix.shape[0]
+        n_new = len(self.indexed_agents)
+        if n_old == n_new:
+            return
+
+        new_matrix = np.zeros((n_new, n_new), dtype=float)
+        new_matrix[:n_old, :n_old] = self.W_matrix
         self.W_matrix = new_matrix
-
-
