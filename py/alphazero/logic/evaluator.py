@@ -15,19 +15,10 @@ from typing import Optional, List
 
 logger = get_logger()
 
-
-class Evaluator:
+class MCTSEvaluator:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self.benchmark = Benchmarker(benchmark_organizer)
-        self._db = RatingDB(self._organizer.eval_db_filename)
-
-        self.arena = self.benchmark.arena.clone()
-        self.arena.load_agents_from_db(self._db)
-        self.arena.load_matches_from_db(self._db)
-        rating_arrays: RatingArrays = self.arena.load_ratings_from_db(self._db)
-        self.evaluated_ixs: np.ndarray = rating_arrays.ixs
-        self.ratings: np.ndarray = rating_arrays.ratings
+        self.evaluator = Evaluator(organizer, benchmark_organizer)
         self.evaluated_gens: List[int] = [self.indexed_agents[ix].agent.gen for ix in self.evaluated_ixs]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
@@ -41,7 +32,7 @@ class Evaluator:
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    tag=self._organizer.tag)
-            self.eval_agent(test_agent, n_games, error_threshold)
+            self.evaluator.eval_agent(test_agent, n_games, error_threshold)
             self.evaluated_gens.append(gen)
 
     def get_next_gen_to_eval(self, target_eval_percent):
@@ -68,6 +59,28 @@ class Evaluator:
         left_gen = gens[max_gap_ix]
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
+
+    @property
+    def indexed_agents(self):
+        return self.evaluator.indexed_agents
+
+    @property
+    def evaluated_ixs(self):
+        return self.evaluator.evaluated_ixs
+
+
+class Evaluator:
+    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
+        self._organizer = organizer
+        self.benchmark = Benchmarker(benchmark_organizer)
+        self._db = RatingDB(self._organizer.eval_db_filename)
+
+        self.arena = self.benchmark.arena.clone()
+        self.arena.load_agents_from_db(self._db)
+        self.arena.load_matches_from_db(self._db)
+        rating_arrays: RatingArrays = self.arena.load_ratings_from_db(self._db)
+        self.evaluated_ixs: np.ndarray = rating_arrays.ixs
+        self.ratings: np.ndarray = rating_arrays.ratings
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100):
         """

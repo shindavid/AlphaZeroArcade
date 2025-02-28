@@ -1,5 +1,5 @@
 from alphazero.logic.benchmarker import DirectoryOrganizer
-from alphazero.logic.evaluator import Evaluator
+from alphazero.logic.evaluator import MCTSEvaluator
 from alphazero.logic.run_params import RunParams
 from util.logging_util import configure_logger
 from util.py_util import CustomHelpFormatter
@@ -28,7 +28,7 @@ def main():
     benchmark_organizer = DirectoryOrganizer(run_params_benchmark, base_dir_root='/workspace')
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
-    evaluator = Evaluator(organizer, benchmark_organizer)
+    evaluator = MCTSEvaluator(organizer, benchmark_organizer)
     evaluator.run(n_iters=args.n_iters, target_eval_percent=args.target_eval_percent,
                   n_games=args.n_games, error_threshold=args.error_threshold)
 
