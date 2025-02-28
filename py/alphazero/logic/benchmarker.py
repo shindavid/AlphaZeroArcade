@@ -65,25 +65,25 @@ class Benchmarker:
         incomplete_gen = self.incomplete_gen()
         if incomplete_gen is not None:
             next_gen = incomplete_gen
-            logger.info(f'Finish incomplete gen: {next_gen}')
+            logger.info('Finish incomplete gen: %d', next_gen)
         else:
             gap = self.get_biggest_mcts_ratings_gap()
             if gap is None or gap.elo_diff < target_elo_gap:
                 return None
             next_gen = (gap.left_gen + gap.right_gen) // 2
-            logger.info(f'Add new gen: {next_gen}, gap [{gap.left_gen}, {gap.right_gen}]: {gap.elo_diff}')
+            logger.info('Add new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
         matches = [Match(next_agent, indexed_agent.agent, n_games) for indexed_agent in self.indexed_agents]
         return matches
 
     def incomplete_gen(self) -> np.ndarray:
-        played_against =(self.arena.W_matrix > 0) | (self.arena.W_matrix.T > 0)
-        opponents_played = np.sum(played_against, axis=1)
-        incomplete = np.where(opponents_played < len(self.indexed_agents) - 1)[0]
+        A = self.arena.adjacent_matrix()
+        num_opponents_played = np.sum(A, axis=1)
+        incomplete = np.where(num_opponents_played < len(self.indexed_agents) - 1)[0]
         if (incomplete.size == 0):
             return None
-        incomplete_ix = np.argmin(opponents_played)
+        incomplete_ix = np.argmin(num_opponents_played)
         return self.indexed_agents[incomplete_ix].gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
@@ -161,7 +161,7 @@ class Benchmarker:
         return mask.astype(int).tolist()
 
     def has_no_matches(self):
-        return np.sum(self.arena.W_matrix) == 0
+        return self.arena.num_matches() == 0
 
     @property
     def indexed_agents(self):

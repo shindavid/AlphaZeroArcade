@@ -1,4 +1,5 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent
+from alphazero.logic.agent_types import Agent
+from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -7,9 +8,6 @@ from util.logging_util import get_logger
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
-from enum import Enum
-from itertools import combinations
-from typing import List
 
 
 logger = get_logger()
@@ -50,7 +48,7 @@ class MatchRunner:
         args1 = dict(base_args)
         args2 = dict(base_args)
 
-        port = 1234  # TODO: move this to constants.py or somewhere
+        port = DEFAULT_REMOTE_PLAY_PORT
 
         cmd1 = [
             organizer1.binary_filename,

@@ -43,10 +43,10 @@ class Arena:
         # TODO: consider making these members private, as there are sensitive invariants that
         # need to be maintained between them. Specifically, self.indexed_agents needs to be
         # consistent with the lookup dictionaries.
-        self.W_matrix = np.zeros((0, 0), dtype=float)
+        self._W_matrix = np.zeros((0, 0), dtype=float)
         self.indexed_agents: List[IndexedAgent] = []
-        self.agent_lookup: Dict[Agent, IndexedAgent] = {}
-        self.agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
+        self._agent_lookup: Dict[Agent, IndexedAgent] = {}
+        self._agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
         self.ratings: np.ndarray = np.array([])
 
     def load_agents_from_db(self, db: RatingDB):
@@ -56,12 +56,12 @@ class Arena:
 
     def load_matches_from_db(self, db: RatingDB) -> List[Agent]:
         for result in db.fetch_match_results():
-            ix1 = self.agent_lookup_db_id[result.agent_id1].index
-            ix2 = self.agent_lookup_db_id[result.agent_id2].index
+            ix1 = self._agent_lookup_db_id[result.agent_id1].index
+            ix2 = self._agent_lookup_db_id[result.agent_id2].index
             counts = result.counts
 
-            self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
-            self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+            self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
+            self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
     def play_matches(self, matches: List[Match], game: str, additional=False,
                      db: Optional[RatingDB]=None) -> WinLossDrawCounts:
@@ -73,16 +73,16 @@ class Arena:
             ix1 = indexed_agent1.index
             ix2 = indexed_agent2.index
 
-            if self.W_matrix[ix1, ix2] > 0 or self.W_matrix[ix2, ix1] > 0:
+            if self._W_matrix[ix1, ix2] > 0 or self._W_matrix[ix2, ix1] > 0:
                 if not additional:
-                    n_games_played = int(self.W_matrix[ix1, ix2] + self.W_matrix[ix2, ix1])
+                    n_games_played = int(self._W_matrix[ix1, ix2] + self._W_matrix[ix2, ix1])
                     match.n_games = match.n_games - n_games_played
                 if match.n_games < 1:
                     continue
 
             counts: WinLossDrawCounts = MatchRunner.run_match_helper(match, game)
-            self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
-            self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+            self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
+            self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
             counts_list.append(counts)
             if db:
                 db_id1 = indexed_agent1.db_id
@@ -96,7 +96,7 @@ class Arena:
         db.commit_rating(agent_ids, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
-        self.ratings = compute_ratings(self.W_matrix, eps=eps)
+        self.ratings = compute_ratings(self._W_matrix, eps=eps)
         return self.ratings
 
     def load_ratings_from_db(self, db: RatingDB) -> Tuple[np.ndarray, np.ndarray]:
@@ -105,7 +105,7 @@ class Arena:
         ratings = []
         committee_flags = []
         for db_agent_rating in db_agent_ratings:
-            ix = self.agent_lookup_db_id[db_agent_rating.agent_id].index
+            ix = self._agent_lookup_db_id[db_agent_rating.agent_id].index
             ixs.append(ix)
             ratings.append(db_agent_rating.rating)
             committee_flags.append(db_agent_rating.is_committee)
@@ -119,27 +119,33 @@ class Arena:
 
     def clone(self) -> 'Arena':
         new_arena = Arena()
-        new_arena.W_matrix = self.W_matrix.copy()
+        new_arena._W_matrix = self._W_matrix.copy()
         new_arena.indexed_agents = self.indexed_agents.copy() # shallow copy with same agents
-        new_arena.agent_lookup = self.agent_lookup.copy()
-        new_arena.agent_lookup_db_id = self.agent_lookup_db_id.copy()
+        new_arena._agent_lookup = self._agent_lookup.copy()
+        new_arena._agent_lookup_db_id = self._agent_lookup_db_id.copy()
         new_arena.ratings = self.ratings.copy()
         return new_arena
 
+    def num_matches(self) -> int:
+        return np.sum(self._W_matrix)
+
     def opponent_ix_played_against(self, agent: Agent) -> np.ndarray:
-        ix = self.agent_lookup[agent].index
-        vertical = np.where(self.W_matrix[:, ix] > 0)[0]
-        horizontal = np.where(self.W_matrix[ix, :] > 0)[0]
+        ix = self._agent_lookup[agent].index
+        vertical = np.where(self._W_matrix[:, ix] > 0)[0]
+        horizontal = np.where(self._W_matrix[ix, :] > 0)[0]
         return np.union1d(vertical, horizontal)
 
     def n_games_played(self, agent: Agent):
-        ix = self.agent_lookup[agent].index
-        return (np.sum(self.W_matrix[ix, :]) + np.sum(self.W_matrix[:, ix])).astype(int)
+        ix = self._agent_lookup[agent].index
+        return (np.sum(self._W_matrix[ix, :]) + np.sum(self._W_matrix[:, ix])).astype(int)
+
+    def adjacent_matrix(self) -> np.ndarray:
+        return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
     def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
-        iagent = self.agent_lookup.get(agent, None)
+        iagent = self._agent_lookup.get(agent, None)
         if assert_new:
             assert iagent is None
 
@@ -149,7 +155,7 @@ class Arena:
         index = len(self.indexed_agents)
         iagent = IndexedAgent(agent, index, db_id)
         self.indexed_agents.append(iagent)
-        self.agent_lookup[agent] = iagent
+        self._agent_lookup[agent] = iagent
 
         if expand_matrix:
             self._expand_matrix()
@@ -158,16 +164,16 @@ class Arena:
             iagent.db_id = db.commit_agent(agent)
 
         assert iagent.db_id is not None
-        self.agent_lookup_db_id[iagent.db_id] = iagent
+        self._agent_lookup_db_id[iagent.db_id] = iagent
 
         return iagent
 
     def _expand_matrix(self):
-        n_old = self.W_matrix.shape[0]
+        n_old = self._W_matrix.shape[0]
         n_new = len(self.indexed_agents)
         if n_old == n_new:
             return
 
-        new_matrix = np.zeros((n_new, n_new), dtype=float)
-        new_matrix[:n_old, :n_old] = self.W_matrix
-        self.W_matrix = new_matrix
+        ne_W_matrix = np.zeros((n_new, n_new), dtype=float)
+        ne_W_matrix[:n_old, :n_old] = self._W_matrix
+        self._W_matrix = ne_W_matrix
