@@ -124,8 +124,8 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sub_id INT,  # index into mcts_agents or ref_agents
-            subtype TEXT  # 'mcts' or 'ref'
+            sub_id INT,
+            subtype TEXT
             )""",
 
     """CREATE TABLE IF NOT EXISTS matches (

@@ -20,7 +20,6 @@ class Evaluator:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
         self._organizer = organizer
         self.benchmark = Benchmarker(benchmark_organizer)
-        self.benchmark_agents = self.benchmark.agents
         self._db = RatingDB(self._organizer.eval_db_filename)
 
         self.arena = self.benchmark.arena.clone()

@@ -27,7 +27,7 @@ class MCTSAgent(Agent):
 
         player_args = {
             '--type': 'MCTS-C',
-            '--name': self.__repr__(),
+            '--name': f'MCTS-{self.gen}-{self.n_iters}',
             '-i': self.n_iters,
             '-n': 1,
         }
@@ -56,7 +56,7 @@ class ReferenceAgent(Agent):
 
         player_args = {
             '--type': self.type_str,
-            '--name': self.__repr__(),
+            '--name': f'{self.type_str}-{self.strength}',
             f'{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)

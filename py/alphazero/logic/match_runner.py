@@ -1,5 +1,6 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
+from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
 from util.logging_util import get_logger
@@ -23,7 +24,7 @@ class Match:
 
 class MatchRunner:
     @staticmethod
-    def run_match_helper(match: Match) -> WinLossDrawCounts:
+    def run_match_helper(match: Match, game: str) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -35,8 +36,11 @@ class MatchRunner:
         if n_games < 1:
             return WinLossDrawCounts()
 
-        ps1 = agent1.make_player_str()
-        ps2 = agent2.make_player_str()
+
+        organizer1 = DirectoryOrganizer(RunParams(game, agent1.tag), base_dir_root='/workspace')
+        organizer2 = DirectoryOrganizer(RunParams(game, agent2.tag), base_dir_root='/workspace')
+        ps1 = agent1.make_player_str(organizer1)
+        ps2 = agent2.make_player_str(organizer2)
 
         base_args = {
             '-G': n_games,
@@ -49,7 +53,7 @@ class MatchRunner:
         port = 1234  # TODO: move this to constants.py or somewhere
 
         cmd1 = [
-            agent1.binary_filename,
+            organizer1.binary_filename,
             '--port', str(port),
             '--player', f'"{ps1}"',
         ]
@@ -57,7 +61,7 @@ class MatchRunner:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            agent2.binary_filename,
+            organizer2.binary_filename,
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]

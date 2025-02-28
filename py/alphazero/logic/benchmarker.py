@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.arena import Arena
+from alphazero.logic.arena import Arena, RatingArrays
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
@@ -35,8 +35,11 @@ class Benchmarker:
     def load_from_db(self):
         self.arena.load_agents_from_db(self._db)
         self.arena.load_matches_from_db(self._db)
-        _, self.ratings, self.committee_ixs = self.arena.load_ratings_from_db(self._db)
-        assert len(self.ratings) == len(self.agents)
+        rating_arrays: RatingArrays = self.arena.load_ratings_from_db(self._db)
+        self.ratings = rating_arrays.ratings
+        self.committee_ixs = rating_arrays.committee_ixs
+        if self.ratings.size > 0:
+            assert len(self.ratings) == len(self.indexed_agents)
         if self.ratings.size == 0 and not self.has_no_matches():
             self.compute_ratings()
 
@@ -45,14 +48,12 @@ class Benchmarker:
             matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
             if matches is None:
                 break
-            self.arena.play_matches(matches, additional=False, db=self._db)
+            self.arena.play_matches(matches, self._organizer.game, additional=False, db=self._db)
             self.compute_ratings()
 
         is_committee = self.select_committee(target_elo_gap)
         self.compute_ratings()
-        if True:
-            raise Exception('TODO: fixme, return IndexedAgent list, not Agent list')
-        self.arena.commit_ratings_to_db(self._db, self.agents.keys(), self.ratings, is_committee)
+        self.arena.commit_ratings_to_db(self._db, self.indexed_agents, self.ratings, is_committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         if self.has_no_matches():
@@ -73,17 +74,17 @@ class Benchmarker:
             logger.info(f'Add new gen: {next_gen}, gap [{gap.left_gen}, {gap.right_gen}]: {gap.elo_diff}')
 
         next_agent = self.build_agent(next_gen, n_iters)
-        matches = [Match(next_agent, agent, n_games) for agent in self.agents.values()]
+        matches = [Match(next_agent, indexed_agent.agent, n_games) for indexed_agent in self.indexed_agents]
         return matches
 
     def incomplete_gen(self) -> np.ndarray:
         played_against =(self.arena.W_matrix > 0) | (self.arena.W_matrix.T > 0)
         opponents_played = np.sum(played_against, axis=1)
-        incomplete = np.where(opponents_played < len(self.agents) - 1)[0]
+        incomplete = np.where(opponents_played < len(self.indexed_agents) - 1)[0]
         if (incomplete.size == 0):
             return None
         incomplete_ix = np.argmin(opponents_played)
-        return self.agents[incomplete_ix].gen
+        return self.indexed_agents[incomplete_ix].gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -110,7 +111,7 @@ class Benchmarker:
         appropriately.
         """
         elos = self.ratings.copy()
-        gens, agent_ix = zip(*[(agent.gen, ix) for ix, agent in self.agents.items()])
+        gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self.indexed_agents])
         gens = np.array(gens)
         agent_ix = np.array(agent_ix)
 
@@ -130,13 +131,12 @@ class Benchmarker:
         if gen == 0:
             return MCTSAgent(gen=gen,
                              n_iters=n_iters,
-                             binary_filename=self._organizer.binary_filename)
+                             tag=self._organizer.tag)
         else:
             return MCTSAgent(gen=gen,
                              n_iters=n_iters,
                              set_temp_zero=True,
-                             binary_filename=self._organizer.binary_filename,
-                             model_filename=self._organizer.get_model_filename(gen))
+                             tag=self._organizer.tag)
 
     def select_committee(self, target_elo_gap) -> List[bool]:
         elos = self.ratings.copy()
@@ -164,5 +164,5 @@ class Benchmarker:
         return np.sum(self.arena.W_matrix) == 0
 
     @property
-    def agents(self):
-        return self.arena.agents
+    def indexed_agents(self):
+        return self.arena.indexed_agents

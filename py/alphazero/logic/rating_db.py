@@ -26,6 +26,13 @@ class MatchResult:
     counts: WinLossDrawCounts
 
 
+@dataclass
+class DBAgentRating:
+    agent_id: AgentDBId
+    rating: float
+    is_committee: bool
+
+
 class RatingDB:
     def __init__(self, db_filename: str):
         self.db_filename = db_filename
@@ -103,28 +110,19 @@ class RatingDB:
         for row in c:
             match_id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws = row
             counts = WinLossDrawCounts(agent1_wins, agent2_wins, draws)
-
-            self._last_fetched_match_id = max(match_id, self._last_fetched_match_id)
             match = MatchResult(agent_id1, agent_id2, counts)
             yield match
 
-    def load_ratings(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if True:
-            raise NotImplementedError('This method is not yet implemented')
+    def load_ratings(self) -> List[DBAgentRating]:
 
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        c.execute('SELECT ix, rating, is_committee FROM ratings')
+        c.execute('SELECT agent_id, rating, is_committee FROM ratings')
 
-        ixs = []
-        ratings = []
-        committee_ixs = []
-        for ix, rating, is_committee in c.fetchall():
-            ixs.append(ix)
-            ratings.append(rating)
-            committee_ixs.append(is_committee)
-        committee_ixs = np.where(np.array(committee_ixs) == 1)[0]
-        return np.array(ixs), np.array(ratings), committee_ixs
+        db_agent_ratings = []
+        for agent_id, rating, is_committee in c.fetchall():
+            db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee)))
+        return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts):
         conn = self.db_conn_pool.get_connection()

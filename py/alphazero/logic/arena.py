@@ -1,7 +1,7 @@
 from alphazero.logic.agent_types import Agent
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
-from alphazero.logic.rating_db import AgentDBId, DBAgent, RatingDB
+from alphazero.logic.rating_db import AgentDBId, DBAgent, RatingDB, DBAgentRating
 
 from dataclasses import replace
 import numpy as np
@@ -24,6 +24,13 @@ class IndexedAgent:
     agent: Agent
     index: ArenaIndex
     db_id: Optional[AgentDBId] = None
+
+
+@dataclass
+class RatingArrays:
+    ixs: np.ndarray
+    ratings: np.ndarray
+    committee_ixs: np.ndarray
 
 
 class Arena:
@@ -56,7 +63,7 @@ class Arena:
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
-    def play_matches(self, matches: List[Match], additional=False,
+    def play_matches(self, matches: List[Match], game: str, additional=False,
                      db: Optional[RatingDB]=None) -> WinLossDrawCounts:
         counts_list = []
         for match in matches:
@@ -73,7 +80,7 @@ class Arena:
                 if match.n_games < 1:
                     continue
 
-            counts: WinLossDrawCounts = MatchRunner.run_match_helper(match)
+            counts: WinLossDrawCounts = MatchRunner.run_match_helper(match, game)
             self.W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self.W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
             counts_list.append(counts)
@@ -93,7 +100,22 @@ class Arena:
         return self.ratings
 
     def load_ratings_from_db(self, db: RatingDB) -> Tuple[np.ndarray, np.ndarray]:
-        return db.load_ratings()
+        db_agent_ratings: List[DBAgentRating] = db.load_ratings()
+        ixs = []
+        ratings = []
+        committee_flags = []
+        for db_agent_rating in db_agent_ratings:
+            ix = self.agent_lookup_db_id[db_agent_rating.agent_id].index
+            ixs.append(ix)
+            ratings.append(db_agent_rating.rating)
+            committee_flags.append(db_agent_rating.is_committee)
+        ixs = np.array(ixs)
+        ratings = np.array(ratings)
+        committee_ixs = ixs[committee_flags]
+        sorted_ixs = np.argsort(ixs)
+        ixs = ixs[sorted_ixs]
+        ratings = ratings[sorted_ixs]
+        return RatingArrays(ixs, ratings, committee_ixs)
 
     def clone(self, include_agents: List[Agent] = None, exclude_agents: List[Agent] = None)\
         -> 'Arena':
@@ -112,25 +134,20 @@ class Arena:
                 If provided, these agents (and edges involving them) are excluded from
                 the new committee.
         """
-        if True:
-            # TODO: this becomes simpler with our Agent/IndexedAgent separation. No need to
-            # reconstruct Agent objects, can just use the existing ones.
-            raise NotImplementedError('This method is not yet implemented')
 
         sub_arena = Arena()
         old_ix = {}
-        for ix, agent in self.agents.items():
+        for iagent in self.indexed_agents:
             if include_agents and exclude_agents:
-                assert not (agent in include_agents and agent in exclude_agents)
-            if exclude_agents and agent in exclude_agents:
+                assert not (iagent.agent in include_agents and iagent.agent in exclude_agents)
+            if exclude_agents and iagent.agent in exclude_agents:
                 continue
-            if not include_agents or agent in include_agents:
-                agent_copy = replace(agent)
-                new_ix, is_new_node = sub_arena._add_agent(agent_copy, expand_matrix=False)
-                old_ix[new_ix] = ix
-                assert is_new_node
+            if not include_agents or iagent.agent in include_agents:
+                sub_arena._add_agent(iagent.agent, db_id=iagent.db_id, expand_matrix=False,
+                                     db=None, assert_new=True)
+
         sub_arena._expand_matrix()
-        n = len(sub_arena.agents)
+        n = len(sub_arena.indexed_agents)
         for i in range(n):
             for j in range(n):
                 sub_arena.W_matrix[i, j] = self.W_matrix[old_ix[i], old_ix[j]]
@@ -152,12 +169,12 @@ class Arena:
     def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
-        iagent: Optional[IndexedAgent] = self.agent_lookup.get(agent, None)
+        ix = self.agent_lookup.get(agent, None)
         if assert_new:
-            assert iagent is None
+            assert ix is None
 
-        if iagent is not None:
-            return iagent
+        if ix is not None:
+            return self.indexed_agents[ix]
 
         index = len(self.indexed_agents)
         self.agent_lookup[agent] = index
