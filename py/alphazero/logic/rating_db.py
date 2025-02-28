@@ -79,7 +79,7 @@ class RatingDB:
             agent = MCTSAgent(gen, n_iters, set_temp_zero, tag)
             yield DBAgent(agent, agent_id)
 
-        query = '''SELECT agents.id, strength_param, strength, tag
+        query = '''SELECT agents.id, type_str, strength_param, strength, tag
                    FROM agents
                    JOIN ref_agents
                    ON agents.sub_id = ref_agents.id

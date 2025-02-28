@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.arena import Arena
+from alphazero.logic.arena import Arena, RatingArrays
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import win_prob
@@ -25,8 +25,10 @@ class Evaluator:
         self.arena = self.benchmark.arena.clone()
         self.arena.load_agents_from_db(self._db)
         self.arena.load_matches_from_db(self._db)
-        self.evaluated_ixs, self.ratings, _ = self.arena.load_ratings_from_db(self._db)
-        self.evaluated_versions: List[int] = [self.agents[ix].version for ix in self.evaluated_ixs]
+        rating_arrays: RatingArrays = self.arena.load_ratings_from_db(self._db)
+        self.evaluated_ixs: np.ndarray = rating_arrays.ixs
+        self.ratings: np.ndarray = rating_arrays.ratings
+        self.evaluated_gens: List[int] = [self.indexed_agents[ix].agent.gen for ix in self.evaluated_ixs]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
         """
@@ -38,16 +40,16 @@ class Evaluator:
                 break
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
-                                   binary_filename=self._organizer.binary_filename,
-                                   model_filename=self._organizer.get_model_filename(gen))
+                                   tag=self._organizer.tag)
             self.eval_agent(test_agent, n_games, error_threshold)
+            self.evaluated_gens.append(gen)
 
     def get_next_gen_to_eval(self, target_eval_percent):
         last_gen = self._organizer.get_latest_model_generation()
-        evaluated_percent = len(self.evaluated_versions) / (last_gen + 1)
-        if 0 not in self.evaluated_versions:
+        evaluated_percent = len(self.evaluated_gens) / (last_gen + 1)
+        if 0 not in self.evaluated_gens:
             return 0
-        if last_gen not in self.evaluated_versions:
+        if last_gen not in self.evaluated_gens:
             return last_gen
         if evaluated_percent >= target_eval_percent:
             return None
@@ -55,11 +57,11 @@ class Evaluator:
         left_gen, right_gen = self.get_biggest_gen_gap()  # based on generation, not rating
         if left_gen + 1 < right_gen:
             gen = (left_gen + right_gen) // 2
-            assert gen not in self.evaluated_versions
+            assert gen not in self.evaluated_gens
         return int(gen)
 
     def get_biggest_gen_gap(self):
-        gens = self.evaluated_versions.copy()
+        gens = self.evaluated_gens.copy()
         gens = np.sort(gens)
         gaps = np.diff(gens)
         max_gap_ix = np.argmax(gaps)
@@ -75,12 +77,12 @@ class Evaluator:
         """
         self.arena.compute_ratings()
         estimated_rating = np.mean(self.benchmark.ratings)
-        ix, is_new = self.arena._add_agent(test_agent, expand_matrix=True, db=self._db)
-        if not is_new:
-            n_games -= self.arena.n_games_played(test_agent)
-            estimated_rating = self.arena.ratings[ix]
+        iagent = self.arena._add_agent(test_agent, expand_matrix=True, db=self._db)
+        n_games -= self.arena.n_games_played(test_agent)
+        if iagent.index in self.evaluated_ixs:
+            estimated_rating = self.arena.ratings[iagent.index]
 
-        opponent_ix_played = []
+        opponent_ix_played = self.arena.opponent_ix_played_against(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(self.committee_ixs):
             """
             The algorithm for selecting opponents is as follows:
@@ -112,26 +114,25 @@ class Evaluator:
                 ix = chosen_ixs[sorted_ixs[i]]
                 n = num_matches[sorted_ixs[i]]
 
-                opponent = self.agents[ix]
+                opponent = self.indexed_agents[ix].agent
                 match = Match(test_agent, opponent, n)
-                self.arena.play_matches([match], additional=True, db=self._db)
+                self.arena.play_matches([match], self._organizer.game, additional=True, db=self._db)
                 n_games -= n
-                opponent_ix_played.append(ix)
+                opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
                 self.arena.compute_ratings()
-                new_estimate = self.arena.ratings[test_agent.ix]
+                new_estimate = self.arena.ratings[iagent.index]
                 if abs(new_estimate - estimated_rating) > error_threshold:
                     estimated_rating = new_estimate
                     break
 
         self.arena.compute_ratings()
-        eval_rating = self.arena.ratings[test_agent.ix]
+        eval_rating = self.arena.ratings[iagent.index]
         interpolated_rating = self.interpolate_ratings(eval_rating)
 
         logger.info(f'{test_agent} rating: {interpolated_rating}, before_interpolation: {eval_rating}')
-        self.evaluated_ixs = np.concatenate([self.evaluated_ixs, [test_agent.ix]])
+        self.evaluated_ixs = np.concatenate([self.evaluated_ixs, [iagent.index]])
         self.ratings = np.concatenate([self.ratings, [interpolated_rating]])
-        self.evaluated_versions.append(test_agent.version)
-        self.arena.commit_ratings_to_db(self._db, [test_agent], [interpolated_rating])
+        self.arena.commit_ratings_to_db(self._db, [iagent], [interpolated_rating])
 
     def interpolate_ratings(self, estimated_rating: float) -> float:
         x = self.benchmark.ratings
@@ -140,8 +141,8 @@ class Evaluator:
         return float(interp_func(estimated_rating))
 
     @property
-    def agents(self):
-        return self.arena.agents
+    def indexed_agents(self):
+        return self.arena.indexed_agents
 
     @property
     def committee_ixs(self):

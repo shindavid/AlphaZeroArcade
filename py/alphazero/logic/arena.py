@@ -90,9 +90,9 @@ class Arena:
                 db.commit_counts(db_id1, db_id2, counts)
         return counts_list
 
-    def commit_ratings_to_db(self, db: RatingDB, agents: Iterable[IndexedAgent],
+    def commit_ratings_to_db(self, db: RatingDB, iagents: Iterable[IndexedAgent],
                              ratings: np.ndarray, is_committee_flags: List[bool] = None):
-        agent_ids = [agent.db_id for agent in agents]
+        agent_ids = [iagent.db_id for iagent in iagents]
         db.commit_rating(agent_ids, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
@@ -117,69 +117,39 @@ class Arena:
         ratings = ratings[sorted_ixs]
         return RatingArrays(ixs, ratings, committee_ixs)
 
-    def clone(self, include_agents: List[Agent] = None, exclude_agents: List[Agent] = None)\
-        -> 'Arena':
-        """
-        Create a new arena for a subset of agents.
-
-        This method filters the current arena's agents based on the optional lists provided,
-        then constructs a new arena with the filtered data. Any match results in W_matrix are
-        copied over for agents that remain.
-
-        Args:
-            include_agents (List[Agent], optional):
-                If provided, only these agents (and edges between them) are considered.
-                Defaults to including all agents if not specified.
-            exclude_agents (List[Agent], optional):
-                If provided, these agents (and edges involving them) are excluded from
-                the new committee.
-        """
-
-        sub_arena = Arena()
-        old_ix = {}
-        for iagent in self.indexed_agents:
-            if include_agents and exclude_agents:
-                assert not (iagent.agent in include_agents and iagent.agent in exclude_agents)
-            if exclude_agents and iagent.agent in exclude_agents:
-                continue
-            if not include_agents or iagent.agent in include_agents:
-                sub_arena._add_agent(iagent.agent, db_id=iagent.db_id, expand_matrix=False,
-                                     db=None, assert_new=True)
-
-        sub_arena._expand_matrix()
-        n = len(sub_arena.indexed_agents)
-        for i in range(n):
-            for j in range(n):
-                sub_arena.W_matrix[i, j] = self.W_matrix[old_ix[i], old_ix[j]]
-        sub_arena.compute_ratings()
-        return sub_arena
+    def clone(self) -> 'Arena':
+        new_arena = Arena()
+        new_arena.W_matrix = self.W_matrix.copy()
+        new_arena.indexed_agents = self.indexed_agents.copy() # shallow copy with same agents
+        new_arena.agent_lookup = self.agent_lookup.copy()
+        new_arena.agent_lookup_db_id = self.agent_lookup_db_id.copy()
+        new_arena.ratings = self.ratings.copy()
+        return new_arena
 
     def opponent_ix_played_against(self, agent: Agent) -> np.ndarray:
-        ix, is_new = self._add_agent(agent)
-        assert not is_new
+        ix = self.agent_lookup[agent].index
         vertical = np.where(self.W_matrix[:, ix] > 0)[0]
         horizontal = np.where(self.W_matrix[ix, :] > 0)[0]
         return np.union1d(vertical, horizontal)
 
     def n_games_played(self, agent: Agent):
-        ix = agent.ix
-        assert ix is not None
+        ix = self.agent_lookup[agent].index
         return (np.sum(self.W_matrix[ix, :]) + np.sum(self.W_matrix[:, ix])).astype(int)
 
     def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
-        ix = self.agent_lookup.get(agent, None)
+        iagent = self.agent_lookup.get(agent, None)
         if assert_new:
-            assert ix is None
+            assert iagent is None
 
-        if ix is not None:
-            return self.indexed_agents[ix]
+        if iagent is not None:
+            return iagent
 
         index = len(self.indexed_agents)
-        self.agent_lookup[agent] = index
         iagent = IndexedAgent(agent, index, db_id)
         self.indexed_agents.append(iagent)
+        self.agent_lookup[agent] = iagent
 
         if expand_matrix:
             self._expand_matrix()

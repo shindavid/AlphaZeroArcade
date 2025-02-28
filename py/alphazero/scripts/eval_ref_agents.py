@@ -31,7 +31,7 @@ def main():
 
     ref_agents = []
     for strength in range(1, 22, 5):
-        ref_agents.append(ReferenceAgent(type_str, strength_param, strength, organizer.binary_filename))
+        ref_agents.append(ReferenceAgent(type_str, strength_param, strength, tag=organizer.tag))
 
     evaluator = Evaluator(organizer, organizer)
     for agent in ref_agents:
