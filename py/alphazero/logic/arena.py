@@ -73,8 +73,9 @@ class Arena:
             if self._W_matrix[ix1, ix2] > 0 or self._W_matrix[ix2, ix1] > 0:
                 if not additional:
                     n_games_played = int(self._W_matrix[ix1, ix2] + self._W_matrix[ix2, ix1])
-                    match.n_games = match.n_games - n_games_played
-                if match.n_games < 1:
+                    n_games = match.n_games - n_games_played
+                    match = Match(match.agent1, match.agent2, n_games)
+                if n_games < 1:
                     continue
 
             counts: WinLossDrawCounts = MatchRunner.run_match_helper(match, game)
