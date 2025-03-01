@@ -96,7 +96,10 @@ class Evaluator:
     def interpolate_ratings(self, estimated_rating: float) -> float:
         x = self._benchmark.ratings
         y = self._arena.ratings[:len(self._benchmark.ratings)]
-        interp_func = interp1d(x, y, kind="linear", fill_value="extrapolate")
+        sorted_ixs = np.argsort(x)
+        x_sorted = x[sorted_ixs]
+        y_sorted = y[sorted_ixs]
+        interp_func = interp1d(x_sorted, y_sorted, kind="linear", fill_value="extrapolate")
         return float(interp_func(estimated_rating))
 
     @property
