@@ -6,6 +6,11 @@ import argparse
 import os
 
 
+"""
+This script copies the binaries from the release directory to the run directory. It creates
+symlinks for the extra dependencies in the release directory. This needs to be run manually
+before benchmarker, evaulator or mctsevaluator.
+"""
 def copy_binaries(organizer: DirectoryOrganizer):
     binary_release_dir = '/workspace/repo/target/Release/bin/'
     copy_file_to_folder(os.path.join(binary_release_dir, organizer.game), organizer.base_dir)
@@ -23,3 +28,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

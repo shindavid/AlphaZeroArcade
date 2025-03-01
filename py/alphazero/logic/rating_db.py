@@ -39,24 +39,6 @@ class RatingDB:
         self.db_conn_pool = DatabaseConnectionPool(db_filename,
                                                    constants.ARENA_TABLE_CREATE_CMDS)
 
-    # @staticmethod
-    # def get_entry_from_agent(agent: Agent):
-    #     if isinstance(agent, MCTSAgent):
-    #         ix = agent.ix
-    #         gen = agent.gen
-    #         n_iters = agent.n_iters
-    #         set_temp_zero = agent.set_temp_zero
-    #         binary_filename = agent.binary_filename
-    #         model_filename = agent.model_filename
-    #     elif isinstance(agent, ReferenceAgent):
-    #         ix = agent.ix
-    #         gen = agent.strength
-    #         n_iters = -1
-    #         set_temp_zero = None
-    #         binary_filename = agent.binary_filename
-    #         model_filename = f'{agent.type_str}|{agent.strength_param}'
-    #     return DBAgent(ix, gen, n_iters, set_temp_zero, binary_filename, model_filename)
-
     def fetch_agents(self) -> Iterable[DBAgent]:
         """
         Constructs a DBAgent from each row of the agents table, and returns a list of them.
@@ -178,3 +160,4 @@ class RatingDB:
         c.execute(insert, (sub_id, subtype))
         conn.commit()
         return c.lastrowid
+

@@ -40,14 +40,11 @@ class Arena:
     compute ratings, and create a subset of match results.
     """
     def __init__(self):
-        # TODO: consider making these members private, as there are sensitive invariants that
-        # need to be maintained between them. Specifically, self.indexed_agents needs to be
-        # consistent with the lookup dictionaries.
         self._W_matrix = np.zeros((0, 0), dtype=float)
-        self.indexed_agents: List[IndexedAgent] = []
+        self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
-        self.ratings: np.ndarray = np.array([])
+        self._ratings: np.ndarray = np.array([])
 
     def load_agents_from_db(self, db: RatingDB):
         for db_agent in db.fetch_agents():
@@ -96,10 +93,10 @@ class Arena:
         db.commit_rating(agent_ids, ratings, is_committee_flags=is_committee_flags)
 
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
-        self.ratings = compute_ratings(self._W_matrix, eps=eps)
-        return self.ratings
+        self._ratings = compute_ratings(self._W_matrix, eps=eps)
+        return self._ratings.copy()
 
-    def load_ratings_from_db(self, db: RatingDB) -> Tuple[np.ndarray, np.ndarray]:
+    def load_ratings_from_db(self, db: RatingDB) -> RatingArrays:
         db_agent_ratings: List[DBAgentRating] = db.load_ratings()
         ixs = []
         ratings = []
@@ -118,13 +115,27 @@ class Arena:
         return RatingArrays(ixs, ratings, committee_ixs)
 
     def clone(self) -> 'Arena':
+        """
+        Note: the agents in the cloned arena are the same instances as the original arena.
+        """
         new_arena = Arena()
-        new_arena._W_matrix = self._W_matrix.copy()
-        new_arena.indexed_agents = self.indexed_agents.copy() # shallow copy with same agents
-        new_arena._agent_lookup = self._agent_lookup.copy()
-        new_arena._agent_lookup_db_id = self._agent_lookup_db_id.copy()
-        new_arena.ratings = self.ratings.copy()
+        new_arena.set_values(W_matrix=self._W_matrix.copy(),
+                             indexed_agents=self._indexed_agents.copy(),
+                             agent_lookup=self._agent_lookup.copy(),
+                             agent_lookup_db_id=self._agent_lookup_db_id.copy(),
+                             ratings=self._ratings.copy())
         return new_arena
+
+    def set_values(self, W_matrix: np.ndarray,
+                   indexed_agents: List[IndexedAgent],
+                   agent_lookup: Dict[Agent, IndexedAgent],
+                   agent_lookup_db_id: Dict[AgentDBId, IndexedAgent],
+                   ratings: np.ndarray):
+        self._W_matrix = W_matrix
+        self._indexed_agents = indexed_agents
+        self._agent_lookup = agent_lookup
+        self._agent_lookup_db_id = agent_lookup_db_id
+        self._ratings = ratings
 
     def num_matches(self) -> int:
         return np.sum(self._W_matrix)
@@ -145,6 +156,12 @@ class Arena:
     def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
+        """
+        _add_agent is used in two places:
+        1. when loading agents from the database, where a db_id is retrieved from the database.
+        2. when preparing agents to play matches, where a db_id is not yet available and will be set
+        after it is committed to the database. Therefore, db needs to be provided in this case.
+        """
         iagent = self._agent_lookup.get(agent, None)
         if assert_new:
             assert iagent is None
@@ -152,9 +169,9 @@ class Arena:
         if iagent is not None:
             return iagent
 
-        index = len(self.indexed_agents)
+        index = len(self._indexed_agents)
         iagent = IndexedAgent(agent, index, db_id)
-        self.indexed_agents.append(iagent)
+        self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
 
         if expand_matrix:
@@ -170,10 +187,23 @@ class Arena:
 
     def _expand_matrix(self):
         n_old = self._W_matrix.shape[0]
-        n_new = len(self.indexed_agents)
+        n_new = len(self._indexed_agents)
         if n_old == n_new:
             return
 
         ne_W_matrix = np.zeros((n_new, n_new), dtype=float)
         ne_W_matrix[:n_old, :n_old] = self._W_matrix
         self._W_matrix = ne_W_matrix
+
+    @property
+    def indexed_agents(self) -> List[IndexedAgent]:
+        """
+        Returns shallow copy of the indexed agents.
+        This is to prevent modification of the original list but agents are technically prone
+        to modification.
+        """
+        return self._indexed_agents.copy()
+
+    @property
+    def ratings(self) -> np.ndarray:
+        return self._ratings.copy()

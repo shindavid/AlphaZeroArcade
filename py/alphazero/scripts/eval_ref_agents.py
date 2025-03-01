@@ -8,6 +8,7 @@ from util.py_util import CustomHelpFormatter
 
 import argparse
 
+
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
@@ -16,6 +17,7 @@ def load_args():
 
 
     return parser.parse_args()
+
 
 def main():
     configure_logger()
@@ -41,3 +43,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
