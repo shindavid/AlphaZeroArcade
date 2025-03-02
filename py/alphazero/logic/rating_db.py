@@ -115,7 +115,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        if is_committee_bools is None:
+        if committee is None:
             is_committee_bools = [None] * len(iagents)
         else:
             # sql requires ints, not bools

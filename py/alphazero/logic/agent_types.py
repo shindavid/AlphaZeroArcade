@@ -79,6 +79,9 @@ class IndexedAgent:
     index: ArenaIndex
     db_id: Optional[AgentDBId] = None
 
+    def __hash__(self):
+        return hash((self.agent, self.index, self.db_id))
+
 
 BenchmarkCommittee = Set[IndexedAgent]
 

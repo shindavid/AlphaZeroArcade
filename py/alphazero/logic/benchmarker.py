@@ -6,7 +6,7 @@ from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
 
 from dataclasses import dataclass
-from typing import  Optional, List, Set
+from typing import Optional
 import copy
 import numpy as np
 
@@ -37,7 +37,7 @@ class Benchmarker:
         self._arena.load_agents_from_db(self._db)
         self._arena.load_matches_from_db(self._db)
         rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
-        self._arena.ratings = rating_data.ratings
+        self._arena._ratings = rating_data.ratings
         self._committee = rating_data.committee
         if self._arena.ratings.size == 0 and not self.has_no_matches():
             self._arena.refresh_ratings()
@@ -63,7 +63,7 @@ class Benchmarker:
 
         self._committee = self.select_committee(target_elo_gap)
         self._arena.refresh_ratings()
-        self._db.commit_ratings(self._db, self.indexed_agents, self.ratings, self._committee)
+        self._db.commit_ratings(self.indexed_agents, self.ratings, self._committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         """
@@ -204,3 +204,5 @@ class Benchmarker:
     @property
     def committee(self):
         return self._committee
+
+

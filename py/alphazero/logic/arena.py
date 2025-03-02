@@ -93,7 +93,7 @@ class Arena:
             db_ids.append(db_id)
             ratings.append(db_agent_rating.rating)
             if db_agent_rating.is_committee:
-                committee.add(self._agent_lookup)
+                committee.add(self._agent_lookup_db_id[db_id])
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
         sorted_ids = np.argsort(db_ids)
@@ -107,7 +107,7 @@ class Arena:
     def get_past_opponents_ix(self, agent: Agent) -> np.ndarray:
         W = self._W_matrix
         ix = self._agent_lookup[agent].index
-        return np.where(W[ix, :] > 0 + W[:, ix] > 0)[0]
+        return np.where((W[ix, :] > 0) | (W[:, ix] > 0))[0]
 
     def n_games_played(self, agent: Agent):
         ix = self._agent_lookup[agent].index

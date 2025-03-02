@@ -9,6 +9,8 @@ from util.logging_util import get_logger
 
 from scipy.interpolate import interp1d
 import numpy as np
+import shutil
+import os
 
 from typing import List
 
@@ -19,53 +21,67 @@ logger = get_logger()
 class Evaluator:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self._db = RatingDB(self._organizer.eval_db_filename)
         self._benchmark = Benchmarker(benchmark_organizer)
         self._arena = self._benchmark.clone_arena()
+        if not os.path.exists(organizer.eval_db_filename):
+            shutil.copy2(benchmark_organizer.benchmark_db_filename, organizer.eval_db_filename)
 
+        self._db = RatingDB(self._organizer.eval_db_filename)
         self._arena.load_agents_from_db(self._db)
         self._arena.load_matches_from_db(self._db)
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
 
-        self._evaluated_ixs = np.array([self._arena.agent_lookup_db_id[agent_id] for agent_id in rating_data.agent_ids])
+        rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
+        self._evaluated_ixs = np.array([self._arena.agent_lookup_db_id[agent_id].index \
+            for agent_id in rating_data.agent_ids])
         self._interpolated_ratings = rating_data.ratings
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100):
         """
-        generic evaluation function for all types of agent.
+        Generic evaluation function for all types of agents.
+
+        The opponent selection algorithm is adapted from KataGo:
+        "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).
+
+        The evaluation process follows these steps:
+
+        1. Compute the test agent's probability of winning against each committee member
+           based on the difference in their estimated Elo ratings. The initial estimated rating of
+           the test agent is set to be the mean of the committee members' ratings if it has not
+           played any matches yet.
+        2. Calculate the variance of the win probability for each committee member using
+           p * (1 - p), where p is the win probability.
+        3. Select opponents from the committee in proportion to their win probability variance.
+        4. Remove any opponents that the test agent has already played from the sampling pool.
+        5. After each match, update the test agent's estimated rating. If the new rating
+           deviates beyond `error_threshold` from the original estimate, it indicates that
+           the initial estimate was unreliable. In this case, reset the process and return to step 1.
+        6. If the test agent has played against all committee members or has completed
+           a sufficient number of matches, stop further evaluation.
+        7. Compute the final rating by interpolating from the benchmark committee's ratings
+           before any games were played against the test agent.
         """
         self._arena.refresh_ratings()
         estimated_rating = np.mean(self._benchmark.ratings)
         iagent = self._arena._add_agent(test_agent, expand_matrix=True, db=self._db)
-        n_games -= self._arena.n_games_played(test_agent)
-        if iagent.index in self._evaluated_ixs:
+
+        n_games_played = self._arena.n_games_played(test_agent)
+        if n_games_played > 0:
+            n_games -= n_games_played
             estimated_rating = self._arena.ratings[iagent.index]
 
+        committee_ixs = np.array([iagent.index for iagent in self._benchmark.committee])
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
-        while n_games > 0 and len(opponent_ix_played) < len(self.committee_ixs):
-            """
-            The algorithm for selecting opponents is as follows:
-            1. Select opponents from the committee proportionally to the variance of the win
-            probability of the test agent against the opponent.
-            2. If the test agent has played against an opponent, remove that opponent from the
-            sampling pool.
-            3. If the test agent's new estimated rating after including the newly played match is
-            not within error_threshold of the original estimate, we conclude the estimate rating used
-            was too off to give us a good basis for sampling opponents. We go back to step 1.
-            4. If the test agent has played against all opponents or enough matches have been played,
-            we stop and compute the final rating.
-            5. The final rating is interpolated from the benchmark committee ratings before any games
-            were played against the test agent.
-            """
-            p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in self.committee_ixs]
+        while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
+
+            p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
             var = np.array([q * (1 - q) for q in p])
             mask = np.zeros(len(var), dtype=bool)
-            committee_ix_played = np.where(np.isin(self.committee_ixs, opponent_ix_played))[0]
+            committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
             mask[committee_ix_played] = True
             var[mask] = 0
             var = var / np.sum(var)
 
-            sample_ixs = self.committee_ixs[np.random.choice(len(self.committee_ixs), p=var, size=n_games)]
+            sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
             chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
             sorted_ixs = np.argsort(num_matches)[::-1]
             logger.info('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
@@ -75,7 +91,7 @@ class Evaluator:
 
                 opponent = self.indexed_agents[ix].agent
                 match = Match(test_agent, opponent, n)
-                self._arena.play_matches([match], self._organizer.game, additional=True, db=self._db)
+                self._arena.play_matches([match], self._organizer.game, additional=False, db=self._db)
                 n_games -= n
                 opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
                 self._arena.refresh_ratings()

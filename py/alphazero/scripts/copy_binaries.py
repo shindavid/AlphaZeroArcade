@@ -11,11 +11,13 @@ This script copies the binaries from the release directory to the run directory.
 symlinks for the extra dependencies in the release directory. This needs to be run manually
 before benchmarker, evaulator or mctsevaluator.
 
-TODO:
+Note:
 - This functionality should be integrated into the existing scripts instead of requiring a manual step.
 - Only the loop-controller has access to the directory, so it should be responsible for copying the binaries.
 - However, currently, the self-play server and ratings server specify their own binaries at launch.
 - The proper solution would be for the loop-controller to send the binary over TCP to these servers.
+
+TODO:
 - Implement this in the future when restructuring the process.
 - We should replace the creation of symlinks with copying/sending the files.
 """
