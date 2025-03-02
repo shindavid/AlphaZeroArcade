@@ -4,7 +4,6 @@ from util.str_util import make_args_str
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Set
-import numpy as np
 
 
 class Agent(ABC):

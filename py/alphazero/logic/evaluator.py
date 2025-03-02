@@ -28,7 +28,7 @@ class Evaluator:
         rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
 
         self._evaluated_ixs = np.array([self._arena.agent_lookup_db_id[agent_id] for agent_id in rating_data.agent_ids])
-        self._ratings = rating_data.ratings
+        self._interpolated_ratings = rating_data.ratings
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100):
         """
@@ -90,7 +90,7 @@ class Evaluator:
 
         logger.info('%s rating: %f, raw: %f', test_agent, interpolated_rating, eval_rating)
         self._evaluated_ixs = np.concatenate([self._evaluated_ixs, [iagent.index]])
-        self._ratings = np.concatenate([self._ratings, [interpolated_rating]])
+        self._interpolated_ratings = np.concatenate([self._interpolated_ratings, [interpolated_rating]])
         self._db.commit_ratings([iagent], [interpolated_rating])
 
     def interpolate_ratings(self, estimated_rating: float) -> float:
@@ -115,8 +115,8 @@ class Evaluator:
         return self._evaluated_ixs
 
     @property
-    def ratings(self):
-        return self._ratings
+    def interpolated_ratings(self):
+        return self._interpolated_ratings
 
 
 class MCTSEvaluator:
