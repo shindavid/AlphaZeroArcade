@@ -63,7 +63,7 @@ class Benchmarker:
 
         self._committee = self.select_committee(target_elo_gap)
         self._arena.refresh_ratings()
-        self._db.commit_rating(self._db, self.indexed_agents, self.ratings, self._committee)
+        self._db.commit_ratings(self._db, self.indexed_agents, self.ratings, self._committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         """

@@ -3,6 +3,8 @@ from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional, Set
+import numpy as np
 
 
 class Agent(ABC):
@@ -60,3 +62,25 @@ class ReferenceAgent(Agent):
             f'{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
+
+
+ArenaIndex = int  # index of an agent in an Arena
+AgentDBId = int  # id in agents table of the database
+
+
+@dataclass
+class IndexedAgent:
+    """
+    A dataclass for storing an agent with auxiliary info.
+
+    - index refers to the index of the agent in the Arena's data structures.
+    - db_id is the id of the agent in the database. This might be set after initial creation.
+    """
+    agent: Agent
+    index: ArenaIndex
+    db_id: Optional[AgentDBId] = None
+
+
+BenchmarkCommittee = Set[IndexedAgent]
+
+

@@ -1,18 +1,12 @@
 from alphazero.logic import constants
-from alphazero.logic.arena import IndexedAgent
-from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
-from alphazero.logic.benchmarker import BenchmarkCommittee
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent, BenchmarkCommittee, AgentDBId, IndexedAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Tuple, Dict, List, Iterable, Optional
-import os
-
-
-AgentDBId = int  # id in agents table of the database
+from typing import List, Iterable, Optional
 
 
 @dataclass

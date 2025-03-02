@@ -1,31 +1,12 @@
-from alphazero.logic.agent_types import Agent
+from alphazero.logic.agent_types import Agent, IndexedAgent, BenchmarkCommittee, AgentDBId
 from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
-from alphazero.logic.rating_db import AgentDBId, DBAgent, RatingDB, DBAgentRating
+from alphazero.logic.rating_db import RatingDB, DBAgentRating
 
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple, Set
-
-
-ArenaIndex = int  # index of an agent in an Arena
-
-
-@dataclass
-class IndexedAgent:
-    """
-    A dataclass for storing an agent with auxiliary info.
-
-    - index refers to the index of the agent in the Arena's data structures.
-    - db_id is the id of the agent in the database. This might be set after initial creation.
-    """
-    agent: Agent
-    index: ArenaIndex
-    db_id: Optional[AgentDBId] = None
-
-
-BenchmarkCommittee = Set[IndexedAgent]
+from typing import Dict, List, Optional
 
 
 @dataclass
