@@ -139,11 +139,10 @@ class Arena:
     def num_matches(self) -> int:
         return np.sum(self._W_matrix)
 
-    def opponent_ix_played_against(self, agent: Agent) -> np.ndarray:
+    def get_past_opponents_ix(self, agent: Agent) -> np.ndarray:
+        W = self._W_matrix
         ix = self._agent_lookup[agent].index
-        vertical = np.where(self._W_matrix[:, ix] > 0)[0]
-        horizontal = np.where(self._W_matrix[ix, :] > 0)[0]
-        return np.union1d(vertical, horizontal)
+        return np.where(W[ix, :] > 0 + W[:, ix] > 0)[0]
 
     def n_games_played(self, agent: Agent):
         ix = self._agent_lookup[agent].index
