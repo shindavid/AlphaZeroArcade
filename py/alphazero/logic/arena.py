@@ -27,7 +27,13 @@ class IndexedAgent:
 
 
 @dataclass
-class RatingArrays:
+class RatingData:
+    """
+    A dataclass for storing the rating data of an agent.
+    - ixs: the indices of the agents in the Arena.
+    - ratings: the ratings of the agents in the Arena.
+    - committee_ixs: the indices of the agents in the committee.
+    """
     ixs: np.ndarray
     ratings: np.ndarray
     committee_ixs: np.ndarray
@@ -62,6 +68,12 @@ class Arena:
 
     def play_matches(self, matches: List[Match], game: str, additional=False,
                      db: Optional[RatingDB]=None) -> WinLossDrawCounts:
+        """
+        Play matches between agents and update the W_matrix with the results. If db is provided,
+        the results are committed to the database. If additional is True, the match is played
+        in addition to the existing matches. If additional is False, it will subtract the number of
+        games already played between the two agents from the number of games to be played.
+        """
         counts_list = []
         for match in matches:
             indexed_agent1 = self._add_agent(match.agent1, expand_matrix=True, db=db)
@@ -88,16 +100,14 @@ class Arena:
                 db.commit_counts(db_id1, db_id2, counts)
         return counts_list
 
-    def commit_ratings_to_db(self, db: RatingDB, iagents: Iterable[IndexedAgent],
-                             ratings: np.ndarray, is_committee_flags: List[bool] = None):
-        agent_ids = [iagent.db_id for iagent in iagents]
-        db.commit_rating(agent_ids, ratings, is_committee_flags=is_committee_flags)
-
     def compute_ratings(self, eps=1e-3) -> np.ndarray:
+        """
+        TODO: pass self._ratings to compute_ratings to speed up the rating computation.
+        """
         self._ratings = compute_ratings(self._W_matrix, eps=eps)
         return self._ratings.copy()
 
-    def load_ratings_from_db(self, db: RatingDB) -> RatingArrays:
+    def load_ratings_from_db(self, db: RatingDB) -> RatingData:
         db_agent_ratings: List[DBAgentRating] = db.load_ratings()
         ixs = []
         ratings = []
@@ -113,7 +123,7 @@ class Arena:
         sorted_ixs = np.argsort(ixs)
         ixs = ixs[sorted_ixs]
         ratings = ratings[sorted_ixs]
-        return RatingArrays(ixs, ratings, committee_ixs)
+        return RatingData(ixs, ratings, committee_ixs)
 
     def clone(self) -> 'Arena':
         """

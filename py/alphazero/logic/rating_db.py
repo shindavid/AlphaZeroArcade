@@ -1,5 +1,7 @@
 from alphazero.logic import constants
+from alphazero.logic.arena import IndexedAgent
 from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
+from alphazero.logic.benchmarker import BenchmarkCommittee
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -114,20 +116,20 @@ class RatingDB:
                   VALUES (?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
-    def commit_rating(self, agent_ids: List[AgentDBId], ratings: np.ndarray,
-                      is_committee_flags: Optional[List[bool]]):
+    def commit_rating(self, iagents: List[IndexedAgent], ratings: np.ndarray,
+                      committee: Optional[BenchmarkCommittee]=None):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        if is_committee_flags is None:
-            is_committee_flags = [None] * len(agent_ids)
+        if is_committee_bools is None:
+            is_committee_bools = [None] * len(iagents)
         else:
             # sql requires ints, not bools
-            is_committee_flags = [int(flag) for flag in is_committee_flags]
+            is_committee_bools = [1 if iagent in committee else 0 for iagent in iagents]
 
         rating_tuples = []
-        for i, rating, is_committee in zip(agent_ids, ratings, is_committee_flags):
-            rating_tuple = (i, rating, is_committee)
+        for iagent, rating, is_committee in zip(iagents, ratings, is_committee_bools):
+            rating_tuple = (iagent.db_id, rating, is_committee)
             rating_tuples.append(rating_tuple)
         c.executemany('''REPLACE INTO ratings (agent_id, rating, is_committee)
                       VALUES (?, ?, ?)''', rating_tuples)

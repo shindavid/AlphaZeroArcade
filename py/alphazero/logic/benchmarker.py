@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.arena import Arena, RatingArrays
+from alphazero.logic.arena import Arena, RatingArrays, IndexedAgent
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
@@ -7,7 +7,7 @@ from util.logging_util import get_logger
 
 from dataclasses import dataclass
 import numpy as np
-from typing import  Optional, List
+from typing import  Optional, List, Set
 
 
 logger = get_logger()
@@ -20,6 +20,9 @@ class RatingsGap:
     elo_diff: float
 
 
+BenchmarkCommittee = Set[IndexedAgent]
+
+
 class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
@@ -28,7 +31,7 @@ class Benchmarker:
         self._organizer = organizer
         self._arena = Arena()
         self._ratings: np.ndarray = np.array([])
-        self._committee_ixs: np.ndarray = np.array([])
+        self.committee: BenchmarkCommittee = set()
         self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
@@ -60,9 +63,9 @@ class Benchmarker:
             self._arena.play_matches(matches, self._organizer.game, additional=False, db=self._db)
             self.compute_ratings()
 
-        is_committee = self.select_committee(target_elo_gap)
+        self.committee = self.select_committee(target_elo_gap)
         self.compute_ratings()
-        self._arena.commit_ratings_to_db(self._db, self.indexed_agents, self._ratings, is_committee)
+        self._db.commit_rating(self._db, self.indexed_agents, self._ratings, self.committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         """
@@ -163,34 +166,26 @@ class Benchmarker:
                              set_temp_zero=True,
                              tag=self._organizer.tag)
 
-    def select_committee(self, target_elo_gap) -> List[bool]:
+    def select_committee(self, target_elo_gap) -> BenchmarkCommittee:
         """
         Selects a committee of generations that are spaced out by the target elo gap.
-        The committee is selected by first finding the min and max elo ratings, and then
-        dividing the range into equal intervals of size target_elo_gap. The generations
-        that are closest to the target elos are selected. The committee is then returned
-        as a boolean mask, where True indicates that the generation is in the committee.
+        The committee is selected by sorting the generations by their elo ratings, and then
+        selecting the highest rated agent, and then selecting the next agent that is
+        spaced out by at least the target elo gap. This is done until all agents are scanned.
+        The committee is returned as a set of IndexedAgent objects.
         """
-        elos = self._ratings.copy()
-        max_elo = np.max(elos)
-        min_elo = np.min(elos)
-        committee_size = int((max_elo - min_elo) / target_elo_gap)
-        target_elos = np.linspace(min_elo, max_elo, committee_size)
+        elos = self._ratings # alias for readability
+        sorted_ix = np.argsort(elos)[::-1]
+        sorted_elos = elos[sorted_ix]
+        committee: BenchmarkCommittee = {self.indexed_agents[sorted_ix[0]]}
+        last_selected_elo = sorted_elos[0]
 
-        sorted_ix = np.argsort(elos)
-        committee_ixs = []
-        j = 0
-        n = len(elos)
-        for e in target_elos:
-            while j < n - 1 and (abs(elos[sorted_ix[j]] - e) > abs(elos[sorted_ix[j + 1]] - e)):
-                j += 1
-            committee_ixs.append(sorted_ix[j])
-        committee_ixs = np.unique(committee_ixs)
-        self._committee_ixs = committee_ixs
+        for i in range(1, len(sorted_elos)):
+            if last_selected_elo - sorted_elos[i] >= target_elo_gap:
+                committee.add(self.indexed_agents[sorted_ix[i]])
+                last_selected_elo = sorted_elos[i]
 
-        mask = np.zeros(len(elos), dtype=bool)
-        mask[committee_ixs] = True
-        return mask.astype(int).tolist()
+        return committee
 
     def has_no_matches(self):
         return self._arena.num_matches() == 0
