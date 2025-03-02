@@ -125,18 +125,6 @@ class Arena:
         ratings = ratings[sorted_ixs]
         return RatingData(ixs, ratings, committee_ixs)
 
-    def clone(self) -> 'Arena':
-        """
-        Note: the agents in the cloned arena are the same instances as the original arena.
-        """
-        new_arena = Arena()
-        new_arena.set_values(W_matrix=self._W_matrix.copy(),
-                             indexed_agents=self._indexed_agents.copy(),
-                             agent_lookup=self._agent_lookup.copy(),
-                             agent_lookup_db_id=self._agent_lookup_db_id.copy(),
-                             ratings=self._ratings.copy())
-        return new_arena
-
     def set_values(self, W_matrix: np.ndarray,
                    indexed_agents: List[IndexedAgent],
                    agent_lookup: Dict[Agent, IndexedAgent],

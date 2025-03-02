@@ -6,8 +6,10 @@ from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
 
 from dataclasses import dataclass
-import numpy as np
 from typing import  Optional, List, Set
+import copy
+import numpy as np
+
 
 
 logger = get_logger()
@@ -191,10 +193,7 @@ class Benchmarker:
         return self._arena.num_matches() == 0
 
     def clone_arena(self) -> Arena:
-        """
-        Note: the agents in the cloned arena are the same instances as the original arena.
-        """
-        return self._arena.clone()
+        return copy.deepcopy(self._arena)
 
     @property
     def indexed_agents(self):
