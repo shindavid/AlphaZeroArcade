@@ -116,7 +116,7 @@ class RatingDB:
                   VALUES (?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
-    def commit_rating(self, iagents: List[IndexedAgent], ratings: np.ndarray,
+    def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
                       committee: Optional[BenchmarkCommittee]=None):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()

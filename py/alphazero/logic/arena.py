@@ -3,11 +3,10 @@ from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import AgentDBId, DBAgent, RatingDB, DBAgentRating
 
-from dataclasses import replace
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Set
 
 
 ArenaIndex = int  # index of an agent in an Arena
@@ -26,17 +25,14 @@ class IndexedAgent:
     db_id: Optional[AgentDBId] = None
 
 
+BenchmarkCommittee = Set[IndexedAgent]
+
+
 @dataclass
 class RatingData:
-    """
-    A dataclass for storing the rating data of an agent.
-    - ixs: the indices of the agents in the Arena.
-    - ratings: the ratings of the agents in the Arena.
-    - committee_ixs: the indices of the agents in the committee.
-    """
-    ixs: np.ndarray
+    agent_ids: np.ndarray
     ratings: np.ndarray
-    committee_ixs: np.ndarray
+    committee: BenchmarkCommittee
 
 
 class Arena:
@@ -100,41 +96,29 @@ class Arena:
                 db.commit_counts(db_id1, db_id2, counts)
         return counts_list
 
-    def compute_ratings(self, eps=1e-3) -> np.ndarray:
+    def refresh_ratings(self, eps=1e-3):
         """
         TODO: pass self._ratings to compute_ratings to speed up the rating computation.
         """
         self._ratings = compute_ratings(self._W_matrix, eps=eps)
-        return self._ratings.copy()
 
     def load_ratings_from_db(self, db: RatingDB) -> RatingData:
         db_agent_ratings: List[DBAgentRating] = db.load_ratings()
-        ixs = []
+        db_ids = []
         ratings = []
-        committee_flags = []
+        committee = set()
         for db_agent_rating in db_agent_ratings:
-            ix = self._agent_lookup_db_id[db_agent_rating.agent_id].index
-            ixs.append(ix)
+            db_id = self._agent_lookup_db_id[db_agent_rating.agent_id].db_id
+            db_ids.append(db_id)
             ratings.append(db_agent_rating.rating)
-            committee_flags.append(db_agent_rating.is_committee)
-        ixs = np.array(ixs)
+            if db_agent_rating.is_committee:
+                committee.add(self._agent_lookup)
+        db_ids = np.array(db_ids)
         ratings = np.array(ratings)
-        committee_ixs = ixs[committee_flags]
-        sorted_ixs = np.argsort(ixs)
-        ixs = ixs[sorted_ixs]
-        ratings = ratings[sorted_ixs]
-        return RatingData(ixs, ratings, committee_ixs)
-
-    def set_values(self, W_matrix: np.ndarray,
-                   indexed_agents: List[IndexedAgent],
-                   agent_lookup: Dict[Agent, IndexedAgent],
-                   agent_lookup_db_id: Dict[AgentDBId, IndexedAgent],
-                   ratings: np.ndarray):
-        self._W_matrix = W_matrix
-        self._indexed_agents = indexed_agents
-        self._agent_lookup = agent_lookup
-        self._agent_lookup_db_id = agent_lookup_db_id
-        self._ratings = ratings
+        sorted_ids = np.argsort(db_ids)
+        db_ids = db_ids[sorted_ids]
+        ratings = ratings[sorted_ids]
+        return RatingData(db_ids, ratings, committee)
 
     def num_matches(self) -> int:
         return np.sum(self._W_matrix)
@@ -155,10 +139,9 @@ class Arena:
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
         """
-        _add_agent is used in two places:
-        1. when loading agents from the database, where a db_id is retrieved from the database.
-        2. when preparing agents to play matches, where a db_id is not yet available and will be set
-        after it is committed to the database. Therefore, db needs to be provided in this case.
+        Between the two optional arguments db_id and db, exactly one of them must be provided.
+        db_id is provided when the agent is already in the database and we want to load it.
+        db is provided when the agent is new and we want to add it to the database.
         """
         iagent = self._agent_lookup.get(agent, None)
         if assert_new:
@@ -193,15 +176,18 @@ class Arena:
         ne_W_matrix[:n_old, :n_old] = self._W_matrix
         self._W_matrix = ne_W_matrix
 
+    """
+    Do not modify the returned objects in the following properties.
+    """
     @property
     def indexed_agents(self) -> List[IndexedAgent]:
-        """
-        Returns shallow copy of the indexed agents.
-        This is to prevent modification of the original list but agents are technically prone
-        to modification.
-        """
-        return self._indexed_agents.copy()
+        return self._indexed_agents
 
     @property
     def ratings(self) -> np.ndarray:
-        return self._ratings.copy()
+        return self._ratings
+
+    @property
+    def agent_lookup_db_id(self) -> Dict[AgentDBId, IndexedAgent]:
+        return self._agent_lookup_db_id
+

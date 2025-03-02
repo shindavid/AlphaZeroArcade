@@ -1,5 +1,5 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.arena import Arena, RatingArrays, IndexedAgent
+from alphazero.logic.arena import Arena, RatingData, BenchmarkCommittee
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
@@ -22,9 +22,6 @@ class RatingsGap:
     elo_diff: float
 
 
-BenchmarkCommittee = Set[IndexedAgent]
-
-
 class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
@@ -32,21 +29,20 @@ class Benchmarker:
     def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
         self._arena = Arena()
-        self._ratings: np.ndarray = np.array([])
-        self.committee: BenchmarkCommittee = set()
+        self._committee: BenchmarkCommittee = set()
         self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db)
         self._arena.load_matches_from_db(self._db)
-        rating_arrays: RatingArrays = self._arena.load_ratings_from_db(self._db)
-        self._ratings = rating_arrays.ratings
-        self._committee_ixs = rating_arrays.committee_ixs
-        if self._ratings.size > 0:
-            assert len(self._ratings) == len(self.indexed_agents)
-        if self._ratings.size == 0 and not self.has_no_matches():
-            self.compute_ratings()
+        rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
+        self._arena.ratings = rating_data.ratings
+        self._committee = rating_data.committee
+        if self._arena.ratings.size == 0 and not self.has_no_matches():
+            self._arena.refresh_ratings()
+
+        assert len(self._arena.ratings) == len(self._arena.indexed_agents)
 
     def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
         """
@@ -63,11 +59,11 @@ class Benchmarker:
             if matches is None:
                 break
             self._arena.play_matches(matches, self._organizer.game, additional=False, db=self._db)
-            self.compute_ratings()
+            self._arena.refresh_ratings()
 
-        self.committee = self.select_committee(target_elo_gap)
-        self.compute_ratings()
-        self._db.commit_rating(self._db, self.indexed_agents, self._ratings, self.committee)
+        self._committee = self.select_committee(target_elo_gap)
+        self._arena.refresh_ratings()
+        self._db.commit_rating(self._db, self.indexed_agents, self.ratings, self._committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         """
@@ -140,7 +136,7 @@ class Benchmarker:
         NOTE: if we want to do partial-gens (i.e., use -i/--num-mcts-iters), then we can change this
         appropriately.
         """
-        elos = self._ratings.copy()
+        elos = self.ratings
         gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self.indexed_agents])
         gens = np.array(gens)
         agent_ix = np.array(agent_ix)
@@ -154,8 +150,7 @@ class Benchmarker:
             if left_gen + 1 < right_gen:
                 return RatingsGap(left_gen, right_gen, float(gaps[gap_ix]))
 
-    def compute_ratings(self, eps=1e-3):
-        self._ratings = self._arena.compute_ratings(eps=eps)
+        return None
 
     def build_agent(self, gen: int, n_iters):
         if gen == 0:
@@ -176,7 +171,7 @@ class Benchmarker:
         spaced out by at least the target elo gap. This is done until all agents are scanned.
         The committee is returned as a set of IndexedAgent objects.
         """
-        elos = self._ratings # alias for readability
+        elos = self.ratings
         sorted_ix = np.argsort(elos)[::-1]
         sorted_elos = elos[sorted_ix]
         committee: BenchmarkCommittee = {self.indexed_agents[sorted_ix[0]]}
@@ -195,14 +190,17 @@ class Benchmarker:
     def clone_arena(self) -> Arena:
         return copy.deepcopy(self._arena)
 
+    """
+    Do not modify the returned objects for the following properties.
+    """
     @property
     def indexed_agents(self):
         return self._arena.indexed_agents
 
     @property
     def ratings(self):
-        return self._ratings.copy()
+        return self._arena.ratings
 
     @property
-    def committee_ixs(self):
-        return self._committee_ixs.copy()
+    def committee(self):
+        return self._committee
