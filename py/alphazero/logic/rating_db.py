@@ -1,5 +1,7 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent, BenchmarkCommittee, AgentDBId, IndexedAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent, \
+BenchmarkCommittee, AgentDBId, IndexedAgent, AgentRole
+from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -13,6 +15,7 @@ from typing import List, Iterable, Optional
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
+    role: AgentRole
 
 
 @dataclass
@@ -20,13 +23,14 @@ class MatchResult:
     agent_id1: AgentDBId
     agent_id2: AgentDBId
     counts: WinLossDrawCounts
+    type: MatchType
 
 
 @dataclass
 class DBAgentRating:
     agent_id: AgentDBId
     rating: float
-    is_committee: bool
+    is_committee: Optional[bool] = None
 
 
 class RatingDB:
@@ -45,7 +49,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        query = '''SELECT agents.id, gen, n_iters, tag, is_zero_temp
+        query = '''SELECT agents.id, gen, n_iters, tag, is_zero_temp, role
                    FROM agents
                    JOIN mcts_agents
                    ON agents.sub_id = mcts_agents.id
@@ -53,11 +57,11 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, gen, n_iters, tag, set_temp_zero in c.fetchall():
+        for agent_id, gen, n_iters, tag, set_temp_zero, role in c.fetchall():
             agent = MCTSAgent(gen, n_iters, set_temp_zero, tag)
-            yield DBAgent(agent, agent_id)
+            yield DBAgent(agent, agent_id, AgentRole(role))
 
-        query = '''SELECT agents.id, type_str, strength_param, strength, tag
+        query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
                    FROM agents
                    JOIN ref_agents
                    ON agents.sub_id = ref_agents.id
@@ -65,9 +69,9 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, type_str, strength_param, strength, tag in c.fetchall():
+        for agent_id, type_str, strength_param, strength, tag, role in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
-            yield DBAgent(agent, agent_id)
+            yield DBAgent(agent, agent_id, AgentRole(role))
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
         """
@@ -80,34 +84,43 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        query = '''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws
+        query = '''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type
                      FROM matches
                   '''
 
         c.execute(query)
         for row in c:
-            match_id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws = row
+            match_id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type = row
             counts = WinLossDrawCounts(agent1_wins, agent2_wins, draws)
-            match = MatchResult(agent_id1, agent_id2, counts)
+            match = MatchResult(agent_id1, agent_id2, counts, MatchType(type))
             yield match
 
-    def load_ratings(self) -> List[DBAgentRating]:
-
+    def load_ratings(self, role: AgentRole) -> List[DBAgentRating]:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        c.execute('SELECT agent_id, rating, is_committee FROM ratings')
+        if role == AgentRole.BENCHMARK:
+            query = 'SELECT agent_id, rating, is_committee FROM benchmark_ratings'
+        elif role == AgentRole.TEST:
+            query = 'SELECT agent_id, rating FROM evaluator_ratings'
+        c.execute(query)
+        rows = c.fetchall()
 
         db_agent_ratings = []
-        for agent_id, rating, is_committee in c.fetchall():
+        for row in rows:
+            if role == AgentRole.BENCHMARK:
+                agent_id, rating, is_committee = row
+            else:
+                agent_id, rating = row
+                is_committee = None
             db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee)))
         return db_agent_ratings
 
-    def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts):
+    def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts, type: MatchType):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw)
-        c.execute('''INSERT INTO matches (agent_id1, agent_id2, agent1_wins, agent2_wins, draws)
-                  VALUES (?, ?, ?, ?, ?)''', match_tuple)
+        match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw, type.value)
+        c.execute('''INSERT INTO matches (agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type)
+                  VALUES (?, ?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
     def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
@@ -115,24 +128,29 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        if committee is None:
-            is_committee_bools = [None] * len(iagents)
-        else:
-            # sql requires ints, not bools
-            is_committee_bools = [1 if iagent in committee else 0 for iagent in iagents]
+        benchmark_tuples = []
+        evaluator_tuples = []
+        for i in range(len(iagents)):
+            iagent = iagents[i]
+            rating = ratings[i]
+            if iagent.role == AgentRole.BENCHMARK:
+                benchmark_tuples.append((iagent.db_id, rating, int(committee[i])))
+            elif iagent.role == AgentRole.TEST:
+                evaluator_tuples.append((iagent.db_id, rating))
+            else:
+                raise ValueError(f'Unknown agent role: {iagent.role}')
 
-        rating_tuples = []
-        for iagent, rating, is_committee in zip(iagents, ratings, is_committee_bools):
-            rating_tuple = (iagent.db_id, rating, is_committee)
-            rating_tuples.append(rating_tuple)
-        c.executemany('''REPLACE INTO ratings (agent_id, rating, is_committee)
-                      VALUES (?, ?, ?)''', rating_tuples)
+        c.executemany('''REPLACE INTO benchmark_ratings (agent_id, rating, is_committee)
+                      VALUES (?, ?, ?)''', benchmark_tuples)
+        c.executemany('''REPLACE INTO evaluator_ratings (agent_id, rating)
+                      VALUES (?, ?)''', evaluator_tuples)
         conn.commit()
 
-    def commit_agent(self, agent: Agent) -> AgentDBId:
+    def commit_agent(self, iagent: IndexedAgent):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
+        agent = iagent.agent
         if isinstance(agent, MCTSAgent):
             subtype = 'mcts'
 
@@ -152,8 +170,8 @@ class RatingDB:
         else:
             raise ValueError(f'Unknown agent type: {type(agent)}')
 
-        insert = '''INSERT INTO agents (sub_id, subtype) VALUES (?, ?)'''
-        c.execute(insert, (sub_id, subtype))
+        insert = '''INSERT INTO agents (sub_id, subtype, role) VALUES (?, ?, ?)'''
+        c.execute(insert, (sub_id, subtype, iagent.role.value))
         conn.commit()
-        return c.lastrowid
+        iagent.db_id = c.lastrowid
 

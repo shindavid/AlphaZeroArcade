@@ -8,9 +8,15 @@ from util.logging_util import get_logger
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
+from enum import Enum
 
 
 logger = get_logger()
+
+
+class MatchType(Enum):
+    BENCHMARK = 'benchmark'
+    EVALUATE = 'evaluate'
 
 
 @dataclass
@@ -18,6 +24,7 @@ class Match:
     agent1: Agent
     agent2: Agent
     n_games: int
+    type: MatchType
 
 
 class MatchRunner:

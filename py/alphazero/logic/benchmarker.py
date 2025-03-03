@@ -1,6 +1,6 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent
-from alphazero.logic.arena import Arena, RatingData, BenchmarkCommittee
-from alphazero.logic.match_runner import Match
+from alphazero.logic.agent_types import Agent, MCTSAgent, BenchmarkCommittee, AgentRole
+from alphazero.logic.arena import Arena, RatingData
+from alphazero.logic.match_runner import Match, MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from typing import Optional
 import copy
 import numpy as np
-
 
 
 logger = get_logger()
@@ -29,20 +28,18 @@ class Benchmarker:
     def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
         self._arena = Arena()
-        self._committee: BenchmarkCommittee = set()
+        self._committee: BenchmarkCommittee = np.array([], dtype=bool)
         self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db)
-        self._arena.load_matches_from_db(self._db)
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db)
+        self._arena.load_matches_from_db(self._db, type=MatchType.BENCHMARK)
+        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.BENCHMARK)
         self._arena._ratings = rating_data.ratings
         self._committee = rating_data.committee
         if self._arena.ratings.size == 0 and not self.has_no_matches():
             self._arena.refresh_ratings()
-
-        assert len(self._arena.ratings) == len(self._arena.indexed_agents)
 
     def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
         """
@@ -81,7 +78,9 @@ class Benchmarker:
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
             last_gen_agent = self.build_agent(last_gen, n_iters)
-            return [Match(gen0_agent, last_gen_agent, n_games)]
+            self._arena._add_agent(gen0_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
+            self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
+            return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
         incomplete_gen = self.incomplete_gen()
         if incomplete_gen is not None:
@@ -95,7 +94,8 @@ class Benchmarker:
             logger.info('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
-        matches = [Match(next_agent, indexed_agent.agent, n_games) for indexed_agent in self.indexed_agents]
+        self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
+        matches = [Match(next_agent, indexed_agent.agent, n_games, MatchType.BENCHMARK) for indexed_agent in self.indexed_agents]
         return matches
 
     def incomplete_gen(self) -> np.ndarray:
@@ -174,14 +174,16 @@ class Benchmarker:
         elos = self.ratings
         sorted_ix = np.argsort(elos)[::-1]
         sorted_elos = elos[sorted_ix]
-        committee: BenchmarkCommittee = {self.indexed_agents[sorted_ix[0]]}
+        committee_ixs = [sorted_ix[0]]
         last_selected_elo = sorted_elos[0]
 
         for i in range(1, len(sorted_elos)):
             if last_selected_elo - sorted_elos[i] >= target_elo_gap:
-                committee.add(self.indexed_agents[sorted_ix[i]])
+                committee_ixs.append(sorted_ix[i])
                 last_selected_elo = sorted_elos[i]
 
+        committee = np.zeros(len(self.indexed_agents), dtype=bool)
+        committee[committee_ixs] = True
         return committee
 
     def has_no_matches(self):

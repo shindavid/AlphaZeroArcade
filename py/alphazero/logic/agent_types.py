@@ -3,7 +3,9 @@ from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Set
+from enum import Enum
+from typing import Optional
+import numpy as np
 
 
 class Agent(ABC):
@@ -67,6 +69,11 @@ ArenaIndex = int  # index of an agent in an Arena
 AgentDBId = int  # id in agents table of the database
 
 
+class AgentRole(Enum):
+    BENCHMARK = 'benchmark'
+    TEST = 'test'
+
+
 @dataclass
 class IndexedAgent:
     """
@@ -77,12 +84,8 @@ class IndexedAgent:
     """
     agent: Agent
     index: ArenaIndex
+    role: AgentRole
     db_id: Optional[AgentDBId] = None
 
-    def __hash__(self):
-        return hash((self.agent, self.index, self.db_id))
 
-
-BenchmarkCommittee = Set[IndexedAgent]
-
-
+BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee

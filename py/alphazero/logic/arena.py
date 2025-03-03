@@ -1,5 +1,5 @@
-from alphazero.logic.agent_types import Agent, IndexedAgent, BenchmarkCommittee, AgentDBId
-from alphazero.logic.match_runner import Match, MatchRunner
+from alphazero.logic.agent_types import Agent, IndexedAgent, BenchmarkCommittee, AgentDBId, AgentRole
+from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import RatingDB, DBAgentRating
 
@@ -31,11 +31,15 @@ class Arena:
 
     def load_agents_from_db(self, db: RatingDB):
         for db_agent in db.fetch_agents():
-            self._add_agent(db_agent.agent, db_id=db_agent.db_id, expand_matrix=False)
+            self._add_agent(db_agent.agent,
+                            role=db_agent.role, db_id=db_agent.db_id,
+                            expand_matrix=False)
         self._expand_matrix()
 
-    def load_matches_from_db(self, db: RatingDB) -> List[Agent]:
+    def load_matches_from_db(self, db: RatingDB, type: Optional[MatchType]=None) -> List[Agent]:
         for result in db.fetch_match_results():
+            if type is not None and result.type != type:
+                continue
             ix1 = self._agent_lookup_db_id[result.agent_id1].index
             ix2 = self._agent_lookup_db_id[result.agent_id2].index
             counts = result.counts
@@ -53,8 +57,8 @@ class Arena:
         """
         counts_list = []
         for match in matches:
-            indexed_agent1 = self._add_agent(match.agent1, expand_matrix=True, db=db)
-            indexed_agent2 = self._add_agent(match.agent2, expand_matrix=True, db=db)
+            indexed_agent1 = self._agent_lookup.get(match.agent1, None)
+            indexed_agent2 = self._agent_lookup.get(match.agent2, None)
 
             ix1 = indexed_agent1.index
             ix2 = indexed_agent2.index
@@ -74,7 +78,7 @@ class Arena:
             if db:
                 db_id1 = indexed_agent1.db_id
                 db_id2 = indexed_agent2.db_id
-                db.commit_counts(db_id1, db_id2, counts)
+                db.commit_counts(db_id1, db_id2, counts, match.type)
         return counts_list
 
     def refresh_ratings(self, eps=1e-3):
@@ -83,22 +87,19 @@ class Arena:
         """
         self._ratings = compute_ratings(self._W_matrix, eps=eps)
 
-    def load_ratings_from_db(self, db: RatingDB) -> RatingData:
-        db_agent_ratings: List[DBAgentRating] = db.load_ratings()
+    def load_ratings_from_db(self, db: RatingDB, role: AgentRole) -> RatingData:
+        db_agent_ratings: List[DBAgentRating] = db.load_ratings(role)
         db_ids = []
         ratings = []
-        committee = set()
+        committee = []
         for db_agent_rating in db_agent_ratings:
             db_id = self._agent_lookup_db_id[db_agent_rating.agent_id].db_id
             db_ids.append(db_id)
             ratings.append(db_agent_rating.rating)
-            if db_agent_rating.is_committee:
-                committee.add(self._agent_lookup_db_id[db_id])
+            committee.append(db_agent_rating.is_committee)
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
-        sorted_ids = np.argsort(db_ids)
-        db_ids = db_ids[sorted_ids]
-        ratings = ratings[sorted_ids]
+        committee = np.array(committee, dtype=bool)
         return RatingData(db_ids, ratings, committee)
 
     def num_matches(self) -> int:
@@ -116,7 +117,7 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def _add_agent(self, agent: Agent, db_id: Optional[AgentDBId]=None,
+    def _add_agent(self, agent: Agent, role: AgentRole, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None,
                    assert_new: bool = False) -> IndexedAgent:
         """
@@ -132,7 +133,7 @@ class Arena:
             return iagent
 
         index = len(self._indexed_agents)
-        iagent = IndexedAgent(agent, index, db_id)
+        iagent = IndexedAgent(agent=agent, index=index, role=role, db_id=db_id)
         self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
 
@@ -140,7 +141,7 @@ class Arena:
             self._expand_matrix()
         if db:
             assert iagent.db_id is None
-            iagent.db_id = db.commit_agent(agent)
+            db.commit_agent(iagent)
 
         assert iagent.db_id is not None
         self._agent_lookup_db_id[iagent.db_id] = iagent
