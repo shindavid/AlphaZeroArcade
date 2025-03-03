@@ -9,31 +9,35 @@ from util.logging_util import get_logger
 
 from scipy.interpolate import interp1d
 import numpy as np
-import shutil
-import os
 
+from dataclasses import dataclass
 from typing import List
 
 
 logger = get_logger()
 
 
+@dataclass
+class EvalRatingData:
+    evaluated_agents: List[Agent]
+    ratings: np.ndarray
+
+
 class Evaluator:
-    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
+    def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self._benchmark = Benchmarker(benchmark_organizer)
+        self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename)
+        benchmark_rating_data = self._benchmark.read_ratings_from_db()
+        self._benchmark_ratings = benchmark_rating_data.ratings
+        self._benchmark_committee = benchmark_rating_data.committee
+
         self._arena = self._benchmark.clone_arena()
-
-        if not os.path.exists(organizer.eval_db_filename):
-            shutil.copy2(benchmark_organizer.benchmark_db_filename, organizer.eval_db_filename)
-
         self._db = RatingDB(self._organizer.eval_db_filename)
-        self._arena.load_agents_from_db(self._db)
-        self._arena.load_matches_from_db(self._db, type=MatchType.EVALUATE)
+        self.load_from_db()
 
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.TEST)
-        self._evaluated_ixs = np.array([self._arena.agent_lookup_db_id[agent_id].index \
-            for agent_id in rating_data.agent_ids])
+    def load_from_db(self):
+        self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)
+        self._arena.load_matches_from_db(self._db, type=MatchType.EVALUATE)
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100):
         """
@@ -61,7 +65,7 @@ class Evaluator:
            before any games were played against the test agent.
         """
         self._arena.refresh_ratings()
-        estimated_rating = np.mean(self._benchmark.ratings)
+        estimated_rating = np.mean(self._benchmark_ratings)
         iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
 
         n_games_played = self._arena.n_games_played(test_agent)
@@ -69,7 +73,7 @@ class Evaluator:
             n_games -= n_games_played
             estimated_rating = self._arena.ratings[iagent.index]
 
-        committee_ixs = np.where(self._benchmark.committee)[0]
+        committee_ixs = np.where(self._benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
 
@@ -89,7 +93,7 @@ class Evaluator:
                 ix = chosen_ixs[sorted_ixs[i]]
                 n = num_matches[sorted_ixs[i]]
 
-                opponent = self.indexed_agents[ix].agent
+                opponent = self._arena.indexed_agents[ix].agent
                 match = Match(test_agent, opponent, n, MatchType.EVALUATE)
                 self._arena.play_matches([match], self._organizer.game, additional=False, db=self._db)
                 n_games -= n
@@ -101,24 +105,16 @@ class Evaluator:
                     break
 
         interpolated_ratings = self.interpolate_ratings()
-        test_agents = [iagent for iagent in self.indexed_agents if iagent.role == AgentRole.TEST]
-
-        self._db.commit_ratings(test_agents, interpolated_ratings)
+        test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
+        self._db.commit_ratings(test_iagents, interpolated_ratings)
         logger.info('Finished evaluating %s. Interpolated rating: %f', test_agent, interpolated_ratings[-1])
 
     def interpolate_ratings(self) -> np.ndarray:
-        benchmark_ixs = []
-        test_ixs = []
-        for i in range(len(self.indexed_agents)):
-            if self.indexed_agents[i].role == AgentRole.BENCHMARK:
-                benchmark_ixs.append(i)
-            elif self.indexed_agents[i].role == AgentRole.TEST:
-                test_ixs.append(i)
-        benchmark_ixs = np.array(benchmark_ixs)
-        test_ixs = np.array(test_ixs)
+        benchmark_ixs = self.benchmark_agent_ixs()
+        test_ixs = self.test_agent_ixs()
 
         self._arena.refresh_ratings()
-        xs = self._benchmark.ratings
+        xs = self._benchmark_ratings
         ys = self._arena.ratings[benchmark_ixs]
         test_agents_elo = self._arena.ratings[test_ixs]
         sorted_ixs = np.argsort(xs)
@@ -126,28 +122,30 @@ class Evaluator:
         ys_sorted = ys[sorted_ixs]
         interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value="extrapolate")
         interpolated_ratings = interp_func(test_agents_elo)
-        self._evaluated_ixs = test_ixs
 
         return interpolated_ratings
 
-    @property
-    def indexed_agents(self):
-        return self._arena.indexed_agents
+    def test_agent_ixs(self) -> np.ndarray:
+        test_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.TEST]
+        return np.array(test_ixs)
 
-    @property
-    def committee(self):
-        return self._benchmark.committee
+    def benchmark_agent_ixs(self) -> np.ndarray:
+        benchmark_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.BENCHMARK]
+        return np.array(benchmark_ixs)
 
-    @property
-    def evaluated_ixs(self):
-        return self._evaluated_ixs
+    def read_ratings_from_db(self) -> EvalRatingData:
+        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.TEST)
+        ratings = rating_data.ratings
+        evaluated_agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
+        return EvalRatingData(evaluated_agents, ratings)
 
 
 class MCTSEvaluator:
-    def __init__(self, organizer: DirectoryOrganizer, benchmark_organizer: DirectoryOrganizer):
+    def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
-        self._evaluator = Evaluator(organizer, benchmark_organizer)
-        self._evaluated_gens: List[int] = [self.indexed_agents[ix].agent.gen for ix in self.evaluated_ixs]
+        self._evaluator = Evaluator(organizer)
+        rating_data = self._evaluator.read_ratings_from_db()
+        self._evaluated_gens = [agent.gen for agent in rating_data.evaluated_agents]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
         """
@@ -188,11 +186,4 @@ class MCTSEvaluator:
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
 
-    @property
-    def indexed_agents(self):
-        return self._evaluator.indexed_agents
-
-    @property
-    def evaluated_ixs(self):
-        return self._evaluator.evaluated_ixs
 

@@ -6,7 +6,7 @@ from alphazero.logic.rating_db import RatingDB
 from util.logging_util import get_logger
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 import copy
 import numpy as np
 
@@ -21,25 +21,30 @@ class RatingsGap:
     elo_diff: float
 
 
+@dataclass
+class BenchmarkRatingData:
+    agents: List[Agent]
+    ratings: np.ndarray
+    committee: BenchmarkCommittee
+
+
 class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
     """
-    def __init__(self, organizer: DirectoryOrganizer):
+    def __init__(self, organizer: DirectoryOrganizer, db_filename: Optional[str]=None):
         self._organizer = organizer
         self._arena = Arena()
-        self._committee: BenchmarkCommittee = np.array([], dtype=bool)
-        self._db = RatingDB(self._organizer.benchmark_db_filename)
+
+        if db_filename is not None:
+            self._db = RatingDB(db_filename)
+        else:
+            self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
 
     def load_from_db(self):
-        self._arena.load_agents_from_db(self._db)
+        self._arena.load_agents_from_db(self._db, role=AgentRole.BENCHMARK)
         self._arena.load_matches_from_db(self._db, type=MatchType.BENCHMARK)
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.BENCHMARK)
-        self._arena._ratings = rating_data.ratings
-        self._committee = rating_data.committee
-        if self._arena.ratings.size == 0 and not self.has_no_matches():
-            self._arena.refresh_ratings()
 
     def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
         """
@@ -51,6 +56,7 @@ class Benchmarker:
         having two generations with ratings that are too similar, we select a committee of generations
         that are spaced out by the target elo gap.
         """
+        self._arena.refresh_ratings()
         while True:
             matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
             if matches is None:
@@ -58,9 +64,8 @@ class Benchmarker:
             self._arena.play_matches(matches, self._organizer.game, additional=False, db=self._db)
             self._arena.refresh_ratings()
 
-        self._committee = self.select_committee(target_elo_gap)
-        self._arena.refresh_ratings()
-        self._db.commit_ratings(self.indexed_agents, self.ratings, self._committee)
+        committee: BenchmarkCommittee = self.select_committee(target_elo_gap)
+        self._db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games):
         """
@@ -95,7 +100,7 @@ class Benchmarker:
 
         next_agent = self.build_agent(next_gen, n_iters)
         self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
-        matches = [Match(next_agent, indexed_agent.agent, n_games, MatchType.BENCHMARK) for indexed_agent in self.indexed_agents]
+        matches = [Match(next_agent, indexed_agent.agent, n_games, MatchType.BENCHMARK) for indexed_agent in self._arena.indexed_agents if indexed_agent.agent.gen != next_agent.gen]
         return matches
 
     def incomplete_gen(self) -> np.ndarray:
@@ -106,11 +111,11 @@ class Benchmarker:
         """
         A = self._arena.adjacent_matrix()
         num_opponents_played = np.sum(A, axis=1)
-        incomplete = np.where(num_opponents_played < len(self.indexed_agents) - 1)[0]
+        incomplete = np.where(num_opponents_played < len(self._arena.indexed_agents) - 1)[0]
         if (incomplete.size == 0):
             return None
         incomplete_ix = np.argmin(num_opponents_played)
-        return self.indexed_agents[incomplete_ix].agent.gen
+        return self._arena.indexed_agents[incomplete_ix].agent.gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
         """
@@ -136,8 +141,8 @@ class Benchmarker:
         NOTE: if we want to do partial-gens (i.e., use -i/--num-mcts-iters), then we can change this
         appropriately.
         """
-        elos = self.ratings
-        gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self.indexed_agents])
+        elos = self._arena.ratings
+        gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self._arena.indexed_agents])
         gens = np.array(gens)
         agent_ix = np.array(agent_ix)
 
@@ -171,7 +176,7 @@ class Benchmarker:
         spaced out by at least the target elo gap. This is done until all agents are scanned.
         The committee is returned as a set of IndexedAgent objects.
         """
-        elos = self.ratings
+        elos = self._arena.ratings
         sorted_ix = np.argsort(elos)[::-1]
         sorted_elos = elos[sorted_ix]
         committee_ixs = [sorted_ix[0]]
@@ -182,7 +187,7 @@ class Benchmarker:
                 committee_ixs.append(sorted_ix[i])
                 last_selected_elo = sorted_elos[i]
 
-        committee = np.zeros(len(self.indexed_agents), dtype=bool)
+        committee = np.zeros(len(self._arena.indexed_agents), dtype=bool)
         committee[committee_ixs] = True
         return committee
 
@@ -192,19 +197,11 @@ class Benchmarker:
     def clone_arena(self) -> Arena:
         return copy.deepcopy(self._arena)
 
-    """
-    Do not modify the returned objects for the following properties.
-    """
-    @property
-    def indexed_agents(self):
-        return self._arena.indexed_agents
-
-    @property
-    def ratings(self):
-        return self._arena.ratings
-
-    @property
-    def committee(self):
-        return self._committee
+    def read_ratings_from_db(self) -> RatingData:
+        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.BENCHMARK)
+        agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
+        ratings = rating_data.ratings
+        committee = rating_data.committee
+        return BenchmarkRatingData(agents, ratings, committee)
 
 

@@ -29,8 +29,10 @@ class Arena:
         self._agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
         self._ratings: np.ndarray = np.array([])
 
-    def load_agents_from_db(self, db: RatingDB):
+    def load_agents_from_db(self, db: RatingDB, role: Optional[AgentRole]=None):
         for db_agent in db.fetch_agents():
+            if role is not None and db_agent.role != role:
+                continue
             self._add_agent(db_agent.agent,
                             role=db_agent.role, db_id=db_agent.db_id,
                             expand_matrix=False)
@@ -85,6 +87,8 @@ class Arena:
         """
         TODO: pass self._ratings to compute_ratings to speed up the rating computation.
         """
+        if self._W_matrix.shape[0] == 0:
+            return
         self._ratings = compute_ratings(self._W_matrix, eps=eps)
 
     def load_ratings_from_db(self, db: RatingDB, role: AgentRole) -> RatingData:

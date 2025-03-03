@@ -4,8 +4,10 @@ from alphazero.logic.run_params import RunParams
 from util.logging_util import configure_logger
 from util.py_util import CustomHelpFormatter
 
-from tqdm import tqdm
 import argparse
+import os
+import shutil
+
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -28,7 +30,10 @@ def main():
     benchmark_organizer = DirectoryOrganizer(run_params_benchmark, base_dir_root='/workspace')
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
-    evaluator = MCTSEvaluator(organizer, benchmark_organizer)
+    if not os.path.exists(organizer.eval_db_filename):
+        shutil.copy2(benchmark_organizer.benchmark_db_filename, organizer.eval_db_filename)
+
+    evaluator = MCTSEvaluator(organizer)
     evaluator.run(n_iters=args.n_iters, target_eval_percent=args.target_eval_percent,
                   n_games=args.n_games, error_threshold=args.error_threshold)
 

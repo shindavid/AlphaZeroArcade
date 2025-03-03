@@ -7,7 +7,8 @@ from util.logging_util import configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
-
+import os
+import shutil
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -27,15 +28,17 @@ def main():
     game_spec = get_game_spec(run_params.game)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
+    if not os.path.exists(organizer.eval_db_filename):
+        shutil.copy2(organizer.benchmark_db_filename, organizer.eval_db_filename)
+
     family = game_spec.reference_player_family
     type_str = family.type_str
     strength_param = family.strength_param
-
     ref_agents = []
     for strength in range(1, 22, 5):
         ref_agents.append(ReferenceAgent(type_str, strength_param, strength, tag=organizer.tag))
 
-    evaluator = Evaluator(organizer, organizer)
+    evaluator = Evaluator(organizer)
     for agent in ref_agents:
         evaluator.eval_agent(agent, n_games=args.n_games,
                              error_threshold=args.error_threshold)
