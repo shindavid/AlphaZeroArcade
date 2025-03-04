@@ -95,7 +95,7 @@ class Evaluator:
 
                 opponent = self._arena.indexed_agents[ix].agent
                 match = Match(test_agent, opponent, n, MatchType.EVALUATE)
-                self._arena.play_matches([match], self._organizer.game, additional=False, db=self._db)
+                self._arena.play_matches([match], self._organizer.game, db=self._db)
                 n_games -= n
                 opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
                 self._arena.refresh_ratings()
