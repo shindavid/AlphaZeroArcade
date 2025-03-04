@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 import numpy as np
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 logger = get_logger()
@@ -37,7 +37,8 @@ class Evaluator:
         self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)
         self._arena.load_matches_from_db(self._db, type=MatchType.EVALUATE)
 
-    def eval_agent(self, test_agent: Agent, n_games, error_threshold=100):
+    def eval_agent(self, test_agent: Agent, n_games, error_threshold=100,
+                   init_rating_estimate: Optional[float]=None):
         """
         Generic evaluation function for all types of agents.
 
@@ -47,9 +48,10 @@ class Evaluator:
         The evaluation process follows these steps:
 
         1. Compute the test agent's probability of winning against each committee member
-           based on the difference in their estimated Elo ratings. The initial estimated rating of
+           based on the difference in their estimated Elo ratings. By default, the initial estimated rating of
            the test agent is set to be the mean of the committee members' ratings if it has not
-           played any matches yet.
+           played any matches yet. The initial estimate can be provided by the caller. In the MCTSEvaluator,
+           the initial estimate is interpolated using the near by gens' ratings if available.
         2. Calculate the variance of the win probability for each committee member using
            p * (1 - p), where p is the win probability.
         3. Select opponents from the committee in proportion to their win probability variance.
@@ -63,7 +65,11 @@ class Evaluator:
            before any games were played against the test agent.
         """
         self._arena.refresh_ratings()
-        estimated_rating = np.mean(self.benchmark_ratings)
+        if init_rating_estimate is not None:
+            estimated_rating = init_rating_estimate
+        else:
+            estimated_rating = np.mean(self.benchmark_ratings)
+
         test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
 
         n_games_played = self._arena.n_games_played(test_agent)
@@ -137,6 +143,9 @@ class Evaluator:
         evaluated_agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
         return EvalRatingData(evaluated_agents, ratings)
 
+    def refresh_ratings(self):
+        self._arena.refresh_ratings()
+
     @property
     def benchmark_ratings(self) -> np.ndarray:
         return self._benchmark_rating_data.ratings
@@ -144,6 +153,10 @@ class Evaluator:
     @property
     def benchmark_committee(self) -> BenchmarkRatingData:
         return self._benchmark_rating_data.committee
+
+    @property
+    def arena_ratings(self) -> np.ndarray:
+        return self._arena.ratings
 
 
 class MCTSEvaluator:
@@ -154,9 +167,7 @@ class MCTSEvaluator:
         self._evaluated_gens = [agent.gen for agent in rating_data.evaluated_agents]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
-        """
-        Used for evaluating generations of MCTS agents of a run.
-        """
+        self._evaluator.refresh_ratings()
         while True:
             gen = self.get_next_gen_to_eval(target_eval_percent)
             if gen is None:
@@ -164,7 +175,10 @@ class MCTSEvaluator:
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    tag=self._organizer.tag)
-            self._evaluator.eval_agent(test_agent, n_games, error_threshold)
+            init_rating_estimate = self.estimate_rating_nearby_gens(gen)
+            self._evaluator.eval_agent(test_agent, n_games,
+                                       error_threshold=error_threshold,
+                                       init_rating_estimate=init_rating_estimate)
             self._evaluated_gens.append(gen)
 
     def get_next_gen_to_eval(self, target_eval_percent):
@@ -177,7 +191,7 @@ class MCTSEvaluator:
         if evaluated_percent >= target_eval_percent:
             return None
 
-        left_gen, right_gen = self.get_biggest_gen_gap()  # based on generation, not rating
+        left_gen, right_gen = self.get_biggest_gen_gap()
         if left_gen + 1 < right_gen:
             gen = (left_gen + right_gen) // 2
             assert gen not in self._evaluated_gens
@@ -191,5 +205,20 @@ class MCTSEvaluator:
         left_gen = gens[max_gap_ix]
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
+
+    def estimate_rating_nearby_gens(self, gen: int) -> float:
+        evaluated_gens = np.array(self._evaluated_gens)
+        sorted_ixs = np.argsort(evaluated_gens)
+
+        for i in range(len(evaluated_gens) - 1):
+            left_gen = evaluated_gens[sorted_ixs[i]]
+            right_gen = evaluated_gens[sorted_ixs[i + 1]]
+            if left_gen < gen < right_gen:
+                left_rating = self._evaluator.arena_ratings[sorted_ixs[i]]
+                right_rating = self._evaluator.arena_ratings[sorted_ixs[i + 1]]
+                return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
+
+        return None
+
 
 
