@@ -114,15 +114,24 @@ def extract_match_record(stdout: Union[List[str], str]) -> MatchRecord:
     return record
 
 
-def compute_ratings(w: np.ndarray) -> np.ndarray:
+def compute_ratings(w: np.ndarray, eps: float=0.0) -> np.ndarray:
     """
     Accepts an (n, n)-shaped matrix w, where w[i, j] is the number of wins player i has over player j.
 
     Outputs a length-n array beta, where beta[i] is the rating of player i.
 
     Fixes beta[0] = 0 arbitrarily.
+
+    Adds eps to each off-diagonal entry of w before performing the calculation. Using a nonzero
+    value for eps ensures that ratings will be well-defined, even if w is disconnected.
+
+    TODO: think about interplay between eps and gradient_threshold.
     """
-    eps = 1e-6
+    gradient_threshold = 1e-6
+
+    w = w.copy()
+    w = w + eps
+    np.fill_diagonal(w, 0)
     n = w.shape[0]
     assert w.shape == (n, n)
     assert np.all(w >= 0)
@@ -136,7 +145,7 @@ def compute_ratings(w: np.ndarray) -> np.ndarray:
         wp_sum = np.sum(ww / pp, axis=1)
         gradient = W / p - wp_sum
         max_gradient = np.max(np.abs(gradient))
-        if max_gradient < eps:
+        if max_gradient < gradient_threshold:
             break
 
         q = W / wp_sum
@@ -145,3 +154,7 @@ def compute_ratings(w: np.ndarray) -> np.ndarray:
 
     beta = np.log(p) * BETA_SCALE_FACTOR
     return beta
+
+def win_prob(elo1: float, elo2: float) -> float:
+    return float(1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR)))
+

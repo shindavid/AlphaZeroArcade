@@ -232,3 +232,69 @@ class CustomHelpFormatter(argparse.HelpFormatter):
             return '/'.join(action.option_strings) + ' ' + self._format_args(action, action.dest.upper())
         else:
             return super()._format_action_invocation(action)
+
+
+def create_symlink(src: str, dst: str):
+    """
+    Creates a symbolic link from `src` to `dst`.
+    - If `src` is a file, creates a symlink to the file.
+    - If `src` is a directory, creates symlinks for all files inside `dst`.
+
+    Args:
+        src (str): Source file or directory path.
+        dst (str): Destination path where the symlink(s) should be created.
+    """
+    if not os.path.exists(src):
+        raise FileNotFoundError(f"Source path does not exist: {src}")
+
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+
+    if os.path.isfile(src):
+        # If src is a file, create a symlink directly
+        os.symlink(src, dst)
+        print(f"Created symlink: {dst} -> {src}")
+
+    elif os.path.isdir(src):
+        # If src is a directory, create a directory at dst (if it doesn’t exist)
+        os.makedirs(dst, exist_ok=True)
+
+        # Iterate over all items in the source directory
+        for item in os.listdir(src):
+            src_item = os.path.join(src, item)
+            dst_item = os.path.join(dst, item)
+
+            # Create a symlink for each file/directory inside src
+            os.symlink(src_item, dst_item)
+            print(f"Created symlink: {dst_item} -> {src_item}")
+
+    else:
+        raise ValueError(f"Invalid source type: {src} (Not a file or directory)")
+
+
+def copy_file_to_folder(src: str, dst_folder: str):
+    """
+    Copies a file from `src` to `dst_folder`, preserving metadata.
+
+    Args:
+        src (str): Path to the source file.
+        dst_folder (str): Path to the destination folder.
+
+    Raises:
+        FileNotFoundError: If `src` does not exist.
+        ValueError: If `src` is not a file.
+    """
+    if not os.path.exists(src):
+        raise FileNotFoundError(f"Source file does not exist: {src}")
+    if not os.path.isfile(src):
+        raise ValueError(f"Source is not a file: {src}")
+
+    # Ensure the destination folder exists
+    os.makedirs(dst_folder, exist_ok=True)
+
+    # Copy file to the destination folder (preserving metadata)
+    dst_path = os.path.join(dst_folder, os.path.basename(src))
+    shutil.copy2(src, dst_path)
+
+    print(f"Copied: {src} -> {dst_path}")
+
+

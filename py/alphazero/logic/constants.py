@@ -1,5 +1,6 @@
 DEFAULT_LOOP_CONTROLLER_PORT = 1111
 LOCALHOST_IP = '127.0.0.1'
+DEFAULT_REMOTE_PLAY_PORT = 1234
 
 
 CLIENTS_TABLE_CREATE_CMDS = [
@@ -103,3 +104,59 @@ RATINGS_TABLE_CREATE_CMDS = [
 
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (tag, mcts_gen)""",
 ]
+
+
+ARENA_TABLE_CREATE_CMDS = [
+    """CREATE TABLE IF NOT EXISTS mcts_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gen INT,
+            n_iters INT,
+            tag TEXT,
+            is_zero_temp INT
+            )""",
+
+    """CREATE TABLE IF NOT EXISTS ref_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type_str TEXT,
+            strength_param TEXT,
+            strength INT,
+            tag TEXT
+            )""",
+
+    """CREATE TABLE IF NOT EXISTS agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sub_id INT,
+            subtype TEXT,
+            role TEXT
+            )""",
+
+    """CREATE TABLE IF NOT EXISTS matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id1 INT,
+            agent_id2 INT,
+            agent1_wins INT,
+            agent2_wins INT,
+            draws INT,
+            type TEXT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (agent_id1, agent_id2)""",
+
+    """CREATE TABLE IF NOT EXISTS benchmark_ratings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INT UNIQUE,
+            rating FLOAT,
+            is_committee INT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON benchmark_ratings (agent_id)""",
+
+    """CREATE TABLE IF NOT EXISTS evaluator_ratings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INT UNIQUE,
+            rating FLOAT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON evaluator_ratings (agent_id)""",
+]
+
