@@ -61,7 +61,7 @@ class Benchmarker:
             matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
             if matches is None:
                 break
-            self._arena.play_matches(matches, self._organizer.game, additional=False, db=self._db)
+            self._arena.play_matches(matches, self._organizer.game, db=self._db)
             self._arena.refresh_ratings()
 
         committee: BenchmarkCommittee = self.select_committee(target_elo_gap)

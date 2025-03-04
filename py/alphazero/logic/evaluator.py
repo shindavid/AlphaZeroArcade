@@ -66,12 +66,12 @@ class Evaluator:
         """
         self._arena.refresh_ratings()
         estimated_rating = np.mean(self._benchmark_ratings)
-        iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
+        test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
 
         n_games_played = self._arena.n_games_played(test_agent)
         if n_games_played > 0:
             n_games -= n_games_played
-            estimated_rating = self._arena.ratings[iagent.index]
+            estimated_rating = self._arena.ratings[test_iagent.index]
 
         committee_ixs = np.where(self._benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
@@ -99,7 +99,7 @@ class Evaluator:
                 n_games -= n
                 opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
                 self._arena.refresh_ratings()
-                new_estimate = self._arena.ratings[iagent.index]
+                new_estimate = self._arena.ratings[test_iagent.index]
                 if abs(new_estimate - estimated_rating) > error_threshold:
                     estimated_rating = new_estimate
                     break

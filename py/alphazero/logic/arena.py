@@ -49,13 +49,11 @@ class Arena:
             self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
-    def play_matches(self, matches: List[Match], game: str, additional=False,
-                     db: Optional[RatingDB]=None) -> WinLossDrawCounts:
+    def play_matches(self, matches: List[Match], game: str, db: Optional[RatingDB]=None) \
+        -> WinLossDrawCounts:
         """
         Play matches between agents and update the W_matrix with the results. If db is provided,
-        the results are committed to the database. If additional is True, the match is played
-        in addition to the existing matches. If additional is False, it will subtract the number of
-        games already played between the two agents from the number of games to be played.
+        the results are committed to the database.
         """
         counts_list = []
         for match in matches:
@@ -66,10 +64,9 @@ class Arena:
             ix2 = indexed_agent2.index
 
             if self._W_matrix[ix1, ix2] > 0 or self._W_matrix[ix2, ix1] > 0:
-                if not additional:
-                    n_games_played = int(self._W_matrix[ix1, ix2] + self._W_matrix[ix2, ix1])
-                    n_games = match.n_games - n_games_played
-                    match = Match(match.agent1, match.agent2, n_games)
+                n_games_played = int(self._W_matrix[ix1, ix2] + self._W_matrix[ix2, ix1])
+                n_games = match.n_games - n_games_played
+                match = Match(match.agent1, match.agent2, n_games)
                 if n_games < 1:
                     continue
 
