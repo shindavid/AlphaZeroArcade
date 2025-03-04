@@ -89,3 +89,4 @@ class IndexedAgent:
 
 
 BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
+

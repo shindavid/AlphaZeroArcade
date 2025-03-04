@@ -1,6 +1,6 @@
 from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole
 from alphazero.logic.arena import RatingData
-from alphazero.logic.benchmarker import Benchmarker
+from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.ratings import win_prob
 from alphazero.logic.rating_db import RatingDB
@@ -27,9 +27,7 @@ class Evaluator:
     def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
         self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename)
-        benchmark_rating_data = self._benchmark.read_ratings_from_db()
-        self._benchmark_ratings = benchmark_rating_data.ratings
-        self._benchmark_committee = benchmark_rating_data.committee
+        self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
 
         self._arena = self._benchmark.clone_arena()
         self._db = RatingDB(self._organizer.eval_db_filename)
@@ -65,7 +63,7 @@ class Evaluator:
            before any games were played against the test agent.
         """
         self._arena.refresh_ratings()
-        estimated_rating = np.mean(self._benchmark_ratings)
+        estimated_rating = np.mean(self.benchmark_ratings)
         test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
 
         n_games_played = self._arena.n_games_played(test_agent)
@@ -73,7 +71,7 @@ class Evaluator:
             n_games -= n_games_played
             estimated_rating = self._arena.ratings[test_iagent.index]
 
-        committee_ixs = np.where(self._benchmark_committee)[0]
+        committee_ixs = np.where(self.benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
 
@@ -114,8 +112,8 @@ class Evaluator:
         test_ixs = self.test_agent_ixs()
 
         self._arena.refresh_ratings()
-        xs = self._arena.ratings[benchmark_ixs][self._benchmark_committee]
-        ys = self._benchmark_ratings[self._benchmark_committee]
+        xs = self._arena.ratings[benchmark_ixs][self.benchmark_committee]
+        ys = self.benchmark_ratings[self.benchmark_committee]
         test_agents_elo = self._arena.ratings[test_ixs]
         sorted_ixs = np.argsort(xs)
         xs_sorted = xs[sorted_ixs]
@@ -138,6 +136,14 @@ class Evaluator:
         ratings = rating_data.ratings
         evaluated_agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
         return EvalRatingData(evaluated_agents, ratings)
+
+    @property
+    def benchmark_ratings(self) -> np.ndarray:
+        return self._benchmark_rating_data.ratings
+
+    @property
+    def benchmark_committee(self) -> BenchmarkRatingData:
+        return self._benchmark_rating_data.committee
 
 
 class MCTSEvaluator:
