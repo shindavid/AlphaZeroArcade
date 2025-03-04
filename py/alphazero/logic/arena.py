@@ -119,16 +119,13 @@ class Arena:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
     def _add_agent(self, agent: Agent, role: AgentRole, db_id: Optional[AgentDBId]=None,
-                   expand_matrix: bool=True, db: Optional[RatingDB]=None,
-                   assert_new: bool = False) -> IndexedAgent:
+                   expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.
         db_id is provided when the agent is already in the database and we want to load it.
         db is provided when the agent is new and we want to add it to the database.
         """
         iagent = self._agent_lookup.get(agent, None)
-        if assert_new:
-            assert iagent is None
 
         if iagent is not None:
             return iagent

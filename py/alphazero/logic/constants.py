@@ -159,3 +159,4 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON evaluator_ratings (agent_id)""",
 ]
+
