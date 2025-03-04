@@ -114,8 +114,8 @@ class Evaluator:
         test_ixs = self.test_agent_ixs()
 
         self._arena.refresh_ratings()
-        xs = self._benchmark_ratings
-        ys = self._arena.ratings[benchmark_ixs]
+        xs = self._arena.ratings[benchmark_ixs][self._benchmark_committee]
+        ys = self._benchmark_ratings[self._benchmark_committee]
         test_agents_elo = self._arena.ratings[test_ixs]
         sorted_ixs = np.argsort(xs)
         xs_sorted = xs[sorted_ixs]
