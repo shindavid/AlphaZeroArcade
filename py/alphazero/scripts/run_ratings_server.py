@@ -9,13 +9,15 @@ This setup allows us to relaunch the c++ binary process as needed under the hood
 ratings server process. This is useful because it allows us to launch each matchup requested by
 the loop controller as a separate c++ binary process.
 """
-import argparse
-
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.servers.gaming.ratings_server import RatingsServer, RatingsServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
+from util.repo_util import Repo
+
+import argparse
+import os
 
 
 def load_args():
@@ -24,7 +26,7 @@ def load_args():
     RatingsServerParams.add_args(parser)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
-    BuildParams.add_args(parser, add_ffi_lib_path_option=False)
+    BuildParams.add_args(parser)
 
     return parser.parse_args()
 
@@ -35,6 +37,8 @@ def main():
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+
+    os.chdir(Repo.root())
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()

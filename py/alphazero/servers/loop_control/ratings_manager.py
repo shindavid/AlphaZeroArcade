@@ -52,8 +52,14 @@ class RatingsManager:
             'tag': self._controller.run_params.tag,
             'ssh_pub_key': ssh_pub_key,
             'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
+            'asset-requirements': self._controller.get_asset_requirements(),
         }
         conn.socket.send_json(reply)
+
+        assets_request = conn.socket.recv_json()
+        assert assets_request['type'] == 'assets-request'
+        for asset in assets_request['assets']:
+            conn.socket.send_file(asset)
 
         conn.aux['status_cond'] = threading.Condition()
         conn.aux['status'] = ServerStatus.BLOCKED

@@ -37,7 +37,7 @@ inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) {
 }
 
 inline PerfectOracle::PerfectOracle() {
-  auto extra_dir = boost::dll::program_location().parent_path() / "extra";
+  auto extra_dir = boost::filesystem::path("extra_deps/connect4");
   auto c4_solver_bin = extra_dir / "c4solver";
   auto c4_solver_book = extra_dir / "7x6.book";
 

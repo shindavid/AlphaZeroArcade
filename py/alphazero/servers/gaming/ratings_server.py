@@ -48,7 +48,7 @@ class RatingsServer:
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
-        self._session_data = SessionData(params, logging_params)
+        self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._proc: Optional[subprocess.Popen] = None
@@ -165,8 +165,8 @@ class RatingsServer:
 
         ps1 = self._get_mcts_player_str(mcts_gen)
         ps2 = self._get_reference_player_str(ref_strength)
-        binary = self._build_params.get_binary_path(self._session_data.game)
 
+        binary = self._session_data.binary_path
         log_filename = self._session_data.get_log_filename('ratings-worker')
         append_mode = not self._session_data.start_log_sync(log_filename)
 
@@ -196,8 +196,10 @@ class RatingsServer:
         mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
         ref_name = RatingsServer._get_reference_player_name(ref_strength)
 
-        self._proc = subprocess_util.Popen(cmd)
-        logger.info('Running %s vs %s match [%s]: %s', mcts_name, ref_name, self._proc.pid, cmd)
+        cwd = self._session_data.run_dir
+        self._proc = subprocess_util.Popen(cmd, cwd=cwd)
+        logger.info('Running %s vs %s match [%s] from %s: %s', mcts_name, ref_name, self._proc.pid,
+                    cwd, cmd)
         stdout = self._session_data.wait_for(self._proc)
         self._proc = None
 

@@ -21,15 +21,15 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import untar_remote_file_to_local_directory
-from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
+from util.py_util import sha256sum, untar_remote_file_to_local_directory
+from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
+    send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
 import logging
 import os
 import shutil
 import socket
-import subprocess
 import threading
 from typing import Callable, Dict, List, Optional
 
@@ -187,6 +187,23 @@ class LoopController:
 
     def request_shutdown(self, return_code: int):
         self._shutdown_manager.request_shutdown(return_code)
+
+    def get_asset_requirements(self) -> JsonDict:
+        """
+        Returns information about the assets required for game-playing servers.
+        """
+        binary_path = self.build_params.get_binary_path(self._run_params.game)
+
+        extras = {}
+        for dep in self.game_spec.extra_runtime_deps:
+            extras[dep] = sha256sum(dep)
+
+        return {
+            'binary': {
+                binary_path : sha256sum(binary_path),
+            },
+            'extras': extras,
+        }
 
     def handle_new_client_connnection(self, conn: ClientConnection):
         """
