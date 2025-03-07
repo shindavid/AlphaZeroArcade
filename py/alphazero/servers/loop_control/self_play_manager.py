@@ -96,6 +96,7 @@ class SelfPlayManager:
             'tag': self._controller.run_params.tag,
             'ssh_pub_key': ssh_pub_key,
             'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
+            'asset-requirements': self._controller.get_asset_requirements(),
         }
         conn.socket.send_json(reply)
 

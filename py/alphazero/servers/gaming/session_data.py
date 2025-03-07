@@ -7,9 +7,8 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
-from util.socket_util import Socket
+from util.socket_util import JsonDict, Socket
 from util import ssh_util
-from util import subprocess_util
 
 import os
 import socket
@@ -111,6 +110,9 @@ class SessionData:
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)
 
+        asset_requirements = data['asset-requirements']
+        self._setup_run_directory(asset_requirements, role)
+
         log_filename = self.get_log_filename(role.value)
         configure_logger(params=self._logging_params, filename=log_filename, mode='w')
         self.start_log_sync(log_filename)
@@ -147,6 +149,52 @@ class SessionData:
             'log_filename': log_filename,
         }
         self.socket.send_json(data)
+
+    def _setup_run_directory(self, asset_requirements: JsonDict):
+        """
+        asset_requirements takes the folowing form:
+
+        {
+            'binary': { path: hash },
+            'extras': {
+                path: hash,
+                path: hash,
+                ...
+            }
+        }
+
+        This method does the following:
+
+        1. Create a run-directory in /scratch/run-dirs/{game}/, if it doesn't yet exist.
+           Files in this directory will be named by their hash.
+
+        2. For each asset:
+
+           A. Check if the run-directory currently contains it. If so, continue.
+           B. Else, check if the target/ directory contains it. If so, copy to the run-directory,
+              otherwise, continue
+           C. If the asset is still missing, request it from the loop controller, and write the
+              asset to the run-directory
+
+        3. Create symlinks in the run-directory so that we can refer to the assets by their path
+           instead of their hash.
+
+        4. Set appropriate data members so that the self-play-server/ratings-server can construct
+           run cmd strs that will point to the correct assets.
+
+        Some technical notes:
+
+        a. We need to make sure to prevent write-condition-races in case multiple servers are
+           running on the same machine (e.g., self-play-server and ratings-server).
+
+        b. I don't think we can have this method directly perform the socket recv() call to receive
+           the asset data. This is because the loop controller might send some other message in
+           between the handshake and the asset request. Instead, the self-play-server/ratings-server
+           should, upon receiving an 'asset-data' message, call a method of this class to process
+           the asset data. This method can use a condition variable to block until the asset data
+           has been received.
+        """
+        raise NotImplementedError()
 
     @property
     def socket(self) -> Socket:
