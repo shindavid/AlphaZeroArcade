@@ -179,8 +179,8 @@ class SessionData:
         3. Create symlinks in the run-directory so that we can refer to the assets by their path
            instead of their hash.
 
-        4. Set appropriate data members so that the self-play-server/ratings-server can construct
-           run cmd strs that will point to the correct assets.
+        4. Set appropriate data members that the self-play-server/ratings-server can use to
+           construct run cmd strs that will point to the correct assets.
 
         Some technical notes:
 
