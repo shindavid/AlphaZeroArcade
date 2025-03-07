@@ -191,8 +191,8 @@ class SessionData:
            the asset data. This is because the loop controller might send some other message in
            between the handshake and the asset request. Instead, the self-play-server/ratings-server
            should, upon receiving an 'asset-data' message, call a method of this class to process
-           the asset data. This method can use a condition variable to block until the asset data
-           has been received.
+           the asset data. This means that the SessionData may not immediately be ready to use
+           after the handshake, so we will need appropriate state tracking to validate readiness.
         """
         raise NotImplementedError()
 
