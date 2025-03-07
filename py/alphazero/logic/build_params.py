@@ -1,14 +1,6 @@
 import argparse
 from dataclasses import dataclass
-from enum import Enum
-from typing import List, Optional, Union
-
-
-class _BinaryPathArgument(Enum):
-    default = 'default'
-
-
-BinaryPathArgument = Union[str, None, _BinaryPathArgument]
+from typing import List, Optional
 
 
 @dataclass
@@ -24,14 +16,10 @@ class BuildParams:
     def build_type(self):
         return 'Debug' if self.debug_build else 'Release'
 
-    def get_binary_path(self, game: str, default: BinaryPathArgument = _BinaryPathArgument.default):
+    def get_binary_path(self, game: str):
         if self.binary_path:
             return self.binary_path
-
-        if default == _BinaryPathArgument.default:
-            return f'target/{self.build_type}/bin/{game}'
-
-        return default
+        return f'target/{self.build_type}/bin/{game}'
 
     def get_ffi_lib_path(self, game: str):
         if self.ffi_lib_path:
@@ -59,30 +47,32 @@ class BuildParams:
         return params
 
     @staticmethod
-    def add_args(parser: argparse.ArgumentParser, add_binary_path_option=True,
-                 add_ffi_lib_path_option=True, add_debug_build_option=True):
+    def add_args(parser: argparse.ArgumentParser, loop_controller=False):
         group = parser.add_argument_group('Build options')
 
-        if add_debug_build_option:
+        if loop_controller:
             group.add_argument(
                 '-d', '--debug-build', action='store_true',
                 help='use Debug binary. Ignored if --binary-path is specified')
-        if add_binary_path_option:
             group.add_argument(
                 '--binary-path',
                 help='path to binary (default: target/{Debug,Release}/bin/{game})')
-        if add_ffi_lib_path_option:
             group.add_argument(
                 '--ffi-lib-path',
                 help='path to ffi library (default: target/Release/lib/lib{game}.so)')
+        else:
+            group.add_argument(
+                '--binary-path',
+                help='path to binary (default: use binary received from loop controller)')
 
-    def add_to_cmd(self, cmd: List[str], add_binary_path_option=True,
-                   add_ffi_lib_path_option=True, add_debug_build_option=True):
+    def add_to_cmd(self, cmd: List[str], loop_controller=False):
         defaults = BuildParams()
 
-        if add_debug_build_option and self.debug_build != defaults.debug_build:
-            cmd.append('--debug-build')
-        if add_binary_path_option and self.binary_path != defaults.binary_path:
+        if self.binary_path != defaults.binary_path:
             cmd.extend(['--binary-path', self.binary_path])
-        if add_ffi_lib_path_option and self.ffi_lib_path != defaults.ffi_lib_path:
-            cmd.extend(['--ffi-lib-path', self.ffi_lib_path])
+
+        if loop_controller:
+            if self.debug_build:
+                cmd.append('--debug-build')
+            if self.ffi_lib_path != defaults.ffi_lib_path:
+                cmd.extend(['--ffi-lib-path', self.ffi_lib_path])

@@ -1,6 +1,7 @@
 from .base_params import BaseParams
 
 from alphazero.logic import constants
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientId, ClientRole
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -8,7 +9,7 @@ from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.socket_util import JsonDict, Socket
-from util import ssh_util
+from util import py_util, ssh_util
 
 import os
 import socket
@@ -26,12 +27,15 @@ class SessionData:
 
     This class holds various data that is associated with that session.
     """
-    def __init__(self, params: BaseParams, logging_params: LoggingParams):
+    def __init__(self, params: BaseParams, logging_params: LoggingParams,
+                 build_params: BuildParams):
         self._params = params
         self._logging_params = logging_params
+        self._build_params = build_params
         self._game = None
         self._game_spec = None
         self._tag = None
+        self._binary_path = None
         self._directory_organizer = None
         self._socket: Optional[Socket] = None
         self._client_id: Optional[ClientId] = None
@@ -47,7 +51,7 @@ class SessionData:
             self._skip_next_returncode_check = False
         elif proc.returncode:
             logger.error(f'Process failed with return code {proc.returncode}')
-            for line in stderr:
+            for line in stderr.splitlines():
                 logger.error(line.strip())
             raise Exception()
         return stdout
@@ -111,7 +115,7 @@ class SessionData:
         ssh_util.add_to_authorized_keys(ssh_pub_key)
 
         asset_requirements = data['asset-requirements']
-        self._setup_run_directory(asset_requirements, role)
+        self._setup_run_directory(asset_requirements)
 
         log_filename = self.get_log_filename(role.value)
         configure_logger(params=self._logging_params, filename=log_filename, mode='w')
@@ -165,36 +169,87 @@ class SessionData:
 
         This method does the following:
 
-        1. Create a run-directory in /scratch/run-dirs/{game}/, if it doesn't yet exist.
+        1. Create an assets-directory in /home/devuser/scratch/assets/, if it doesn't yet exist.
            Files in this directory will be named by their hash.
 
         2. For each asset:
 
-           A. Check if the run-directory currently contains it. If so, continue.
-           B. Else, check if the target/ directory contains it. If so, copy to the run-directory,
+           A. Check if the assets-directory currently contains it. If so, continue.
+           B. Else, check if the target/ directory contains it. If so, copy to the assets-directory,
               otherwise, continue
            C. If the asset is still missing, request it from the loop controller, and write the
-              asset to the run-directory
+              asset to the assets-directory
 
-        3. Create symlinks in the run-directory so that we can refer to the assets by their path
-           instead of their hash.
+        3. Create a unique run-directory in /home/devuser/scratch/runs/ to be used by this server
+           and this server only. Add symlinks in this run-directory, named by the asset path, that
+           point to the asset in the assets-directory.
 
-        4. Set appropriate data members that the self-play-server/ratings-server can use to
-           construct run cmd strs that will point to the correct assets.
-
-        Some technical notes:
-
-        a. We need to make sure to prevent write-condition-races in case multiple servers are
-           running on the same machine (e.g., self-play-server and ratings-server).
-
-        b. I don't think we can have this method directly perform the socket recv() call to receive
-           the asset data. This is because the loop controller might send some other message in
-           between the handshake and the asset request. Instead, the self-play-server/ratings-server
-           should, upon receiving an 'asset-data' message, call a method of this class to process
-           the asset data. This means that the SessionData may not immediately be ready to use
-           after the handshake, so we will need appropriate state tracking to validate readiness.
+        4. Set appropriate data members to self, that support methods that SelfPlayServer and
+           RatingsServer can use to construct their run-command-strings.
         """
-        raise NotImplementedError()
+        assets_dir = '/home/devuser/scratch/assets'
+        py_util.atomic_makedirs(assets_dir)
+
+        binary_info = asset_requirements['binary']
+        extras_info = asset_requirements['extras']
+
+        if self._build_params.binary_path is not None:
+            self._binary_path = './custom-binary'
+
+            src = os.path.abspath(self._build_params.binary_path)
+            dst = os.path.join(self.run_dir, self._binary_path)
+            dst_dir = os.path.dirname(dst)
+            os.makedirs(dst_dir, exist_ok=True)
+            ln_cmd = f'ln -sf {src} {dst}'
+            subprocess.run(ln_cmd, shell=True, check=True)
+        else:
+            assert len(binary_info) == 1
+            self._binary_path = list(binary_info.keys())[0]
+
+        hash_dict = {}
+        missing_assets = []
+        for info in [binary_info, extras_info]:
+            hash_dict.update(info)
+            for asset_path, asset_hash in info.items():
+                # See 2A above
+                dst_path = os.path.join(assets_dir, asset_hash)
+                if os.path.exists(dst_path):
+                    continue
+
+                # See 2B above
+                workspace_path = os.path.join('/workspace/repo', asset_path)
+                if os.path.exists(workspace_path):
+                    candidate_hash = py_util.sha256sum(workspace_path)
+                    if candidate_hash == asset_hash:
+                        py_util.atomic_cp(workspace_path, dst_path)
+                        continue
+
+                # See 2C above
+                missing_assets.append(asset_path)
+
+        data = {
+            'type': 'assets-request',
+            'assets': missing_assets,
+        }
+        self.socket.send_json(data)
+
+        logger.info('DBG sent assets-request %s', data)
+        for asset_path in missing_assets:
+            asset_hash = hash_dict[asset_path]
+            full_asset_path = os.path.join(assets_dir, asset_hash)
+            self.socket.recv_file(full_asset_path, atomic=True)
+            logger.info('DBG received asset: %s', full_asset_path)
+            assert os.path.isfile(full_asset_path)
+
+        # Create soft links to the assets. Note  that because the run_dir will be unique to each
+        # server, we don't need to worry about atomicity for the filesytem operations below.
+        for asset_path, asset_hash in hash_dict.items():
+            src = os.path.join(assets_dir, asset_hash)
+            dst = os.path.join(self.run_dir, asset_path)
+            dst_dir = os.path.dirname(dst)
+            os.makedirs(dst_dir, exist_ok=True)
+            ln_cmd = f'ln -sf {src} {dst}'
+            subprocess.run(ln_cmd, shell=True, check=True)
 
     @property
     def socket(self) -> Socket:
@@ -225,6 +280,16 @@ class SessionData:
         if self._game_spec is None:
             self._game_spec = get_game_spec(self.game)
         return self._game_spec
+
+    @property
+    def binary_path(self) -> str:
+        if self._binary_path is None:
+            raise ValueError('binary path not set')
+        return self._binary_path
+
+    @property
+    def run_dir(self) -> str:
+        return os.path.join('/home/devuser/scratch/runs', self.game, self.tag, str(self.client_id))
 
     @property
     def directory_organizer(self) -> Optional[DirectoryOrganizer]:

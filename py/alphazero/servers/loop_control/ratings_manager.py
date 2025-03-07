@@ -56,6 +56,11 @@ class RatingsManager:
         }
         conn.socket.send_json(reply)
 
+        assets_request = conn.socket.recv_json()
+        assert assets_request['type'] == 'assets-request'
+        for asset in assets_request['assets']:
+            conn.socket.send_file(asset)
+
         conn.aux['status_cond'] = threading.Condition()
         conn.aux['status'] = ServerStatus.BLOCKED
 

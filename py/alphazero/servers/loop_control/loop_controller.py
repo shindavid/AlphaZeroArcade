@@ -192,15 +192,15 @@ class LoopController:
         """
         Returns information about the assets required for game-playing servers.
         """
-        binary_path = self.build_params.get_binary_path()
+        binary_path = self.build_params.get_binary_path(self._run_params.game)
 
         extras = {}
-        for dep in self._game_spec.extra_runtime_deps:
+        for dep in self.game_spec.extra_runtime_deps:
             extras[dep] = sha256sum(dep)
 
         return {
             'binary': {
-                'binary_path': sha256sum(binary_path),
+                binary_path : sha256sum(binary_path),
             },
             'extras': extras,
         }

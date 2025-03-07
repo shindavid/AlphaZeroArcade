@@ -26,7 +26,7 @@ def load_args():
     RatingsServerParams.add_args(parser)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
-    BuildParams.add_args(parser, add_ffi_lib_path_option=False)
+    BuildParams.add_args(parser)
 
     return parser.parse_args()
 

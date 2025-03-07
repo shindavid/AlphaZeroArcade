@@ -87,7 +87,7 @@ def load_args():
     Params.add_args(parser)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
-    BuildParams.add_args(parser)
+    BuildParams.add_args(parser, loop_controller=True)
 
     return parser.parse_args(), game_spec
 
@@ -110,7 +110,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
-    build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
+    build_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching self-play server: %s', cmd)
@@ -137,7 +137,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
-    build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
+    build_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching ratings server: %s', cmd)
@@ -168,7 +168,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
-    build_params.add_to_cmd(cmd, add_binary_path_option=False)
+    build_params.add_to_cmd(cmd, loop_controller=True)
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
 

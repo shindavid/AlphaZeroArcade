@@ -36,7 +36,7 @@ class SelfPlayServer:
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
-        self._session_data = SessionData(params, logging_params)
+        self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._proc: Optional[subprocess.Popen] = None
@@ -196,8 +196,7 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary = self._build_params.get_binary_path(self._session_data.game)
-
+        binary = self._session_data.binary_path
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,
@@ -214,9 +213,10 @@ class SelfPlayServer:
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL)
+        cwd = self._session_data.run_dir
+        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
         self._proc = proc
-        logger.info('Running gen-0 self-play [%s]: %s', proc.pid, self_play_cmd)
+        logger.info('Running gen-0 self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
         self._proc = None
 
@@ -267,8 +267,7 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary = self._build_params.get_binary_path(self._session_data.game)
-
+        binary = self._session_data.binary_path
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,
@@ -285,9 +284,10 @@ class SelfPlayServer:
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL)
+        cwd = self._session_data.run_dir
+        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
         self._proc = proc
-        logger.info('Running self-play [%s]: %s', proc.pid, self_play_cmd)
+        logger.info('Running self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
         self._proc = None
 

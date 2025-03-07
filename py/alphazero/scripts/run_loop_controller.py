@@ -27,7 +27,7 @@ def load_args():
     TrainingParams.add_args(parser, defaults=default_training_params)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
-    BuildParams.add_args(parser)
+    BuildParams.add_args(parser, loop_controller=True)
 
     return parser.parse_args()
 

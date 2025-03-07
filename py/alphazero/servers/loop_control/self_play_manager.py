@@ -100,6 +100,12 @@ class SelfPlayManager:
         }
         conn.socket.send_json(reply)
 
+        assets_request = conn.socket.recv_json()
+        assert assets_request['type'] == 'assets-request'
+
+        for asset in assets_request['assets']:
+            conn.socket.send_file(asset)
+
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'self-play-server',
             disconnect_handler=self._handle_server_disconnect)
