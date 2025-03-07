@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-
-import argparse
-
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
@@ -11,7 +8,9 @@ from games.game_spec import GameSpec
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.py_util import CustomHelpFormatter
+from util.repo_util import Repo
 
+import argparse
 import os
 from typing import Optional
 
@@ -28,7 +27,7 @@ def load_args():
     TrainingParams.add_args(parser, defaults=default_training_params)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
-    BuildParams.add_args(parser, add_binary_path_option=False)
+    BuildParams.add_args(parser)
 
     return parser.parse_args()
 
@@ -41,6 +40,8 @@ def main():
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+
+    os.chdir(Repo.root())
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()
