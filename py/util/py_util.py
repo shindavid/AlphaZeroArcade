@@ -36,6 +36,7 @@ def sha256sum(filename, use_cache=True):
     If use_cache is True, then as an optimization, if the checksum has already been computed and the file has not been
     modified since the checksum was computed, then the cached checksum is returned.
     """
+    assert os.path.isfile(filename), f'File not found: {filename}'
     if not use_cache:
         return sha256sum_helper(filename)
 
@@ -96,6 +97,18 @@ def untar_remote_file_to_local_directory(src_tar, dst_dir):
             os.remove(local_tar)
 
 
+def atomic_makedirs(path):
+    """
+    Performs the equivalent of "mkdir -p path".
+
+    There is os.makedirs(path, exist_ok=True), but that can throw an exception if two processes
+    simultaneously try to create the same directory, even despite the exist_ok=True flag. This
+    function does not have that problem.
+    """
+    subprocess.run(['mkdir', '-p', path])  # intentionally don't check=True
+    assert os.path.isdir(path), f'Failed to create directory: {path}'
+
+
 def make_hidden_filename(filename):
     """
     Returns a filename formed by prepending a '.' to the filename part of filename.
@@ -116,18 +129,21 @@ def atomic_cp(src, dst, intermediate=None):
     works because the unix cmd "mv" is atomic (as long as the files are in the same filesystem).
 
     The location of the temporary file is specified by intermediate. If intermediate is None, then
-    the location is created by prepending a '.' to the filename part of dst. It is the
-    responsibility of the caller to ensure that:
+    the location is a temporary unique file in the same directory as dst.
 
-    1. intermediate is on the same file system as dst
+    It is the responsibility of the caller to ensure that:
+
+    1. intermediate is on the same filesystem as dst
     2. intermediate does not already exist
     3. the temporary existance of intermediate does not cause any problems
     """
     if intermediate is None:
-        intermediate = make_hidden_filename(dst)
+        fd, intermediate = tempfile.mkstemp(dir=os.path.dirname(dst))
+        os.close(fd)
+    else:
+        assert not os.path.exists(intermediate), intermediate
 
-    assert not os.path.exists(intermediate), intermediate
-    shutil.copyfile(src, intermediate)
+    shutil.copy2(src, intermediate)
     os.rename(intermediate, dst)
 
 
@@ -144,17 +160,20 @@ def atomic_softlink(target, link_name, intermediate=None):
     are in the same filesystem).
 
     The location of the temporary file is specified by intermediate. If intermediate is None, then
-    the location is created by prepending a '.' to the filename part of link_name. It is the
-    responsibility of the caller to ensure that:
+    the location is a temporary unique file in the same directory as dst.
+
+    It is the responsibility of the caller to ensure that:
 
     1. intermediate is on the same file system as link_name
     2. intermediate does not already exist
     3. the temporary existance of intermediate does not cause any problems
     """
     if intermediate is None:
-        intermediate = make_hidden_filename(link_name)
+        fd, intermediate = tempfile.mkstemp(dir=os.path.dirname(link_name))
+        os.close(fd)
+    else:
+        assert not os.path.exists(intermediate), intermediate
 
-    assert not os.path.exists(intermediate), intermediate
     os.symlink(target, intermediate)
     os.rename(intermediate, link_name)
 
@@ -296,5 +315,3 @@ def copy_file_to_folder(src: str, dst_folder: str):
     shutil.copy2(src, dst_path)
 
     print(f"Copied: {src} -> {dst_path}")
-
-

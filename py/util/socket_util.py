@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import socket
+import tempfile
 import threading
 from typing import Any, Dict, Optional, Union
 
@@ -137,11 +138,20 @@ def send_json(sock: socket.socket, data: JsonData):
             'socket.sendall() failure during send_json() - socket likely closed by peer')
 
 
-def recv_file(sock: socket.socket, filename: Optional[str]) -> bytes:
+def recv_file(sock: socket.socket, filename: Optional[str], atomic=False) -> bytes:
     """
     Receives a file from the socket. This assumes that the file is prepended by a 4-byte big-endian
     integer specifying the length of the file and a 1-byte bool specifying whether the file is
     executable. The file is written to the given filename.
+
+    If atomic is True, then the file is written to a temporary file first, and then moved to the
+    final location. This yields an effectively atomic operation because the unix cmd "mv" is atomic
+    (as long as the source and destination are on the same filesystem).
+
+    NOTE: If atomic is True, the file is written to the same directory as the final location. We
+    do this to ensure that the temporary file is on the same filesystem as the fina location,
+    which is required to guarantee atomicity. The user must take care to ensure that the temporary
+    file does not cause any problems.
 
     Calls recvall() under the hood - see recvall() documentation for details on possible exceptions.
     """
@@ -156,11 +166,23 @@ def recv_file(sock: socket.socket, filename: Optional[str]) -> bytes:
     if filename is None:
         return
 
-    with open(filename, 'wb') as f:
-        f.write(data)
+    if atomic:
+        dirname = os.path.dirname(filename)
+        with tempfile.NamedTemporaryFile(dir=dirname, delete=False) as f:
+            f.write(data)
+            tmp_filename = f.name
+        if executable:
+            os.chmod(tmp_filename, 0o755)
+            assert os.access(tmp_filename, os.X_OK)
 
-    if executable:
-        os.chmod(filename, 0o755)
+        os.rename(tmp_filename, filename)
+        if executable:
+            assert os.access(filename, os.X_OK)
+    else:
+        with open(filename, 'wb') as f:
+            f.write(data)
+        if executable:
+            os.chmod(filename, 0o755)
 
 
 def send_file(sock: socket.socket, filename: str):
@@ -234,12 +256,12 @@ class Socket:
         with self._send_mutex:
             send_json(self._sock, data)
 
-    def recv_file(self, filename: Optional[str]):
+    def recv_file(self, filename: Optional[str], atomic=False):
         """
         Mutex-protected call to socket_util.recv_file().
         """
         with self._recv_mutex:
-            recv_file(self._sock, filename)
+            recv_file(self._sock, filename, atomic=atomic)
 
     def send_file(self, filename: str):
         """
