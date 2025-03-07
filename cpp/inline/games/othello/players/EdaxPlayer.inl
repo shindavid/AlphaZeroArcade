@@ -25,14 +25,15 @@ inline EdaxPlayer::EdaxPlayer(const Params& params) : params_(params) {
   line_buffer_.resize(1);
 
   auto edax_dir = boost::filesystem::path("extra_deps/edax-reversi");
-  auto edax_bin = edax_dir / "bin" / "lEdax-x64-modern";
+  auto edax_relative_bin = boost::filesystem::path("bin/lEdax-x64-modern");
+  auto edax_bin = edax_dir / edax_relative_bin;
 
   if (!boost::filesystem::is_regular_file(edax_bin)) {
     throw util::CleanException("File does not exist: %s", edax_bin.c_str());
   }
 
   namespace bp = boost::process;
-  proc_ = new bp::child(edax_bin.c_str(), bp::start_dir(edax_dir), bp::std_out > out_,
+  proc_ = new bp::child(edax_relative_bin.c_str(), bp::start_dir(edax_dir), bp::std_out > out_,
                         bp::std_err > bp::null, bp::std_in < in_);
 
   std::string level_str = util::create_string("level %d\n", params_.depth);
