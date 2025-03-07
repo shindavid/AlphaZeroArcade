@@ -102,7 +102,6 @@ class SelfPlayManager:
 
         assets_request = conn.socket.recv_json()
         assert assets_request['type'] == 'assets-request'
-
         for asset in assets_request['assets']:
             conn.socket.send_file(asset)
 
