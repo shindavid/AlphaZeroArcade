@@ -135,26 +135,6 @@ def main():
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
 
-    bin_dir = os.path.join(repo_root, target_dir, 'bin')
-
-    categories = set(t.category for t in expanded_targets)
-    for category in categories:
-        spec = GAME_SPECS_BY_NAME.get(category, None)
-        if spec is None:
-            continue
-        extra_deps = spec.extra_runtime_deps
-        for dep in extra_deps:
-            dep_loc = os.path.join(repo_root, dep)
-            if not os.path.exists(dep_loc):
-                print(f'ERROR: extra dependency for {category} not found: {dep}')
-                print('Please rerun setup_wizard.py to fix this.')
-                raise Exception()
-            extra_dir = os.path.join(bin_dir, 'extra')
-            os.makedirs(extra_dir, exist_ok=True)
-            cp_loc = extra_dir
-            run(f'rsync -r {dep_loc} {cp_loc}', print_cmd=False)
-            print(f'Extra dependency:', os.path.join(cp_loc, os.path.split(dep)[1]))
-
     expanded_targets.sort(key=lambda t: (t.directory, t.filename))
     for tgt in expanded_targets:
         full_path = os.path.join(tgt.directory, tgt.filename)

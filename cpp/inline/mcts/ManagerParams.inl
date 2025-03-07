@@ -30,8 +30,7 @@ inline auto ManagerParams<Game>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  boost::filesystem::path default_profiling_dir_path =
-      util::Repo::root() / "output" / "mcts_profiling";
+  boost::filesystem::path default_profiling_dir_path = "/workspace/output/mcts_profiling";
   std::string default_profiling_dir = default_profiling_dir_path.string();
 
   po2::options_description desc("Manager options");

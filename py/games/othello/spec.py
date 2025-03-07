@@ -85,7 +85,8 @@ class OthelloSpec(GameSpec):
     name = 'othello'
     extra_runtime_deps = [
         'extra_deps/edax-reversi/bin/lEdax-x64-modern',
-        'extra_deps/edax-reversi/data',
+        'extra_deps/edax-reversi/data/book.dat',
+        'extra_deps/edax-reversi/data/eval.dat',
         ]
     model_configs = {
         'default': b9_c128,
