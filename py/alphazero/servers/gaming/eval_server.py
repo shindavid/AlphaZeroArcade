@@ -97,10 +97,10 @@ class EvalServer:
 
     def _send_handshake(self):
         aux = { 'tag': self._params.rating_tag, }
-        self._session_data.send_handshake(ClientRole.RATINGS_SERVER, aux=aux)
+        self._session_data.send_handshake(ClientRole.EVAL_SERVER, aux=aux)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.RATINGS_SERVER)
+        self._session_data.recv_handshake(ClientRole.EVAL_SERVER)
 
     def _recv_loop(self):
         try:
@@ -174,7 +174,7 @@ class EvalServer:
             '-G': n_games,
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.RATINGS_WORKER.value,
+            '--client-role': ClientRole.EVAL_WORKER.value,
             '--manager-id': self._session_data.client_id,
             '--ratings-tag': f'"{self._params.rating_tag}"',
             '--cuda-device': self._params.cuda_device,
