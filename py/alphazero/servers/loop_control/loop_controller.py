@@ -204,7 +204,7 @@ class LoopController:
             'extras': extras,
         }
 
-    def handle_new_client_connnection(self, conn: ClientConnection):
+    def handle_new_client_connection(self, conn: ClientConnection):
         """
         Dispatches to a manager to handle a new client connection. The manager will spawn a new
         thread.

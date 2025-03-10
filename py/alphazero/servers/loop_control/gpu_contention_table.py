@@ -165,7 +165,7 @@ class GpuContentionTable:
         for handling this case appropriately.
 
         In order for this to work, other domains, upon receiving the notification in step 1, are
-        responsible for releasing the lock if they are no longer have priority. This can be
+        responsible for releasing the lock if they no longer have priority. This can be
         accomplished by calling wait_for_lock_expiry() and then release_lock().
 
         The wait in step 2 will end due to one of these scenarios:
