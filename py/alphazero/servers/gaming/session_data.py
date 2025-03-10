@@ -156,7 +156,7 @@ class SessionData:
 
     def _setup_run_directory(self, asset_requirements: JsonDict):
         """
-        asset_requirements takes the folowing form:
+        asset_requirements takes the following form:
 
         {
             'binary': { path: hash },
