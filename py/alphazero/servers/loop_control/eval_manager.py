@@ -4,13 +4,13 @@ from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
 from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus
+from alphazero.logic.evaluator import MCTSEvaluator
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
-from enum import Enum
 import threading
 from typing import Optional, TYPE_CHECKING
 
@@ -20,21 +20,18 @@ if TYPE_CHECKING:
 
 logger = get_logger()
 
+
 class EvalManager:
     """
-    A separate RatingsManager is created for each rating-tag.
+    A separate EvalManager is created for each rating-tag.
     """
     def __init__(self, controller: LoopController, tag: EvalTag):
         self._tag = tag
         self._controller = controller
 
-        self._min_ref_strength = controller.game_spec.reference_player_family.min_strength
-        self._max_ref_strength = controller.game_spec.reference_player_family.max_strength
-
-        self._started = False
         self._lock = threading.Lock()
         self._new_work_cond = threading.Condition(self._lock)
-        self._rating_data_dict: RatingDataDict = {}
+        self._mcts_evaluator = MCTSEvaluator(self._controller._organizer)
 
     def add_server(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()
@@ -57,10 +54,9 @@ class EvalManager:
         conn.aux['status_cond'] = threading.Condition()
         conn.aux['status'] = ServerStatus.BLOCKED
 
-        self._start()
-        logger.info('Starting ratings-recv-loop for %s...', conn)
+        logger.info('Starting eval-recv-loop for %s...', conn)
         self._controller.launch_recv_loop(
-            self._server_msg_handler, conn, 'ratings-server',
+            self._server_msg_handler, conn, 'eval-server',
             disconnect_handler=self._handle_server_disconnect)
 
         thread = threading.Thread(target=self._manage_server, args=(conn,),
@@ -76,7 +72,7 @@ class EvalManager:
         }
         conn.socket.send_json(reply)
         self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'ratings-worker',
+            self._worker_msg_handler, conn, 'eval-worker',
             disconnect_handler=self._handle_worker_disconnect)
 
     def notify_of_new_model(self):
@@ -89,58 +85,18 @@ class EvalManager:
 
     def _set_priority(self):
         latest_gen = self._controller.latest_gen()
-        dict_len = len(self._rating_data_dict)
-        rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
+        num_evaluated = len(self._mcts_evaluator._evaluated_gens)
 
         target_rate = self._controller.params.target_rating_rate
-        num = dict_len + (0 if rating_in_progress else 1)
-        den = max(1, latest_gen)
-        current_rate = num / den
+        current_rate = num_evaluated / max(1, latest_gen)
 
         elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
-                     rating_in_progress, current_rate, target_rate)
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, num_evaluated,
+                      current_rate, target_rate)
         self._controller.set_ratings_priority(elevate)
 
-    def _start(self):
-        with self._lock:
-            if self._started:
-                return
-            self._started = True
-            self._load_past_data()
-
-    def _load_past_data(self):
-        logger.info('Loading past ratings data...')
-        conn = self._controller.ratings_db_conn_pool.get_connection()
-        c = conn.cursor()
-        res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE tag = ?',
-                        (self._tag,))
-
-        for mcts_gen, ref_strength, mcts_wins, draws, ref_wins in res.fetchall():
-            if mcts_gen not in self._rating_data_dict:
-                data = RatingData(mcts_gen, self._min_ref_strength, self._max_ref_strength)
-                self._rating_data_dict[mcts_gen] = data
-            counts = WinLossDrawCounts(mcts_wins, ref_wins, draws)
-            self._rating_data_dict[mcts_gen].add_result(ref_strength, counts, set_rating=False)
-
-        for data in self._rating_data_dict.values():
-            data.set_rating()
-
-        for gen, data in self._rating_data_dict.items():
-            if data.rating is None:
-                data.est_rating = self._estimate_rating(gen)
-
-        self._set_priority()
-
     def _handle_server_disconnect(self, conn: ClientConnection):
-        gen = conn.aux.pop('gen', None)
-        if gen is not None:
-            with self._lock:
-                rating_data = self._rating_data_dict.get(gen, None)
-                if rating_data is not None:
-                    rating_data.owner = None
-
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
@@ -177,9 +133,10 @@ class EvalManager:
     def _wait_until_work_exists(self):
         with self._lock:
             self._new_work_cond.wait_for(
-                lambda: len(self._rating_data_dict) < self._controller.latest_gen())
+                lambda: len(self._mcts_evaluator._evaluated_gens) < self._controller.latest_gen())
 
     def _get_rating_data(self, conn: ClientConnection, gen: Generation) -> RatingData:
+      #TODO: may not need this or need to modify
         with self._lock:
             rating_data = self._rating_data_dict.get(gen, None)
             if rating_data is None:
@@ -192,23 +149,26 @@ class EvalManager:
             return rating_data
 
     def _send_match_request(self, conn: ClientConnection):
+      #TODO: modify
+        logger.info('*******************REACHED SEND MATCH REQUEST')
         gen = conn.aux.get('gen', None)
         if gen is None:
-            gen = self._get_next_gen_to_rate()
+            gen = self._mcts_evaluator.get_next_gen_to_eval(self._controller.params.target_rating_rate)
             conn.aux['gen'] = gen
 
-        rating_data = self._get_rating_data(conn, gen)
-        assert rating_data.rating is None
-        strength = rating_data.get_next_strength_to_test()
-        assert strength is not None
+        logger.info('Sending match request for gen %s', gen)
+        # rating_data = self._get_rating_data(conn, gen)
+        # assert rating_data.rating is None
+        # strength = rating_data.get_next_strength_to_test()
+        # assert strength is not None
 
-        data = {
-            'type': 'match-request',
-            'mcts_gen': rating_data.mcts_gen,
-            'ref_strength': strength,
-            'n_games': N_GAMES,
-        }
-        conn.socket.send_json(data)
+        # data = {
+        #     'type': 'match-request',
+        #     'mcts_gen': rating_data.mcts_gen,
+        #     'ref_strength': strength,
+        #     'n_games': N_GAMES,
+        # }
+        # conn.socket.send_json(data)
 
     def _manage_server(self, conn: ClientConnection):
         try:
@@ -242,7 +202,7 @@ class EvalManager:
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('eval-server received json message: %s', msg)
 
         if msg_type == 'ready':
             self._handle_ready(conn)
@@ -253,12 +213,12 @@ class EvalManager:
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:
-            logger.warning('ratings-server: unknown message type: %s', msg)
+            logger.warning('eval-server: unknown message type: %s', msg)
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        logger.debug('ratings-worker received json message: %s', msg)
+        logger.debug('eval-worker received json message: %s', msg)
 
         if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
@@ -269,7 +229,7 @@ class EvalManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warning('ratings-worker: unknown message type: %s', msg)
+            logger.warning('eval-worker: unknown message type: %s', msg)
         return False
 
     def _handle_ready(self, conn: ClientConnection):
@@ -279,6 +239,7 @@ class EvalManager:
             status_cond.notify_all()
 
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
+      #TODO: main change
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         record = WinLossDrawCounts.from_json(msg['record'])
@@ -308,7 +269,7 @@ class EvalManager:
     def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
         gen = msg['gen']
         thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
-                                  daemon=True, name=f'manage-ratings-worker')
+                                  daemon=True, name=f'manage-eval-worker')
         thread.start()
 
     def _manage_worker(self, gen: Generation, conn: ClientConnection):
