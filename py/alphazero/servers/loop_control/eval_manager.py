@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
@@ -20,12 +20,11 @@ if TYPE_CHECKING:
 
 logger = get_logger()
 
-
-class RatingsManager:
+class EvalManager:
     """
     A separate RatingsManager is created for each rating-tag.
     """
-    def __init__(self, controller: LoopController, tag: RatingTag):
+    def __init__(self, controller: LoopController, tag: EvalTag):
         self._tag = tag
         self._controller = controller
 
@@ -378,121 +377,4 @@ class RatingsManager:
         self._controller.broadcast_weights(conn, gen)
         conn.aux['gen'] = gen
 
-    def _estimate_rating(self, gen: Generation) -> Optional[float]:
-        """
-        Estimates the rating for a given MCTS generation by interpolating nearby generations.
 
-        Caller is responsible for holding self._lock if necessary.
-        """
-        rated_gens = [g for g, r in self._rating_data_dict.items() if r.rating is not None]
-
-        left = max([g for g in rated_gens if g < gen], default=None)
-        right = min([g for g in rated_gens if g > gen], default=None)
-
-        left_rating = None if left is None else self._rating_data_dict[left].rating
-        right_rating = None if right is None else self._rating_data_dict[right].rating
-
-        if left is None:
-            return right_rating
-        if right is None:
-            return left_rating
-
-        left_weight = right - gen
-        right_weight = gen - left
-
-        num = left_weight * left_rating + right_weight * right_rating
-        den = left_weight + right_weight
-        return num / den
-
-    def _commit_rating(self, gen: Generation, rating: float):
-        """
-        Assumes that ratings_db_conn_pool.db_lock is held.
-        """
-        rating_tuple = (self._tag, gen, N_GAMES, rating)
-
-        conn = self._controller.ratings_db_conn_pool.get_connection()
-        c = conn.cursor()
-        c.execute('REPLACE INTO ratings VALUES (?, ?, ?, ?)', rating_tuple)
-        conn.commit()
-
-    def _commit_counts(self, mcts_gen: Generation, ref_strength: int, counts: WinLossDrawCounts):
-        """
-        Assumes that ratings_db_conn_pool.db_lock is held.
-        """
-        conn = self._controller.ratings_db_conn_pool.get_connection()
-        match_tuple = (self._tag, mcts_gen, ref_strength, counts.win, counts.draw, counts.loss)
-        c = conn.cursor()
-        c.execute('REPLACE INTO matches VALUES (?, ?, ?, ?, ?, ?)', match_tuple)
-        conn.commit()
-
-    def _get_next_gen_to_rate(self) -> Generation:
-        """
-        Returns the next generation to rate. Assumes that there is at least one generation that has
-        not been rated and is not currently being rated.
-
-        Description of selection algorithm:
-
-        Let G be the set of gens that we have graded or are currently graded thus far, and let M be
-        the max generation that exists in the models directory.
-
-        If M is at least 10 greater than the max element of G, then we return M. This is to keep up
-        with a currently running alphazero run.
-
-        Otherwise, if 1 is not in G, then we return 1.
-
-        Finally, we find the largest gap in G, and return the midpoint of that gap. If G is fully
-        saturated, we return M, which cannot be in G due to the above assumption.
-        """
-        latest_gen = self._controller.latest_gen()
-        assert latest_gen > 0, latest_gen
-
-        logger.debug('Getting next gen to rate, latest_gen=%s...', latest_gen)
-        with self._lock:
-            taken_gens = [g for g, r in self._rating_data_dict.items()
-                          if r.rating is not None or r.owner is not None]
-            taken_gens.sort()
-        if not taken_gens:
-            logger.debug('No gens yet rated, rating latest (%s)...', latest_gen)
-            return latest_gen
-
-        max_taken_gen = taken_gens[-1]
-
-        assert latest_gen >= max_taken_gen
-        latest_gap = latest_gen - max_taken_gen
-
-        latest_gap_threshold = 10
-        if latest_gap >= latest_gap_threshold:
-            logger.debug('%s+ gap to latest, rating latest (%s)...', latest_gap_threshold,
-                         latest_gen)
-            return latest_gen
-
-        if taken_gens[0] > 1:
-            logger.debug('Gen-1 not yet rated, rating it...')
-            return 1
-
-        assert latest_gen != 1, latest_gen
-
-        if len(taken_gens) == 1:
-            logger.debug('No existing gaps, rating latest (%s)...', latest_gen)
-            return latest_gen
-
-        left, right = find_largest_gap(taken_gens)
-        gap = right - left
-        if 2 * latest_gap >= gap:
-            logger.debug(
-                'Large gap to latest, rating latest=%s '
-                '(biggest-gap:[%s, %s], latest-gap:[%s, %s])...',
-                latest_gen, left, right, max_taken_gen, latest_gap)
-            return latest_gen
-
-        assert max(gap, latest_gap) > 1, (gap, latest_gap)
-
-        if left + 1 == right:
-            assert latest_gen > right, (latest_gen, right)
-            logger.debug('No existing gaps, rating latest (%s)...', latest_gen)
-            return latest_gen
-
-        mid = (left + right) // 2
-        logger.debug('Rating gen %s (biggest-gap:[%s, %s], latest=%s)...',
-                     mid, left, right, latest_gen)
-        return mid
