@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
+from alphazero.logic.agent_types import MCTSAgent, AgentRole
 from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
 from alphazero.logic.arena import Arena
-from alphazero.logic.evaluator import Evaluator
+from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
@@ -13,7 +14,8 @@ from util import ssh_util
 
 import threading
 from dataclasses import dataclass
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
+from enum import Enum
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -22,10 +24,17 @@ if TYPE_CHECKING:
 logger = get_logger()
 
 
+class MatchRequestStatus(Enum):
+    REQUESTED = 'requested'
+    COMPLETE = 'complete'
+    OBSOLETE = 'obsolete'
+
+
 @dataclass
 class EvalStatus:
     mcts_gen: Generation
     owner: Optional[ClientId] = None
+    match_status: Dict[Generation, MatchRequestStatus] = None
     is_done: bool = False
 
 
@@ -41,7 +50,8 @@ class EvalManager:
         self._lock = threading.Lock()
         self._new_work_cond = threading.Condition(self._lock)
         self._evaluator = Evaluator(self._controller._organizer)
-        self._eval_status_dict: Dict[Generation, EvalStatus] = {}
+        self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
+
 
     def add_server(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()
@@ -172,24 +182,30 @@ class EvalManager:
 
     def _send_match_request(self, conn: ClientConnection):
         gen = conn.aux.get('gen', None)
+        evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values()]
         if gen is None:
-            gen = self._mcts_evaluator.get_next_gen_to_eval(self._controller.params.target_rating_rate)
-            assert gen is not None
-            conn.aux['gen'] = gen
+            latest_gen = self._controller.latest_gen()
+            target_rating_rate = self._controller.params.target_rating_rate
+            with self._lock:
+                gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
+                assert gen is not None
+                conn.aux['gen'] = gen
+                test_agent = MCTSAgent(gen, n_iters=100, set_temp_zero=True,
+                                       tag=self._controller._organizer.tag)
+                test_iagent = self._evaluator._arena._add_agent(test_agent,
+                                                                AgentRole.TEST,
+                                                                expand_matrix=True,
+                                                                db=self._evaluator._db)
+                self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen,
+                                                                       owner=conn.client_id)
+            self._set_priority()
 
-        with self._lock:
-            if gen not in self._eval_status_dict:
-                self._eval_status_dict[gen] = EvalStatus(mcts_gen=gen,
-                                                        owner=conn.client_id,
-                                                        is_done=False)
-                self._set_priority()
+        ratings = self._evaluator.arena_ratings[list(self._eval_status_dict.keys())]
+        init_rating_estimate = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
 
-        init_rating_estimate = self._mcts_evaluator.estimate_rating_nearby_gens(gen)
+
         next_match = self._mcts_evaluator.get_next_match_to_eval(gen,
                                                                  init_rating_estimate = init_rating_estimate)
-        if next_match is None:
-            self._eval_status_dict[gen].is_done = True
-            logger.info("Inside of _send_match_request(): no more next match. Mark gen as done.")
 
         data = {
             'type': 'match-request',

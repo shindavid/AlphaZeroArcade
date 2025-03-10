@@ -158,66 +158,86 @@ class Evaluator:
     def arena_ratings(self) -> np.ndarray:
         return self._arena.ratings
 
+    @property
+    def indexed_agents(self) -> List[Agent]:
+        return self._arena.indexed_agents
+
+    @property
+    def agent_lookup(self) -> dict:
+        return self._arena._agent_lookup
+
 
 class MCTSEvaluator:
     def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
         self._evaluator = Evaluator(organizer)
         rating_data = self._evaluator.read_ratings_from_db()
-        self._evaluated_gens = [agent.gen for agent in rating_data.evaluated_agents]
+        self._evaluated_ixs = [self._evaluator.agent_lookup[agent].index \
+            for agent in rating_data.evaluated_agents]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
         self._evaluator.refresh_ratings()
         while True:
+            evaluated_gens = [self._evaluator.indexed_agents[ix].agent.gen \
+                for ix in self._evaluated_ixs]
             last_gen = self._organizer.get_latest_model_generation()
-            gen = get_next_gen_to_eval(last_gen, self._evaluated_gens, target_eval_percent)
+            gen = EvalUtils.get_next_gen_to_eval(last_gen, evaluated_gens, target_eval_percent)
             if gen is None:
                 break
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    tag=self._organizer.tag)
-            init_rating_estimate = self.estimate_rating_nearby_gens(gen)
+            ratings = np.array([self._evaluator.arena_ratings[ix] for ix in self._evaluated_ixs])
+            init_rating_estimate = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens,
+                                                               ratings)
             self._evaluator.eval_agent(test_agent, n_games,
                                        error_threshold=error_threshold,
                                        init_rating_estimate=init_rating_estimate)
-            self._evaluated_gens.append(gen)
+            new_ix = self._evaluator.agent_lookup[test_agent].index
+            assert new_ix == len(self._evaluator.indexed_agents) - 1
+            self._evaluated_ixs.append(new_ix)
 
-    def estimate_rating_nearby_gens(self, gen: int) -> float:
-        evaluated_gens = np.array(self._evaluated_gens)
-        sorted_ixs = np.argsort(evaluated_gens)
 
-        for i in range(len(evaluated_gens) - 1):
-            left_gen = evaluated_gens[sorted_ixs[i]]
-            right_gen = evaluated_gens[sorted_ixs[i + 1]]
+class EvalUtils:
+    @staticmethod
+    def estimate_rating_nearby_gens(gen: int, evaluated_gens: List[int], ratings: np.ndarray) -> float:
+        assert len(evaluated_gens) == len(ratings)
+        evaluated_gens_arr = np.array(evaluated_gens)
+        sorted_ixs = np.argsort(evaluated_gens_arr)
+
+        for i in range(len(evaluated_gens_arr) - 1):
+            left_gen = evaluated_gens_arr[sorted_ixs[i]]
+            right_gen = evaluated_gens_arr[sorted_ixs[i + 1]]
             if left_gen < gen < right_gen:
-                left_rating = self._evaluator.arena_ratings[sorted_ixs[i]]
-                right_rating = self._evaluator.arena_ratings[sorted_ixs[i + 1]]
+                left_rating = ratings[sorted_ixs[i]]
+                right_rating = ratings[sorted_ixs[i + 1]]
                 return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
 
         return None
 
-def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int], target_eval_percent: float):
-    if 0 not in evaluated_gens:
-        return 0
-    if latest_gen not in evaluated_gens:
-        return latest_gen
+    @staticmethod
+    def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int], target_eval_percent: float):
+        if 0 not in evaluated_gens:
+            return 0
+        if latest_gen not in evaluated_gens:
+            return latest_gen
 
-    evaluated_percent = len(evaluated_gens) / (latest_gen + 1)
-    if evaluated_percent >= target_eval_percent:
-        return None
+        evaluated_percent = len(evaluated_gens) / (latest_gen + 1)
+        if evaluated_percent >= target_eval_percent:
+            return None
 
-    left_gen, right_gen = get_biggest_gen_gap(evaluated_gens)
-    if left_gen + 1 < right_gen:
-        gen = (left_gen + right_gen) // 2
-        assert gen not in evaluated_gens
-    return int(gen)
+        left_gen, right_gen = EvalUtils.get_biggest_gen_gap(evaluated_gens)
+        if left_gen + 1 < right_gen:
+            gen = (left_gen + right_gen) // 2
+            assert gen not in evaluated_gens
+        return int(gen)
 
-
-def get_biggest_gen_gap(evaluated_gens: List[int]):
-    gens = evaluated_gens.copy()
-    gens = np.sort(gens)
-    gaps = np.diff(gens)
-    max_gap_ix = np.argmax(gaps)
-    left_gen = gens[max_gap_ix]
-    right_gen = gens[max_gap_ix + 1]
-    return left_gen, right_gen
+    @staticmethod
+    def get_biggest_gen_gap(evaluated_gens: List[int]):
+        gens = evaluated_gens.copy()
+        gens = np.sort(gens)
+        gaps = np.diff(gens)
+        max_gap_ix = np.argmax(gaps)
+        left_gen = gens[max_gap_ix]
+        right_gen = gens[max_gap_ix + 1]
+        return left_gen, right_gen
