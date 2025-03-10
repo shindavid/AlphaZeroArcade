@@ -98,8 +98,9 @@ void LoopControllerClient::send_done() {
   send(msg);
 }
 
-void LoopControllerClient::send_with_file(const boost::json::value& msg, std::stringstream& ss) {
-  socket_->json_write_and_send_file_bytes(msg, ss);
+void LoopControllerClient::send_with_file(const boost::json::value& msg,
+                                          const std::vector<char>& buf) {
+  socket_->json_write_and_send_file_bytes(msg, buf);
 }
 
 void LoopControllerClient::send_handshake() {
@@ -192,11 +193,12 @@ void LoopControllerClient::unpause() {
   }
 }
 
-void LoopControllerClient::reload_weights(std::stringstream& ss, const std::string& cuda_device) {
+void LoopControllerClient::reload_weights(const std::vector<char>& buf,
+                                          const std::string& cuda_device) {
   LOG_INFO << "LoopControllerClient: reloading weights...";
 
   for (auto listener : reload_weights_listeners_) {
-    listener->reload_weights(ss, cuda_device);
+    listener->reload_weights(buf, cuda_device);
   }
 }
 
@@ -241,8 +243,8 @@ void LoopControllerClient::loop() {
       int64_t generation = msg.at("generation").as_int64();
 
       // reload-weights msg will be immediately followed by a file transfer
-      std::stringstream ss;
-      if (!socket_->recv_file_bytes(ss)) {
+      std::vector<char> buf;
+      if (!socket_->recv_file_bytes(buf)) {
         if (!shutdown_initiated_) {
           LOG_INFO << "LoopControllerClient: cmd-server socket closed, breaking";
         }
@@ -251,7 +253,7 @@ void LoopControllerClient::loop() {
 
       send_metrics();
       cur_generation_ = generation;
-      reload_weights(ss, cuda_device);
+      reload_weights(buf, cuda_device);
     } else if (type == "quit") {
       deactivated_ = true;
       break;

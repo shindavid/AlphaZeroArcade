@@ -64,9 +64,10 @@ GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::TensorData::write_to(std::ostream& os) const {
+int GameLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
   int s = size();
-  os.write(reinterpret_cast<const char*>(this), s);
+  const char* bytes = reinterpret_cast<const char*>(this);
+  buf.insert(buf.end(), bytes, bytes + s);
   return s;
 }
 
@@ -399,14 +400,13 @@ void GameLogWriter<Game>::add_terminal(const State& state, const ValueTensor& ou
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::serialize(std::ostream& stream) const {
+void GameLogWriter<Game>::serialize(std::vector<char>& buf) const {
   util::release_assert(terminal_added_);
   int num_entries = entries_.size();
 
   std::vector<pos_index_t> sampled_indices;
   std::vector<mem_offset_t> mem_offsets;
-  std::ostringstream data_stream;
-
+  std::vector<char> data_buf;
   sampled_indices.reserve(sample_count_);
   mem_offsets.reserve(num_entries);
 
@@ -429,9 +429,9 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
     TensorData policy(entry->policy_target_is_valid, entry->policy_target);
     TensorData action_values(entry->action_values_are_valid, entry->action_values);
 
-    mem_offset += write_section(data_stream, &record, 1, false);
-    mem_offset += policy.write_to(data_stream);
-    mem_offset += action_values.write_to(data_stream);
+    mem_offset += write_section(data_buf, &record, 1, false);
+    mem_offset += policy.write_to(data_buf);
+    mem_offset += action_values.write_to(data_buf);
   }
 
   Header header;
@@ -439,12 +439,14 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   header.num_positions = num_entries;
   header.extra = 0;
 
-  write_section(stream, &header);
-  write_section(stream, &final_state_);
-  write_section(stream, &outcome_);
-  write_section(stream, sampled_indices.data(), sampled_indices.size());
-  write_section(stream, mem_offsets.data(), mem_offsets.size());
-  stream << data_stream.str();
+  write_section(buf, &header);
+  write_section(buf, &final_state_);
+  write_section(buf, &outcome_);
+  write_section(buf, sampled_indices.data(), sampled_indices.size());
+  write_section(buf, mem_offsets.data(), mem_offsets.size());
+
+  // copy data_buf to buf:
+  buf.insert(buf.end(), data_buf.begin(), data_buf.end());
 }
 
 template <concepts::Game Game>
@@ -457,10 +459,11 @@ bool GameLogWriter<Game>::was_previous_entry_used_for_policy_training() const {
 
 template <concepts::Game Game>
 template <typename T>
-int GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count, bool pad) {
+int GameLogWriter<Game>::write_section(std::vector<char>& buf, const T* t, int count, bool pad) {
   constexpr int A = GameLogBase::kAlignment;
   int n_bytes = sizeof(T) * count;
-  os.write(reinterpret_cast<const char*>(t), n_bytes);
+  const char* bytes = reinterpret_cast<const char*>(t);
+  buf.insert(buf.end(), bytes, bytes + n_bytes);
 
   if (!pad) return n_bytes;
 
@@ -469,7 +472,7 @@ int GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count, 
   if (remainder) {
     padding = A - remainder;
     uint8_t zeroes[A] = {0};
-    os.write(reinterpret_cast<const char*>(zeroes), padding);
+    buf.insert(buf.end(), zeroes, zeroes + padding);
   }
   return n_bytes + padding;
 }

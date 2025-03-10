@@ -5,6 +5,8 @@
 #include <bitset>
 #include <chrono>
 #include <cstdint>
+#include <istream>
+#include <streambuf>
 #include <tuple>
 #include <typeinfo>
 #include <type_traits>

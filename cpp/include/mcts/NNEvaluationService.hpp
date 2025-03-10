@@ -17,7 +17,6 @@
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
-#include <sstream>
 #include <vector>
 
 namespace mcts {
@@ -175,7 +174,7 @@ class NNEvaluationService
 
   void wait_for_unpause();
   void load_initial_weights_if_necessary();
-  void reload_weights(std::stringstream&, const std::string& cuda_device) override;
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
   void pause() override;
   void unpause() override;
   void wait_until_batch_ready();

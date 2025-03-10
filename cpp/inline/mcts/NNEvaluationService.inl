@@ -5,6 +5,9 @@
 
 #include <boost/json/src.hpp>
 
+#include <span>
+#include <spanstream>
+
 namespace mcts {
 
 template <core::concepts::Game Game>
@@ -541,12 +544,14 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::reload_weights(std::stringstream& ss,
+void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
                                                const std::string& cuda_device) {
   LOG_INFO << "NNEvaluationService: reloading network weights...";
   util::release_assert(paused_, "%s() called while not paused", __func__);
+
+  std::ispanstream stream{std::span<const char>(buf)};
   std::unique_lock net_weights_lock(net_weights_mutex_);
-  net_.load_weights(ss, cuda_device);
+  net_.load_weights(stream, cuda_device);
   initial_weights_loaded_ = true;
   net_weights_lock.unlock();
   cv_net_weights_.notify_all();

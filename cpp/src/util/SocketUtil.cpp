@@ -35,25 +35,25 @@ void Socket::json_write(const boost::json::value& json) {
   write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
 }
 
-void Socket::send_file_bytes(const std::stringstream& ss) {
-  std::string data = ss.str();
-  uint32_t length = htonl(static_cast<uint32_t>(data.size()));
+void Socket::send_file_bytes(const std::vector<char>& buf) {
+  size_t size = buf.size();
+  uint32_t length = htonl(static_cast<uint32_t>(size));
   bool exec_bit = false;
 
   std::unique_lock lock(write_mutex_);
   if (!active_) return;
   write_helper(&length, sizeof(length), "Could not send_file_bytes length to socket");
   write_helper(&exec_bit, sizeof(exec_bit), "Could not send_file_bytes exec-bit to socket");
-  write_helper(data.c_str(), data.size(), "Could not send_file_bytes to socket");
+  write_helper(buf.data(), size, "Could not send_file_bytes to socket");
 }
 
 void Socket::json_write_and_send_file_bytes(const boost::json::value& json,
-                                            const std::stringstream& ss) {
+                                            const std::vector<char>& buf) {
   std::string json_str = boost::json::serialize(json);
   uint32_t length = htonl(static_cast<uint32_t>(json_str.size()));
 
-  std::string data = ss.str();
-  uint32_t length2 = htonl(static_cast<uint32_t>(data.size()));
+  size_t size = buf.size();
+  uint32_t length2 = htonl(static_cast<uint32_t>(size));
   bool exec_bit = false;
 
   std::unique_lock lock(write_mutex_);
@@ -63,7 +63,7 @@ void Socket::json_write_and_send_file_bytes(const boost::json::value& json,
 
   write_helper(&length2, sizeof(length2), "Could not send_file_bytes length to socket");
   write_helper(&exec_bit, sizeof(exec_bit), "Could not send_file_bytes exec-bit to socket");
-  write_helper(data.c_str(), data.size(), "Could not send_file_bytes to socket");
+  write_helper(buf.data(), size, "Could not send_file_bytes to socket");
 }
 
 bool Socket::json_read(boost::json::value* data) {
@@ -86,7 +86,7 @@ bool Socket::json_read(boost::json::value* data) {
   return true;
 }
 
-bool Socket::recv_file_bytes(std::stringstream& ss) {
+bool Socket::recv_file_bytes(std::vector<char>& buf) {
   std::unique_lock lock(read_mutex_);
 
   uint32_t length;
@@ -100,11 +100,10 @@ bool Socket::recv_file_bytes(std::stringstream& ss) {
     return false;
   }
 
-  std::vector<char> buffer(length);
-  if (!read_helper(buffer.data(), length, "Could not recv_file_bytes from socket")) {
+  buf.resize(length);
+  if (!read_helper(buf.data(), length, "Could not recv_file_bytes from socket")) {
     return false;
   }
-  ss.write(buffer.data(), length);
   return true;
 }
 
