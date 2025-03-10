@@ -4,7 +4,6 @@
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -89,7 +88,7 @@ class GameLog : public GameLogBase {
     static constexpr int kSparseCapacity = PolicyTensor::Dimensions::total_size / 2;
 
     TensorData(bool valid, const PolicyTensor&);
-    int write_to(std::ostream&) const;
+    int write_to(std::vector<char>& buf) const;
     int size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
     bool load(PolicyTensor&) const;  // return true if valid tensor
 
@@ -196,7 +195,7 @@ class GameLogWriter {
            const PolicyTensor* policy_target, const ActionValueTensor* action_values,
            bool use_for_training);
   void add_terminal(const State& state, const ValueTensor& outcome);
-  void serialize(std::ostream&) const;
+  void serialize(std::vector<char>& buf) const;
   bool was_previous_entry_used_for_policy_training() const;
   int sample_count() const { return sample_count_; }
   game_id_t id() const { return id_; }
@@ -204,7 +203,7 @@ class GameLogWriter {
 
  private:
   template <typename T>
-  static int write_section(std::ostream& os, const T* t, int count=1, bool pad=true);
+  static int write_section(std::vector<char>& buf, const T* t, int count=1, bool pad=true);
 
   entry_vector_t entries_;
   State final_state_;

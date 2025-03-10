@@ -4,7 +4,6 @@
 
 #include <map>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -66,23 +65,18 @@ class Socket {
   void json_write(const boost::json::value& json);
 
   /*
-   * Thread-safe convenience method for writing the bytes of a stringstream to the socket.
+   * Thread-safe convenience method for writing a sequence of bytes to the socket.
    *
    * The format matches that of the send_file() method from the python file
    * py/util/socket_util.py. See that file for data format details. The executable bit is set to 0.
    * This means that the receiving end can use the recv_file() method to get the sent bytes.
-   *
-   * NOTE: This is inefficient currently in that it copies the stringstream bytes into a temporary
-   * buffer before sending to the socket. There is probably a better way to do this.
    */
-  void send_file_bytes(const std::stringstream& ss);
+  void send_file_bytes(const std::vector<char>& buf);
 
   /*
-   * Does json_write(json) and then send_file_bytes(ss), all under one mutex lock.
-   *
-   * The inefficiency noted in send_file_bytes() applies here as well.
+   * Does json_write(json) and then send_file_bytes(buf), all under one mutex lock.
    */
-  void json_write_and_send_file_bytes(const boost::json::value& json, const std::stringstream& ss);
+  void json_write_and_send_file_bytes(const boost::json::value& json, const std::vector<char>& buf);
 
   /*
    * Thread-safe read from socket.
@@ -108,19 +102,14 @@ class Socket {
 
   /*
    * Thread-safe convenience method for reading a file from the socket. Extends the provided
-   * stringstream with the file bytes.
+   * vector with the file bytes.
    *
    * The file is assumed to have been sent by the send_file() method from the python file
    * py/util/socket_util.py. See that file for data format details.
    *
    * Returns false if the socket has been closed.
-   *
-   * NOTE: This is inefficient currently in that it copies the file bytes into a vector before
-   * copying them into the stringstream. I use a stringstream because that is ultimately what we
-   * need to pass to torch::load() (or so I think!), and I didn't see an obvious way to avoid the
-   * intermediate vector given this requirement. There is probably a better way to do this.
    */
-  bool recv_file_bytes(std::stringstream& ss);
+  bool recv_file_bytes(std::vector<char>& buf);
 
   void shutdown();
 

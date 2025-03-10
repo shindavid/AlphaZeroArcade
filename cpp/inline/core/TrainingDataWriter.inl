@@ -127,8 +127,8 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
 
   int model_generation = client ? client->cur_generation() : 0;
 
-  std::stringstream ss;
-  log->serialize(ss);
+  std::vector<char> buf;
+  log->serialize(buf);
 
   int rows = log->sample_count();
   auto new_rows_written = rows_written_ + rows;
@@ -191,14 +191,16 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
 
     std::string filename = util::create_string("%s/%ld.log", directory.c_str(), cur_timestamp);
 
-    std::ofstream file(filename);
-    file << ss.str();
+    std::ofstream file(filename, std::ios::binary);
+    file.write(buf.data(), buf.size());
+    util::release_assert(file.good(), "TrainingDataWriter: failed to write to file %s",
+                         filename.c_str());
     file.close();
 
     msg["no-file"] = true;
     client->send(msg);
   } else {
-    client->send_with_file(msg, ss);
+    client->send_with_file(msg, buf);
   }
 
   rows_written_ = new_rows_written;

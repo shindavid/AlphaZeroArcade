@@ -9,7 +9,6 @@
 
 #include <condition_variable>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -74,7 +73,7 @@ class LoopControllerClient {
   void start();
   void shutdown();
   void send_done();
-  void send_with_file(const boost::json::value& msg, std::stringstream& ss);
+  void send_with_file(const boost::json::value& msg, const std::vector<char>& buf);
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
   void request_weights();
@@ -99,7 +98,7 @@ class LoopControllerClient {
   void send_unpause_ack();
   void pause();
   void unpause();
-  void reload_weights(std::stringstream&, const std::string& cuda_device);
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device);
   void wait_for_pause_receipts();
   void wait_for_unpause_receipts();
   void loop();

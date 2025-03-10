@@ -17,7 +17,7 @@ find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
 find_package(Boost COMPONENTS program_options filesystem json log log_setup REQUIRED)
 find_package(GTest REQUIRED)
 
-set(CMAKE_CXX_STANDARD  20)
+set(CMAKE_CXX_STANDARD  23)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
