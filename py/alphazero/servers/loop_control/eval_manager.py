@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
-from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus
-from alphazero.logic.evaluator import MCTSEvaluator
+from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
+from alphazero.logic.arena import Arena
+from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
@@ -12,13 +12,21 @@ from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
 import threading
-from typing import Optional, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
 logger = get_logger()
+
+
+@dataclass
+class EvalStatus:
+    mcts_gen: Generation
+    owner: Optional[ClientId] = None
+    is_done: bool = False
 
 
 class EvalManager:
@@ -29,9 +37,11 @@ class EvalManager:
         self._tag = tag
         self._controller = controller
 
+        self._started = False
         self._lock = threading.Lock()
         self._new_work_cond = threading.Condition(self._lock)
-        self._mcts_evaluator = MCTSEvaluator(self._controller._organizer)
+        self._evaluator = Evaluator(self._controller._organizer)
+        self._eval_status_dict: Dict[Generation, EvalStatus] = {}
 
     def add_server(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()
@@ -60,7 +70,7 @@ class EvalManager:
             disconnect_handler=self._handle_server_disconnect)
 
         thread = threading.Thread(target=self._manage_server, args=(conn,),
-                                  daemon=True, name=f'manage-self-play-server')
+                                  daemon=True, name=f'manage-eval-server')
         thread.start()
 
     def add_worker(self, conn: ClientConnection):
@@ -85,18 +95,30 @@ class EvalManager:
 
     def _set_priority(self):
         latest_gen = self._controller.latest_gen()
-        num_evaluated = len(self._mcts_evaluator._evaluated_gens)
+        dict_len = len(self._eval_status_dict)
+        eval_in_progress = any(not data.is_done for data in self._eval_status_dict.values())
 
         target_rate = self._controller.params.target_rating_rate
-        current_rate = num_evaluated / max(1, latest_gen)
+        num = dict_len + (0 if eval_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
 
         elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, num_evaluated,
-                      current_rate, target_rate)
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     eval_in_progress, current_rate, target_rate)
+        #TODO: separate out eval from rating domain
         self._controller.set_ratings_priority(elevate)
 
+
     def _handle_server_disconnect(self, conn: ClientConnection):
+        gen = conn.aux.pop('gen', None)
+        if gen is not None:
+            with self._lock:
+                eval_status = self._eval_status_dict.get(gen, None)
+                if eval_status is not None:
+                    eval_status.owner = None
+
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
@@ -149,26 +171,43 @@ class EvalManager:
             return rating_data
 
     def _send_match_request(self, conn: ClientConnection):
-      #TODO: modify
-        logger.info('*******************REACHED SEND MATCH REQUEST')
         gen = conn.aux.get('gen', None)
         if gen is None:
             gen = self._mcts_evaluator.get_next_gen_to_eval(self._controller.params.target_rating_rate)
+            assert gen is not None
             conn.aux['gen'] = gen
 
-        logger.info('Sending match request for gen %s', gen)
-        # rating_data = self._get_rating_data(conn, gen)
-        # assert rating_data.rating is None
-        # strength = rating_data.get_next_strength_to_test()
-        # assert strength is not None
+        with self._lock:
+            if gen not in self._eval_status_dict:
+                self._eval_status_dict[gen] = EvalStatus(mcts_gen=gen,
+                                                        owner=conn.client_id,
+                                                        is_done=False)
+                self._set_priority()
 
-        # data = {
-        #     'type': 'match-request',
-        #     'mcts_gen': rating_data.mcts_gen,
-        #     'ref_strength': strength,
-        #     'n_games': N_GAMES,
-        # }
-        # conn.socket.send_json(data)
+        init_rating_estimate = self._mcts_evaluator.estimate_rating_nearby_gens(gen)
+        next_match = self._mcts_evaluator.get_next_match_to_eval(gen,
+                                                                 init_rating_estimate = init_rating_estimate)
+        if next_match is None:
+            self._eval_status_dict[gen].is_done = True
+            logger.info("Inside of _send_match_request(): no more next match. Mark gen as done.")
+
+        data = {
+            'type': 'match-request',
+            'agent1': {
+                'gen': next_match.agent1.gen,
+                'n_iters': next_match.agent1.n_iters,
+                'set_temp_zero': next_match.agent1.set_temp_zero,
+                'tag': next_match.agent1.tag,
+            },
+            'agent2': {
+                'gen': next_match.agent2.gen,
+                'n_iters': next_match.agent2.n_iters,
+                'set_temp_zero': next_match.agent2.set_temp_zero,
+                'tag': next_match.agent2.tag,
+            },
+            'n_games': next_match.n_games,
+        }
+        conn.socket.send_json(data)
 
     def _manage_server(self, conn: ClientConnection):
         try:
