@@ -169,7 +169,8 @@ class MCTSEvaluator:
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
         self._evaluator.refresh_ratings()
         while True:
-            gen = self.get_next_gen_to_eval(target_eval_percent)
+            last_gen = self._organizer.get_latest_model_generation()
+            gen = get_next_gen_to_eval(last_gen, self._evaluated_gens, target_eval_percent)
             if gen is None:
                 break
 
@@ -180,31 +181,6 @@ class MCTSEvaluator:
                                        error_threshold=error_threshold,
                                        init_rating_estimate=init_rating_estimate)
             self._evaluated_gens.append(gen)
-
-    def get_next_gen_to_eval(self, target_eval_percent):
-        last_gen = self._organizer.get_latest_model_generation()
-        evaluated_percent = len(self._evaluated_gens) / (last_gen + 1)
-        if 0 not in self._evaluated_gens:
-            return 0
-        if last_gen not in self._evaluated_gens:
-            return last_gen
-        if evaluated_percent >= target_eval_percent:
-            return None
-
-        left_gen, right_gen = self.get_biggest_gen_gap()
-        if left_gen + 1 < right_gen:
-            gen = (left_gen + right_gen) // 2
-            assert gen not in self._evaluated_gens
-        return int(gen)
-
-    def get_biggest_gen_gap(self):
-        gens = self._evaluated_gens.copy()
-        gens = np.sort(gens)
-        gaps = np.diff(gens)
-        max_gap_ix = np.argmax(gaps)
-        left_gen = gens[max_gap_ix]
-        right_gen = gens[max_gap_ix + 1]
-        return left_gen, right_gen
 
     def estimate_rating_nearby_gens(self, gen: int) -> float:
         evaluated_gens = np.array(self._evaluated_gens)
@@ -219,3 +195,29 @@ class MCTSEvaluator:
                 return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
 
         return None
+
+def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int], target_eval_percent: float):
+    if 0 not in evaluated_gens:
+        return 0
+    if latest_gen not in evaluated_gens:
+        return latest_gen
+
+    evaluated_percent = len(evaluated_gens) / (latest_gen + 1)
+    if evaluated_percent >= target_eval_percent:
+        return None
+
+    left_gen, right_gen = get_biggest_gen_gap(evaluated_gens)
+    if left_gen + 1 < right_gen:
+        gen = (left_gen + right_gen) // 2
+        assert gen not in evaluated_gens
+    return int(gen)
+
+
+def get_biggest_gen_gap(evaluated_gens: List[int]):
+    gens = evaluated_gens.copy()
+    gens = np.sort(gens)
+    gaps = np.diff(gens)
+    max_gap_ix = np.argmax(gaps)
+    left_gen = gens[max_gap_ix]
+    right_gen = gens[max_gap_ix + 1]
+    return left_gen, right_gen
