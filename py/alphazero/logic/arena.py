@@ -80,6 +80,13 @@ class Arena:
                 db.commit_counts(db_id1, db_id2, counts, match.type)
         return counts_list
 
+    def update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts, type: MatchType, db: RatingDB):
+        self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
+        self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+        db_id1 = self._indexed_agents[ix1].db_id
+        db_id2 = self._indexed_agents[ix2].db_id
+        db.commit_counts(db_id1, db_id2, counts, type)
+
     def refresh_ratings(self, eps=1e-3):
         """
         TODO: pass self._ratings to compute_ratings to speed up the rating computation.

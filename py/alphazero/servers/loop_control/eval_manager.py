@@ -3,10 +3,11 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole
-from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
 from alphazero.logic.arena import Arena
+from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.ratings import WinLossDrawCounts
+from alphazero.logic.match_runner import MatchType
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
@@ -37,6 +38,7 @@ class MatchStatus:
     opponent_gen: Generation
     n_games: int
     status: MatchRequestStatus
+    estimated_rating: Optional[float] = None
 
 
 @dataclass
@@ -85,6 +87,7 @@ class EvalManager:
 
         conn.aux['status_cond'] = threading.Condition()
         conn.aux['status'] = ServerStatus.BLOCKED
+        conn.aux['needs_new_opponents_cond'] = threading.Condition()
         conn.aux['needs_new_opponents'] = True
 
         self._start()
@@ -200,6 +203,7 @@ class EvalManager:
         gen = conn.aux.get('gen', None)
         evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values()]
         ratings = self._evaluator.arena_ratings[list(self._eval_status_dict.keys())]
+
         if gen is None:
             latest_gen = self._controller.latest_gen()
             target_rating_rate = self._controller.params.target_rating_rate
@@ -207,6 +211,7 @@ class EvalManager:
                 gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
                 assert gen is not None
                 conn.aux['gen'] = gen
+
                 test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True,
                                        tag=self._controller._organizer.tag)
                 test_iagent = self._evaluator._arena._add_agent(test_agent,
@@ -215,6 +220,11 @@ class EvalManager:
                                                                 db=self._evaluator._db)
                 self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen,
                                                                        owner=conn.client_id)
+
+            cond = conn.aux['needs_new_opponents_cond']
+            with cond:
+                conn.aux['needs_new_opponents'] = True
+
             self._set_priority()
         else:
             test_iagent = [iagent for iagent in self._evaluator.indexed_agents if \
@@ -225,21 +235,28 @@ class EvalManager:
         if estimated_rating is None:
             estimated_rating = np.mean(self._evaluator.arena_ratings)
 
-        if conn.aux['needs_new_opponents']:
-            n_games_played = self._evaluator._arena.n_games_played(test_iagent.agent)
-            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, self.n_games - n_games_played)
+        n_games_played = self._evaluator._arena.n_games_played(test_iagent.agent)
+        n_games_needed = self.n_games - n_games_played
+
+        if conn.aux['needs_new_opponents'] and n_games_needed > 0:
+            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, n_games_needed)
             for ix, match_status in self._eval_status_dict[test_iagent.index].ix_match_status.items():
                 if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                     match_status.status = MatchRequestStatus.OBSOLETE
+                    logger.info('set match between %s and %s to obsolete', gen, match_status.opponent_gen)
                 elif ix in chosen_ixs and match_status.status == MatchRequestStatus.OBSOLETE:
                     match_status.status = MatchRequestStatus.PENDING
+                    logger.info('set match between %s and %s to pending', gen, match_status.opponent_gen)
 
             for ix, n_games in zip(chosen_ixs, num_matches):
                 if ix not in self._eval_status_dict[test_iagent.index].ix_match_status:
                     new_opponent_gen = self._evaluator.indexed_agents[ix].agent.gen
                     self._eval_status_dict[test_iagent.index].ix_match_status[ix] = \
-                        MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
+                        MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING, estimated_rating)
                     logger.info('add new pending match between %s and %s', gen, new_opponent_gen)
+            cond = conn.aux['needs_new_opponents_cond']
+            with cond:
+                conn.aux['needs_new_opponents'] = False
 
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
@@ -254,7 +271,7 @@ class EvalManager:
                 'tag': self._controller._organizer.tag,
             },
             'agent2': {
-                'ix': next_opponent_ix,
+                'ix': int(next_opponent_ix),
                 'gen': next_opponent_agent.gen,
                 'n_iters': next_opponent_agent.n_iters,
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
@@ -333,32 +350,35 @@ class EvalManager:
             status_cond.notify_all()
 
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
-      #TODO: main change
-        mcts_gen = msg['mcts_gen']
-        ref_strength = msg['ref_strength']
-        record = WinLossDrawCounts.from_json(msg['record'])
+        logger.info('Received match result %s from %s', msg, conn)
+        ix1 = msg['ix1']
+        ix2 = msg['ix2']
+        counts = WinLossDrawCounts.from_json(msg['record'])
+        with self._evaluator._db.db_lock:
+            self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator._db)
+        self._evaluator.refresh_ratings()
+        new_rating = self._evaluator.arena_ratings[ix1]
+        old_rating = self._eval_status_dict[ix1].ix_match_status[ix2].estimated_rating
+        if abs(new_rating - old_rating) > self.error_threshold:
+            cond = conn.aux['needs_new_opponents_cond']
+            with cond:
+                conn.aux['needs_new_opponents'] = True
 
-        rating = None
         with self._lock:
-            rating_data = self._rating_data_dict[mcts_gen]
-            assert rating_data.owner == conn.client_id
-            assert conn.aux.get('gen', None) == mcts_gen
-            rating_data.add_result(ref_strength, record)
+            self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
+            has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._eval_status_dict[ix1].ix_match_status.values())
 
-            updated_record = rating_data.match_data[ref_strength]
-            rating = rating_data.rating
-            if rating is not None:
-                conn.aux.pop('gen')
-                rating_data.owner = None
-
-        with self._controller.ratings_db_conn_pool.db_lock:
-            self._commit_counts(mcts_gen, ref_strength, updated_record)
-            if rating is not None:
-                self._commit_rating(mcts_gen, rating)
-
-        if rating is not None:
+        if not has_pending:
+            self._eval_status_dict[ix1].is_done = True
+            self._eval_status_dict[ix1].owner = None
+            conn.aux.pop('gen')
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
+
+            interpolated_ratings = self._evaluator.interpolate_ratings()
+            test_iagents = [ia for ia in self._evaluator.indexed_agents if ia.role == AgentRole.TEST]
+            with self._evaluator._db.db_lock:
+                self._evaluator._db.commit_ratings(test_iagents, interpolated_ratings)
 
     def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
         gen = msg['gen']

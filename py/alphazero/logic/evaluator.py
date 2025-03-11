@@ -189,9 +189,11 @@ class MCTSEvaluator:
             evaluated_gens = [self._evaluator.indexed_agents[ix].agent.gen \
                 for ix in self._evaluated_ixs]
             last_gen = self._organizer.get_latest_model_generation()
-            gen = EvalUtils.get_next_gen_to_eval(last_gen, evaluated_gens, target_eval_percent)
-            if gen is None:
+
+            evaluated_percent = len(evaluated_gens) / (last_gen + 1)
+            if evaluated_percent >= target_eval_percent:
                 break
+            gen = EvalUtils.get_next_gen_to_eval(last_gen, evaluated_gens, target_eval_percent)
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    tag=self._organizer.tag)
@@ -229,10 +231,6 @@ class EvalUtils:
             return 0
         if latest_gen not in evaluated_gens:
             return latest_gen
-
-        evaluated_percent = len(evaluated_gens) / (latest_gen + 1)
-        if evaluated_percent >= target_eval_percent:
-            return None
 
         left_gen, right_gen = EvalUtils.get_biggest_gen_gap(evaluated_gens)
         if left_gen + 1 < right_gen:

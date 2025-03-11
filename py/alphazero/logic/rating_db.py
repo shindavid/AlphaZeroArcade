@@ -174,3 +174,7 @@ class RatingDB:
         c.execute(insert, (sub_id, subtype, iagent.role.value))
         conn.commit()
         iagent.db_id = c.lastrowid
+
+    @property
+    def db_lock(self):
+        return self.db_conn_pool._db_lock
