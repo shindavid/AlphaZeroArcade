@@ -1,5 +1,7 @@
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -141,9 +143,9 @@ class EvalServer:
 
     def _handle_match_request(self, msg: JsonDict):
         logger.info('Received match request: %s', msg)
-        # thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
-        #                           name='run-match')
-        # thread.start()
+        thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
+                                  name='run-match')
+        thread.start()
 
     def _quit(self):
         logger.info('Received quit command')
@@ -160,63 +162,26 @@ class EvalServer:
         assert not self._running
         self._running = True
 
-        mcts_gen = msg['mcts_gen']
-        ref_strength = msg['ref_strength']
-        n_games = msg['n_games']
+        mcts_agent1 = MCTSAgent(gen=msg['agent1']['gen'],
+                                n_iters=msg['agent1']['n_iters'],
+                                set_temp_zero=msg['agent1']['set_temp_zero'],
+                                tag=msg['agent1']['tag'])
+        mcts_agent2 = MCTSAgent(gen=msg['agent2']['gen'],
+                                n_iters=msg['agent2']['n_iters'],
+                                set_temp_zero=msg['agent2']['set_temp_zero'],
+                                tag=msg['agent2']['tag'])
+        match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
+        result = MatchRunner.run_match_helper(match, self._session_data._game)
 
-        ps1 = self._get_mcts_player_str(mcts_gen)
-        ps2 = self._get_reference_player_str(ref_strength)
-
-        binary = self._session_data.binary_path
-        log_filename = self._session_data.get_log_filename('ratings-worker')
-        append_mode = not self._session_data.start_log_sync(log_filename)
-
-        args = {
-            '-G': n_games,
-            '--loop-controller-hostname': self._params.loop_controller_host,
-            '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.EVAL_WORKER.value,
-            '--manager-id': self._session_data.client_id,
-            '--ratings-tag': f'"{self._params.rating_tag}"',
-            '--cuda-device': self._params.cuda_device,
-            '--weights-request-generation': mcts_gen,
-            '--do-not-report-metrics': None,
-            '--log-filename': log_filename,
-        }
-        if append_mode:
-            args['--log-append-mode'] = None
-        args.update(self._session_data.game_spec.rating_options)
-        cmd = [
-            binary,
-            '--player', f'"{ps1}"',
-            '--player', f'"{ps2}"',
-            ]
-        cmd.append(make_args_str(args))
-        cmd = ' '.join(map(str, cmd))
-
-        mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
-        ref_name = RatingsServer._get_reference_player_name(ref_strength)
-
-        cwd = self._session_data.run_dir
-        self._proc = subprocess_util.Popen(cmd, cwd=cwd)
-        logger.info('Running %s vs %s match [%s] from %s: %s', mcts_name, ref_name, self._proc.pid,
-                    cwd, cmd)
-        stdout = self._session_data.wait_for(self._proc)
-        self._proc = None
-
-        # NOTE: extracting the match record from stdout is potentially fragile. Consider
-        # changing this to have the c++ process directly communicate its win/loss data to the
-        # loop-controller. Doing so would better match how the self-play server works.
-        record = extract_match_record(stdout)
-        logger.info('Match result: %s', record.get(0))
+        logger.info('Match result: %s', result)
 
         self._running = False
 
         data = {
             'type': 'match-result',
-            'record': record.get(0).to_json(),
-            'mcts_gen': mcts_gen,
-            'ref_strength': ref_strength,
+            'record': result.to_json(),
+            'ix1': msg['agent1']['ix'],
+            'ix2': msg['agent2']['ix']
         }
 
         self._session_data.socket.send_json(data)
