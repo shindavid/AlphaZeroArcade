@@ -32,6 +32,7 @@ class Evaluator:
         self._arena = self._benchmark.clone_arena()
         self._db = RatingDB(self._organizer.eval_db_filename)
         self.load_from_db()
+        self._arena.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)
@@ -80,17 +81,7 @@ class Evaluator:
         committee_ixs = np.where(self.benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
-
-            p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
-            var = np.array([q * (1 - q) for q in p])
-            mask = np.zeros(len(var), dtype=bool)
-            committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
-            mask[committee_ix_played] = True
-            var[mask] = 0
-            var = var / np.sum(var)
-
-            sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
-            chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
+            chosen_ixs, num_matches = self.gen_matches(test_agent, estimated_rating, n_games)
             sorted_ixs = np.argsort(num_matches)[::-1]
             logger.info('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
             for i in range(len(chosen_ixs)):
@@ -111,7 +102,24 @@ class Evaluator:
         interpolated_ratings = self.interpolate_ratings()
         test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
         self._db.commit_ratings(test_iagents, interpolated_ratings)
-        logger.info('Finished evaluating %s. Interpolated rating: %f', test_agent, interpolated_ratings[-1])
+        logger.info('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
+                    test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
+
+    def gen_matches(self, test_agent: Agent, estimated_rating: float, n_games: int):
+
+        committee_ixs = np.where(self.benchmark_committee)[0]
+        opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
+        p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
+        var = np.array([q * (1 - q) for q in p])
+        mask = np.zeros(len(var), dtype=bool)
+        committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
+        mask[committee_ix_played] = True
+        var[mask] = 0
+        var = var / np.sum(var)
+
+        sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
+        chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
+        return chosen_ixs, num_matches
 
     def interpolate_ratings(self) -> np.ndarray:
         benchmark_ixs = self.benchmark_agent_ixs()

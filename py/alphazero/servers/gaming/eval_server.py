@@ -140,9 +140,10 @@ class EvalServer:
         return False
 
     def _handle_match_request(self, msg: JsonDict):
-        thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
-                                  name='run-match')
-        thread.start()
+        logger.info('Received match request: %s', msg)
+        # thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
+        #                           name='run-match')
+        # thread.start()
 
     def _quit(self):
         logger.info('Received quit command')

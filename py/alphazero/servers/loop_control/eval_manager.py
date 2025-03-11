@@ -12,8 +12,9 @@ from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
+import numpy as np
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, TYPE_CHECKING
 from enum import Enum
 
@@ -27,14 +28,22 @@ logger = get_logger()
 class MatchRequestStatus(Enum):
     REQUESTED = 'requested'
     COMPLETE = 'complete'
+    PENDING = 'pending'
     OBSOLETE = 'obsolete'
+
+
+@dataclass
+class MatchStatus:
+    opponent_gen: Generation
+    n_games: int
+    status: MatchRequestStatus
 
 
 @dataclass
 class EvalStatus:
     mcts_gen: Generation
     owner: Optional[ClientId] = None
-    match_status: Dict[Generation, MatchRequestStatus] = None
+    ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict) # ix -> MatchStatus
     is_done: bool = False
 
 
@@ -52,6 +61,9 @@ class EvalManager:
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
+        self.n_games = 1000
+        self.error_threshold = 100
+        self.n_iters = 100
 
     def add_server(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()
@@ -73,7 +85,9 @@ class EvalManager:
 
         conn.aux['status_cond'] = threading.Condition()
         conn.aux['status'] = ServerStatus.BLOCKED
+        conn.aux['needs_new_opponents'] = True
 
+        self._start()
         logger.info('Starting eval-recv-loop for %s...', conn)
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'eval-server',
@@ -120,14 +134,29 @@ class EvalManager:
         #TODO: separate out eval from rating domain
         self._controller.set_ratings_priority(elevate)
 
+    def _start(self):
+        with self._lock:
+            if self._started:
+                logger.info('****!!!!!!!!**** EvalManager already started ****!!!!!!!!****')
+                return
+            self._started = True
+            self._load_past_data()
+
+    def _load_past_data(self):
+        logger.info('Loading past ratings data...')
+        rating_data = self._evaluator.read_ratings_from_db()
+        self._eval_status_dict = {self._evaluator.agent_lookup[agent].index: \
+            EvalStatus(mcts_gen=agent.gen, is_done=True) \
+                for agent in rating_data.evaluated_agents}
+        self._set_priority()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
         gen = conn.aux.pop('gen', None)
         if gen is not None:
             with self._lock:
-                eval_status = self._eval_status_dict.get(gen, None)
-                if eval_status is not None:
-                    eval_status.owner = None
+                eval_status = [data for data in self._eval_status_dict.values() if data.mcts_gen == gen]
+                if not eval_status:
+                    eval_status[0].owner = None
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
@@ -165,24 +194,12 @@ class EvalManager:
     def _wait_until_work_exists(self):
         with self._lock:
             self._new_work_cond.wait_for(
-                lambda: len(self._mcts_evaluator._evaluated_gens) < self._controller.latest_gen())
-
-    def _get_rating_data(self, conn: ClientConnection, gen: Generation) -> RatingData:
-      #TODO: may not need this or need to modify
-        with self._lock:
-            rating_data = self._rating_data_dict.get(gen, None)
-            if rating_data is None:
-                rating_data = RatingData(gen, self._min_ref_strength, self._max_ref_strength)
-                rating_data.est_rating = self._estimate_rating(gen)
-                self._rating_data_dict[gen] = rating_data
-                self._set_priority()
-
-            rating_data.owner = conn.client_id
-            return rating_data
+                lambda: len(self._eval_status_dict) < self._controller.latest_gen())
 
     def _send_match_request(self, conn: ClientConnection):
         gen = conn.aux.get('gen', None)
         evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values()]
+        ratings = self._evaluator.arena_ratings[list(self._eval_status_dict.keys())]
         if gen is None:
             latest_gen = self._controller.latest_gen()
             target_rating_rate = self._controller.params.target_rating_rate
@@ -190,7 +207,7 @@ class EvalManager:
                 gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
                 assert gen is not None
                 conn.aux['gen'] = gen
-                test_agent = MCTSAgent(gen, n_iters=100, set_temp_zero=True,
+                test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True,
                                        tag=self._controller._organizer.tag)
                 test_iagent = self._evaluator._arena._add_agent(test_agent,
                                                                 AgentRole.TEST,
@@ -199,29 +216,49 @@ class EvalManager:
                 self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen,
                                                                        owner=conn.client_id)
             self._set_priority()
+        else:
+            test_iagent = [iagent for iagent in self._evaluator.indexed_agents if \
+                iagent.role == AgentRole.TEST and iagent.agent.gen == gen][0]
 
-        ratings = self._evaluator.arena_ratings[list(self._eval_status_dict.keys())]
-        init_rating_estimate = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
 
+        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
+        if estimated_rating is None:
+            estimated_rating = np.mean(self._evaluator.arena_ratings)
 
-        next_match = self._mcts_evaluator.get_next_match_to_eval(gen,
-                                                                 init_rating_estimate = init_rating_estimate)
+        if conn.aux['needs_new_opponents']:
+            n_games_played = self._evaluator._arena.n_games_played(test_iagent.agent)
+            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, self.n_games - n_games_played)
+            for ix, match_status in self._eval_status_dict[test_iagent.index].ix_match_status.items():
+                if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
+                    match_status.status = MatchRequestStatus.OBSOLETE
+                elif ix in chosen_ixs and match_status.status == MatchRequestStatus.OBSOLETE:
+                    match_status.status = MatchRequestStatus.PENDING
 
+            for ix, n_games in zip(chosen_ixs, num_matches):
+                if ix not in self._eval_status_dict[test_iagent.index].ix_match_status:
+                    new_opponent_gen = self._evaluator.indexed_agents[ix].agent.gen
+                    self._eval_status_dict[test_iagent.index].ix_match_status[ix] = \
+                        MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
+                    logger.info('add new pending match between %s and %s', gen, new_opponent_gen)
+
+        candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
+        next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
+        next_opponent_agent = self._evaluator.indexed_agents[next_opponent_ix].agent
         data = {
             'type': 'match-request',
             'agent1': {
-                'gen': next_match.agent1.gen,
-                'n_iters': next_match.agent1.n_iters,
-                'set_temp_zero': next_match.agent1.set_temp_zero,
-                'tag': next_match.agent1.tag,
+                'gen': test_iagent.agent.gen,
+                'n_iters': self.n_iters,
+                'set_temp_zero': True,
+                'tag': self._controller._organizer.tag,
             },
             'agent2': {
-                'gen': next_match.agent2.gen,
-                'n_iters': next_match.agent2.n_iters,
-                'set_temp_zero': next_match.agent2.set_temp_zero,
-                'tag': next_match.agent2.tag,
+                'gen': next_opponent_agent.gen,
+                'n_iters': next_opponent_agent.n_iters,
+                'set_temp_zero': next_opponent_agent.set_temp_zero,
+                'tag': next_opponent_agent.tag,
             },
-            'n_games': next_match.n_games,
+            'n_games': int(next_n_games),
         }
         conn.socket.send_json(data)
 
