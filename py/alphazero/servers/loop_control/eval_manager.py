@@ -247,12 +247,14 @@ class EvalManager:
         data = {
             'type': 'match-request',
             'agent1': {
+                'ix': test_iagent.index,
                 'gen': test_iagent.agent.gen,
                 'n_iters': self.n_iters,
                 'set_temp_zero': True,
                 'tag': self._controller._organizer.tag,
             },
             'agent2': {
+                'ix': next_opponent_ix,
                 'gen': next_opponent_agent.gen,
                 'n_iters': next_opponent_agent.n_iters,
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
