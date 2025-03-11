@@ -200,6 +200,7 @@ class EvalManager:
                 lambda: len(self._eval_status_dict) < self._controller.latest_gen())
 
     def _send_match_request(self, conn: ClientConnection):
+        assert conn.is_on_localhost()
         gen = conn.aux.get('gen', None)
         evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values()]
         ratings = self._evaluator.arena_ratings[list(self._eval_status_dict.keys())]
