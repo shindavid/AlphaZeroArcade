@@ -39,19 +39,19 @@ class TrainingDataWriter
   using TrainingTargetsList = Game::TrainingTargets::List;
 
   using GameWriteLog = core::GameWriteLog<Game>;
-  using FOOBAR_sptr = std::shared_ptr<GameWriteLog>;
+  using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
-  void add(FOOBAR_sptr log);
+  void add(GameWriteLog_sptr log);
   void shut_down();
 
   void pause() override;
   void unpause() override;
 
  protected:
-  using game_queue_t = std::vector<FOOBAR_sptr>;
+  using game_queue_t = std::vector<GameWriteLog_sptr>;
 
   void loop();
   bool send(const GameWriteLog* log);  // return true if this is last game

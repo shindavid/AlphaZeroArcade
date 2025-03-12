@@ -38,7 +38,7 @@ template <concepts::Game Game>
 class AbstractPlayer {
  public:
   using State = Game::State;
-  using FOOBAR_sptr = core::TrainingDataWriter<Game>::FOOBAR_sptr;
+  using GameWriteLog_sptr = core::TrainingDataWriter<Game>::GameWriteLog_sptr;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
@@ -53,9 +53,9 @@ class AbstractPlayer {
   const player_name_array_t& get_player_names() const { return player_names_; }
   game_id_t get_game_id() const { return game_id_; }
   seat_index_t get_my_seat() const { return my_seat_; }
-  FOOBAR_sptr get_game_log() const { return game_log_; }
+  GameWriteLog_sptr get_game_log() const { return game_log_; }
   void init_game(game_id_t game_id, const player_name_array_t& player_names,
-                 seat_index_t seat_assignment, FOOBAR_sptr game_log);
+                 seat_index_t seat_assignment, GameWriteLog_sptr game_log);
 
   virtual void start_game() {}
   virtual void receive_state_change(seat_index_t, const State&, action_t) {}
@@ -98,7 +98,7 @@ class AbstractPlayer {
   player_name_array_t player_names_;
   game_id_t game_id_ = -1;
   seat_index_t my_seat_ = -1;
-  FOOBAR_sptr game_log_;
+  GameWriteLog_sptr game_log_;
 };
 
 }  // namespace core

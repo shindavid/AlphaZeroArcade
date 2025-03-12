@@ -23,7 +23,7 @@ class GameServer {
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
-  using FOOBAR_sptr = TrainingDataWriter::FOOBAR_sptr;
+  using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
   using GameResults = Game::GameResults;
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;

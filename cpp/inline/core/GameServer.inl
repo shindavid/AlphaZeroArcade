@@ -287,7 +287,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   game_id_t game_id = util::get_unique_id();
 
   TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
-  FOOBAR_sptr game_log(
+  GameWriteLog_sptr game_log(
       training_data_writer ? new GameWriteLog(game_id, util::ns_since_epoch()) : nullptr);
 
   player_name_array_t player_names;

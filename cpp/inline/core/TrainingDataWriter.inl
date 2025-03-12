@@ -49,7 +49,7 @@ TrainingDataWriter<Game>::~TrainingDataWriter() {
 }
 
 template <concepts::Game Game>
-void TrainingDataWriter<Game>::add(FOOBAR_sptr data) {
+void TrainingDataWriter<Game>::add(GameWriteLog_sptr data) {
   std::unique_lock<std::mutex> lock(mutex_);
   completed_games_[queue_index_].push_back(data);
   lock.unlock();
@@ -110,7 +110,7 @@ void TrainingDataWriter<Game>::loop() {
     }
     queue_index_ = 1 - queue_index_;
     lock.unlock();
-    for (FOOBAR_sptr& data : queue) {
+    for (GameWriteLog_sptr& data : queue) {
       if (send(data.get())) break;
     }
     queue.clear();
