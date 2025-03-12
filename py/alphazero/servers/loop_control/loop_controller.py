@@ -317,6 +317,11 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
+            if not os.path.exists(self.organizer.eval_db_filename):
+                assert self.params.benchmark_tag is not None, "Benchmark tag must be set for eval manager"
+                benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
+                benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
+                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
             self._eval_managers[tag] = EvalManager(self, tag)
         return self._eval_managers[tag]
 

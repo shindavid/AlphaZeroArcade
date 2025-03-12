@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole
+from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EvalRatingData:
-    evaluated_agents: List[Agent]
+    evaluated_iagents: List[IndexedAgent]
     ratings: np.ndarray
 
 
@@ -148,8 +148,8 @@ class Evaluator:
     def read_ratings_from_db(self) -> EvalRatingData:
         rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.TEST)
         ratings = rating_data.ratings
-        evaluated_agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
-        return EvalRatingData(evaluated_agents, ratings)
+        evaluated_iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
+        return EvalRatingData(evaluated_iagents, ratings)
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()
