@@ -213,14 +213,16 @@ class EvalManager:
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
-            test_iagent = self._evaluator._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator._db)
+            test_iagent = self._evaluator.add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator._db)
             conn.aux['ix'] = test_iagent.index
             with self._lock:
                 if ix in self._eval_status_dict:
                     assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
                     self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
                 else:
+                    ix_match_status = self._load_ix_match_status(test_iagent.index)
                     self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
+                                                                           ix_match_status=ix_match_status,
                                                                            status=EvalRequestStatus.REQUESTED)
             conn.aux['needs_new_opponents'] = True
             self._set_priority()
@@ -234,11 +236,13 @@ class EvalManager:
             logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
             conn.aux['estimated_rating'] = estimated_rating
 
-        n_games_played = self._evaluator._arena.n_games_played(test_iagent.agent)
-        n_games_needed = self.n_games - n_games_played
+        n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
+            if data.status == MatchRequestStatus.COMPLETE or data.status == MatchRequestStatus.REQUESTED])
+        n_games_needed = self.n_games - n_games_in_progress
+        assert n_games_needed > 0
 
         need_new_opponents = conn.aux['needs_new_opponents']
-        if need_new_opponents and n_games_needed > 0:
+        if need_new_opponents:
             logger.info('Requesting new opponents for gen %s, estimated rating: %s', test_iagent.agent.gen, estimated_rating)
             chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, n_games_needed)
             with self._lock:
@@ -308,6 +312,18 @@ class EvalManager:
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
                     MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
                 logger.info('add new pending match between %s and %s', self._evaluator.indexed_agents[test_ix].index, new_opponent_gen)
+
+    def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
+        W_matrix = self._evaluator._arena._W_matrix
+        n_games_played = W_matrix[test_ix, :] + W_matrix[:, test_ix]
+        match_status_dict = {}
+        for ix, n_games in enumerate(n_games_played):
+            if ix == test_ix:
+                continue
+            if n_games > 0:
+                gen = self._evaluator.indexed_agents[ix].agent.gen
+                match_status_dict[ix] = MatchStatus(gen, int(n_games), MatchRequestStatus.COMPLETE)
+        return match_status_dict
 
     def _manage_server(self, conn: ClientConnection):
         try:
@@ -384,14 +400,18 @@ class EvalManager:
         if not has_pending:
             self._eval_status_dict[ix1].status = EvalRequestStatus.COMPLETE
             self._eval_status_dict[ix1].owner = None
-            conn.aux.pop('ix')
+            ix = conn.aux.pop('ix')
+            assert ix == ix1
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
 
-            interpolated_ratings = self._evaluator.interpolate_ratings()
-            test_iagents = [ia for ia in self._evaluator.indexed_agents if ia.role == AgentRole.TEST]
+            test_ixs, interpolated_ratings = self._evaluator.interpolate_ratings()
+            test_iagents = [self._evaluator.indexed_agents[ix] for ix in test_ixs]
             with self._evaluator._db.db_lock:
                 self._evaluator._db.commit_ratings(test_iagents, interpolated_ratings)
+            logger.info('///Finished evaluating gen %s, rating: %s',
+                        self._evaluator.indexed_agents[ix1].agent.gen,
+                        interpolated_ratings[np.where(test_ixs == ix1)[0]])
 
 
 

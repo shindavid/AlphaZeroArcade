@@ -99,7 +99,7 @@ class Evaluator:
                     estimated_rating = new_estimate
                     break
 
-        interpolated_ratings = self.interpolate_ratings()
+        _, interpolated_ratings = self.interpolate_ratings()
         test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
         self._db.commit_ratings(test_iagents, interpolated_ratings)
         logger.info('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
@@ -135,7 +135,7 @@ class Evaluator:
         interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value="extrapolate")
         interpolated_ratings = interp_func(test_agents_elo)
 
-        return interpolated_ratings
+        return test_ixs, interpolated_ratings
 
     def test_agent_ixs(self) -> np.ndarray:
         test_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.TEST]
@@ -153,6 +153,9 @@ class Evaluator:
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()
+
+    def add_agent(self, agent: Agent, role: AgentRole, expand_matrix: bool=True, db: Optional[RatingDB]=None):
+        return self._arena._add_agent(agent, role, expand_matrix=expand_matrix, db=db)
 
     @property
     def benchmark_ratings(self) -> np.ndarray:
