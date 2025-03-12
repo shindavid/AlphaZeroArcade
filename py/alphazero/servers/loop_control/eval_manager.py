@@ -240,14 +240,16 @@ class EvalManager:
             conn.aux['estimated_rating'] = estimated_rating
 
         n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
-            if data.status == MatchRequestStatus.COMPLETE or data.status == MatchRequestStatus.REQUESTED])
+            if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)])
         n_games_needed = self.n_games - n_games_in_progress
         assert n_games_needed > 0
 
         need_new_opponents = conn.aux['needs_new_opponents']
         if need_new_opponents:
             logger.info('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
-            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, n_games_needed)
+            opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
+                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
+            chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
             conn.aux['needs_new_opponents'] = False
@@ -274,6 +276,7 @@ class EvalManager:
             'n_games': int(next_n_games),
         }
         conn.socket.send_json(data)
+        self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
 
     def _get_next_gen_to_eval(self):
         latest_gen = self._controller.latest_gen()
@@ -307,17 +310,19 @@ class EvalManager:
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
             if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                 match_status.status = MatchRequestStatus.OBSOLETE
-                logger.info('+set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
-            elif ix in chosen_ixs and match_status.status == MatchRequestStatus.OBSOLETE:
-                match_status.status = MatchRequestStatus.PENDING
-                logger.info('+set match between %s and %s to pending', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
+                logger.info('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
 
         for ix, n_games in zip(chosen_ixs, num_matches):
             if ix not in self._eval_status_dict[test_ix].ix_match_status:
                 new_opponent_gen = self._evaluator.indexed_agents[ix].agent.gen
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
                     MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
-                logger.info('add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, new_opponent_gen)
+                logger.info('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+            else:
+                self._eval_status_dict[test_ix].ix_match_status[ix].n_games = n_games
+                if self._eval_status_dict[test_ix].ix_match_status[ix].status == MatchRequestStatus.OBSOLETE:
+                    self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
+                logger.info('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
 
     def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
         W_matrix = self._evaluator._arena._W_matrix
@@ -404,6 +409,7 @@ class EvalManager:
             has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._eval_status_dict[ix1].ix_match_status.values())
 
         if not has_pending:
+            assert self._evaluator._arena.n_games_played(self._evaluator.indexed_agents[ix1].agent) == self.n_games
             self._eval_status_dict[ix1].status = EvalRequestStatus.COMPLETE
             self._eval_status_dict[ix1].owner = None
             ix = conn.aux.pop('ix')
