@@ -142,7 +142,7 @@ class EvalServer:
         return False
 
     def _handle_match_request(self, msg: JsonDict):
-        logger.info('Received match request: %s', msg)
+        logger.info('Received match request between gen %s and gen %s', msg['agent1']['gen'], msg['agent2']['gen'])
         thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
                                   name='run-match')
         thread.start()
@@ -173,7 +173,7 @@ class EvalServer:
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
         result = MatchRunner.run_match_helper(match, self._session_data._game)
 
-        logger.info('Match result: %s', result)
+        logger.info('Played match between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
         self._running = False
 
@@ -187,34 +187,3 @@ class EvalServer:
         self._session_data.socket.send_json(data)
         self._send_ready()
 
-    @staticmethod
-    def _get_mcts_player_name(gen: int):
-        return f'MCTS-{gen}'
-
-    def _get_mcts_player_str(self, gen: int):
-        name = RatingsServer._get_mcts_player_name(gen)
-
-        player_args = {
-            '--type': 'MCTS-C',
-            '--name': name,
-            '--cuda-device': self._params.cuda_device,
-        }
-        player_args.update(self._session_data.game_spec.rating_player_options)
-        return make_args_str(player_args)
-
-    @staticmethod
-    def _get_reference_player_name(strength: int):
-        return f'ref-{strength}'
-
-    def _get_reference_player_str(self, strength: int):
-        name = RatingsServer._get_reference_player_name(strength)
-        family = self._session_data.game_spec.reference_player_family
-        type_str = family.type_str
-        strength_param = family.strength_param
-
-        player_args = {
-            '--type': type_str,
-            '--name': name,
-            strength_param: strength,
-        }
-        return make_args_str(player_args)
