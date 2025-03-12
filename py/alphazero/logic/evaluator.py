@@ -81,7 +81,8 @@ class Evaluator:
         committee_ixs = np.where(self.benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
-            chosen_ixs, num_matches = self.gen_matches(test_agent, estimated_rating, n_games)
+            opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
+            chosen_ixs, num_matches = self.gen_matches(estimated_rating, opponent_ix_played, n_games)
             sorted_ixs = np.argsort(num_matches)[::-1]
             logger.info('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
             for i in range(len(chosen_ixs)):
@@ -105,10 +106,8 @@ class Evaluator:
         logger.info('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
 
-    def gen_matches(self, test_agent: Agent, estimated_rating: float, n_games: int):
-
+    def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int):
         committee_ixs = np.where(self.benchmark_committee)[0]
-        opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
         var = np.array([q * (1 - q) for q in p])
         mask = np.zeros(len(var), dtype=bool)
