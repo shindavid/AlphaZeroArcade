@@ -28,12 +28,12 @@ inline ShapeInfo::~ShapeInfo() {
   delete[] dims;
 }
 
-inline constexpr int GameLogBase::align(int offset) {
+inline constexpr int GameLogCommon::align(int offset) {
   return math::round_up_to_nearest_multiple(offset, kAlignment);
 }
 
 template <concepts::Game Game>
-GameReadLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
+GameLogBase<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
   if (!valid) {
     encoding = 0;
     return;
@@ -64,7 +64,7 @@ GameReadLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor
 }
 
 template <concepts::Game Game>
-int GameReadLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
+int GameLogBase<Game>::TensorData::write_to(std::vector<char>& buf) const {
   int s = size();
   const char* bytes = reinterpret_cast<const char*>(this);
   buf.insert(buf.end(), bytes, bytes + s);
@@ -72,7 +72,7 @@ int GameReadLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
 }
 
 template <concepts::Game Game>
-bool GameReadLog<Game>::TensorData::load(PolicyTensor& tensor) const {
+bool GameLogBase<Game>::TensorData::load(PolicyTensor& tensor) const {
   if (encoding == 0) {
     // no policy target
     return false;
@@ -303,8 +303,8 @@ char* GameReadLog<Game>::get_buffer() const {
 }
 
 template <concepts::Game Game>
-const GameLogBase::Header& GameReadLog<Game>::header() const {
-  return *reinterpret_cast<const GameLogBase::Header*>(buffer_);
+const GameLogCommon::Header& GameReadLog<Game>::header() const {
+  return *reinterpret_cast<const GameLogCommon::Header*>(buffer_);
 }
 
 template <concepts::Game Game>
@@ -317,7 +317,7 @@ bool GameReadLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy
 
 template <concepts::Game Game>
 bool GameReadLog<Game>::get_action_values(mem_offset_t mem_offset,
-                                      ActionValueTensor& action_values) const {
+                                          ActionValueTensor& action_values) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
   const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
   full_offset += policy_data->size();
@@ -337,20 +337,21 @@ const typename GameReadLog<Game>::ValueTensor& GameReadLog<Game>::get_outcome() 
 }
 
 template <concepts::Game Game>
-GameLogBase::pos_index_t GameReadLog<Game>::get_pos_index(int index) const {
+GameLogCommon::pos_index_t GameReadLog<Game>::get_pos_index(int index) const {
   pos_index_t* ptr = (pos_index_t*) &buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
 template <concepts::Game Game>
-const typename GameReadLog<Game>::Record& GameReadLog<Game>::get_record(mem_offset_t mem_offset) const {
-  const Record* ptr = (const Record*) &buffer_[layout_.records_start + mem_offset];
+const typename GameReadLog<Game>::Record& GameReadLog<Game>::get_record(
+    mem_offset_t mem_offset) const {
+  const Record* ptr = (const Record*)&buffer_[layout_.records_start + mem_offset];
   return *ptr;
 }
 
 template <concepts::Game Game>
 typename GameReadLog<Game>::mem_offset_t GameReadLog<Game>::get_mem_offset(int state_index) const {
-  mem_offset_t* mem_offsets_ptr = (mem_offset_t*) &buffer_[layout_.mem_offsets_start];
+  mem_offset_t* mem_offsets_ptr = (mem_offset_t*)&buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[state_index];
 }
 

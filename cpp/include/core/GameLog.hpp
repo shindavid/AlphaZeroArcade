@@ -19,7 +19,7 @@ struct ShapeInfo {
   int target_index = -1;
 };
 
-struct GameLogBase {
+struct GameLogCommon {
   static constexpr int kAlignment = 16;
 
   struct Header {
@@ -49,32 +49,10 @@ struct GameLogBase {
   static constexpr int align(int offset);
 };
 
-/*
- * GameReadLog file format is as follows:
- *
- * [Header]
- * [State]                              // final state
- * [ValueTensor]                        // game result
- * [pos_index_t...]                     // indices of sampled positions
- * [mem_offset_t...]                    // memory-offsets into the DATA region
- * [DATA]                               // differently-sized sections of data
- *
- * Each section is aligned to 8 bytes.
- */
 template <concepts::Game Game>
-class GameReadLog : public GameLogBase {
- public:
-  using Header = GameLogBase::Header;
-
-  using Rules = Game::Rules;
-  using InputTensorizor = Game::InputTensorizor;
-  using InputTensor = Game::InputTensorizor::Tensor;
-  using TrainingTargetsList = Game::TrainingTargets::List;
+struct GameLogBase : public GameLogCommon {
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ValueTensor = Game::Types::ValueTensor;
-  using GameLogView = Game::Types::GameLogView;
 
   struct Record {
     State position;
@@ -111,6 +89,40 @@ class GameReadLog : public GameLogBase {
   };
   static_assert(sizeof(TensorData) ==
                 sizeof(tensor_encoding_t) + sizeof(typename TensorData::data_t));
+};
+
+/*
+ * GameReadLog file format is as follows:
+ *
+ * [Header]
+ * [State]                              // final state
+ * [ValueTensor]                        // game result
+ * [pos_index_t...]                     // indices of sampled positions
+ * [mem_offset_t...]                    // memory-offsets into the DATA region
+ * [DATA]                               // differently-sized sections of data
+ *
+ * Each section is aligned to 8 bytes.
+ */
+template <concepts::Game Game>
+class GameReadLog : public GameLogBase<Game> {
+ public:
+  using mem_offset_t = GameLogCommon::mem_offset_t;
+  using pos_index_t = GameLogCommon::pos_index_t;
+  using Header = GameLogCommon::Header;
+
+  using GameLogBase = core::GameLogBase<Game>;
+  using Record = GameLogBase::Record;
+  using TensorData = GameLogBase::TensorData;
+
+  using Rules = Game::Rules;
+  using InputTensorizor = Game::InputTensorizor;
+  using InputTensor = Game::InputTensorizor::Tensor;
+  using TrainingTargetsList = Game::TrainingTargets::List;
+  using State = Game::State;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using ValueTensor = Game::Types::ValueTensor;
+  using GameLogView = Game::Types::GameLogView;
 
   struct FileLayout {
     FileLayout(const Header&);
@@ -135,6 +147,8 @@ class GameReadLog : public GameLogBase {
   int num_sampled_positions() const { return header().num_samples; }
 
  private:
+  static constexpr int align(int offset) { return GameLogCommon::align(offset); }
+
   char* get_buffer() const;
   const Header& header() const;
 
@@ -158,11 +172,15 @@ class GameReadLog : public GameLogBase {
 };
 
 template <concepts::Game Game>
-class GameWriteLog : public GameLogBase {
+class GameWriteLog : public GameLogBase<Game> {
  public:
-  using GameReadLog = core::GameReadLog<Game>;
-  using Record = GameReadLog::Record;
-  using TensorData = GameReadLog::TensorData;
+  using mem_offset_t = GameLogCommon::mem_offset_t;
+  using pos_index_t = GameLogCommon::pos_index_t;
+  using Header = GameLogCommon::Header;
+
+  using GameLogBase = core::GameLogBase<Game>;
+  using Record = GameLogBase::Record;
+  using TensorData = GameLogBase::TensorData;
 
   using Rules = Game::Rules;
   using State = Game::State;
