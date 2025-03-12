@@ -50,7 +50,7 @@ struct GameLogBase {
 };
 
 /*
- * GameLog file format is as follows:
+ * GameReadLog file format is as follows:
  *
  * [Header]
  * [State]                              // final state
@@ -62,7 +62,7 @@ struct GameLogBase {
  * Each section is aligned to 8 bytes.
  */
 template <concepts::Game Game>
-class GameLog : public GameLogBase {
+class GameReadLog : public GameLogBase {
  public:
   using Header = GameLogBase::Header;
 
@@ -123,8 +123,8 @@ class GameLog : public GameLogBase {
     int records_start;
   };
 
-  GameLog(const char* filename);
-  ~GameLog();
+  GameReadLog(const char* filename);
+  ~GameReadLog();
 
   static ShapeInfo* get_shape_info_array();
 
@@ -158,17 +158,11 @@ class GameLog : public GameLogBase {
 };
 
 template <concepts::Game Game>
-class GameLogWriter {
+class GameWriteLog : public GameLogBase {
  public:
-  using GameLog = core::GameLog<Game>;
-  using Header = GameLog::Header;
-  using Record = GameLog::Record;
-  using TensorData = GameLog::TensorData;
-
-  using mem_offset_t = GameLogBase::mem_offset_t;
-  using pos_index_t = GameLogBase::pos_index_t;
-  using tensor_encoding_t = GameLogBase::tensor_encoding_t;
-  using SparseTensorEntry = GameLogBase::SparseTensorEntry;
+  using GameReadLog = core::GameReadLog<Game>;
+  using Record = GameReadLog::Record;
+  using TensorData = GameReadLog::TensorData;
 
   using Rules = Game::Rules;
   using State = Game::State;
@@ -188,8 +182,8 @@ class GameLogWriter {
   };
   using entry_vector_t = std::vector<Entry*>;
 
-  GameLogWriter(game_id_t id, int64_t start_timestamp);
-  ~GameLogWriter();
+  GameWriteLog(game_id_t id, int64_t start_timestamp);
+  ~GameWriteLog();
 
   void add(const State& state, action_t action, seat_index_t active_seat,
            const PolicyTensor* policy_target, const ActionValueTensor* action_values,

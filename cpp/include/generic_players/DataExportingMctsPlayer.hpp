@@ -23,7 +23,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
    */
   static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
 
-  using GameLogWriter_sptr = core::TrainingDataWriter<Game>::GameLogWriter_sptr;
+  using FOOBAR_sptr = core::TrainingDataWriter<Game>::FOOBAR_sptr;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;

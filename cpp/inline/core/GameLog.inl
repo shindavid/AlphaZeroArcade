@@ -33,7 +33,7 @@ inline constexpr int GameLogBase::align(int offset) {
 }
 
 template <concepts::Game Game>
-GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
+GameReadLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
   if (!valid) {
     encoding = 0;
     return;
@@ -64,7 +64,7 @@ GameLog<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
+int GameReadLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
   int s = size();
   const char* bytes = reinterpret_cast<const char*>(this);
   buf.insert(buf.end(), bytes, bytes + s);
@@ -72,7 +72,7 @@ int GameLog<Game>::TensorData::write_to(std::vector<char>& buf) const {
 }
 
 template <concepts::Game Game>
-bool GameLog<Game>::TensorData::load(PolicyTensor& tensor) const {
+bool GameReadLog<Game>::TensorData::load(PolicyTensor& tensor) const {
   if (encoding == 0) {
     // no policy target
     return false;
@@ -98,7 +98,7 @@ bool GameLog<Game>::TensorData::load(PolicyTensor& tensor) const {
 }
 
 template <concepts::Game Game>
-GameLog<Game>::FileLayout::FileLayout(const Header& h) {
+GameReadLog<Game>::FileLayout::FileLayout(const Header& h) {
   header = 0;
   final_state = align(0 + sizeof(Header));
   outcome = align(final_state + sizeof(State));
@@ -108,7 +108,7 @@ GameLog<Game>::FileLayout::FileLayout(const Header& h) {
 }
 
 template <concepts::Game Game>
-GameLog<Game>::GameLog(const char* filename)
+GameReadLog<Game>::GameReadLog(const char* filename)
     : filename_(filename),
       buffer_(get_buffer()),
       layout_(header()) {
@@ -116,12 +116,12 @@ GameLog<Game>::GameLog(const char* filename)
 }
 
 template <concepts::Game Game>
-GameLog<Game>::~GameLog() {
+GameReadLog<Game>::~GameReadLog() {
   delete[] buffer_;
 }
 
 template <concepts::Game Game>
-ShapeInfo* GameLog<Game>::get_shape_info_array() {
+ShapeInfo* GameReadLog<Game>::get_shape_info_array() {
   constexpr int n_targets = mp::Length_v<TrainingTargetsList>;
   constexpr int n = n_targets + 2;  // 1 for input, 1 for terminator
 
@@ -138,7 +138,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 }
 
 template <concepts::Game Game>
-void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
+void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
                          float** target_arrays, bool** target_masks) const {
   util::release_assert(index >= 0 && index < num_sampled_positions(),
                        "Index %d out of bounds [0, %d) in %s", index, num_sampled_positions(),
@@ -225,7 +225,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 }
 
 template <concepts::Game Game>
-void GameLog<Game>::replay() const {
+void GameReadLog<Game>::replay() const {
   using Array = eigen_util::FArray<Game::Types::kMaxNumActions>;
   int n = num_positions();
   action_t last_action = -1;
@@ -280,7 +280,7 @@ void GameLog<Game>::replay() const {
 }
 
 template <concepts::Game Game>
-char* GameLog<Game>::get_buffer() const {
+char* GameReadLog<Game>::get_buffer() const {
   FILE* file = fopen(filename_.c_str(), "rb");
   util::clean_assert(file, "Failed to open file '%s'", filename_.c_str());
 
@@ -303,12 +303,12 @@ char* GameLog<Game>::get_buffer() const {
 }
 
 template <concepts::Game Game>
-const GameLogBase::Header& GameLog<Game>::header() const {
+const GameLogBase::Header& GameReadLog<Game>::header() const {
   return *reinterpret_cast<const GameLogBase::Header*>(buffer_);
 }
 
 template <concepts::Game Game>
-bool GameLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
+bool GameReadLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
   const TensorData* policy_data = (const TensorData*) &buffer_[full_offset];
 
@@ -316,7 +316,7 @@ bool GameLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) co
 }
 
 template <concepts::Game Game>
-bool GameLog<Game>::get_action_values(mem_offset_t mem_offset,
+bool GameReadLog<Game>::get_action_values(mem_offset_t mem_offset,
                                       ActionValueTensor& action_values) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
   const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
@@ -327,46 +327,46 @@ bool GameLog<Game>::get_action_values(mem_offset_t mem_offset,
 }
 
 template <concepts::Game Game>
-const typename GameLog<Game>::State& GameLog<Game>::get_final_state() const {
+const typename GameReadLog<Game>::State& GameReadLog<Game>::get_final_state() const {
   return *reinterpret_cast<State*>(buffer_ + layout_.final_state);
 }
 
 template <concepts::Game Game>
-const typename GameLog<Game>::ValueTensor& GameLog<Game>::get_outcome() const {
+const typename GameReadLog<Game>::ValueTensor& GameReadLog<Game>::get_outcome() const {
   return *reinterpret_cast<ValueTensor*>(buffer_ + layout_.outcome);
 }
 
 template <concepts::Game Game>
-GameLogBase::pos_index_t GameLog<Game>::get_pos_index(int index) const {
+GameLogBase::pos_index_t GameReadLog<Game>::get_pos_index(int index) const {
   pos_index_t* ptr = (pos_index_t*) &buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
 template <concepts::Game Game>
-const typename GameLog<Game>::Record& GameLog<Game>::get_record(mem_offset_t mem_offset) const {
+const typename GameReadLog<Game>::Record& GameReadLog<Game>::get_record(mem_offset_t mem_offset) const {
   const Record* ptr = (const Record*) &buffer_[layout_.records_start + mem_offset];
   return *ptr;
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::mem_offset_t GameLog<Game>::get_mem_offset(int state_index) const {
+typename GameReadLog<Game>::mem_offset_t GameReadLog<Game>::get_mem_offset(int state_index) const {
   mem_offset_t* mem_offsets_ptr = (mem_offset_t*) &buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[state_index];
 }
 
 template <concepts::Game Game>
-GameLogWriter<Game>::GameLogWriter(game_id_t id, int64_t start_timestamp)
+GameWriteLog<Game>::GameWriteLog(game_id_t id, int64_t start_timestamp)
     : id_(id), start_timestamp_(start_timestamp) {}
 
 template <concepts::Game Game>
-GameLogWriter<Game>::~GameLogWriter() {
+GameWriteLog<Game>::~GameWriteLog() {
   for (Entry* entry : entries_) {
     delete entry;
   }
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add(const State& state, action_t action, seat_index_t active_seat,
+void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t active_seat,
                               const PolicyTensor* policy_target,
                               const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
@@ -392,7 +392,7 @@ void GameLogWriter<Game>::add(const State& state, action_t action, seat_index_t 
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add_terminal(const State& state, const ValueTensor& outcome) {
+void GameWriteLog<Game>::add_terminal(const State& state, const ValueTensor& outcome) {
   util::release_assert(!terminal_added_);
   terminal_added_ = true;
   final_state_ = state;
@@ -400,7 +400,7 @@ void GameLogWriter<Game>::add_terminal(const State& state, const ValueTensor& ou
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::serialize(std::vector<char>& buf) const {
+void GameWriteLog<Game>::serialize(std::vector<char>& buf) const {
   util::release_assert(terminal_added_);
   int num_entries = entries_.size();
 
@@ -450,7 +450,7 @@ void GameLogWriter<Game>::serialize(std::vector<char>& buf) const {
 }
 
 template <concepts::Game Game>
-bool GameLogWriter<Game>::was_previous_entry_used_for_policy_training() const {
+bool GameWriteLog<Game>::was_previous_entry_used_for_policy_training() const {
   if (entries_.empty()) {
     return false;
   }
@@ -459,7 +459,7 @@ bool GameLogWriter<Game>::was_previous_entry_used_for_policy_training() const {
 
 template <concepts::Game Game>
 template <typename T>
-int GameLogWriter<Game>::write_section(std::vector<char>& buf, const T* t, int count, bool pad) {
+int GameWriteLog<Game>::write_section(std::vector<char>& buf, const T* t, int count, bool pad) {
   constexpr int A = GameLogBase::kAlignment;
   int n_bytes = sizeof(T) * count;
   const char* bytes = reinterpret_cast<const char*>(t);

@@ -49,7 +49,7 @@ TrainingDataWriter<Game>::~TrainingDataWriter() {
 }
 
 template <concepts::Game Game>
-void TrainingDataWriter<Game>::add(GameLogWriter_sptr data) {
+void TrainingDataWriter<Game>::add(FOOBAR_sptr data) {
   std::unique_lock<std::mutex> lock(mutex_);
   completed_games_[queue_index_].push_back(data);
   lock.unlock();
@@ -110,7 +110,7 @@ void TrainingDataWriter<Game>::loop() {
     }
     queue_index_ = 1 - queue_index_;
     lock.unlock();
-    for (GameLogWriter_sptr& data : queue) {
+    for (FOOBAR_sptr& data : queue) {
       if (send(data.get())) break;
     }
     queue.clear();
@@ -118,7 +118,7 @@ void TrainingDataWriter<Game>::loop() {
 }
 
 template <concepts::Game Game>
-bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
+bool TrainingDataWriter<Game>::send(const GameWriteLog* log) {
   int64_t start_timestamp = log->start_timestamp();
   int64_t cur_timestamp = util::ns_since_epoch();
 

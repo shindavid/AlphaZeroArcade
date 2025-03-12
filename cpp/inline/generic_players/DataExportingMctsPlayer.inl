@@ -13,7 +13,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 
   auto search_mode = this->choose_search_mode(request);
 
-  GameLogWriter_sptr game_log = this->get_game_log();
+  FOOBAR_sptr game_log = this->get_game_log();
   bool use_for_training = game_log && search_mode == core::kFull;
 
   // TODO: if we have chance-events between player-events, we should compute this bool

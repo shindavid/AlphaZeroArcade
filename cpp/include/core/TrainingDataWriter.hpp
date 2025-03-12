@@ -38,23 +38,23 @@ class TrainingDataWriter
   using InputTensorizor = Game::InputTensorizor;
   using TrainingTargetsList = Game::TrainingTargets::List;
 
-  using GameLogWriter = core::GameLogWriter<Game>;
-  using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
+  using GameWriteLog = core::GameWriteLog<Game>;
+  using FOOBAR_sptr = std::shared_ptr<GameWriteLog>;
 
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
-  void add(GameLogWriter_sptr log);
+  void add(FOOBAR_sptr log);
   void shut_down();
 
   void pause() override;
   void unpause() override;
 
  protected:
-  using game_queue_t = std::vector<GameLogWriter_sptr>;
+  using game_queue_t = std::vector<FOOBAR_sptr>;
 
   void loop();
-  bool send(const GameLogWriter* log);  // return true if this is last game
+  bool send(const GameWriteLog* log);  // return true if this is last game
 
   Params params_;
   std::thread* thread_;
