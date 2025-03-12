@@ -21,7 +21,7 @@ class Agent(ABC):
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
-    n_iters: int = 0
+    n_iters: Optional[int] = None
     set_temp_zero: bool = None
     tag: str = None
 
@@ -31,9 +31,11 @@ class MCTSAgent(Agent):
         player_args = {
             '--type': 'MCTS-C',
             '--name': f'MCTS-{self.gen}-{self.n_iters}',
-            '-i': self.n_iters,
             '-n': 1,
         }
+
+        if self.n_iters is not None:
+            player_args['-i'] = self.n_iters
 
         if self.gen == 0:
             player_args['--no-model'] = None
