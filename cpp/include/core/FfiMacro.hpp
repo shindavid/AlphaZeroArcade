@@ -13,7 +13,9 @@
                                                                                            \
   void free_shape_info_array(core::ShapeInfo* info) { delete[] info; }                     \
                                                                                            \
-  GameReadLog* GameLog_new(const char* filename) { return new GameReadLog(filename); }     \
+  GameReadLog* GameLog_new(const char* filename, int game_index) {                         \
+    return new GameReadLog(filename, game_index);                                          \
+  }                                                                                        \
                                                                                            \
   void GameLog_delete(GameReadLog* log) { delete log; }                                    \
                                                                                            \

@@ -32,6 +32,25 @@ inline constexpr int GameLogCommon::align(int offset) {
   return math::round_up_to_nearest_multiple(offset, kAlignment);
 }
 
+template <typename T>
+int GameLogCommon::write_section(std::vector<char>& buf, const T* t, int count, bool pad) {
+  constexpr int A = kAlignment;
+  int n_bytes = sizeof(T) * count;
+  const char* bytes = reinterpret_cast<const char*>(t);
+  buf.insert(buf.end(), bytes, bytes + n_bytes);
+
+  if (!pad) return n_bytes;
+
+  int remainder = n_bytes % A;
+  int padding = 0;
+  if (remainder) {
+    padding = A - remainder;
+    uint8_t zeroes[A] = {0};
+    buf.insert(buf.end(), zeroes, zeroes + padding);
+  }
+  return n_bytes + padding;
+}
+
 template <concepts::Game Game>
 GameLogBase<Game>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
   if (!valid) {
@@ -98,21 +117,42 @@ bool GameLogBase<Game>::TensorData::load(PolicyTensor& tensor) const {
 }
 
 template <concepts::Game Game>
-GameReadLog<Game>::FileLayout::FileLayout(const Header& h) {
-  header = 0;
-  final_state = align(0 + sizeof(Header));
+void GameReadLog<Game>::DataLayout::load(const GameLogMetadata& m) {
+  final_state = 0;
   outcome = align(final_state + sizeof(State));
   sampled_indices_start = align(outcome + sizeof(ValueTensor));
-  mem_offsets_start = align(sampled_indices_start + sizeof(pos_index_t) * h.num_samples);
-  records_start = align(mem_offsets_start + sizeof(mem_offset_t) * h.num_positions);
+  mem_offsets_start = align(sampled_indices_start + sizeof(pos_index_t) * m.num_samples);
+  records_start = align(mem_offsets_start + sizeof(mem_offset_t) * m.num_positions);
 }
 
 template <concepts::Game Game>
-GameReadLog<Game>::GameReadLog(const char* filename)
-    : filename_(filename),
-      buffer_(get_buffer()),
-      layout_(header()) {
-  util::release_assert(num_positions() > 0, "Empty game log file: %s", filename_.c_str());
+GameReadLog<Game>::GameReadLog(const char* filename, int game_index)
+    : filename_(filename), game_index_(game_index) {
+  FILE* file = fopen(filename, "rb");
+
+  // first read metadata
+  int metadata_offset = sizeof(GameLogFileHeader) + game_index * sizeof(GameLogMetadata);
+  fseek(file, metadata_offset, SEEK_SET);
+  uint32_t read_size = fread(&metadata_, 1, sizeof(metadata_), file);
+  if (read_size != sizeof(metadata_)) {
+    fclose(file);
+    throw util::Exception("Failed to read metadata %d from '%s'", game_index, filename);
+  }
+
+  layout_.load(metadata_);
+
+  // now read game data
+  buffer_ = new char[metadata_.data_size];
+  fseek(file, metadata_.start_offset, SEEK_SET);
+  read_size = fread(buffer_, 1, metadata_.data_size, file);
+  if (read_size != metadata_.data_size) {
+    fclose(file);
+    throw util::Exception("Failed to read game data %d from '%s'", game_index, filename);
+  }
+  fclose(file);
+
+  util::release_assert(num_positions() > 0, "Empty game log file %d from '%s'", game_index,
+                       filename);
 }
 
 template <concepts::Game Game>
@@ -138,8 +178,9 @@ ShapeInfo* GameReadLog<Game>::get_shape_info_array() {
 }
 
 template <concepts::Game Game>
-void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-                         float** target_arrays, bool** target_masks) const {
+void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values,
+                             int* target_indices, float** target_arrays,
+                             bool** target_masks) const {
   util::release_assert(index >= 0 && index < num_sampled_positions(),
                        "Index %d out of bounds [0, %d) in %s", index, num_sampled_positions(),
                        filename_.c_str());
@@ -280,34 +321,6 @@ void GameReadLog<Game>::replay() const {
 }
 
 template <concepts::Game Game>
-char* GameReadLog<Game>::get_buffer() const {
-  FILE* file = fopen(filename_.c_str(), "rb");
-  util::clean_assert(file, "Failed to open file '%s'", filename_.c_str());
-
-  // get file size:
-  fseek(file, 0, SEEK_END);
-  int file_size = ftell(file);
-
-  char* buffer = new char[file_size];
-  fseek(file, 0, SEEK_SET);
-  int read_size = fread(buffer, 1, file_size, file);
-  if (read_size != file_size) {
-    fclose(file);
-    delete[] buffer;
-    throw util::Exception("Failed to read file '%s' (%d!=%d)", filename_.c_str(), read_size,
-                          file_size);
-  }
-  fclose(file);
-
-  return buffer;
-}
-
-template <concepts::Game Game>
-const GameLogCommon::Header& GameReadLog<Game>::header() const {
-  return *reinterpret_cast<const GameLogCommon::Header*>(buffer_);
-}
-
-template <concepts::Game Game>
 bool GameReadLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
   const TensorData* policy_data = (const TensorData*) &buffer_[full_offset];
@@ -401,24 +414,28 @@ void GameWriteLog<Game>::add_terminal(const State& state, const ValueTensor& out
 }
 
 template <concepts::Game Game>
-void GameWriteLog<Game>::serialize(std::vector<char>& buf) const {
-  util::release_assert(terminal_added_);
-  int num_entries = entries_.size();
+bool GameWriteLog<Game>::was_previous_entry_used_for_policy_training() const {
+  if (entries_.empty()) {
+    return false;
+  }
+  return entries_.back()->use_for_training;
+}
 
-  std::vector<pos_index_t> sampled_indices;
-  std::vector<mem_offset_t> mem_offsets;
-  std::vector<char> data_buf;
-  sampled_indices.reserve(sample_count_);
-  mem_offsets.reserve(num_entries);
+template <concepts::Game Game>
+GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std::vector<char>& buf,
+                                                   int client_id) {
+  uint32_t start_buf_size = buf.size();
+  util::release_assert(log->terminal_added_);
+  int num_entries = log->entries_.size();
 
   mem_offset_t mem_offset = 0;
 
   for (int move_num = 0; move_num < num_entries; ++move_num) {
-    const Entry* entry = entries_[move_num];
+    const Entry* entry = log->entries_[move_num];
 
-    mem_offsets.push_back(mem_offset);
+    mem_offsets_.push_back(mem_offset);
     if (entry->use_for_training) {
-      sampled_indices.push_back(move_num);
+      sampled_indices_.push_back(move_num);
     }
 
     Record record;
@@ -430,52 +447,37 @@ void GameWriteLog<Game>::serialize(std::vector<char>& buf) const {
     TensorData policy(entry->policy_target_is_valid, entry->policy_target);
     TensorData action_values(entry->action_values_are_valid, entry->action_values);
 
-    mem_offset += write_section(data_buf, &record, 1, false);
-    mem_offset += policy.write_to(data_buf);
-    mem_offset += action_values.write_to(data_buf);
+    mem_offset += GameLogCommon::write_section(data_buf_, &record, 1, false);
+    mem_offset += policy.write_to(data_buf_);
+    mem_offset += action_values.write_to(data_buf_);
   }
 
-  Header header;
-  header.num_samples = sample_count_;
-  header.num_positions = num_entries;
-  header.extra = 0;
-
-  write_section(buf, &header);
-  write_section(buf, &final_state_);
-  write_section(buf, &outcome_);
-  write_section(buf, sampled_indices.data(), sampled_indices.size());
-  write_section(buf, mem_offsets.data(), mem_offsets.size());
+  GameLogCommon::write_section(buf, &log->final_state_);
+  GameLogCommon::write_section(buf, &log->outcome_);
+  GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
+  GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
 
   // copy data_buf to buf:
-  buf.insert(buf.end(), data_buf.begin(), data_buf.end());
-}
+  buf.insert(buf.end(), data_buf_.begin(), data_buf_.end());
 
-template <concepts::Game Game>
-bool GameWriteLog<Game>::was_previous_entry_used_for_policy_training() const {
-  if (entries_.empty()) {
-    return false;
-  }
-  return entries_.back()->use_for_training;
-}
+  // clear vectors
+  sampled_indices_.clear();
+  mem_offsets_.clear();
+  data_buf_.clear();
 
-template <concepts::Game Game>
-template <typename T>
-int GameWriteLog<Game>::write_section(std::vector<char>& buf, const T* t, int count, bool pad) {
-  constexpr int A = GameLogBase::kAlignment;
-  int n_bytes = sizeof(T) * count;
-  const char* bytes = reinterpret_cast<const char*>(t);
-  buf.insert(buf.end(), bytes, bytes + n_bytes);
+  uint32_t end_buf_size = buf.size();
 
-  if (!pad) return n_bytes;
+  // NOTE: the start_offset value is initially assigned here relative to the start of the GameData
+  // region. It will be updated later to be relative to the start of the file.
+  GameLogMetadata metadata;
+  metadata.start_timestamp = log->start_timestamp_;
+  metadata.start_offset = start_buf_size;
+  metadata.data_size = end_buf_size - start_buf_size;
+  metadata.num_samples = log->sample_count_;
+  metadata.num_positions = num_entries;
+  metadata.client_id = client_id;
 
-  int remainder = n_bytes % A;
-  int padding = 0;
-  if (remainder) {
-    padding = A - remainder;
-    uint8_t zeroes[A] = {0};
-    buf.insert(buf.end(), zeroes, zeroes + padding);
-  }
-  return n_bytes + padding;
+  return metadata;
 }
 
 }  // namespace core

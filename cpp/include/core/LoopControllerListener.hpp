@@ -9,7 +9,12 @@
 
 namespace core {
 
-enum class LoopControllerInteractionType { kPause, kReloadWeights, kMetricsRequest };
+enum class LoopControllerInteractionType {
+  kPause,
+  kReloadWeights,
+  kMetricsRequest,
+  kDataRequest
+};
 
 class LoopControllerClient;
 
@@ -48,6 +53,20 @@ class LoopControllerListener<LoopControllerInteractionType::kMetricsRequest> {
  public:
   virtual ~LoopControllerListener() = default;
   virtual PerfStats get_perf_stats() = 0;
+};
+
+template <>
+class LoopControllerListener<LoopControllerInteractionType::kDataRequest> {
+ public:
+  virtual ~LoopControllerListener() = default;
+
+  // Handle a request for n_rows row of self-play data. This data should already have been produced;
+  // the loop-controller knows this because it has received heartbeat messages advertising this
+  // count.
+  //
+  // On the *next* call to handle_self_play_data_request(), the value of n_rows is guaranteed not to
+  // exceed the value of next_row_limit.
+  virtual void handle_data_request(int n_rows, int next_row_limit) = 0;
 };
 
 }  // namespace core

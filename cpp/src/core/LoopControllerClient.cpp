@@ -159,7 +159,6 @@ void LoopControllerClient::send_metrics() {
   msg["timestamp"] = timestamp;
   msg["metrics"] = stats.to_json();
 
-  set_last_games_flush_ts(timestamp);
   send(msg);
 }
 
@@ -202,6 +201,15 @@ void LoopControllerClient::reload_weights(const std::vector<char>& buf,
   }
 }
 
+void LoopControllerClient::handle_data_request(int n_rows, int next_row_limit) {
+  LOG_INFO << "LoopControllerClient: handling self-play data request(" << n_rows << ", "
+           << next_row_limit << ")...";
+
+  for (auto listener : data_request_listeners_) {
+    listener->handle_data_request(n_rows, next_row_limit);
+  }
+}
+
 void LoopControllerClient::wait_for_pause_receipts() {
   LOG_INFO << "LoopControllerClient: waiting for pause receipts...";
   std::unique_lock lock(receipt_mutex_);
@@ -235,6 +243,10 @@ void LoopControllerClient::loop() {
       unpause();
       wait_for_unpause_receipts();
       send_unpause_ack();
+    } else if (type == "data-request") {
+      int n_rows = msg.at("n_rows").as_int64();
+      int next_row_limit = msg.at("next_row_limit").as_int64();
+      handle_data_request(n_rows, next_row_limit);
     } else if (type == "reload-weights") {
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {

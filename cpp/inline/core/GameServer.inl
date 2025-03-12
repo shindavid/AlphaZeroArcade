@@ -255,7 +255,9 @@ template <concepts::Game Game>
 void GameServer<Game>::GameThread::run() {
   const Params& params = shared_data_.params();
 
+  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
   while (!decommissioned_) {
+    if (training_data_writer && training_data_writer->closed()) return;
     if (!shared_data_.request_game(params.num_games)) return;
 
     player_instantiation_array_t player_order = shared_data_.generate_player_order(instantiations_);
