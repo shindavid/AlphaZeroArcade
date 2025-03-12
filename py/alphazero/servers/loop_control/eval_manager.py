@@ -33,6 +33,11 @@ class MatchRequestStatus(Enum):
     OBSOLETE = 'obsolete'
 
 
+class EvalRequestStatus(Enum):
+    REQUESTED = 'requested'
+    COMPLETE = 'complete'
+    FAILED = 'failed'
+
 @dataclass
 class MatchStatus:
     opponent_gen: Generation
@@ -45,7 +50,7 @@ class EvalStatus:
     mcts_gen: Generation
     owner: Optional[ClientId] = None
     ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict) # ix -> MatchStatus
-    is_done: bool = False
+    status: Optional[EvalRequestStatus] = None
 
 
 class EvalManager:
@@ -122,7 +127,7 @@ class EvalManager:
     def _set_priority(self):
         latest_gen = self._controller.latest_gen()
         dict_len = len(self._eval_status_dict)
-        eval_in_progress = any(not data.is_done for data in self._eval_status_dict.values())
+        eval_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
 
         target_rate = self._controller.params.target_rating_rate
         num = dict_len + (0 if eval_in_progress else 1)
@@ -147,19 +152,21 @@ class EvalManager:
         logger.info('Loading past ratings data...')
         rating_data = self._evaluator.read_ratings_from_db()
         self._eval_status_dict = {self._evaluator.agent_lookup[agent].index: \
-            EvalStatus(mcts_gen=agent.gen, is_done=True) \
+            EvalStatus(mcts_gen=agent.gen, status=EvalRequestStatus.COMPLETE) \
                 for agent in rating_data.evaluated_agents}
         self._set_priority()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
-        logger.info('Server disconnected: %s, evaluating gen %s', conn, conn.aux.get('gen', None))
-        gen = conn.aux.pop('gen', None)
-        if gen is not None:
+        logger.info('Server disconnected: %s, evaluating ix %s', conn, conn.aux.get('ix', None))
+        ix = conn.aux.pop('ix', None)
+        logger.info('Before status update: %s', self._eval_status_dict[ix])
+        if ix is not None:
             with self._lock:
-                eval_status = [data for data in self._eval_status_dict.values() if data.mcts_gen == gen]
-                if not eval_status:
-                    eval_status[0].owner = None
-
+                eval_status = self._eval_status_dict[ix].status
+                if eval_status != EvalRequestStatus.COMPLETE:
+                    self._eval_status_dict[ix].status = EvalRequestStatus.FAILED
+                    self._eval_status_dict[ix].owner = None
+        logger.info('Before status update: %s', self._eval_status_dict[ix])
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
@@ -201,26 +208,30 @@ class EvalManager:
     def _send_match_request(self, conn: ClientConnection):
         #TODO: remove this assert and implement mechasnim to request for binary, extra depencies or model files
         assert conn.is_on_localhost()
-        gen = conn.aux.get('gen', None)
-        if gen is None:
+        ix = conn.aux.get('ix', None)
+        if ix is None:
             gen = self._get_next_gen_to_eval()
             assert gen is not None
-            conn.aux['gen'] = gen
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
             test_iagent = self._evaluator._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator._db)
+            conn.aux['ix'] = test_iagent.index
             with self._lock:
-                self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id)
+                if ix in self._eval_status_dict:
+                    assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
+                    self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
+                else:
+                    self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
+                                                                           status=EvalRequestStatus.REQUESTED)
             conn.aux['needs_new_opponents'] = True
             self._set_priority()
         else:
-            test_iagent = [iagent for iagent in self._evaluator.indexed_agents if \
-                iagent.role == AgentRole.TEST and iagent.agent.gen == gen][0]
+            test_iagent = self._evaluator.indexed_agents[ix]
 
-        logger.info('***Evaluating gen %s', gen)
+        logger.info('***Evaluating gen %s', test_iagent.agent.gen)
         estimated_rating = conn.aux['estimated_rating']
         if estimated_rating is None:
             estimated_rating = self._estimate_rating(test_iagent)
-            logger.info('Estimated rating for gen %s: %s', gen, estimated_rating)
+            logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
             conn.aux['estimated_rating'] = estimated_rating
 
         n_games_played = self._evaluator._arena.n_games_played(test_iagent.agent)
@@ -228,7 +239,7 @@ class EvalManager:
 
         need_new_opponents = conn.aux['needs_new_opponents']
         if need_new_opponents and n_games_needed > 0:
-            logger.info('Requesting new opponents for gen %s, estimated rating: %s', gen, estimated_rating)
+            logger.info('Requesting new opponents for gen %s, estimated rating: %s', test_iagent.agent.gen, estimated_rating)
             chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.agent, estimated_rating, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
@@ -259,14 +270,15 @@ class EvalManager:
 
     def _get_next_gen_to_eval(self):
         latest_gen = self._controller.latest_gen()
-        evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values()]
+        evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values() \
+            if data.status != EvalRequestStatus.FAILED]
         target_rating_rate = self._controller.params.target_rating_rate
         gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
         return gen
 
     def _estimate_rating_nearby_gens(self, gen):
         evaluated_ixs, evaluated_gens = zip(*[(ix, data.mcts_gen) for ix, data in \
-            self._eval_status_dict.items() if data.is_done])
+            self._eval_status_dict.items() if data.status == EvalRequestStatus.COMPLETE])
         ratings = self._evaluator.arena_ratings[np.array(evaluated_ixs)]
         estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
         return estimated_rating
@@ -311,7 +323,7 @@ class EvalManager:
                 status = self._wait_for_unblock(conn)
                 if status == ServerStatus.DISCONNECTED:
                     break
-                if conn.aux.get('gen', None) is None:
+                if conn.aux.get('ix', None) is None:
                     self._wait_until_work_exists()
 
                 table.activate(domain)
@@ -370,9 +382,9 @@ class EvalManager:
             has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._eval_status_dict[ix1].ix_match_status.values())
 
         if not has_pending:
-            self._eval_status_dict[ix1].is_done = True
+            self._eval_status_dict[ix1].status = EvalRequestStatus.COMPLETE
             self._eval_status_dict[ix1].owner = None
-            conn.aux.pop('gen')
+            conn.aux.pop('ix')
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
 
