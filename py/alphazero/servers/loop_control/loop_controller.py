@@ -224,8 +224,6 @@ class LoopController:
             self._get_ratings_manager(conn.aux['tag']).add_worker(conn)
         elif client_role == ClientRole.EVAL_SERVER:
             self._get_eval_manager(conn.aux['tag']).add_server(conn)
-        elif client_role == ClientRole.EVAL_WORKER:
-            self._get_eval_manager(conn.aux['tag']).add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
