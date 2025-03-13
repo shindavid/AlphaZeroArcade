@@ -2,14 +2,12 @@ from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.match_runner import Match, MatchRunner, MatchType
-from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
-from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
@@ -34,14 +32,14 @@ class EvalServerParams(BaseParams):
     def add_args(parser, omit_base=False):
         defaults = EvalServerParams()
 
-        group = parser.add_argument_group(f'RatingsServer options')
+        group = parser.add_argument_group(f'EvalServer options')
         if not omit_base:
             BaseParams.add_base_args(group)
 
         group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
-                           help='ratings tag. Loop controller collates ratings by this str. It is '
+                           help='evaluation tag. Loop controller collates ratings by this str. It is '
                            'the responsibility of the user to make sure that the same '
-                           'binary/params are used across different RatingsServer processes '
+                           'binary/params are used across different EvalServer processes '
                            'sharing the same rating-tag. (default: "%(default)s")')
 
 
@@ -68,7 +66,7 @@ class EvalServer:
             self._shutdown_manager.shutdown()
 
     def _shutdown(self):
-        logger.info('Shutting down ratings server...')
+        logger.info('Shutting down eval-server...')
         try:
             self._session_data.socket.close()
         except:
@@ -78,10 +76,10 @@ class EvalServer:
             try:
                 self._proc.terminate()
                 subprocess_util.wait_for(self._proc, expected_return_code=None)
-                logger.info('Terminated ratings-worker process %s', self._proc.pid)
+                logger.info('Terminated eval-worker process %s', self._proc.pid)
             except:
                 pass
-        logger.info('Ratings server shutdown complete!')
+        logger.info('Eval server shutdown complete!')
 
     def _main_loop(self):
         try:
@@ -129,7 +127,7 @@ class EvalServer:
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('eval-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
@@ -186,4 +184,5 @@ class EvalServer:
 
         self._session_data.socket.send_json(data)
         self._send_ready()
+
 

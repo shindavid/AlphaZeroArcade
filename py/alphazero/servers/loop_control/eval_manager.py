@@ -3,13 +3,11 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole
-from alphazero.logic.arena import Arena
 from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.match_runner import MatchType
 from util.logging_util import get_logger
-from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
@@ -37,6 +35,7 @@ class EvalRequestStatus(Enum):
     REQUESTED = 'requested'
     COMPLETE = 'complete'
     FAILED = 'failed'
+
 
 @dataclass
 class MatchStatus:
@@ -104,18 +103,6 @@ class EvalManager:
                                   daemon=True, name=f'manage-eval-server')
         thread.start()
 
-    def add_worker(self, conn: ClientConnection):
-        conn.aux['ack_cond'] = threading.Condition()
-
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-        }
-        conn.socket.send_json(reply)
-        self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'eval-worker',
-            disconnect_handler=self._handle_worker_disconnect)
-
     def notify_of_new_model(self):
         """
         Notify manager that there is new work to do.
@@ -180,18 +167,6 @@ class EvalManager:
             conn.aux['status'] = ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
-    def _handle_worker_disconnect(self, conn: ClientConnection):
-        cond: threading.Condition = conn.aux['ack_cond']
-        with cond:
-            conn.aux.pop('pending_pause_ack', None)
-            conn.aux.pop('pending_unpause_ack', None)
-            cond.notify_all()
-
-        # We set the management status to DEACTIVATING, rather than INACTIVE, here, so that the
-        # worker loop breaks while the server loop continues.
-        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-        table.mark_as_deactivating(conn.client_domain)
-
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
         """
         The server status is initially BLOCKED. This function waits until that status is
@@ -211,7 +186,7 @@ class EvalManager:
                 lambda: len(self._eval_status_dict) < self._controller.latest_gen())
 
     def _send_match_request(self, conn: ClientConnection):
-        #TODO: remove this assert and implement mechasnim to request for binary, extra depencies or model files
+        #TODO: remove this assert and implement mechasnim to request for binary, extra dependencies or model files
         assert conn.is_on_localhost()
         ix = conn.aux.get('ix', None)
         if ix is None:
@@ -272,6 +247,7 @@ class EvalManager:
                 'n_iters': next_opponent_agent.n_iters,
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
                 'tag': next_opponent_agent.tag,
+
             },
             'n_games': int(next_n_games),
         }
@@ -286,16 +262,6 @@ class EvalManager:
         gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
         return gen
 
-    def _estimate_rating_nearby_gens(self, gen):
-        evaluated_data = [(ix, data.mcts_gen) for ix, data in \
-            self._eval_status_dict.items() if data.status == EvalRequestStatus.COMPLETE]
-        if not evaluated_data:
-            return None
-        evaluated_ixs, evaluated_gens = zip(*evaluated_data)
-        ratings = self._evaluator.arena_ratings[np.array(evaluated_ixs)]
-        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
-        return estimated_rating
-
     def _estimate_rating(self, test_iagent):
         if self._evaluator._arena.n_games_played(test_iagent.agent) > 0:
             estimated_rating = self._evaluator.arena_ratings[test_iagent.index]
@@ -304,6 +270,16 @@ class EvalManager:
             if estimated_rating is None:
                 estimated_rating = np.mean(self._evaluator.arena_ratings)
         assert estimated_rating is not None
+        return estimated_rating
+
+    def _estimate_rating_nearby_gens(self, gen):
+        evaluated_data = [(ix, data.mcts_gen) for ix, data in \
+            self._eval_status_dict.items() if data.status == EvalRequestStatus.COMPLETE]
+        if not evaluated_data:
+            return None
+        evaluated_ixs, evaluated_gens = zip(*evaluated_data)
+        ratings = self._evaluator.arena_ratings[np.array(evaluated_ixs)]
+        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
         return estimated_rating
 
     def _update_eval_status(self, test_ix, chosen_ixs, num_matches):
@@ -425,6 +401,5 @@ class EvalManager:
             logger.info('///Finished evaluating gen %s, rating: %s',
                         self._evaluator.indexed_agents[ix1].agent.gen,
                         interpolated_ratings[np.where(test_ixs == ix1)[0]])
-
 
 
