@@ -249,3 +249,4 @@ class EvalUtils:
         left_gen = gens[max_gap_ix]
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
+

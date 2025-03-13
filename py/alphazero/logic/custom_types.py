@@ -19,7 +19,6 @@ class ClientRole(Enum):
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
     EVAL_SERVER = 'eval-server'
-    EVAL_WORKER = 'eval-worker'
 
     @staticmethod
     def worker_roles():
@@ -44,7 +43,7 @@ class Domain(Enum):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
             return Domain.RATINGS
-        elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
+        elif role == ClientRole.EVAL_SERVER:
             return Domain.RATINGS
         else:
             raise ValueError(f'Unexpected role: {role}')

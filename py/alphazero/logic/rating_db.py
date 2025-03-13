@@ -178,3 +178,4 @@ class RatingDB:
     @property
     def db_lock(self):
         return self.db_conn_pool._db_lock
+
