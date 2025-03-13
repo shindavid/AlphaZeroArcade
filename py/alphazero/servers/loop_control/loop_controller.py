@@ -7,13 +7,14 @@ from .log_syncer import LogSyncer
 from .output_dir_syncer import OutputDirSyncer
 from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
+from .eval_manager import EvalManager
 from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
-    Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -90,6 +91,7 @@ class LoopController:
         self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
+        self._eval_managers: Dict[EvalTag, EvalManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
 
@@ -205,7 +207,7 @@ class LoopController:
             'extras': extras,
         }
 
-    def handle_new_client_connnection(self, conn: ClientConnection):
+    def handle_new_client_connection(self, conn: ClientConnection):
         """
         Dispatches to a manager to handle a new client connection. The manager will spawn a new
         thread.
@@ -220,6 +222,8 @@ class LoopController:
             self._get_ratings_manager(conn.aux['tag']).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
             self._get_ratings_manager(conn.aux['tag']).add_worker(conn)
+        elif client_role == ClientRole.EVAL_SERVER:
+            self._get_eval_manager(conn.aux['tag']).add_server(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -292,6 +296,16 @@ class LoopController:
         if tag not in self._ratings_managers:
             self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
+
+    def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
+        if tag not in self._eval_managers:
+            if not os.path.exists(self.organizer.eval_db_filename):
+                assert self.params.benchmark_tag is not None, "Benchmark tag must be set for eval manager"
+                benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
+                benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
+                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
+            self._eval_managers[tag] = EvalManager(self, tag)
+        return self._eval_managers[tag]
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,

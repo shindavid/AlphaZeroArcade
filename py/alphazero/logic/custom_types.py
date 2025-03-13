@@ -10,6 +10,7 @@ Generation = int
 ClientId = int
 ThreadId = int
 RatingTag = str
+EvalTag = str
 
 
 class ClientRole(Enum):
@@ -17,10 +18,17 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
+    EVAL_SERVER = 'eval-server'
 
     @staticmethod
     def worker_roles():
         return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
+
+
+class ServerStatus(Enum):
+    DISCONNECTED = 'disconnected'
+    BLOCKED = 'blocked'
+    READY = 'ready'
 
 
 class Domain(Enum):
@@ -34,6 +42,8 @@ class Domain(Enum):
         if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
+            return Domain.RATINGS
+        elif role == ClientRole.EVAL_SERVER:
             return Domain.RATINGS
         else:
             raise ValueError(f'Unexpected role: {role}')

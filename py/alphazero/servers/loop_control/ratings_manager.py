@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag
+from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
@@ -19,12 +19,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger()
-
-
-class ServerStatus(Enum):
-    DISCONNECTED = 'disconnected'
-    BLOCKED = 'blocked'
-    READY = 'ready'
 
 
 class RatingsManager:
