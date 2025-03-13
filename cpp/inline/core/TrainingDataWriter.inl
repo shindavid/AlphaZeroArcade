@@ -212,7 +212,9 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
 
   boost::json::object msg;
   msg["type"] = "self-play-data";
+  msg["timestamp"] = util::ns_since_epoch();
   msg["gen"] = model_generation;
+  msg["n_games"] = n_games;
   if (client->report_metrics()) {
     msg["metrics"] = client->get_perf_stats().to_json();
   }

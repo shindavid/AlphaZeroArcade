@@ -265,15 +265,17 @@ class LoopController:
         self._gpu_contention_manager.set_ratings_priority(elevate)
 
     def hijack_all_self_play_tables(self):
+        logger.debug('Hijacking all self-play tables...')
         self._gpu_contention_manager.hijack_all_self_play_tables()
 
     def unhijack_all_self_play_tables(self):
+        logger.debug('Unhijacking all self-play tables...')
         self._gpu_contention_manager.unhijack_all_self_play_tables()
 
-    def get_num_self_play_positions_generated(self):
-        return self._self_play_manager.get_num_positions()
+    def get_num_rows(self):
+        return self._self_play_manager.get_num_rows()
 
-    def get_next_checkpoint(self) -> int:
+    def get_next_checkpoint(self):
         return self._training_manager.get_next_checkpoint()
 
     def start_log_sync(self, conn: ClientConnection, remote_filename: str):

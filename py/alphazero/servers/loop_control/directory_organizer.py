@@ -224,11 +224,8 @@ class DirectoryOrganizer:
     def get_latest_self_play_generation(self, default=None) -> Optional[Generation]:
         return DirectoryOrganizer._get_latest_generation(self.self_play_data_dir, default=default)
 
-    def get_self_play_data_dir(self, gen: Generation, client_id: Optional[ClientId]=None) -> str:
-        gen_dir = os.path.join(self.self_play_data_dir, f'gen-{gen}')
-        if client_id is None:
-            return gen_dir
-        return os.path.join(gen_dir, f'client-{client_id}')
+    def get_self_play_data_filename(self, gen: Generation) -> str:
+        return os.path.join(self.self_play_data_dir, f'gen-{gen}.data')
 
     def get_any_self_play_data_filename(self, gen: Optional[Generation]) -> Optional[str]:
         """

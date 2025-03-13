@@ -47,6 +47,7 @@ class TrainingManager:
         self._opt = None
         self._model_counts_dumped = False
 
+        self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
         self._last_sample_window: Optional[Window] = None  # initialized lazily
         self._latest_gen: Generation = 0
         self._master_list_slice = PositionListSlice()
@@ -68,8 +69,9 @@ class TrainingManager:
         with self._controller.self_play_db_conn_pool.db_lock:
             cursor = self._controller.self_play_db_conn_pool.get_cursor()
             start = last_sample_window.start
-            where_clause = f'cumulative_augmented_positions <= {start}'
-            cursor.execute(f'SELECT gen FROM games WHERE {where_clause} ORDER BY id LIMIT 1')
+            where_clause = f'cumulative_positions >= {start}'
+            query = f'SELECT gen FROM self_play_data WHERE {where_clause} ORDER BY id LIMIT 1'
+            cursor.execute(query)
             row = cursor.fetchone()
             cursor.close()
         if row is None:
@@ -89,9 +91,6 @@ class TrainingManager:
         if self._controller.organizer.fork_info is not None:
             max_forked_client_id = self._controller.organizer.fork_info.max_client_id
             self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
-
-    def get_next_checkpoint(self):
-        return get_required_dataset_size(self._controller.training_params, self._last_sample_window)
 
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
@@ -114,6 +113,9 @@ class TrainingManager:
         table.acquire_lock(Domain.TRAINING)
         self._train_step_helper(retrain_from_fork)
         table.release_lock(Domain.TRAINING)
+
+    def get_next_checkpoint(self):
+        return self._checkpoint
 
     def _shutdown(self):
         with self._lock:
@@ -138,7 +140,7 @@ class TrainingManager:
 
     def _extend_master_list(self):
         f = self._controller.training_params.window_size_function
-        n = self._controller.get_num_self_play_positions_generated()
+        n = self._controller.get_num_rows()
         c = int(n - f(n))
 
         start = max(0, c)
@@ -306,9 +308,14 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
+            self._set_checkpoint()
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self._controller.request_shutdown(1)
+
+    def _set_checkpoint(self):
+        self._checkpoint = get_required_dataset_size(
+            self._controller.training_params, self._last_sample_window)
 
     def _record_stats(self, gen: Generation, stats: TrainingStats):
         training_params = self._controller.training_params

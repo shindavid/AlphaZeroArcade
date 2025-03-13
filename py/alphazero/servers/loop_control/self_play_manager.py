@@ -8,11 +8,13 @@ from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
 from collections import defaultdict
+from dataclasses import dataclass, field
 import os
 import sqlite3
+import tempfile
 import threading
 import time
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -22,6 +24,15 @@ logger = get_logger()
 
 
 class SelfPlayManager:
+
+    @dataclass
+    class CommitInfo:
+        pending_metrics: list = field(default_factory=list)
+        n_committed_rows: int = 0
+        n_pending_rows: int = 0
+        n_pending_games: int = 0
+        pending_runtime: int = 0
+
     def __init__(self, controller: LoopController):
         self._controller = controller
 
@@ -33,23 +44,17 @@ class SelfPlayManager:
         self._ready_lock = threading.Lock()
         self._ready_cond = threading.Condition(self._ready_lock)
 
-        self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
-        self._checkpoint_lock = threading.Lock()
-        self._checkpoint_cond = threading.Condition(self._checkpoint_lock)
-
-        # The length of the master_list can be computed on-demand by reading the database. To
-        # avoid doing this repeatedly, we grab the value once at start-up, store it as a member, and
-        # then update it manually whenever we add new games to the database.
-        self._master_list_length: Optional[int] = None  # protected by _pending_game_data_lock
-        self._pending_game_data = []
-        self._n_pending_rows = 0
-        self._pending_game_data_lock = threading.Lock()
+        self._commit_info = SelfPlayManager.CommitInfo()
+        self._commit_info_lock = threading.Lock()
+        self._commit_info_cond = threading.Condition(self._commit_info_lock)
 
     def setup(self):
-        self._master_list_length = self._fetch_num_total_augmented_positions()
+        with self._commit_info_lock:
+            self._commit_info.n_committed_rows = self._fetch_num_rows_in_db()
 
-    def get_num_positions(self):
-        return self._master_list_length
+    def get_num_rows(self):
+        with self._commit_info_lock:
+            return self._get_num_rows()
 
     def run_gen0_if_necessary(self):
         additional_gen0_rows_needed = self._num_additional_gen0_positions_needed()
@@ -67,24 +72,22 @@ class SelfPlayManager:
             self._gen0_cond.wait_for(lambda: self._gen0_complete)
 
     def run_until_checkpoint(self):
-        self._checkpoint = self._controller.get_next_checkpoint()
+        checkpoint = self._controller.get_next_checkpoint()
 
-        if self._checkpoint <= self._master_list_length:
+        num_rows = self.get_num_rows()
+        if checkpoint <= num_rows:
             return
 
         logger.info('Waiting for more training data... (current=%s, needed=%s)',
-                    self._master_list_length, self._checkpoint)
+                    num_rows, checkpoint)
 
-        with self._ready_lock:
-            for conn in self._ready_conns:
-                if not conn.aux.get('launched', False):
-                    self._launch_self_play(conn)
-
-        logger.debug('Unhijacking all self-play tables...')
+        self._launch_unlaunched_workers()
         self._controller.unhijack_all_self_play_tables()
-        with self._checkpoint_lock:
-            self._checkpoint_cond.wait_for(lambda: self._master_list_length >= self._checkpoint)
-        logger.debug('Hijacking all self-play tables...')
+        self._wait_until_checkpoint_reached()
+        self._request_all_game_data()
+        self._receive_all_game_data()
+        self._update_self_play_db()
+        self._reset_row_data()
         self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
@@ -111,6 +114,7 @@ class SelfPlayManager:
 
     def add_worker(self, conn: ClientConnection):
         conn.aux['ack_cond'] = threading.Condition()
+        conn.aux['self_play_data_cond'] = threading.Condition()
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
@@ -120,12 +124,15 @@ class SelfPlayManager:
             self._worker_msg_handler, conn, 'self-play-worker',
             disconnect_handler=self._handle_worker_disconnect)
 
-    def _fetch_num_total_augmented_positions(self) -> int:
+    def _get_num_rows(self):
+        return self._commit_info.n_committed_rows + self._commit_info.n_pending_rows
+
+    def _fetch_num_rows_in_db(self) -> int:
         with self._controller.self_play_db_conn_pool.db_lock:
-            # Return cumulative_augmented_positions for the last row of games:
+            # Return cumulative_positions for the last row of the self_play_data table:
             cursor = self._controller.self_play_db_conn_pool.get_cursor()
-            cursor.execute("""SELECT cumulative_augmented_positions FROM games
-                           ORDER BY id DESC LIMIT 1""")
+            cursor.execute("""SELECT cumlative_positions FROM self_play_data
+                           ORDER BY gen DESC LIMIT 1""")
             row = cursor.fetchone()
             cursor.close()
         if row is not None:
@@ -146,6 +153,11 @@ class SelfPlayManager:
             conn.aux.pop('pending_pause_ack', None)
             conn.aux.pop('pending_unpause_ack', None)
             cond.notify_all()
+
+        conn.aux.pop('tmp_game_file_written', None)
+        game_filename = conn.aux.pop('tmp_game_filename', None)
+        if game_filename is not None:
+            os.remove(game_filename)
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
@@ -169,20 +181,16 @@ class SelfPlayManager:
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
 
-        if msg_type != 'game':
-            # logging every game is too spammy
-            logger.debug('self-play-worker received json message: %s', msg)
-
         if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
         elif msg_type == 'weights-request':
             self._handle_weights_request(conn)
-        elif msg_type == 'metrics':
-            self._handle_metrics(msg, conn)
-        elif msg_type == 'game':
-            self._handle_game(msg, conn)
+        elif msg_type == 'heartbeat':
+            self._handle_heartbeat(msg, conn)
+        elif msg_type == 'self-play-data':
+            self._handle_self_play_data(msg, conn)
         elif msg_type == 'done':
             return True
         else:
@@ -344,174 +352,212 @@ class SelfPlayManager:
         with self._controller.self_play_db_conn_pool.db_lock:
             cursor = self._controller.self_play_db_conn_pool.get_cursor()
             cursor.execute(
-                'SELECT gen, cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1')
+                'SELECT gen, cumlulative_positions FROM self_play_data ORDER BY id DESC LIMIT 1')
             row = cursor.fetchone()
             cursor.close()
         if row is None:
             return total_needed
-        gen, n_augmented_positions = row
+        gen, cumulative_positions = row
         if gen > 0:
             return 0
 
         assert gen == 0, gen
-        return max(0, total_needed - n_augmented_positions)
+        return max(0, total_needed - cumulative_positions)
 
-    def _insert_metrics(self, client_id, gen, timestamp, metrics, cursor):
-        cache_hits = metrics['cache_hits']
-        cache_misses = metrics['cache_misses']
-        positions_evaluated = metrics['positions_evaluated']
-        batches_evaluated = metrics['batches_evaluated']
-        full_batches_evaluated = metrics['full_batches_evaluated']
-
-        cursor.execute(
-            'INSERT INTO metrics (client_id, gen, report_timestamp, '
-            'cache_hits, cache_misses, positions_evaluated, batches_evaluated, '
-            'full_batches_evaluated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            (
-                client_id,
-                gen,
-                timestamp,
-                cache_hits,
-                cache_misses,
-                positions_evaluated,
-                batches_evaluated,
-                full_batches_evaluated,
-            )
-        )
-
-        cursor.execute("""UPDATE self_play_metadata
-            SET positions_evaluated = positions_evaluated + ?,
-                batches_evaluated = batches_evaluated + ?
-            WHERE gen = ?""", (positions_evaluated, batches_evaluated, gen))
-
-    def _handle_metrics(self, msg, conn: ClientConnection):
-        client_id = conn.client_id
-        gen = msg['gen']
-        timestamp = msg['timestamp']
-        metrics = msg['metrics']
-
-        with self._controller.self_play_db_conn_pool.db_lock:
-            db_conn = self._controller.self_play_db_conn_pool.get_connection()
-            cursor = db_conn.cursor()
-            self._flush_pending_games(conn, cursor)
-            self._insert_metrics(client_id, gen, timestamp, metrics, cursor)
-            cursor.close()
-            db_conn.commit()
-
-        if self._master_list_length >= self._checkpoint:
-            with self._checkpoint_lock:
-                self._checkpoint_cond.notify_all()
-
-    def _handle_game(self, msg, conn: ClientConnection):
-        client_id = conn.client_id
-        gen = msg['gen']
-        start_timestamp = msg['start_timestamp']
-        end_timestamp = msg['end_timestamp']
+    def _handle_heartbeat(self, msg: JsonDict, conn: ClientConnection):
         rows = msg['rows']
-        flush = msg['flush']
-        done = msg['done']
-        no_file = msg.get('no-file', False)
 
-        with self._pending_game_data_lock:
-            use_data = self._master_list_length + self._n_pending_rows < self._checkpoint
-            if use_data:
-                self._pending_game_data.append((client_id, gen, start_timestamp, end_timestamp,
-                                                rows))
-                self._n_pending_rows += rows
+        with self._commit_info_lock:
+            prev_rows = conn.aux.get('rows', 0)
+            conn.aux['rows'] = rows
+            self._commit_info.n_pending_rows += rows - prev_rows
 
-        if use_data:
-            organizer = self._controller.organizer
-            # json msg is immediately followed by the game file
-            game_dir = organizer.get_self_play_data_dir(gen, client_id)
-            os.makedirs(game_dir, exist_ok=True)
-            game_filename = os.path.join(game_dir, f'{end_timestamp}.log')
-        else:
-            # TODO: This is not the best way to prevent overflowing the checkpoint.
-            # This makes it so that the c++ blindly keeps generating games, but the python side
-            # just drops them on the floor if they exceed the budget. It would be smarter to have
-            # the c++ side be aware of the checkpoint.
-            game_filename = None
+            if self._get_num_rows() >= self._controller.get_next_checkpoint():
+                self._commit_info_cond.notify_all()
 
-        if not no_file:
-            conn.socket.recv_file(game_filename)
+    def _launch_unlaunched_workers(self):
+        with self._ready_lock:
+            for conn in self._ready_conns:
+                if not conn.aux.get('launched', False):
+                    self._launch_self_play(conn)
 
-        if flush:
-            metrics = msg.get('metrics', None)
+    def _wait_until_checkpoint_reached(self):
+        checkpoint = self._controller.get_next_checkpoint()
+        with self._commit_info_lock:
+            self._commit_info_cond.wait_for(lambda: self._get_num_rows() >= checkpoint)
 
-            with self._controller.self_play_db_conn_pool.db_lock:
-                db_conn = self._controller.self_play_db_conn_pool.get_connection()
-                cursor = db_conn.cursor()
-                self._flush_pending_games(conn, cursor)
-                if metrics:
-                    self._insert_metrics(client_id, gen, end_timestamp, metrics, cursor)
-                cursor.close()
-                db_conn.commit()
+    def _request_all_game_data(self):
+        logger.debug('Requesting data from all self-play workers...')
+        n_rows_needed = self._controller.get_next_checkpoint()
 
-            if self._master_list_length >= self._checkpoint:
-                with self._checkpoint_lock:
-                    self._checkpoint_cond.notify_all()
+        n_rows_requested = 0
 
-        if done:
-            logger.info('Client %s has finished self-play', client_id)
-            conn.socket.send_json({'type': 'quit'})
+        with self._ready_lock:
+            for conn in self._ready_conns:
+                rows = conn.aux.get('rows', 0)
+                n_rows_to_request = min(n_rows_needed - n_rows_requested, rows)
+                if n_rows_to_request > 0:
+                    self._request_game_data(conn, n_rows_to_request)
+                n_rows_requested += n_rows_to_request
 
-    def _flush_pending_games_helper(self, cursor: sqlite3.Cursor, gen: Generation,
-                                    n_games: int, n_augmented_positions: int, runtime: int):
-        cursor.execute(
-            'INSERT OR IGNORE INTO self_play_metadata (gen) VALUES (?)', (gen,))
+    def _request_game_data(self, conn: ClientConnection, n_rows: int):
+        logger.debug('Requesting %s to send %s rows of data...', conn, n_rows)
+        data = {
+            'type': 'data-request',
+            'rows': n_rows,
+        }
+        conn.socket.send_json(data)
 
-        cursor.execute("""UPDATE self_play_metadata
-                SET games = games + ?,
-                    augmented_positions = augmented_positions + ?,
-                    runtime = runtime + ?
-                WHERE gen = ?""", (n_games, n_augmented_positions, runtime, gen))
-
-    def _flush_pending_games(self, conn: ClientConnection, cursor: sqlite3.Cursor):
-        """
-        Flushes pending games to the database, and returns the number of augmented positions.
-
-        Commits to the database unless cursor is provided, in which case the commit is left to the
-        caller.
-        """
-        with self._pending_game_data_lock:
-            self._master_list_length += self._n_pending_rows
-            pending_game_data_copy = [game_data for game_data in self._pending_game_data]
-            self._pending_game_data = []
-            self._n_pending_rows = 0
-
-        if not pending_game_data_copy:
-            return
-
-        n_games_per_gen: Dict[Generation, int] = defaultdict(int)
-        n_augmented_positions_per_gen: Dict[Generation, int] = defaultdict(int)
-        for game_data in pending_game_data_copy:
-            gen = game_data[1]
-            n_rows = game_data[4]
-            n_games_per_gen[gen] += 1
-            n_augmented_positions_per_gen[gen] += n_rows
+    def _handle_self_play_data(self, msg: JsonDict, conn: ClientConnection):
+        timestamp = msg['timestamp']
+        gen = msg['gen']
+        n_games = msg['n_games']
+        metrics = msg.get('metrics', None)
 
         cond = conn.aux['ack_cond']
         with cond:
-            conn_gen = conn.aux.get('gen', None)
             start_ts = conn.aux.get('start_ts', None)
-            total_runtime = conn.aux.get('total_runtime', 0)
+            total_runtime = conn.aux.pop('total_runtime', 0)
             if start_ts is not None:
                 now = time.time_ns()
                 elapsed = now - start_ts
                 total_runtime += elapsed
                 conn.aux['start_ts'] = now
 
-            if 'total_runtime' in conn.aux:
-                del conn.aux['total_runtime']
+        with self._commit_info_lock:
+            self._commit_info.pending_runtime += total_runtime
+            self._commit_info.n_pending_games += n_games
+            if metrics is not None:
+                self._commit_info.pending_metrics.append((conn.client_id, timestamp, metrics))
 
-        for gen, n_games in n_games_per_gen.items():
-            gen_runtime = total_runtime if gen == conn_gen else 0
-            n_augmented_positions = n_augmented_positions_per_gen[gen]
-            self._flush_pending_games_helper(cursor, gen, n_games, n_augmented_positions,
-                                             gen_runtime)
+        # the JSON msg is immediately followed by the game data file. We receive it and save it to
+        # an in-memory filesystem
+        with tempfile.NamedTemporaryFile(dir='/dev/shm', delete=False) as tf:
+            game_filename = tf.name
+            conn.aux['tmp_game_filename'] = game_filename
+            conn.socket.recv_file(game_filename)
 
-        cursor.executemany('INSERT INTO games (client_id, gen, start_timestamp, end_timestamp, augmented_positions) VALUES (?, ?, ?, ?, ?)',
-                           pending_game_data_copy)
+        conn.aux['tmp_game_file_written'] = True
+        conn.aux['self_play_data_cond'].notify_all()
+
+        if gen == 0:
+            logger.info('Client %s has finished self-play', conn.client_id)
+            conn.socket.send_json({'type': 'quit'})
+
+    def _receive_all_game_data(self):
+        with self._ready_lock:
+            conns = list(self._ready_conns)
+
+        gen = self._controller.latest_gen()
+        game_filenames = []
+        for conn in conns:
+            cond = conn.aux['self_play_data_cond']
+            with cond:
+                cond.wait_for(lambda: 'tmp_game_file_written' in conn.aux, timeout=10)
+
+            written = conn.aux.pop('tmp_game_file_written', False)
+            game_filename = conn.aux.get('tmp_game_filename', None)
+            if not written:
+                logger.error('Timed out waiting for self-play data from %s', conn)
+                if game_filename is not None:
+                    os.remove(game_filename)
+                conn.aux.pop('tmp_game_filename', None)
+                self._controller.request_shutdown(1)
+                return
+            assert game_filename is not None
+            game_filenames.append(game_filename)
+
+        output_filename = self._controller.organizer.get_self_play_data_filename(gen)
+
+        if len(game_filenames) == 1:
+            # Easy case: we can just move the file to the correct location
+            game_filename = game_filenames[0]
+            os.rename(game_filename, output_filename)
+
+            for conn in conns:
+                conn.aux.pop('tmp_game_filename', None)
+        else:
+            # Harder case: we need to weave the files together, sorting by game-start-timestamp
+            # This will require an FFI call to the c++ code
+            for conn in conns:
+                conn.aux.pop('tmp_game_filename', None)
+            raise NotImplementedError('Multiple self-play servers temporarily disabled')
+
+    def _update_self_play_db(self):
+        gen = self._controller.latest_gen()
+        with self._commit_info_lock:
+            positions = self._commit_info.n_pending_rows
+            cumulative_positions = self._commit_info.n_committed_rows + positions
+            n_games = self._commit_info.n_pending_games
+            metrics_list = list(self._commit_info.pending_metrics)
+
+        metrics_columns = [
+            'client_id',
+            'gen',
+            'report_timestamp',
+            'cache_hits',
+            'cache_misses',
+            'positions_evaluated',
+            'batches_evaluated',
+            'full_batches_evaluated',
+        ]
+        values_str = ', '.join(['?' for _ in metrics_columns])
+
+        metrics_insert_list = [
+            (client_id,
+             gen,
+             timestamp,
+             metrics['cache_hits'],
+             metrics['cache_misses'],
+             metrics['positions_evaluated'],
+             metrics['batches_evaluated'],
+             metrics['full_batches_evaluated'])
+            for client_id, timestamp, metrics in metrics_list]
+
+        positions_evaluated = sum(metrics['positions_evaluated'] for _, _, metrics in metrics_list)
+        batches_evaluated = sum(metrics['batches_evaluated'] for _, _, metrics in metrics_list)
+        runtime = sum(metrics['runtime'] for _, _, metrics in metrics_list)
+
+        self_play_data_columns = [
+            'gen',
+            'positions',
+            'cumulative_positions',
+            'positions_evaluated',
+            'batches_evaluated',
+            'games',
+            'runtime',
+        ]
+
+        self_play_data_insert_tuple = (
+            gen,
+            positions,
+            cumulative_positions,
+            positions_evaluated,
+            batches_evaluated,
+            n_games,
+            runtime,
+        )
+
+        with self._controller.self_play_db_conn_pool.db_lock:
+            db_conn = self._controller.self_play_db_conn_pool.get_connection()
+            cursor = db_conn.cursor()
+
+            if metrics_insert_list:
+                cursor.executemany(f"""INSERT INTO metrics ({', '.join(metrics_columns)})
+                                    VALUES ({values_str})""", metrics_insert_list)
+
+            cursor.execute(
+                f"""INSERT INTO self_play_data ({', '.join(self_play_data_columns)})
+                VALUES ({', '.join(['?' for _ in self_play_data_columns])})""",
+                self_play_data_insert_tuple)
+
+    def _reset_row_data(self):
+        with self._commit_info_lock:
+            self._commit_info.n_committed_rows += self._commit_info.n_pending_rows
+            self._commit_info.n_pending_rows = 0
+            self._commit_info.n_pending_games = 0
+            self._commit_info.pending_runtime = 0
+            self._commit_info.pending_metrics = []
 
     def _handle_weights_request(self, conn: ClientConnection):
         thread = threading.Thread(target=self._manage_worker, args=(conn,),
