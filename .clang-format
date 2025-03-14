@@ -1,2 +1,5 @@
 BasedOnStyle: Google
+IndentWidth: 2
+ContinuationIndentWidth: 2
+AccessModifierOffset: -1
 ColumnLimit: 100
