@@ -11,6 +11,7 @@ class BuildParams:
     debug_build: Optional[bool] = None
     binary_path: Optional[str] = None
     ffi_lib_path: Optional[str] = None
+    override_binary: bool = False
 
     @property
     def build_type(self):
@@ -43,6 +44,7 @@ class BuildParams:
             debug_build=getattr(args, 'debug_build', defaults.debug_build),
             binary_path=getattr(args, 'binary_path', defaults.binary_path),
             ffi_lib_path=getattr(args, 'ffi_lib_path', defaults.ffi_lib_path),
+            override_binary=getattr(args, 'override_binary', False),
         )
         return params
 
@@ -60,6 +62,8 @@ class BuildParams:
             group.add_argument(
                 '--ffi-lib-path',
                 help='path to ffi library (default: target/Release/lib/lib{game}.so)')
+            group.add_argument('--override-binary', action='store_true',
+                               help='override the binary file in output/{game}/{tag}/target/{Debug, Release}')
         else:
             group.add_argument(
                 '--binary-path',

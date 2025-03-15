@@ -21,7 +21,8 @@ from alphazero.logic.signaling import register_standard_server_signals
 from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.py_util import sha256sum
+from util.logging_util import get_logger
+from util.py_util import sha256sum, atomic_cp, write_metadata, get_latest_timestamp
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -420,10 +421,42 @@ class LoopController:
         logger.info('Prior run restoration complete!')
         return True
 
+    def _copy_binary_files(self):
+        if self._on_ephemeral_local_disk_env:
+            organizer = self._persistent_organizer
+        else:
+            organizer = self._organizer
+        persistent_run_dir = organizer.base_dir
+
+        binary_path = self.build_params.get_binary_path(self._run_params.game)
+        target_file = os.path.join(persistent_run_dir, binary_path)
+        if os.path.exists(target_file):
+            hash = sha256sum(target_file)
+            if hash == sha256sum(binary_path):
+                logger.info('Binary file already exists, skipping copy')
+                return
+            elif not self.build_params.override_binary:
+                message = f"""Hash mismatch for binary file {binary_path}.
+                Latest copy time: {get_latest_timestamp(organizer.binary_info_filename)}.
+                Include --override-binary to override or have the matching binary: {binary_path}"""
+                raise Exception(message)
+            else:
+                message = f"""Hash mismatch for binary file {binary_path}.
+                Latest copy time: {get_latest_timestamp(organizer.binary_info_filename)}.
+                Overriding binary file with the one in {binary_path}"""
+                logger.warning(message)
+        else:
+            logger.info('Copying binary file to persistent run dir...')
+
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+        atomic_cp(binary_path, target_file)
+        write_metadata(organizer.binary_info_filename, target_file, '/workspace/repo', 10)
+
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
             self._setup_output_dir()
+            self._copy_binary_files()
             self._init_socket()
             self._self_play_manager.setup()
             self._training_manager.setup()
