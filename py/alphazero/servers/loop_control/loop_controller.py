@@ -421,7 +421,7 @@ class LoopController:
         logger.info('Prior run restoration complete!')
         return True
 
-    def _copy_binary_files(self):
+    def _copy_binary_file(self):
         if self._on_ephemeral_local_disk_env:
             organizer = self._persistent_organizer
         else:
@@ -448,15 +448,16 @@ class LoopController:
         else:
             logger.info('Copying binary file to persistent run dir...')
 
+
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
-        write_metadata(organizer.binary_info_filename, target_file, '/workspace/repo', 10)
+        write_metadata(organizer.binary_info_filename, target_file, '/workspace/repo', self.build_params.metadata_num_entries)
 
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
             self._setup_output_dir()
-            self._copy_binary_files()
+            self._copy_binary_file()
             self._init_socket()
             self._self_play_manager.setup()
             self._training_manager.setup()
