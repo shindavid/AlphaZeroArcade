@@ -66,10 +66,6 @@ class EvalManager:
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
-        self.n_games = self._controller.params.n_games_per_evaluation
-        self.n_iters = self._controller.params.eval_agent_n_iters
-        self.error_threshold = self._controller.params.eval_error_threshold
-
     def add_server(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()
         reply = {
@@ -402,4 +398,15 @@ class EvalManager:
                         self._evaluator.indexed_agents[ix1].agent.gen,
                         interpolated_ratings[np.where(test_ixs == ix1)[0]])
 
+    @property
+    def n_games(self):
+        return self._controller.params.n_games_per_evaluation
+
+    @property
+    def n_iters(self):
+        return self._controller.params.eval_agent_n_iters
+
+    @property
+    def error_threshold(self):
+        return self._controller.params.eval_error_threshold
 
