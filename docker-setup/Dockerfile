@@ -69,6 +69,14 @@ RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy ma
     google-api-python-client torch torchvision torchaudio \
     notebook sortedcontainers
 
+# clangd, needed for vscode plugin
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 19 && \
+    apt-get install -y clangd-19 && \
+    update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-19 100 && \
+    rm llvm.sh
+
 ################################################################################################
 # FOR FASTER DOCKER IMAGE REBUILDS: put new apt-get/pip3 installs below this line. This avoids #
 # re-installing all the above when rebuilding the image. We can periodically move these back   #
@@ -87,7 +95,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="3.5.2"
+ARG VERSION="3.6.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 

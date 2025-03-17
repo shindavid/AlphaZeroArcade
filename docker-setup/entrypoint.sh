@@ -23,5 +23,16 @@ fi
 
 service ssh start
 
+# Write vscode settings file
+mkdir -p /root/.vscode-server/data/Machine
+cat << 'EOF' > /root/.vscode-server/data/Machine/settings.json
+{
+  "clangd.path": "/usr/bin/clangd",
+  "clangd.arguments": [
+      "--compile-commands-dir=target/Release"
+  ]
+}
+EOF
+
 gosu "$USERNAME" /usr/local/bin/devuser-setup.sh
 exec gosu "$USERNAME" "$@"

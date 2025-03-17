@@ -16,7 +16,7 @@ import subprocess
 LOCAL_DOCKER_IMAGE = 'a0a'
 DOCKER_HUB_IMAGE = 'dshin83/alphazeroarcade'
 LATEST_DOCKER_HUB_IMAGE = f'{DOCKER_HUB_IMAGE}:latest'
-MINIMUM_REQUIRED_IMAGE_VERSION = "3.5.2"
+MINIMUM_REQUIRED_IMAGE_VERSION = "3.6.1"
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')
