@@ -35,7 +35,19 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
       graphviz graphviz-dev openssh-server && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
-# Add PPA for the latest Boost and install Boost packages
+###################################################################################################
+# PPA Installations: These are packages that are not available with our current base image.       #
+# In the future, if we switch to a newer base image, we can remove these specialized PPA installs #
+# and simply add the packages to the above apt-get install command.                               #
+###################################################################################################
+
+# gcc-13/g++-13
+RUN apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y gcc-13 g++-13
+
+# Boost
 RUN add-apt-repository -y ppa:mhier/libboost-latest && \
     apt-get update && \
     apt-get install -y \
@@ -44,7 +56,7 @@ RUN add-apt-repository -y ppa:mhier/libboost-latest && \
 
 # Update alternatives for gcc/g++
 RUN for tool in gcc g++; do \
-      update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-12 60 || true; \
+      update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-13 60 || true; \
     done
 
 # Python dependencies
@@ -54,15 +66,14 @@ RUN for tool in gcc g++; do \
 # installed allows for better code completion when working with the Docker-external code.
 RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib \
     bokeh scipy flask plotly dash packaging pygraphviz google-cloud-compute \
-    google-api-python-client torch torchvision torchaudio
+    google-api-python-client torch torchvision torchaudio \
+    notebook sortedcontainers
 
 ################################################################################################
 # FOR FASTER DOCKER IMAGE REBUILDS: put new apt-get/pip3 installs below this line. This avoids #
 # re-installing all the above when rebuilding the image. We can periodically move these back   #
 # up for cleanliness.                                                                          #
 ################################################################################################
-
-RUN pip3 install --ignore-installed notebook sortedcontainers
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -76,7 +87,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="3.4.2"
+ARG VERSION="3.5.2"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
