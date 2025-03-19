@@ -34,7 +34,7 @@ inline auto Random::uniform_sample(T lower, U upper) {
   if (lower >= upper) {
     throw std::runtime_error("Random::uniform_sample() - invalid range");
   }
-  using V = decltype(std::declval<T>() + std::declval<U>());
+  using V = std::common_type_t<T, U>;
   std::uniform_int_distribution<V> dist{(V)lower, (V)(upper - 1)};
   return dist(instance()->prng_);
 }
