@@ -4,7 +4,6 @@
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
 
-#include <string>
 #include <vector>
 
 /*
@@ -60,6 +59,21 @@ struct GameLogMetadata {
   uint32_t reserved = 0;
 };
 static_assert(sizeof(GameLogMetadata) == 32);
+
+class GameLogFileReader {
+ public:
+  GameLogFileReader(const char* buffer);
+
+  const GameLogFileHeader& header() const;
+  int num_games() const;
+
+  int num_samples(int game_index) const;
+  const char* game_data_buffer(int game_index) const;
+  const GameLogMetadata& metadata(int game_index) const;
+
+ private:
+  const char* buffer_;
+};
 
 struct GameLogCommon {
   static constexpr int kAlignment = 16;
@@ -151,7 +165,7 @@ class GameReadLog : public GameLogBase<Game> {
 
   // indicates offsets relative to the start of the GameData region
   struct DataLayout {
-    void load(const GameLogMetadata&);
+    DataLayout(const GameLogMetadata&);
 
     int final_state;
     int outcome;
@@ -160,15 +174,15 @@ class GameReadLog : public GameLogBase<Game> {
     int records_start;
   };
 
-  GameReadLog(const char* filename, int game_index);
-  ~GameReadLog();
+  GameReadLog(const char* filename, int game_index, const GameLogMetadata& metadata,
+              const char* buffer);
 
   static ShapeInfo* get_shape_info_array();
 
-  void load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-            float** target_arrays, bool** target_masks) const;
+  void load(int row_index, bool apply_symmetry, float* input_values, int* target_indices,
+            float** target_arrays, bool** target_masks, int out_index) const;
 
-  void replay() const;
+  // void replay() const;
   int num_sampled_positions() const { return metadata_.num_samples; }
 
  private:
@@ -188,11 +202,11 @@ class GameReadLog : public GameLogBase<Game> {
   const Record& get_record(mem_offset_t mem_offset) const;
   mem_offset_t get_mem_offset(int state_index) const;
 
-  const std::string filename_;
+  const char* filename_;
   const int game_index_;
-  GameLogMetadata metadata_;
-  DataLayout layout_;
-  char* buffer_ = nullptr;  // stores GameData bytes
+  const GameLogMetadata& metadata_;
+  const char* buffer_ = nullptr;
+  const DataLayout layout_;
 };
 
 template <concepts::Game Game> class GameLogSerializer;  // Forward declaration

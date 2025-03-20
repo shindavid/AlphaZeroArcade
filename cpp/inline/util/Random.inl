@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <util/Random.hpp>
 
 #include <ctime>
@@ -57,6 +58,25 @@ RealType Random::exponential(RealType lambda) {
 template <std::random_access_iterator T>
 void Random::shuffle(T begin, T end) {
   return std::shuffle(begin, end, instance()->prng_);
+}
+
+template <int ChunkSize, std::random_access_iterator T>
+void Random::chunked_shuffle(T begin, T end) {
+  auto& rng = instance()->prng_;
+
+  constexpr int c = ChunkSize;
+  int n = (end - begin) / c;
+
+  // Fisher–Yates shuffle on groups.
+  for (int i = n - 1; i > 0; i--) {
+    std::uniform_int_distribution<int> dist(0, i);
+    int j = dist(rng);
+    if (i != j) {
+      T a = begin + i * c;
+      T b = begin + j * c;
+      std::swap_ranges(a, a + c, b);
+    }
+  }
 }
 
 template <typename IntType, typename InputIt>

@@ -63,10 +63,12 @@ class LoopControllerListener<LoopControllerInteractionType::kDataRequest> {
   // Handle a request for n_rows row of self-play data. This data should already have been produced;
   // the loop-controller knows this because it has received heartbeat messages advertising this
   // count.
-  //
-  // On the *next* call to handle_self_play_data_request(), the value of n_rows is guaranteed not to
-  // exceed the value of next_row_limit.
-  virtual void handle_data_request(int n_rows, int next_row_limit) = 0;
+  virtual void handle_data_request(int n_rows) = 0;
+
+  // The loop-controller is telling us that for the next handle_data_request() call, it will not
+  // pass a value of n_rows that exceeds this limit. The listener can use this information to
+  // avoid doing unnecessary work.
+  virtual void handle_data_pre_request(int n_rows_limit) = 0;
 };
 
 }  // namespace core

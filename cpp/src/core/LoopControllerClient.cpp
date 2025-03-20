@@ -201,12 +201,20 @@ void LoopControllerClient::reload_weights(const std::vector<char>& buf,
   }
 }
 
-void LoopControllerClient::handle_data_request(int n_rows, int next_row_limit) {
-  LOG_INFO << "LoopControllerClient: handling self-play data request(" << n_rows << ", "
-           << next_row_limit << ")...";
+void LoopControllerClient::handle_data_request(int n_rows) {
+  LOG_INFO << "LoopControllerClient: handling self-play data request(" << n_rows << ")...";
 
   for (auto listener : data_request_listeners_) {
-    listener->handle_data_request(n_rows, next_row_limit);
+    listener->handle_data_request(n_rows);
+  }
+}
+
+void LoopControllerClient::handle_data_pre_request(int n_rows_limit) {
+  LOG_INFO << "LoopControllerClient: handling self-play data pre-request(" << n_rows_limit
+           << ")...";
+
+  for (auto listener : data_request_listeners_) {
+    listener->handle_data_pre_request(n_rows_limit);
   }
 }
 
@@ -245,8 +253,10 @@ void LoopControllerClient::loop() {
       send_unpause_ack();
     } else if (type == "data-request") {
       int n_rows = msg.at("n_rows").as_int64();
-      int next_row_limit = msg.at("next_row_limit").as_int64();
-      handle_data_request(n_rows, next_row_limit);
+      handle_data_request(n_rows);
+    } else if (type == "data-pre-request") {
+      int n_rows_limit = msg.at("n_rows_limit").as_int64();
+      handle_data_pre_request(n_rows_limit);
     } else if (type == "reload-weights") {
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {

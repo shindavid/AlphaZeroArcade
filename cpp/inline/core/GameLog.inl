@@ -6,7 +6,7 @@
 #include <util/Math.hpp>
 #include <util/MetaProgramming.hpp>
 
-#include <limits>
+#include <algorithm>
 
 namespace core {
 
@@ -30,6 +30,30 @@ inline ShapeInfo::~ShapeInfo() {
 
 inline constexpr int GameLogCommon::align(int offset) {
   return math::round_up_to_nearest_multiple(offset, kAlignment);
+}
+
+inline GameLogFileReader::GameLogFileReader(const char* buffer)
+    : buffer_(buffer) {}
+
+inline const GameLogFileHeader& GameLogFileReader::header() const {
+  return *reinterpret_cast<const GameLogFileHeader*>(buffer_);
+}
+
+inline int GameLogFileReader::num_games() const { return header().num_games; }
+
+inline int GameLogFileReader::num_samples(int game_index) const {
+  return metadata(game_index).num_samples;
+}
+
+inline const char* GameLogFileReader::game_data_buffer(int game_index) const {
+  const GameLogMetadata& m = metadata(game_index);
+  return buffer_ + m.start_offset;
+}
+
+inline const GameLogMetadata& GameLogFileReader::metadata(int game_index) const {
+  const GameLogFileHeader& h = header();
+  constexpr auto m = sizeof(GameLogMetadata);
+  return *reinterpret_cast<const GameLogMetadata*>(buffer_ + sizeof(h) + game_index * m);
 }
 
 template <typename T>
@@ -117,7 +141,7 @@ bool GameLogBase<Game>::TensorData::load(PolicyTensor& tensor) const {
 }
 
 template <concepts::Game Game>
-void GameReadLog<Game>::DataLayout::load(const GameLogMetadata& m) {
+GameReadLog<Game>::DataLayout::DataLayout(const GameLogMetadata& m) {
   final_state = 0;
   outcome = align(final_state + sizeof(State));
   sampled_indices_start = align(outcome + sizeof(ValueTensor));
@@ -126,38 +150,14 @@ void GameReadLog<Game>::DataLayout::load(const GameLogMetadata& m) {
 }
 
 template <concepts::Game Game>
-GameReadLog<Game>::GameReadLog(const char* filename, int game_index)
-    : filename_(filename), game_index_(game_index) {
-  FILE* file = fopen(filename, "rb");
-
-  // first read metadata
-  int metadata_offset = sizeof(GameLogFileHeader) + game_index * sizeof(GameLogMetadata);
-  fseek(file, metadata_offset, SEEK_SET);
-  uint32_t read_size = fread(&metadata_, 1, sizeof(metadata_), file);
-  if (read_size != sizeof(metadata_)) {
-    fclose(file);
-    throw util::Exception("Failed to read metadata %d from '%s'", game_index, filename);
-  }
-
-  layout_.load(metadata_);
-
-  // now read game data
-  buffer_ = new char[metadata_.data_size];
-  fseek(file, metadata_.start_offset, SEEK_SET);
-  read_size = fread(buffer_, 1, metadata_.data_size, file);
-  if (read_size != metadata_.data_size) {
-    fclose(file);
-    throw util::Exception("Failed to read game data %d from '%s'", game_index, filename);
-  }
-  fclose(file);
-
-  util::release_assert(num_positions() > 0, "Empty game log file %d from '%s'", game_index,
-                       filename);
-}
-
-template <concepts::Game Game>
-GameReadLog<Game>::~GameReadLog() {
-  delete[] buffer_;
+GameReadLog<Game>::GameReadLog(const char* filename, int game_index,
+                               const GameLogMetadata& metadata, const char* buffer)
+    : filename_(filename),
+      game_index_(game_index),
+      metadata_(metadata),
+      buffer_(buffer),
+      layout_(metadata) {
+  util::release_assert(num_positions() > 0, "Empty game log file %s[%d]", filename, game_index);
 }
 
 template <concepts::Game Game>
@@ -178,14 +178,14 @@ ShapeInfo* GameReadLog<Game>::get_shape_info_array() {
 }
 
 template <concepts::Game Game>
-void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values,
+void GameReadLog<Game>::load(int row_index, bool apply_symmetry, float* input_values,
                              int* target_indices, float** target_arrays,
-                             bool** target_masks) const {
-  util::release_assert(index >= 0 && index < num_sampled_positions(),
-                       "Index %d out of bounds [0, %d) in %s", index, num_sampled_positions(),
-                       filename_.c_str());
+                             bool** target_masks, int out_index) const {
+  util::release_assert(row_index >= 0 && row_index < num_sampled_positions(),
+                       "Index %d out of bounds [0, %d) in %s[%d]", row_index, num_sampled_positions(),
+                       filename_, game_index_);
 
-  pos_index_t state_index = get_pos_index(index);
+  pos_index_t state_index = get_pos_index(row_index);
   mem_offset_t mem_offset = get_mem_offset(state_index);
   const Record& record = get_record(mem_offset);
 
@@ -239,7 +239,7 @@ void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values
   const ValueTensor& outcome = get_outcome();
 
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
-  memcpy(input_values, input.data(), input.size() * sizeof(float));
+  std::copy(input.data(), input.data() + input.size(), &input_values[out_index * input.size()]);
 
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
@@ -258,67 +258,70 @@ void GameReadLog<Game>::load(int index, bool apply_symmetry, float* input_values
         using Target = mp::TypeAt_t<TrainingTargetsList, a>;
         using Tensor = Target::Tensor;
         Tensor tensor;
-        target_masks[t][0] = Target::tensorize(view, tensor);
-        memcpy(target_arrays[t], tensor.data(), tensor.size() * sizeof(float));
+        target_masks[t][out_index] = Target::tensorize(view, tensor);
+        std::copy(tensor.data(), tensor.data() + tensor.size(),
+                  &target_arrays[t][out_index * tensor.size()]);
       }
     });
   }
 }
 
-template <concepts::Game Game>
-void GameReadLog<Game>::replay() const {
-  using Array = eigen_util::FArray<Game::Types::kMaxNumActions>;
-  int n = num_positions();
-  action_t last_action = -1;
-  for (int i = 0; i < n; ++i) {
-    mem_offset_t mem_offset = get_mem_offset(i);
-    const Record& record = get_record(mem_offset);
+// TODO: bring back replay()
 
-    const State& pos = record.position;
-    seat_index_t active_seat = record.active_seat;
-    action_mode_t mode = record.action_mode;
-    action_t action = record.action;
+// template <concepts::Game Game>
+// void GameReadLog<Game>::replay() const {
+//   using Array = eigen_util::FArray<Game::Types::kMaxNumActions>;
+//   int n = num_positions();
+//   action_t last_action = -1;
+//   for (int i = 0; i < n; ++i) {
+//     mem_offset_t mem_offset = get_mem_offset(i);
+//     const Record& record = get_record(mem_offset);
 
-    Game::IO::print_state(std::cout, pos, last_action);
-    std::cout << "active seat: " << (int)active_seat << std::endl;
+//     const State& pos = record.position;
+//     seat_index_t active_seat = record.active_seat;
+//     action_mode_t mode = record.action_mode;
+//     action_t action = record.action;
 
-    if (i < n - 1) {
-      PolicyTensor policy;
-      ActionValueTensor action_values_target;
-      bool policy_valid = get_policy(mem_offset, policy);
-      bool action_values_valid = get_action_values(mem_offset, action_values_target);
+//     Game::IO::print_state(std::cout, pos, last_action);
+//     std::cout << "active seat: " << (int)active_seat << std::endl;
 
-      if (policy_valid || action_values_valid) {
-        Array action_arr(policy.size());
-        Array policy_arr(policy.size());
-        Array action_values_arr(action_values_target.size());
-        util::release_assert(policy.size() == action_values_target.size());
-        for (action_t a = 0; a < policy.size(); ++a) {
-          action_arr(a) = a;
-          policy_arr(a) = policy(a);
-          action_values_arr(a) = action_values_target(a);
-        }
+//     if (i < n - 1) {
+//       PolicyTensor policy;
+//       ActionValueTensor action_values_target;
+//       bool policy_valid = get_policy(mem_offset, policy);
+//       bool action_values_valid = get_action_values(mem_offset, action_values_target);
 
-        static std::vector<std::string> columns = {"action", "policy", "action_values"};
-        auto data = eigen_util::concatenate_columns(action_arr, policy_arr, action_values_arr);
+//       if (policy_valid || action_values_valid) {
+//         Array action_arr(policy.size());
+//         Array policy_arr(policy.size());
+//         Array action_values_arr(action_values_target.size());
+//         util::release_assert(policy.size() == action_values_target.size());
+//         for (action_t a = 0; a < policy.size(); ++a) {
+//           action_arr(a) = a;
+//           policy_arr(a) = policy(a);
+//           action_values_arr(a) = action_values_target(a);
+//         }
 
-        eigen_util::PrintArrayFormatMap fmt_map{
-            {"action",
-             [&](float x) {
-               return std::string(x == action ? "*" : " ") + Game::IO::action_to_str(x, mode);
-             }},
-        };
-        eigen_util::print_array(std::cout, data, columns, &fmt_map);
-      }
-    }
-    std::cout << std::endl;
-    last_action = action;
-  }
+//         static std::vector<std::string> columns = {"action", "policy", "action_values"};
+//         auto data = eigen_util::concatenate_columns(action_arr, policy_arr, action_values_arr);
 
-  Game::IO::print_state(std::cout, get_final_state(), last_action);
-  std::cout << "OUTCOME: " << std::endl;
-  std::cout << get_outcome() << std::endl;
-}
+//         eigen_util::PrintArrayFormatMap fmt_map{
+//             {"action",
+//              [&](float x) {
+//                return std::string(x == action ? "*" : " ") + Game::IO::action_to_str(x, mode);
+//              }},
+//         };
+//         eigen_util::print_array(std::cout, data, columns, &fmt_map);
+//       }
+//     }
+//     std::cout << std::endl;
+//     last_action = action;
+//   }
+
+//   Game::IO::print_state(std::cout, get_final_state(), last_action);
+//   std::cout << "OUTCOME: " << std::endl;
+//   std::cout << get_outcome() << std::endl;
+// }
 
 template <concepts::Game Game>
 bool GameReadLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
@@ -341,17 +344,17 @@ bool GameReadLog<Game>::get_action_values(mem_offset_t mem_offset,
 
 template <concepts::Game Game>
 const typename GameReadLog<Game>::State& GameReadLog<Game>::get_final_state() const {
-  return *reinterpret_cast<State*>(buffer_ + layout_.final_state);
+  return *reinterpret_cast<const State*>(buffer_ + layout_.final_state);
 }
 
 template <concepts::Game Game>
 const typename GameReadLog<Game>::ValueTensor& GameReadLog<Game>::get_outcome() const {
-  return *reinterpret_cast<ValueTensor*>(buffer_ + layout_.outcome);
+  return *reinterpret_cast<const ValueTensor*>(buffer_ + layout_.outcome);
 }
 
 template <concepts::Game Game>
 GameLogCommon::pos_index_t GameReadLog<Game>::get_pos_index(int index) const {
-  pos_index_t* ptr = (pos_index_t*) &buffer_[layout_.sampled_indices_start];
+  const pos_index_t* ptr = (const pos_index_t*) &buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
@@ -364,7 +367,7 @@ const typename GameReadLog<Game>::Record& GameReadLog<Game>::get_record(
 
 template <concepts::Game Game>
 typename GameReadLog<Game>::mem_offset_t GameReadLog<Game>::get_mem_offset(int state_index) const {
-  mem_offset_t* mem_offsets_ptr = (mem_offset_t*)&buffer_[layout_.mem_offsets_start];
+  const mem_offset_t* mem_offsets_ptr = (const mem_offset_t*)&buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[state_index];
 }
 

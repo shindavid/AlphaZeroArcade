@@ -12,7 +12,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <list>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -104,7 +103,8 @@ class TrainingDataWriter
 
   void pause() override;
   void unpause() override;
-  void handle_data_request(int n_rows, int next_row_limit) override;
+  void handle_data_request(int n_rows) override;
+  void handle_data_pre_request(int n_rows_limit) override;
 
  protected:
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;

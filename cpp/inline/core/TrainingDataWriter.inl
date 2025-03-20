@@ -1,6 +1,6 @@
 #include <core/TrainingDataWriter.hpp>
 
-#include <filesystem>
+#include <format>
 #include <string>
 
 #include <util/BoostUtil.hpp>
@@ -103,13 +103,19 @@ void TrainingDataWriter<Game>::unpause() {
 }
 
 template <concepts::Game Game>
-void TrainingDataWriter<Game>::handle_data_request(int n_rows, int next_request_limit) {
+void TrainingDataWriter<Game>::handle_data_request(int n_rows) {
   std::unique_lock lock(batch_mutex_);
 
   send_batch(n_rows);
   batch_data_.reset();
   batch_data_.next_heartbeat_time = std::chrono::steady_clock::now() + heartbeat_interval();
-  batch_data_.limit = next_request_limit;
+  batch_data_.limit = 0;
+}
+
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::handle_data_pre_request(int n_rows_limit) {
+  std::unique_lock lock(batch_mutex_);
+  batch_data_.limit = n_rows_limit;
 }
 
 template <concepts::Game Game>
@@ -219,11 +225,6 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
     msg["metrics"] = client->get_perf_stats().to_json();
   }
 
-  // NOTE: we are temporarily disabling the below optimization, because we are having the loop
-  // controller merge all the self-play data from the different clients into a single file. We can
-  // bring it back in the future, but if we do so, we need to be careful to properly detect that
-  // there was only one self-play client that generated data for this generation.
-  //
   // Optimization: if we are on the same machine as the loop-controller, we can write the file
   // directly to the filesystem, rather than sending it over the TCP socket. This helps reduce
   // socket contention, which empirically can be a bottleneck in some settings.
@@ -241,41 +242,23 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   //
   // 3. Therefore, for this optimization, we must first write the file to disk here, and then send a
   //    message to the loop-controller to update the database, in that order.
-  //
-  // 4. The loop-controller's SelfPlayManager will sometimes intentionally drop certain games,
-  //    skipping the filesystem-write and the database-update. Unless we copy that logic from
-  //    python into c++ (which we don't want to for code-maintenance reasons), we lose the ability
-  //    to replicate that behavior. That is ok, because again, the filesystem-write without a
-  //    database-update is essentially a drop.
+  if (misc_data_.direct_game_log_write_optimization_enabled) {
+    // In the future, if we change the logic controlling the game filename on the python-side, we
+    // need to change this code to match the python-side. Not ideal, but it is what it is.
+    std::string filename =
+      std::format("/home/devuser/scratch/self-play-data/{}.data", client->client_id());
 
-  // if (direct_game_log_write_optimization_enabled_) {
+    std::ofstream file(filename, std::ios::binary);
+    file.write(batch_data_.send_buf.data(), batch_data_.send_buf.size());
+    util::release_assert(file.good(), "TrainingDataWriter: failed to write to file %s",
+                         filename.c_str());
+    file.close();
 
-  //   // In the future, if we change the logic controlling the game filename on the python-side, we
-  //   // need to change this code to match the python-side. Not ideal, but it is what it is.
-  //   std::string directory =
-  //       util::create_string("%s/self-play-data/gen-%d/client-%d", client->output_base_dir().c_str(),
-  //                           model_generation, client->client_id());
-
-  //   if (model_generation != last_created_dir_generation_) {
-  //     boost::filesystem::create_directories(directory);  // mkdir -p
-  //     last_created_dir_generation_ = model_generation;
-  //   }
-
-  //   std::string filename = util::create_string("%s/%ld.log", directory.c_str(), cur_timestamp);
-
-  //   std::ofstream file(filename, std::ios::binary);
-  //   file.write(buf.data(), buf.size());
-  //   util::release_assert(file.good(), "TrainingDataWriter: failed to write to file %s",
-  //                        filename.c_str());
-  //   file.close();
-
-  //   msg["no-file"] = true;
-  //   client->send(msg);
-  // } else {
-  //   client->send_with_file(msg, buf);
-  // }
-
-  client->send_with_file(msg, batch_data_.send_buf);
+    msg["no_file"] = true;
+    client->send(msg);
+  } else {
+    client->send_with_file(msg, batch_data_.send_buf);
+  }
 }
 
 template <concepts::Game Game>
