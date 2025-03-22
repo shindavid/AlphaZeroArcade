@@ -1,5 +1,6 @@
 from .build_params import BuildParams
 
+from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
 from shared.net_modules import ShapeInfo, ShapeInfoDict
 from util.logging_util import get_logger
@@ -8,11 +9,19 @@ from util.repo_util import Repo
 import torch
 
 from cffi import FFI
+from dataclasses import dataclass
 import os
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 
 logger = get_logger()
+
+
+@dataclass
+class DataBatch:
+    input_tensor: torch.Tensor
+    target_tensors: List[torch.Tensor]
+    target_masks: List[torch.Tensor]
 
 
 class GameLogReader:
@@ -21,7 +30,6 @@ class GameLogReader:
 
     The functions of the shared library are exposed through the FFI interface.
     """
-
     def __init__(self, game_spec: GameSpec, build_params: BuildParams):
         self._game_spec = game_spec
         self._build_params = build_params
@@ -29,9 +37,23 @@ class GameLogReader:
         self._lib = self._get_shared_lib()
         self._lib.init()
         self._shape_info_dict: Optional[ShapeInfoDict] = None
+        self._data_loader = None
 
     def close(self):
+        if self._data_loader is not None:
+            self._lib.DataLoader_delete(self._data_loader)
         self._ffi.dlclose(self._lib)
+
+    def init_data_loader(self, data_dir: str,
+                         memory_budget: int = 2**28,  # 256 MB
+                         num_worker_threads=4,
+                         num_prefetch_threads=4):
+        ffi = self._ffi
+        lib = self._lib
+
+        data_dir = ffi.new('char[]', data_dir.encode('utf-8'))
+        self._data_loader = lib.DataLoader_new(data_dir, memory_budget, num_worker_threads,
+                                               num_prefetch_threads)
 
     @property
     def shape_info_dict(self) -> ShapeInfoDict:
@@ -39,26 +61,45 @@ class GameLogReader:
             self._shape_info_dict = self._load_shape_info_dict()
         return self._shape_info_dict
 
-    def open_log(self, filename: str):
-        ffi = self._ffi
-        filename = ffi.new('char[]', filename.encode('utf-8'))
-        return self._lib.GameLog_new(filename)
-
-    def num_sampled_positions(self, log):
-        return self._lib.GameLog_num_sampled_positions(log)
-
-    def close_log(self, log):
-        self._lib.GameLog_delete(log)
-
-    def create_tensors(self, log, input_shape_info: ShapeInfo, target_shape_infos: List[ShapeInfo],
-                       index: int, apply_symmetry: bool = True):
+    def restore_data_loader(self, gens: List[Generation], row_counts: List[int],
+                            file_sizes: List[int]):
         ffi = self._ffi
         lib = self._lib
 
-        input_tensor = torch.empty(input_shape_info.shape, dtype=torch.float32)
-        target_tensors = [torch.empty(shape_info.shape, dtype=torch.float32)
-                          for shape_info in target_shape_infos]
-        target_masks = [torch.empty(1, dtype=torch.bool) for _ in target_shape_infos]
+        assert len(gens) == len(row_counts) == len(file_sizes)
+
+        n = len(gens)
+        if n == 0:
+            return
+
+        gens_c = ffi.new('int[]', gens)
+        row_counts_c = ffi.new('int[]', row_counts)
+        file_sizes_c = ffi.new('int64_t[]', file_sizes)
+        lib.DataLoader_restore(self._data_loader, n, gens_c, row_counts_c, file_sizes_c)
+
+    def add_gen(self, gen: Generation, num_rows: int, file_size: int):
+        self._lib.DataLoader_add_gen(self._data_loader, gen, num_rows, file_size)
+
+    def create_data_batches(self, window_size: int, minibatch_size: int, n_minibatches: int,
+                            master_size: int, target_names: List[str], gen: Generation,
+                            apply_symmetry=True) -> Iterable[DataBatch]:
+        ffi = self._ffi
+        lib = self._lib
+
+        n_samples = minibatch_size * n_minibatches
+
+        input_shape_info = self.shape_info_dict['input']
+        target_shape_infos = [self.shape_info_dict[name] for name in target_names]
+
+        input_shape = tuple(list(input_shape_info.shape) + [n_samples])
+        input_tensor = torch.empty(input_shape, dtype=torch.float32)
+
+        target_shapes = [tuple(list(shape_info.shape) + [n_samples]) for shape_info in
+                         target_shape_infos]
+        target_tensors = [torch.empty(shape, dtype=torch.float32) for shape in target_shapes]
+
+        target_masks = [torch.empty(n_samples, dtype=torch.bool) for _ in target_shape_infos]
+
         target_indices = [s.target_index for s in target_shape_infos] + [-1]  # -1: null-terminator
         target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
         target_mask_values = [ffi.cast('bool*', tensor.data_ptr()) for tensor in target_masks]
@@ -68,14 +109,43 @@ class GameLogReader:
         target_values_c = ffi.new('float*[]', target_values)
         target_masks_c = ffi.new('bool*[]', target_mask_values)
 
-        lib.GameLog_load(log, index, apply_symmetry, input_values_c, target_indices_c,
-                         target_values_c, target_masks_c)
-        return [input_tensor] + target_tensors + target_masks
+        start_gen_tensor = torch.empty(1, dtype=torch.int32)
+        start_gen_value_c = ffi.cast('int*', start_gen_tensor.data_ptr())
+
+        logger.info('******************************')
+        logger.info('Train gen:%s', gen)
+
+        lib.DataLoader_load(self._data_loader, window_size, n_samples, apply_symmetry,
+                            input_values_c, target_indices_c, target_values_c, target_masks_c,
+                            start_gen_value_c)
+
+        start_gen = start_gen_tensor.item()
+
+        if start_gen + 1 == gen:
+            gen_str = f'gen {start_gen}'
+        else:
+            gen_str = f'gens {start_gen} to {gen - 1}'
+        logger.info(
+            'Sampling from %s of %s (%.1f%%) positions (%s)' %
+            (window_size, master_size, 100. * window_size / master_size, gen_str))
+
+        for i in range(n_minibatches):
+            start = i * minibatch_size
+            end = (i + 1) * minibatch_size
+
+            input_tensor_slice = input_tensor[..., start:end]
+            target_tensor_slices = [tensor[..., start:end] for tensor in target_tensors]
+            target_mask_slices = [mask[start:end] for mask in target_masks]
+
+            data_batch = DataBatch(input_tensor=input_tensor_slice,
+                                   target_tensors=target_tensor_slices,
+                                   target_masks=target_mask_slices)
+            yield data_batch
 
     def _get_ffi(self):
         ffi = FFI()
         ffi.cdef("""
-            struct GameLog {};
+            struct DataLoader {};
 
             struct ShapeInfo {
                 char* name;
@@ -85,14 +155,23 @@ class GameLogReader:
             };
 
             struct ShapeInfo* get_shape_info_array();
+
             void free_shape_info_array(struct ShapeInfo* info);
 
-            struct GameLog* GameLog_new(const char* filename);
-            void GameLog_delete(struct GameLog* log);
-            void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
-                       float* input_values, int* target_indices, float** target_value_arrays,
-                       bool** target_masks);
-            int GameLog_num_sampled_positions(struct GameLog* log);
+            struct DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
+                int num_worker_threads, int num_prefetch_threads);
+
+            void DataLoader_delete(struct DataLoader* loader);
+
+            void DataLoader_restore(struct DataLoader* loader, int n, int* gens, int* row_counts,
+                int64_t* file_sizes);
+
+            void DataLoader_add_gen(struct DataLoader* loader, int gen, int num_rows,
+                int64_t file_size);
+
+            void DataLoader_load(struct DataLoader* loader, int64_t window_size, int n_samples,
+                bool apply_symmetry, float* input_data_array, int* target_indices_array,
+                float** target_data_arrays, bool** target_mask_arrays, int* start_gen);
 
             void init();
             """)

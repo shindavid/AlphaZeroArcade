@@ -246,17 +246,28 @@ class LoopController:
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
+    def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
+        self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
+
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
-        data = {
+        required_rows = self.get_next_checkpoint() - self.get_num_rows()
+
+        data1 = {
+            'type': 'data-pre-request',
+            'n_rows_limit': required_rows,
+        }
+
+        data2 = {
             'type': 'reload-weights',
             'generation': gen,
         }
 
         model_filename = self.organizer.get_model_filename(gen)
         with conn.socket.send_mutex():
-            send_json(conn.socket.native_socket(), data)
+            send_json(conn.socket.native_socket(), data1)
+            send_json(conn.socket.native_socket(), data2)
             send_file(conn.socket.native_socket(), model_filename)
 
         logger.debug('Weights broadcast complete!')

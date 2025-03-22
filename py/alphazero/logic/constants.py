@@ -36,7 +36,8 @@ SELF_PLAY_TABLE_CREATE_CMDS = [
             positions_evaluated INTEGER DEFAULT 0,
             batches_evaluated INTEGER DEFAULT 0,
             games INTEGER DEFAULT 0,
-            runtime INTEGER DEFAULT 0
+            runtime INTEGER DEFAULT 0,
+            file_size INTEGER DEFAULT 0
             )""",
 ]
 
