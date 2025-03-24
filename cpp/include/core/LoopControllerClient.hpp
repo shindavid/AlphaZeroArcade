@@ -88,7 +88,6 @@ class LoopControllerClient {
 
   void send_handshake();
   void recv_handshake();
-  void send_metrics();
   void send_pause_ack();
   void send_unpause_ack();
   void pause();

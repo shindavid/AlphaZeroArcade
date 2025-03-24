@@ -10,6 +10,7 @@ import torch
 
 from cffi import FFI
 from dataclasses import dataclass
+import math
 import os
 from typing import Iterable, List, Optional
 
@@ -89,27 +90,28 @@ class GameLogReader:
         lib = self._lib
 
         n_samples = minibatch_size * n_minibatches
+        n_targets = len(target_names)
 
         input_shape_info = self.shape_info_dict['input']
         target_shape_infos = [self.shape_info_dict[name] for name in target_names]
 
-        input_shape = tuple([n_samples] + list(input_shape_info.shape))
-        input_tensor = torch.empty(input_shape, dtype=torch.float32)
+        input_shape = input_shape_info.shape
+        target_shapes = [info.shape for info in target_shape_infos]
+        mask_shapes = [(1, ) for _ in target_shape_infos]
 
-        target_shapes = [tuple([n_samples] + list(shape_info.shape)) for shape_info in
-                         target_shape_infos]
-        target_tensors = [torch.empty(shape, dtype=torch.float32) for shape in target_shapes]
+        input_shape_size = math.prod(input_shape)
+        target_shape_sizes = [math.prod(shape) for shape in target_shapes]
+        mask_shape_sizes = [math.prod(shape) for shape in mask_shapes]
 
-        target_masks = [torch.empty(n_samples, dtype=torch.bool) for _ in target_shape_infos]
+        # we smash the input, targets, and masks into a single output array
+        combined_size = input_shape_size + sum(target_shape_sizes) + sum(mask_shape_sizes)
+        output_shape = (n_samples, combined_size)
+        output_tensor = torch.empty(output_shape, dtype=torch.float32)
 
-        target_indices = [s.target_index for s in target_shape_infos] + [-1]  # -1: null-terminator
-        target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
-        target_mask_values = [ffi.cast('bool*', tensor.data_ptr()) for tensor in target_masks]
+        output_values_c = ffi.cast('float*', output_tensor.data_ptr())
 
-        input_values_c = ffi.cast('float*', input_tensor.data_ptr())
+        target_indices = [s.target_index for s in target_shape_infos]
         target_indices_c = ffi.new('int[]', target_indices)
-        target_values_c = ffi.new('float*[]', target_values)
-        target_masks_c = ffi.new('bool*[]', target_mask_values)
 
         start_gen_tensor = torch.empty(1, dtype=torch.int32)
         start_gen_value_c = ffi.cast('int*', start_gen_tensor.data_ptr())
@@ -117,9 +119,8 @@ class GameLogReader:
         logger.info('******************************')
         logger.info('Train gen:%s', gen)
 
-        lib.DataLoader_load(self._data_loader, window_size, n_samples, apply_symmetry,
-                            input_values_c, target_indices_c, target_values_c, target_masks_c,
-                            start_gen_value_c)
+        lib.DataLoader_load(self._data_loader, window_size, n_samples, apply_symmetry, n_targets,
+                            output_values_c, target_indices_c, start_gen_value_c)
 
         start_gen = start_gen_tensor.item()
 
@@ -131,22 +132,28 @@ class GameLogReader:
             'Sampling from %s of %s (%.1f%%) positions (%s)' %
             (window_size, master_size, 100. * window_size / master_size, gen_str))
 
-        input_tensor = input_tensor.to(self._cuda_device_str)
-        for t, target_tensor in enumerate(target_tensors):
-            target_tensors[t] = target_tensor.to(self._cuda_device_str)
-            target_masks[t] = target_masks[t].to(self._cuda_device_str)
+        output_tensor = output_tensor.to(self._cuda_device_str)
 
         for i in range(n_minibatches):
             start = i * minibatch_size
             end = (i + 1) * minibatch_size
+            output_slice = output_tensor[start:end]
 
-            input_tensor_slice = input_tensor[start:end]
-            target_tensor_slices = [tensor[start:end] for tensor in target_tensors]
-            target_mask_slices = [mask[start:end] for mask in target_masks]
+            input_slice = output_slice[:, :input_shape_size].reshape(-1, *input_shape)
 
-            data_batch = DataBatch(input_tensor=input_tensor_slice,
-                                   target_tensors=target_tensor_slices,
-                                   target_masks=target_mask_slices)
+            c = input_shape_size
+            target_slices = []
+            mask_slices = []
+            for target_shape, target_size in zip(target_shapes, target_shape_sizes):
+                target_slice = output_slice[:, c:c + target_size].reshape(-1, *target_shape)
+                mask_slice = output_slice[:, c + target_size].type(torch.bool)
+                target_slices.append(target_slice)
+                mask_slices.append(mask_slice)
+                c += target_size + 1
+
+            data_batch = DataBatch(input_tensor=input_slice,
+                                   target_tensors=target_slices,
+                                   target_masks=mask_slices)
             yield data_batch
 
     def _get_ffi(self):
@@ -177,8 +184,8 @@ class GameLogReader:
                 int64_t file_size);
 
             void DataLoader_load(struct DataLoader* loader, int64_t window_size, int n_samples,
-                bool apply_symmetry, float* input_data_array, int* target_indices_array,
-                float** target_data_arrays, bool** target_mask_arrays, int* start_gen);
+                bool apply_symmetry, int n_targets, float* output_data_array,
+                int* target_indices_array, int* start_gen);
 
             void init();
             """)

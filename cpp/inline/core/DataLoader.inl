@@ -79,14 +79,30 @@ const char* DataLoader<Game>::DataFile::buffer() const {
 }
 
 template <concepts::Game Game>
-void DataLoader<Game>::LoadInstructions::init(bool apply_sym, float* input_data_arr,
-                                              int* target_indices_arr, float** target_data_arrs,
-                                              bool** target_mask_arrs) {
+void DataLoader<Game>::LoadInstructions::init(bool apply_sym, int n_targets, float* output_array,
+                                              int* target_indices_array) {
   apply_symmetry = apply_sym;
-  input_data_array = input_data_arr;
-  target_indices_array = target_indices_arr;
-  target_data_arrays = target_data_arrs;
-  target_mask_arrays = target_mask_arrs;
+  output_data_array = output_array;
+  target_indices.resize(n_targets);
+  for (int i = 0; i < n_targets; ++i) {
+    target_indices[i] = target_indices_array[i];
+  }
+
+  row_size = Game::InputTensorizor::Tensor::Dimensions::total_size;
+
+  using TrainingTargetsList = Game::TrainingTargets::List;
+  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
+
+  for (int target_index : target_indices) {
+    mp::constexpr_for<0, N, 1>([&](auto a) {
+      if (target_index == a) {
+        using Target = mp::TypeAt_t<TrainingTargetsList, a>;
+        constexpr int kSize = Target::Tensor::Dimensions::total_size;
+        row_size += kSize;
+        row_size++;  // for the mask
+      }
+    });
+  }
 }
 
 template <concepts::Game Game>
@@ -525,10 +541,9 @@ void DataLoader<Game>::WorkerThread::do_work() {
   const char* buffer = file->buffer();  // blocks until loaded
 
   bool apply_symmetry = load_instructions_->apply_symmetry;
-  int* target_indices_array = load_instructions_->target_indices_array;
-  float* input_data_array = load_instructions_->input_data_array;
-  float** target_data_arrays = load_instructions_->target_data_arrays;
-  bool** target_mask_arrays = load_instructions_->target_mask_arrays;
+  float* output_data_array = load_instructions_->output_data_array;
+  const std::vector<int>& target_indices = load_instructions_->target_indices;
+  int row_size = load_instructions_->row_size;
 
   GameLogFileReader reader(buffer);
 
@@ -543,18 +558,18 @@ void DataLoader<Game>::WorkerThread::do_work() {
 
       for (; s < num_samples && sample_indices[s] < limit; ++s) {
         int row_index = sample_indices[s] - offset;
-        log.load(row_index, apply_symmetry, input_data_array, target_indices_array,
-                 target_data_arrays, target_mask_arrays, output_index);
+        float* output = output_data_array + output_index * row_size;
+        log.load(row_index, apply_symmetry, target_indices, output);
         output_index++;
       }
 
-      if (s == num_samples) break;
+      if (s == num_samples) return;
     }
     offset = limit;
   }
 
-  util::release_assert(s == num_samples, "WorkerThread::do_work() bug at %d (%d != %d) num_games=%d", __LINE__,
-                       s, num_samples, num_games);
+  throw util::Exception("WorkerThread::do_work() bug at %d (%d != %d) num_games=%d", __LINE__, s,
+                        num_samples, num_games);
 }
 
 template <concepts::Game Game>
@@ -614,11 +629,9 @@ void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
 }
 
 template <concepts::Game Game>
-void DataLoader<Game>::load(int64_t window_size, int n_samples,
-                            bool apply_symmetry, float* input_data_array, int* target_indices_array,
-                            float** target_data_arrays, bool** target_mask_arrays, int* start_gen) {
-  load_instructions_.init(apply_symmetry, input_data_array, target_indices_array,
-                          target_data_arrays, target_mask_arrays);
+void DataLoader<Game>::load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
+                            float* output_array, int* target_indices_array, int* start_gen) {
+  load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
   sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_size,
                            n_samples);
   for (const auto& unit : work_units_) {
@@ -633,31 +646,9 @@ void DataLoader<Game>::load(int64_t window_size, int n_samples,
 
 template <concepts::Game Game>
 void DataLoader<Game>::shuffle_output(int n_samples) {
-  constexpr int kInputSize = Game::InputTensorizor::Tensor::Dimensions::count;
-
-  float* i = load_instructions_.input_data_array;
-  util::Random::chunked_shuffle<kInputSize>(&i[0], i + n_samples);
-
-  using TrainingTargetsList = Game::TrainingTargets::List;
-  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
-
-  for (int t = 0;; ++t) {
-    int target_index = load_instructions_.target_indices_array[t];
-    if (target_index < 0) break;
-
-    mp::constexpr_for<0, N, 1>([&](auto a) {
-      if (target_index == a) {
-        using Target = mp::TypeAt_t<TrainingTargetsList, a>;
-        constexpr int kOutputSize = Target::Tensor::Dimensions::count;
-
-        float* d = load_instructions_.target_data_arrays[t];
-        bool* m = load_instructions_.target_mask_arrays[t];
-
-        util::Random::chunked_shuffle<kOutputSize>(&d[0], d + n_samples);
-        util::Random::shuffle(&m[0], m + n_samples);
-      }
-    });
-  }
+  float* f = load_instructions_.output_data_array;
+  int row_size = load_instructions_.row_size;
+  util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
 }  // namespace core

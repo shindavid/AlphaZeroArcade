@@ -116,14 +116,12 @@ class DataLoader {
    * LoadInstructions specifies what tensors to extract from the game data and where to write them.
    */
   struct LoadInstructions {
-    void init(bool apply_sym, float* input_data_arr, int* target_indices_arr,
-              float** target_data_arrs, bool** target_mask_arrs);
+    void init(bool apply_sym, int n_targets, float* output_array, int* target_indices_array);
 
     bool apply_symmetry;
-    float* input_data_array;
-    int* target_indices_array;
-    float** target_data_arrays;
-    bool** target_mask_arrays;
+    float* output_data_array;
+    std::vector<int> target_indices;
+    int row_size;
   };
 
   /*
@@ -318,16 +316,19 @@ class DataLoader {
 
   /*
    * Samples n_samples rows from M[-window_size:]. Converts the rows into tensors, which are written
-   * into the arrays passed in. Additionally, the first generation used for sampling is written to
+   * into output_array. Additionally, the first generation used for sampling is written to
    * start_gen.
+   *
+   * On the python side, output_array is sized to fit all the tensors that will be generated. Each
+   * row is expected to be written as a concatenated (input, targets..., masks...) row. The python
+   * will take care of subsequently splitting the row into its constituent parts.
    *
    * NOTE: if the tensors are very large, this might not all fit in memory. In that case, it is up
    * to the caller to call load() multiple times, passing in values for n_minibatches that sum up to
    * the desired total.
    */
-  void load(int64_t window_size, int n_samples, bool apply_symmetry, float* input_data_array,
-            int* target_indices_array, float** target_data_arrays, bool** target_mask_arrays,
-            int* start_gen);
+  void load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
+            float* output_array, int* target_indices_array, int* start_gen);
 
  private:
   void shuffle_output(int n_samples);

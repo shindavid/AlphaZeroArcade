@@ -179,8 +179,9 @@ class GameReadLog : public GameLogBase<Game> {
 
   static ShapeInfo* get_shape_info_array();
 
-  void load(int row_index, bool apply_symmetry, float* input_values, int* target_indices,
-            float** target_arrays, bool** target_masks, int out_index) const;
+  void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
+            float* output_array) const;
+
 
   // void replay() const;
   int num_sampled_positions() const { return metadata_.num_samples; }

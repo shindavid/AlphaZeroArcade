@@ -106,7 +106,7 @@ class SelfPlayData:
                     select_tokens.append(sv.sql_select_str + ' AS ' + sv.df_col)
                 else:
                     select_tokens.append(sv.sql_select_str)
-            query = f"SELECT {', '.join(select_tokens)} FROM {table}"
+            query = f"SELECT {', '.join(select_tokens)} FROM {table} WHERE gen > 0"
             group_by = set([sv.group_by for sv in select_vars if sv.group_by is not None])
             if group_by:
                 assert len(group_by) == 1, select_vars

@@ -178,13 +178,8 @@ ShapeInfo* GameReadLog<Game>::get_shape_info_array() {
 }
 
 template <concepts::Game Game>
-void GameReadLog<Game>::load(int row_index, bool apply_symmetry, float* input_values,
-                             int* target_indices, float** target_arrays, bool** target_masks,
-                             int out_index) const {
-  printf("GameLog::%s(%d, ..., %d) %s metadata={%lu, %u, %u, %u, %u, %u, %u}\n", __func__,
-         row_index, out_index, filename_, metadata_.start_timestamp, metadata_.start_offset,
-         metadata_.data_size, metadata_.num_samples,
-          metadata_.num_positions, metadata_.client_id, metadata_.reserved);
+void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
+                             const std::vector<int>& target_indices, float* output_array) const {
   util::release_assert(row_index >= 0 && row_index < num_sampled_positions(),
                        "Index %d out of bounds [0, %d) in %s[%d]", row_index, num_sampled_positions(),
                        filename_, game_index_);
@@ -242,8 +237,9 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry, float* input_va
 
   const ValueTensor& outcome = get_outcome();
 
+  constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
-  std::copy(input.data(), input.data() + input.size(), &input_values[out_index * input.size()]);
+  output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
 
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
@@ -261,10 +257,13 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry, float* input_va
       if (target_index == a) {
         using Target = mp::TypeAt_t<TrainingTargetsList, a>;
         using Tensor = Target::Tensor;
+        constexpr int kSize = Tensor::Dimensions::total_size;
+
         Tensor tensor;
-        target_masks[t][out_index] = Target::tensorize(view, tensor);
-        std::copy(tensor.data(), tensor.data() + tensor.size(),
-                  &target_arrays[t][out_index * tensor.size()]);
+        bool mask = Target::tensorize(view, tensor);
+        output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
+        output_array[0] = mask;
+        output_array++;
       }
     });
   }

@@ -5,8 +5,6 @@
 
 #define FFI_MACRO(Game)                                                                    \
   using GameReadLog = core::GameReadLog<Game>;                                             \
-  using State = Game::State;                                                               \
-  using GameTensor = Game::InputTensorizor::Tensor;                                        \
   using DataLoader = core::DataLoader<Game>;                                               \
   using DataLoaderParams = DataLoader::Params;                                             \
                                                                                            \
@@ -31,11 +29,10 @@
   }                                                                                        \
                                                                                            \
   void DataLoader_load(DataLoader* loader, int64_t window_size, int n_samples,             \
-                       bool apply_symmetry, float* input_data_array,                       \
-                       int* target_indices_array, float** target_data_arrays,              \
-                       bool** target_mask_arrays, int* start_gen) {                        \
-    loader->load(window_size, n_samples, apply_symmetry, input_data_array,                 \
-      target_indices_array, target_data_arrays, target_mask_arrays, start_gen);            \
+                       bool apply_symmetry, int n_targets, float* output_data_array,       \
+                       int* target_indices_array, int* start_gen) {                        \
+    loader->load(window_size, n_samples, apply_symmetry, n_targets, output_data_array,     \
+      target_indices_array, start_gen);                                                    \
   }                                                                                        \
                                                                                            \
   core::ShapeInfo* get_shape_info_array() { return GameReadLog::get_shape_info_array(); }  \

@@ -140,28 +140,6 @@ void LoopControllerClient::recv_handshake() {
   client_id_ = client_id;
 }
 
-void LoopControllerClient::send_metrics() {
-  if (!params_.report_metrics) {
-    return;
-  }
-
-  PerfStats stats = get_perf_stats();
-  if (stats.empty()) {
-    return;
-  }
-
-  LOG_INFO << "LoopControllerClient: sending metrics...";
-  int64_t timestamp = util::ns_since_epoch();
-
-  boost::json::object msg;
-  msg["type"] = "metrics";
-  msg["gen"] = cur_generation_;
-  msg["timestamp"] = timestamp;
-  msg["metrics"] = stats.to_json();
-
-  send(msg);
-}
-
 void LoopControllerClient::send_pause_ack() {
   boost::json::object msg;
   msg["type"] = "pause-ack";
@@ -273,7 +251,6 @@ void LoopControllerClient::loop() {
         break;
       }
 
-      send_metrics();
       cur_generation_ = generation;
       reload_weights(buf, cuda_device);
     } else if (type == "quit") {

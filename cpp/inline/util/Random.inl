@@ -60,11 +60,11 @@ void Random::shuffle(T begin, T end) {
   return std::shuffle(begin, end, instance()->prng_);
 }
 
-template <int ChunkSize, std::random_access_iterator T>
-void Random::chunked_shuffle(T begin, T end) {
+template <std::random_access_iterator T>
+void Random::chunked_shuffle(T begin, T end, int chunk_size) {
   auto& rng = instance()->prng_;
 
-  constexpr int c = ChunkSize;
+  int c = chunk_size;
   int n = (end - begin) / c;
 
   // Fisher–Yates shuffle on groups.
