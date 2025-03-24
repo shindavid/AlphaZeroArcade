@@ -1,5 +1,4 @@
 from typing import List
-import torch
 from torch import optim
 
 from alphazero.logic.custom_types import Generation
@@ -7,7 +6,6 @@ from alphazero.logic.game_log_reader import DataBatch
 from shared.net_modules import Head, Model
 from util.logging_util import get_logger
 from util.torch_util import apply_mask
-
 
 import time
 from typing import Optional
@@ -134,11 +132,6 @@ class NetTrainer:
         self.gen = gen
         self.n_minibatches_to_process = n_minibatches_to_process
         self.py_cuda_device_str = py_cuda_device_str
-        self.reset()
-
-    def reset(self):
-        self.for_loop_time = 0
-        self.t0 = time.time()
 
     def shutdown(self):
         self._shutdown_in_progress = True
@@ -167,7 +160,6 @@ class NetTrainer:
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
-            t1 = time.time()
 
             inputs = batch.input_tensor
             labels = batch.target_tensors
@@ -189,8 +181,6 @@ class NetTrainer:
             loss.backward()
             optimizer.step()
             stats.n_minibatches_processed += 1
-            t2 = time.time()
-            self.for_loop_time += t2 - t1
             if stats.n_minibatches_processed == self.n_minibatches_to_process:
                 break
             if self._shutdown_in_progress:
@@ -205,12 +195,3 @@ class NetTrainer:
         stats.window_sample_rate = window_sample_rate
 
         return stats
-
-    def dump_timing_stats(self, log_level):
-        if logger.level > log_level:
-            return
-
-        total_time = time.time() - self.t0
-        data_loading_time = total_time - self.for_loop_time
-        logger.log(log_level, 'Data loading time: %10.3f seconds', data_loading_time)
-        logger.log(log_level, 'Training time:     %10.3f seconds', self.for_loop_time)

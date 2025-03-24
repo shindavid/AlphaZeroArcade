@@ -569,14 +569,13 @@ class SelfPlayManager:
                 self_play_data_insert_tuple)
 
             cursor.close()
+            db_conn.commit()
 
-        self._controller.handle_new_self_play_data(gen, positions, file_size)
-
-        logger.debug('Resetting row data...')
         with self._commit_lock:
             self._n_committed_rows = self._get_num_potential_rows()
             self._commit_info.clear()
-        logger.debug('Row data reset! New num rows: %s', self._n_committed_rows)
+
+        self._controller.handle_new_self_play_data(gen, positions, file_size)
 
     def _commit_data_fully_staged(self):
         return all(info.staged for info in self._commit_info.values())

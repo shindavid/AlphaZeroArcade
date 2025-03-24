@@ -52,14 +52,14 @@ class SelectVar:
 
 SELECT_VARS = [
     SelectVar('metrics', 'mcts_gen', 'gen', index=True),
-    SelectVar('metrics', 'cache_hits', 'SUM(cache_hits)', group_by='mcts_gen'),
-    SelectVar('metrics', 'cache_misses', 'SUM(cache_misses)', group_by='mcts_gen'),
-    SelectVar('self_play_metadata', 'mcts_gen', 'gen', index=True),
-    SelectVar('self_play_metadata', 'positions_evaluated', 'positions_evaluated'),
-    SelectVar('self_play_metadata', 'batches_evaluated', 'batches_evaluated'),
-    SelectVar('self_play_metadata', 'y_runtime', '1e-9 * runtime'),
-    SelectVar('self_play_metadata', 'n_positions', 'augmented_positions'),
-    SelectVar('self_play_metadata', 'y_games', 'games'),
+    SelectVar('metrics', 'cache_hits', 'SUM(cache_hits)', group_by='gen'),
+    SelectVar('metrics', 'cache_misses', 'SUM(cache_misses)', group_by='gen'),
+    SelectVar('self_play_data', 'mcts_gen', 'gen', index=True),
+    SelectVar('self_play_data', 'positions_evaluated', 'positions_evaluated'),
+    SelectVar('self_play_data', 'batches_evaluated', 'batches_evaluated'),
+    SelectVar('self_play_data', 'y_runtime', '1e-9 * runtime'),
+    SelectVar('self_play_data', 'n_positions', 'positions'),
+    SelectVar('self_play_data', 'y_games', 'games'),
 ]
 
 

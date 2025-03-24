@@ -28,12 +28,12 @@ class SelectVar:
 
 
 SELECT_VARS = [
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'runtime', '1e-9 * runtime'),
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'mcts_gen', 'gen', index=True),
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_games', 'games'),
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_evaluated_positions',
+    SelectVar('self_play_db_filename', 'self_play_data', 'runtime', '1e-9 * runtime'),
+    SelectVar('self_play_db_filename', 'self_play_data', 'mcts_gen', 'gen', index=True),
+    SelectVar('self_play_db_filename', 'self_play_data', 'n_games', 'games'),
+    SelectVar('self_play_db_filename', 'self_play_data', 'n_evaluated_positions',
               'positions_evaluated'),
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_batches_evaluated',
+    SelectVar('self_play_db_filename', 'self_play_data', 'n_batches_evaluated',
               'batches_evaluated'),
     SelectVar('training_db_filename', 'training', 'train_time',
               '1e-9 * (training_end_ts - training_start_ts)'),
