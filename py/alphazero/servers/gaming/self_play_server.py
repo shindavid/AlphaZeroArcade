@@ -12,7 +12,7 @@ from util import subprocess_util
 from dataclasses import dataclass, fields
 import subprocess
 import threading
-from typing import Optional
+from typing import List, Optional
 
 
 logger = get_logger()
@@ -38,8 +38,9 @@ class SelfPlayServer:
         self._build_params = build_params
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
-        self._running = False
+
         self._proc: Optional[subprocess.Popen] = None
+        self._proc_cond = threading.Condition()
 
         self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
@@ -115,6 +116,8 @@ class SelfPlayServer:
         msg_type = msg['type']
         if msg_type == 'start-gen0':
             self._handle_start_gen0(msg)
+        elif msg_type == 'stop-gen0':
+            self._handle_stop_gen0()
         elif msg_type == 'start':
             self._handle_start()
         elif msg_type == 'restart':
@@ -134,6 +137,19 @@ class SelfPlayServer:
         thread = threading.Thread(target=self._start_gen0, args=(msg,),
                                   daemon=True, name=f'start-gen0')
         thread.start()
+
+    def _handle_stop_gen0(self):
+        # NOTE: although my intention is for this to be the point at which the process is killed,
+        # the gen-0 c++ process seems to exit on its own. I'm not exactly sure why, but it doesn't
+        # really matter, so I'm not going to investigate further.
+        proc = self._proc
+        assert proc is not None
+
+        logger.info('Stopping gen-0 self-play process [%s]', proc.pid)
+        self._session_data.disable_next_returncode_check()
+        self._proc.kill()
+        self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
+        self._clear_proc()
 
     def _handle_start(self):
         thread = threading.Thread(target=self._start, daemon=True, name=f'start')
@@ -159,9 +175,6 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_gen0_helper(self, msg):
-        assert not self._running
-        self._running = True
-
         max_rows = msg['max_rows']
 
         player_args = {
@@ -214,20 +227,12 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         cwd = self._session_data.run_dir
-        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
-        self._proc = proc
+        proc = self._set_proc(self_play_cmd, cwd)
         logger.info('Running gen-0 self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
-        self._proc = None
+        self._clear_proc()
 
         logger.info('Gen-0 self-play complete!')
-        self._running = False
-
-        data = {
-            'type': 'gen0-complete',
-        }
-        self._session_data.socket.send_json(data)
-
         self._session_data.stop_log_sync(log_filename)
 
     def _start(self):
@@ -238,9 +243,6 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_helper(self):
-        assert not self._running
-        self._running = True
-
         player_args = {
             '--type': 'MCTS-T',
             '--name': 'MCTS',
@@ -285,11 +287,10 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         cwd = self._session_data.run_dir
-        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
-        self._proc = proc
+        proc = self._set_proc(self_play_cmd, cwd)
         logger.info('Running self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
-        self._proc = None
+        self._clear_proc()
 
     def _restart_helper(self):
         proc = self._proc
@@ -300,7 +301,18 @@ class SelfPlayServer:
         self._session_data.disable_next_returncode_check()
         self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
-        self._proc = None
-        self._running = False
+        self._clear_proc()
 
         self._start_helper()
+
+    def _set_proc(self, cmd: List[str], cwd: str) -> subprocess.Popen:
+        with self._proc_cond:
+            self._proc_cond.wait_for(lambda: self._proc is None)
+            proc = subprocess_util.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL)
+            self._proc = proc
+            return proc
+
+    def _clear_proc(self):
+        with self._proc_cond:
+            self._proc = None
+            self._proc_cond.notify_all()

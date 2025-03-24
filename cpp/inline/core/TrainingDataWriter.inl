@@ -73,6 +73,12 @@ void TrainingDataWriter<Game>::shut_down() {
 }
 
 template <concepts::Game Game>
+void TrainingDataWriter<Game>::wait_until_batch_empty() {
+  std::unique_lock lock(batch_mutex_);
+  batch_cv_.wait(lock, [&] { return batch_data_.size == 0; });
+}
+
+template <concepts::Game Game>
 void TrainingDataWriter<Game>::pause() {
   LOG_INFO << "TrainingDataWriter: pausing";
   std::unique_lock lock(game_queue_mutex_);
@@ -110,6 +116,7 @@ void TrainingDataWriter<Game>::handle_data_request(int n_rows) {
   batch_data_.reset();
   batch_data_.next_heartbeat_time = std::chrono::steady_clock::now() + heartbeat_interval();
   batch_data_.limit = 0;
+  batch_cv_.notify_one();
 }
 
 template <concepts::Game Game>
@@ -177,6 +184,7 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   for (; n_games < n_total_games; ++n_games) {
     row_count += batch_data_.metadata[n_games].num_samples;
     if (row_count >= n_rows) {
+      n_games++;
       break;
     }
   }
@@ -221,6 +229,7 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   msg["timestamp"] = util::ns_since_epoch();
   msg["gen"] = model_generation;
   msg["n_games"] = n_games;
+  msg["n_rows"] = row_count;
   if (client->report_metrics()) {
     msg["metrics"] = client->get_perf_stats().to_json();
   }

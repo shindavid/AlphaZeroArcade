@@ -513,6 +513,10 @@ void GameServer<Game>::run() {
   }
   time_point_t end_time = std::chrono::steady_clock::now();
 
+  if (shared_data_.training_data_writer()) {
+    shared_data_.training_data_writer()->wait_until_batch_empty();
+  }
+
   int num_games = shared_data_.num_games_started();
   duration_t duration = end_time - start_time;
   int64_t ns = duration.count();

@@ -76,7 +76,7 @@ class DataLoader {
     DataFile(const char* filename, int gen, int num_rows, int64_t file_size);
     ~DataFile();
 
-    const char* filename() const { return filename_; }
+    const char* filename() const { return filename_.c_str(); }
     generation_t gen() const { return gen_; }
     const int num_rows() const { return num_rows_; }
     int64_t file_size() const { return file_size_; }
@@ -93,7 +93,7 @@ class DataLoader {
     bool is_loaded() const { return buffer_ != nullptr; }
 
    private:
-    const char* filename_;
+    std::string filename_;
     const generation_t gen_;
     const int num_rows_;
     const int64_t file_size_;
@@ -200,7 +200,7 @@ class DataLoader {
     mutable std::mutex mutex_;
     mutable std::condition_variable cv_;
     std::thread thread_;
-    DataFile* file_;
+    DataFile* file_ = nullptr;
     bool quitting_ = false;
   };
 
@@ -245,7 +245,7 @@ class DataLoader {
     void exit_prefetch_loop();
     void delete_all_files();
 
-    const boost::filesystem::path& data_dir_;
+    const boost::filesystem::path data_dir_;
     const int64_t memory_budget_;
 
     mutable std::mutex mutex_;
@@ -312,7 +312,6 @@ class DataLoader {
   };
 
   DataLoader(const Params&);
-  ~DataLoader();
 
   void restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes);
   void add_gen(int gen, int num_rows, int64_t file_size);

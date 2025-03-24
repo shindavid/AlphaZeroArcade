@@ -21,7 +21,7 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import sha256sum, untar_remote_file_to_local_directory
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -252,7 +252,7 @@ class LoopController:
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
-        required_rows = self.get_next_checkpoint() - self.get_num_rows()
+        required_rows = self.get_next_checkpoint() - self.get_num_committed_rows()
 
         data1 = {
             'type': 'data-pre-request',
@@ -283,8 +283,8 @@ class LoopController:
         logger.debug('Unhijacking all self-play tables...')
         self._gpu_contention_manager.unhijack_all_self_play_tables()
 
-    def get_num_rows(self):
-        return self._self_play_manager.get_num_rows()
+    def get_num_committed_rows(self):
+        return self._self_play_manager.get_num_committed_rows()
 
     def get_next_checkpoint(self):
         return self._training_manager.get_next_checkpoint()
@@ -321,8 +321,8 @@ class LoopController:
                 'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn)
         except SocketSendException:
             logger.warning(
-                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn,
-                exc_info=True)
+                'Encountered SocketSendException in %s (conn=%s):', thread_name, conn,
+                exc_info=True, stack_info=True, stacklevel=10)
         except:
             logger.error(
                 'Unexpected error in %s (conn=%s):', thread_name, conn, exc_info=True)
@@ -386,15 +386,10 @@ class LoopController:
         gen = self._training_manager.get_oldest_required_gen()
         logger.info(f'Copying self-play data from gen {gen} to {last_gen}...')
         while gen <= last_gen:
-            # copy .tar file and unpack it to the local self-play-data directory
-            src_tar = self._persistent_organizer.get_self_play_data_dir(gen) + '.tar'
-
-            if not os.path.isfile(src_tar):
-                gen += 1
-                continue  # there can be gaps in self-play gens, so continue here, not break
-
-            dst_dir = self._organizer.self_play_data_dir
-            untar_remote_file_to_local_directory(src_tar, dst_dir)
+            src = self._persistent_organizer.get_self_play_data_filename(gen)
+            if src is not None and os.path.isfile(src):
+                dst = self._organizer.get_self_play_data_filename(gen)
+                shutil.copy(src, dst)
             gen += 1
 
         # Copy the most recent checkpoint

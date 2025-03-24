@@ -100,6 +100,7 @@ class TrainingDataWriter
   void add(GameWriteLog_sptr log);
   void shut_down();
   bool closed() const { return misc_data_.closed; }
+  void wait_until_batch_empty();
 
   void pause() override;
   void unpause() override;

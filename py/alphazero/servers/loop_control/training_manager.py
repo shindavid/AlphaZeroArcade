@@ -38,7 +38,8 @@ class TrainingManager:
         self._controller = controller
         self._lock = threading.Lock()
 
-        self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params)
+        self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params,
+                                              controller.params.cuda_device)
 
         self._trainer = None
         self._net = None
@@ -275,8 +276,9 @@ class TrainingManager:
             n_minibatches = training_params.minibatches_per_epoch
 
             f = training_params.window_size_function
-            n = self._controller.get_num_rows()
+            n = self._controller.get_num_committed_rows()
             w = int(f(n))
+            logger.debug('Training window size: f(%s)=%s', n, w)
 
             start = max(0, n - w)
             end = n

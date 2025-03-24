@@ -30,9 +30,11 @@ class GameLogReader:
 
     The functions of the shared library are exposed through the FFI interface.
     """
-    def __init__(self, game_spec: GameSpec, build_params: BuildParams):
+    def __init__(self, game_spec: GameSpec, build_params: BuildParams,
+                 cuda_device_str: str):
         self._game_spec = game_spec
         self._build_params = build_params
+        self._cuda_device_str = cuda_device_str
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._lib.init()
@@ -91,10 +93,10 @@ class GameLogReader:
         input_shape_info = self.shape_info_dict['input']
         target_shape_infos = [self.shape_info_dict[name] for name in target_names]
 
-        input_shape = tuple(list(input_shape_info.shape) + [n_samples])
+        input_shape = tuple([n_samples] + list(input_shape_info.shape))
         input_tensor = torch.empty(input_shape, dtype=torch.float32)
 
-        target_shapes = [tuple(list(shape_info.shape) + [n_samples]) for shape_info in
+        target_shapes = [tuple([n_samples] + list(shape_info.shape)) for shape_info in
                          target_shape_infos]
         target_tensors = [torch.empty(shape, dtype=torch.float32) for shape in target_shapes]
 
@@ -129,12 +131,17 @@ class GameLogReader:
             'Sampling from %s of %s (%.1f%%) positions (%s)' %
             (window_size, master_size, 100. * window_size / master_size, gen_str))
 
+        input_tensor = input_tensor.to(self._cuda_device_str)
+        for t, target_tensor in enumerate(target_tensors):
+            target_tensors[t] = target_tensor.to(self._cuda_device_str)
+            target_masks[t] = target_masks[t].to(self._cuda_device_str)
+
         for i in range(n_minibatches):
             start = i * minibatch_size
             end = (i + 1) * minibatch_size
 
-            input_tensor_slice = input_tensor[..., start:end]
-            target_tensor_slices = [tensor[..., start:end] for tensor in target_tensors]
+            input_tensor_slice = input_tensor[start:end]
+            target_tensor_slices = [tensor[start:end] for tensor in target_tensors]
             target_mask_slices = [mask[start:end] for mask in target_masks]
 
             data_batch = DataBatch(input_tensor=input_tensor_slice,

@@ -1,6 +1,7 @@
 #include <core/DataLoader.hpp>
 
 #include <core/GameLog.hpp>
+#include <cstdio>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
@@ -17,33 +18,35 @@ namespace core {
 
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::DataFile(const char* filename, int gen, int num_rows, int64_t file_size)
-    : filename_(filename),
-      gen_(gen),
-      num_rows_(num_rows),
-      file_size_(file_size) {}
+    : filename_(filename), gen_(gen), num_rows_(num_rows), file_size_(file_size) {
+  printf("%p %s\n", this, std::format("{}({})", __func__, filename_).c_str());
+}
 
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::~DataFile() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   unload();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::DataFile::load() {
   std::unique_lock lock(mutex_);
   if (!buffer_) {
-    FILE* file = fopen(filename_, "rb");
+    printf("%p %s\n", this, std::format("{}({})", __func__, filename_).c_str());
+    FILE* file = fopen(filename_.c_str(), "rb");
     if (!file) {
-      throw util::Exception("Failed to open file '%s'", filename_);
+      throw util::Exception("Failed to open file '%s'", filename_.c_str());
     }
 
     if (fseek(file, 0, SEEK_SET) != 0) {
-      throw util::Exception("Failed to seek to start of file '%s'", filename_);
+      throw util::Exception("Failed to seek to start of file '%s'", filename_.c_str());
     }
 
     buffer_ = new char[file_size_];
     int64_t read_size = fread(buffer_, 1, file_size_, file);
     if (read_size != file_size_) {
-      throw util::Exception("Failed to read data from file '%s'", filename_);
+      throw util::Exception("Failed to read data from file '%s'", filename_.c_str());
     }
 
     fclose(file);
@@ -68,7 +71,9 @@ int64_t DataLoader<Game>::DataFile::unload() {
 template <concepts::Game Game>
 const char* DataLoader<Game>::DataFile::buffer() const {
   std::unique_lock lock(mutex_);
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   return buffer_;
 }
 
@@ -85,12 +90,15 @@ void DataLoader<Game>::LoadInstructions::init(bool apply_sym, float* input_data_
 
 template <concepts::Game Game>
 DataLoader<Game>::SamplingManager::~SamplingManager() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (local_index_vec_t* vec : vec_pool_used_) {
     delete vec;
   }
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (local_index_vec_t* vec : vec_pool_unused_) {
     delete vec;
   }
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -99,6 +107,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
                                                int n_samples) {
   reset_vec_pools();
   sampled_indices_.resize(n_samples);
+  printf("%s\n", std::format("{}(..., {}, {})", __func__, window_size, n_samples).c_str());
   for (int i = 0; i < n_samples; ++i) {
     sampled_indices_[i] = util::Random::uniform_sample(0, window_size);
   }
@@ -112,14 +121,18 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
     gen = file->gen();
     int64_t num_rows = file->num_rows();
     int64_t limit = offset + num_rows;
+    int64_t local_offset = std::max(limit - window_size, int64_t(0));
     int output_index = index;
 
     // Note: it important to create a WorkUnit even if the gen has no samples, because WorkManager
     // detects when a DataFile is safe to remove based on the smallest gen in work_units.
     local_index_vec_t* local_indices = get_vec();
     while (index < n_samples && sampled_indices_[index] < limit) {
-      int64_t rev_local_index = sampled_indices_[index] - offset;
-      local_indices->push_back(num_rows - rev_local_index);
+      int64_t local_index = local_offset + sampled_indices_[index] - offset;
+      util::release_assert(local_index >= 0 && local_index < num_rows,
+                           "SamplingManager::sample() bug at %d [local_index:%ld num_rows:%ld]",
+                           __LINE__, local_index, num_rows);
+      local_indices->push_back(local_index);
       index++;
     }
     work_units->push_back(WorkUnit{file, local_indices, output_index});
@@ -173,7 +186,9 @@ void DataLoader<Game>::ThreadTable::mark_as_available(thread_id_t id) {
 template <concepts::Game Game>
 typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_thread() {
   std::unique_lock lock(mutex_);
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] { return quitting_ || !available_thread_ids_.empty(); });
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   if (quitting_) return -1;
   thread_id_t id = available_thread_ids_.back();
   available_thread_ids_.pop_back();
@@ -183,9 +198,11 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
   std::unique_lock lock(mutex_);
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] {
     return quitting_ || (int)available_thread_ids_.size() == n_threads_;
     });
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -204,16 +221,22 @@ DataLoader<Game>::PrefetchThread::PrefetchThread(ThreadTable* table, thread_id_t
 
 template <concepts::Game Game>
 DataLoader<Game>::PrefetchThread::~PrefetchThread() {
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   quit();
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::quit() {
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   std::unique_lock lock(mutex_);
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_.join();
+  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -227,8 +250,11 @@ void DataLoader<Game>::PrefetchThread::schedule_prefetch(DataFile* data_file) {
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::loop() {
   while (!quitting_) {
+    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     std::unique_lock lock(mutex_);
+    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [this] { return quitting_ || file_ != nullptr; });
+    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     if (quitting_) return;
     lock.unlock();
 
@@ -242,6 +268,7 @@ template <concepts::Game Game>
 DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_dir,
                                            int64_t memory_budget, int num_prefetch_threads)
     : data_dir_(data_dir), memory_budget_(memory_budget), thread_table_(num_prefetch_threads) {
+  printf("%p %s\n", this, std::format("{}() - data_dir_={}", __func__, data_dir_.c_str()).c_str());
   for (int i = 0; i < num_prefetch_threads; ++i) {
     prefetch_threads_.push_back(new PrefetchThread(&thread_table_, i));
   }
@@ -250,13 +277,20 @@ DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_d
 
 template <concepts::Game Game>
 DataLoader<Game>::FileManager::~FileManager() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.quit();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   exit_prefetch_loop();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+  delete_all_files();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 
   for (PrefetchThread* thread : prefetch_threads_) {
     delete thread;
   }
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   prefetch_loop_thread_.join();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -377,13 +411,14 @@ void DataLoader<Game>::FileManager::prefetch_loop() {
   while (!quitting_) {
     std::unique_lock lock(mutex_);
     Instruction instruction = kWait;
+    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [&] {
       instruction = get_next_instruction();
       return instruction != kWait;
     });
+    printf("%s\n", std::format("{}() - {} - {}", __func__, (int)instruction, __LINE__).c_str());
 
     if (instruction == kQuit) {
-      delete_all_files();
       return;
     } else if (instruction == kLoad) {
       DataFile* file = load_queue_.front();
@@ -429,7 +464,9 @@ DataLoader<Game>::WorkerThread::WorkerThread(FileManager* file_manager, ThreadTa
 
 template <concepts::Game Game>
 DataLoader<Game>::WorkerThread::~WorkerThread() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   quit();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -456,7 +493,9 @@ template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::loop() {
   while (!quitting_) {
     std::unique_lock lock(mutex_);
+    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [this] { return quitting_ || has_work_; });
+    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
     if (quitting_) return;
 
     do_work();
@@ -479,6 +518,9 @@ void DataLoader<Game>::WorkerThread::do_work() {
   int output_index = unit_.output_index;
 
   const char* filename = file->filename();
+  printf("%s() - filename=%s output_index=%d num_samples=%d\n", __func__, filename, output_index,
+         num_samples);
+  std::cout.flush();
   const char* buffer = file->buffer();  // blocks until loaded
 
   bool apply_symmetry = load_instructions_->apply_symmetry;
@@ -510,8 +552,8 @@ void DataLoader<Game>::WorkerThread::do_work() {
     offset = limit;
   }
 
-  util::release_assert(s == num_samples, "WorkerThread::do_work() bug at %d (%d != %d)", __LINE__,
-                       s, num_samples);
+  util::release_assert(s == num_samples, "WorkerThread::do_work() bug at %d (%d != %d) num_games=%d", __LINE__,
+                       s, num_samples, num_games);
 }
 
 template <concepts::Game Game>
@@ -524,10 +566,13 @@ DataLoader<Game>::WorkManager::WorkManager(FileManager* file_manager, int num_th
 
 template <concepts::Game Game>
 DataLoader<Game>::WorkManager::~WorkManager() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.quit();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (WorkerThread* thread : workers_) {
     delete thread;
   }
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -540,7 +585,9 @@ void DataLoader<Game>::WorkManager::process(const LoadInstructions& load_instruc
     work_units.pop_front();
   }
 
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.wait_until_all_threads_available();
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -548,10 +595,6 @@ DataLoader<Game>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
-
-template <concepts::Game Game>
-DataLoader<Game>::~DataLoader() {
-}
 
 template <concepts::Game Game>
 void DataLoader<Game>::restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes) {
@@ -603,8 +646,6 @@ void DataLoader<Game>::shuffle_output(int n_samples) {
       }
     });
   }
-
-  throw std::runtime_error("Not implemented");
 }
 
 }  // namespace core

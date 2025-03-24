@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection
+from alphazero.logic.custom_types import ClientConnection, ClientId
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
-from dataclasses import dataclass, field
+from collections import defaultdict
+from dataclasses import dataclass
 import os
+import subprocess
 import threading
 import time
-from typing import List, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -21,66 +23,82 @@ logger = get_logger()
 
 
 class SelfPlayManager:
-
     @dataclass
     class CommitInfo:
-        pending_metrics: list = field(default_factory=list)
-        client_ids_with_pending_game_data: set = field(default_factory=set)
-        client_ids_with_game_data: list = field(default_factory=list)
-        n_committed_rows: int = 0
-        n_pending_rows: int = 0
-        n_pending_games: int = 0
-        pending_runtime: int = 0
+        """
+        Houses per-worker metadata about the current generation of self-play data.
+
+        Initially, the data is in an "unstaged" state - this means that if the worker process dies,
+        the data is discarded.
+
+        Once the data is fully received, it is "staged" - this means that the data is ready to be
+        committed to the database. At this point, even if the worker process dies, the data will be
+        committed to the database.
+
+        Once the data is committed to the database, this object is removed from the
+        SelfPlayManager's self._commit_info dict.
+
+        This concept of staging/unstaging allows us to be flexible about the exact sequence of
+        events that occur when a worker process dies (which typically happens for gen-0 and for
+        periodic restarts).
+        """
+        n_rows: int = 0
+        n_games: int = 0
+        timestamp: int = 0
+        runtime: int = 0
+
+        # metrics
+        n_cache_hits: int = 0
+        n_cache_misses: int = 0
+        n_positions_evaluated: int = 0
+        n_batches_evaluated: int = 0
+        n_full_batches_evaluated: int = 0
+
+        staged: bool = False  # see docstring for explanation
 
     def __init__(self, controller: LoopController):
         self._controller = controller
 
         self._scratch_dir = '/home/devuser/scratch/self-play-data'
 
-        self._gen0_complete = False
-        self._gen0_lock = threading.Lock()
-        self._gen0_cond = threading.Condition(self._gen0_lock)
+        self._ready_server_conns: List[ClientConnection] = []
+        self._worker_conns: List[ClientConnection] = []
+        self._conns_lock = threading.Lock()
+        self._conns_cond = threading.Condition(self._conns_lock)
 
-        self._ready_conns: List[ClientConnection] = []
-        self._ready_lock = threading.Lock()
-        self._ready_cond = threading.Condition(self._ready_lock)
-
-        self._commit_info = SelfPlayManager.CommitInfo()
-        self._commit_info_lock = threading.Lock()
-        self._commit_info_cond = threading.Condition(self._commit_info_lock)
+        CommitInfo = SelfPlayManager.CommitInfo
+        self._commit_info: Dict[ClientId, SelfPlayManager.CommitInfo] = defaultdict(CommitInfo)
+        self._n_committed_rows = 0
+        self._commit_lock = threading.Lock()
+        self._commit_cond = threading.Condition(self._commit_lock)
 
     def setup(self):
         os.makedirs(self._scratch_dir, exist_ok=True)
 
-        with self._commit_info_lock:
-            self._commit_info.n_committed_rows = self._fetch_num_rows_in_db()
+        with self._commit_lock:
+            self._n_committed_rows = self._fetch_num_rows_in_db()
 
-    def get_num_rows(self):
-        with self._commit_info_lock:
-            return self._get_num_rows()
+    def get_num_committed_rows(self):
+        return self._n_committed_rows
 
     def run_gen0_if_necessary(self):
-        additional_gen0_rows_needed = self._num_additional_gen0_positions_needed()
-        if additional_gen0_rows_needed == 0:
-            self._gen0_complete = True
+        num_rows = self._n_committed_rows
+        if num_rows > 0:
             return
 
-        with self._ready_lock:
-            self._ready_cond.wait_for(lambda: self._ready_conns)
-            conn = self._ready_conns[0]
+        with self._conns_lock:
+            self._conns_cond.wait_for(lambda: self._ready_server_conns)
+            conn = self._ready_server_conns[0]
 
-        self._launch_gen0_self_play(conn, additional_gen0_rows_needed)
-        self._wait_until_checkpoint_reached()
-
-        with self._gen0_cond:
-            self._gen0_cond.wait_for(lambda: self._gen0_complete)
-
+        checkpoint = self._controller.get_next_checkpoint()
+        self._launch_gen0_self_play(conn, checkpoint)
         self._collect_and_process_game_data()
+        self._stop_gen0_self_play(conn)
 
     def run_until_checkpoint(self):
         checkpoint = self._controller.get_next_checkpoint()
 
-        num_rows = self.get_num_rows()
+        num_rows = self._n_committed_rows
         if checkpoint <= num_rows:
             return
 
@@ -89,7 +107,6 @@ class SelfPlayManager:
 
         self._launch_unlaunched_workers()
         self._controller.unhijack_all_self_play_tables()
-        self._wait_until_checkpoint_reached()
         self._collect_and_process_game_data()
         self._controller.hijack_all_self_play_tables()
 
@@ -116,6 +133,9 @@ class SelfPlayManager:
             disconnect_handler=self._handle_server_disconnect)
 
     def add_worker(self, conn: ClientConnection):
+        with self._conns_lock:
+            self._worker_conns.append(conn)
+
         conn.aux['ack_cond'] = threading.Condition()
         reply = {
             'type': 'handshake-ack',
@@ -126,8 +146,13 @@ class SelfPlayManager:
             self._worker_msg_handler, conn, 'self-play-worker',
             disconnect_handler=self._handle_worker_disconnect)
 
-    def _get_num_rows(self):
-        return self._commit_info.n_committed_rows + self._commit_info.n_pending_rows
+    def _get_num_potential_rows(self):
+        """
+        Returns the number of rows there will be if all pending data is committed.
+
+        Assumes that self._commit_lock is held.
+        """
+        return self._n_committed_rows + sum(info.n_rows for info in self._commit_info.values())
 
     def _fetch_num_rows_in_db(self) -> int:
         with self._controller.self_play_db_conn_pool.db_lock:
@@ -143,13 +168,18 @@ class SelfPlayManager:
         return 0
 
     def _handle_server_disconnect(self, conn: ClientConnection):
-        # If we really want, we could implement graceful handling for this case, but it's simpler
-        # to just shut down the server.
-        if not self._gen0_complete:
-            raise Exception('Server disconnected before gen-0 self-play was complete')
         self._controller.stop_log_sync(conn)
 
     def _handle_worker_disconnect(self, conn: ClientConnection):
+        logger.debug('Handling disconnect of %s...', conn)
+        with self._conns_lock:
+            self._worker_conns = [c for c in self._worker_conns if c.client_id != conn.client_id]
+
+        with self._commit_lock:
+            info = self._commit_info.get(conn.client_id, None)
+            if info is not None and not info.staged:
+                del self._commit_info[conn.client_id]
+
         cond: threading.Condition = conn.aux['ack_cond']
         with cond:
             conn.aux.pop('pending_pause_ack', None)
@@ -169,14 +199,13 @@ class SelfPlayManager:
             self._controller.start_log_sync(conn, msg['log_filename'])
         elif msg_type == 'log-sync-stop':
             self._controller.stop_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'gen0-complete':
-            self._handle_gen0_complete()
         else:
             logger.warning('self-play-server: unknown message type: %s', msg)
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
+        logger.debug('self-play-worker received json message: %s', msg)
 
         if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
@@ -194,23 +223,21 @@ class SelfPlayManager:
             logger.warning('self-play-worker: unknown message type: %s', msg)
         return False
 
-    def _set_gen0_completion(self, complete: bool, log=True):
-        """
-        Assumes self._gen0_lock is already acquired.
-        """
-        if self._gen0_complete:
-            return
-
-        self._gen0_complete = complete
-        if complete and log:
-            logger.info('Gen-0 self-play complete!')
-
     def _launch_gen0_self_play(self, conn: ClientConnection, num_rows: int):
         logger.info('Requesting %s to perform gen-0 self-play...', conn)
 
         data = {
             'type': 'start-gen0',
             'max_rows': num_rows,
+        }
+
+        conn.socket.send_json(data)
+
+    def _stop_gen0_self_play(self, conn: ClientConnection):
+        logger.info('Requesting %s to stop gen-0 self-play...', conn)
+
+        data = {
+            'type': 'stop-gen0',
         }
 
         conn.socket.send_json(data)
@@ -252,15 +279,12 @@ class SelfPlayManager:
         conn.socket.send_json(data)
 
     def _handle_ready(self, conn: ClientConnection):
-        with self._ready_lock:
-            self._ready_conns.append(conn)
-            self._ready_cond.notify_all()
+        with self._conns_lock:
+            self._ready_server_conns.append(conn)
+            self._conns_cond.notify_all()
 
-            with self._gen0_lock:
-                if not self._gen0_complete:
-                    return
-
-            self._launch_self_play(conn)
+            if self._n_committed_rows > 0:
+                self._launch_self_play(conn)
 
     def _manage_worker(self, conn: ClientConnection):
         try:
@@ -339,74 +363,48 @@ class SelfPlayManager:
             self._controller.broadcast_weights(conn, gen)
             conn.aux['gen'] = gen
 
-    def _handle_gen0_complete(self):
-        with self._gen0_cond:
-            self._gen0_complete = True
-            self._gen0_cond.notify_all()
-
-    def _num_additional_gen0_positions_needed(self) -> int:
-        total_needed = self._controller.training_params.samples_per_window()
-        with self._controller.self_play_db_conn_pool.db_lock:
-            cursor = self._controller.self_play_db_conn_pool.get_cursor()
-            cursor.execute(
-                'SELECT gen, cumulative_positions FROM self_play_data ORDER BY id DESC LIMIT 1')
-            row = cursor.fetchone()
-            cursor.close()
-        if row is None:
-            return total_needed
-        gen, cumulative_positions = row
-        if gen > 0:
-            return 0
-
-        assert gen == 0, gen
-        return max(0, total_needed - cumulative_positions)
-
     def _handle_heartbeat(self, msg: JsonDict, conn: ClientConnection):
         rows = msg['rows']
 
-        with self._commit_info_lock:
-            prev_rows = conn.aux.get('rows', 0)
-            conn.aux['rows'] = rows
-            self._commit_info.n_pending_rows += rows - prev_rows
+        with self._commit_lock:
+            self._commit_info[conn.client_id].n_rows = rows
 
-            if self._get_num_rows() >= self._controller.get_next_checkpoint():
-                self._commit_info_cond.notify_all()
+            if self._get_num_potential_rows() >= self._controller.get_next_checkpoint():
+                self._commit_cond.notify_all()
 
     def _launch_unlaunched_workers(self):
-        with self._ready_lock:
-            for conn in self._ready_conns:
+        with self._conns_lock:
+            for conn in self._ready_server_conns:
                 if not conn.aux.get('launched', False):
                     self._launch_self_play(conn)
 
     def _wait_until_checkpoint_reached(self):
         checkpoint = self._controller.get_next_checkpoint()
-        with self._commit_info_lock:
-            self._commit_info_cond.wait_for(lambda: self._get_num_rows() >= checkpoint)
+        with self._commit_lock:
+            self._commit_cond.wait_for(lambda: self._get_num_potential_rows() >= checkpoint)
 
     def _collect_and_process_game_data(self):
+        self._wait_until_checkpoint_reached()
         self._request_all_game_data()
         self._receive_all_game_data()
         self._update_self_play_db()
-        self._reset_row_data()
 
     def _request_all_game_data(self):
-        logger.debug('Requesting data from all self-play workers...')
-        n_rows_needed = self._controller.get_next_checkpoint() - self._commit_info.n_committed_rows
+        n_rows_needed = self._controller.get_next_checkpoint() - self._n_committed_rows
+        logger.debug('Requesting %s rows of data from all self-play workers...', n_rows_needed)
 
         n_rows_requested = 0
 
-        with self._ready_lock:
-            for conn in self._ready_conns:
-                rows = conn.aux.get('rows', 0)
+        with self._conns_lock:
+            for conn in self._worker_conns:
+                with self._commit_lock:
+                    rows = self._commit_info[conn.client_id].n_rows
                 n_rows_to_request = min(n_rows_needed - n_rows_requested, rows)
                 if n_rows_to_request > 0:
                     self._request_game_data(conn, n_rows_to_request)
                 n_rows_requested += n_rows_to_request
 
     def _request_game_data(self, conn: ClientConnection, n_rows: int):
-        with self._commit_info_lock:
-            self._commit_info.client_ids_with_pending_game_data.add(conn.client_id)
-
         logger.debug('Requesting %s to send %s rows of data...', conn, n_rows)
         data = {
             'type': 'data-request',
@@ -418,8 +416,8 @@ class SelfPlayManager:
         logger.debug('Handling self play data for %s...', conn)
 
         timestamp = msg['timestamp']
-        gen = msg['gen']
         n_games = msg['n_games']
+        n_rows = msg['n_rows']
         metrics = msg.get('metrics', None)
         no_file = msg.get('no_file', False)
 
@@ -442,30 +440,39 @@ class SelfPlayManager:
         else:
             conn.socket.recv_file(game_filename)
 
-        with self._commit_info_lock:
-            self._commit_info.pending_runtime += total_runtime
-            self._commit_info.n_pending_games += n_games
-            if metrics is not None:
-                self._commit_info.pending_metrics.append((conn.client_id, timestamp, metrics))
-            self._commit_info.client_ids_with_pending_game_data.pop(conn.client_id)
-            self._commit_info.client_ids_with_game_data.append(conn.client_id)
-            if not self._commit_info.client_ids_with_pending_game_data:
-                self._commit_info_cond.notify_all()
+        with self._commit_lock:
+            info = self._commit_info[conn.client_id]
 
-        if gen == 0:
-            logger.info('Client %s has finished self-play', conn.client_id)
-            conn.socket.send_json({'type': 'quit'})
+            assert n_rows <= info.n_rows, (n_rows, info.n_rows)
+
+            info.n_rows = n_rows
+            info.n_games = n_games
+            info.timestamp = timestamp
+            info.runtime = total_runtime
+
+            if metrics is not None:
+                info.n_cache_hits = metrics['cache_hits']
+                info.n_cache_misses = metrics['cache_misses']
+                info.n_positions_evaluated = metrics['positions_evaluated']
+                info.n_batches_evaluated = metrics['batches_evaluated']
+                info.n_full_batches_evaluated = metrics['full_batches_evaluated']
+
+            info.staged = True
+            if self._commit_data_fully_staged():
+                self._commit_cond.notify_all()
 
     def _receive_all_game_data(self):
         logger.debug('Receiving all game data...')
-        with self._commit_info_lock:
-            self._commit_info_cond.wait_for(
-                lambda: not self._commit_info.client_ids_with_pending_game_data, timeout=30)
+        with self._commit_lock:
+            self._commit_cond.wait_for(
+                lambda: self._commit_data_fully_staged(), timeout=30)
 
-            if self._commit_info.client_ids_with_pending_game_data:
+            if not self._commit_data_fully_staged():
                 raise Exception('Timed out waiting for self-play data from clients')
 
-            client_ids = list(self._commit_info.client_ids_with_game_data)
+            client_ids = list(self._commit_info.keys())
+
+        logger.debug('Clients with game data: %s', client_ids)
 
         game_filenames = [os.path.join(self._scratch_dir, f'{c}.data') for c in client_ids]
 
@@ -478,7 +485,7 @@ class SelfPlayManager:
         if len(game_filenames) == 1:
             # Easy case: we can just move the file to the correct location
             game_filename = game_filenames[0]
-            os.rename(game_filename, output_filename)
+            subprocess.run(['mv', game_filename, output_filename], check=True)
         elif len(game_filenames) == 0:
             raise Exception('No game data received')
         else:
@@ -493,11 +500,10 @@ class SelfPlayManager:
 
         file_size = os.path.getsize(output_filename)
 
-        with self._commit_info_lock:
-            positions = self._commit_info.n_pending_rows
-            cumulative_positions = self._commit_info.n_committed_rows + positions
-            n_games = self._commit_info.n_pending_games
-            metrics_list = list(self._commit_info.pending_metrics)
+        with self._commit_lock:
+            cumulative_positions = self._get_num_potential_rows()
+            positions = cumulative_positions - self._n_committed_rows
+            commit_info = dict(self._commit_info)
 
         metrics_columns = [
             'client_id',
@@ -514,17 +520,18 @@ class SelfPlayManager:
         metrics_insert_list = [
             (client_id,
              gen,
-             timestamp,
-             metrics['cache_hits'],
-             metrics['cache_misses'],
-             metrics['positions_evaluated'],
-             metrics['batches_evaluated'],
-             metrics['full_batches_evaluated'])
-            for client_id, timestamp, metrics in metrics_list]
+             info.timestamp,
+             info.n_cache_hits,
+             info.n_cache_misses,
+             info.n_positions_evaluated,
+             info.n_batches_evaluated,
+             info.n_full_batches_evaluated)
+            for client_id, info in commit_info.items()]
 
-        positions_evaluated = sum(metrics['positions_evaluated'] for _, _, metrics in metrics_list)
-        batches_evaluated = sum(metrics['batches_evaluated'] for _, _, metrics in metrics_list)
-        runtime = sum(metrics['runtime'] for _, _, metrics in metrics_list)
+        n_positions_evaluated = sum(info.n_positions_evaluated for info in commit_info.values())
+        n_batches_evaluated = sum(info.n_batches_evaluated for info in commit_info.values())
+        n_games = sum(info.n_games for info in commit_info.values())
+        runtime = sum(info.runtime for info in commit_info.values())
 
         self_play_data_columns = [
             'gen',
@@ -541,8 +548,8 @@ class SelfPlayManager:
             gen,
             positions,
             cumulative_positions,
-            positions_evaluated,
-            batches_evaluated,
+            n_positions_evaluated,
+            n_batches_evaluated,
             n_games,
             runtime,
             file_size,
@@ -561,17 +568,18 @@ class SelfPlayManager:
                 VALUES ({', '.join(['?' for _ in self_play_data_columns])})""",
                 self_play_data_insert_tuple)
 
+            cursor.close()
+
         self._controller.handle_new_self_play_data(gen, positions, file_size)
 
-    def _reset_row_data(self):
-        with self._commit_info_lock:
-            self._commit_info.n_committed_rows += self._commit_info.n_pending_rows
-            self._commit_info.n_pending_rows = 0
-            self._commit_info.n_pending_games = 0
-            self._commit_info.pending_runtime = 0
-            self._commit_info.pending_metrics = []
-            self._commit_info.client_ids_with_pending_game_data = set()
-            self._commit_info.client_ids_with_game_data = []
+        logger.debug('Resetting row data...')
+        with self._commit_lock:
+            self._n_committed_rows = self._get_num_potential_rows()
+            self._commit_info.clear()
+        logger.debug('Row data reset! New num rows: %s', self._n_committed_rows)
+
+    def _commit_data_fully_staged(self):
+        return all(info.staged for info in self._commit_info.values())
 
     def _handle_weights_request(self, conn: ClientConnection):
         thread = threading.Thread(target=self._manage_worker, args=(conn,),
