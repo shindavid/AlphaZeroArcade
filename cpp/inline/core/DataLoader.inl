@@ -19,21 +19,21 @@ namespace core {
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::DataFile(const char* filename, int gen, int num_rows, int64_t file_size)
     : filename_(filename), gen_(gen), num_rows_(num_rows), file_size_(file_size) {
-  printf("%p %s\n", this, std::format("{}({})", __func__, filename_).c_str());
+  printf("%p %s\n", this, std::format("DataFile::{}({})", __func__, filename_).c_str());
 }
 
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::~DataFile() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   unload();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::DataFile::load() {
   std::unique_lock lock(mutex_);
   if (!buffer_) {
-    printf("%p %s\n", this, std::format("{}({})", __func__, filename_).c_str());
+    printf("%s\n", std::format("DataFile::{}({})", __func__, filename_).c_str());
     FILE* file = fopen(filename_.c_str(), "rb");
     if (!file) {
       throw util::Exception("Failed to open file '%s'", filename_.c_str());
@@ -51,6 +51,7 @@ void DataLoader<Game>::DataFile::load() {
 
     fclose(file);
   }
+  printf("%s\n", std::format("DataFile::{}({}) - complete", __func__, filename_).c_str());
   lock.unlock();
   cv_.notify_all();
 }
@@ -71,9 +72,9 @@ int64_t DataLoader<Game>::DataFile::unload() {
 template <concepts::Game Game>
 const char* DataLoader<Game>::DataFile::buffer() const {
   std::unique_lock lock(mutex_);
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   return buffer_;
 }
 
@@ -317,13 +318,13 @@ int DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_u
     }
   }
 
-  util::release_assert(memory_usage_ == expected_memory_usage,
-                       "DataFileSet::prepare_files() memory-usage-tracking-bug [%ld != %ld]",
-                        memory_usage_, expected_memory_usage);
-
   if (start_gen >= 0) {
     trim(start_gen);
   }
+
+  util::release_assert(memory_usage_ == expected_memory_usage,
+    "DataFileSet::prepare_files() memory-usage-tracking-bug [%ld != %ld]",
+     memory_usage_, expected_memory_usage);
 
   lock.unlock();
   cv_.notify_all();
@@ -493,9 +494,9 @@ template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::loop() {
   while (!quitting_) {
     std::unique_lock lock(mutex_);
-    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+    printf("%s\n", std::format("WorkerThread::{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [this] { return quitting_ || has_work_; });
-    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
+    printf("%s\n", std::format("WorkerThread::{}() - {}", __func__, __LINE__).c_str());
     if (quitting_) return;
 
     do_work();
@@ -518,16 +519,16 @@ void DataLoader<Game>::WorkerThread::do_work() {
   int output_index = unit_.output_index;
 
   const char* filename = file->filename();
-  printf("%s() - filename=%s output_index=%d num_samples=%d\n", __func__, filename, output_index,
+  printf("WorkerThread::%s() - filename=%s output_index=%d num_samples=%d\n", __func__, filename, output_index,
          num_samples);
   std::cout.flush();
   const char* buffer = file->buffer();  // blocks until loaded
 
   bool apply_symmetry = load_instructions_->apply_symmetry;
-  float* input_data_array = &load_instructions_->input_data_array[output_index];
   int* target_indices_array = load_instructions_->target_indices_array;
-  float** target_data_arrays = &load_instructions_->target_data_arrays[output_index];
-  bool** target_mask_arrays = &load_instructions_->target_mask_arrays[output_index];
+  float* input_data_array = load_instructions_->input_data_array;
+  float** target_data_arrays = load_instructions_->target_data_arrays;
+  bool** target_mask_arrays = load_instructions_->target_mask_arrays;
 
   GameLogFileReader reader(buffer);
 
@@ -598,11 +599,17 @@ DataLoader<Game>::DataLoader(const Params& params)
 
 template <concepts::Game Game>
 void DataLoader<Game>::restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes) {
+  printf("%s\n",
+         std::format("DataLoader::{}({}, {}...{})", __func__, n, gens[0], gens[n - 1]).c_str());
+
   file_manager_.restore(n, gens, row_counts, file_sizes);
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
+  printf("%s\n",
+         std::format("DataLoader::{}({}, {}, {})", __func__, gen, num_rows, file_size).c_str());
+
   file_manager_.append(gen, num_rows, file_size);
 }
 
@@ -614,6 +621,11 @@ void DataLoader<Game>::load(int64_t window_size, int n_samples,
                           target_data_arrays, target_mask_arrays);
   sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_size,
                            n_samples);
+  for (const auto& unit : work_units_) {
+    printf("%s\n", std::format("DBG unit {} gen={} num_samples={} output={}",
+                               unit.file->filename(), unit.file->gen(), unit.sample_indices->size(),
+                               unit.output_index).c_str());
+  }
   start_gen[0] = file_manager_.prepare_files(work_units_);
   work_manager_.process(load_instructions_, work_units_);
   shuffle_output(n_samples);

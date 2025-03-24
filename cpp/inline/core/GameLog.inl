@@ -179,8 +179,12 @@ ShapeInfo* GameReadLog<Game>::get_shape_info_array() {
 
 template <concepts::Game Game>
 void GameReadLog<Game>::load(int row_index, bool apply_symmetry, float* input_values,
-                             int* target_indices, float** target_arrays,
-                             bool** target_masks, int out_index) const {
+                             int* target_indices, float** target_arrays, bool** target_masks,
+                             int out_index) const {
+  printf("GameLog::%s(%d, ..., %d) %s metadata={%lu, %u, %u, %u, %u, %u, %u}\n", __func__,
+         row_index, out_index, filename_, metadata_.start_timestamp, metadata_.start_offset,
+         metadata_.data_size, metadata_.num_samples,
+          metadata_.num_positions, metadata_.client_id, metadata_.reserved);
   util::release_assert(row_index >= 0 && row_index < num_sampled_positions(),
                        "Index %d out of bounds [0, %d) in %s[%d]", row_index, num_sampled_positions(),
                        filename_, game_index_);
