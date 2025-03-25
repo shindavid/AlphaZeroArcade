@@ -13,12 +13,10 @@ from util.py_util import make_hidden_filename
 import torch
 from torch import optim
 
-import logging
 import os
 import shutil
 import tempfile
 import threading
-import time
 from typing import Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -287,26 +285,14 @@ class TrainingManager:
             net, optimizer = self._get_net_and_optimizer()
             self._dump_model_counts()
 
-            window_size = w
-
-            t0 = time.time()
-            data_batches = self._game_log_reader.create_data_batches(
-                window_size, minibatch_size, n_minibatches, n, net.target_names, gen)
-            t1 = time.time()
-
-            stats = trainer.do_training_epoch(data_batches, net, optimizer, minibatch_size, start,
-                                              end)
-            t2 = time.time()
+            stats = trainer.do_training_epoch(
+                self._game_log_reader, net, optimizer, minibatch_size, n_minibatches,
+                start, end, gen)
 
             if stats is None:
                 # Happens in premature-shutdown case. No need to release training gpu lock since
                 # the whole process is shutting down.
                 return
-
-            stats.dump(logging.INFO)
-            logger.info('Gen %s training complete', gen)
-            logger.info('Data loading time: %10.3f seconds', t1 - t0)
-            logger.info('Training time:     %10.3f seconds', t2 - t1)
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)

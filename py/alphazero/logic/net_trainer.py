@@ -2,11 +2,12 @@ from typing import List
 from torch import optim
 
 from alphazero.logic.custom_types import Generation
-from alphazero.logic.game_log_reader import DataBatch
+from alphazero.logic.game_log_reader import GameLogReader
 from shared.net_modules import Head, Model
 from util.logging_util import get_logger
 from util.torch_util import apply_mask
 
+import logging
 import time
 from typing import Optional
 
@@ -137,12 +138,14 @@ class NetTrainer:
         self._shutdown_in_progress = True
 
     def do_training_epoch(self,
-                          data_batches: List[DataBatch],
+                          reader: GameLogReader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          batch_size: int,
+                          minibatch_size: int,
+                          n_minibatches: int,
                           window_start: int,
-                          window_end: int) -> Optional[TrainingStats]:
+                          window_end: int,
+                          gen: Generation) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -151,16 +154,24 @@ class NetTrainer:
 
         If a separate thread calls self.shutdown(), then this exits prematurely and returns None
         """
+        t0 = time.time()
+        train_time = 0.0
+
+        window_size = window_end - window_start
+        data_batches = reader.create_data_batches(
+            window_size, minibatch_size, n_minibatches, window_end, net.target_names, gen)
+
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]
 
         start_ts = time.time_ns()
         n_samples = 0
-        stats = TrainingStats(self.gen, batch_size, window_start, window_end, net)
+        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
 
+            t1 = time.time()
             inputs = batch.input_tensor
             labels = batch.target_tensors
             masks = batch.target_masks
@@ -180,6 +191,9 @@ class NetTrainer:
 
             loss.backward()
             optimizer.step()
+
+            t2 = time.time()
+            train_time += t2 - t1
             stats.n_minibatches_processed += 1
             if stats.n_minibatches_processed == self.n_minibatches_to_process:
                 break
@@ -193,5 +207,14 @@ class NetTrainer:
         stats.start_ts = start_ts
         stats.end_ts = end_ts
         stats.window_sample_rate = window_sample_rate
+        t3 = time.time()
+
+        total_time = t3 - t0
+        load_time = total_time - train_time
+
+        stats.dump(logging.INFO)
+        logger.info('Gen %s training complete', gen)
+        logger.info('Data loading time: %10.3f seconds', load_time)
+        logger.info('Training time:     %10.3f seconds', train_time)
 
         return stats

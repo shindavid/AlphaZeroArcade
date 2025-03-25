@@ -214,6 +214,7 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
 
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   std::unique_lock lock(mutex_);
   printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] {
@@ -311,7 +312,8 @@ DataLoader<Game>::FileManager::~FileManager() {
 }
 
 template <concepts::Game Game>
-int DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_units) {
+void DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_units,
+                                                  generation_t* gen_range) {
   std::unique_lock lock(mutex_);
   load_queue_.clear();
   unload_queue_.clear();
@@ -319,18 +321,18 @@ int DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_u
 
   int64_t expected_memory_usage = 0;
   generation_t start_gen = -1;
+  generation_t end_gen = -1;
   for (const WorkUnit& unit : work_units) {
     DataFile* file = unit.file;
     util::release_assert(start_gen == -1 || file->gen() < start_gen,
                          "DataFileSet::prepare_files() bug at %d", __LINE__);
     start_gen = file->gen();
-    if (!unit.sample_indices->empty()) {
-      if (file->is_loaded()) {
-        active_file_count_++;
-        expected_memory_usage += file->file_size();
-      } else {
-        load_queue_.push_back(file);
-      }
+    if (end_gen == -1) end_gen = file->gen();
+    if (file->is_loaded()) {
+      active_file_count_++;
+      expected_memory_usage += file->file_size();
+    } else {
+      load_queue_.push_back(file);
     }
   }
 
@@ -344,7 +346,9 @@ int DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_u
 
   lock.unlock();
   cv_.notify_all();
-  return start_gen;
+
+  gen_range[0] = start_gen;
+  gen_range[1] = end_gen;
 }
 
 template <concepts::Game Game>
@@ -529,7 +533,7 @@ void DataLoader<Game>::WorkerThread::do_work() {
   const local_index_vec_t& sample_indices = *unit_.sample_indices;
 
   int num_samples = sample_indices.size();
-  util::release_assert(num_samples > 0, "WorkerThread::do_work() bug at %d", __LINE__);
+  if (num_samples == 0) return;
 
   DataFile* file = unit_.file;
   int output_index = unit_.output_index;
@@ -630,7 +634,7 @@ void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
 
 template <concepts::Game Game>
 void DataLoader<Game>::load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
-                            float* output_array, int* target_indices_array, int* start_gen) {
+                            float* output_array, int* target_indices_array, int* gen_range) {
   load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
   sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_size,
                            n_samples);
@@ -639,7 +643,7 @@ void DataLoader<Game>::load(int64_t window_size, int n_samples, bool apply_symme
                                unit.file->filename(), unit.file->gen(), unit.sample_indices->size(),
                                unit.output_index).c_str());
   }
-  start_gen[0] = file_manager_.prepare_files(work_units_);
+  file_manager_.prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
   shuffle_output(n_samples);
 }
@@ -648,7 +652,12 @@ template <concepts::Game Game>
 void DataLoader<Game>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
+  printf("%s\n",
+         std::format("{}() - n_samples:{} row_size:{} {}", __func__, n_samples, row_size, __LINE__)
+           .c_str());
+
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
+  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 }  // namespace core

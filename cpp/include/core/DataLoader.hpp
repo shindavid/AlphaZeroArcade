@@ -214,9 +214,9 @@ class DataLoader {
                 int num_prefetch_threads);
     ~FileManager();
 
-    // Launches background prefetching of files. Returns the earliest generation of data that falls
-    // in the window.
-    int prepare_files(const work_unit_deque_t& work_units);
+    // Launches background prefetching of files. Writes the first and last gen of the sampled rows
+    // into gen_range.
+    void prepare_files(const work_unit_deque_t& work_units, generation_t* gen_range);
 
     // Called at startup to restore an existing run
     //
@@ -316,8 +316,7 @@ class DataLoader {
 
   /*
    * Samples n_samples rows from M[-window_size:]. Converts the rows into tensors, which are written
-   * into output_array. Additionally, the first generation used for sampling is written to
-   * start_gen.
+   * into output_array. Writes the first and last gen of the sampled rows into gen_range.
    *
    * On the python side, output_array is sized to fit all the tensors that will be generated. Each
    * row is expected to be written as a concatenated (input, targets..., masks...) row. The python
@@ -328,7 +327,7 @@ class DataLoader {
    * the desired total.
    */
   void load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
-            float* output_array, int* target_indices_array, int* start_gen);
+            float* output_array, int* target_indices_array, int* gen_range);
 
  private:
   void shuffle_output(int n_samples);

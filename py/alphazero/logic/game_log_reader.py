@@ -113,21 +113,22 @@ class GameLogReader:
         target_indices = [s.target_index for s in target_shape_infos]
         target_indices_c = ffi.new('int[]', target_indices)
 
-        start_gen_tensor = torch.empty(1, dtype=torch.int32)
-        start_gen_value_c = ffi.cast('int*', start_gen_tensor.data_ptr())
+        gen_range_tensor = torch.empty(2, dtype=torch.int32)
+        gen_range_value_c = ffi.cast('int*', gen_range_tensor.data_ptr())
 
         logger.info('******************************')
         logger.info('Train gen:%s', gen)
 
         lib.DataLoader_load(self._data_loader, window_size, n_samples, apply_symmetry, n_targets,
-                            output_values_c, target_indices_c, start_gen_value_c)
+                            output_values_c, target_indices_c, gen_range_value_c)
 
-        start_gen = start_gen_tensor.item()
+        start_gen = gen_range_tensor[0].item()
+        end_gen = gen_range_tensor[1].item()
 
-        if start_gen + 1 == gen:
+        if start_gen == end_gen:
             gen_str = f'gen {start_gen}'
         else:
-            gen_str = f'gens {start_gen} to {gen - 1}'
+            gen_str = f'gens {start_gen} to {end_gen}'
         logger.info(
             'Sampling from %s of %s (%.1f%%) positions (%s)' %
             (window_size, master_size, 100. * window_size / master_size, gen_str))
@@ -184,8 +185,8 @@ class GameLogReader:
                 int64_t file_size);
 
             void DataLoader_load(struct DataLoader* loader, int64_t window_size, int n_samples,
-                bool apply_symmetry, int n_targets, float* output_data_array,
-                int* target_indices_array, int* start_gen);
+                 bool apply_symmetry, int n_targets, float* output_data_array,
+                 int* target_indices_array, int* gen_range);
 
             void init();
             """)

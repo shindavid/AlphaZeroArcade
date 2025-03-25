@@ -249,10 +249,7 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
 
-  for (int t = 0;; ++t) {
-    int target_index = target_indices[t];
-    if (target_index < 0) break;
-
+  for (int target_index : target_indices) {
     mp::constexpr_for<0, N, 1>([&](auto a) {
       if (target_index == a) {
         using Target = mp::TypeAt_t<TrainingTargetsList, a>;
