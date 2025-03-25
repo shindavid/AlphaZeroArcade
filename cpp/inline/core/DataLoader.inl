@@ -18,22 +18,17 @@ namespace core {
 
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::DataFile(const char* filename, int gen, int num_rows, int64_t file_size)
-    : filename_(filename), gen_(gen), num_rows_(num_rows), file_size_(file_size) {
-  printf("%p %s\n", this, std::format("DataFile::{}({})", __func__, filename_).c_str());
-}
+    : filename_(filename), gen_(gen), num_rows_(num_rows), file_size_(file_size) {}
 
 template <concepts::Game Game>
 DataLoader<Game>::DataFile::~DataFile() {
-  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   unload();
-  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::DataFile::load() {
   std::unique_lock lock(mutex_);
   if (!buffer_) {
-    printf("%s\n", std::format("DataFile::{}({})", __func__, filename_).c_str());
     FILE* file = fopen(filename_.c_str(), "rb");
     if (!file) {
       throw util::Exception("Failed to open file '%s'", filename_.c_str());
@@ -51,7 +46,6 @@ void DataLoader<Game>::DataFile::load() {
 
     fclose(file);
   }
-  printf("%s\n", std::format("DataFile::{}({}) - complete", __func__, filename_).c_str());
   lock.unlock();
   cv_.notify_all();
 }
@@ -72,9 +66,7 @@ int64_t DataLoader<Game>::DataFile::unload() {
 template <concepts::Game Game>
 const char* DataLoader<Game>::DataFile::buffer() const {
   std::unique_lock lock(mutex_);
-  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
-  printf("%s\n", std::format("DataFile::{}() - {} - {}", __func__, filename_, __LINE__).c_str());
   return buffer_;
 }
 
@@ -107,15 +99,12 @@ void DataLoader<Game>::LoadInstructions::init(bool apply_sym, int n_targets, flo
 
 template <concepts::Game Game>
 DataLoader<Game>::SamplingManager::~SamplingManager() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (local_index_vec_t* vec : vec_pool_used_) {
     delete vec;
   }
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (local_index_vec_t* vec : vec_pool_unused_) {
     delete vec;
   }
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -124,7 +113,6 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
                                                int n_samples) {
   reset_vec_pools();
   sampled_indices_.resize(n_samples);
-  printf("%s\n", std::format("{}(..., {}, {})", __func__, window_size, n_samples).c_str());
   for (int i = 0; i < n_samples; ++i) {
     sampled_indices_[i] = util::Random::uniform_sample(0, window_size);
   }
@@ -203,9 +191,7 @@ void DataLoader<Game>::ThreadTable::mark_as_available(thread_id_t id) {
 template <concepts::Game Game>
 typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_thread() {
   std::unique_lock lock(mutex_);
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] { return quitting_ || !available_thread_ids_.empty(); });
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   if (quitting_) return -1;
   thread_id_t id = available_thread_ids_.back();
   available_thread_ids_.pop_back();
@@ -214,13 +200,10 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
 
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   std::unique_lock lock(mutex_);
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   cv_.wait(lock, [this] {
     return quitting_ || (int)available_thread_ids_.size() == n_threads_;
     });
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -239,22 +222,16 @@ DataLoader<Game>::PrefetchThread::PrefetchThread(ThreadTable* table, thread_id_t
 
 template <concepts::Game Game>
 DataLoader<Game>::PrefetchThread::~PrefetchThread() {
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   quit();
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::quit() {
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   std::unique_lock lock(mutex_);
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_.join();
-  printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -268,11 +245,8 @@ void DataLoader<Game>::PrefetchThread::schedule_prefetch(DataFile* data_file) {
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::loop() {
   while (!quitting_) {
-    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     std::unique_lock lock(mutex_);
-    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [this] { return quitting_ || file_ != nullptr; });
-    printf("%p %s\n", this, std::format("{}() - {}", __func__, __LINE__).c_str());
     if (quitting_) return;
     lock.unlock();
 
@@ -286,7 +260,6 @@ template <concepts::Game Game>
 DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_dir,
                                            int64_t memory_budget, int num_prefetch_threads)
     : data_dir_(data_dir), memory_budget_(memory_budget), thread_table_(num_prefetch_threads) {
-  printf("%p %s\n", this, std::format("{}() - data_dir_={}", __func__, data_dir_.c_str()).c_str());
   for (int i = 0; i < num_prefetch_threads; ++i) {
     prefetch_threads_.push_back(new PrefetchThread(&thread_table_, i));
   }
@@ -295,20 +268,14 @@ DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_d
 
 template <concepts::Game Game>
 DataLoader<Game>::FileManager::~FileManager() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.quit();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   exit_prefetch_loop();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   delete_all_files();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 
   for (PrefetchThread* thread : prefetch_threads_) {
     delete thread;
   }
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   prefetch_loop_thread_.join();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -432,12 +399,10 @@ void DataLoader<Game>::FileManager::prefetch_loop() {
   while (!quitting_) {
     std::unique_lock lock(mutex_);
     Instruction instruction = kWait;
-    printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [&] {
       instruction = get_next_instruction();
       return instruction != kWait;
     });
-    printf("%s\n", std::format("{}() - {} - {}", __func__, (int)instruction, __LINE__).c_str());
 
     if (instruction == kQuit) {
       return;
@@ -485,9 +450,7 @@ DataLoader<Game>::WorkerThread::WorkerThread(FileManager* file_manager, ThreadTa
 
 template <concepts::Game Game>
 DataLoader<Game>::WorkerThread::~WorkerThread() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   quit();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -514,9 +477,7 @@ template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::loop() {
   while (!quitting_) {
     std::unique_lock lock(mutex_);
-    printf("%s\n", std::format("WorkerThread::{}() - {}", __func__, __LINE__).c_str());
     cv_.wait(lock, [this] { return quitting_ || has_work_; });
-    printf("%s\n", std::format("WorkerThread::{}() - {}", __func__, __LINE__).c_str());
     if (quitting_) return;
 
     do_work();
@@ -539,9 +500,6 @@ void DataLoader<Game>::WorkerThread::do_work() {
   int output_index = unit_.output_index;
 
   const char* filename = file->filename();
-  printf("WorkerThread::%s() - filename=%s output_index=%d num_samples=%d\n", __func__, filename, output_index,
-         num_samples);
-  std::cout.flush();
   const char* buffer = file->buffer();  // blocks until loaded
 
   bool apply_symmetry = load_instructions_->apply_symmetry;
@@ -586,13 +544,10 @@ DataLoader<Game>::WorkManager::WorkManager(FileManager* file_manager, int num_th
 
 template <concepts::Game Game>
 DataLoader<Game>::WorkManager::~WorkManager() {
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.quit();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   for (WorkerThread* thread : workers_) {
     delete thread;
   }
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -605,9 +560,7 @@ void DataLoader<Game>::WorkManager::process(const LoadInstructions& load_instruc
     work_units.pop_front();
   }
 
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
   thread_table_.wait_until_all_threads_available();
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 template <concepts::Game Game>
@@ -618,17 +571,11 @@ DataLoader<Game>::DataLoader(const Params& params)
 
 template <concepts::Game Game>
 void DataLoader<Game>::restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes) {
-  printf("%s\n",
-         std::format("DataLoader::{}({}, {}...{})", __func__, n, gens[0], gens[n - 1]).c_str());
-
   file_manager_.restore(n, gens, row_counts, file_sizes);
 }
 
 template <concepts::Game Game>
 void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
-  printf("%s\n",
-         std::format("DataLoader::{}({}, {}, {})", __func__, gen, num_rows, file_size).c_str());
-
   file_manager_.append(gen, num_rows, file_size);
 }
 
@@ -638,11 +585,6 @@ void DataLoader<Game>::load(int64_t window_size, int n_samples, bool apply_symme
   load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
   sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_size,
                            n_samples);
-  for (const auto& unit : work_units_) {
-    printf("%s\n", std::format("DBG unit {} gen={} num_samples={} output={}",
-                               unit.file->filename(), unit.file->gen(), unit.sample_indices->size(),
-                               unit.output_index).c_str());
-  }
   file_manager_.prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
   shuffle_output(n_samples);
@@ -652,12 +594,7 @@ template <concepts::Game Game>
 void DataLoader<Game>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
-  printf("%s\n",
-         std::format("{}() - n_samples:{} row_size:{} {}", __func__, n_samples, row_size, __LINE__)
-           .c_str());
-
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
-  printf("%s\n", std::format("{}() - {}", __func__, __LINE__).c_str());
 }
 
 }  // namespace core
