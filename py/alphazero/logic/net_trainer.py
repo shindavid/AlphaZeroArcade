@@ -155,6 +155,7 @@ class NetTrainer:
         If a separate thread calls self.shutdown(), then this exits prematurely and returns None
         """
         t0 = time.time()
+        start_ts = time.time_ns()
         train_time = 0.0
 
         window_size = window_end - window_start
@@ -164,7 +165,6 @@ class NetTrainer:
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]
 
-        start_ts = time.time_ns()
         n_samples = 0
         stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net)
         for batch in data_batches:
