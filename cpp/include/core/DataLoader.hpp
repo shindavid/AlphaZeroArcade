@@ -132,12 +132,13 @@ class DataLoader {
    public:
     ~SamplingManager();
 
-    // Sample from M[-window_size:]. Writes output into work_units. A work unit gets created for
-    // every gen that intersects M[-window_size:], even if no samples are taken from that gen.
+    // Sample from M[window_start:window_end]. Writes output into work_units. A work unit gets
+    // created for every gen that intersects M[-window_size:], even if no samples are taken from
+    // that gen.
     //
     // We expect files to be in reverse order by generation.
-    void sample(work_unit_deque_t* work_units, const file_deque_t& files, int64_t window_size,
-                int n_samples);
+    void sample(work_unit_deque_t* work_units, const file_deque_t& files, int64_t window_start,
+                int64_t window_end, int64_t n_total_rows, int n_samples);
 
    private:
     local_index_vec_t* get_vec();
@@ -222,7 +223,8 @@ class DataLoader {
     //
     // Each of the arrays will be of length n. The k'th generation of self-play data will be for
     // generation gens[k], with row_counts[k] rows and file_sizes[k] bytes.
-    void restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes);
+    void restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
+                 int64_t* file_sizes);
 
     // Add a new generation of data to the manager
     void append(generation_t gen, int num_rows, int64_t file_size);
@@ -231,6 +233,8 @@ class DataLoader {
     const file_deque_t& files_in_reverse_order() const { return all_files_; }
 
     void decrement_active_file_count();
+
+    int64_t n_total_rows() const { return n_total_rows_; }
 
    private:
     enum Instruction : int8_t { kUnload, kLoad, kWait, kQuit };
@@ -258,6 +262,7 @@ class DataLoader {
     file_deque_t unload_queue_;
     int active_file_count_ = 0;
 
+    int64_t n_total_rows_ = 0;
     file_deque_t all_files_;  // stored in reverse order by generation
     int64_t memory_usage_ = 0;  // sum(file->memory_usage() for all files in all_files_)
   };
@@ -311,12 +316,15 @@ class DataLoader {
 
   DataLoader(const Params&);
 
-  void restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes);
+  void restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
+               int64_t* file_sizes);
+
   void add_gen(int gen, int num_rows, int64_t file_size);
 
   /*
-   * Samples n_samples rows from M[-window_size:]. Converts the rows into tensors, which are written
-   * into output_array. Writes the first and last gen of the sampled rows into gen_range.
+   * Samples n_samples rows from M[window_size:window_end]. Converts the rows into tensors, which
+   * are written into output_array. Writes the first and last gen of the sampled rows into
+   * gen_range.
    *
    * On the python side, output_array is sized to fit all the tensors that will be generated. Each
    * row is expected to be written as a concatenated (input, targets..., masks...) row. The python
@@ -326,8 +334,8 @@ class DataLoader {
    * to the caller to call load() multiple times, passing in values for n_minibatches that sum up to
    * the desired total.
    */
-  void load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
-            float* output_array, int* target_indices_array, int* gen_range);
+  void load(int64_t window_start, int64_t window_end, int n_samples, bool apply_symmetry,
+            int n_targets, float* output_array, int* target_indices_array, int* gen_range);
 
  private:
   void shuffle_output(int n_samples);

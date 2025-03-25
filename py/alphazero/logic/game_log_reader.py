@@ -65,7 +65,7 @@ class GameLogReader:
         return self._shape_info_dict
 
     def restore_data_loader(self, gens: List[Generation], row_counts: List[int],
-                            file_sizes: List[int]):
+                            file_sizes: List[int], n_total_rows: int):
         ffi = self._ffi
         lib = self._lib
 
@@ -78,13 +78,14 @@ class GameLogReader:
         gens_c = ffi.new('int[]', gens)
         row_counts_c = ffi.new('int[]', row_counts)
         file_sizes_c = ffi.new('int64_t[]', file_sizes)
-        lib.DataLoader_restore(self._data_loader, n, gens_c, row_counts_c, file_sizes_c)
+        lib.DataLoader_restore(self._data_loader, n_total_rows, n, gens_c, row_counts_c,
+                               file_sizes_c)
 
     def add_gen(self, gen: Generation, num_rows: int, file_size: int):
         self._lib.DataLoader_add_gen(self._data_loader, gen, num_rows, file_size)
 
-    def create_data_batches(self, window_size: int, minibatch_size: int, n_minibatches: int,
-                            master_size: int, target_names: List[str], gen: Generation,
+    def create_data_batches(self, minibatch_size: int, n_minibatches: int, window_start: int,
+                            window_end: int, target_names: List[str], gen: Generation,
                             apply_symmetry=True) -> Iterable[DataBatch]:
         ffi = self._ffi
         lib = self._lib
@@ -119,8 +120,8 @@ class GameLogReader:
         logger.info('******************************')
         logger.info('Train gen:%s', gen)
 
-        lib.DataLoader_load(self._data_loader, window_size, n_samples, apply_symmetry, n_targets,
-                            output_values_c, target_indices_c, gen_range_value_c)
+        lib.DataLoader_load(self._data_loader, window_start, window_end, n_samples, apply_symmetry,
+                            n_targets, output_values_c, target_indices_c, gen_range_value_c)
 
         start_gen = gen_range_tensor[0].item()
         end_gen = gen_range_tensor[1].item()
@@ -129,9 +130,11 @@ class GameLogReader:
             gen_str = f'gen {start_gen}'
         else:
             gen_str = f'gens {start_gen} to {end_gen}'
+
+        window_size = window_end - window_start
         logger.info(
             'Sampling from %s of %s (%.1f%%) positions (%s)' %
-            (window_size, master_size, 100. * window_size / master_size, gen_str))
+            (window_size, window_end, 100. * window_size / window_end, gen_str))
 
         output_tensor = output_tensor.to(self._cuda_device_str)
 
@@ -178,15 +181,15 @@ class GameLogReader:
 
             void DataLoader_delete(struct DataLoader* loader);
 
-            void DataLoader_restore(struct DataLoader* loader, int n, int* gens, int* row_counts,
-                int64_t* file_sizes);
+            void DataLoader_restore(struct DataLoader* loader, int64_t n_total_rows, int n,
+                int* gens, int* row_counts, int64_t* file_sizes);
 
             void DataLoader_add_gen(struct DataLoader* loader, int gen, int num_rows,
                 int64_t file_size);
 
-            void DataLoader_load(struct DataLoader* loader, int64_t window_size, int n_samples,
-                 bool apply_symmetry, int n_targets, float* output_data_array,
-                 int* target_indices_array, int* gen_range);
+            void DataLoader_load(struct DataLoader* loader, int64_t window_start,
+                int64_t window_end, int n_samples, bool apply_symmetry, int n_targets,
+                float* output_data_array, int* target_indices_array, int* gen_range);
 
             void init();
             """)

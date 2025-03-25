@@ -18,19 +18,19 @@
                                                                                                   \
   void DataLoader_delete(DataLoader* loader) { delete loader; }                                   \
                                                                                                   \
-  void DataLoader_restore(DataLoader* loader, int n, int* gens, int* row_counts,                  \
-                          int64_t* file_sizes) {                                                  \
-    loader->restore(n, gens, row_counts, file_sizes);                                             \
+  void DataLoader_restore(DataLoader* loader, int64_t n_total_rows, int n, int* gens,             \
+                          int* row_counts, int64_t* file_sizes) {                                 \
+    loader->restore(n_total_rows, n, gens, row_counts, file_sizes);                               \
   }                                                                                               \
                                                                                                   \
   void DataLoader_add_gen(DataLoader* loader, int gen, int num_rows, int64_t file_size) {         \
     loader->add_gen(gen, num_rows, file_size);                                                    \
   }                                                                                               \
                                                                                                   \
-  void DataLoader_load(DataLoader* loader, int64_t window_size, int n_samples,                    \
-                       bool apply_symmetry, int n_targets, float* output_data_array,              \
-                       int* target_indices_array, int* gen_range) {                               \
-    return loader->load(window_size, n_samples, apply_symmetry, n_targets,                        \
+  void DataLoader_load(DataLoader* loader, int64_t window_start, int64_t window_end,              \
+                       int n_samples, bool apply_symmetry, int n_targets,                         \
+                       float* output_data_array, int* target_indices_array, int* gen_range) {     \
+    return loader->load(window_start, window_end, n_samples, apply_symmetry, n_targets,           \
                         output_data_array, target_indices_array, gen_range);                      \
   }                                                                                               \
                                                                                                   \

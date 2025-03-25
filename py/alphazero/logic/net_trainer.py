@@ -158,9 +158,8 @@ class NetTrainer:
         start_ts = time.time_ns()
         train_time = 0.0
 
-        window_size = window_end - window_start
         data_batches = reader.create_data_batches(
-            window_size, minibatch_size, n_minibatches, window_end, net.target_names, gen)
+            minibatch_size, n_minibatches, window_start, window_end, net.target_names, gen)
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]

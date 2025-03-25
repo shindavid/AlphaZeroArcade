@@ -88,31 +88,29 @@ class TrainingManager:
         """
         self._last_sample_window = self._load_last_sample_window()
         self._latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
-
-        if self._controller.organizer.fork_info is not None:
-            # TODO: Forking support. Need to pass fork info to restore_data_loader(), so that the
-            # C++ can properly construct filenames from the fork dir(s).
-            raise NotImplementedError('Forking support is temporarily unavailable')
-
+        start = self._last_sample_window.start
         self._game_log_reader.init_data_loader(self._controller.organizer.self_play_data_dir)
 
         gens = []
         row_counts = []
+        cumulative_row_counts = []
         file_sizes = []
         with self._controller.self_play_db_conn_pool.db_lock:
             cursor = self._controller.self_play_db_conn_pool.get_cursor()
-            start = self._last_sample_window.start
             where_clause = f'cumulative_positions >= {start}'
-            query = f'SELECT gen, positions, file_size FROM self_play_data WHERE {where_clause}'
+            query = f'SELECT gen, positions, cumulative_positions, file_size FROM self_play_data WHERE {where_clause}'
             cursor.execute(query)
 
             for row in cursor:
                 gens.append(row[0])
                 row_counts.append(row[1])
-                file_sizes.append(row[2])
+                cumulative_row_counts.append(row[2])
+                file_sizes.append(row[3])
             cursor.close()
 
-        self._game_log_reader.restore_data_loader(gens, row_counts, file_sizes)
+        cumulative_row_count = max(cumulative_row_counts + [0])
+        self._game_log_reader.restore_data_loader(gens, row_counts, file_sizes,
+                                                  cumulative_row_count)
 
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
@@ -274,13 +272,17 @@ class TrainingManager:
             minibatch_size = training_params.minibatch_size
             n_minibatches = training_params.minibatches_per_epoch
 
-            f = training_params.window_size_function
-            n = self._controller.get_num_committed_rows()
-            w = int(f(n))
-            logger.debug('Training window size: f(%s)=%s', n, w)
+            fork_info = self._controller.organizer.fork_info
+            if fork_info is not None and gen in fork_info.train_windows:
+                start, end = fork_info.train_windows[gen]
+            else:
+                f = training_params.window_size_function
+                n = self._controller.get_num_committed_rows()
+                w = int(f(n))
+                logger.debug('Training window size: f(%s)=%s', n, w)
 
-            start = max(0, n - w)
-            end = n
+                start = max(0, n - w)
+                end = n
 
             net, optimizer = self._get_net_and_optimizer()
             self._dump_model_counts()

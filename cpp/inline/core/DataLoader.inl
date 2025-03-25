@@ -109,46 +109,61 @@ DataLoader<Game>::SamplingManager::~SamplingManager() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
-                                               const file_deque_t& files, int64_t window_size,
+                                               const file_deque_t& files, int64_t window_start,
+                                               int64_t window_end, int64_t n_total_rows,
                                                int n_samples) {
   reset_vec_pools();
   sampled_indices_.resize(n_samples);
   for (int i = 0; i < n_samples; ++i) {
-    sampled_indices_[i] = util::Random::uniform_sample(0, window_size);
+    sampled_indices_[i] = util::Random::uniform_sample(window_start, window_end);
   }
-  std::sort(sampled_indices_.begin(), sampled_indices_.end());
+  std::sort(sampled_indices_.begin(), sampled_indices_.end(), std::greater{});
 
-  int index = 0;
-  int64_t offset = 0;
+  int sample_index = 0;
+  int64_t file_end = n_total_rows;
   generation_t gen = -1;
   for (DataFile* file : files) {
     util::release_assert(gen == -1 || file->gen() < gen, "DataFileSet::files() bug");
     gen = file->gen();
     int64_t num_rows = file->num_rows();
-    int64_t limit = offset + num_rows;
-    int64_t local_offset = std::max(limit - window_size, int64_t(0));
-    int output_index = index;
+    int64_t file_start = file_end - num_rows;
+
+    if (file_start >= window_end) {
+      // Usually, window_end corresponds to the end of the latest file, so it shouldn't be possible
+      // to reach this point. The exception is when we are retraining over prior training windows
+      // for forked runs.
+      file_end = file_start;
+      continue;
+    }
 
     // Note: it important to create a WorkUnit even if the gen has no samples, because WorkManager
     // detects when a DataFile is safe to remove based on the smallest gen in work_units.
     local_index_vec_t* local_indices = get_vec();
-    while (index < n_samples && sampled_indices_[index] < limit) {
-      int64_t local_index = local_offset + sampled_indices_[index] - offset;
+
+    int output_index = sample_index;
+    while (sample_index < n_samples && sampled_indices_[sample_index] >= file_start) {
+      int64_t local_index = sampled_indices_[sample_index] - file_start;
       util::release_assert(local_index >= 0 && local_index < num_rows,
                            "SamplingManager::sample() bug at %d [local_index:%ld num_rows:%ld]",
                            __LINE__, local_index, num_rows);
       local_indices->push_back(local_index);
-      index++;
+      sample_index++;
     }
+
+    // NOTE: if we're careful, we can avoid reversing local_indices here. But that would make the
+    // logic less clear.
+    std::reverse(local_indices->begin(), local_indices->end());
+
     work_units->push_back(WorkUnit{file, local_indices, output_index});
-    offset = limit;
-    if (offset >= window_size) {
+
+    file_end = file_start;
+    if (file_end <= window_start) {
       sampled_indices_.clear();
       return;
     }
   }
-  throw util::Exception("SamplingManager::sample() bug at %d [window_size:%ld offset:%ld files:%ld]",
-                        __LINE__, window_size, offset, files.size());
+  throw util::Exception("SamplingManager::sample() bug at %d [%ld:%ld] total:%ld sam:%d files:%ld",
+                        __LINE__, window_start, window_end, n_total_rows, n_samples, files.size());
 }
 
 template <concepts::Game Game>
@@ -319,13 +334,14 @@ void DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_
 }
 
 template <concepts::Game Game>
-void DataLoader<Game>::FileManager::restore(int n, generation_t* gens, int* row_counts,
-                                            int64_t* file_sizes) {
+void DataLoader<Game>::FileManager::restore(int64_t n_total_rows, int n, generation_t* gens,
+                                            int* row_counts, int64_t* file_sizes) {
   util::release_assert(all_files_.empty(), "FileManager::init() bug");
 
   for (int i = 0; i < n; ++i) {
     append(gens[i], row_counts[i], file_sizes[i]);
   }
+  n_total_rows_ = n_total_rows;
 }
 
 template <concepts::Game Game>
@@ -334,6 +350,7 @@ void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t fi
   DataFile* data_file = new DataFile(filename.c_str(), end_gen, num_rows, file_size);
 
   std::unique_lock lock(mutex_);
+  n_total_rows_ += num_rows;
   all_files_.push_front(data_file);
 }
 
@@ -570,8 +587,9 @@ DataLoader<Game>::DataLoader(const Params& params)
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
 template <concepts::Game Game>
-void DataLoader<Game>::restore(int n, generation_t* gens, int* row_counts, int64_t* file_sizes) {
-  file_manager_.restore(n, gens, row_counts, file_sizes);
+void DataLoader<Game>::restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
+                               int64_t* file_sizes) {
+  file_manager_.restore(n_total_rows, n, gens, row_counts, file_sizes);
 }
 
 template <concepts::Game Game>
@@ -580,11 +598,12 @@ void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
 }
 
 template <concepts::Game Game>
-void DataLoader<Game>::load(int64_t window_size, int n_samples, bool apply_symmetry, int n_targets,
-                            float* output_array, int* target_indices_array, int* gen_range) {
+void DataLoader<Game>::load(int64_t window_start, int64_t window_end, int n_samples,
+                            bool apply_symmetry, int n_targets, float* output_array,
+                            int* target_indices_array, int* gen_range) {
   load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
-  sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_size,
-                           n_samples);
+  sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_start,
+                           window_end, file_manager_.n_total_rows(), n_samples);
   file_manager_.prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
   shuffle_output(n_samples);
