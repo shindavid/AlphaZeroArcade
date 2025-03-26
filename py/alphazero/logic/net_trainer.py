@@ -1,14 +1,13 @@
 from typing import List
-import torch
 from torch import optim
 
 from alphazero.logic.custom_types import Generation
-from alphazero.logic.position_dataset import PositionDataset
+from alphazero.logic.game_log_reader import GameLogReader
 from shared.net_modules import Head, Model
 from util.logging_util import get_logger
 from util.torch_util import apply_mask
 
-
+import logging
 import time
 from typing import Optional
 
@@ -134,20 +133,19 @@ class NetTrainer:
         self.gen = gen
         self.n_minibatches_to_process = n_minibatches_to_process
         self.py_cuda_device_str = py_cuda_device_str
-        self.reset()
-
-    def reset(self):
-        self.for_loop_time = 0
-        self.t0 = time.time()
 
     def shutdown(self):
         self._shutdown_in_progress = True
 
     def do_training_epoch(self,
-                          loader: torch.utils.data.DataLoader,
+                          reader: GameLogReader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          dataset: PositionDataset) -> Optional[TrainingStats]:
+                          minibatch_size: int,
+                          n_minibatches: int,
+                          window_start: int,
+                          window_end: int,
+                          gen: Generation) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -156,58 +154,46 @@ class NetTrainer:
 
         If a separate thread calls self.shutdown(), then this exits prematurely and returns None
         """
-        dataset.set_key_order(net.target_names)
+        t0 = time.time()
+        start_ts = time.time_ns()
+        train_time = 0.0
+
+        data_batches = reader.create_data_batches(
+            minibatch_size, n_minibatches, window_start, window_end, net.target_names, gen)
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]
 
-        window_start = dataset.start_index
-        window_end = dataset.end_index
-
-        first = True
-
-        start_ts = time.time_ns()
         n_samples = 0
-        stats = TrainingStats(self.gen, loader.batch_size, window_start, window_end, net)
-        for data in loader:
+        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net)
+        for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
+
             t1 = time.time()
-            d = len(data)
-            assert d % 2 == 1, d
-            dd = (d + 1) // 2
-            inputs = data[0]
-            labels_list = data[1:dd]
-            masks = data[dd:]
-
-            inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
-
-            labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
-            masks_list = [mask.to(self.py_cuda_device_str).squeeze(-1) for mask in masks]
+            inputs = batch.input_tensor
+            labels = batch.target_tensors
+            masks = batch.target_masks
 
             optimizer.zero_grad()
-            outputs_list = net(inputs)
-            assert len(outputs_list) == len(labels_list)
+            outputs = net(inputs)
+            assert len(outputs) == len(labels)
 
-            labels_list = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks_list, labels_list)]
-            outputs_list = [apply_mask(y, mask) for mask, y in zip(masks_list, outputs_list)]
-
-            loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
-                            zip(loss_fns, outputs_list, labels_list)]
-
-            loss = sum([loss * loss_weight for loss, loss_weight in zip(loss_list, loss_weights)])
-
-            results_list = [EvaluationResults(labels, outputs, subloss) for labels, outputs, subloss in
-                            zip(labels_list, outputs_list, loss_list)]
+            labels = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks, labels)]
+            outputs = [apply_mask(y, mask) for mask, y in zip(masks, outputs)]
+            losses = [f(y_hat, y) for f, y_hat, y in zip(loss_fns, outputs, labels)]
+            loss = sum([l * w for l, w in zip(losses, loss_weights)])
+            results_list = [EvaluationResults(*x) for x in zip(labels, outputs, losses)]
 
             n_samples += len(inputs)
             stats.update(results_list, len(inputs))
 
             loss.backward()
             optimizer.step()
-            stats.n_minibatches_processed += 1
+
             t2 = time.time()
-            self.for_loop_time += t2 - t1
+            train_time += t2 - t1
+            stats.n_minibatches_processed += 1
             if stats.n_minibatches_processed == self.n_minibatches_to_process:
                 break
             if self._shutdown_in_progress:
@@ -220,14 +206,14 @@ class NetTrainer:
         stats.start_ts = start_ts
         stats.end_ts = end_ts
         stats.window_sample_rate = window_sample_rate
+        t3 = time.time()
+
+        total_time = t3 - t0
+        load_time = total_time - train_time
+
+        stats.dump(logging.INFO)
+        logger.info('Gen %s training complete', gen)
+        logger.info('Data loading time: %10.3f seconds', load_time)
+        logger.info('Training time:     %10.3f seconds', train_time)
 
         return stats
-
-    def dump_timing_stats(self, log_level):
-        if logger.level > log_level:
-            return
-
-        total_time = time.time() - self.t0
-        data_loading_time = total_time - self.for_loop_time
-        logger.log(log_level, 'Data loading time: %10.3f seconds', data_loading_time)
-        logger.log(log_level, 'Training time:     %10.3f seconds', self.for_loop_time)

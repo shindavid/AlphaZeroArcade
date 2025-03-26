@@ -53,6 +53,7 @@ class LoopControllerClient {
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
   using ReloadWeightsListener = LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
   using MetricsRequestListener = LoopControllerListener<LoopControllerInteractionType::kMetricsRequest>;
+  using DataRequestListener = LoopControllerListener<LoopControllerInteractionType::kDataRequest>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
@@ -81,24 +82,19 @@ class LoopControllerClient {
   void handle_unpause_receipt();
   PerfStats get_perf_stats() const;
 
-  int64_t get_last_games_flush_ts() const { return last_games_flush_ts_; }
-  bool ready_for_games_flush(int64_t ts) const {
-    return ts > last_games_flush_ts_ + util::s_to_ns(1);
-  }
-  void set_last_games_flush_ts(int64_t ts) { last_games_flush_ts_ = ts; }
-
  private:
   LoopControllerClient(const Params&);
   ~LoopControllerClient();
 
   void send_handshake();
   void recv_handshake();
-  void send_metrics();
   void send_pause_ack();
   void send_unpause_ack();
   void pause();
   void unpause();
   void reload_weights(const std::vector<char>& buf, const std::string& cuda_device);
+  void handle_data_request(int n_rows);
+  void handle_data_pre_request(int n_rows_limit);
   void wait_for_pause_receipts();
   void wait_for_unpause_receipts();
   void loop();
@@ -107,12 +103,12 @@ class LoopControllerClient {
 
   const Params params_;
   const int64_t proc_start_ts_;
-  int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
+  std::vector<DataRequestListener*> data_request_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
   int cur_generation_ = 0;
 

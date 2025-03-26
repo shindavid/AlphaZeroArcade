@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <util/Random.hpp>
 
 #include <ctime>
@@ -34,7 +35,7 @@ inline auto Random::uniform_sample(T lower, U upper) {
   if (lower >= upper) {
     throw std::runtime_error("Random::uniform_sample() - invalid range");
   }
-  using V = decltype(std::declval<T>() + std::declval<U>());
+  using V = std::common_type_t<T, U>;
   std::uniform_int_distribution<V> dist{(V)lower, (V)(upper - 1)};
   return dist(instance()->prng_);
 }
@@ -57,6 +58,25 @@ RealType Random::exponential(RealType lambda) {
 template <std::random_access_iterator T>
 void Random::shuffle(T begin, T end) {
   return std::shuffle(begin, end, instance()->prng_);
+}
+
+template <std::random_access_iterator T>
+void Random::chunked_shuffle(T begin, T end, int chunk_size) {
+  auto& rng = instance()->prng_;
+
+  int c = chunk_size;
+  int n = (end - begin) / c;
+
+  // Fisher–Yates shuffle on groups.
+  for (int i = n - 1; i > 0; i--) {
+    std::uniform_int_distribution<int> dist(0, i);
+    int j = dist(rng);
+    if (i != j) {
+      T a = begin + i * c;
+      T b = begin + j * c;
+      std::swap_ranges(a, a + c, b);
+    }
+  }
 }
 
 template <typename IntType, typename InputIt>

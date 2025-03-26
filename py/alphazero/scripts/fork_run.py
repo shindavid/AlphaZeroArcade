@@ -95,7 +95,10 @@ def main():
 
     if hard_fork:
         logger.info('Copying self-play data...')
-        from_organizer.copy_self_play_data(to_organizer, last_gen - 1)
+        from_organizer.copy_self_play_data(to_organizer, last_gen)
+    else:
+        logger.info('Soft-linking self-play data...')
+        from_organizer.soft_link_self_play_data(to_organizer, last_gen)
 
     if retrain_models:
         logger.info('Skipping model files...')
@@ -107,7 +110,7 @@ def main():
     from_organizer.copy_databases(to_organizer, retrain_models, last_gen)
 
     logger.info('Writing fork info...')
-    to_organizer.write_fork_info(from_organizer, hard_fork, retrain_models, last_gen)
+    to_organizer.write_fork_info(from_organizer, retrain_models, last_gen)
 
     logger.info('Fork complete!')
 

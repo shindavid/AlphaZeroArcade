@@ -54,7 +54,7 @@ from typing import Dict, List, Optional, Tuple
 # current code, we should increment VERSION.
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
-VERSION = 1
+VERSION = 2
 
 
 class PathInfo:
@@ -72,13 +72,11 @@ class PathInfo:
 class ForkInfo:
     def __init__(self, forked_base_dir: str):
         self.forked_base_dir: str = forked_base_dir
-        self.max_client_id: int = -1
         self.train_windows: Dict[Generation, Tuple[int, int]] = {}
 
     def save(self, filename: str):
         json_dict = {
             'forked_base_dir': self.forked_base_dir,
-            'max_client_id': self.max_client_id,
             'train_windows': self.train_windows,
         }
 
@@ -91,7 +89,6 @@ class ForkInfo:
             json_dict = json.load(f)
 
         fork_info = ForkInfo(json_dict['forked_base_dir'])
-        fork_info.max_client_id = json_dict['max_client_id']
         fork_info.train_windows = {int(k):v for k, v in json_dict['train_windows'].items()}
         return fork_info
 
@@ -224,11 +221,8 @@ class DirectoryOrganizer:
     def get_latest_self_play_generation(self, default=None) -> Optional[Generation]:
         return DirectoryOrganizer._get_latest_generation(self.self_play_data_dir, default=default)
 
-    def get_self_play_data_dir(self, gen: Generation, client_id: Optional[ClientId]=None) -> str:
-        gen_dir = os.path.join(self.self_play_data_dir, f'gen-{gen}')
-        if client_id is None:
-            return gen_dir
-        return os.path.join(gen_dir, f'client-{client_id}')
+    def get_self_play_data_filename(self, gen: Generation) -> str:
+        return os.path.join(self.self_play_data_dir, f'gen-{gen}.data')
 
     def get_any_self_play_data_filename(self, gen: Optional[Generation]) -> Optional[str]:
         """
@@ -256,20 +250,26 @@ class DirectoryOrganizer:
         return self.get_any_self_play_data_filename(gen - 1)
 
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
-                            last_gen: Optional[Generation]=None):
-        for gen_subdir in os.listdir(self.self_play_data_dir):
-            assert gen_subdir.startswith('gen-'), f'Unexpected subpath: {gen_subdir}'
-            gen = int(gen_subdir.split('-')[1])
-            if gen > last_gen:
+                            last_model_gen: Optional[Generation]=None):
+        for filename in os.listdir(self.self_play_data_dir):
+            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
+            gen = int(filename.split('.')[0].split('-')[1])
+            if last_model_gen is not None and gen >= last_model_gen:
                 continue
-            src_gen_dir = os.path.join(self.self_play_data_dir, gen_subdir)
-            src_self_play_dir = os.path.join(src_gen_dir, 'self-play')
+            src = os.path.join(self.self_play_data_dir, filename)
+            dst = os.path.join(target.self_play_data_dir, filename)
+            shutil.copyfile(src, dst)
 
-            dst_gen_dir = os.path.join(target.self_play_data_dir, gen_subdir)
-            dst_self_play_dir = os.path.join(dst_gen_dir, 'self-play')
-            os.makedirs(dst_self_play_dir, exist_ok=True)
-
-            shutil.copytree(src_self_play_dir, dst_self_play_dir)
+    def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
+                                 last_model_gen: Optional[Generation]=None):
+        for filename in os.listdir(self.self_play_data_dir):
+            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
+            gen = int(filename.split('.')[0].split('-')[1])
+            if last_model_gen is not None and gen >= last_model_gen:
+                continue
+            src = os.path.join(self.self_play_data_dir, filename)
+            dst = os.path.join(target.self_play_data_dir, filename)
+            os.symlink(src, dst)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
                                     last_gen: Optional[Generation]=None):
@@ -305,18 +305,9 @@ class DirectoryOrganizer:
             sqlite3_util.copy_db(self.self_play_db_filename, target.self_play_db_filename,
                                  f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
 
-    def write_fork_info(self, from_organizer: 'DirectoryOrganizer', hard_fork: bool,
+    def write_fork_info(self, from_organizer: 'DirectoryOrganizer',
                         retrain_models: bool, last_gen: Optional[Generation]):
         self.fork_info = ForkInfo(from_organizer.base_dir)
-
-        if not hard_fork:
-            conn = sqlite3.connect(from_organizer.clients_db_filename)
-            c = conn.cursor()
-            c.execute('SELECT MAX(id) FROM clients')
-            row = c.fetchone()
-            if row:
-                self.fork_info.max_client_id = row[0]
-            conn.close()
 
         if retrain_models:
             conn = sqlite3.connect(from_organizer.training_db_filename)

@@ -28,35 +28,17 @@ SELF_PLAY_TABLE_CREATE_CMDS = [
             full_batches_evaluated INTEGER
             )""",
 
-    """CREATE TABLE games (
+    """CREATE TABLE self_play_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_id INTEGER,
             gen INTEGER,
-            start_timestamp INTEGER,
-            end_timestamp INTEGER,
-            augmented_positions INTEGER,
-            cumulative_augmented_positions INTEGER
-            )""",
-
-    """CREATE TABLE self_play_metadata (
-            gen INTEGER PRIMARY KEY,
+            positions INTEGER,
+            cumulative_positions INTEGER,
             positions_evaluated INTEGER DEFAULT 0,
             batches_evaluated INTEGER DEFAULT 0,
             games INTEGER DEFAULT 0,
             runtime INTEGER DEFAULT 0,
-            augmented_positions INTEGER DEFAULT 0
+            file_size INTEGER DEFAULT 0
             )""",
-
-    """CREATE TRIGGER update_games AFTER INSERT ON games
-            BEGIN
-                UPDATE games
-                SET cumulative_augmented_positions = CASE
-                WHEN NEW.id = 1 THEN NEW.augmented_positions
-                ELSE (SELECT cumulative_augmented_positions FROM games WHERE id = NEW.id - 1)
-                        + NEW.augmented_positions
-                END
-                WHERE id = NEW.id;
-            END""",
 ]
 
 
@@ -159,4 +141,3 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON evaluator_ratings (agent_id)""",
 ]
-

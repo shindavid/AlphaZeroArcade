@@ -52,14 +52,14 @@ class SelectVar:
 
 SELECT_VARS = [
     SelectVar('metrics', 'mcts_gen', 'gen', index=True),
-    SelectVar('metrics', 'cache_hits', 'SUM(cache_hits)', group_by='mcts_gen'),
-    SelectVar('metrics', 'cache_misses', 'SUM(cache_misses)', group_by='mcts_gen'),
-    SelectVar('self_play_metadata', 'mcts_gen', 'gen', index=True),
-    SelectVar('self_play_metadata', 'positions_evaluated', 'positions_evaluated'),
-    SelectVar('self_play_metadata', 'batches_evaluated', 'batches_evaluated'),
-    SelectVar('self_play_metadata', 'y_runtime', '1e-9 * runtime'),
-    SelectVar('self_play_metadata', 'n_positions', 'augmented_positions'),
-    SelectVar('self_play_metadata', 'y_games', 'games'),
+    SelectVar('metrics', 'cache_hits', 'SUM(cache_hits)', group_by='gen'),
+    SelectVar('metrics', 'cache_misses', 'SUM(cache_misses)', group_by='gen'),
+    SelectVar('self_play_data', 'mcts_gen', 'gen', index=True),
+    SelectVar('self_play_data', 'positions_evaluated', 'positions_evaluated'),
+    SelectVar('self_play_data', 'batches_evaluated', 'batches_evaluated'),
+    SelectVar('self_play_data', 'y_runtime', '1e-9 * runtime'),
+    SelectVar('self_play_data', 'n_positions', 'positions'),
+    SelectVar('self_play_data', 'y_games', 'games'),
 ]
 
 
@@ -106,7 +106,7 @@ class SelfPlayData:
                     select_tokens.append(sv.sql_select_str + ' AS ' + sv.df_col)
                 else:
                     select_tokens.append(sv.sql_select_str)
-            query = f"SELECT {', '.join(select_tokens)} FROM {table}"
+            query = f"SELECT {', '.join(select_tokens)} FROM {table} WHERE gen > 0"
             group_by = set([sv.group_by for sv in select_vars if sv.group_by is not None])
             if group_by:
                 assert len(group_by) == 1, select_vars

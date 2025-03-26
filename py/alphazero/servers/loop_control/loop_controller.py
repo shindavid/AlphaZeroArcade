@@ -21,7 +21,7 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import sha256sum, untar_remote_file_to_local_directory
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -246,17 +246,28 @@ class LoopController:
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
+    def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
+        self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
+
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
-        data = {
+        required_rows = self.get_next_checkpoint() - self.get_num_committed_rows()
+
+        data1 = {
+            'type': 'data-pre-request',
+            'n_rows_limit': required_rows,
+        }
+
+        data2 = {
             'type': 'reload-weights',
             'generation': gen,
         }
 
         model_filename = self.organizer.get_model_filename(gen)
         with conn.socket.send_mutex():
-            send_json(conn.socket.native_socket(), data)
+            send_json(conn.socket.native_socket(), data1)
+            send_json(conn.socket.native_socket(), data2)
             send_file(conn.socket.native_socket(), model_filename)
 
         logger.debug('Weights broadcast complete!')
@@ -265,15 +276,17 @@ class LoopController:
         self._gpu_contention_manager.set_ratings_priority(elevate)
 
     def hijack_all_self_play_tables(self):
+        logger.debug('Hijacking all self-play tables...')
         self._gpu_contention_manager.hijack_all_self_play_tables()
 
     def unhijack_all_self_play_tables(self):
+        logger.debug('Unhijacking all self-play tables...')
         self._gpu_contention_manager.unhijack_all_self_play_tables()
 
-    def get_num_self_play_positions_generated(self):
-        return self._self_play_manager.get_num_positions()
+    def get_num_committed_rows(self):
+        return self._self_play_manager.get_num_committed_rows()
 
-    def get_next_checkpoint(self) -> int:
+    def get_next_checkpoint(self):
         return self._training_manager.get_next_checkpoint()
 
     def start_log_sync(self, conn: ClientConnection, remote_filename: str):
@@ -287,6 +300,9 @@ class LoopController:
 
     def wait_for_log_sync_thread(self):
         self._log_syncer.wait_for_sync_thread()
+
+    def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
+        self._training_manager.merge_game_log_files(input_filenames, output_filename)
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
@@ -308,8 +324,8 @@ class LoopController:
                 'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn)
         except SocketSendException:
             logger.warning(
-                'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn,
-                exc_info=True)
+                'Encountered SocketSendException in %s (conn=%s):', thread_name, conn,
+                exc_info=True, stack_info=True, stacklevel=10)
         except:
             logger.error(
                 'Unexpected error in %s (conn=%s):', thread_name, conn, exc_info=True)
@@ -373,15 +389,10 @@ class LoopController:
         gen = self._training_manager.get_oldest_required_gen()
         logger.info(f'Copying self-play data from gen {gen} to {last_gen}...')
         while gen <= last_gen:
-            # copy .tar file and unpack it to the local self-play-data directory
-            src_tar = self._persistent_organizer.get_self_play_data_dir(gen) + '.tar'
-
-            if not os.path.isfile(src_tar):
-                gen += 1
-                continue  # there can be gaps in self-play gens, so continue here, not break
-
-            dst_dir = self._organizer.self_play_data_dir
-            untar_remote_file_to_local_directory(src_tar, dst_dir)
+            src = self._persistent_organizer.get_self_play_data_filename(gen)
+            if src is not None and os.path.isfile(src):
+                dst = self._organizer.get_self_play_data_filename(gen)
+                shutil.copy(src, dst)
             gen += 1
 
         # Copy the most recent checkpoint

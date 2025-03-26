@@ -140,29 +140,6 @@ void LoopControllerClient::recv_handshake() {
   client_id_ = client_id;
 }
 
-void LoopControllerClient::send_metrics() {
-  if (!params_.report_metrics) {
-    return;
-  }
-
-  PerfStats stats = get_perf_stats();
-  if (stats.empty()) {
-    return;
-  }
-
-  LOG_INFO << "LoopControllerClient: sending metrics...";
-  int64_t timestamp = util::ns_since_epoch();
-
-  boost::json::object msg;
-  msg["type"] = "metrics";
-  msg["gen"] = cur_generation_;
-  msg["timestamp"] = timestamp;
-  msg["metrics"] = stats.to_json();
-
-  set_last_games_flush_ts(timestamp);
-  send(msg);
-}
-
 void LoopControllerClient::send_pause_ack() {
   boost::json::object msg;
   msg["type"] = "pause-ack";
@@ -202,6 +179,23 @@ void LoopControllerClient::reload_weights(const std::vector<char>& buf,
   }
 }
 
+void LoopControllerClient::handle_data_request(int n_rows) {
+  LOG_INFO << "LoopControllerClient: handling self-play data request(" << n_rows << ")...";
+
+  for (auto listener : data_request_listeners_) {
+    listener->handle_data_request(n_rows);
+  }
+}
+
+void LoopControllerClient::handle_data_pre_request(int n_rows_limit) {
+  LOG_INFO << "LoopControllerClient: handling self-play data pre-request(" << n_rows_limit
+           << ")...";
+
+  for (auto listener : data_request_listeners_) {
+    listener->handle_data_pre_request(n_rows_limit);
+  }
+}
+
 void LoopControllerClient::wait_for_pause_receipts() {
   LOG_INFO << "LoopControllerClient: waiting for pause receipts...";
   std::unique_lock lock(receipt_mutex_);
@@ -235,6 +229,12 @@ void LoopControllerClient::loop() {
       unpause();
       wait_for_unpause_receipts();
       send_unpause_ack();
+    } else if (type == "data-request") {
+      int n_rows = msg.at("n_rows").as_int64();
+      handle_data_request(n_rows);
+    } else if (type == "data-pre-request") {
+      int n_rows_limit = msg.at("n_rows_limit").as_int64();
+      handle_data_pre_request(n_rows_limit);
     } else if (type == "reload-weights") {
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {
@@ -251,7 +251,6 @@ void LoopControllerClient::loop() {
         break;
       }
 
-      send_metrics();
       cur_generation_ = generation;
       reload_weights(buf, cuda_device);
     } else if (type == "quit") {

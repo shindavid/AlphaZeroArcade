@@ -45,6 +45,10 @@ def main():
         organizer = DirectoryOrganizer(run_params)
         self_play_filename = organizer.get_any_self_play_data_filename(gen)
 
+    if True:
+        print('replay_game.py is temporarily disabled')
+        raise NotImplementedError()
+
     print(f'Replaying from {self_play_filename}\n')
 
     ffi = FFI()

@@ -5,7 +5,6 @@ from .gpu_contention_table import GpuContentionTable
 from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
-from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
 from shared.net_modules import Model, ModelConfig
 from util.logging_util import get_logger
@@ -13,14 +12,12 @@ from util.py_util import make_hidden_filename
 
 import torch
 from torch import optim
-from torch.utils.data import DataLoader
 
-import logging
 import os
 import shutil
 import tempfile
 import threading
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -40,21 +37,29 @@ class TrainingManager:
         self._controller = controller
         self._lock = threading.Lock()
 
-        self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params)
+        self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params,
+                                              controller.params.cuda_device)
 
         self._trainer = None
         self._net = None
         self._opt = None
         self._model_counts_dumped = False
 
+        self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
         self._last_sample_window: Optional[Window] = None  # initialized lazily
         self._latest_gen: Generation = 0
-        self._master_list_slice = PositionListSlice()
 
     @property
     def last_sample_window(self) -> Window:
         assert self._last_sample_window is not None
         return self._last_sample_window
+
+    @property
+    def training_params(self):
+        return self._controller.training_params
+
+    def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
+        self._game_log_reader.merge_game_log_files(input_filenames, output_filename)
 
     def get_oldest_required_gen(self) -> Generation:
         """
@@ -68,8 +73,9 @@ class TrainingManager:
         with self._controller.self_play_db_conn_pool.db_lock:
             cursor = self._controller.self_play_db_conn_pool.get_cursor()
             start = last_sample_window.start
-            where_clause = f'cumulative_augmented_positions <= {start}'
-            cursor.execute(f'SELECT gen FROM games WHERE {where_clause} ORDER BY id LIMIT 1')
+            where_clause = f'cumulative_positions >= {start}'
+            query = f'SELECT gen FROM self_play_data WHERE {where_clause} ORDER BY id LIMIT 1'
+            cursor.execute(query)
             row = cursor.fetchone()
             cursor.close()
         if row is None:
@@ -85,25 +91,41 @@ class TrainingManager:
         """
         self._last_sample_window = self._load_last_sample_window()
         self._latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
+        start = self._last_sample_window.start
+        self._game_log_reader.init_data_loader(self._controller.organizer.self_play_data_dir)
 
-        if self._controller.organizer.fork_info is not None:
-            max_forked_client_id = self._controller.organizer.fork_info.max_client_id
-            self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
+        gens = []
+        row_counts = []
+        cumulative_row_counts = []
+        file_sizes = []
+        with self._controller.self_play_db_conn_pool.db_lock:
+            cursor = self._controller.self_play_db_conn_pool.get_cursor()
+            where_clause = f'cumulative_positions >= {start}'
+            query = f'SELECT gen, positions, cumulative_positions, file_size FROM self_play_data WHERE {where_clause}'
+            cursor.execute(query)
 
-    def get_next_checkpoint(self):
-        return get_required_dataset_size(self._controller.training_params, self._last_sample_window)
+            for row in cursor:
+                gens.append(row[0])
+                row_counts.append(row[1])
+                cumulative_row_counts.append(row[2])
+                file_sizes.append(row[3])
+            cursor.close()
+
+        cumulative_row_count = max(cumulative_row_counts + [0])
+        self._game_log_reader.restore_data_loader(gens, row_counts, file_sizes,
+                                                  cumulative_row_count)
 
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
             n_retrain_gens = len(self._controller.organizer.fork_info.train_windows)
             while self._latest_gen < n_retrain_gens:
-                self.train_step(retrain_from_fork=True)
+                self.train_step()
 
     def train_gen1_model_if_necessary(self):
         if self._latest_gen == 0:
             self.train_step()
 
-    def train_step(self, retrain_from_fork=False):
+    def train_step(self):
         """
         Performs a train step.
 
@@ -112,14 +134,21 @@ class TrainingManager:
         """
         table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
         table.acquire_lock(Domain.TRAINING)
-        self._train_step_helper(retrain_from_fork)
+        self._train_step_helper()
         table.release_lock(Domain.TRAINING)
+
+    def get_next_checkpoint(self):
+        return self._checkpoint
+
+    def notify_of_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
+        self._game_log_reader.add_gen(gen, n_rows, file_size)
 
     def _shutdown(self):
         with self._lock:
             if self._trainer is not None:
                 logger.info('Closing DataLoader...')
                 self._trainer.shutdown()
+            self._game_log_reader.close()
 
     def _load_last_sample_window(self) -> Window:
         with self._controller.training_db_conn_pool.db_lock:
@@ -130,34 +159,11 @@ class TrainingManager:
             cursor.close()
         if row is None:
             # kZero-style initialization of sample window
-            # samples_per_window = self._controller.training_params.samples_per_window()
-            # target_sample_rate = self._controller.training_params.target_sample_rate
+            # samples_per_window = self.training_params.samples_per_window()
+            # target_sample_rate = self.training_params.target_sample_rate
             # return Window(0, samples_per_window, target_sample_rate)
             return Window(0, 0, 0)
         return Window(*row)
-
-    def _extend_master_list(self):
-        f = self._controller.training_params.window_size_function
-        n = self._controller.get_num_self_play_positions_generated()
-        c = int(n - f(n))
-
-        start = max(0, c)
-        end = n
-
-        pool = self._controller.self_play_db_conn_pool
-        with pool.db_lock:
-            cursor = pool.get_cursor()
-            self._master_list_slice.set_bounds(cursor, start, end)
-            cursor.close()
-
-    def _extend_master_list_from_fork(self, gen):
-        start, end = self._controller.organizer.fork_info.train_windows[gen]
-
-        pool = self._controller.self_play_db_conn_pool
-        with pool.db_lock:
-            cursor = pool.get_cursor()
-            self._master_list_slice.set_bounds(cursor, start, end, gen)
-            cursor.close()
 
     def _load_last_checkpoint(self, model_cfg: ModelConfig):
         """
@@ -220,34 +226,19 @@ class TrainingManager:
 
         return self._net, self._opt
 
-    def _train_step_helper(self, retrain_from_fork: bool):
+    def _train_step_helper(self):
         self._controller.spawn_log_sync_thread()
 
         organizer = self._controller.organizer
-        fork_info = organizer.fork_info
-
-        forked_base_dir = None if fork_info is None else fork_info.forked_base_dir
         gen = organizer.get_latest_model_generation(default=0) + 1
-        if retrain_from_fork:
-            self._extend_master_list_from_fork(gen)
-        else:
-            self._extend_master_list()
 
-        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice,
-                                  self._game_log_reader)
-
-        logger.info('******************************')
-        logger.info('Train gen:%s', gen)
-        dataset.announce_sampling(logging.INFO)
-
-        n_minibatches = self._controller.training_params.minibatches_per_epoch
-
+        n_minibatches = self.training_params.minibatches_per_epoch
         trainer = NetTrainer(gen, n_minibatches, self._controller.params.cuda_device)
         with self._lock:
             self._trainer = trainer
 
         thread = threading.Thread(target=self._do_training_epoch, name='train_step', daemon=False,
-                                  args=(dataset, trainer, gen))
+                                  args=(trainer, gen))
         thread.start()
         thread.join()
 
@@ -278,40 +269,48 @@ class TrainingManager:
 
         self._model_counts_dumped = True
 
-    def _do_training_epoch(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
+    def _do_training_epoch(self, trainer: NetTrainer, gen: Generation):
         try:
-            training_params = self._controller.training_params
+            training_params = self.training_params
             minibatch_size = training_params.minibatch_size
+            n_minibatches = training_params.minibatches_per_epoch
 
-            loader = DataLoader(
-                dataset,
-                batch_size=minibatch_size,
-                num_workers=4,
-                pin_memory=True,
-                shuffle=True)
+            fork_info = self._controller.organizer.fork_info
+            if fork_info is not None and gen in fork_info.train_windows:
+                start, end = fork_info.train_windows[gen]
+            else:
+                f = training_params.window_size_function
+                n = self._controller.get_num_committed_rows()
+                w = int(f(n))
+                logger.debug('Training window size: f(%s)=%s', n, w)
+
+                start = max(0, n - w)
+                end = n
 
             net, optimizer = self._get_net_and_optimizer()
             self._dump_model_counts()
 
-            stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
+            stats = trainer.do_training_epoch(
+                self._game_log_reader, net, optimizer, minibatch_size, n_minibatches,
+                start, end, gen)
 
             if stats is None:
                 # Happens in premature-shutdown case. No need to release training gpu lock since
                 # the whole process is shutting down.
                 return
 
-            stats.dump(logging.INFO)
-            logger.info('Gen %s training complete', gen)
-            trainer.dump_timing_stats(logging.INFO)
-
             self._save_model(gen, net)
             self._record_stats(gen, stats)
+            self._set_checkpoint()
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self._controller.request_shutdown(1)
 
+    def _set_checkpoint(self):
+        self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)
+
     def _record_stats(self, gen: Generation, stats: TrainingStats):
-        training_params = self._controller.training_params
+        training_params = self.training_params
         n_minibatches = training_params.minibatches_per_epoch
         minibatch_size = training_params.minibatch_size
 
