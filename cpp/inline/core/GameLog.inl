@@ -4,6 +4,7 @@
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FileUtil.hpp>
+#include <util/IndexedDispatcher.hpp>
 #include <util/LoggingUtil.hpp>
 #include <util/Math.hpp>
 #include <util/MetaProgramming.hpp>
@@ -327,20 +328,17 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
                    next_policy_ptr, action_values_ptr, active_seat};
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
-
   for (int target_index : target_indices) {
-    mp::constexpr_for<0, N, 1>([&](auto a) {
-      if (target_index == a) {
-        using Target = mp::TypeAt_t<TrainingTargetsList, a>;
-        using Tensor = Target::Tensor;
-        constexpr int kSize = Tensor::Dimensions::total_size;
+    util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
+      using Target = mp::TypeAt_t<TrainingTargetsList, t>;
+      using Tensor = Target::Tensor;
+      constexpr int kSize = Tensor::Dimensions::total_size;
 
-        Tensor tensor;
-        bool mask = Target::tensorize(view, tensor);
-        output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
-        output_array[0] = mask;
-        output_array++;
-      }
+      Tensor tensor;
+      bool mask = Target::tensorize(view, tensor);
+      output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
+      output_array[0] = mask;
+      output_array++;
     });
   }
 }

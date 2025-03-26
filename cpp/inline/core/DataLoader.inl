@@ -4,6 +4,7 @@
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 #include <util/FileUtil.hpp>
+#include <util/IndexedDispatcher.hpp>
 #include <util/Random.hpp>
 
 #include <boost/filesystem.hpp>
@@ -70,15 +71,13 @@ void DataLoader<Game>::LoadInstructions::init(bool apply_sym, int n_targets, flo
 
   using TrainingTargetsList = Game::TrainingTargets::List;
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
-
   for (int target_index : target_indices) {
-    mp::constexpr_for<0, N, 1>([&](auto a) {
-      if (target_index == a) {
-        using Target = mp::TypeAt_t<TrainingTargetsList, a>;
-        constexpr int kSize = Target::Tensor::Dimensions::total_size;
-        row_size += kSize;
-        row_size++;  // for the mask
-      }
+    util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
+      using Target = mp::TypeAt_t<TrainingTargetsList, t>;
+      using Tensor = Target::Tensor;
+      constexpr int kSize = Tensor::Dimensions::total_size;
+      row_size += kSize;
+      row_size++;  // for the mask
     });
   }
 }
