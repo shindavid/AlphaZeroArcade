@@ -34,6 +34,11 @@
                         output_data_array, target_indices_array, gen_range);                      \
   }                                                                                               \
                                                                                                   \
+  void merge_game_log_files(const char** input_filenames, int n_input_filenames,                  \
+                            const char* output_filename) {                                        \
+    GameReadLog::merge_files(input_filenames, n_input_filenames, output_filename);                \
+  }                                                                                               \
+                                                                                                  \
   core::ShapeInfo* get_shape_info_array() { return GameReadLog::get_shape_info_array(); }         \
                                                                                                   \
   void free_shape_info_array(core::ShapeInfo* info) { delete[] info; }                            \

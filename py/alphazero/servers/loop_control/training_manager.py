@@ -17,7 +17,7 @@ import os
 import shutil
 import tempfile
 import threading
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -57,6 +57,9 @@ class TrainingManager:
     @property
     def training_params(self):
         return self._controller.training_params
+
+    def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
+        self._game_log_reader.merge_game_log_files(input_filenames, output_filename)
 
     def get_oldest_required_gen(self) -> Generation:
         """

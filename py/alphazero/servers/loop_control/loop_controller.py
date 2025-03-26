@@ -301,6 +301,9 @@ class LoopController:
     def wait_for_log_sync_thread(self):
         self._log_syncer.wait_for_sync_thread()
 
+    def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
+        self._training_manager.merge_game_log_files(input_filenames, output_filename)
+
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
             self._ratings_managers[tag] = RatingsManager(self, tag)

@@ -1,15 +1,16 @@
 #include <core/DataLoader.hpp>
 
 #include <core/GameLog.hpp>
-#include <cstdio>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
+#include <util/FileUtil.hpp>
 #include <util/Random.hpp>
 
 #include <boost/filesystem.hpp>
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <format>
 #include <mutex>
@@ -29,22 +30,7 @@ template <concepts::Game Game>
 void DataLoader<Game>::DataFile::load() {
   std::unique_lock lock(mutex_);
   if (!buffer_) {
-    FILE* file = fopen(filename_.c_str(), "rb");
-    if (!file) {
-      throw util::Exception("Failed to open file '%s'", filename_.c_str());
-    }
-
-    if (fseek(file, 0, SEEK_SET) != 0) {
-      throw util::Exception("Failed to seek to start of file '%s'", filename_.c_str());
-    }
-
-    buffer_ = new char[file_size_];
-    int64_t read_size = fread(buffer_, 1, file_size_, file);
-    if (read_size != file_size_) {
-      throw util::Exception("Failed to read data from file '%s'", filename_.c_str());
-    }
-
-    fclose(file);
+    buffer_ = util::read_file(filename_.c_str(), file_size_);
   }
   lock.unlock();
   cv_.notify_all();

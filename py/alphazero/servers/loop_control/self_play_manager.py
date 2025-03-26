@@ -489,9 +489,7 @@ class SelfPlayManager:
         elif len(game_filenames) == 0:
             raise Exception('No game data received')
         else:
-            # Harder case: we need to weave the files together, sorting by game-start-timestamp
-            # This will require an FFI call to the c++ code
-            raise NotImplementedError('Multiple self-play servers temporarily disabled')
+            self._controller.merge_game_log_files(game_filenames, output_filename)
 
     def _update_self_play_db(self):
         logger.debug('Updating self play db...')

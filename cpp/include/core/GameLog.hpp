@@ -43,8 +43,8 @@ struct ShapeInfo {
 };
 
 struct GameLogFileHeader {
-  uint32_t num_games;
-  uint32_t num_rows;
+  uint32_t num_games = 0;
+  uint32_t num_rows = 0;
   uint64_t reserved = 0;
 };
 static_assert(sizeof(GameLogFileHeader) == 16);
@@ -70,6 +70,7 @@ class GameLogFileReader {
   int num_samples(int game_index) const;
   const char* game_data_buffer(int game_index) const;
   const GameLogMetadata& metadata(int game_index) const;
+  const char* buffer() const { return buffer_; }
 
  private:
   const char* buffer_;
@@ -178,6 +179,9 @@ class GameReadLog : public GameLogBase<Game> {
               const char* buffer);
 
   static ShapeInfo* get_shape_info_array();
+
+  static void merge_files(const char** input_filenames, int n_input_filenames,
+                          const char* output_filename);
 
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;

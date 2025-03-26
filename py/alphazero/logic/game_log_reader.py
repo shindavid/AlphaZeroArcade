@@ -64,6 +64,21 @@ class GameLogReader:
             self._shape_info_dict = self._load_shape_info_dict()
         return self._shape_info_dict
 
+    def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
+        ffi = self._ffi
+        lib = self._lib
+
+        n_input_filenames = len(input_filenames)
+
+        input_filenames_alloc = [ffi.new('char[]', f.encode('utf-8')) for f in input_filenames]
+        input_filenames_c = ffi.new('char*[]', input_filenames_alloc)
+        output_filename_c = ffi.new('char[]', output_filename.encode('utf-8'))
+
+        lib.merge_game_log_files(input_filenames_c, n_input_filenames, output_filename_c)
+
+        for f in input_filenames:
+            os.remove(f)
+
     def restore_data_loader(self, gens: List[Generation], row_counts: List[int],
                             file_sizes: List[int], n_total_rows: int):
         ffi = self._ffi
@@ -190,6 +205,9 @@ class GameLogReader:
             void DataLoader_load(struct DataLoader* loader, int64_t window_start,
                 int64_t window_end, int n_samples, bool apply_symmetry, int n_targets,
                 float* output_data_array, int* target_indices_array, int* gen_range);
+
+            void merge_game_log_files(const char** input_filenames, int n_input_filenames,
+                const char* output_filename);
 
             void init();
             """)
