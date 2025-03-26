@@ -25,8 +25,8 @@
  * all the files together, we can imagine a single array of rows that houses all the data. Let us
  * call this array M (for "master array").
  *
- * The python side constructs a DataLoader object via an FFI interface, and passes it the following
- * parameters:
+ * The python side constructs a DataLoader object via an FFI interface, and essentially passes it
+ * the following parameters:
  *
  *    - s: num samples (typically equals n_minibatches * minibatch_size)
  *    - w: window size
@@ -37,14 +37,14 @@
  * Mechanics *
  *************
  *
- * core::DataLoader<Game> starts by sampling m*b indices, withouth replacement, from M[c:]. It then
+ * core::DataLoader<Game> starts by sampling s indices, withouth replacement, from M[-w:]. It then
  * sorts these indices, grouping them by file. Each file can then be read in a single pass.
  *
- * The work of reading each file is done by a worker thread. There will be several worker threads,
+ * The work of reading each file is done by a worker thread. There are several worker threads,
  * coming from a worker pool. This allows us to read multiple files in parallel. Additionally, we
- * will have a prefetch pool, consisting of prefetch threads. These threads open up the next file in
- * the list, storing the file bytes in memory. This way, the worker threads can immediately start
- * reading from the next file, without waiting for the filesystem.
+ * have a prefetch pool, consisting of prefetch threads. These threads preemptively open up the next
+ * file in the list, storing the file bytes in memory. This way, the worker threads can immediately
+ * start reading from the next file, masking filesystem latency.
  */
 
 namespace core {
