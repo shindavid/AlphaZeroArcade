@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from alphazero.logic.custom_types import Generation
 from util.logging_util import get_logger
-from util.py_util import tar_and_remotely_copy
 
 import os
 import shutil
@@ -161,13 +160,13 @@ class OutputDirSyncer:
             end_gen -= 1  # more data might be coming, just wait for gen-completion or final-sync
 
         for gen in range(start_gen, end_gen + 1):
-            src_dir = self._controller.organizer.get_self_play_data_dir(gen)
-            if not os.path.isdir(src_dir):
+            src = self._controller.organizer.get_self_play_data_filename(gen)
+            if not os.path.isfile(src):
                 continue  # there can be gaps in self-play gens, so continue here, not break
 
-            dst = self._controller.persistent_organizer.get_self_play_data_dir(gen)  + '.tar'
+            dst = self._controller.persistent_organizer.get_self_play_data_filename(gen)
             logger.debug("OutputDirSyncer: syncing self-play data: %s -> %s", src_dir, dst)
-            tar_and_remotely_copy(src_dir, dst)
+            shutil.copyfile(src, dst)
 
         # Finally, copy log files
         src_dir = self._controller.organizer.logs_dir
