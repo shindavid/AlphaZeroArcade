@@ -17,7 +17,7 @@ namespace util {
  *
  * The above is equivalent to:
  *
- * auto out = func<n>(arg1, arg2);  // n can be a runtime-value!
+ * auto out = func<n>(arg1, arg2);  // n can be a runtime-value in the range [0, N)
  */
 template <int N>
 struct IndexedDispatcher {
