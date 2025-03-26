@@ -19,10 +19,9 @@ from dataclasses import dataclass
 import os
 import secrets
 import sqlite3
+import sys
 from threading import Thread
-import time
 from typing import List
-import webbrowser
 
 
 @dataclass
@@ -79,11 +78,33 @@ all_tags = [d for d in os.listdir(game_dir) if os.path.isdir(os.path.join(game_d
 if not all_tags:
     raise ValueError(f'No directories found in {game_dir}')
 
-# sort all_tags based on os.path.getmtime:
-all_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
+usable_tags = []
+skipped_tags = []
+for tag in all_tags:
+    rp = RunParams(run_params.game, tag)
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+    if directory_organizer.version_check():
+        usable_tags.append(tag)
+    else:
+        skipped_tags.append(tag)
+
+if skipped_tags:
+    print('The following tags were skipped because of a version mismatch:')
+    for tag in skipped_tags:
+        print(f'  {tag}')
+    print('')
+    print('This means that those output dirs were created with an outdated version of the code.')
+    print('Consider removing them.')
+
+if all_tags and not usable_tags:
+    print('All output directories are outdated. Exiting...')
+    sys.exit(0)
+
+# sort usable_tags based on os.path.getmtime:
+usable_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
 
 all_training_heads = []
-for tag in all_tags:
+for tag in usable_tags:
     rp = RunParams(run_params.game, tag)
     directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
     training_db_filename = directory_organizer.training_db_filename
@@ -104,14 +125,27 @@ for tag in all_tags:
 
 if run_params.tag:
     tags = run_params.tag.split(',')
+    outdated_tags = []
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
         path = os.path.join('/workspace/output', run_params.game, tag)
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
+        rp = RunParams(run_params.game, tag)
+        directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+        if not directory_organizer.version_check():
+            outdated_tags.append(tag)
+    if outdated_tags:
+        print(f'ERROR: The following tags for {run_params.game} are outdated:')
+        for tag in outdated_tags:
+            print(f'  {tag}')
+        print('')
+        print('This means that the output dir was created with an outdated version of the code.')
+        print('Please remove the outdated tags and try again.')
+        sys.exit(0)
 else:
-    tags = all_tags
+    tags = usable_tags
 
 default_tags = tags
 
@@ -184,7 +218,7 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
-            'tags': all_tags,
+            'tags': usable_tags,
             'init_tags': self.tags,
         }
 
