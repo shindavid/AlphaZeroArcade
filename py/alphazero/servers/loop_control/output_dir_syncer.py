@@ -165,7 +165,7 @@ class OutputDirSyncer:
                 continue  # there can be gaps in self-play gens, so continue here, not break
 
             dst = self._controller.persistent_organizer.get_self_play_data_filename(gen)
-            logger.debug("OutputDirSyncer: syncing self-play data: %s -> %s", src_dir, dst)
+            logger.debug("OutputDirSyncer: syncing self-play data: %s -> %s", src, dst)
             shutil.copyfile(src, dst)
 
         # Finally, copy log files
