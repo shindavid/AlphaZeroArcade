@@ -1,49 +1,42 @@
-#!/usr/bin/env python3
+import torch
 import time
 
-import torch
-from torch.utils.data import DataLoader
+# Ensure GPU is available
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"🔍 Running on: {device.upper()}")
 
-import torchvision.models as models
-import torchvision.datasets as datasets
-import torchvision.transforms as transforms
+# Define matrix size (higher = more compute-heavy)
+MATRIX_SIZE = 8192  
 
-USE_LOADER = True
-torch.set_grad_enabled(False)
+# Allocate random matrices
+A = torch.randn(MATRIX_SIZE, MATRIX_SIZE, device=device)
+B = torch.randn(MATRIX_SIZE, MATRIX_SIZE, device=device)
 
-for use_cuda in (True, False):
-    for batch_size in (1, 64):
-        model = models.resnet50()
-        model.eval()
-        size = 1024
+# Warm-up (ensures stable GPU performance)
+for _ in range(10):
+    _ = A @ B
 
-        if USE_LOADER:
-            dataset = datasets.FakeData(
-                size=size,
-                transform=transforms.ToTensor())
-            loader = DataLoader(
-                dataset,
-                batch_size=1,
-                num_workers=1,
-                pin_memory=True
-            )
-        else:
-            loader = [(torch.rand(batch_size, 3, 224, 224), None) for _ in range(size // batch_size)]
+# Benchmark GPU
+torch.cuda.synchronize()
+start_time = time.time()
+for _ in range(10):
+    _ = A @ B
+torch.cuda.synchronize()
+gpu_time = time.time() - start_time
 
-        if use_cuda:
-            model.to('cuda')
+print(f"🚀 GPU Time for 10 matrix multiplications: {gpu_time:.4f} seconds")
 
-        x = 0
-        t1 = time.time()
-        if use_cuda:
-            for data, _ in loader:
-                data = data.to('cuda', non_blocking=True)
-                x += torch.sum(model(data).to('cpu'))
-        else:
-            for data, _ in loader:
-                x += torch.sum(model(data))
+# Benchmark CPU
+A_cpu = A.cpu()
+B_cpu = B.cpu()
 
-        t2 = time.time()
-        t = t2 - t1
-        print('batch_size:%-2d use_cuda:%d runtime:%.3fs' % (batch_size, use_cuda, t))
+start_time = time.time()
+for _ in range(10):
+    _ = A_cpu @ B_cpu
+cpu_time = time.time() - start_time
+
+print(f"🐌 CPU Time for 10 matrix multiplications: {cpu_time:.4f} seconds")
+
+speedup = cpu_time / gpu_time if gpu_time > 0 else float('inf')
+print(f"⚡ Speedup (CPU vs. GPU): {speedup:.2f}x")
 
