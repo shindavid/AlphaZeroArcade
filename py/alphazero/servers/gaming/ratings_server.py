@@ -96,8 +96,8 @@ class RatingsServer:
         self._session_data.init_socket()
 
     def _send_handshake(self):
-        aux = { 'tag': self._params.rating_tag, }
-        self._session_data.send_handshake(ClientRole.RATINGS_SERVER, aux=aux)
+        self._session_data.send_handshake(ClientRole.RATINGS_SERVER,
+                                          rating_tag=self._params.rating_tag)
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(ClientRole.RATINGS_SERVER)

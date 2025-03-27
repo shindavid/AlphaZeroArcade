@@ -217,9 +217,9 @@ class LoopController:
         elif client_role == ClientRole.SELF_PLAY_WORKER:
             self._self_play_manager.add_worker(conn)
         elif client_role == ClientRole.RATINGS_SERVER:
-            self._get_ratings_manager(conn.aux['tag']).add_server(conn)
+            self._get_ratings_manager(conn.rating_tag).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
-            self._get_ratings_manager(conn.aux['tag']).add_worker(conn)
+            self._get_ratings_manager(conn.rating_tag).add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -243,7 +243,8 @@ class LoopController:
                          daemon=True).start()
 
     def handle_new_model(self):
-        for manager in self._ratings_managers.values():
+        for tag, manager in self._ratings_managers.items():
+            assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
 
     def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):

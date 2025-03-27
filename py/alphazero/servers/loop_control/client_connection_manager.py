@@ -54,7 +54,7 @@ class ClientConnectionManager:
 
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
-        aux = msg.get('aux', None)
+        rating_tag = msg.get('rating_tag', '')
         manager_id = msg.get('manager_id', None)
         client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
 
@@ -130,12 +130,7 @@ class ClientConnectionManager:
         domain = Domain.from_role(client_role)
 
         conn = ClientConnection(domain, client_role, client_id, Socket(client_socket),
-                                start_timestamp, gpu_id)
-
-        if aux is not None:
-            assert isinstance(aux, dict), (aux, type(aux))
-            assert all(isinstance(k, str) for k in aux.keys()), aux
-            conn.aux.update(aux)
+                                start_timestamp, gpu_id, rating_tag)
 
         with self._lock:
             self._connections.append(conn)

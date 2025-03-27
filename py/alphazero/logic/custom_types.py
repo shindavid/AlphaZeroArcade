@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, List
+from typing import Any, Callable, List
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -63,8 +63,9 @@ class ClientConnection:
     socket: Socket
     start_timestamp: int
     client_gpu_id: GpuId
+    rating_tag: str
     active: bool = True
-    aux: dict = field(default_factory=dict)  # maintain arbitrary state
+    aux: Any = None  # for arbitrary data
 
     @property
     def ip_address(self):

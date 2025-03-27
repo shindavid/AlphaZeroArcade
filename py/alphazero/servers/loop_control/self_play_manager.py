@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, ClientId
+from alphazero.logic.custom_types import ClientConnection
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 import subprocess
 import threading
 import time
-from typing import Dict, List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -23,6 +23,26 @@ logger = get_logger()
 
 
 class SelfPlayManager:
+
+    @dataclass
+    class ServerAux:
+        """
+        Auxiliary data stored per server connection.
+        """
+        launched: bool = False
+
+    @dataclass
+    class WorkerAux:
+        """
+        Auxiliary data stored per worker connection.
+        """
+        cond: threading.Condition = field(default_factory=threading.Condition)
+        pending_pause_ack: bool = False
+        pending_unpause_ack: bool = False
+        start_ts: Optional[int] = None
+        total_runtime: int = 0
+        gen: int = -1
+
     @dataclass
     class CommitInfo:
         """
@@ -66,8 +86,7 @@ class SelfPlayManager:
         self._conns_lock = threading.Lock()
         self._conns_cond = threading.Condition(self._conns_lock)
 
-        CommitInfo = SelfPlayManager.CommitInfo
-        self._commit_info: Dict[ClientId, SelfPlayManager.CommitInfo] = defaultdict(CommitInfo)
+        self._commit_info = defaultdict(SelfPlayManager.CommitInfo)
         self._n_committed_rows = 0
         self._commit_lock = threading.Lock()
         self._commit_cond = threading.Condition(self._commit_lock)
@@ -111,6 +130,8 @@ class SelfPlayManager:
         self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
+        conn.aux = SelfPlayManager.ServerAux()
+
         ssh_pub_key = ssh_util.get_pub_key()
         reply = {
             'type': 'handshake-ack',
@@ -133,10 +154,11 @@ class SelfPlayManager:
             disconnect_handler=self._handle_server_disconnect)
 
     def add_worker(self, conn: ClientConnection):
+        conn.aux = SelfPlayManager.WorkerAux()
+
         with self._conns_lock:
             self._worker_conns.append(conn)
 
-        conn.aux['ack_cond'] = threading.Condition()
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
@@ -180,11 +202,11 @@ class SelfPlayManager:
             if info is not None and not info.staged:
                 del self._commit_info[conn.client_id]
 
-        cond: threading.Condition = conn.aux['ack_cond']
-        with cond:
-            conn.aux.pop('pending_pause_ack', None)
-            conn.aux.pop('pending_unpause_ack', None)
-            cond.notify_all()
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        with aux.cond:
+            aux.pending_pause_ack = False
+            aux.pending_unpause_ack = False
+            aux.cond.notify_all()
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
@@ -250,7 +272,8 @@ class SelfPlayManager:
         logger.info('Requesting %s to launch self-play...', conn)
         conn.socket.send_json(data)
 
-        conn.aux['launched'] = True
+        aux: SelfPlayManager.ServerAux = conn.aux
+        aux.launched = True
         thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
                                   daemon=True, name=f'self-play-restart-loop')
         thread.start()
@@ -311,57 +334,55 @@ class SelfPlayManager:
 
     def _pause(self, conn: ClientConnection):
         logger.debug('Pausing %s...', conn)
-        data = {
-            'type': 'pause',
-        }
-        conn.aux['pending_pause_ack'] = True
-        conn.socket.send_json(data)
 
-        cond: threading.Condition = conn.aux['ack_cond']
-        with cond:
-            cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        aux.pending_pause_ack = True
+
+        conn.socket.send_json({ 'type': 'pause' })
+
+        with aux.cond:
+            aux.cond.wait_for(lambda: not aux.pending_pause_ack)
 
         logger.debug('Pause of %s complete!', conn)
 
     def _unpause(self, conn: ClientConnection):
         logger.debug('Unpausing %s...', conn)
-        data = {
-            'type': 'unpause',
-        }
-        conn.aux['pending_unpause_ack'] = True
-        conn.socket.send_json(data)
 
-        cond: threading.Condition = conn.aux['ack_cond']
-        with cond:
-            cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        aux.pending_unpause_ack = True
+
+        conn.socket.send_json({ 'type': 'unpause' })
+
+        with aux.cond:
+            aux.cond.wait_for(lambda: not aux.pending_unpause_ack)
 
         logger.debug('Unpause of %s complete!', conn)
 
     def _handle_pause_ack(self, conn: ClientConnection):
-        cond = conn.aux['ack_cond']
-        with cond:
-            start_ts = conn.aux.get('start_ts', None)
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        with aux.cond:
+            start_ts = aux.start_ts
             if start_ts is not None:
                 elapsed = time.time_ns() - start_ts
-                total_runtime = conn.aux.get('total_runtime', 0)
-                conn.aux['total_runtime'] = total_runtime + elapsed
-                del conn.aux['start_ts']
-            conn.aux.pop('pending_pause_ack', None)
-            cond.notify_all()
+                aux.total_runtime += elapsed
+                aux.start_ts = None
+            aux.pending_pause_ack = False
+            aux.cond.notify_all()
 
     def _handle_unpause_ack(self, conn: ClientConnection):
-        cond = conn.aux['ack_cond']
-        with cond:
-            if 'start_ts' not in conn.aux:
-                conn.aux['start_ts'] = time.time_ns()
-            conn.aux.pop('pending_unpause_ack', None)
-            cond.notify_all()
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        with aux.cond:
+            if aux.start_ts is None:
+                aux.start_ts = time.time_ns()
+            aux.pending_unpause_ack = False
+            aux.cond.notify_all()
 
     def _refresh_weights_if_needed(self, conn: ClientConnection):
         gen = self._controller.latest_gen()
-        if conn.aux.get('gen', None) != gen:
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        if aux.gen != gen:
             self._controller.broadcast_weights(conn, gen)
-            conn.aux['gen'] = gen
+            aux.gen = gen
 
     def _handle_heartbeat(self, msg: JsonDict, conn: ClientConnection):
         rows = msg['rows']
@@ -375,7 +396,8 @@ class SelfPlayManager:
     def _launch_unlaunched_workers(self):
         with self._conns_lock:
             for conn in self._ready_server_conns:
-                if not conn.aux.get('launched', False):
+                aux: SelfPlayManager.ServerAux = conn.aux
+                if not aux.launched:
                     self._launch_self_play(conn)
 
     def _wait_until_checkpoint_reached(self):
@@ -421,15 +443,15 @@ class SelfPlayManager:
         metrics = msg.get('metrics', None)
         no_file = msg.get('no_file', False)
 
-        cond = conn.aux['ack_cond']
-        with cond:
-            start_ts = conn.aux.get('start_ts', None)
-            total_runtime = conn.aux.pop('total_runtime', 0)
+        aux: SelfPlayManager.WorkerAux = conn.aux
+        with aux.cond:
+            start_ts = aux.start_ts
+            total_runtime = aux.total_runtime
             if start_ts is not None:
                 now = time.time_ns()
                 elapsed = now - start_ts
                 total_runtime += elapsed
-                conn.aux['start_ts'] = now
+                aux.start_ts = now
 
         # the JSON msg is immediately followed by the game data file. We receive it and save it to
         # scratch dir, to be merged later.
