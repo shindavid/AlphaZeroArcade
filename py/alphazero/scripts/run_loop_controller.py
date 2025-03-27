@@ -61,7 +61,8 @@ def main():
         # first copy over the loop-controller.log from persistent to scratch. This makes it so
         # rsyncing back from scratch to persistent effectively acts as an append operation.
         backup = os.path.join(server.persistent_organizer.logs_dir, 'loop-controller.log')
-        os.system(f'cp {backup} {log_filename}')
+        if os.path.isfile(backup):
+            os.system(f'cp {backup} {log_filename}')
 
     configure_logger(filename=log_filename, params=logging_params, mode='a')
     logger.info('**** Starting loop-controller ****')
