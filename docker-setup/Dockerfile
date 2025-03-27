@@ -59,16 +59,6 @@ RUN for tool in gcc g++; do \
       update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-13 60 || true; \
     done
 
-# Python dependencies
-#
-# Technically, we don't need the google stuff within the Docker container, as it's only used
-# externally. But it's common to attach vscode to the container, and having the google stuff
-# installed allows for better code completion when working with the Docker-external code.
-RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib \
-    bokeh scipy flask plotly dash packaging pygraphviz google-cloud-compute \
-    google-api-python-client torch torchvision torchaudio \
-    notebook sortedcontainers
-
 # clangd, needed for vscode plugin
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -76,6 +66,16 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     apt-get install -y clangd-19 && \
     update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-19 100 && \
     rm llvm.sh
+
+# Python dependencies
+#
+# Technically, we don't need the google/runpod stuff within the Docker container, as it's only used
+# externally. But it's common to attach vscode to the container, and having that stuff
+# installed allows for better code completion when working with the Docker-external code.
+RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib \
+    bokeh scipy flask plotly dash packaging pygraphviz google-cloud-compute \
+    google-api-python-client torch torchvision torchaudio \
+    notebook sortedcontainers runpod
 
 ################################################################################################
 # FOR FASTER DOCKER IMAGE REBUILDS: put new apt-get/pip3 installs below this line. This avoids #
@@ -95,7 +95,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="3.6.1"
+ARG VERSION="3.6.2"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
