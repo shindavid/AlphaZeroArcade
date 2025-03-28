@@ -21,6 +21,13 @@ MINIMUM_REQUIRED_IMAGE_VERSION = "3.6.1"
 DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')
 
+REQUIRED_PORTS = [
+    5012,  # bokeh
+    8002,  # flask
+    8051,  # dash
+    8888,  # jupyter-notebook
+]
+
 
 def update_env_json(mappings):
     env = {}

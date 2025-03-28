@@ -2,8 +2,8 @@
 
 # This file should not depend on any repo python files outside of the top-level directory.
 
-from setup_common import MINIMUM_REQUIRED_IMAGE_VERSION, get_env_json, get_image_label, \
-    is_version_ok
+from setup_common import MINIMUM_REQUIRED_IMAGE_VERSION, REQUIRED_PORTS, get_env_json, \
+    get_image_label, is_version_ok
 
 import argparse
 import os
@@ -13,13 +13,6 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.resolve()
-
-EXPOSED_PORTS = [
-    5012,  # bokeh
-    8002,  # flask
-    8051,  # dash
-    8888,  # jupyter-notebook
-]
 
 
 def check_image_version(image_name):
@@ -125,7 +118,7 @@ def run_container(args):
         mounts.extend(['-v', f"{output_dir}:/workspace/output"])
 
     ports_strs = []
-    for port in EXPOSED_PORTS:
+    for port in REQUIRED_PORTS:
         ports_strs += ['-p', f"{port}:{port}"]
 
     user_id = subprocess.check_output(["id", "-u"], text=True).strip()
@@ -170,7 +163,7 @@ def run_container_gcp(args):
         ]
 
     ports_strs = []
-    for port in EXPOSED_PORTS:
+    for port in REQUIRED_PORTS:
         ports_strs += ['-p', f"{port}:{port}"]
 
     user_id = subprocess.check_output(["id", "-u"], text=True).strip()
