@@ -22,8 +22,6 @@ Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool,
       pondering_search_params_(
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
       shared_data_(mutex_cv_pool, params, next_instance_id_++) {
-  namespace bf = boost::filesystem;
-
   if (mcts::kEnableProfiling) {
     auto profiling_dir = params_.profiling_dir();
     if (profiling_dir.empty()) {

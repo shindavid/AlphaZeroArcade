@@ -82,10 +82,10 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   }
 
  protected:
-  auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
-  const SearchResults* mcts_search(core::SearchMode search_mode) const;
+  auto get_action_policy(const SearchResults*, const ActionMask&) const;
+  const SearchResults* mcts_search() const;
   core::SearchMode choose_search_mode(const ActionRequest& request) const;
-  ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
+  ActionResponse get_action_response_helper(const SearchResults*,
                                             const ActionMask& valid_actions) const;
   void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                           const SearchResults& results) const;
@@ -108,6 +108,9 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   VerboseInfo* verbose_info_ = nullptr;
   const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
+
+  core::SearchMode search_mode_;
+  bool mid_yield_ = false;
 
   template<core::concepts::Game> friend class MctsPlayerTest;
 };
