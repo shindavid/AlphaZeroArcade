@@ -96,8 +96,8 @@ class EvalServer:
         self._session_data.init_socket()
 
     def _send_handshake(self):
-        aux = { 'tag': self._params.rating_tag, }
-        self._session_data.send_handshake(ClientRole.EVAL_SERVER, aux=aux)
+        self._session_data.send_handshake(ClientRole.EVAL_SERVER,
+                                    rating_tag=self._params.rating_tag)
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(ClientRole.EVAL_SERVER)
@@ -169,7 +169,19 @@ class EvalServer:
                                 set_temp_zero=msg['agent2']['set_temp_zero'],
                                 tag=msg['agent2']['tag'])
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
-        result = MatchRunner.run_match_helper(match, self._session_data._game)
+
+        log_filename = self._session_data.get_log_filename('eval-worker')
+        args = {
+            '--loop-controller-hostname': self._params.loop_controller_host,
+            '--loop-controller-port': self._params.loop_controller_port,
+            '--client-role': ClientRole.EVAL_WORKER.value,
+            '--manager-id': self._session_data.client_id,
+            '--ratings-tag': f'"{self._params.rating_tag}"',
+            '--cuda-device': self._params.cuda_device,
+            '--do-not-report-metrics': None,
+            '--log-filename': log_filename,
+        }
+        result = MatchRunner.run_match_helper(match, self._session_data._game, args)
 
         logger.info('Played match between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
@@ -184,5 +196,3 @@ class EvalServer:
 
         self._session_data.socket.send_json(data)
         self._send_ready()
-
-

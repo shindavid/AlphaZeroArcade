@@ -56,6 +56,27 @@ class EvalManager:
     """
     A separate EvalManager is created for each rating-tag.
     """
+
+    @dataclass
+    class ServerAux:
+        """
+        Auxiliary data stored per server connection.
+        """
+        status_cond: threading.Condition = field(default_factory=threading.Condition)
+        status: ServerStatus = ServerStatus.BLOCKED
+        needs_new_opponents: bool = True
+        estimated_rating: Optional[float] = None
+        ix: Optional[int] = None  # test agent index
+
+    @dataclass
+    class WorkerAux:
+        """
+        Auxiliary data stored per worker connection.
+        """
+        cond: threading.Condition = field(default_factory=threading.Condition)
+        pending_pause_ack: bool = False
+        pending_unpause_ack: bool = False
+
     def __init__(self, controller: LoopController, tag: EvalTag):
         self._tag = tag
         self._controller = controller
@@ -67,6 +88,7 @@ class EvalManager:
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
     def add_server(self, conn: ClientConnection):
+        conn.aux = EvalManager.ServerAux()
         ssh_pub_key = ssh_util.get_pub_key()
         reply = {
             'type': 'handshake-ack',
@@ -83,11 +105,6 @@ class EvalManager:
         assert assets_request['type'] == 'assets-request'
         for asset in assets_request['assets']:
             conn.socket.send_file(asset)
-
-        conn.aux['status_cond'] = threading.Condition()
-        conn.aux['status'] = ServerStatus.BLOCKED
-        conn.aux['needs_new_opponents'] = True
-        conn.aux['estimated_rating'] = None
 
         self._start()
         logger.info('Starting eval-recv-loop for %s...', conn)
@@ -147,8 +164,8 @@ class EvalManager:
         self._set_priority()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
-        logger.info('Server disconnected: %s, evaluating ix %s', conn, conn.aux.get('ix', None))
-        ix = conn.aux.pop('ix', None)
+        logger.info('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
+        ix = conn.aux.ix
         if ix is not None:
             with self._lock:
                 eval_status = self._eval_status_dict[ix].status
@@ -158,9 +175,9 @@ class EvalManager:
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
-        status_cond: threading.Condition = conn.aux['status_cond']
+        status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
-            conn.aux['status'] = ServerStatus.DISCONNECTED
+            conn.aux.status= ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
@@ -169,11 +186,11 @@ class EvalManager:
         changed (either to READY or DISCONNECTED). After waiting, it resets the status to
         BLOCKED, and returns what the status was changed to.
         """
-        status_cond: threading.Condition = conn.aux['status_cond']
+        status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
-            status_cond.wait_for(lambda: conn.aux['status'] != ServerStatus.BLOCKED)
-            status = conn.aux['status']
-            conn.aux['status'] = ServerStatus.BLOCKED
+            status_cond.wait_for(lambda: conn.aux.status != ServerStatus.BLOCKED)
+            status = conn.aux.status
+            conn.aux.status = ServerStatus.BLOCKED
             return status
 
     def _wait_until_work_exists(self):
@@ -184,13 +201,13 @@ class EvalManager:
     def _send_match_request(self, conn: ClientConnection):
         #TODO: remove this assert and implement mechasnim to request for binary, extra dependencies or model files
         assert conn.is_on_localhost()
-        ix = conn.aux.get('ix', None)
+        ix = conn.aux.ix
         if ix is None:
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
             test_iagent = self._evaluator.add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator._db)
-            conn.aux['ix'] = test_iagent.index
+            conn.aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
                     assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
@@ -198,24 +215,24 @@ class EvalManager:
                 else:
                     self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
                                                                            status=EvalRequestStatus.REQUESTED)
-            conn.aux['needs_new_opponents'] = True
+            conn.aux.needs_new_opponents = True
             self._set_priority()
         else:
             test_iagent = self._evaluator.indexed_agents[ix]
 
         logger.info('***Evaluating gen %s', test_iagent.agent.gen)
-        estimated_rating = conn.aux['estimated_rating']
+        estimated_rating = conn.aux.estimated_rating
         if estimated_rating is None:
             estimated_rating = self._estimate_rating(test_iagent)
             logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
-            conn.aux['estimated_rating'] = estimated_rating
+            conn.aux.estimated_rating = estimated_rating
 
         n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
             if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)])
         n_games_needed = self.n_games - n_games_in_progress
-        assert n_games_needed > 0
+        assert n_games_needed > 0, f"{self.n_games} games needed, but {n_games_in_progress} already in progress"
 
-        need_new_opponents = conn.aux['needs_new_opponents']
+        need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
             logger.info('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
             opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
@@ -223,7 +240,7 @@ class EvalManager:
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
-            conn.aux['needs_new_opponents'] = False
+            conn.aux.needs_new_opponents = False
 
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
@@ -322,7 +339,7 @@ class EvalManager:
                 status = self._wait_for_unblock(conn)
                 if status == ServerStatus.DISCONNECTED:
                     break
-                if conn.aux.get('ix', None) is None:
+                if conn.aux.ix is None:
                     self._wait_until_work_exists()
 
                 table.activate(domain)
@@ -355,9 +372,9 @@ class EvalManager:
         return False
 
     def _handle_ready(self, conn: ClientConnection):
-        status_cond: threading.Condition = conn.aux['status_cond']
+        status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
-            conn.aux['status'] = ServerStatus.READY
+            conn.aux.status = ServerStatus.READY
             status_cond.notify_all()
 
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
@@ -369,12 +386,12 @@ class EvalManager:
             self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator._db)
         self._evaluator.refresh_ratings()
         new_rating = self._evaluator.arena_ratings[ix1]
-        old_rating = conn.aux['estimated_rating']
+        old_rating = conn.aux.estimated_rating
         logger.info('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
             logger.info('Rating change too large, requesting new opponents...')
-            conn.aux['needs_new_opponents'] = True
-            conn.aux['estimated_rating'] = new_rating
+            conn.aux.needs_new_opponents = True
+            conn.aux.estimated_rating = new_rating
 
         with self._lock:
             self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
@@ -384,7 +401,7 @@ class EvalManager:
             assert self._evaluator._arena.n_games_played(self._evaluator.indexed_agents[ix1].agent) == self.n_games
             self._eval_status_dict[ix1].status = EvalRequestStatus.COMPLETE
             self._eval_status_dict[ix1].owner = None
-            ix = conn.aux.pop('ix')
+            ix = conn.aux.ix
             assert ix == ix1
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
@@ -393,10 +410,123 @@ class EvalManager:
             test_iagents = [self._evaluator.indexed_agents[ix] for ix in test_ixs]
             with self._evaluator._db.db_lock:
                 self._evaluator._db.commit_ratings(test_iagents, interpolated_ratings)
-            conn.aux['estimated_rating'] = None
+            conn.aux.estimated_rating = None
+            conn.aux.ix = None
             logger.info('///Finished evaluating gen %s, rating: %s',
                         self._evaluator.indexed_agents[ix1].agent.gen,
                         interpolated_ratings[np.where(test_ixs == ix1)[0]])
+
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+            table.release_lock(conn.client_domain)
+
+    def add_worker(self, conn: ClientConnection):
+        conn.aux = EvalManager.WorkerAux()
+
+        reply = {
+            'type': 'handshake-ack',
+            'client_id': conn.client_id,
+        }
+        conn.socket.send_json(reply)
+        self._controller.launch_recv_loop(
+            self._worker_msg_handler, conn, 'ratings-worker',
+            disconnect_handler=self._handle_worker_disconnect)
+
+    def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
+        msg_type = msg['type']
+        logger.debug('ratings-worker received json message: %s', msg)
+
+        if msg_type == 'pause-ack':
+            self._handle_pause_ack(conn)
+        elif msg_type == 'unpause-ack':
+            self._handle_unpause_ack(conn)
+        elif msg_type == 'weights-request':
+            self._handle_weights_request(msg, conn)
+        elif msg_type == 'done':
+            return True
+        else:
+            logger.warning('ratings-worker: unknown message type: %s', msg)
+        return False
+
+    def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
+        gen = msg['gen']
+        thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
+                                  daemon=True, name=f'manage-ratings-worker')
+        thread.start()
+
+    def _manage_worker(self, gen: Generation, conn: ClientConnection):
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            self._pause(conn)
+            self._update_weights(gen, conn)
+
+            while table.active(domain):
+                if not table.acquire_lock(domain):
+                    break
+                self._unpause(conn)
+                if table.wait_for_lock_expiry(domain):
+                    self._pause(conn)
+                    table.release_lock(domain)
+        except SocketSendException:
+            logger.warning('Error sending to %s - worker likely disconnected', conn)
+        except:
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
+            self._controller.request_shutdown(1)
+
+    def _handle_worker_disconnect(self, conn: ClientConnection):
+        aux: EvalManager.WorkerAux = conn.aux
+        with aux.cond:
+            aux.pending_pause_ack = False
+            aux.pending_unpause_ack = False
+            aux.cond.notify_all()
+
+        # We set the management status to DEACTIVATING, rather than INACTIVE, here, so that the
+        # worker loop breaks while the server loop continues.
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.mark_as_deactivating(conn.client_domain)
+
+    def _pause(self, conn: ClientConnection):
+        logger.debug('Pausing %s...', conn)
+
+        aux: EvalManager.WorkerAux = conn.aux
+        aux.pending_pause_ack = True
+
+        conn.socket.send_json({ 'type': 'pause' })
+
+        with aux.cond:
+            aux.cond.wait_for(lambda: not aux.pending_pause_ack)
+
+        logger.debug('Pause of %s complete!', conn)
+
+    def _unpause(self, conn: ClientConnection):
+        logger.debug('Unpausing %s...', conn)
+
+        aux: EvalManager.WorkerAux = conn.aux
+        aux.pending_unpause_ack = True
+
+        conn.socket.send_json({ 'type': 'unpause' })
+
+        with aux.cond:
+            aux.cond.wait_for(lambda: not aux.pending_unpause_ack)
+
+        logger.debug('Unpause of %s complete!', conn)
+
+    def _handle_pause_ack(self, conn: ClientConnection):
+        aux: EvalManager.WorkerAux = conn.aux
+        with aux.cond:
+            aux.pending_pause_ack = False
+            aux.cond.notify_all()
+
+    def _handle_unpause_ack(self, conn: ClientConnection):
+        aux: EvalManager.WorkerAux = conn.aux
+        with aux.cond:
+            aux.pending_unpause_ack = False
+            aux.cond.notify_all()
+
+    def _update_weights(self, gen: Generation, conn: ClientConnection):
+        self._controller.broadcast_weights(conn, gen)
 
     @property
     def n_games(self):
@@ -409,4 +539,3 @@ class EvalManager:
     @property
     def error_threshold(self):
         return self._controller.params.eval_error_threshold
-

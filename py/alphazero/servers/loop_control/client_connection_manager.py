@@ -73,18 +73,18 @@ class ClientConnectionManager:
             tmp_socket.close()
             return None
 
-        if client_id in [c.client_id for c in conns]:
-            logger.warning('Rejecting connection due to bad client-id reuse: %s, %s, %s',
-                           manager_id, client_id, conns)
+        # if client_id in [c.client_id for c in conns]:
+        #     logger.warning('Rejecting connection due to bad client-id reuse: %s, %s, %s',
+        #                    manager_id, client_id, conns)
 
-            reply = {
-                'type': 'handshake-ack',
-                'rejection': 'illegal reuse of client-id',
-            }
-            tmp_socket = Socket(client_socket)
-            tmp_socket.send_json(reply)
-            tmp_socket.close()
-            return None
+        #     reply = {
+        #         'type': 'handshake-ack',
+        #         'rejection': 'illegal reuse of client-id',
+        #     }
+        #     tmp_socket = Socket(client_socket)
+        #     tmp_socket.send_json(reply)
+        #     tmp_socket.close()
+        #     return None
 
         with self._lock:
             if client_id is None:

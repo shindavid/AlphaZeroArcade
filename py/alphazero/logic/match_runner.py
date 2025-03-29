@@ -9,6 +9,7 @@ from util.str_util import make_args_str
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Dict
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class Match:
 
 class MatchRunner:
     @staticmethod
-    def run_match_helper(match: Match, game: str) -> WinLossDrawCounts:
+    def run_match_helper(match: Match, game: str, args: Dict) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -47,13 +48,10 @@ class MatchRunner:
         ps1 = agent1.make_player_str(organizer1)
         ps2 = agent2.make_player_str(organizer2)
 
-        base_args = {
-            '-G': n_games,
-            '--do-not-report-metrics': None,
-        }
+        args['-G'] = n_games
 
-        args1 = dict(base_args)
-        args2 = dict(base_args)
+        args1 = dict(args)
+        args2 = dict(args)
 
         port = DEFAULT_REMOTE_PLAY_PORT
 
