@@ -48,6 +48,9 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
 
   PolicyTensor policy_target_;
   ActionValueTensor action_values_target_;
+
+  bool use_for_training_;
+  bool previous_used_for_training_;
 };
 
 }  // namespace generic

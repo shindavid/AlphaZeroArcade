@@ -78,12 +78,22 @@ struct GameTypes {
    *     simulations.
    *
    * - training_info: a pointer to a TrainingInfo object, to be used for NN training.
+   *
+   * - yield: a bool indicating that the player requests more time to think. This is used by the
+   *          MCTSPlayer when it is blocked waiting for an NN evaluation to finish. If yield is
+   *          true, then all other fields are ignored.
    */
   struct ActionResponse {
-    ActionResponse(action_t a=-1) : action(a) {}
+    ActionResponse(action_t a = -1) : action(a) {}
+    static ActionResponse make_yield() {
+      ActionResponse response;
+      response.yield = true;
+      return response;
+    }
 
     action_t action = -1;
     bool victory_guarantee = false;
+    bool yield = false;
     TrainingInfo training_info;
   };
 

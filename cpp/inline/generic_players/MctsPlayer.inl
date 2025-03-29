@@ -113,6 +113,7 @@ inline MctsPlayer<Game>::~MctsPlayer() {
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::start_game() {
+  mid_yield_ = false;
   move_temperature_.reset();
   if (owns_shared_data_) {
     get_manager()->start();
@@ -121,7 +122,8 @@ inline void MctsPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                    core::action_t action) {
+                                                   core::action_t action) {
+  util::release_assert(!mid_yield_);
   move_temperature_.step();
   if (owns_shared_data_) {
     get_manager()->receive_state_change(seat, state, action);
@@ -138,17 +140,23 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 }
 
 template <core::concepts::Game Game>
-typename MctsPlayer<Game>::ActionResponse
-MctsPlayer<Game>::get_action_response(const ActionRequest& request) {
-  core::SearchMode search_mode = choose_search_mode(request);
-  const SearchResults* mcts_results = mcts_search(search_mode);
-  return get_action_response_helper(search_mode, mcts_results, request.valid_actions);
+typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
+  if (!mid_yield_) {
+    search_mode_ = choose_search_mode(request);
+  }
+  const SearchResults* mcts_results = mcts_search();
+  if (!mcts_results) {
+    mid_yield_ = true;
+    return ActionResponse::make_yield();
+  }
+  return get_action_response_helper(mcts_results, request.valid_actions);
 }
 
 template <core::concepts::Game Game>
-inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search(
-    core::SearchMode search_mode) const {
-  return get_manager()->search(search_params_[search_mode]);
+inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search() const {
+  MctsSearchParams search_params = search_params_[search_mode_];
+  return get_manager()->search(search_params);
 }
 
 template <core::concepts::Game Game>
@@ -158,10 +166,9 @@ inline core::SearchMode MctsPlayer<Game>::choose_search_mode(const ActionRequest
 
 template <core::concepts::Game Game>
 typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_helper(
-    core::SearchMode search_mode, const SearchResults* mcts_results,
-    const ActionMask& valid_actions) const {
+    const SearchResults* mcts_results, const ActionMask& valid_actions) const {
 
-  PolicyTensor modified_policy = get_action_policy(search_mode, mcts_results, valid_actions);
+  PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
   if (verbose_info_) {
     verbose_info_->action_policy = modified_policy;
@@ -174,12 +181,11 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
 }
 
 template <core::concepts::Game Game>
-auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
-                                         const SearchResults* mcts_results,
+auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
                                          const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
-  if (search_mode == core::kRawPolicy) {
+  if (search_mode_ == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
     bitset_util::randomly_zero_out(valid_actions_subset, valid_actions_subset.count() / 2);
 
@@ -188,13 +194,13 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
     for (int a : bitset_util::on_indices(valid_actions_subset)) {
       policy(a) = mcts_results->policy_prior(a);
     }
-  } else if (search_params_[search_mode].tree_size_limit <= 1) {
+  } else if (search_params_[search_mode_].tree_size_limit <= 1) {
     policy = mcts_results->policy_prior;
   } else {
     policy = counts;
   }
 
-  if (search_mode != core::kRawPolicy && search_params_[search_mode].tree_size_limit > 1) {
+  if (search_mode_ != core::kRawPolicy && search_params_[search_mode_].tree_size_limit > 1) {
     if (params_.LCB_z_score) {
       Q_sum = mcts_results->Q * policy;
       Q_sq_sum = mcts_results->Q_sq * policy;

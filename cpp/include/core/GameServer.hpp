@@ -1,10 +1,5 @@
 #pragma once
 
-#include <array>
-#include <chrono>
-#include <map>
-#include <vector>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
@@ -13,8 +8,38 @@
 #include <core/TrainingDataWriter.hpp>
 #include <third_party/ProgressBar.hpp>
 
+#include <array>
+#include <chrono>
+#include <condition_variable>
+#include <map>
+#include <queue>
+#include <vector>
+
 namespace core {
 
+// GameServer is used to run games, potentially in parallel, between players. It is responsible for
+// managing the game state, handling player actions, and communicating with the players. It also
+// provides a mechanism for training data collection and logging game results.
+//
+// The overall architecture is driven by the empirical observation that using too many threads can
+// lead to performance degradation, particularly in cloud environments. In the past, we had one
+// game-thread per active-game, which led to a tension: we want many active games to fully
+// saturate the GPU for batch nn evaluation, but we also want to limit the number of threads to
+// avoid overhead.
+//
+// ** The solution is to decouple the number of active games from the number of game threads. **
+//
+// In our new implementation, we have T GameThread's and P GameSlot's, with T << P. The GameSlot's
+// will reside in a queue, and each GameThread will run in a loop, constantly pulling from the queue
+// and processing the next GameSlot. When processing a GameSlot, it will keep working on that
+// instance until the current player returns an ActionResponse. That ActionResponse might be a move
+// in the game, or it might be a "yield", which means that the player is blocked (e.g., waiting for
+// an nn evaluation to finish). In that case, the GameThread will skip to the next GameSlot in the
+// queue.
+//
+// For MCTS self-play, the ideal configuration will be such that when a GameThread revisits a
+// GameSlot that previously yielded, the nn evaluation will typically be finished, so that a
+// GameThread never spends time waiting.
 template <concepts::Game Game>
 class GameServer {
  public:
@@ -63,10 +88,9 @@ class GameServer {
    * A PlayerRegistration gives birth to a PlayerInstantiation.
    *
    * The difference is that a PlayerRegistration has a player-*generating-function*, rather than a
-   * player. This is needed because when multiple GameThread's are launched, each needs to
+   * player. This is needed because when multiple GameSlot's are created, each needs to
    * instantiate its own Player. This requires the GameServer API to demand passing in a
-   * player-*generator*, as opposed to a player, so that each spawned GameThread can create its own
-   * player.
+   * player-*generator*, as opposed to a player, so that each GameSlot can create its own player.
    */
   struct PlayerRegistration {
     PlayerGenerator* gen = nullptr;
@@ -82,8 +106,9 @@ class GameServer {
   struct Params {
     auto make_options_description();
 
-    int num_games = 1000;   // if <=0, run indefinitely
-    int parallelism = 256;  // number of games to run simultaneously
+    int num_games = 1000;       // if <=0, run indefinitely
+    int parallelism = 256;      // number of games to run simultaneously
+    int num_game_threads = 16;  // number of threads to use
     int port = 0;
     float mean_noisy_moves = 0.0;  // mean of exp distr from which to draw number of noisy moves
     bool display_progress_bar = false;
@@ -96,8 +121,47 @@ class GameServer {
   static std::string get_results_str(const results_map_t& map);
 
  private:
+  class SharedData;  // forward declaration
+
+  class GameSlot {
+   public:
+    GameSlot(SharedData&, game_slot_index_t);
+    ~GameSlot();
+
+    void step();
+    bool start_game();
+    bool game_started() const { return game_started_; }
+
+   private:
+    const Params& params() const { return shared_data_.params(); }
+    void step_chance();
+    void step_non_chance();
+    void handle_terminal(const ValueTensor& outcome);
+
+    SharedData& shared_data_;
+    const game_slot_index_t id_;
+    player_instantiation_array_t instantiations_;
+
+    // Initialized at the start of the game
+    game_id_t game_id_;
+    GameWriteLog_sptr game_log_;
+    player_instantiation_array_t player_order_;
+    player_array_t players_;
+    player_name_array_t player_names_;
+    int num_noisy_starting_moves_ = 0;
+    bool game_started_ = false;
+
+    // Updated for each move
+    StateHistory state_history_;
+    int move_number_;  // tracks player-actions, not chance-events
+    core::action_mode_t action_mode_;
+    seat_index_t active_seat_;
+    bool noisy_mode_;
+    bool mid_yield_;
+  };
+
   /*
-   * Members of GameServer that need to be accessed by the individual GameThread's.
+   * Members of GameServer that need to be accessed by the individual GameSlot's.
    */
   class SharedData {
    public:
@@ -105,23 +169,31 @@ class GameServer {
     ~SharedData();
 
     const Params& params() const { return params_; }
+
+    void init_slots();
     void init_progress_bar();
-    bool request_game(int num_games);  // returns false iff hit num_games limit
-    void update(const ValueArray& outcome, int64_t ns);
+    void init_random_seat_indices();
+
+    int num_slots() const { return game_slots_.size(); }
+    GameSlot* next();  // returns nullptr if ready to shut down
+    void enqueue(GameSlot*);
+    void skip_enqueue();
+
+    bool request_game();  // returns false iff hit params_.num_games limit
+    void update(const ValueArray& outcome);
     auto get_results() const;
     void end_session();
     bool ready_to_start() const;
-    int compute_parallelism_factor() const;
-    int num_games_started() const { return num_games_started_; }
     void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote = false);
-    int num_registrations() const { return registrations_.size(); }
     player_instantiation_array_t generate_player_order(
-        const player_instantiation_array_t& instantiations);
-    void init_random_seat_indices();
-    registration_vec_t& registration_templates() { return registrations_; }
+      const player_instantiation_array_t& instantiations);
+
     const std::string& get_player_name(player_id_t p) const {
       return registrations_[p].gen->get_name();
     }
+    int num_games_started() const { return num_games_started_; }
+    int num_registrations() const { return registrations_.size(); }
+    registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
 
    private:
@@ -133,14 +205,25 @@ class GameServer {
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
     int num_random_seats_ = 0;
 
+    std::condition_variable cv_;
     mutable std::mutex mutex_;
     progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
 
+    // game_slots_ is in a fixed order, and doesn't change after initialization. This data
+    // structure is used to look up the GameSlot for a given game_slot_index_t, which is needed for
+    // efficient remote proxy mechanics.
+    std::vector<GameSlot*> game_slots_;
+
+    // We constantly pop from the front of the queue via next(), and push back to the end of the
+    // queue via enqueue(). In between next() and enqueue(), pending_queue_count_ is incremented.
+    //
+    // During the normal course of operations, (queue_.size() + pending_queue_count_) should equal
+    // game_slots_.size(). When a shutdown commences, queue_ will whittle down to zero.
+    std::queue<GameSlot*> queue_;
+    int pending_queue_count_ = 0;
+
     results_array_t results_array_;  // indexed by player_id
-    int64_t total_ns_ = 0;
-    int64_t min_ns_ = std::numeric_limits<int64_t>::max();
-    int64_t max_ns_ = 0;
   };
 
   class GameThread {
@@ -148,23 +231,15 @@ class GameServer {
     GameThread(SharedData& shared_data, game_thread_id_t);
     ~GameThread();
 
-    void join() {
-      if (thread_ && thread_->joinable()) thread_->join();
-    }
-    void launch() {
-      thread_ = new std::thread([&] { run(); });
-    }
-    void decommission() { decommissioned_ = true; }
+    void join();
+    void launch();
 
    private:
     void run();
-    ValueArray play_game(player_array_t&);
 
     SharedData& shared_data_;
-    player_instantiation_array_t instantiations_;
-    std::thread* thread_ = nullptr;
+    std::thread thread_;
     game_thread_id_t id_;
-    bool decommissioned_ = false;
   };
 
  public:
