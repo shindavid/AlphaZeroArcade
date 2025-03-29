@@ -140,6 +140,8 @@ class EvalManager:
                      eval_in_progress, current_rate, target_rate)
         #TODO: separate out eval from rating domain
         self._controller.set_ratings_priority(elevate)
+        for table in self._controller._gpu_contention_manager._get_all_tables():
+            logger.info(f'Table priority: {table}')
 
     def _start(self):
         with self._lock:
@@ -342,6 +344,7 @@ class EvalManager:
                 if conn.aux.ix is None:
                     self._wait_until_work_exists()
 
+                logger.info(f"Managing eval-server, priority: {table}")
                 table.activate(domain)
                 if not table.acquire_lock(domain):
                     break
@@ -418,6 +421,7 @@ class EvalManager:
 
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
+            self._set_priority()
 
     def add_worker(self, conn: ClientConnection):
         conn.aux = EvalManager.WorkerAux()

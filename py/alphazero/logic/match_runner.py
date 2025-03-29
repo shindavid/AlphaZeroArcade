@@ -8,8 +8,10 @@ from util.str_util import make_args_str
 
 from dataclasses import dataclass
 from enum import Enum
+
 import logging
-from typing import Dict
+from typing import Dict, Optional
+
 
 
 logger = logging.getLogger(__name__)
@@ -30,24 +32,24 @@ class Match:
 
 class MatchRunner:
     @staticmethod
-    def run_match_helper(match: Match, game: str, args: Dict) -> WinLossDrawCounts:
+    def run_match_helper(match: Match, game: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
         """
-        #TODO: add support for running different binaries
         agent1 = match.agent1
         agent2 = match.agent2
         n_games = match.n_games
         if n_games < 1:
             return WinLossDrawCounts()
 
-
         organizer1 = DirectoryOrganizer(RunParams(game, agent1.tag), base_dir_root='/workspace')
         organizer2 = DirectoryOrganizer(RunParams(game, agent2.tag), base_dir_root='/workspace')
         ps1 = agent1.make_player_str(organizer1)
         ps2 = agent2.make_player_str(organizer2)
 
+        if args is None:
+            args = {}
         args['-G'] = n_games
 
         args1 = dict(args)
