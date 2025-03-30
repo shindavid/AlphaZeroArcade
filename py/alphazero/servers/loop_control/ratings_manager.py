@@ -352,6 +352,7 @@ class RatingsManager:
                     break
                 self._unpause(conn)
                 if table.wait_for_lock_expiry(domain):
+                    logger.info("XXXXXXXXXXXX ratings-worker lock expiried")
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:

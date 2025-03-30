@@ -195,6 +195,7 @@ class GpuContentionTable:
         This does not actually release the lock. The caller is responsible for calling
         release_lock() to actually release the lock.
         """
+        logger.debug('..................Waiting for lock expiry for %s: %s', domain, self)
         with self._lock:
             return self._wait_for_lock_expiry(domain)
 

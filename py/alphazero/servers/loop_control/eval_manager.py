@@ -419,9 +419,9 @@ class EvalManager:
                         self._evaluator.indexed_agents[ix1].agent.gen,
                         interpolated_ratings[np.where(test_ixs == ix1)[0]])
 
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-            table.release_lock(conn.client_domain)
-            self._set_priority()
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.release_lock(conn.client_domain)
+        self._set_priority()
 
     def add_worker(self, conn: ClientConnection):
         conn.aux = EvalManager.WorkerAux()
@@ -432,12 +432,12 @@ class EvalManager:
         }
         conn.socket.send_json(reply)
         self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'ratings-worker',
+            self._worker_msg_handler, conn, 'eval-worker',
             disconnect_handler=self._handle_worker_disconnect)
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        logger.debug('ratings-worker received json message: %s', msg)
+        logger.debug('eval-worker received json message: %s', msg)
 
         if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
@@ -448,10 +448,11 @@ class EvalManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warning('ratings-worker: unknown message type: %s', msg)
+            logger.warning('eval-worker: unknown message type: %s', msg)
         return False
 
     def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
+        logger.debug('?????????????????????Handling weights-request from eval-worker: %s', msg)
         gen = msg['gen']
         thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
                                   daemon=True, name=f'manage-ratings-worker')
@@ -471,6 +472,8 @@ class EvalManager:
                     break
                 self._unpause(conn)
                 if table.wait_for_lock_expiry(domain):
+                    logger.info("XXXXXXXXXXXX eval-worker lock expiried")
+                    logger.info(f"Priority: {table}")
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
