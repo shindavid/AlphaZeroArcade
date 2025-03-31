@@ -289,8 +289,8 @@ class RatingsManager:
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
-        elif msg_type == 'weights-request':
-            self._handle_weights_request(msg, conn)
+        elif msg_type == 'worker-ready':
+            self._handle_worker_ready(msg, conn)
         elif msg_type == 'done':
             return True
         else:
@@ -332,7 +332,7 @@ class RatingsManager:
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
 
-    def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
+    def _handle_worker_ready(self, msg: JsonDict, conn: ClientConnection):
         gen = msg['gen']
         thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
                                   daemon=True, name=f'manage-ratings-worker')
@@ -352,7 +352,6 @@ class RatingsManager:
                     break
                 self._unpause(conn)
                 if table.wait_for_lock_expiry(domain):
-                    logger.info("XXXXXXXXXXXX ratings-worker lock expiried")
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
