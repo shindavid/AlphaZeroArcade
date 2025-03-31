@@ -89,20 +89,10 @@ class EvalManager:
 
     def add_server(self, conn: ClientConnection):
         conn.aux = EvalManager.ServerAux()
-        ssh_pub_key = ssh_util.get_pub_key()
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-            'game': self._controller.game_spec.name,
-            'tag': self._controller.run_params.tag,
-            'ssh_pub_key': ssh_pub_key,
-            'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
-            'asset-requirements': self._controller.get_asset_requirements(),
-        }
-        conn.socket.send_json(reply)
-
+        self._controller.send_handshake_ack(conn)
         assets_request = conn.socket.recv_json()
         assert assets_request['type'] == 'assets-request'
+
         for asset in assets_request['assets']:
             conn.socket.send_file(asset)
 
@@ -120,7 +110,6 @@ class EvalManager:
         """
         Notify manager that there is new work to do.
         """
-        logger.debug('XXXXXXXXXXXXXXXXXXXXXX NEW MODEL NOTIFICATION XXXXXXXXXXXXXXXXXXXXXX')
         self._set_priority()
         with self._lock:
             self._new_work_cond.notify_all()
@@ -329,35 +318,8 @@ class EvalManager:
         return match_status_dict
 
     def _manage_server(self, conn: ClientConnection):
-        try:
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
-            table.activate(domain)
-
-            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
-            # only breaks when the table becomes INACTIVE. It is important then to use
-            # (not inactive) in the below loop-condition, rather than (active).
-            while not table.inactive(domain):
-                status = self._wait_for_unblock(conn)
-                if status == ServerStatus.DISCONNECTED:
-                    break
-                if conn.aux.ix is None:
-                    self._wait_until_work_exists()
-
-                logger.info(f"Managing eval-server, priority: {table}")
-                table.activate(domain)
-                if not table.acquire_lock(domain):
-                    break
-                self._send_match_request(conn)
-
-                # We do not release the lock here. The lock is released either when a gen is
-                # fully rated, or when the server disconnects.
-        except SocketSendException:
-            logger.warning('Error sending to %s - server likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self._controller.request_shutdown(1)
+        self._controller.manage_server(conn, self._wait_for_unblock, self._wait_until_work_exists,
+                                       self._send_match_request)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
@@ -445,29 +407,25 @@ class EvalManager:
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
         elif msg_type == 'worker-ready':
-            self._handle_worker_ready(msg, conn)
+            self._handle_worker_ready(conn)
         elif msg_type == 'done':
             return True
         else:
             logger.warning('eval-worker: unknown message type: %s', msg)
         return False
 
-    def _handle_worker_ready(self, msg: JsonDict, conn: ClientConnection):
-        needs_weights = msg['needs_weights']
-        gen = msg.get('gen', None)
-        thread = threading.Thread(target=self._manage_worker, args=(gen, needs_weights, conn),
+    def _handle_worker_ready(self, conn: ClientConnection):
+        thread = threading.Thread(target=self._manage_worker, args=(conn,),
                                   daemon=True, name=f'manage-ratings-worker')
         thread.start()
 
-    def _manage_worker(self, gen: Generation, needs_weights: bool, conn: ClientConnection):
+    def _manage_worker(self, conn: ClientConnection):
         try:
             domain = conn.client_domain
             gpu_id = conn.client_gpu_id
 
             table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
             self._pause(conn)
-            if needs_weights:
-                self._update_weights(gen, conn)
 
             while table.active(domain):
                 if not table.acquire_lock(domain):

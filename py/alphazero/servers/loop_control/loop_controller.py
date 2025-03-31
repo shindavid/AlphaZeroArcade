@@ -14,7 +14,7 @@ from .training_manager import TrainingManager
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
-    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction
+    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction, ServerStatus
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -26,6 +26,7 @@ from util.py_util import sha256sum, atomic_cp, write_metadata, get_latest_timest
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
+from util import ssh_util
 
 import logging
 import os
@@ -456,6 +457,51 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
         write_metadata(organizer.binary_info_filename, target_file, '/workspace/repo', self.build_params.metadata_num_entries)
+
+    def send_handshake_ack(self, conn: ClientConnection):
+        ssh_pub_key = ssh_util.get_pub_key()
+        reply = {
+            'type': 'handshake-ack',
+            'client_id': conn.client_id,
+            'game': self.game_spec.name,
+            'tag': self.run_params.tag,
+            'ssh_pub_key': ssh_pub_key,
+            'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
+            'asset-requirements': self.get_asset_requirements(),
+        }
+        conn.socket.send_json(reply)
+
+    def manage_server(self, conn: ClientConnection, wait_for_unblock: Callable,
+                      wait_until_work_exists: Callable, send_match_request: Callable):
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+            table: GpuContentionTable = self.get_gpu_lock_table(gpu_id)
+            table.activate(domain)
+
+            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
+            # only breaks when the table becomes INACTIVE. It is important then to use
+            # (not inactive) in the below loop-condition, rather than (active).
+            while not table.inactive(domain):
+                status = wait_for_unblock(conn)
+                if status == ServerStatus.DISCONNECTED:
+                    break
+                if conn.aux.ix is None:
+                    wait_until_work_exists()
+
+                logger.info(f"Managing eval-server, priority: {table}")
+                table.activate(domain)
+                if not table.acquire_lock(domain):
+                    break
+                send_match_request(conn)
+
+                # We do not release the lock here. The lock is released either when a gen is
+                # fully rated, or when the server disconnects.
+        except SocketSendException:
+            logger.warning('Error sending to %s - server likely disconnected', conn)
+        except:
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
+            self.request_shutdown(1)
 
     def _main_loop(self):
         try:
