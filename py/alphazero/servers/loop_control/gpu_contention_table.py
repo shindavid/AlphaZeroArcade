@@ -231,13 +231,20 @@ class GpuContentionTable:
         assert self._lock.locked(), 'LockTable must be locked'
         return self._states[domain].management_status == ManagementStatus.INACTIVE
 
-    def _acquire_lock(self, domain: Domain) -> bool:
-        logger.debug('Acquiring lock for %s: %s', domain, self)
+    def pre_acquire_lock(self, domain: Domain):
+        with self._lock:
+            return self._pre_acquire_lock(domain)
+
+    def _pre_acquire_lock(self, domain: Domain):
+        logger.debug('Pre-acquiring lock for %s: %s', domain, self)
         assert self._lock.locked(), 'LockTable must be locked'
         if self._states[domain].lock_status == LockStatus.ACQUIRED:
             return True
         self._states[domain].lock_status = LockStatus.ACQUIRING
         self._cond.notify_all()
+
+    def _acquire_lock(self, domain: Domain) -> bool:
+        self._pre_acquire_lock(domain)
         self._cond.wait_for(lambda: self._states[domain].lock_status == LockStatus.ACQUIRED or
                             self._lock_available(domain) or not self._active(domain))
         active = self._active(domain)

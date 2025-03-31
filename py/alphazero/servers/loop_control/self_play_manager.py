@@ -3,6 +3,8 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.custom_types import ClientConnection
+from alphazero.servers.loop_control.gpu_contention_table import Domain
+from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
@@ -127,7 +129,6 @@ class SelfPlayManager:
         self._launch_unlaunched_workers()
         self._controller.unhijack_all_self_play_tables()
         self._collect_and_process_game_data()
-        self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
         conn.aux = SelfPlayManager.ServerAux()
@@ -411,6 +412,9 @@ class SelfPlayManager:
 
     def _collect_and_process_game_data(self):
         self._wait_until_checkpoint_reached()
+        self._controller.get_gpu_lock_table_for_training().pre_acquire_lock(Domain.TRAINING)
+        self._controller.hijack_all_self_play_tables()
+
         self._request_all_game_data()
         self._receive_all_game_data()
         self._update_self_play_db()

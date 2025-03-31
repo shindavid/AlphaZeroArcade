@@ -160,14 +160,8 @@ class EvalServer:
         assert not self._running
         self._running = True
 
-        mcts_agent1 = MCTSAgent(gen=msg['agent1']['gen'],
-                                n_iters=msg['agent1']['n_iters'],
-                                set_temp_zero=msg['agent1']['set_temp_zero'],
-                                tag=msg['agent1']['tag'])
-        mcts_agent2 = MCTSAgent(gen=msg['agent2']['gen'],
-                                n_iters=msg['agent2']['n_iters'],
-                                set_temp_zero=msg['agent2']['set_temp_zero'],
-                                tag=msg['agent2']['tag'])
+        mcts_agent1 = MCTSAgent(**msg['agent1'])
+        mcts_agent2 = MCTSAgent(**msg['agent2'])
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
 
         log_filename = self._session_data.get_log_filename('eval-worker')
@@ -190,8 +184,8 @@ class EvalServer:
         data = {
             'type': 'match-result',
             'record': result.to_json(),
-            'ix1': msg['agent1']['ix'],
-            'ix2': msg['agent2']['ix']
+            'ix1': msg['ix1'],
+            'ix2': msg['ix2']
         }
 
         self._session_data.socket.send_json(data)
