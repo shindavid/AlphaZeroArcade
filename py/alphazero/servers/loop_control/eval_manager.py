@@ -120,6 +120,7 @@ class EvalManager:
         """
         Notify manager that there is new work to do.
         """
+        logger.debug('XXXXXXXXXXXXXXXXXXXXXX NEW MODEL NOTIFICATION XXXXXXXXXXXXXXXXXXXXXX')
         self._set_priority()
         with self._lock:
             self._new_work_cond.notify_all()
@@ -443,37 +444,36 @@ class EvalManager:
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
-        elif msg_type == 'weights-request':
-            self._handle_weights_request(msg, conn)
+        elif msg_type == 'worker-ready':
+            self._handle_worker_ready(msg, conn)
         elif msg_type == 'done':
             return True
         else:
             logger.warning('eval-worker: unknown message type: %s', msg)
         return False
 
-    def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
-        logger.debug('?????????????????????Handling weights-request from eval-worker: %s', msg)
-        gen = msg['gen']
-        thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
+    def _handle_worker_ready(self, msg: JsonDict, conn: ClientConnection):
+        needs_weights = msg['needs_weights']
+        gen = msg.get('gen', None)
+        thread = threading.Thread(target=self._manage_worker, args=(gen, needs_weights, conn),
                                   daemon=True, name=f'manage-ratings-worker')
         thread.start()
 
-    def _manage_worker(self, gen: Generation, conn: ClientConnection):
+    def _manage_worker(self, gen: Generation, needs_weights: bool, conn: ClientConnection):
         try:
             domain = conn.client_domain
             gpu_id = conn.client_gpu_id
 
             table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
             self._pause(conn)
-            self._update_weights(gen, conn)
+            if needs_weights:
+                self._update_weights(gen, conn)
 
             while table.active(domain):
                 if not table.acquire_lock(domain):
                     break
                 self._unpause(conn)
                 if table.wait_for_lock_expiry(domain):
-                    logger.info("XXXXXXXXXXXX eval-worker lock expiried")
-                    logger.info(f"Priority: {table}")
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:

@@ -253,6 +253,10 @@ class LoopController:
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
 
+        for tag, manager in self._eval_managers.items():
+            assert tag is not None  # defensive programming, this indicates a bug
+            manager.notify_of_new_model()
+
     def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
         self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
 

@@ -77,7 +77,7 @@ class LoopControllerClient {
   void send_with_file(const boost::json::value& msg, const std::vector<char>& buf);
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
-  void request_weights();
+  void send_worker_ready(bool needs_weights);
   void handle_pause_receipt();
   void handle_unpause_receipt();
   PerfStats get_perf_stats() const;
@@ -104,7 +104,7 @@ class LoopControllerClient {
   const Params params_;
   const int64_t proc_start_ts_;
   io::Socket* socket_;
-  std::thread* thread_;
+  std::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;

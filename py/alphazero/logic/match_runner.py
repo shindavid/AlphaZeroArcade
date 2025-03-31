@@ -73,6 +73,8 @@ class MatchRunner:
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
+        logger.debug('Running match between:\n%s\n%s', cmd1, cmd2)
+
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
 

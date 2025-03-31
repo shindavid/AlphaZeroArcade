@@ -233,8 +233,8 @@ class SelfPlayManager:
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
-        elif msg_type == 'weights-request':
-            self._handle_weights_request(conn)
+        elif msg_type == 'worker-ready':
+            self._handle_worker_ready(conn, msg['needs_weights'])
         elif msg_type == 'heartbeat':
             self._handle_heartbeat(msg, conn)
         elif msg_type == 'self-play-data':
@@ -309,7 +309,7 @@ class SelfPlayManager:
             if self._n_committed_rows > 0:
                 self._launch_self_play(conn)
 
-    def _manage_worker(self, conn: ClientConnection):
+    def _manage_worker(self, conn: ClientConnection, needs_weights: bool):
         try:
             domain = conn.client_domain
             gpu_id = conn.client_gpu_id
@@ -321,7 +321,8 @@ class SelfPlayManager:
             while table.active(domain):
                 if not table.acquire_lock(domain):
                     break
-                self._refresh_weights_if_needed(conn)
+                logger.info(f'Managing self-play worker gen: {needs_weights}')
+                self._refresh_weights_if_needed(conn, needs_weights)
                 self._unpause(conn)
                 if table.wait_for_lock_expiry(domain):
                     self._pause(conn)
@@ -377,7 +378,10 @@ class SelfPlayManager:
             aux.pending_unpause_ack = False
             aux.cond.notify_all()
 
-    def _refresh_weights_if_needed(self, conn: ClientConnection):
+    def _refresh_weights_if_needed(self, conn: ClientConnection, weights_request_gen: Optional[int]):
+        if weights_request_gen is None:
+            return
+
         gen = self._controller.latest_gen()
         aux: SelfPlayManager.WorkerAux = conn.aux
         if aux.gen != gen:
@@ -600,7 +604,7 @@ class SelfPlayManager:
     def _commit_data_fully_staged(self):
         return all(info.staged for info in self._commit_info.values())
 
-    def _handle_weights_request(self, conn: ClientConnection):
-        thread = threading.Thread(target=self._manage_worker, args=(conn,),
+    def _handle_worker_ready(self, conn: ClientConnection, needs_weights: bool):
+        thread = threading.Thread(target=self._manage_worker, args=(conn, needs_weights),
                                   daemon=True, name=f'manage-self-play-worker')
         thread.start()
