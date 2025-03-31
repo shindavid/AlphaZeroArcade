@@ -471,38 +471,6 @@ class LoopController:
         }
         conn.socket.send_json(reply)
 
-    def manage_server(self, conn: ClientConnection, wait_for_unblock: Callable,
-                      wait_until_work_exists: Callable, send_match_request: Callable):
-        try:
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-            table: GpuContentionTable = self.get_gpu_lock_table(gpu_id)
-            table.activate(domain)
-
-            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
-            # only breaks when the table becomes INACTIVE. It is important then to use
-            # (not inactive) in the below loop-condition, rather than (active).
-            while not table.inactive(domain):
-                status = wait_for_unblock(conn)
-                if status == ServerStatus.DISCONNECTED:
-                    break
-                if conn.aux.ix is None:
-                    wait_until_work_exists()
-
-                logger.info(f"Managing eval-server, priority: {table}")
-                table.activate(domain)
-                if not table.acquire_lock(domain):
-                    break
-                send_match_request(conn)
-
-                # We do not release the lock here. The lock is released either when a gen is
-                # fully rated, or when the server disconnects.
-        except SocketSendException:
-            logger.warning('Error sending to %s - server likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self.request_shutdown(1)
-
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')

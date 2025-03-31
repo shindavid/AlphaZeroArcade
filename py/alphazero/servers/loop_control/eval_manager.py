@@ -318,8 +318,35 @@ class EvalManager:
         return match_status_dict
 
     def _manage_server(self, conn: ClientConnection):
-        self._controller.manage_server(conn, self._wait_for_unblock, self._wait_until_work_exists,
-                                       self._send_match_request)
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            table.activate(domain)
+
+            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
+            # only breaks when the table becomes INACTIVE. It is important then to use
+            # (not inactive) in the below loop-condition, rather than (active).
+            while not table.inactive(domain):
+                status = self._wait_for_unblock(conn)
+                if status == ServerStatus.DISCONNECTED:
+                    break
+                if conn.aux.ix is None:
+                    self._wait_until_work_exists()
+
+                logger.info(f"Managing eval-server, priority: {table}")
+                table.activate(domain)
+                if not table.acquire_lock(domain):
+                    break
+                self._send_match_request(conn)
+
+                # We do not release the lock here. The lock is released either when a gen is
+                # fully rated, or when the server disconnects.
+        except SocketSendException:
+            logger.warning('Error sending to %s - server likely disconnected', conn)
+        except:
+            logger.error('Unexpected error managing %s', conn, exc_info=True)
+            self._controller.request_shutdown(1)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
