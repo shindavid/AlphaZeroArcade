@@ -533,7 +533,7 @@ void NNEvaluationService<Game>::wait_for_unpause() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
-  if (sent_ready_) return;
+  if (sent_ready_ || initial_weights_loaded_) return;
 
   LOG_INFO << "NNEvaluationService: sending worker-ready...";
 
