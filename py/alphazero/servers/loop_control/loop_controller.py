@@ -22,7 +22,7 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import sha256sum, atomic_cp, write_metadata, get_latest_timestamp
+from util.py_util import sha256sum, atomic_cp
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -442,12 +442,10 @@ class LoopController:
                 return
             elif not self.build_params.override_binary:
                 message = f"""Hash mismatch for binary file {binary_path}.
-                Latest copy time: {get_latest_timestamp(organizer.binary_info_filename)}.
                 Include --override-binary to override or have the matching binary: {binary_path}"""
                 raise Exception(message)
             else:
                 message = f"""Hash mismatch for binary file {binary_path}.
-                Latest copy time: {get_latest_timestamp(organizer.binary_info_filename)}.
                 Overriding binary file with the one in {binary_path}"""
                 logger.warning(message)
         else:
@@ -456,7 +454,6 @@ class LoopController:
 
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
-        write_metadata(organizer.binary_info_filename, target_file, '/workspace/repo', self.build_params.metadata_num_entries)
 
     def send_handshake_ack(self, conn: ClientConnection):
         ssh_pub_key = ssh_util.get_pub_key()

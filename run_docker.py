@@ -102,9 +102,7 @@ def run_container(args):
             return
 
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
-              '-v',"/etc/timezone:/etc/timezone:ro",
-              '-v',"/etc/localtime:/etc/localtime:ro",]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
     post_mount_cmds = [
         'mkdir -p ~/scratch',
         ]

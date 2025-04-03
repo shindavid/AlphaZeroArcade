@@ -1,13 +1,10 @@
 import argparse
 import hashlib
 import inspect
-import json
 import os
 import shutil
 import subprocess
 import tempfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import List, Union
 
 
@@ -318,66 +315,3 @@ def copy_file_to_folder(src: str, dst_folder: str):
     shutil.copy2(src, dst_path)
 
     print(f"Copied: {src} -> {dst_path}")
-
-
-@dataclass
-class GitInfo:
-    commit_hash: str
-    commit_message: str
-    uncommitted_changes: bool
-
-
-def get_git_info(repo_path) -> GitInfo:
-    try:
-        commit_hash = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=repo_path, text=True).strip()
-        commit_message = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%B"], cwd=repo_path, text=True).strip()
-        uncommitted_changes = bool(
-            subprocess.check_output(["git", "status", "--porcelain"], cwd=repo_path))
-        return GitInfo(commit_hash, commit_message, uncommitted_changes)
-    except subprocess.CalledProcessError:
-        raise RuntimeError("Failed to retrieve git information. Ensure you are in a git repository.")
-
-
-def write_metadata(metadata_file, filename, repo_path, max_entries):
-    if not os.path.exists(metadata_file):
-        with open(metadata_file, "w") as f:
-            json.dump([], f)
-
-    with open(metadata_file, "r") as f:
-        metadata = json.load(f)
-        if not isinstance(metadata, list):
-            raise ValueError(f"Metadata file {metadata_file} is not a valid JSON array.")
-
-    git_info = get_git_info(repo_path)
-    timestamp_utc = datetime.now(timezone.utc).isoformat()
-    new_entry = {
-        "timestamp_utc": timestamp_utc,
-        "filename": filename,
-        "commit_hash": git_info.commit_hash,
-        "commit_message": git_info.commit_message,
-        "uncommitted_changes": git_info.uncommitted_changes,
-    }
-    metadata.append(new_entry)
-
-    if len(metadata) > max_entries:
-        metadata.pop(0)
-
-    with open(metadata_file, "w") as f:
-        json.dump(metadata, f, indent=4)
-
-
-def get_latest_timestamp(metadata_file):
-    if not os.path.exists(metadata_file):
-        raise FileNotFoundError(f"Metadata file {metadata_file} does not exist.")
-
-    with open(metadata_file, "r") as f:
-        metadata = json.load(f)
-        if not isinstance(metadata, list) or not metadata:
-            return None
-
-    latest_entry = max(metadata, key=lambda x: x["timestamp_utc"])
-    utc_time = datetime.fromisoformat(latest_entry["timestamp_utc"])
-    local_time = utc_time.astimezone()
-    return local_time.strftime("%Y-%m-%d %H:%M:%S") + " " + local_time.tzname()
