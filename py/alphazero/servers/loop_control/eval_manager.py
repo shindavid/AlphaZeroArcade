@@ -442,6 +442,7 @@ class EvalManager:
         return False
 
     def _handle_worker_ready(self, conn: ClientConnection):
+        logger.debug( 'Eval-Worker %s is ready', conn)
         thread = threading.Thread(target=self._manage_worker, args=(conn,),
                                   daemon=True, name=f'manage-ratings-worker')
         thread.start()

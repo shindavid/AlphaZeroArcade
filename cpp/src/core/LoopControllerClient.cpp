@@ -22,16 +22,9 @@ void LoopControllerClient::init(const Params& params) {
   instance_ = new LoopControllerClient(params);
 }
 
-void LoopControllerClient::send_worker_ready(bool needs_weights) {
+void LoopControllerClient::send_worker_ready() {
   boost::json::object msg;
   msg["type"] = "worker-ready";
-
-  if (needs_weights) {
-    msg["needs_weights"] = true;
-  } else {
-    msg["needs_weights"] = false;
-  }
-
   if (params_.weights_request_generation >= 0) {
     msg["gen"] = params_.weights_request_generation;
   }

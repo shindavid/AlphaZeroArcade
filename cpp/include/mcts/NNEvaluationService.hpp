@@ -262,7 +262,7 @@ class NNEvaluationService
   int num_connections_ = 0;
 
   bool initial_weights_loaded_ = false;
-  bool sent_ready_ = false;
+  bool ready_ = false;
   bool skip_next_pause_receipt_ = false;
   bool paused_ = false;
   std::mutex pause_mutex_;
