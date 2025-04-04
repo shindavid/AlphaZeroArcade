@@ -1,7 +1,7 @@
 from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
-from alphazero.logic.custom_types import ClientRole, BinaryFile
+from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.run_params import RunParams
@@ -169,11 +169,18 @@ class EvalServer:
         self._running = True
 
         required_binaries = msg['binaries']
-        missing_binaries: List[BinaryFile] = self._session_data.get_missing_binaries(required_binaries)
+        missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
         if missing_binaries:
             logger.warning('Missing required binaries: %s', missing_binaries)
             self._session_data.send_binary_request(missing_binaries)
             self._session_data.wait_for_binaries(missing_binaries)
+
+        # required_model = msg['model_file']
+        # missing_model: bool = self._session_data.is_model_missing(required_model)
+        # if missing_model:
+        #     logger.warning('Missing required model file: %s', required_model)
+        #     self._session_data.send_model_request(required_model)
+        #     self._session_data.wait_for_model(required_model)
 
         mcts_agent1 = MCTSAgent(**msg['agent1'])
         mcts_agent2 = MCTSAgent(**msg['agent2'])

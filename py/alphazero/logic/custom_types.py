@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -107,14 +107,14 @@ DisconnectHandler = Callable[[ClientConnection], None]
 
 
 @dataclass
-class BinaryFile:
-    source_path: str
-    scratch_path: str
-    hash: str
+class FileToTransfer:
+    source_path: Optional[str] = None
+    scratch_path: Optional[str] = None
+    hash: Optional[str] = None
 
     def to_dict(self) -> JsonDict:
         """
-        Convert the BinaryFile to a dictionary representation for JSON serialization.
+        Convert the FileToTransfer to a dictionary representation for JSON serialization.
         """
         return {
             'source_path': self.source_path,

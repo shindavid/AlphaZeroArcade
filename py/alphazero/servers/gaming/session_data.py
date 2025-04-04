@@ -2,7 +2,7 @@ from .base_params import BaseParams
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientId, ClientRole, BinaryFile
+from alphazero.logic.custom_types import ClientId, ClientRole, FileToTransfer
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
@@ -273,7 +273,7 @@ class SessionData:
 
         missing_binaries = []
         for b in binaries:
-            binary = BinaryFile(**b)
+            binary = FileToTransfer(**b)
             asset_path = os.path.join(ASSETS_DIR, binary.hash)
             if not os.path.exists(asset_path):
                 missing_binaries.append(binary)
@@ -294,7 +294,7 @@ class SessionData:
 
         return missing_binaries
 
-    def send_binary_request(self, missing_binaries: List[BinaryFile]):
+    def send_binary_request(self, missing_binaries: List[FileToTransfer]):
         if not missing_binaries:
             return
 
@@ -308,7 +308,7 @@ class SessionData:
 
     def receive_binary_file(self, binary_dict: JsonDict):
         py_util.atomic_makedirs(ASSETS_DIR)
-        binary = BinaryFile(**binary_dict)
+        binary = FileToTransfer(**binary_dict)
         asset_path = os.path.join(ASSETS_DIR, binary.hash)
         self.socket.recv_file(asset_path, atomic=True)
 
@@ -323,7 +323,7 @@ class SessionData:
         with self._binary_ready_cv:
             self._binary_ready_cv.notify_all()
 
-    def _is_binary_ready(self, missing_binaries: List[BinaryFile]) -> bool:
+    def _is_binary_ready(self, missing_binaries: List[FileToTransfer]) -> bool:
         """
         Check if all the missing binaries are ready.
         This is used to determine whether to proceed with the run command.
@@ -346,7 +346,7 @@ class SessionData:
 
         return True
 
-    def wait_for_binaries(self, missing_binaries: List[BinaryFile]):
+    def wait_for_binaries(self, missing_binaries: List[FileToTransfer]):
         with  self._binary_ready_cv:
             self._binary_ready_cv.wait_for(lambda: self._is_binary_ready(missing_binaries))
 

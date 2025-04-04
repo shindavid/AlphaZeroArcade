@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import MCTSAgent, AgentRole
+from alphazero.logic.agent_types import MCTSAgent, AgentRole, IndexedAgent
 from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId,\
-    BinaryFile
+    FileToTransfer
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.ratings import WinLossDrawCounts
+from alphazero.logic.run_params import RunParams
 from alphazero.logic.match_runner import MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
@@ -238,19 +239,36 @@ class EvalManager:
 
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
-        next_opponent_agent = self._evaluator.indexed_agents[next_opponent_ix].agent
+        next_opponent_iagent = self._evaluator.indexed_agents[next_opponent_ix]
 
+        data = self.gen_match_request_data( test_iagent, next_opponent_iagent, next_n_games)
+        conn.socket.send_json(data)
+        self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
+
+    def gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent, next_n_games) -> JsonDict:
         game = self._controller._run_params.game
-        eval_binary = BinaryFile(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/target/Release/bin/{game}',
+        next_opponent_agent = next_opponent_iagent.agent
+        eval_binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
             scratch_path=f'target/bin/{game}',
-            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/target/Release/bin/{game}'),
+            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
         )
-        benchmark_binary = BinaryFile(
-            source_path= f'output/{game}/{next_opponent_agent.tag}/target/Release/bin/{game}',
+        benchmark_binary = FileToTransfer(
+            source_path= f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}',
             scratch_path=f'target/benchmark-bin/{game}',
-            hash=sha256sum(f'output/{game}/{next_opponent_agent.tag}/target/Release/bin/{game}'),
+            hash=sha256sum(f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}'),
         )
+
+        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag),
+                                                 base_dir_root='/workspace')
+        logger.debug(f"Benchmark model: {benchmark_organizer.get_model_filename(next_opponent_agent.gen)}")
+
+        benchmark_model = FileToTransfer()
+        if next_opponent_agent.gen > 0:
+            benchmark_model.source_path = benchmark_organizer.get_model_filename(next_opponent_agent.gen)
+            benchmark_model.scratch_path = f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt'
+            benchmark_model.hash = sha256sum(benchmark_model.source_path)
+
         data = {
             'type': 'match-request',
             'agent1': {
@@ -258,22 +276,24 @@ class EvalManager:
                 'n_iters': self.n_iters,
                 'set_temp_zero': True,
                 'tag': self._controller._organizer.tag,
-                'binary': eval_binary.scratch_path
+                'binary': eval_binary.scratch_path,
+                'model': self._controller._organizer.get_model_filename(test_iagent.agent.gen)
             },
             'agent2': {
                 'gen': next_opponent_agent.gen,
                 'n_iters': next_opponent_agent.n_iters,
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
                 'tag': next_opponent_agent.tag,
-                'binary': benchmark_binary.scratch_path
+                'binary': benchmark_binary.scratch_path,
+                'model': benchmark_model.scratch_path
             },
             'ix1': test_iagent.index,
-            'ix2': int(next_opponent_ix),
+            'ix2': int(next_opponent_iagent.index),
             'n_games': int(next_n_games),
             'binaries': [eval_binary.to_dict(), benchmark_binary.to_dict()],
+            'model_file': benchmark_model.to_dict()
         }
-        conn.socket.send_json(data)
-        self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
+        return data
 
     def _get_next_gen_to_eval(self):
         latest_gen = self._controller.latest_gen()

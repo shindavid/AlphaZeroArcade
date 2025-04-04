@@ -25,6 +25,7 @@ class MCTSAgent(Agent):
     set_temp_zero: bool = None
     tag: str = None
     binary: str = None
+    model: str = None
 
     def make_player_str(self, organizer: DirectoryOrganizer) -> str:
         assert organizer.tag == self.tag
