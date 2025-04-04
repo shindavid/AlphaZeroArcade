@@ -50,7 +50,7 @@ class SessionData:
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
         self._log_sync_set = set()
-        self._binary_ready_cv = threading.Condition()
+        self._file_ready_cv = threading.Condition()
 
     def disable_next_returncode_check(self):
         self._skip_next_returncode_check = True
@@ -273,6 +273,7 @@ class SessionData:
 
         missing_binaries = []
         for b in binaries:
+            logger.debug('Checking binary: %s', b)
             binary = FileToTransfer(**b)
             asset_path = os.path.join(ASSETS_DIR, binary.hash)
             if not os.path.exists(asset_path):
@@ -320,35 +321,45 @@ class SessionData:
         ln_cmd = f'ln -sf {src} {dst}'
         subprocess.run(ln_cmd, shell=True, check=True)
 
-        with self._binary_ready_cv:
-            self._binary_ready_cv.notify_all()
+        with self._file_ready_cv:
+            self._file_ready_cv.notify_all()
 
-    def _is_binary_ready(self, missing_binaries: List[FileToTransfer]) -> bool:
-        """
-        Check if all the missing binaries are ready.
-        This is used to determine whether to proceed with the run command.
-        """
-        for binary in missing_binaries:
-            asset_path = os.path.join(ASSETS_DIR, binary.hash)
-            if not os.path.exists(asset_path):
-                return False
+    def wait_for_binaries(self, required_binaries: List[JsonDict]):
+        with  self._file_ready_cv:
+            self._file_ready_cv.wait_for(lambda: self.get_missing_binaries(required_binaries) == [])
 
-            saved_file_hash = py_util.sha256sum(asset_path)
-            if saved_file_hash != binary.hash:
-                logger.warning(f'Hash mismatch for binary {binary.source_path}: '
-                               f'expected {binary.hash}, found {py_util.sha256sum(asset_path)}')
-                return False
+    def is_model_missing(self, required_model: JsonDict):
+        model_file = FileToTransfer(**required_model)
+        model_path = os.path.join(self.run_dir, model_file.scratch_path)
+        logger.debug( 'Checking if model is missing: %s', model_path)
+        return not os.path.exists(model_path)
 
-            symlink_path = os.path.join(self.run_dir, binary.scratch_path)
-            if not os.path.islink(symlink_path):
-                logger.warning(f'Symlink not found for binary {binary.source_path} at {symlink_path}')
-                return False
+    def send_model_request(self, required_model: JsonDict):
+        if not required_model:
+            return
 
-        return True
+        data = {
+            'type': 'model-request',
+            'model': required_model,
+        }
+        self.socket.send_json(data)
+        logger.info('Sent model-request: %s', data)
 
-    def wait_for_binaries(self, missing_binaries: List[FileToTransfer]):
-        with  self._binary_ready_cv:
-            self._binary_ready_cv.wait_for(lambda: self._is_binary_ready(missing_binaries))
+    def wait_for_model(self, required_model: JsonDict):
+        with self._file_ready_cv:
+            self. _file_ready_cv.wait_for(lambda: not self.is_model_missing(required_model))
+
+    def receive_model_file(self, model_dict: JsonDict):
+        py_util.atomic_makedirs(self.run_dir)
+        model_file = FileToTransfer(**model_dict)
+        model_path = os.path.join(self.run_dir, model_file.scratch_path)
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        self.socket.recv_file(model_path, atomic=True)
+
+        logger.info('Received model file: %s', model_path)
+
+        with self._file_ready_cv:
+            self._file_ready_cv.notify_all()
 
     @property
     def socket(self) -> Socket:

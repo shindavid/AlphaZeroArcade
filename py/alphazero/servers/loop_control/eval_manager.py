@@ -398,6 +398,8 @@ class EvalManager:
             self._handle_match_result(msg, conn)
         elif msg_type == 'binary-request':
             self._handle_binary_request(conn, msg['binaries'])
+        elif msg_type == 'model-request':
+            self._handle_model_request(conn, msg['model'])
         else:
             logger.warning('eval-server: unknown message type: %s', msg)
         return False
@@ -566,12 +568,22 @@ class EvalManager:
         """
         logger.info('Handling binary request from %s: %s', conn, binaries)
         for binary in binaries:
-            binary_file = BinaryFile(**binary)
+            binary_file = FileToTransfer(**binary)
             conn.socket.send_json({
                 'type': 'binary-file',
                 'binary': binary_file.to_dict(),
             })
             conn.socket.send_file(binary_file.source_path)
+
+    def _handle_model_request(self, conn: ClientConnection, model: JsonDict):
+        model_file = FileToTransfer(**model)
+        logger.info('Handling model request from %s: %s', conn, model_file)
+        conn.socket.send_json({
+            'type': 'model-file',
+            'model': model_file.to_dict(),
+        })
+        conn.socket.send_file(model_file.source_path)
+        logger.debug('Sent model file %s to %s', model_file.source_path, conn)
 
     @property
     def n_games(self):
