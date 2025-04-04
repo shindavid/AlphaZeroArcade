@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 import numpy as np
+import os
 
 
 class Agent(ABC):
@@ -27,9 +28,7 @@ class MCTSAgent(Agent):
     binary: str = None
     model: str = None
 
-    def make_player_str(self, organizer: DirectoryOrganizer) -> str:
-        assert organizer.tag == self.tag
-
+    def make_player_str(self, run_dir) -> str:
         player_args = {
             '--type': 'MCTS-C',
             '--name': f'MCTS-{self.gen}-{self.n_iters}',
@@ -42,7 +41,7 @@ class MCTSAgent(Agent):
         if self.gen == 0:
             player_args['--no-model'] = None
         else:
-            player_args['-m'] = organizer.get_model_filename(self.gen)
+            player_args['-m'] = os.path.join(run_dir, self.model)
 
         if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0

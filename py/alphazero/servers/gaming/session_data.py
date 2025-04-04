@@ -330,6 +330,8 @@ class SessionData:
 
     def is_model_missing(self, required_model: JsonDict):
         model_file = FileToTransfer(**required_model)
+        if not model_file.scratch_path:
+            return False
         model_path = os.path.join(self.run_dir, model_file.scratch_path)
         logger.debug( 'Checking if model is missing: %s', model_path)
         return not os.path.exists(model_path)

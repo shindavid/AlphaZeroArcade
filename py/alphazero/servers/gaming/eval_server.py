@@ -227,10 +227,8 @@ class EvalServer:
         if n_games < 1:
             return WinLossDrawCounts()
 
-        organizer1 = DirectoryOrganizer(RunParams(game, agent1.tag), base_dir_root='/workspace')
-        organizer2 = DirectoryOrganizer(RunParams(game, agent2.tag), base_dir_root='/workspace')
-        ps1 = agent1.make_player_str(organizer1)
-        ps2 = agent2.make_player_str(organizer2)
+        ps1 = agent1.make_player_str(self._session_data.run_dir)
+        ps2 = agent2.make_player_str(self._session_data.run_dir)
 
         if args is None:
             args = {}
