@@ -24,6 +24,7 @@ class MCTSAgent(Agent):
     n_iters: Optional[int] = None
     set_temp_zero: bool = None
     tag: str = None
+    binary: str = None
 
     def make_player_str(self, organizer: DirectoryOrganizer) -> str:
         assert organizer.tag == self.tag
@@ -91,4 +92,3 @@ class IndexedAgent:
 
 
 BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
-

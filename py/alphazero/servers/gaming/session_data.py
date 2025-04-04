@@ -2,7 +2,7 @@ from .base_params import BaseParams
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientId, ClientRole
+from alphazero.logic.custom_types import ClientId, ClientRole, BinaryFile
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
@@ -15,11 +15,19 @@ import logging
 import os
 import socket
 import subprocess
+import threading
 import time
-from typing import Optional
+from typing import Optional, Dict, List
 
 
 logger = logging.getLogger(__name__)
+
+
+filename = str
+sha256hash = str
+
+
+ASSETS_DIR = '/home/devuser/scratch/assets'
 
 
 class SessionData:
@@ -42,6 +50,7 @@ class SessionData:
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
         self._log_sync_set = set()
+        self._binary_ready_cv = threading.Condition()
 
     def disable_next_returncode_check(self):
         self._skip_next_returncode_check = True
@@ -251,6 +260,95 @@ class SessionData:
             os.makedirs(dst_dir, exist_ok=True)
             ln_cmd = f'ln -sf {src} {dst}'
             subprocess.run(ln_cmd, shell=True, check=True)
+
+    def get_missing_binaries(self, binaries: List[JsonDict]):
+        """
+        This method does the following:
+        1. create an assets-directory in /home/devuser/scratch/assets/, if it doesn't yet exist.
+        2. return a list of missing binaries that are not found in the assets-directory.
+        3. if a binary is found in the assets-directory, check if the dst path matches the hash. If not,
+        create a soft link to the correct binary.
+        """
+        py_util.atomic_makedirs(ASSETS_DIR)
+
+        missing_binaries = []
+        for b in binaries:
+            binary = BinaryFile(**b)
+            asset_path = os.path.join(ASSETS_DIR, binary.hash)
+            if not os.path.exists(asset_path):
+                missing_binaries.append(binary)
+            else:
+                # Verify the hash matches if the file exists
+                current_hash = py_util.sha256sum(asset_path)
+                if current_hash != binary.hash:
+                    logger.warning(f'Hash mismatch for binary {binary.source_path}: '
+                                   f'expected {binary.hash}, found {current_hash}')
+                    missing_binaries.append(binary)
+                else:
+                    # Create a soft link to the correct binary if necessary
+                    dst_path = os.path.join(self.run_dir, binary.scratch_path)
+                    dst_dir = os.path.dirname(dst_path)
+                    os.makedirs(dst_dir, exist_ok=True)
+                    ln_cmd = f'ln -sf {asset_path} {dst_path}'
+                    subprocess.run(ln_cmd, shell=True, check=True)
+
+        return missing_binaries
+
+    def send_binary_request(self, missing_binaries: List[BinaryFile]):
+        if not missing_binaries:
+            return
+
+        binaries_info = [b.to_dict() for b in missing_binaries]
+        data = {
+            'type': 'binary-request',
+            'binaries': binaries_info,
+        }
+        self.socket.send_json(data)
+        logger.info('Sent binary-request for %d binaries: %s', len(missing_binaries), binaries_info)
+
+    def receive_binary_file(self, binary_dict: JsonDict):
+        py_util.atomic_makedirs(ASSETS_DIR)
+        binary = BinaryFile(**binary_dict)
+        asset_path = os.path.join(ASSETS_DIR, binary.hash)
+        self.socket.recv_file(asset_path, atomic=True)
+
+        # create soft link in the run directory
+        src = asset_path
+        dst = os.path.join(self.run_dir, binary.scratch_path)
+        dst_dir = os.path.dirname(dst)
+        os.makedirs(dst_dir, exist_ok=True)
+        ln_cmd = f'ln -sf {src} {dst}'
+        subprocess.run(ln_cmd, shell=True, check=True)
+
+        with self._binary_ready_cv:
+            self._binary_ready_cv.notify_all()
+
+    def _is_binary_ready(self, missing_binaries: List[BinaryFile]) -> bool:
+        """
+        Check if all the missing binaries are ready.
+        This is used to determine whether to proceed with the run command.
+        """
+        for binary in missing_binaries:
+            asset_path = os.path.join(ASSETS_DIR, binary.hash)
+            if not os.path.exists(asset_path):
+                return False
+
+            saved_file_hash = py_util.sha256sum(asset_path)
+            if saved_file_hash != binary.hash:
+                logger.warning(f'Hash mismatch for binary {binary.source_path}: '
+                               f'expected {binary.hash}, found {py_util.sha256sum(asset_path)}')
+                return False
+
+            symlink_path = os.path.join(self.run_dir, binary.scratch_path)
+            if not os.path.islink(symlink_path):
+                logger.warning(f'Symlink not found for binary {binary.source_path} at {symlink_path}')
+                return False
+
+        return True
+
+    def wait_for_binaries(self, missing_binaries: List[BinaryFile]):
+        with  self._binary_ready_cv:
+            self._binary_ready_cv.wait_for(lambda: self._is_binary_ready(missing_binaries))
 
     @property
     def socket(self) -> Socket:

@@ -1,19 +1,25 @@
 from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientRole
-from alphazero.logic.match_runner import Match, MatchRunner, MatchType
+from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
+from alphazero.logic.custom_types import ClientRole, BinaryFile
+from alphazero.logic.match_runner import Match, MatchType
+from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
+from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.session_data import SessionData
+from alphazero.servers.gaming.session_data import SessionData, ASSETS_DIR
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util import subprocess_util
+from util.str_util import make_args_str
 
 from dataclasses import dataclass, fields
 import subprocess
 import threading
-from typing import Optional
+import os
+from typing import Optional, List, Dict
 
 
 logger = get_logger()
@@ -132,6 +138,8 @@ class EvalServer:
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
+        elif msg_type == 'binary-file':
+            self._session_data.receive_binary_file(msg['binary'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -160,6 +168,13 @@ class EvalServer:
         assert not self._running
         self._running = True
 
+        required_binaries = msg['binaries']
+        missing_binaries: List[BinaryFile] = self._session_data.get_missing_binaries(required_binaries)
+        if missing_binaries:
+            logger.warning('Missing required binaries: %s', missing_binaries)
+            self._session_data.send_binary_request(missing_binaries)
+            self._session_data.wait_for_binaries(missing_binaries)
+
         mcts_agent1 = MCTSAgent(**msg['agent1'])
         mcts_agent2 = MCTSAgent(**msg['agent2'])
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
@@ -175,7 +190,7 @@ class EvalServer:
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
-        result = MatchRunner.run_match_helper(match, self._session_data._game, args)
+        result = self._eval_match(match, self._session_data.game, args)
 
         logger.info('Played match between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
@@ -190,3 +205,60 @@ class EvalServer:
 
         self._session_data.socket.send_json(data)
         self._send_ready()
+
+    def _eval_match(self, match: Match, game: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
+        """
+        Run a match between two agents and return the results by running two subprocesses
+        of C++ binaries.
+        """
+        agent1 = match.agent1
+        agent2 = match.agent2
+        n_games = match.n_games
+        if n_games < 1:
+            return WinLossDrawCounts()
+
+        organizer1 = DirectoryOrganizer(RunParams(game, agent1.tag), base_dir_root='/workspace')
+        organizer2 = DirectoryOrganizer(RunParams(game, agent2.tag), base_dir_root='/workspace')
+        ps1 = agent1.make_player_str(organizer1)
+        ps2 = agent2.make_player_str(organizer2)
+
+        if args is None:
+            args = {}
+        args['-G'] = n_games
+
+        args1 = dict(args)
+        args2 = dict(args)
+
+        port = DEFAULT_REMOTE_PLAY_PORT
+
+        cmd1 = [
+            os.path.join(self._session_data.run_dir, agent1.binary),
+            '--port', str(port),
+            '--player', f'"{ps1}"',
+        ]
+        cmd1.append(make_args_str(args1))
+        cmd1 = ' '.join(map(str, cmd1))
+
+        cmd2 = [
+            os.path.join(self._session_data.run_dir, agent1.binary),
+            '--remote-port', str(port),
+            '--player', f'"{ps2}"',
+        ]
+        cmd2.append(make_args_str(args2))
+        cmd2 = ' '.join(map(str, cmd2))
+
+        logger.debug('Running match between:\n%s\n%s', cmd1, cmd2)
+
+        proc1 = subprocess_util.Popen(cmd1)
+        proc2 = subprocess_util.Popen(cmd2)
+
+        expected_rc = None
+        print_fn = logger.error
+        stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+
+        # NOTE: extracting the match record from stdout is potentially fragile. Consider
+        # changing this to have the c++ process directly communicate its win/loss data to the
+        # loop-controller. Doing so would better match how the self-play server works.
+        record = extract_match_record(stdout)
+        logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
+        return record.get(0)

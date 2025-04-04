@@ -104,3 +104,20 @@ class ClientConnection:
 ShutdownAction = Callable[[], None]
 MsgHandler = Callable[[ClientConnection, JsonDict], bool]  # return True for loop-break
 DisconnectHandler = Callable[[ClientConnection], None]
+
+
+@dataclass
+class BinaryFile:
+    source_path: str
+    scratch_path: str
+    hash: str
+
+    def to_dict(self) -> JsonDict:
+        """
+        Convert the BinaryFile to a dictionary representation for JSON serialization.
+        """
+        return {
+            'source_path': self.source_path,
+            'scratch_path': self.scratch_path,
+            'hash': self.hash
+        }

@@ -58,7 +58,7 @@ class MatchRunner:
         port = DEFAULT_REMOTE_PLAY_PORT
 
         cmd1 = [
-            organizer1.binary_filename,
+            agent1.tag,
             '--port', str(port),
             '--player', f'"{ps1}"',
         ]
@@ -66,7 +66,7 @@ class MatchRunner:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            organizer2.binary_filename,
+            agent2.tag,
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]

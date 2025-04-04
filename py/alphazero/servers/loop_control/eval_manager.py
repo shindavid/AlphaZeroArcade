@@ -3,13 +3,15 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole
-from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId
+from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId,\
+    BinaryFile
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.match_runner import MatchType
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
-from util import ssh_util
+from util.py_util import sha256sum, atomic_cp
 
 import numpy as np
 import threading
@@ -237,6 +239,18 @@ class EvalManager:
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
         next_opponent_agent = self._evaluator.indexed_agents[next_opponent_ix].agent
+
+        game = self._controller._run_params.game
+        eval_binary = BinaryFile(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/target/Release/bin/{game}',
+            scratch_path=f'target/bin/{game}',
+            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/target/Release/bin/{game}'),
+        )
+        benchmark_binary = BinaryFile(
+            source_path= f'output/{game}/{next_opponent_agent.tag}/target/Release/bin/{game}',
+            scratch_path=f'target/benchmark-bin/{game}',
+            hash=sha256sum(f'output/{game}/{next_opponent_agent.tag}/target/Release/bin/{game}'),
+        )
         data = {
             'type': 'match-request',
             'agent1': {
@@ -244,17 +258,19 @@ class EvalManager:
                 'n_iters': self.n_iters,
                 'set_temp_zero': True,
                 'tag': self._controller._organizer.tag,
+                'binary': eval_binary.scratch_path
             },
             'agent2': {
                 'gen': next_opponent_agent.gen,
                 'n_iters': next_opponent_agent.n_iters,
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
                 'tag': next_opponent_agent.tag,
-
+                'binary': benchmark_binary.scratch_path
             },
             'ix1': test_iagent.index,
             'ix2': int(next_opponent_ix),
             'n_games': int(next_n_games),
+            'binaries': [eval_binary.to_dict(), benchmark_binary.to_dict()],
         }
         conn.socket.send_json(data)
         self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
@@ -360,6 +376,8 @@ class EvalManager:
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
+        elif msg_type == 'binary-request':
+            self._handle_binary_request(conn, msg['binaries'])
         else:
             logger.warning('eval-server: unknown message type: %s', msg)
         return False
@@ -520,6 +538,20 @@ class EvalManager:
 
     def _update_weights(self, gen: Generation, conn: ClientConnection):
         self._controller.broadcast_weights(conn, gen)
+
+    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
+        """
+        Handle binary request from the eval-server. This function sends the requested binaries
+        to the eval-server.
+        """
+        logger.info('Handling binary request from %s: %s', conn, binaries)
+        for binary in binaries:
+            binary_file = BinaryFile(**binary)
+            conn.socket.send_json({
+                'type': 'binary-file',
+                'binary': binary_file.to_dict(),
+            })
+            conn.socket.send_file(binary_file.source_path)
 
     @property
     def n_games(self):
