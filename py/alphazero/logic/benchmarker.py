@@ -3,15 +3,16 @@ from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
-from util.logging_util import get_logger
 
-from dataclasses import dataclass
-from typing import Optional, List
-import copy
 import numpy as np
 
+import copy
+from dataclasses import dataclass
+import logging
+from typing import Optional, List
 
-logger = get_logger()
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -203,5 +204,3 @@ class Benchmarker:
         ratings = rating_data.ratings
         committee = rating_data.committee
         return BenchmarkRatingData(agents, ratings, committee)
-
-

@@ -174,4 +174,3 @@ class RatingDB:
         c.execute(insert, (sub_id, subtype, iagent.role.value))
         conn.commit()
         iagent.db_id = c.lastrowid
-

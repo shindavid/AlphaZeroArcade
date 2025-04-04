@@ -1,13 +1,13 @@
 from alphazero.logic.custom_types import ClientId, Generation
 from alphazero.logic.ratings import WinLossDrawCounts
-from util.logging_util import get_logger
 
 from collections import defaultdict
+import logging
 import math
 from typing import Dict, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 """

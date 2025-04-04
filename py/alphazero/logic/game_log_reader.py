@@ -3,19 +3,19 @@ from .build_params import BuildParams
 from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
 from shared.net_modules import ShapeInfo, ShapeInfoDict
-from util.logging_util import get_logger
 from util.repo_util import Repo
 
 import torch
 
 from cffi import FFI
 from dataclasses import dataclass
+import logging
 import math
 import os
 from typing import Iterable, List, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 @dataclass

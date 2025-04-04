@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from alphazero.logic.custom_types import Generation
-from util.logging_util import get_logger
 
+import logging
 import os
 import shutil
 import tempfile
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class OutputDirSyncer:

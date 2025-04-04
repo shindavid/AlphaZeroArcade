@@ -5,18 +5,19 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
-from util.logging_util import LoggingParams, get_logger
+from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
+import logging
 import subprocess
 import threading
 from typing import Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 @dataclass

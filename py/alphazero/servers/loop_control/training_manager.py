@@ -7,12 +7,12 @@ from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
 from shared.net_modules import Model, ModelConfig
-from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 
 import torch
 from torch import optim
 
+import logging
 import os
 import shutil
 import tempfile
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class TrainingManager:

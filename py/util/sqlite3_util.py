@@ -1,12 +1,11 @@
-from util.logging_util import get_logger
-
+import logging
 import os
 import sqlite3
 import threading
 from typing import Dict, List, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class DatabaseConnectionPool:

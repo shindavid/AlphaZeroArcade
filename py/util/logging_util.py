@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
 import logging
 import os
@@ -7,27 +7,33 @@ import sys
 from typing import List, Optional
 
 
-DEFAULT_LOGGER_NAME = 'default'
-
-
 @dataclass
 class LoggingParams:
     debug: bool
+    debug_module: List[str] = field(default_factory=list)
 
     @staticmethod
     def create(args) -> 'LoggingParams':
         return LoggingParams(
             debug=bool(args.debug),
+            debug_module=args.debug_module,
         )
 
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group('Logging options')
-        group.add_argument('--debug', action='store_true', help='debug mode')
+        group.add_argument('--debug', action='store_true', help='enable debug loggign')
+        group.add_argument('--debug-module', type=str, nargs='+', default=[],
+                           help='specific module(s) to enable debug logging for. Example: '
+                                '--debug-module=util.sqlite3_util --debug-module=alphazero.servers.gaming.session_data')
 
     def add_to_cmd(self, cmd: List[str]):
         if self.debug:
             cmd.append('--debug')
+        if self.debug_module:
+            for module in self.debug_module:
+                cmd.append('--debug-module')
+                cmd.append(module)
 
 
 class QueueStream:
@@ -64,8 +70,7 @@ class NonErrorStreamHandler(logging.StreamHandler):
 
 
 def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
-                     queue_stream: Optional[QueueStream]=None, mode='a',
-                     prefix='', logger_name=DEFAULT_LOGGER_NAME):
+                     mode='a', prefix=''):
     """
     Configures the logger. A log level of INFO is used by default. If debug is True, then a log
     level of DEBUG is used instead.
@@ -76,52 +81,40 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
 
     If filename is provided, then the logger will additionally log to the file, using the specified
     mode: 'a' (default) or 'w'.
-
-    If queue_stream is provided, then the logger will additionally log to the queue. The expectation
-    is that the queue will be consumed by a separate thread.
     """
     debug = params.debug if params else False
     level = logging.DEBUG if debug else logging.INFO
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(level)
 
     custom_datefmt = '%Y-%m-%d %H:%M:%S.%f'
     fmt = '%(asctime)s [%(levelname)s] %(message)s'
     if prefix:
         fmt = f'{prefix} {fmt}'
     formatter = CustomFormatter(fmt, datefmt=custom_datefmt)
-    # formatter = CustomFormatter(
-    #     '%(asctime)s [Thread:%(thread_id)s] [%(levelname)s] %(message)s', datefmt=custom_datefmt)
 
+    handlers = []
     if filename:
         # Create a file handler and add it to the logger
         directory = os.path.dirname(filename)
         if directory:
             os.makedirs(directory, exist_ok=True)
         file_handler = logging.FileHandler(filename, mode=mode)
-        file_handler.setLevel(level)
+        file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    if queue_stream:
-        queue_handler = logging.StreamHandler(queue_stream)
-        queue_handler.setLevel(level)
-        queue_handler.setFormatter(formatter)
-        logger.addHandler(queue_handler)
+        handlers.append(file_handler)
 
     error_handler = logging.StreamHandler(sys.stderr)
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
 
     non_error_handler = NonErrorStreamHandler(sys.stdout)
-    non_error_handler.setLevel(level)
+    non_error_handler.setLevel(logging.DEBUG)
     non_error_handler.setFormatter(formatter)
 
-    logger.addHandler(error_handler)
-    logger.addHandler(non_error_handler)
+    handlers.append(error_handler)
+    handlers.append(non_error_handler)
 
-    return logger
+    logging.basicConfig(level=level, handlers=handlers)
 
-
-def get_logger(logger_name=DEFAULT_LOGGER_NAME):
-    return logging.getLogger(logger_name)
+    if params.debug_module is not None:
+        for module in params.debug_module:
+            logging.getLogger(module).setLevel(logging.DEBUG)

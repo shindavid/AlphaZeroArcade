@@ -3,9 +3,9 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.custom_types import Domain, GpuId
-from util.logging_util import get_logger
 
 from collections import defaultdict
+import logging
 import threading
 from typing import Dict, List, TYPE_CHECKING
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 IpAddress = str

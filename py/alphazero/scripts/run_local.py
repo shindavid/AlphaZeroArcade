@@ -27,13 +27,14 @@ from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
 from shared.training_params import TrainingParams
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
 from util import subprocess_util
 
 import argparse
 from dataclasses import dataclass, fields
+import logging
 import os
 from pipes import quote
 import signal
@@ -44,7 +45,7 @@ from typing import Optional
 import torch
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 default_build_params = BuildParams()

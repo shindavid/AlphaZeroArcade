@@ -5,16 +5,16 @@ from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.ratings import win_prob
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from util.logging_util import get_logger
 
 from scipy.interpolate import interp1d
 import numpy as np
 
 from dataclasses import dataclass
+import logging
 from typing import List, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -219,6 +219,3 @@ class MCTSEvaluator:
                 return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
 
         return None
-
-
-

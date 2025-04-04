@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from alphazero.logic.custom_types import ClientConnection, ClientRole, Domain, GpuId
-from util.logging_util import get_logger
 from util.socket_util import recv_json, Socket
 
 import logging
@@ -12,7 +11,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class ClientConnectionManager:

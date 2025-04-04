@@ -11,13 +11,14 @@ Usage:
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
-from util.logging_util import configure_logger, get_logger
+from util.logging_util import configure_logger
 
 import argparse
+import logging
 import os
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 def load_args():

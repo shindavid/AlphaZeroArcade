@@ -110,7 +110,7 @@ def extract_match_record(stdout: Union[List[str], str]) -> MatchRecord:
     assert not record.empty(), stdout
     counts1 = record.get(0)
     counts2 = record.get(1)
-    assert (counts1.win, counts1.loss, counts1.draw) == (counts2.loss, counts2.win, counts2.draw)
+    assert (counts1.win, counts1.loss, counts1.draw) == (counts2.loss, counts2.win, counts2.draw), '\n'.join(lines)
     return record
 
 
@@ -157,4 +157,3 @@ def compute_ratings(w: np.ndarray, eps: float=0.0) -> np.ndarray:
 
 def win_prob(elo1: float, elo2: float) -> float:
     return float(1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR)))
-

@@ -1,12 +1,12 @@
 from alphazero.logic.custom_types import ShutdownAction
-from util.logging_util import get_logger
 
+import logging
 import sys
 import threading
 from typing import List, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class ShutdownManager:

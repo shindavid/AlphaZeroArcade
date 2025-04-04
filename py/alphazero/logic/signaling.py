@@ -1,11 +1,10 @@
-from util.logging_util import get_logger
-
 import faulthandler
+import logging
 import signal
 from typing import Optional, Type
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 def register_standard_server_signals(ignore_sigint: bool):

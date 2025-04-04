@@ -3,12 +3,12 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.custom_types import ClientConnection
-from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+import logging
 import os
 import subprocess
 import threading
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class SelfPlayManager:

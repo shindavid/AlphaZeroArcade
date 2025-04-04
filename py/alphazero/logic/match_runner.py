@@ -4,14 +4,14 @@ from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
-from util.logging_util import get_logger
 from util.str_util import make_args_str
 
 from dataclasses import dataclass
 from enum import Enum
+import logging
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class MatchType(Enum):
@@ -86,4 +86,3 @@ class MatchRunner:
         record = extract_match_record(stdout)
         logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
         return record.get(0)
-

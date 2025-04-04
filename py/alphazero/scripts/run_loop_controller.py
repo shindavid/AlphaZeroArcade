@@ -6,16 +6,17 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
 from games.game_spec import GameSpec
 from shared.training_params import TrainingParams
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
 
 import argparse
+import logging
 import os
 from typing import Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 def load_args():

@@ -18,12 +18,12 @@ Given W (represented by {a, b, r}), at what point can we start sampling the next
 This module provides functionality for answering this question.
 """
 from shared.training_params import TrainingParams
-from util.logging_util import get_logger
 
 from dataclasses import dataclass
+import logging
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 @dataclass

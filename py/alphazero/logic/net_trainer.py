@@ -4,7 +4,6 @@ from torch import optim
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from shared.net_modules import Head, Model
-from util.logging_util import get_logger
 from util.torch_util import apply_mask
 
 import logging
@@ -12,7 +11,7 @@ import time
 from typing import Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class EvaluationResults:

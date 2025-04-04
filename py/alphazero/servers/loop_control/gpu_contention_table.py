@@ -1,13 +1,13 @@
 from alphazero.logic.custom_types import Domain, GpuId
-from util.logging_util import get_logger
 
 from dataclasses import dataclass
 from enum import Enum
+import logging
 import threading
 from typing import Dict, Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class LockStatus(Enum):

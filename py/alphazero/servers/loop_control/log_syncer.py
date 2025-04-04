@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from alphazero.logic.custom_types import ClientConnection
-from util.logging_util import get_logger
 
 from collections import defaultdict
+import logging
 import os
 import subprocess
 import threading
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class LogSyncer:

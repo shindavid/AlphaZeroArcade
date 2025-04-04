@@ -5,14 +5,13 @@ from .rating_data import N_GAMES, RatingData, RatingDataDict
 
 from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
-from util.logging_util import get_logger
 from util.py_util import find_largest_gap
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
-from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
+import logging
 import threading
 from typing import Optional, TYPE_CHECKING
 
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class ServerStatus(Enum):

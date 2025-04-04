@@ -7,10 +7,11 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import LoggingParams, configure_logger
 from util.socket_util import JsonDict, Socket
 from util import py_util, ssh_util
 
+import logging
 import os
 import socket
 import subprocess
@@ -18,7 +19,7 @@ import time
 from typing import Optional
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class SessionData:
