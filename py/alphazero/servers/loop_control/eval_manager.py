@@ -229,24 +229,28 @@ class EvalManager:
     def gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent, next_n_games) -> JsonDict:
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
-        eval_binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
-            scratch_path=f'target/bin/{game}',
-            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
-        )
-        benchmark_binary = FileToTransfer(
-            source_path= f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}',
-            scratch_path=f'target/benchmark-bin/{game}',
-            hash=sha256sum(f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}'),
-        )
 
-        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag),
-                                                 base_dir_root='/workspace')
-        benchmark_model = FileToTransfer()
+        eval_binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'
+            )
+        eval_binary.asset_path = eval_binary.sha256_hash
+        eval_binary.scratch_path = f'target/bin/{game}'
+
+        benchmark_binary = FileToTransfer(
+            source_path=f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}'
+            )
+        benchmark_binary.asset_path = benchmark_binary.sha256_hash
+        benchmark_binary.scratch_path = f'target/benchmark-bin/{game}'
+
+        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+        files_required = [eval_binary, benchmark_binary]
+        benchmark_model = None
         if next_opponent_agent.gen > 0:
-            benchmark_model.source_path = benchmark_organizer.get_model_filename(next_opponent_agent.gen)
+            benchmark_model = FileToTransfer(
+                source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen))
             benchmark_model.scratch_path = f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt'
-            benchmark_model.hash = sha256sum(benchmark_model.source_path)
+            benchmark_model.asset_path = benchmark_model.scratch_path
+            files_required.append(benchmark_model)
 
         data = {
             'type': 'match-request',
@@ -264,13 +268,12 @@ class EvalManager:
                 'set_temp_zero': next_opponent_agent.set_temp_zero,
                 'tag': next_opponent_agent.tag,
                 'binary': benchmark_binary.scratch_path,
-                'model': benchmark_model.scratch_path
+                'model': benchmark_model.scratch_path if benchmark_model else None
             },
             'ix1': test_iagent.index,
             'ix2': int(next_opponent_iagent.index),
             'n_games': int(next_n_games),
-            'binaries': [eval_binary.to_dict(), benchmark_binary.to_dict()],
-            'model_file': benchmark_model.to_dict()
+            'files_required': [f.to_dict() for f in files_required],
         }
         return data
 
@@ -375,10 +378,8 @@ class EvalManager:
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
-        elif msg_type == 'binary-request':
-            self._handle_binary_request(conn, msg['binaries'])
-        elif msg_type == 'model-request':
-            self._handle_model_request(conn, msg['model'])
+        elif msg_type == 'file-request':
+            self._handle_file_request(conn, msg['files'])
         else:
             logger.warning('eval-server: unknown message type: %s', msg)
         return False
@@ -540,18 +541,8 @@ class EvalManager:
     def _update_weights(self, gen: Generation, conn: ClientConnection):
         self._controller.broadcast_weights(conn, gen)
 
-    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        self._controller.handle_binary_request(conn, binaries)
-
-    def _handle_model_request(self, conn: ClientConnection, model: JsonDict):
-        model_file = FileToTransfer(**model)
-        logger.info('Handling model request from %s: %s', conn, model_file)
-        conn.socket.send_json({
-            'type': 'model-file',
-            'model': model_file.to_dict(),
-        })
-        conn.socket.send_file(model_file.source_path)
-        logger.debug('Sent model file %s to %s', model_file.source_path, conn)
+    def _handle_file_request(self, conn: ClientConnection, binaries: List[JsonDict]):
+        self._controller.handle_file_request(conn, binaries)
 
     @property
     def n_games(self):

@@ -1,8 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, List, Optional
 
 from alphazero.logic import constants
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, Socket
 
 
@@ -108,16 +109,27 @@ DisconnectHandler = Callable[[ClientConnection], None]
 
 @dataclass
 class FileToTransfer:
-    source_path: Optional[str] = None
+    """
+    Contains information about a file to be transferred, including:
+    - source_path: the location of the file to be transferred. It is an absolute path.
+    - asset_path: the destination where the file is stored. It is a relative path from the asset
+        directory specified in the session data.
+    - scratch_path: the location that the file will be used or referenced. It is a relative path
+        from the run directory.
+    - SHA256 hash of the file.
+    """
+    source_path: str
+    asset_path: Optional[str] = None
     scratch_path: Optional[str] = None
-    hash: Optional[str] = None
+    sha256_hash: Optional[str] = None
+
+    def __post_init__(self):
+        self.sha256_hash = sha256sum(self.source_path)
 
     def to_dict(self) -> JsonDict:
-        """
-        Convert the FileToTransfer to a dictionary representation for JSON serialization.
-        """
         return {
             'source_path': self.source_path,
+            'asset_path': self.asset_path,
             'scratch_path': self.scratch_path,
-            'hash': self.hash
+            'sha256_hash': self.sha256_hash
         }

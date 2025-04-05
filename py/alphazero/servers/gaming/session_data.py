@@ -17,7 +17,7 @@ import socket
 import subprocess
 import threading
 import time
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Literal
 
 
 logger = logging.getLogger(__name__)
@@ -157,52 +157,53 @@ class SessionData:
         }
         self.socket.send_json(data)
 
-    def get_missing_binaries(self, binaries: List[JsonDict]):
-        missing_binaries = []
-        for b in binaries:
-            logger.debug('Checking binary: %s', b)
-            binary = FileToTransfer(**b)
-            asset_path = os.path.join(ASSETS_DIR, binary.hash)
+    def get_files_to_request(self, files_required: List[JsonDict]):
+        files_to_request = []
+        for f in files_required:
+            logger.debug('Checking file: %s', f)
+            file = FileToTransfer(**f)
+            asset_path = os.path.join(ASSETS_DIR, file.asset_path)
             if not os.path.exists(asset_path):
-                missing_binaries.append(binary)
+                files_to_request.append(file)
             else:
                 # Verify the hash matches if the file exists
                 current_hash = py_util.sha256sum(asset_path)
-                if current_hash != binary.hash:
-                    logger.debug(f'Hash mismatch for binary {binary.source_path}: '
-                                   f'expected {binary.hash}, found {current_hash}')
-                    missing_binaries.append(binary)
+                if current_hash != file.sha256_hash:
+                    logger.debug(f'Hash mismatch for binary {file.source_path}: '
+                                   f'expected {file.sha256_hash}, found {current_hash}')
+                    files_to_request.append(file)
                 else:
                     # Create a soft link to the correct binary if necessary
-                    dst_path = os.path.join(self.run_dir, binary.scratch_path)
+                    dst_path = os.path.join(self.run_dir, file.scratch_path)
                     dst_dir = os.path.dirname(dst_path)
                     os.makedirs(dst_dir, exist_ok=True)
                     ln_cmd = f'ln -sf {asset_path} {dst_path}'
                     subprocess.run(ln_cmd, shell=True, check=True)
 
-        return missing_binaries
+        return files_to_request
 
-    def send_binary_request(self, missing_binaries: List[FileToTransfer]):
-        if not missing_binaries:
+    def send_file_request(self, files_to_request: List[FileToTransfer]):
+        if not files_to_request:
             return
 
-        binaries_info = [b.to_dict() for b in missing_binaries]
+        files = [f.to_dict() for f in files_to_request]
         data = {
-            'type': 'binary-request',
-            'binaries': binaries_info,
+            'type': 'file-request',
+            'files': files,
         }
         self.socket.send_json(data)
-        logger.info('Sent binary-request for %d binaries: %s', len(missing_binaries), binaries_info)
+        logger.info('Sent file-request for %d files: %s', len(files), files)
 
-    def receive_binary_file(self, binary_dict: JsonDict):
+    def receive_file(self, file_to_receive: JsonDict):
         py_util.atomic_makedirs(ASSETS_DIR)
-        binary = FileToTransfer(**binary_dict)
-        asset_path = os.path.join(ASSETS_DIR, binary.hash)
+        file = FileToTransfer(**file_to_receive)
+        asset_path = os.path.join(ASSETS_DIR, file.asset_path)
+        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
         self.socket.recv_file(asset_path, atomic=True)
 
         # create soft link in the run directory
         src = asset_path
-        dst = os.path.join(self.run_dir, binary.scratch_path)
+        dst = os.path.join(self.run_dir, file.scratch_path)
         dst_dir = os.path.dirname(dst)
         os.makedirs(dst_dir, exist_ok=True)
         ln_cmd = f'ln -sf {src} {dst}'
@@ -211,65 +212,9 @@ class SessionData:
         with self._file_transfer_cv:
             self._file_transfer_cv.notify_all()
 
-    def wait_for_binaries(self, required_binaries: List[JsonDict]):
+    def wait_for_files(self, files_required: List[JsonDict]):
         with  self._file_transfer_cv:
-            self._file_transfer_cv.wait_for(lambda: self.get_missing_binaries(required_binaries) == [])
-
-    def is_model_missing(self, required_model: JsonDict):
-        model_file = FileToTransfer(**required_model)
-        if not model_file.scratch_path:
-            return False
-
-        asset_path = os.path.join(ASSETS_DIR, model_file.scratch_path)
-        if not os.path.exists(asset_path):
-            return True
-        else:
-            current_hash = py_util.sha256sum(asset_path)
-            if current_hash != model_file.hash:
-                logger.debug(f'Hash mismatch for model {model_file.source_path}: '
-                             f'expected {model_file.hash}, found {current_hash}')
-                return True
-            else:
-                dst_path = os.path.join(self.run_dir, model_file.scratch_path)
-                dst_dir = os.path.dirname(dst_path)
-                os.makedirs(dst_dir, exist_ok=True)
-                ln_cmd = f'ln -sf {asset_path} {dst_path}'
-                subprocess.run(ln_cmd, shell=True, check=True)
-
-        return False
-
-    def send_model_request(self, required_model: JsonDict):
-        if not required_model:
-            return
-
-        data = {
-            'type': 'model-request',
-            'model': required_model,
-        }
-        self.socket.send_json(data)
-        logger.info('Sent model-request: %s', data)
-
-    def wait_for_model(self, required_model: JsonDict):
-        with self._file_transfer_cv:
-            self. _file_transfer_cv.wait_for(lambda: not self.is_model_missing(required_model))
-
-    def receive_model_file(self, model_dict: JsonDict):
-        py_util.atomic_makedirs(ASSETS_DIR)
-        model_file = FileToTransfer(**model_dict)
-        asset_path = os.path.join(ASSETS_DIR, model_file.scratch_path)
-        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
-        self.socket.recv_file(asset_path, atomic=True)
-        logger.info('Received model file: %s', asset_path)
-
-        # create soft link in the run directory
-        dst_path = os.path.join(self.run_dir, model_file.scratch_path)
-        dst_dir = os.path.dirname(dst_path)
-        os.makedirs(dst_dir, exist_ok=True)
-        ln_cmd = f'ln -sf {asset_path} {dst_path}'
-        subprocess.run(ln_cmd, shell=True, check=True)
-
-        with self._file_transfer_cv:
-            self._file_transfer_cv.notify_all()
+            self._file_transfer_cv.wait_for(lambda: self.get_files_to_request(files_required) == [])
 
     @property
     def socket(self) -> Socket:

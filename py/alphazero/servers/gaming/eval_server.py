@@ -137,10 +137,8 @@ class EvalServer:
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
-        elif msg_type == 'binary-file':
-            self._session_data.receive_binary_file(msg['binary'])
-        elif msg_type == 'model-file':
-            self._session_data.receive_model_file(msg['model'])
+        elif msg_type == 'file-transfer':
+            self._session_data.receive_file(msg['file'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -169,19 +167,12 @@ class EvalServer:
         assert not self._running
         self._running = True
 
-        required_binaries = msg['binaries']
-        missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
-        if missing_binaries:
-            logger.warning('Missing required binaries: %s', missing_binaries)
-            self._session_data.send_binary_request(missing_binaries)
-            self._session_data.wait_for_binaries(required_binaries)
-
-        required_model = msg['model_file']
-        missing_model: bool = self._session_data.is_model_missing(required_model)
-        if missing_model:
-            logger.warning('Missing required model file: %s', required_model)
-            self._session_data.send_model_request(required_model)
-            self._session_data.wait_for_model(required_model)
+        files_required = msg['files_required']
+        files_to_request: List[FileToTransfer] = self._session_data.get_files_to_request(files_required)
+        if files_to_request:
+            logger.debug('Missing required files: %s', files_to_request)
+            self._session_data.send_file_request(files_to_request)
+            self._session_data.wait_for_files(files_required)
 
         mcts_agent1 = MCTSAgent(**msg['agent1'])
         mcts_agent2 = MCTSAgent(**msg['agent2'])

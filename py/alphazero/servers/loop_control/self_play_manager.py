@@ -205,8 +205,8 @@ class SelfPlayManager:
             self._controller.start_log_sync(conn, msg['log_filename'])
         elif msg_type == 'log-sync-stop':
             self._controller.stop_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'binary-request':
-            self._handle_binary_request(conn, msg['binaries'])
+        elif msg_type == 'file-request':
+            self._handle_file_request(conn, msg['files'])
         else:
             logger.warning('self-play-server: unknown message type: %s', msg)
         return False
@@ -233,12 +233,7 @@ class SelfPlayManager:
 
     def _launch_gen0_self_play(self, conn: ClientConnection, num_rows: int):
         logger.info('Requesting %s to perform gen-0 self-play...', conn)
-        game = self._controller.run_params.game
-        binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
-            scratch_path=f'target/bin/{game}',
-            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
-        )
+        binary = self._construct_binary()
 
         data = {
             'type': 'start-gen0',
@@ -247,6 +242,15 @@ class SelfPlayManager:
         }
 
         conn.socket.send_json(data)
+
+    def _construct_binary(self) -> FileToTransfer:
+        game = self._controller.run_params.game
+        binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'
+        )
+        binary.asset_path = binary.sha256_hash
+        binary.scratch_path = f'target/bin/{game}'
+        return binary
 
     def _stop_gen0_self_play(self, conn: ClientConnection):
         logger.info('Requesting %s to stop gen-0 self-play...', conn)
@@ -258,12 +262,7 @@ class SelfPlayManager:
         conn.socket.send_json(data)
 
     def _launch_self_play(self, conn: ClientConnection):
-        game = self._controller.run_params.game
-        binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
-            scratch_path=f'target/bin/{game}',
-            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
-        )
+        binary = self._construct_binary()
         data = {
             'type': 'start',
             'binary': binary.to_dict()
@@ -608,5 +607,5 @@ class SelfPlayManager:
                                   daemon=True, name=f'manage-self-play-worker')
         thread.start()
 
-    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        self._controller.handle_binary_request(conn, binaries)
+    def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        self._controller.handle_file_request(conn, files)

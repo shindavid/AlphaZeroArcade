@@ -449,19 +449,15 @@ class LoopController:
         }
         conn.socket.send_json(reply)
 
-    def handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        """
-        Handle binary request from the eval-server. This function sends the requested binaries
-        to the eval-server.
-        """
-        logger.info('Handling binary request from %s: %s', conn, binaries)
-        for binary in binaries:
-            binary_file = FileToTransfer(**binary)
+    def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        logger.info('Handling file request from %s: %s', conn, files)
+        for f in files:
+            file = FileToTransfer(**f)
             conn.socket.send_json({
-                'type': 'binary-file',
-                'binary': binary_file.to_dict(),
+                'type': 'file-transfer',
+                'file': file.to_dict(),
             })
-            conn.socket.send_file(binary_file.source_path)
+            conn.socket.send_file(file.source_path)
 
     def set_priority(self, dict_len: int, rating_in_progress: bool):
         latest_gen = self.latest_gen()
