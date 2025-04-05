@@ -9,7 +9,7 @@ NNEvaluationResponse UniformNNEvaluationService<Game>::evaluate(NNEvaluationRequ
     item.set_eval(NNEvaluation::create_uniform(valid_actions));
   }
 
-  return NNEvaluationResponse(sequence_id_++, core::kContinue);
+  return NNEvaluationResponse(0, core::kContinue);
 }
 
 }  // namespace mcts

@@ -3,12 +3,12 @@
 #include <games/nim/Game.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
-#include <mcts/SearchLog.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/SearchLog.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -37,7 +37,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
   MockNNEvaluationService(bool smart) : smart_(smart) {}
 
-  void evaluate(const NNEvaluationRequest& request) override {
+  mcts::NNEvaluationResponse evaluate(NNEvaluationRequest& request) override {
     ValueTensor value;
     PolicyTensor policy;
     ActionValueTensor action_values;
@@ -77,7 +77,11 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
       item.set_eval(std::make_shared<NNEvaluation>(value, policy, action_values, valid_actions, sym,
                                                    seat, mode));
     }
+
+    return mcts::NNEvaluationResponse(0, core::kContinue);
   }
+
+  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
 
  private:
   bool smart_;
@@ -90,7 +94,6 @@ class ManagerTest : public testing::Test {
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
   using StateHistory = Game::StateHistory;
-  using SearchThread = mcts::SearchThread<Game>;
   using action_t = core::action_t;
   using Edge = mcts::Node<Game>::Edge;
   using LookupTable = mcts::Node<Game>::LookupTable;
@@ -120,26 +123,24 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    const mcts::SharedData<Game>* shared_data = manager_->shared_data();
-    search_log_ = new mcts::SearchLog<Game>(shared_data);
+    search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
     manager_->start();
     for (core::action_t action : initial_actions) {
-      manager_->shared_data()->update_state(action);
+      manager_->update(action);
     }
     this->initial_actions_ = initial_actions;
   }
 
   ManagerParams& manager_params() { return manager_params_; }
 
-  void start_threads() { manager_->start_threads(); }
-
   const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
-    return manager_->search(search_params);
+    manager_->set_search_params(search_params);
+    return manager_->search();
   }
 
   Node* get_node_by_index(node_pool_index_t index) {
@@ -153,7 +154,6 @@ class ManagerTest : public testing::Test {
                    const std::vector<core::action_t>& initial_actions, Service* service) {
     init_manager(service);
     start_manager(initial_actions);
-    start_threads();
     const SearchResult* result = search(num_search);
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";

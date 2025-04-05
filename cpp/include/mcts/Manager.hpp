@@ -226,10 +226,13 @@ class Manager {
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
+  void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
   const SearchResults* search();
   void load_root_action_values(ActionValueTensor& action_values);
+  const LookupTable* lookup_table() const { return &lookup_table_; }
+  const RootInfo* root_info() const { return &root_info_; }
 
   void end_session() { nn_eval_service_->end_session(); }
 
