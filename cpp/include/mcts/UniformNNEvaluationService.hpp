@@ -26,9 +26,6 @@ class UniformNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
 
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
   void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
-
- private:
-  core::nn_evaluation_sequence_id_t sequence_id_ = 1;
 };
 
 }  // namespace mcts

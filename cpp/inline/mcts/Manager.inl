@@ -93,7 +93,7 @@ inline void Manager<Game>::start() {
 }
 
 template <core::concepts::Game Game>
-inline void Manager<Game>::clear() {
+void Manager<Game>::clear() {
   root_softmax_temperature_.reset();
   lookup_table_.clear();
   root_info_.node_index = -1;
@@ -109,8 +109,12 @@ inline void Manager<Game>::clear() {
 }
 
 template <core::concepts::Game Game>
-inline void Manager<Game>::receive_state_change(core::seat_index_t seat, const State&,
-                                                core::action_t action) {
+void Manager<Game>::receive_state_change(core::seat_index_t, const State&, core::action_t action) {
+  update(action);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::update(core::action_t action) {
   group::element_t root_sym = root_info_.canonical_sym;
 
   core::action_mode_t mode =
@@ -149,13 +153,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat, const S
   Symmetries::apply(transformed_action, root_sym, mode);
 
   Node* root = lookup_table_.get_node(root_index);
-  root_index = root->lookup_child_by_action(transformed_action);  // tree reuse
-  if (root_index < 0) {
-    root_info_.node_index = -1;
-    return;
-  }
-
-  root_info_.node_index = root_index;
+  root_info_.node_index = root->lookup_child_by_action(transformed_action);  // tree reuse
 }
 
 template <core::concepts::Game Game>
