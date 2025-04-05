@@ -481,6 +481,19 @@ class LoopController:
             })
             conn.socket.send_file(binary_file.source_path)
 
+    def set_priority(self, dict_len: int, rating_in_progress: bool):
+        latest_gen = self.latest_gen()
+        target_rate = self.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
+        self.set_ratings_priority(elevate)
+
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')

@@ -94,20 +94,9 @@ class RatingsManager:
             self._new_work_cond.notify_all()
 
     def _set_priority(self):
-        latest_gen = self._controller.latest_gen()
         dict_len = len(self._rating_data_dict)
         rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
-
-        target_rate = self._controller.params.target_rating_rate
-        num = dict_len + (0 if rating_in_progress else 1)
-        den = max(1, latest_gen)
-        current_rate = num / den
-
-        elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
-                     rating_in_progress, current_rate, target_rate)
-        self._controller.set_ratings_priority(elevate)
+        self._controller.set_priority(dict_len, rating_in_progress)
 
     def _start(self):
         with self._lock:
