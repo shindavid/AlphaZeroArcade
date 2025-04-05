@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection
+from alphazero.logic.custom_types import ClientConnection, FileToTransfer
+from alphazero.servers.loop_control.gpu_contention_table import Domain
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, SocketSendException
-from util import ssh_util
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -127,27 +128,10 @@ class SelfPlayManager:
         self._launch_unlaunched_workers()
         self._controller.unhijack_all_self_play_tables()
         self._collect_and_process_game_data()
-        self._controller.hijack_all_self_play_tables()
 
     def add_server(self, conn: ClientConnection):
         conn.aux = SelfPlayManager.ServerAux()
-
-        ssh_pub_key = ssh_util.get_pub_key()
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-            'game': self._controller.game_spec.name,
-            'tag': self._controller.run_params.tag,
-            'ssh_pub_key': ssh_pub_key,
-            'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
-            'asset-requirements': self._controller.get_asset_requirements(),
-        }
-        conn.socket.send_json(reply)
-
-        assets_request = conn.socket.recv_json()
-        assert assets_request['type'] == 'assets-request'
-        for asset in assets_request['assets']:
-            conn.socket.send_file(asset)
+        self._controller.send_handshake_ack(conn)
 
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'self-play-server',
@@ -221,6 +205,8 @@ class SelfPlayManager:
             self._controller.start_log_sync(conn, msg['log_filename'])
         elif msg_type == 'log-sync-stop':
             self._controller.stop_log_sync(conn, msg['log_filename'])
+        elif msg_type == 'binary-request':
+            self._handle_binary_request(conn, msg['binaries'])
         else:
             logger.warning('self-play-server: unknown message type: %s', msg)
         return False
@@ -233,8 +219,8 @@ class SelfPlayManager:
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
-        elif msg_type == 'weights-request':
-            self._handle_weights_request(conn)
+        elif msg_type == 'worker-ready':
+            self._handle_worker_ready(conn)
         elif msg_type == 'heartbeat':
             self._handle_heartbeat(msg, conn)
         elif msg_type == 'self-play-data':
@@ -247,10 +233,17 @@ class SelfPlayManager:
 
     def _launch_gen0_self_play(self, conn: ClientConnection, num_rows: int):
         logger.info('Requesting %s to perform gen-0 self-play...', conn)
+        game = self._controller.run_params.game
+        binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
+            scratch_path=f'target/bin/{game}',
+            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
+        )
 
         data = {
             'type': 'start-gen0',
             'max_rows': num_rows,
+            'binary': binary.to_dict(),
         }
 
         conn.socket.send_json(data)
@@ -265,8 +258,15 @@ class SelfPlayManager:
         conn.socket.send_json(data)
 
     def _launch_self_play(self, conn: ClientConnection):
+        game = self._controller.run_params.game
+        binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
+            scratch_path=f'target/bin/{game}',
+            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
+        )
         data = {
             'type': 'start',
+            'binary': binary.to_dict()
         }
 
         logger.info('Requesting %s to launch self-play...', conn)
@@ -407,6 +407,9 @@ class SelfPlayManager:
 
     def _collect_and_process_game_data(self):
         self._wait_until_checkpoint_reached()
+        self._controller.get_gpu_lock_table_for_training().pre_acquire_lock(Domain.TRAINING)
+        self._controller.hijack_all_self_play_tables()
+
         self._request_all_game_data()
         self._receive_all_game_data()
         self._update_self_play_db()
@@ -600,7 +603,10 @@ class SelfPlayManager:
     def _commit_data_fully_staged(self):
         return all(info.staged for info in self._commit_info.values())
 
-    def _handle_weights_request(self, conn: ClientConnection):
-        thread = threading.Thread(target=self._manage_worker, args=(conn,),
+    def _handle_worker_ready(self, conn: ClientConnection):
+        thread = threading.Thread(target=self._manage_worker, args=(conn, ),
                                   daemon=True, name=f'manage-self-play-worker')
         thread.start()
+
+    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
+        self._controller.handle_binary_request(conn, binaries)

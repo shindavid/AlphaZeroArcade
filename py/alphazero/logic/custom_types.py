@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -10,6 +10,7 @@ Generation = int
 ClientId = int
 ThreadId = int
 RatingTag = str
+EvalTag = str
 
 
 class ClientRole(Enum):
@@ -17,10 +18,18 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
+    EVAL_SERVER = 'eval-server'
+    EVAL_WORKER = 'eval-worker'
 
     @staticmethod
     def worker_roles():
         return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
+
+
+class ServerStatus(Enum):
+    DISCONNECTED = 'disconnected'
+    BLOCKED = 'blocked'
+    READY = 'ready'
 
 
 class Domain(Enum):
@@ -34,6 +43,8 @@ class Domain(Enum):
         if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
+            return Domain.RATINGS
+        elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
             return Domain.RATINGS
         else:
             raise ValueError(f'Unexpected role: {role}')
@@ -93,3 +104,20 @@ class ClientConnection:
 ShutdownAction = Callable[[], None]
 MsgHandler = Callable[[ClientConnection, JsonDict], bool]  # return True for loop-break
 DisconnectHandler = Callable[[ClientConnection], None]
+
+
+@dataclass
+class FileToTransfer:
+    source_path: Optional[str] = None
+    scratch_path: Optional[str] = None
+    hash: Optional[str] = None
+
+    def to_dict(self) -> JsonDict:
+        """
+        Convert the FileToTransfer to a dictionary representation for JSON serialization.
+        """
+        return {
+            'source_path': self.source_path,
+            'scratch_path': self.scratch_path,
+            'hash': self.hash
+        }

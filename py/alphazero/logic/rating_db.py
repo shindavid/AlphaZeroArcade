@@ -58,7 +58,7 @@ class RatingDB:
 
         c.execute(query)
         for agent_id, gen, n_iters, tag, set_temp_zero, role in c.fetchall():
-            agent = MCTSAgent(gen, n_iters, set_temp_zero, tag)
+            agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
             yield DBAgent(agent, agent_id, AgentRole(role))
 
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
@@ -174,3 +174,7 @@ class RatingDB:
         c.execute(insert, (sub_id, subtype, iagent.role.value))
         conn.commit()
         iagent.db_id = c.lastrowid
+
+    @property
+    def db_lock(self):
+        return self.db_conn_pool._db_lock

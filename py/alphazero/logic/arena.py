@@ -66,7 +66,7 @@ class Arena:
             if self._W_matrix[ix1, ix2] > 0 or self._W_matrix[ix2, ix1] > 0:
                 n_games_played = int(self._W_matrix[ix1, ix2] + self._W_matrix[ix2, ix1])
                 n_games = match.n_games - n_games_played
-                match = Match(match.agent1, match.agent2, n_games)
+                match = Match(match.agent1, match.agent2, n_games, match.type)
                 if n_games < 1:
                     continue
 
@@ -79,6 +79,13 @@ class Arena:
                 db_id2 = indexed_agent2.db_id
                 db.commit_counts(db_id1, db_id2, counts, match.type)
         return counts_list
+
+    def update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts, type: MatchType, db: RatingDB):
+        self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
+        self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
+        db_id1 = self._indexed_agents[ix1].db_id
+        db_id2 = self._indexed_agents[ix2].db_id
+        db.commit_counts(db_id1, db_id2, counts, type)
 
     def refresh_ratings(self, eps=1e-3):
         """
@@ -170,4 +177,3 @@ class Arena:
     @property
     def agent_lookup_db_id(self) -> Dict[AgentDBId, IndexedAgent]:
         return self._agent_lookup_db_id
-

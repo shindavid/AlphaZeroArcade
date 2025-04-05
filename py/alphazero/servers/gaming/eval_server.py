@@ -1,52 +1,55 @@
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
-from alphazero.logic.ratings import extract_match_record
+from alphazero.logic.match_runner import Match, MatchType
+from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
-from util.str_util import make_args_str
 from util import subprocess_util
+from util.str_util import make_args_str
 
 from dataclasses import dataclass, fields
 import logging
-import os
 import subprocess
 import threading
-from typing import Optional, List
+import os
+from typing import Optional, List, Dict
 
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class RatingsServerParams(BaseParams):
+class EvalServerParams(BaseParams):
     rating_tag: str = ''
 
     @staticmethod
-    def create(args) -> 'RatingsServerParams':
-        kwargs = {f.name: getattr(args, f.name) for f in fields(RatingsServerParams)}
-        return RatingsServerParams(**kwargs)
+    def create(args) -> 'EvalServerParams':
+        kwargs = {f.name: getattr(args, f.name) for f in fields(EvalServerParams)}
+        return EvalServerParams(**kwargs)
 
     @staticmethod
     def add_args(parser, omit_base=False):
-        defaults = RatingsServerParams()
+        defaults = EvalServerParams()
 
-        group = parser.add_argument_group(f'RatingsServer options')
+        group = parser.add_argument_group(f'EvalServer options')
         if not omit_base:
             BaseParams.add_base_args(group)
 
         group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
-                           help='ratings tag. Loop controller collates ratings by this str. It is '
+                           help='evaluation tag. Loop controller collates ratings by this str. It is '
                            'the responsibility of the user to make sure that the same '
-                           'binary/params are used across different RatingsServer processes '
+                           'binary/params are used across different EvalServer processes '
                            'sharing the same rating-tag. (default: "%(default)s")')
 
 
-class RatingsServer:
-    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams,
+class EvalServer:
+    def __init__(self, params: EvalServerParams, logging_params: LoggingParams,
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
@@ -68,7 +71,7 @@ class RatingsServer:
             self._shutdown_manager.shutdown()
 
     def _shutdown(self):
-        logger.info('Shutting down ratings server...')
+        logger.info('Shutting down eval-server...')
         try:
             self._session_data.socket.close()
         except:
@@ -78,10 +81,10 @@ class RatingsServer:
             try:
                 self._proc.terminate()
                 subprocess_util.wait_for(self._proc, expected_return_code=None)
-                logger.info('Terminated ratings-worker process %s', self._proc.pid)
+                logger.info('Terminated eval-worker process %s', self._proc.pid)
             except:
                 pass
-        logger.info('Ratings server shutdown complete!')
+        logger.info('Eval server shutdown complete!')
 
     def _main_loop(self):
         try:
@@ -98,11 +101,11 @@ class RatingsServer:
         self._session_data.init_socket()
 
     def _send_handshake(self):
-        self._session_data.send_handshake(ClientRole.RATINGS_SERVER,
-                                          rating_tag=self._params.rating_tag)
+        self._session_data.send_handshake(ClientRole.EVAL_SERVER,
+                                    rating_tag=self._params.rating_tag)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.RATINGS_SERVER)
+        self._session_data.recv_handshake(ClientRole.EVAL_SERVER)
 
     def _recv_loop(self):
         try:
@@ -129,13 +132,15 @@ class RatingsServer:
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
-        logger.debug('ratings-server received json message: %s', msg)
+        logger.debug('eval-server received json message: %s', msg)
 
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
         elif msg_type == 'binary-file':
             self._session_data.receive_binary_file(msg['binary'])
+        elif msg_type == 'model-file':
+            self._session_data.receive_model_file(msg['model'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -144,6 +149,7 @@ class RatingsServer:
         return False
 
     def _handle_match_request(self, msg: JsonDict):
+        logger.info('Received match request between gen %s and gen %s', msg['agent1']['gen'], msg['agent2']['gen'])
         thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
                                   name='run-match')
         thread.start()
@@ -166,100 +172,99 @@ class RatingsServer:
         required_binaries = msg['binaries']
         missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
         if missing_binaries:
-            logger.debug('Missing required binaries: %s', missing_binaries)
+            logger.warning('Missing required binaries: %s', missing_binaries)
             self._session_data.send_binary_request(missing_binaries)
             self._session_data.wait_for_binaries(required_binaries)
 
-        mcts_gen = msg['mcts_gen']
-        ref_strength = msg['ref_strength']
-        n_games = msg['n_games']
+        required_model = msg['model_file']
+        missing_model: bool = self._session_data.is_model_missing(required_model)
+        if missing_model:
+            logger.warning('Missing required model file: %s', required_model)
+            self._session_data.send_model_request(required_model)
+            self._session_data.wait_for_model(required_model)
 
-        ps1 = self._get_mcts_player_str(mcts_gen)
-        ps2 = self._get_reference_player_str(ref_strength)
+        mcts_agent1 = MCTSAgent(**msg['agent1'])
+        mcts_agent2 = MCTSAgent(**msg['agent2'])
+        match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
 
-        binary = os.path.join(self._session_data.run_dir, msg['binary_path'])
-        log_filename = self._session_data.get_log_filename('ratings-worker')
-        append_mode = not self._session_data.start_log_sync(log_filename)
-
+        log_filename = self._session_data.get_log_filename('eval-worker')
         args = {
-            '-G': n_games,
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.RATINGS_WORKER.value,
+            '--client-role': ClientRole.EVAL_WORKER.value,
             '--manager-id': self._session_data.client_id,
             '--ratings-tag': f'"{self._params.rating_tag}"',
             '--cuda-device': self._params.cuda_device,
-            '--weights-request-generation': mcts_gen,
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
-        if append_mode:
-            args['--log-append-mode'] = None
-        args.update(self._session_data.game_spec.rating_options)
-        cmd = [
-            binary,
-            '--player', f'"{ps1}"',
-            '--player', f'"{ps2}"',
-            ]
-        cmd.append(make_args_str(args))
-        cmd = ' '.join(map(str, cmd))
+        result = self._eval_match(match, self._session_data.game, args)
 
-        mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
-        ref_name = RatingsServer._get_reference_player_name(ref_strength)
-
-        cwd = self._session_data.run_dir
-        self._proc = subprocess_util.Popen(cmd, cwd=cwd)
-        logger.info('Running %s vs %s match [%s] from %s: %s', mcts_name, ref_name, self._proc.pid,
-                    cwd, cmd)
-        stdout = self._session_data.wait_for(self._proc)
-        self._proc = None
-
-        # NOTE: extracting the match record from stdout is potentially fragile. Consider
-        # changing this to have the c++ process directly communicate its win/loss data to the
-        # loop-controller. Doing so would better match how the self-play server works.
-        record = extract_match_record(stdout)
-        logger.info('Match result: %s', record.get(0))
+        logger.info('Played match between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
         self._running = False
 
         data = {
             'type': 'match-result',
-            'record': record.get(0).to_json(),
-            'mcts_gen': mcts_gen,
-            'ref_strength': ref_strength,
+            'record': result.to_json(),
+            'ix1': msg['ix1'],
+            'ix2': msg['ix2']
         }
 
         self._session_data.socket.send_json(data)
         self._send_ready()
 
-    @staticmethod
-    def _get_mcts_player_name(gen: int):
-        return f'MCTS-{gen}'
+    def _eval_match(self, match: Match, game: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
+        """
+        Run a match between two agents and return the results by running two subprocesses
+        of C++ binaries.
+        """
+        agent1 = match.agent1
+        agent2 = match.agent2
+        n_games = match.n_games
+        if n_games < 1:
+            return WinLossDrawCounts()
 
-    def _get_mcts_player_str(self, gen: int):
-        name = RatingsServer._get_mcts_player_name(gen)
+        ps1 = agent1.make_player_str(self._session_data.run_dir)
+        ps2 = agent2.make_player_str(self._session_data.run_dir)
 
-        player_args = {
-            '--type': 'MCTS-C',
-            '--name': name,
-            '--cuda-device': self._params.cuda_device,
-        }
-        player_args.update(self._session_data.game_spec.rating_player_options)
-        return make_args_str(player_args)
+        if args is None:
+            args = {}
+        args['-G'] = n_games
 
-    @staticmethod
-    def _get_reference_player_name(strength: int):
-        return f'ref-{strength}'
+        args1 = dict(args)
+        args2 = dict(args)
 
-    def _get_reference_player_str(self, strength: int):
-        name = RatingsServer._get_reference_player_name(strength)
-        family = self._session_data.game_spec.reference_player_family
-        type_str = family.type_str
-        strength_param = family.strength_param
+        port = DEFAULT_REMOTE_PLAY_PORT
 
-        player_args = {
-            '--type': type_str,
-            '--name': name,
-            strength_param: strength,
-        }
-        return make_args_str(player_args)
+        cmd1 = [
+            os.path.join(self._session_data.run_dir, agent1.binary),
+            '--port', str(port),
+            '--player', f'"{ps1}"',
+        ]
+        cmd1.append(make_args_str(args1))
+        cmd1 = ' '.join(map(str, cmd1))
+
+        cmd2 = [
+            os.path.join(self._session_data.run_dir, agent1.binary),
+            '--remote-port', str(port),
+            '--player', f'"{ps2}"',
+        ]
+        cmd2.append(make_args_str(args2))
+        cmd2 = ' '.join(map(str, cmd2))
+
+        logger.debug('Running match between:\n%s\n%s', cmd1, cmd2)
+
+        proc1 = subprocess_util.Popen(cmd1)
+        proc2 = subprocess_util.Popen(cmd2)
+
+        expected_rc = None
+        print_fn = logger.error
+        stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+
+        # NOTE: extracting the match record from stdout is potentially fragile. Consider
+        # changing this to have the c++ process directly communicate its win/loss data to the
+        # loop-controller. Doing so would better match how the self-play server works.
+        record = extract_match_record(stdout)
+        logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
+        return record.get(0)
