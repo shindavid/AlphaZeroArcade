@@ -190,23 +190,6 @@ class LoopController:
     def request_shutdown(self, return_code: int):
         self._shutdown_manager.request_shutdown(return_code)
 
-    def get_asset_requirements(self) -> JsonDict:
-        """
-        Returns information about the assets required for game-playing servers.
-        """
-        binary_path = self.build_params.get_binary_path(self._run_params.game)
-
-        extras = {}
-        for dep in self.game_spec.extra_runtime_deps:
-            extras[dep] = sha256sum(dep)
-
-        return {
-            'binary': {
-                binary_path : sha256sum(binary_path),
-            },
-            'extras': extras,
-        }
-
     def handle_new_client_connection(self, conn: ClientConnection):
         """
         Dispatches to a manager to handle a new client connection. The manager will spawn a new

@@ -23,10 +23,6 @@ from typing import Optional, Dict, List
 logger = logging.getLogger(__name__)
 
 
-filename = str
-sha256hash = str
-
-
 ASSETS_DIR = '/home/devuser/scratch/assets'
 
 
@@ -161,113 +157,7 @@ class SessionData:
         }
         self.socket.send_json(data)
 
-    def _setup_run_directory(self, asset_requirements: JsonDict):
-        """
-        asset_requirements takes the following form:
-
-        {
-            'binary': { path: hash },
-            'extras': {
-                path: hash,
-                path: hash,
-                ...
-            }
-        }
-
-        This method does the following:
-
-        1. Create an assets-directory in /home/devuser/scratch/assets/, if it doesn't yet exist.
-           Files in this directory will be named by their hash.
-
-        2. For each asset:
-
-           A. Check if the assets-directory currently contains it. If so, continue.
-           B. Else, check if the target/ directory contains it. If so, copy to the assets-directory,
-              otherwise, continue
-           C. If the asset is still missing, request it from the loop controller, and write the
-              asset to the assets-directory
-
-        3. Create a unique run-directory in /home/devuser/scratch/runs/ to be used by this server
-           and this server only. Add symlinks in this run-directory, named by the asset path, that
-           point to the asset in the assets-directory.
-
-        4. Set appropriate data members to self, that support methods that SelfPlayServer and
-           RatingsServer can use to construct their run-command-strings.
-        """
-        assets_dir = '/home/devuser/scratch/assets'
-        py_util.atomic_makedirs(assets_dir)
-
-        binary_info = asset_requirements['binary']
-        extras_info = asset_requirements['extras']
-
-        if self._build_params.binary_path is not None:
-            self._binary_path = './custom-binary'
-
-            src = os.path.abspath(self._build_params.binary_path)
-            dst = os.path.join(self.run_dir, self._binary_path)
-            dst_dir = os.path.dirname(dst)
-            os.makedirs(dst_dir, exist_ok=True)
-            ln_cmd = f'ln -sf {src} {dst}'
-            subprocess.run(ln_cmd, shell=True, check=True)
-        else:
-            assert len(binary_info) == 1
-            self._binary_path = list(binary_info.keys())[0]
-
-        hash_dict = {}
-        missing_assets = []
-        for info in [binary_info, extras_info]:
-            hash_dict.update(info)
-            for asset_path, asset_hash in info.items():
-                # See 2A above
-                dst_path = os.path.join(assets_dir, asset_hash)
-                if os.path.exists(dst_path):
-                    continue
-
-                # See 2B above
-                workspace_path = os.path.join('/workspace/repo', asset_path)
-                if os.path.exists(workspace_path):
-                    candidate_hash = py_util.sha256sum(workspace_path)
-                    if candidate_hash == asset_hash:
-                        py_util.atomic_cp(workspace_path, dst_path)
-                        continue
-
-                # See 2C above
-                missing_assets.append(asset_path)
-
-        data = {
-            'type': 'assets-request',
-            'assets': missing_assets,
-        }
-        self.socket.send_json(data)
-
-        logger.info('DBG sent assets-request %s', data)
-        for asset_path in missing_assets:
-            asset_hash = hash_dict[asset_path]
-            full_asset_path = os.path.join(assets_dir, asset_hash)
-            self.socket.recv_file(full_asset_path, atomic=True)
-            logger.info('DBG received asset: %s', full_asset_path)
-            assert os.path.isfile(full_asset_path)
-
-        # Create soft links to the assets. Note  that because the run_dir will be unique to each
-        # server, we don't need to worry about atomicity for the filesytem operations below.
-        for asset_path, asset_hash in hash_dict.items():
-            src = os.path.join(assets_dir, asset_hash)
-            dst = os.path.join(self.run_dir, asset_path)
-            dst_dir = os.path.dirname(dst)
-            os.makedirs(dst_dir, exist_ok=True)
-            ln_cmd = f'ln -sf {src} {dst}'
-            subprocess.run(ln_cmd, shell=True, check=True)
-
     def get_missing_binaries(self, binaries: List[JsonDict]):
-        """
-        This method does the following:
-        1. create an assets-directory in /home/devuser/scratch/assets/, if it doesn't yet exist.
-        2. return a list of missing binaries that are not found in the assets-directory.
-        3. if a binary is found in the assets-directory, check if the dst path matches the hash. If not,
-        create a soft link to the correct binary.
-        """
-        py_util.atomic_makedirs(ASSETS_DIR)
-
         missing_binaries = []
         for b in binaries:
             logger.debug('Checking binary: %s', b)
