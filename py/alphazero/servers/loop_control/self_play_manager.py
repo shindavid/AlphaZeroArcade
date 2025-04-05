@@ -245,11 +245,11 @@ class SelfPlayManager:
 
     def _construct_binary(self) -> FileToTransfer:
         game = self._controller.run_params.game
-        binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'
+        binary = FileToTransfer.from_src_scratch_path(
+            source_path=self._controller._organizer.binary_filename,
+            scratch_path=f'target/bin/{game}',
+            asset_path_mode='hash'
         )
-        binary.asset_path = binary.sha256_hash
-        binary.scratch_path = f'target/bin/{game}'
         return binary
 
     def _stop_gen0_self_play(self, conn: ClientConnection):

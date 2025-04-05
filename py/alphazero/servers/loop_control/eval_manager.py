@@ -230,26 +230,26 @@ class EvalManager:
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
 
-        eval_binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'
-            )
-        eval_binary.asset_path = eval_binary.sha256_hash
-        eval_binary.scratch_path = f'target/bin/{game}'
-
-        benchmark_binary = FileToTransfer(
-            source_path=f'output/{game}/{next_opponent_agent.tag}/{self._controller.build_params.get_binary_path(game)}'
-            )
-        benchmark_binary.asset_path = benchmark_binary.sha256_hash
-        benchmark_binary.scratch_path = f'target/benchmark-bin/{game}'
-
+        eval_binary = FileToTransfer.from_src_scratch_path(
+            source_path=self._controller._organizer.binary_filename,
+            scratch_path=f'target/bin/{game}',
+            asset_path_mode='hash'
+        )
         benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+        benchmark_binary = FileToTransfer.from_src_scratch_path(
+            source_path= benchmark_organizer.binary_filename,
+            scratch_path=f'target/benchmark-bin/{game}',
+            asset_path_mode='hash'
+        )
         files_required = [eval_binary, benchmark_binary]
+
         benchmark_model = None
         if next_opponent_agent.gen > 0:
-            benchmark_model = FileToTransfer(
-                source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen))
-            benchmark_model.scratch_path = f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt'
-            benchmark_model.asset_path = benchmark_model.scratch_path
+            benchmark_model = FileToTransfer.from_src_scratch_path(
+                source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen),
+                scratch_path=f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt',
+                asset_path_mode='scratch'
+            )
             files_required.append(benchmark_model)
 
         data = {

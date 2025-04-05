@@ -237,7 +237,7 @@ class EvalServer:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            os.path.join(self._session_data.run_dir, agent1.binary),
+            os.path.join(self._session_data.run_dir, agent2.binary),
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]

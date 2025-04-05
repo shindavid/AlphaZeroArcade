@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Literal
 
 from alphazero.logic import constants
 from util.py_util import sha256sum
@@ -119,12 +119,26 @@ class FileToTransfer:
     - SHA256 hash of the file.
     """
     source_path: str
+    scratch_path: str
     asset_path: Optional[str] = None
-    scratch_path: Optional[str] = None
     sha256_hash: Optional[str] = None
 
-    def __post_init__(self):
-        self.sha256_hash = sha256sum(self.source_path)
+    @classmethod
+    def from_src_scratch_path(cls, source_path: str, scratch_path: str, asset_path_mode: Literal['hash', 'scratch']):
+        obj = cls(
+            source_path=source_path,
+            scratch_path=scratch_path
+        )
+        obj.sha256_hash = sha256sum(obj.source_path)
+
+        if asset_path_mode == 'hash':
+            obj.asset_path = obj.sha256_hash
+        elif asset_path_mode == 'scratch':
+            obj.asset_path = scratch_path
+        else:
+            raise ValueError(f"Invalid asset_path_mode: {asset_path_mode}. Must be 'hash' or 'scratch'.")
+
+        return obj
 
     def to_dict(self) -> JsonDict:
         return {
