@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -6,11 +6,11 @@ from alphazero.logic.ratings import win_prob
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
-from scipy.interpolate import interp1d
 import numpy as np
+from scipy.interpolate import interp1d
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import List, Optional
 
 

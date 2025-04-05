@@ -1,27 +1,27 @@
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
+from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
 from .output_dir_syncer import OutputDirSyncer
 from .params import LoopControllerParams
 from .ratings_manager import RatingsManager
-from .eval_manager import EvalManager
 from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
-    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction, FileToTransfer
+from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, EvalTag,\
+    Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.py_util import sha256sum, atomic_cp
+from shared.training_params import TrainingParams
+from util.py_util import atomic_cp, sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -266,6 +266,40 @@ class LoopController:
 
         logger.debug('Weights broadcast complete!')
 
+    def send_handshake_ack(self, conn: ClientConnection):
+        ssh_pub_key = ssh_util.get_pub_key()
+        reply = {
+            'type': 'handshake-ack',
+            'client_id': conn.client_id,
+            'game': self.game_spec.name,
+            'tag': self.run_params.tag,
+            'ssh_pub_key': ssh_pub_key,
+            'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
+        }
+        conn.socket.send_json(reply)
+
+    def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        logger.info('Handling file request from %s: %s', conn, files)
+        for f in files:
+            conn.socket.send_json({
+                'type': 'file-transfer',
+                'file': f,
+            })
+            conn.socket.send_file(f['source_path'])
+
+    def set_priority(self, dict_len: int, rating_in_progress: bool):
+        latest_gen = self.latest_gen()
+        target_rate = self.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
+        self.set_ratings_priority(elevate)
+
     def set_ratings_priority(self, elevate: bool):
         self._gpu_contention_manager.set_ratings_priority(elevate)
 
@@ -435,40 +469,6 @@ class LoopController:
 
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
-
-    def send_handshake_ack(self, conn: ClientConnection):
-        ssh_pub_key = ssh_util.get_pub_key()
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-            'game': self.game_spec.name,
-            'tag': self.run_params.tag,
-            'ssh_pub_key': ssh_pub_key,
-            'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
-        }
-        conn.socket.send_json(reply)
-
-    def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
-        logger.info('Handling file request from %s: %s', conn, files)
-        for f in files:
-            conn.socket.send_json({
-                'type': 'file-transfer',
-                'file': f,
-            })
-            conn.socket.send_file(f['source_path'])
-
-    def set_priority(self, dict_len: int, rating_in_progress: bool):
-        latest_gen = self.latest_gen()
-        target_rate = self.params.target_rating_rate
-        num = dict_len + (0 if rating_in_progress else 1)
-        den = max(1, latest_gen)
-        current_rate = num / den
-
-        elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
-                     rating_in_progress, current_rate, target_rate)
-        self.set_ratings_priority(elevate)
 
     def _main_loop(self):
         try:

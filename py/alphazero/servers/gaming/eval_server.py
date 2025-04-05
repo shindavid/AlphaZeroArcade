@@ -15,9 +15,9 @@ from util.str_util import make_args_str
 
 from dataclasses import dataclass, fields
 import logging
+import os
 import subprocess
 import threading
-import os
 from typing import Optional, List, Dict
 
 
@@ -161,7 +161,7 @@ class EvalServer:
             self._run_match_helper(msg)
         except:
             logger.error('Unexpected error in run-match:', exc_info=True)
-            self._shutdown_manager.request_shutdown(1)
+        self._shutdown_manager.request_shutdown(1)
 
     def _run_match_helper(self, msg: JsonDict):
         assert not self._running

@@ -150,6 +150,10 @@ class GpuContentionTable:
             if top_domain == Domain.SELF_PLAY:
                 self._acquire_lock(top_domain)
 
+    def pre_acquire_lock(self, domain: Domain):
+        with self._lock:
+            return self._pre_acquire_lock(domain)
+
     def acquire_lock(self, domain: Domain) -> bool:
         """
         This method performs a series of carefully orchestrated steps:
@@ -230,10 +234,6 @@ class GpuContentionTable:
     def _inactive(self, domain: Domain) -> bool:
         assert self._lock.locked(), 'LockTable must be locked'
         return self._states[domain].management_status == ManagementStatus.INACTIVE
-
-    def pre_acquire_lock(self, domain: Domain):
-        with self._lock:
-            return self._pre_acquire_lock(domain)
 
     def _pre_acquire_lock(self, domain: Domain):
         logger.debug('Pre-acquiring lock for %s: %s', domain, self)

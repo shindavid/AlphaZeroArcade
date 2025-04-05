@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
-from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus,\
-    FileToTransfer
+
+from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.py_util import find_largest_gap, sha256sum
 from util.socket_util import JsonDict, SocketSendException
@@ -11,7 +11,7 @@ from util.socket_util import JsonDict, SocketSendException
 from dataclasses import dataclass, field
 import logging
 import threading
-from typing import Optional, TYPE_CHECKING, List
+from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController

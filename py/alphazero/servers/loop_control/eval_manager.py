@@ -3,22 +3,23 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole, IndexedAgent
-from alphazero.logic.custom_types import ClientConnection, Generation, EvalTag, ServerStatus, ClientId,\
-    FileToTransfer
+from alphazero.logic.custom_types import ClientConnection, ClientId, EvalTag, FileToTransfer, \
+    Generation, ServerStatus
 from alphazero.logic.evaluator import Evaluator, EvalUtils
+from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.run_params import RunParams
-from alphazero.logic.match_runner import MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.socket_util import JsonDict, SocketSendException
-from util.py_util import sha256sum
 
 import numpy as np
-import threading
-import logging
+
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, TYPE_CHECKING
 from enum import Enum
+import logging
+import threading
+from typing import Dict, List, Optional, TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -104,6 +105,18 @@ class EvalManager:
                                   daemon=True, name=f'manage-eval-server')
         thread.start()
 
+    def add_worker(self, conn: ClientConnection):
+        conn.aux = EvalManager.WorkerAux()
+
+        reply = {
+            'type': 'handshake-ack',
+            'client_id': conn.client_id,
+        }
+        conn.socket.send_json(reply)
+        self._controller.launch_recv_loop(
+            self._worker_msg_handler, conn, 'eval-worker',
+            disconnect_handler=self._handle_worker_disconnect)
+
     def notify_of_new_model(self):
         """
         Notify manager that there is new work to do.
@@ -116,7 +129,6 @@ class EvalManager:
         dict_len = len(self._eval_status_dict)
         rating_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
         self._controller.set_priority(dict_len, rating_in_progress)
-
 
     def _start(self):
         with self._lock:
@@ -222,11 +234,11 @@ class EvalManager:
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
         next_opponent_iagent = self._evaluator.indexed_agents[next_opponent_ix]
 
-        data = self.gen_match_request_data( test_iagent, next_opponent_iagent, next_n_games)
+        data = self._gen_match_request_data( test_iagent, next_opponent_iagent, next_n_games)
         conn.socket.send_json(data)
         self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
 
-    def gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent, next_n_games) -> JsonDict:
+    def _gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent, next_n_games) -> JsonDict:
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
 
@@ -441,18 +453,6 @@ class EvalManager:
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
         self._set_priority()
-
-    def add_worker(self, conn: ClientConnection):
-        conn.aux = EvalManager.WorkerAux()
-
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-        }
-        conn.socket.send_json(reply)
-        self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'eval-worker',
-            disconnect_handler=self._handle_worker_disconnect)
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
