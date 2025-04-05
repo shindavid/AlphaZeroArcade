@@ -12,7 +12,6 @@ class BuildParams:
     binary_path: Optional[str] = None
     ffi_lib_path: Optional[str] = None
     override_binary: bool = False
-    metadata_num_entries: int = 3
 
     @property
     def build_type(self):
