@@ -464,7 +464,6 @@ class LoopController:
             'tag': self.run_params.tag,
             'ssh_pub_key': ssh_pub_key,
             'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
-            'asset-requirements': self.get_asset_requirements(),
         }
         conn.socket.send_json(reply)
 

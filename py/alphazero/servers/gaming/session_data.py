@@ -50,7 +50,7 @@ class SessionData:
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
         self._log_sync_set = set()
-        self._file_ready_cv = threading.Condition()
+        self._file_transfer_cv = threading.Condition()
 
     def disable_next_returncode_check(self):
         self._skip_next_returncode_check = True
@@ -321,12 +321,12 @@ class SessionData:
         ln_cmd = f'ln -sf {src} {dst}'
         subprocess.run(ln_cmd, shell=True, check=True)
 
-        with self._file_ready_cv:
-            self._file_ready_cv.notify_all()
+        with self._file_transfer_cv:
+            self._file_transfer_cv.notify_all()
 
     def wait_for_binaries(self, required_binaries: List[JsonDict]):
-        with  self._file_ready_cv:
-            self._file_ready_cv.wait_for(lambda: self.get_missing_binaries(required_binaries) == [])
+        with  self._file_transfer_cv:
+            self._file_transfer_cv.wait_for(lambda: self.get_missing_binaries(required_binaries) == [])
 
     def is_model_missing(self, required_model: JsonDict):
         model_file = FileToTransfer(**required_model)
@@ -363,8 +363,8 @@ class SessionData:
         logger.info('Sent model-request: %s', data)
 
     def wait_for_model(self, required_model: JsonDict):
-        with self._file_ready_cv:
-            self. _file_ready_cv.wait_for(lambda: not self.is_model_missing(required_model))
+        with self._file_transfer_cv:
+            self. _file_transfer_cv.wait_for(lambda: not self.is_model_missing(required_model))
 
     def receive_model_file(self, model_dict: JsonDict):
         py_util.atomic_makedirs(ASSETS_DIR)
@@ -381,8 +381,8 @@ class SessionData:
         ln_cmd = f'ln -sf {asset_path} {dst_path}'
         subprocess.run(ln_cmd, shell=True, check=True)
 
-        with self._file_ready_cv:
-            self._file_ready_cv.notify_all()
+        with self._file_transfer_cv:
+            self._file_transfer_cv.notify_all()
 
     @property
     def socket(self) -> Socket:
