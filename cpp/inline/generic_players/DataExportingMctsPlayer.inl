@@ -11,9 +11,8 @@ typename DataExportingMctsPlayer<Game>::ActionResponse
 DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request) {
   const ActionMask& valid_actions = request.valid_actions;
 
-  if (!this->mid_yield_) {
-    this->search_mode_ = this->choose_search_mode(request);
-
+  std::unique_lock lock(this->search_mode_mutex_);
+  if (this->init_search_mode(request)) {
     GameWriteLog_sptr game_log = this->get_game_log();
     use_for_training_ = game_log && this->search_mode_ == core::kFull;
 
@@ -26,15 +25,15 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
       this->search_mode_ = core::kFull;
     }
   }
+  lock.unlock();
 
-  const SearchResults* mcts_search_results = this->mcts_search();
-  if (mcts_search_results == nullptr) {
-    this->mid_yield_ = true;
+  const SearchResults* mcts_results = this->get_manager()->search();
+  if (!mcts_results) {
     return ActionResponse::make_yield();
   }
 
   ActionResponse response =
-      base_t::get_action_response_helper(mcts_search_results, valid_actions);
+      base_t::get_action_response_helper(mcts_results, valid_actions);
 
   TrainingInfo& training_info = response.training_info;
   training_info.policy_target = nullptr;
@@ -43,10 +42,10 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 
   if (use_for_training_ || previous_used_for_training_) {
     training_info.policy_target = &policy_target_;
-    extract_policy_target(mcts_search_results, &training_info.policy_target);
+    extract_policy_target(mcts_results, &training_info.policy_target);
   }
   if (use_for_training_) {
-    action_values_target_ = mcts_search_results->action_values;
+    action_values_target_ = mcts_results->action_values;
     training_info.action_values_target = &action_values_target_;
   }
 

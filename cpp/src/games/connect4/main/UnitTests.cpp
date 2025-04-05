@@ -3,8 +3,6 @@
 #include <games/connect4/Game.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SearchThread.hpp>
-#include <mcts/SharedData.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>

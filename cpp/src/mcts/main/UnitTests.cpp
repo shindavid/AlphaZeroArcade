@@ -9,8 +9,6 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SearchThread.hpp>
-#include <mcts/SharedData.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>

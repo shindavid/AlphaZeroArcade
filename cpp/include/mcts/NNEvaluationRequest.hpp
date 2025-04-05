@@ -98,18 +98,22 @@ class NNEvaluationRequest {
   };
   using item_vec_t = std::vector<Item>;
 
-  NNEvaluationRequest(item_vec_t& items, search_thread_profiler_t* thread_profiler,
-                      int thread_id);
+  void init(search_thread_profiler_t* thread_profiler, int thread_id);
+
+  // void mark_as_pending_eval();
+  // void notify();
+  // void wait_for_eval();
 
   std::string thread_id_whitespace() const;
   search_thread_profiler_t* thread_profiler() const { return thread_profiler_; }
   int thread_id() const { return thread_id_; }
-  item_vec_t& items() const { return items_; }
+  item_vec_t& items() { return items_; }
 
  private:
-  item_vec_t& items_;
-  search_thread_profiler_t* const thread_profiler_;
-  const int thread_id_;
+  item_vec_t items_;
+  search_thread_profiler_t* thread_profiler_;
+  int thread_id_;
+  bool pending_eval_ = false;
 };
 
 }  // namespace mcts

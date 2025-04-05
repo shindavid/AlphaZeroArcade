@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
@@ -12,6 +10,9 @@
 #include <mcts/SearchParams.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
+
+#include <memory>
+#include <mutex>
 
 namespace generic {
 
@@ -82,9 +83,12 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   }
 
  protected:
+  void clear_search_mode();
+
+  // assumes search_mode_mutex_ is held, returns true if search mode was changed
+  bool init_search_mode(const ActionRequest&);
+
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
-  const SearchResults* mcts_search() const;
-  core::SearchMode choose_search_mode(const ActionRequest& request) const;
   ActionResponse get_action_response_helper(const SearchResults*,
                                             const ActionMask& valid_actions) const;
   void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
@@ -109,8 +113,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
 
-  core::SearchMode search_mode_;
-  bool mid_yield_ = false;
+  mutable std::mutex search_mode_mutex_;
+  core::SearchMode search_mode_ = core::kNumSearchModes;
 
   template<core::concepts::Game> friend class MctsPlayerTest;
 };

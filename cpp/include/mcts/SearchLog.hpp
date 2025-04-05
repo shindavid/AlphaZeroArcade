@@ -1,12 +1,11 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/Node.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <boost/json.hpp>
 
-#include <sstream>
 #include <string>
 
 namespace mcts {
@@ -14,13 +13,14 @@ namespace mcts {
 template <core::concepts::Game Game>
 class SearchLog {
  protected:
+  using LookupTable = Node<Game>::LookupTable;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
 
  public:
-  SearchLog(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
+  SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}
 
   struct LogNode {
     node_index_t index;
@@ -75,7 +75,7 @@ class SearchLog {
   std::string last_graph_json_str();
 
  private:
-  const SharedData<Game>* shared_data_;
+  const LookupTable* lookup_table_;
   std::vector<Graph> graphs;
 
   void add_graph(const Graph& graph) { graphs.push_back(graph); }

@@ -333,6 +333,7 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::step_chance() {
   ActionValueTensor* action_values = nullptr;
   for (auto player2 : players_) {
+    // ChancePrehandleResponse response = player2->prehandle_chance_event();
     ActionValueTensor* action_values2 = player2->prehandle_chance_event();
     if (!noisy_mode_ && action_values2) {
       util::release_assert(!action_values,
