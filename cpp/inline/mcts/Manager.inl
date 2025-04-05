@@ -1,6 +1,8 @@
 #include <mcts/Manager.hpp>
 
+#include <core/BasicTypes.hpp>
 #include <mcts/ActionSelector.hpp>
+#include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <mcts/UniformNNEvaluationService.hpp>
 #include <util/Asserts.hpp>
@@ -8,6 +10,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <format>
 #include <memory>
 
 namespace mcts {
@@ -16,12 +19,16 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool,
-                       const ManagerParams& params, NNEvaluationServiceBase* service)
+Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const ManagerParams& params,
+                       NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
-          SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
-      shared_data_(mutex_cv_pool, params, next_instance_id_++) {
+        SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
+      manager_id_(next_instance_id_++),
+      lookup_table_(mutex_cv_pool),
+      root_softmax_temperature_(params.starting_root_softmax_temperature,
+        params.ending_root_softmax_temperature,
+        params.root_softmax_temperature_half_life) {
   if (mcts::kEnableProfiling) {
     auto profiling_dir = params_.profiling_dir();
     if (profiling_dir.empty()) {
@@ -42,18 +49,15 @@ Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool,
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
 
-  if (num_search_threads() < 1) {
-    throw util::CleanException("num_search_threads must be positive (%d)", num_search_threads());
+  if (num_search_threads() != 1) {
+    throw util::CleanException("non-single-threaded mode temporarily unsupported");
   }
-  if (params.enable_pondering && num_search_threads() == 1) {
-    throw util::CleanException("pondering mode does not work with only 1 search thread");
+  if (params.enable_pondering) {
+    throw util::CleanException("pondering mode temporarily unsupported");
   }
+  search_contexts_.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
-    auto thread = new SearchThread(&shared_data_, nn_eval_service_, &params_, i);
-    if (mcts::kEnableProfiling) {
-      thread->set_profiling_dir(params.profiling_dir());
-    }
-    search_threads_.push_back(thread);
+    init_context(i);
   }
 }
 
@@ -72,15 +76,9 @@ inline Manager<Game>::~Manager() {
   clear();
 
   nn_eval_service_->disconnect();
-  for (auto* thread : search_threads_) {
-    delete thread;
-  }
-}
-
-template <core::concepts::Game Game>
-inline void Manager<Game>::start_threads() {
-  for (SearchThread* thread : search_threads_) {
-    thread->start();
+  for (auto& context : search_contexts_) {
+    context.profiler.dump(1);
+    context.profiler.close_file();
   }
 }
 
@@ -96,64 +94,1133 @@ inline void Manager<Game>::start() {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::clear() {
-  stop_search_threads();
-  shared_data_.clear();
+  root_softmax_temperature_.reset();
+  lookup_table_.clear();
+  root_info_.node_index = -1;
+
+  for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
+    root_info_.history_array[sym].initialize(Rules{});
+    State& state = root_info_.history_array[sym].current();
+    Symmetries::apply(state, sym);
+  }
+
+  const State& raw_state = root_info_.history_array[group::kIdentity].current();
+  root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 }
 
 template <core::concepts::Game Game>
-inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
-                                                const State&,
+inline void Manager<Game>::receive_state_change(core::seat_index_t seat, const State&,
                                                 core::action_t action) {
-  group::element_t sym = shared_data_.root_info.canonical_sym;
+  group::element_t root_sym = root_info_.canonical_sym;
 
-  core::action_mode_t mode = shared_data_.get_current_action_mode();
-  shared_data_.update_state(action);
-  shared_data_.root_softmax_temperature.step();
-  stop_search_threads();  // stop pondering
-  node_pool_index_t root_index = shared_data_.root_info.node_index;
+  core::action_mode_t mode =
+    Rules::get_action_mode(root_info_.history_array[group::kIdentity].current());
+
+  // TODO: this logic is currently not quite right. It assumes that the symmetry-set is constant,
+  // which is not true for games like chess where the symmetries of the game is dependent on the
+  // board state.
+  //
+  // To fix this, I think we need to track the intersection of the symmetry-set across the entire
+  // history.
+  //
+  // I also think that this loop needs to change to symmetrize the states, rather than the action.
+  // It makes no sense to symmetrize an action like a king-side-castle into 8 different versions.
+  // But we can symmetrize the state that results from the king-side-castle. By respecting the valid
+  // symmetry set that comes from the intersection, we won't actually use any of those symmetries
+  // that correspond to nonsensical states.
+  //
+  // As part of this, I think the get_canonical_symmetry() function needs to accept a history,
+  // rather than a state. The history object should probably be extended to easily compute the
+  // symmetry-set-intersection.
+  for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
+    core::action_t transformed_action = action;
+    Symmetries::apply(transformed_action, sym, mode);
+    Rules::apply(root_info_.history_array[sym], transformed_action);
+  }
+
+  const State& raw_state = root_info_.history_array[group::kIdentity].current();
+  root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
+
+  root_softmax_temperature_.step();
+  node_pool_index_t root_index = root_info_.node_index;
   if (root_index < 0) return;
 
   core::action_t transformed_action = action;
-  Game::Symmetries::apply(transformed_action, sym, mode);
+  Symmetries::apply(transformed_action, root_sym, mode);
 
-  Node* root = shared_data_.lookup_table.get_node(root_index);
+  Node* root = lookup_table_.get_node(root_index);
   root_index = root->lookup_child_by_action(transformed_action);  // tree reuse
   if (root_index < 0) {
-    shared_data_.root_info.node_index = -1;
+    root_info_.node_index = -1;
     return;
   }
 
-  shared_data_.root_info.node_index = root_index;
+  root_info_.node_index = root_index;
+}
 
-  if (params_.enable_pondering) {
-    start_search_threads(pondering_search_params_);  // resume pondering
+template <core::concepts::Game Game>
+void Manager<Game>::set_search_params(const SearchParams& params) {
+  search_params_ = params;
+}
+
+template <core::concepts::Game Game>
+const typename Manager<Game>::SearchResults* Manager<Game>::search() {
+  std::unique_lock lock(state_machine_.mutex);
+  core::search_context_id_t context_id = get_next_context_id();
+  SearchContext& context = search_contexts_[context_id];
+
+  if (state_machine_.state == kIdle) {
+    if (context_id == state_machine_.primary_context_id) {
+      state_machine_.state = kInitializingRoot;
+      lock.unlock();
+      if (begin_root_initialization(context) == core::kContinue) {
+        std::unique_lock lock2(state_machine_.mutex);
+        update_state_machine_to_in_visit_loop();
+      } else {
+        return nullptr;
+      }
+    } else {
+      return nullptr;
+    }
+  }
+
+  if (state_machine_.state == kInitializingRoot) {
+    if (context_id == state_machine_.primary_context_id) {
+      resume_root_initialization(context);
+      update_state_machine_to_in_visit_loop();
+      lock.unlock();
+    } else {
+      return nullptr;
+    }
+  }
+
+  util::release_assert(state_machine_.state == kInVisitLoop);
+  lock.unlock();
+  if (context.mid_search_iteration) {
+    if (resume_search_iteration(context) == core::kYield) return nullptr;
+  }
+
+  Node* root = lookup_table_.get_node(root_info_.node_index);
+  while (more_search_iterations_needed(root)) {
+    if (begin_search_iteration(context)== core::kYield) return nullptr;
+  }
+
+  lock.lock();
+  if (!mark_as_done_with_visit_loop(context)) return nullptr;
+  prepare_results();
+  return &results_;
+}
+
+/*
+ * Here, we do a skimmed-down version of Manager::search()
+ */
+template <core::concepts::Game Game>
+inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
+  action_values.setZero();
+  // stop_search_threads();  // stop pondering
+
+  init_root_info(false);
+
+  // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
+  // which will expand all the root's children.
+  constexpr int tree_size_limit = 0;
+  constexpr bool full_search = true;
+  constexpr bool ponder = false;
+  SearchParams params{tree_size_limit, full_search, ponder};
+  search_params_ = params;
+
+  Node* root = lookup_table_.get_node(root_info_.node_index);
+  const auto& stable_data = root->stable_data();
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = root_info_.canonical_sym;
+
+  util::release_assert(Rules::is_chance_mode(mode));
+
+  int i = 0;
+  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
+    auto* edge = root->get_edge(i);
+    core::action_t transformed_action = action;
+    Symmetries::apply(transformed_action, sym, mode);
+    node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
+    if (child_node_index < 0) {
+      action_values(action) = edge->child_V_estimate;
+    } else {
+      Node* child = lookup_table_.get_node(child_node_index);
+      action_values(action) = child->stable_data().VT(stable_data.active_seat);
+    }
+    i++;
   }
 }
 
 template <core::concepts::Game Game>
-inline const typename Manager<Game>::SearchResults*
-Manager<Game>::search(const SearchParams& params) {
-  stop_search_threads();  // stop pondering
+core::search_context_id_t Manager<Game>::get_next_context_id() {
+  // Assumes state_machine_.mutex is held
+  core::search_context_id_t context_id = state_machine_.next_context_id;
+  state_machine_.next_context_id++;
+  if (state_machine_.next_context_id == num_search_threads()) {
+    state_machine_.next_context_id = 0;
+  }
+  return context_id;
+}
 
-  bool add_noise = params.full_search && params_.dirichlet_mult > 0;
-  shared_data_.init_root_info(add_noise);
+template <core::concepts::Game Game>
+void Manager<Game>::update_state_machine_to_in_visit_loop() {
+  // Assumes state_machine_.mutex is held
+  if (state_machine_.state == kInVisitLoop) return;
+  state_machine_.state = kInVisitLoop;
+  state_machine_.in_visit_loop_count = num_search_threads();
+  for (auto& context : search_contexts_) {
+    context.in_visit_loop = true;
+  }
+}
 
-  auto& root_info = shared_data_.root_info;
+template <core::concepts::Game Game>
+bool Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context) {
+  // Assumes state_machine_.mutex is held
+  if (context.in_visit_loop) {
+    context.in_visit_loop = false;
+    state_machine_.in_visit_loop_count--;
+    if (state_machine_.in_visit_loop_count == 0) {
+      state_machine_.state = kIdle;
+      state_machine_.primary_context_id = context.id;
+      return true;
+    }
+  }
+  return false;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::init_context(core::search_context_id_t i) {
+  SearchContext& context = search_contexts_[i];
+  context.id = i;
+  if (mcts::kEnableProfiling) {
+    auto dir = params_.profiling_dir();
+    auto profiling_file_path = dir / std::format("search{}-{}.txt", manager_id_, i);
+    context.profiler.initialize_file(profiling_file_path);
+    context.profiler.set_name(std::format("s-{}-{}", manager_id_, i));
+    context.profiler.skip_next_n_dumps(5);
+  }
+}
+
+template <core::concepts::Game Game>
+inline void Manager<Game>::init_root_info(bool add_noise) {
+  root_info_.add_noise = add_noise;
+  if (root_info_.node_index < 0 || add_noise) {
+    const StateHistory& canonical_history = root_info_.history_array[root_info_.canonical_sym];
+    root_info_.node_index = lookup_table_.alloc_node();
+    Node* root = lookup_table_.get_node(root_info_.node_index);
+    core::seat_index_t active_seat = Rules::get_current_player(canonical_history.current());
+    util::release_assert(active_seat >= 0 && active_seat < Constants::kNumPlayers);
+    root_info_.active_seat = active_seat;
+    new (root) Node(&lookup_table_, canonical_history, active_seat);
+    root->stats().RN++;  // thread-safe since single-threaded here
+  }
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext& context) {
+  bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
+  init_root_info(add_noise);
+
   if (mcts::kEnableSearchDebug) {
-    Game::IO::print_state(std::cout, root_info.history_array[group::kIdentity].current());
+    const auto& state = root_info_.history_array[group::kIdentity].current();
+    IO::print_state(std::cout, state);
   }
 
-  start_search_threads(params);
-  wait_for_search_threads();
+  node_pool_index_t root_index = root_info_.node_index;
+  Node* root = lookup_table_.get_node(root_index);
+  if (root->is_terminal()) return core::kContinue;
 
-  shared_data_.lookup_table.defragment(root_info.node_index);
-  Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
+  if (!root->edges_initialized()) {
+    root->initialize_edges();
+  }
+
+  if (root->all_children_edges_initialized()) {
+    return core::kContinue;
+  }
+
+  StateHistory& history = root_info_.history_array[context.canonical_sym];
+
+  context.canonical_history = history;
+  context.initialization_history = &context.canonical_history;
+  context.node_index_under_initialization = root_index;
+  return begin_node_initialization(context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::resume_root_initialization(SearchContext& context) {
+  resume_node_initialization(context);
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext& context) {
+  StateHistory* history = context.initialization_history;
+  node_pool_index_t node_index = context.node_index_under_initialization;
+  Node* node = lookup_table_.get_node(node_index);
+
+  context.mid_node_initialization = true;
+  context.eval_request.init(&context.profiler, context.id);
+
+  bool is_root = (node_index == root_info_.node_index);
+  if (!node->is_terminal()) {
+    bool eval_all_children =
+      params_.force_evaluate_all_root_children && is_root && search_params_.full_search;
+
+    if (!node->stable_data().VT_valid) {
+      group::element_t sym = group::kIdentity;
+      if (params_.apply_random_symmetries) {
+        sym = bitset_util::choose_random_on_index(Symmetries::get_mask(history->current()));
+      }
+      bool incorporate = params_.incorporate_sym_into_cache_key;
+      context.eval_request.items().emplace_back(node, *history, sym, incorporate);
+    }
+    if (eval_all_children) {
+      expand_all_children(context, node);
+    }
+
+    NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
+    context.nn_eval_seq_id = response.sequence_id;
+    if (response.yield_instruction == core::kYield) {
+      return core::kYield;
+    }
+  }
+
+  resume_node_initialization(context);
+  return core::kContinue;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::resume_node_initialization(SearchContext& context) {
+  StateHistory* history = context.initialization_history;
+  node_pool_index_t node_index = context.node_index_under_initialization;
+
+  Node* node = lookup_table_.get_node(node_index);
+  bool is_root = (node_index == root_info_.node_index);
+
+  nn_eval_service_->wait_for(context.nn_eval_seq_id);
+  for (auto& item : context.eval_request.items()) {
+    item.node()->load_eval(item.eval(),
+                           [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
+  }
+  context.eval_request.items().clear();
+
+  if (!node->is_terminal() && node->stable_data().is_chance_node) {
+    ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
+    for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
+      Edge* edge = node->get_edge(i);
+      core::action_t action = edge->action;
+      edge->base_prob = chance_dist(action);
+    }
+  }
+
+  auto mcts_key = InputTensorizor::mcts_key(*history);
+  bool overwrite = is_root;
+  context.inserted_node_index = lookup_table_.insert_node(mcts_key, node_index, overwrite);
+  context.mid_node_initialization = false;
+}
+
+template <core::concepts::Game Game>
+bool Manager<Game>::more_search_iterations_needed(Node* root) {
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  if (!search_params_.ponder && root->trivial()) return false;
+  return root->stats().total_count() <= search_params_.tree_size_limit;
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& context) {
+  Node* root = lookup_table_.get_node(root_info_.node_index);
+  context.search_path.clear();
+  context.search_path.emplace_back(root, nullptr);
+  context.visit_node = root;
+  context.mid_search_iteration = true;
+
+  return resume_search_iteration(context);
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& context) {
+  if (context.mid_visit) {
+    resume_visit(context);
+  }
+
+  while (context.visit_node) {
+    if (begin_visit(context) == core::kYield) return core::kYield;
+  }
+
+  Node* root = lookup_table_.get_node(root_info_.node_index);
+  root->validate_state();
+  context.canonical_sym = root_info_.canonical_sym;
+  context.raw_history = root_info_.history_array[group::kIdentity];
+  context.active_seat = root_info_.active_seat;
+  context.profiler.dump(64);
+  if (!root->trivial()) {  // this if is here to match existing code, to make unit-tests pass
+    post_visit_func_();
+  }
+  context.mid_search_iteration = false;
+  return core::kContinue;
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
+  Node* node = context.visit_node;
+  print_visit_info(context);
+  context.mid_visit = true;
+
+  const auto& stable_data = node->stable_data();
+  if (stable_data.terminal) {
+    pure_backprop(context, GameResults::to_value_array(stable_data.VT));
+    context.visit_node = nullptr;
+    context.mid_visit = false;
+    return core::kContinue;
+  }
+
+  int child_index;
+  if (stable_data.is_chance_node) {
+    child_index = sample_chance_child_index(context);
+  } else {
+    child_index = get_best_child_index(context);
+  }
+
+  Edge* edge = node->get_edge(child_index);
+  context.visit_edge = edge;
+  context.search_path.back().edge = edge;
+  context.applied_action = false;
+  context.inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
+  if (edge->state != Node::kExpanded) {
+    // reread state under mutex in case of race-condition
+    std::unique_lock lock(node->mutex());
+
+    if (edge->state == Node::kNotExpanded) {
+      edge->state = Node::kMidExpansion;
+      lock.unlock();
+
+      // reorient edge->action into raw-orientation
+      core::action_t edge_action = edge->action;
+      Symmetries::apply(edge_action, context.inv_canonical_sym, node->action_mode());
+
+      // apply raw-orientation action to raw-orientation leaf-state
+      Rules::apply(context.raw_history, edge_action);
+
+      // determine canonical orientation of new leaf-state
+      group::element_t new_sym = Symmetries::get_canonical_symmetry(context.raw_history.current());
+      edge->sym = SymmetryGroup::compose(new_sym, context.inv_canonical_sym);
+
+      context.canonical_sym = new_sym;
+
+      core::action_mode_t child_mode = Rules::get_action_mode(context.raw_history.current());
+      if (!Rules::is_chance_mode(child_mode)) {
+        context.active_seat = Rules::get_current_player(context.raw_history.current());
+      }
+      context.applied_action = true;
+
+      context.initialization_history = &context.raw_history;
+      if (context.canonical_sym != group::kIdentity) {
+        calc_canonical_state_data(context);
+        context.initialization_history = &context.canonical_history;
+      }
+
+      if (begin_expansion(context) == core::kYield) return core::kYield;
+    } else if (edge->state == Node::kMidExpansion) {
+      util::release_assert(multithreaded());
+      return core::kYield;
+    } else if (edge->state == Node::kPreExpanded) {
+      edge->state = Node::kMidExpansion;
+      lock.unlock();
+
+      util::debug_assert(edge->child_index >= 0);
+      Node* child = lookup_table_.get_node(edge->child_index);
+      context.search_path.emplace_back(child, nullptr);
+      int edge_count = edge->E;
+      int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
+      if (edge_count < child_count) {
+        short_circuit_backprop(context);
+      } else {
+        standard_backprop(context, false);
+      }
+
+      lock.lock();
+      edge->state = Node::kExpanded;
+      if (multithreaded()) {
+        lock.unlock();
+        node->cv().notify_all();
+      }
+      context.visit_node = nullptr;
+      context.mid_visit = false;
+      return core::kContinue;
+    }
+  }
+
+  resume_visit(context);
+  return core::kContinue;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::resume_visit(SearchContext& context) {
+  Node* node = context.visit_node;
+  Edge* edge = context.visit_edge;
+
+  if (context.mid_expansion) {
+    resume_expansion(context);
+
+    if (context.expanded_new_node) {
+      context.visit_node = nullptr;
+      context.mid_visit = false;
+      return;
+    }
+  } else {
+    // we could have hit the yield in the kMidExpansion case, as the non-primary context
+    if (edge->state != Node::kExpanded) {
+      std::unique_lock lock(node->mutex());
+      node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+    }
+  }
+
+  util::release_assert(edge->state == Node::kExpanded);
+  Node* child = node->get_child(edge);
+  if (child) {
+    context.search_path.emplace_back(child, nullptr);
+    int edge_count = edge->E;
+    int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
+    if (edge_count < child_count) {
+      short_circuit_backprop(context);
+      context.visit_node = nullptr;
+      context.mid_visit = false;
+      return;
+    }
+  }
+  if (!context.applied_action) {
+    // reorient edge->action into raw-orientation
+    core::action_t edge_action = edge->action;
+    Symmetries::apply(edge_action, context.inv_canonical_sym, node->action_mode());
+
+    Rules::apply(context.raw_history, edge_action);
+    core::action_mode_t child_mode = Rules::get_action_mode(context.raw_history.current());
+    if (!Rules::is_chance_mode(child_mode)) {
+      context.active_seat = Rules::get_current_player(context.raw_history.current());
+    }
+    context.canonical_sym = SymmetryGroup::compose(edge->sym, context.canonical_sym);
+  }
+  context.visit_node = child;
+  context.mid_visit = false;
+}
+
+template <core::concepts::Game Game>
+core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context) {
+  context.profiler.record(SearchThreadRegion::kExpand);
+  context.mid_expansion = true;
+
+  StateHistory* history = context.initialization_history;
+  Node* parent = context.visit_node;
+  Edge* edge = context.visit_edge;
+
+  MCTSKey mcts_key = InputTensorizor::mcts_key(*history);
+
+  // NOTE: we do a lookup_node() call here, and then later, inside init_node(), we do a
+  // corresponding insert_node() call. This is analagous to:
+  //
+  // if key not in dict:
+  //   ...
+  //   dict[key] = value
+  //
+  // If there are multiple search threads, this represents a potential race-condition. The
+  // straightforward solution is to hold a mutex during that entire sequence of operations. However,
+  // this would hold the mutex for far too long.
+  //
+  // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
+  // keeps the first init_node() and "unwinds" the second one.
+  node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
+
+  context.expanded_new_node = child_index < 0;
+  if (context.expanded_new_node) {
+    child_index = lookup_table_.alloc_node();
+    Node* child = lookup_table_.get_node(child_index);
+
+    ValueTensor game_outcome;
+    core::action_t last_action = edge->action;
+    Symmetries::apply(last_action, edge->sym, parent->action_mode());
+
+    bool terminal = Rules::is_terminal(
+        history->current(), parent->stable_data().active_seat, last_action, game_outcome);
+
+    if (terminal) {
+      new (child) Node(&lookup_table_, *history, game_outcome);
+    } else {
+      new (child) Node(&lookup_table_, *history, context.active_seat);
+    }
+
+    context.search_path.emplace_back(child, nullptr);
+    child->initialize_edges();
+    bool do_virtual = !terminal && multithreaded();
+    if (do_virtual) {
+      virtual_backprop(context);
+    }
+
+    context.initialization_history = history;
+    context.node_index_under_initialization = child_index;
+    if (begin_node_initialization(context) == core::kYield) return core::kYield;
+  }
+  resume_expansion(context);
+  return core::kContinue;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::resume_expansion(SearchContext& context) {
+  if (context.mid_node_initialization) {
+    resume_node_initialization(context);
+  }
+  node_pool_index_t child_index = context.node_index_under_initialization;
+  node_pool_index_t inserted_child_index = context.inserted_node_index;
+  Node* child = lookup_table_.get_node(child_index);
+  Node* parent = context.visit_node;
+  Edge* edge = context.visit_edge;
+  bool terminal = child->is_terminal();
+  bool do_virtual = !terminal && multithreaded();
+
+  edge->child_index = inserted_child_index;
+  if (child_index != inserted_child_index) {
+    // This means that we hit the race-condition described in begin_expansion(). We need to "unwind"
+    // the second init_node() call, and instead use the first one.
+    //
+    // Note that all the work done in constructing child is effectively discarded. We don't
+    // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
+    // when the lookup_table is defragmented.
+    context.search_path.pop_back();
+    if (do_virtual) {
+      undo_virtual_backprop(context);
+    }
+    context.expanded_new_node = false;
+    child_index = edge->child_index;
+  } else {
+    if (terminal) {
+      pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
+    } else {
+      standard_backprop(context, do_virtual);
+    }
+  }
+
+  if (!context.expanded_new_node) {
+    // TODO: in this case, we should check to see if there are sister edges that point to the same
+    // child. In this case, we can "slide" the visits and policy-mass from one edge to the other,
+    // effectively pretending that we had merged the two edges from the beginning. This should
+    // result in a more efficient search.
+    //
+    // We had something like this at some point, and for tic-tac-toe, it led to a significant
+    // improvement. But that previous implementation was inefficient for large branching factors,
+    // as it did the edge-merging up-front. This proposal only attempts edge-merges on-demand,
+    // piggy-backing existing MCGS-key-lookups for minimal additional overhead.
+    //
+    // Some technical notes on this:
+    //
+    // - At a minimum we want to slide E and adjusted_base_prob, and then mark the edge as defunct,
+    //   so that PUCT will not select it.
+    // - We can easily mutex-protect the writes, by doing this under the parent's mutex. For the
+    //   reads in ActionSelector, we can probably be unsafe. I think a reasonable order would be:
+    //
+    //   edge1->merged_edge_index = edge2_index;
+    //   edge2->adjusted_base_prob += edge1->adjusted_base_prob;
+    //   edge1->adjusted_base_prob = 0;
+    //   edge2->E += edge1->E;
+    //   edge1->E = 0;
+    //
+    //   We just have to reason carefully about the order of the reads in ActionSelector. Choosing
+    //   which edge merges into which edge can also give us more control over possible races, as
+    //   ActionSelector iterates over the edges in a specific order. More careful analysis is
+    //   needed here.
+    //
+    //   Wherever we increment an edge->E, we can check, under the parent-mutex, if
+    //   edge->merged_edge_index >= 0, and if so, increment the E of the merged edge instead, in
+    //   order to make the writes thread-safe.
+    edge->child_index = child_index;
+  }
+
+  std::unique_lock lock(parent->mutex());
+  parent->update_child_expand_count();
+  edge->state = Node::kExpanded;
+
+  context.mid_expansion = false;
+  if (multithreaded()) {
+    lock.unlock();
+    parent->cv().notify_all();
+  }
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
+  if (index == root_info_.node_index) {
+    if (search_params_.full_search) {
+      if (params_.dirichlet_mult) {
+        add_dirichlet_noise(P);
+      }
+      P = P.pow(1.0 / root_softmax_temperature_.value());
+      P /= P.sum();
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+inline void Manager<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
+  int n = P.rows();
+  double alpha = params_.dirichlet_alpha_factor / sqrt(n);
+  LocalPolicyArray noise = dirichlet_gen_.template generate<LocalPolicyArray>(rng_, alpha, n);
+  P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
+  group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
+
+  // Evaluate every child of the root node
+  int n_actions = node->stable_data().num_valid_actions;
+  int expand_count = 0;
+  for (int e = 0; e < n_actions; e++) {
+    Edge* edge = node->get_edge(e);
+    if (edge->child_index >= 0) continue;
+
+    // reorient edge->action into raw-orientation
+    core::action_t raw_edge_action = edge->action;
+    Symmetries::apply(raw_edge_action, inv_canonical_sym, node->action_mode());
+
+    // apply raw-orientation action to raw-orientation child-state
+    Rules::apply(context.raw_history, raw_edge_action);
+
+    const State& raw_child_state = context.raw_history.current();
+
+    // compute active-seat as local-variable, so we don't need an undo later
+    core::action_mode_t child_mode = Rules::get_action_mode(raw_child_state);
+    core::seat_index_t child_active_seat = context.active_seat;
+    if (!Rules::is_chance_mode(child_mode)) {
+      child_active_seat = Rules::get_current_player(raw_child_state);
+    }
+
+    // determine canonical orientation of new leaf-state
+    group::element_t canonical_child_sym =
+        Symmetries::get_canonical_symmetry(raw_child_state);
+    edge->sym = SymmetryGroup::compose(canonical_child_sym, inv_canonical_sym);
+
+    StateHistory& canonical_history = context.root_history_array[canonical_child_sym];
+
+    core::action_t reoriented_action = raw_edge_action;
+    Symmetries::apply(reoriented_action, canonical_child_sym, node->action_mode());
+    Rules::apply(canonical_history, reoriented_action);
+
+    expand_count++;
+    edge->state = Node::kPreExpanded;
+
+    MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
+    node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
+    if (child_index >= 0) {
+      edge->child_index = child_index;
+      canonical_history.undo();
+      context.raw_history.undo();
+      continue;
+    }
+
+    edge->child_index = lookup_table_.alloc_node();
+    Node* child = lookup_table_.get_node(edge->child_index);
+
+    core::seat_index_t parent_active_seat = node->stable_data().active_seat;
+    util::debug_assert(parent_active_seat == context.active_seat);
+
+    ValueTensor game_outcome;
+    if (Rules::is_terminal(raw_child_state, parent_active_seat,
+                                 raw_edge_action, game_outcome)) {
+      new (child) Node(&lookup_table_, canonical_history, game_outcome);
+    } else {
+      new (child) Node(&lookup_table_, canonical_history, child_active_seat);
+    }
+    child->initialize_edges();
+    bool overwrite = false;
+    lookup_table_.insert_node(mcts_key, edge->child_index, overwrite);
+
+    State canonical_child_state = canonical_history.current();
+    canonical_history.undo();
+    context.raw_history.undo();
+
+    if (child->is_terminal()) continue;
+
+    group::element_t sym = group::kIdentity;
+    if (params_.apply_random_symmetries) {
+      sym = bitset_util::choose_random_on_index(Symmetries::get_mask(canonical_child_state));
+    }
+    bool incorporate = params_.incorporate_sym_into_cache_key;
+    context.eval_request.items().emplace_back(child, canonical_history, canonical_child_state, sym,
+                                              incorporate);
+  }
+
+  node->update_child_expand_count(expand_count);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::virtual_backprop(SearchContext& context) {
+  context.profiler.record(SearchThreadRegion::kVirtualBackprop);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace(context) << __func__ << " " << search_path_str(context);
+  }
+
+  util::release_assert(!context.search_path.empty());
+  Node* last_node = context.search_path.back().node;
+
+  last_node->update_stats([&] {
+    last_node->stats().VN++;  // thread-safe because executed under mutex
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E++;
+      node->stats().VN++;  // thread-safe because executed under mutex
+    });
+  }
+  validate_search_path(context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
+  // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
+  // modified in between the two calls.
+  context.profiler.record(SearchThreadRegion::kUndoVirtualBackprop);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace(context) << __func__ << " " << search_path_str(context);
+  }
+
+  util::release_assert(!context.search_path.empty());
+
+  for (int i = context.search_path.size() - 1; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E--;
+      node->stats().VN--;  // thread-safe because executed under mutex
+    });
+  }
+  validate_search_path(context);
+}
+
+template <core::concepts::Game Game>
+inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArray& value) {
+  context.profiler.record(SearchThreadRegion::kPureBackprop);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace(context) << __func__ << " " << search_path_str(context)
+             << " " << value.transpose();
+  }
+
+  util::release_assert(!context.search_path.empty());
+  Node* last_node = context.search_path.back().node;
+
+  last_node->update_stats([&] {
+    auto& stats = last_node->stats();  // thread-safe because executed under mutex
+    stats.init_q(value, true);
+    stats.RN++;
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E++;
+      node->stats().RN++;  // thread-safe because executed under mutex
+    });
+  }
+  validate_search_path(context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual) {
+  context.profiler.record(SearchThreadRegion::kStandardBackprop);
+
+  Node* last_node = context.search_path.back().node;
+  auto value = GameResults::to_value_array(last_node->stable_data().VT);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace(context) << __func__ << " " << search_path_str(context)
+             << ": " << value.transpose();
+  }
+
+  last_node->update_stats([&] {
+    auto& stats = last_node->stats();  // thread-safe because executed under mutex
+    stats.init_q(value, false);
+    stats.RN++;
+    stats.VN -= undo_virtual;
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E += !undo_virtual;
+      auto& stats = node->stats();  // thread-safe because executed under mutex
+      stats.RN++;
+      stats.VN -= undo_virtual;
+    });
+  }
+  validate_search_path(context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::short_circuit_backprop(SearchContext& context) {
+  context.profiler.record(SearchThreadRegion::kShortCircuitBackprop);
+
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace(context) << __func__ << " " << search_path_str(context);
+  }
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->E++;
+      node->stats().RN++;  // thread-safe because executed under mutex
+    });
+  }
+  validate_search_path(context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
+  context.canonical_history = context.raw_history;
+
+  if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
+    using Group = SymmetryGroup;
+    context.canonical_history = root_info_.history_array[context.canonical_sym];
+    group::element_t cur_canonical_sym = root_info_.canonical_sym;
+    group::element_t leaf_canonical_sym = context.canonical_sym;
+    for (const Visitation& visitation : context.search_path) {
+      Edge* edge = visitation.edge;
+      core::action_mode_t mode = visitation.node->action_mode();
+      core::action_t action = edge->action;
+      group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
+      Symmetries::apply(action, sym, mode);
+      Rules::apply(context.canonical_history, action);
+      cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
+    }
+
+    util::release_assert(cur_canonical_sym == leaf_canonical_sym,
+                         "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
+                         leaf_canonical_sym);
+  } else {
+    Symmetries::apply(context.canonical_history, context.canonical_sym);
+  }
+
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    State s = context.canonical_history.current();
+    Symmetries::apply(s, Symmetries::get_canonical_symmetry(s));
+    if (s != context.canonical_history.current()) {
+      std::cout << "ERROR! Bad Canonicalization!" << std::endl;
+      std::cout << "canonical_sym_: " << int(context.canonical_sym) << std::endl;
+      std::cout << "canonical_history.current():" << std::endl;
+      IO::print_state(std::cout, context.canonical_history.current());
+      std::cout << "Should be:" << std::endl;
+      IO::print_state(std::cout, s);
+      util::release_assert(false);
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::print_visit_info(const SearchContext& context) {
+  if (mcts::kEnableSearchDebug) {
+    Node* node = context.visit_node;
+    LOG_INFO << thread_id_whitespace(context) << "visit " << search_path_str(context)
+             << " seat=" << (int)node->stable_data().active_seat;
+  }
+}
+
+template <core::concepts::Game Game>
+std::string Manager<Game>::thread_id_whitespace(const SearchContext& context) const {
+  return util::make_whitespace(kThreadWhitespaceLength * context.id);;
+}
+
+template <core::concepts::Game Game>
+std::string Manager<Game>::break_plus_thread_id_whitespace(const SearchContext& context) const {
+  return std::format("\n{}", util::make_whitespace(
+    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * context.id).c_str());
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::validate_search_path(const SearchContext& context) const {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  int N = context.search_path.size();
+  for (int i = N - 1; i >= 0; --i) {
+    context.search_path[i].node->validate_state();
+  }
+}
+
+template <core::concepts::Game Game>
+int Manager<Game>::get_best_child_index(const SearchContext& context) {
+  Node* node = context.visit_node;
+  context.profiler.record(SearchThreadRegion::kPUCT);
+
+  bool is_root = (node == lookup_table_.get_node(root_info_.node_index));
+  ActionSelector action_selector(params_, search_params_, node, is_root);
+
+  using PVec = LocalPolicyArray;
+
+  const PVec& P = action_selector.P;
+  const PVec& mE = action_selector.mE;
+  PVec& PUCT = action_selector.PUCT;
+
+  int argmax_index;
+
+  if (search_params_.tree_size_limit == 1) {
+    // net-only, use P
+    P.maxCoeff(&argmax_index);
+  } else {
+    bool force_playouts = params_.forced_playouts && is_root &&
+                          search_params_.full_search && params_.dirichlet_mult > 0;
+
+    if (force_playouts) {
+      PVec n_forced = (P * params_.k_forced * mE.sum()).sqrt();
+      auto F1 = (mE < n_forced).template cast<float>();
+      auto F2 = (mE > 0).template cast<float>();
+      auto F = F1 * F2;
+      PUCT = PUCT * (1 - F) + F * 1e+6;
+    }
+
+    PUCT.maxCoeff(&argmax_index);
+  }
+
+  print_action_selection_details(context, action_selector, argmax_index);
+  return argmax_index;
+}
+
+template <core::concepts::Game Game>
+int Manager<Game>::sample_chance_child_index(const SearchContext& context) {
+  Node* node = context.visit_node;
+  int n = node->stable_data().num_valid_actions;
+  float chance_dist[n];
+  for (int i = 0; i < n; i++) {
+    chance_dist[i] = node->get_edge(i)->base_prob;
+  }
+  return util::Random::weighted_sample(chance_dist, chance_dist + n);
+}
+
+template <core::concepts::Game Game>
+std::string Manager<Game>::search_path_str(const SearchContext& context) const {
+  group::element_t cur_sym = SymmetryGroup::inverse(root_info_.canonical_sym);
+  std::string delim = IO::action_delimiter();
+  std::vector<std::string> vec;
+  for (const Visitation& visitation : context.search_path) {
+    if (!visitation.edge) continue;
+    core::action_mode_t mode = visitation.node->action_mode();
+    core::action_t action = visitation.edge->action;
+    Symmetries::apply(action, cur_sym, mode);
+    cur_sym = SymmetryGroup::compose(cur_sym, SymmetryGroup::inverse(visitation.edge->sym));
+    vec.push_back(IO::action_to_str(action, mode));
+  }
+  return std::format("[{}]", boost::algorithm::join(vec, delim));
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::print_action_selection_details(const SearchContext& context,
+                                                   const ActionSelector& selector,
+                                                   int argmax_index) const {
+  Node* node = context.visit_node;
+  if (mcts::kEnableSearchDebug) {
+    std::ostringstream ss;
+    ss << thread_id_whitespace(context);
+
+    core::seat_index_t seat = node->stable_data().active_seat;
+
+    int n_actions = node->stable_data().num_valid_actions;
+
+    ValueArray players;
+    ValueArray nQ = node->stats().Q;
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == seat;
+    }
+
+    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+
+    eigen_util::PrintArrayFormatMap fmt_map1 {
+      {"Seat", [&](float x) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
+    };
+
+    std::stringstream ss1;
+    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+    for (const std::string& line : util::splitlines(ss1.str())) {
+      ss << line << break_plus_thread_id_whitespace(context);
+    }
+
+    const LocalPolicyArray& P = selector.P;
+    const LocalPolicyArray& Q = selector.Q;
+    const LocalPolicyArray& FPU = selector.FPU;
+    const LocalPolicyArray& PW = selector.PW;
+    const LocalPolicyArray& PL = selector.PL;
+    const LocalPolicyArray& E = selector.E;
+    const LocalPolicyArray& mE = selector.mE;
+    const LocalPolicyArray& RN = selector.RN;
+    const LocalPolicyArray& VN = selector.VN;
+    const LocalPolicyArray& PUCT = selector.PUCT;
+
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray child_addr(n_actions);
+    LocalPolicyArray argmax(n_actions);
+    child_addr.setConstant(-1);
+    argmax.setZero();
+    argmax(argmax_index) = 1;
+
+    group::element_t inv_sym = SymmetryGroup::inverse(context.canonical_sym);
+    for (int e = 0; e < n_actions; ++e) {
+      auto edge = node->get_edge(e);
+      core::action_t action = edge->action;
+      Symmetries::apply(action, inv_sym, node->action_mode());
+      actions(e) = action;
+      child_addr(e) = edge->child_index;
+    }
+
+    static std::vector<std::string> action_columns = {
+        "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+        actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+
+    eigen_util::PrintArrayFormatMap fmt_map2 {
+      {"action", [&](float x) { return IO::action_to_str(x, node->action_mode()); }},
+      {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
+      {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+    };
+
+    std::stringstream ss2;
+    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+
+    for (const std::string& line : util::splitlines(ss2.str())) {
+      ss << line << break_plus_thread_id_whitespace(context);
+    }
+
+    LOG_INFO << ss.str();
+  }
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::prepare_results() {
+  lookup_table_.defragment(root_info_.node_index);
+  Node* root = lookup_table_.get_node(root_info_.node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();  // thread-safe since single-threaded here
 
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
+  group::element_t sym = root_info_.canonical_sym;
+  group::element_t inv_sym = SymmetryGroup::inverse(sym);
 
   results_.valid_actions.reset();
   results_.policy_prior.setZero();
@@ -162,7 +1229,7 @@ Manager<Game>::search(const SearchParams& params) {
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
-    Game::Symmetries::apply(action, inv_sym, mode);
+    Symmetries::apply(action, inv_sym, mode);
     results_.valid_actions.set(action, true);
     actions[i] = action;
 
@@ -177,99 +1244,27 @@ Manager<Game>::search(const SearchParams& params) {
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.active_seat];
   results_.trivial = root->trivial();
-  if (params_.forced_playouts && add_noise) {
-    prune_policy_target(params, inv_sym);
+  if (params_.forced_playouts && root_info_.add_noise) {
+    prune_policy_target(search_params_, inv_sym);
   }
 
-  Game::Symmetries::apply(results_.counts, inv_sym, mode);
-  Game::Symmetries::apply(results_.policy_target, inv_sym, mode);
-  Game::Symmetries::apply(results_.Q, inv_sym, mode);
-  Game::Symmetries::apply(results_.Q_sq, inv_sym, mode);
-  Game::Symmetries::apply(results_.action_values, inv_sym, mode);
+  Symmetries::apply(results_.counts, inv_sym, mode);
+  Symmetries::apply(results_.policy_target, inv_sym, mode);
+  Symmetries::apply(results_.Q, inv_sym, mode);
+  Symmetries::apply(results_.Q_sq, inv_sym, mode);
+  Symmetries::apply(results_.action_values, inv_sym, mode);
 
   results_.win_rates = stats.Q;
   results_.value_prior = stable_data.VT;
   results_.action_mode = mode;
-
-  return &results_;
-}
-
-/*
- * Here, we do a skimmed-down version of Manager::search()
- */
-template <core::concepts::Game Game>
-inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
-  action_values.setZero();
-  stop_search_threads();  // stop pondering
-
-  shared_data_.init_root_info(false);
-  auto& root_info = shared_data_.root_info;
-
-  // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
-  // which will expand all the root's children.
-  constexpr int tree_size_limit = 0;
-  constexpr bool full_search = true;
-  constexpr bool ponder = false;
-  SearchParams params{tree_size_limit, full_search, ponder};
-
-  start_search_threads(params);
-  wait_for_search_threads();
-
-  Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
-  const auto& stable_data = root->stable_data();
-
-  core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-
-  util::release_assert(Game::Rules::is_chance_mode(mode));
-
-  int i = 0;
-  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
-    auto* edge = root->get_edge(i);
-    core::action_t transformed_action = action;
-    Game::Symmetries::apply(transformed_action, sym, mode);
-    node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
-    if (child_node_index < 0) {
-      action_values(action) = edge->child_V_estimate;
-    } else {
-      Node* child = shared_data_.lookup_table.get_node(child_node_index);
-      action_values(action) = child->stable_data().VT(stable_data.active_seat);
-    }
-    i++;
-  }
-
-  if (params_.enable_pondering) {
-    start_search_threads(pondering_search_params_);  // resume pondering
-  }
 }
 
 template <core::concepts::Game Game>
-inline void Manager<Game>::start_search_threads(const SearchParams& search_params) {
-  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
-
-  shared_data_.search_params = search_params;
-  shared_data_.active_search_threads.set();
-  shared_data_.cv_search_on.notify_all();
-}
-
-template <core::concepts::Game Game>
-inline void Manager<Game>::wait_for_search_threads() {
-  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
-  shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
-}
-
-template <core::concepts::Game Game>
-inline void Manager<Game>::stop_search_threads() {
-  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
-  shared_data_.search_params.tree_size_limit = 0;
-  shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
-}
-
-template <core::concepts::Game Game>
-inline void Manager<Game>::announce_shutdown() {
-  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
-  shared_data_.shutting_down = true;
-  shared_data_.cv_search_on.notify_all();
+void Manager<Game>::announce_shutdown() {
+  throw std::runtime_error("announce_shutdown not implemented");
+  // std::unique_lock<std::mutex> lock(search_mutex_);
+  // shared_data_.shutting_down = true;
+  // shared_data_.cv_search_on.notify_all();
 }
 
 template <core::concepts::Game Game>
@@ -292,11 +1287,9 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
 template <core::concepts::Game Game>
 void Manager<Game>::prune_policy_target(const SearchParams& search_params,
                                         group::element_t inv_sym) {
-  using ActionSelector = mcts::ActionSelector<Game>;
-
   if (params_.no_model) return;
 
-  Node* root = shared_data_.get_root_node();
+  Node* root = lookup_table_.get_node(root_info_.node_index);
   ActionSelector action_selector(params_, search_params, root, true);
 
   const auto& P = action_selector.P;
@@ -348,7 +1341,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
     for (int i = 0; i < n_actions; ++i) {
       core::action_t raw_action = root->get_edge(i)->action;
       core::action_t action = raw_action;
-      Game::Symmetries::apply(action, inv_sym, mode);
+      Symmetries::apply(action, inv_sym, mode);
       actions(i) = action;
       pruned(i) = results_.policy_target(raw_action);
     }
@@ -361,7 +1354,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
         eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
     eigen_util::PrintArrayFormatMap fmt_map {
-      {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+      {"action", [&](float x) { return IO::action_to_str(x, mode); }},
     };
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
@@ -385,13 +1378,6 @@ void Manager<Game>::init_profiling_dir(const std::string& profiling_dir) {
     bf::remove_all(path);
   }
   bf::create_directories(path);
-}
-
-template <core::concepts::Game Game>
-void Manager<Game>::set_post_visit_func(std::function<void()> func) {
-  for (SearchThread* thread : search_threads_) {
-    thread->set_post_visit_func(func);
-  }
 }
 
 }  // namespace mcts

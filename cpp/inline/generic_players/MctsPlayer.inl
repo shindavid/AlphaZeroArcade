@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <core/Constants.hpp>
 #include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
@@ -93,10 +94,6 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared
                         params.move_temperature_half_life),
       shared_data_(shared_data),
       owns_shared_data_(owns_shared_data) {
-  if (owns_shared_data_) {
-    shared_data->manager.start_threads();
-  }
-
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
@@ -113,7 +110,7 @@ inline MctsPlayer<Game>::~MctsPlayer() {
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::start_game() {
-  mid_yield_ = false;
+  clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
     get_manager()->start();
@@ -123,7 +120,7 @@ inline void MctsPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
                                                    core::action_t action) {
-  util::release_assert(!mid_yield_);
+  clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
     get_manager()->receive_state_change(seat, state, action);
@@ -142,26 +139,30 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 template <core::concepts::Game Game>
 typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  if (!mid_yield_) {
-    search_mode_ = choose_search_mode(request);
-  }
-  const SearchResults* mcts_results = mcts_search();
+  std::unique_lock lock(search_mode_mutex_);
+  init_search_mode(request);
+  lock.unlock();
+
+  const SearchResults* mcts_results = get_manager()->search();
   if (!mcts_results) {
-    mid_yield_ = true;
     return ActionResponse::make_yield();
   }
   return get_action_response_helper(mcts_results, request.valid_actions);
 }
 
 template <core::concepts::Game Game>
-inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search() const {
-  MctsSearchParams search_params = search_params_[search_mode_];
-  return get_manager()->search(search_params);
+void MctsPlayer<Game>::clear_search_mode() {
+  std::unique_lock lock(search_mode_mutex_);
+  search_mode_ = core::kNumSearchModes;
 }
 
 template <core::concepts::Game Game>
-inline core::SearchMode MctsPlayer<Game>::choose_search_mode(const ActionRequest& request) const {
-  return request.play_noisily ? core::kRawPolicy : get_random_search_mode();
+bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
+  if (search_mode_ != core::kNumSearchModes) return false;
+
+  search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
+  get_manager()->set_search_params(search_params_[search_mode_]);
+  return true;
 }
 
 template <core::concepts::Game Game>

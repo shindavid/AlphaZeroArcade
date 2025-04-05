@@ -50,10 +50,31 @@ typename NNEvaluationRequest<Game>::cache_key_t NNEvaluationRequest<Game>::Item:
 }
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::NNEvaluationRequest(item_vec_t& items,
-                                               search_thread_profiler_t* thread_profiler,
-                                               int thread_id)
-    : items_(items), thread_profiler_(thread_profiler), thread_id_(thread_id) {}
+void NNEvaluationRequest<Game>::init(search_thread_profiler_t* thread_profiler, int thread_id) {
+  items_.clear();
+  thread_profiler_ = thread_profiler;
+  thread_id_ = thread_id;
+  pending_eval_ = false;
+}
+
+// template <core::concepts::Game Game>
+// void NNEvaluationRequest<Game>::mark_as_pending_eval() {
+//   pending_eval_ = true;
+// }
+
+// template <core::concepts::Game Game>
+// void NNEvaluationRequest<Game>::notify() {
+//   std::unique_lock lock(*mutex_);
+//   pending_eval_ = false;
+//   cv_->notify_all();
+// }
+
+// template <core::concepts::Game Game>
+// void NNEvaluationRequest<Game>::wait_for_eval() {
+//   if (!pending_eval_) return;
+//   std::unique_lock lock(*mutex_);
+//   cv_->wait(lock, [&] { return !pending_eval_; });
+// }
 
 template <core::concepts::Game Game>
 std::string NNEvaluationRequest<Game>::thread_id_whitespace() const {

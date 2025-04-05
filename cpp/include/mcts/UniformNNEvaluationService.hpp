@@ -5,7 +5,7 @@
 #include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 
-namespace mcts{
+namespace mcts {
 
 /*
  * UniformNNEvaluationService
@@ -24,7 +24,11 @@ class UniformNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
 
-  void evaluate(const NNEvaluationRequest&) override;
+  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
+  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
+
+ private:
+  core::nn_evaluation_sequence_id_t sequence_id_ = 1;
 };
 
 }  // namespace mcts

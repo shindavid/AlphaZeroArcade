@@ -11,7 +11,6 @@
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
@@ -79,7 +78,6 @@ class NNEvaluationService
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
-  using SharedData = mcts::SharedData<Game>;
 
   using ActionMask = Game::Types::ActionMask;
 
@@ -124,22 +122,8 @@ class NNEvaluationService
 
   void disconnect() override;
 
-  /*
-   * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the
-   * service thread.
-   *
-   * Note that historically, parallel MCTS did evaluations asynchronously. AlphaGo Zero was the
-   * first version that switched to blocking evaluations.
-   *
-   * "Compared to the MCTS in AlphaGo Fan and AlphaGo Lee, the principal differences are...each
-   * search thread simply waits for the neural network evaluation, rather than performing evaluation
-   * and backup asynchronously"
-   *
-   * - Mastering the Game of Go without Human Knowledge (page 27)
-   *
-   * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-   */
-  void evaluate(const NNEvaluationRequest&) override;
+  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
+  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
 
   void end_session() override;
 
@@ -161,7 +145,7 @@ class NNEvaluationService
   void batch_evaluate();
   void loop();
 
-  void check_cache(const NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
+  void check_cache(NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
 
   void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
   IndexReservation make_reservation(const NNEvaluationRequest&, int count,
@@ -261,6 +245,7 @@ class NNEvaluationService
   bool session_ended_ = false;
   int num_connections_ = 0;
 
+  core::nn_evaluation_sequence_id_t sequence_id_ = 1;
   bool initial_weights_loaded_ = false;
   bool ready_ = false;
   bool skip_next_pause_receipt_ = false;

@@ -1,5 +1,6 @@
 #include <mcts/NNEvaluationService.hpp>
 
+#include <core/BasicTypes.hpp>
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
 
@@ -7,6 +8,7 @@
 
 #include <span>
 #include <spanstream>
+#include "mcts/NNEvaluationServiceBase.hpp"
 
 namespace mcts {
 
@@ -156,11 +158,16 @@ inline NNEvaluationService<Game>::~NNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
+NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
+  if (request.items().empty()) {
+    return NNEvaluationResponse(0, core::kContinue);
+  }
+
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__, request.items().size());
   }
 
+  // TODO: yield when appropriate
   int eval_count = 0;
   while (true) {
     int my_claim_count = 0;
@@ -207,6 +214,16 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
   std::unique_lock<std::mutex> perf_stats_lock(perf_stats_mutex_);
   perf_stats_.cache_misses += eval_count;
   perf_stats_.cache_hits += request.items().size() - eval_count;
+
+  throw std::exception();  // TODO
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) {
+  if (sequence_id_ > seq) return;
+
+  // TODO: do a cv wait here
+  throw std::runtime_error("Not implemented");
 }
 
 template <core::concepts::Game Game>
@@ -333,7 +350,7 @@ void NNEvaluationService<Game>::loop() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, int& my_claim_count,
+void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request, int& my_claim_count,
                                             int& other_claim_count) {
   request.thread_profiler()->record(SearchThreadRegion::kCheckingCache);
 
