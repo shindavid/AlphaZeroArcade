@@ -452,12 +452,11 @@ class LoopController:
     def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
         logger.info('Handling file request from %s: %s', conn, files)
         for f in files:
-            file = FileToTransfer(**f)
             conn.socket.send_json({
                 'type': 'file-transfer',
-                'file': file.to_dict(),
+                'file': f,
             })
-            conn.socket.send_file(file.source_path)
+            conn.socket.send_file(f['source_path'])
 
     def set_priority(self, dict_len: int, rating_in_progress: bool):
         latest_gen = self.latest_gen()
