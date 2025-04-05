@@ -215,11 +215,10 @@ class EvalManager:
         else:
             test_iagent = self._evaluator.indexed_agents[ix]
 
-        logger.info('***Evaluating gen %s', test_iagent.agent.gen)
         estimated_rating = conn.aux.estimated_rating
         if estimated_rating is None:
             estimated_rating = self._estimate_rating(test_iagent)
-            logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
+            logger.debug('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
             conn.aux.estimated_rating = estimated_rating
 
         n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \

@@ -282,7 +282,7 @@ class SessionData:
                 # Verify the hash matches if the file exists
                 current_hash = py_util.sha256sum(asset_path)
                 if current_hash != binary.hash:
-                    logger.warning(f'Hash mismatch for binary {binary.source_path}: '
+                    logger.debug(f'Hash mismatch for binary {binary.source_path}: '
                                    f'expected {binary.hash}, found {current_hash}')
                     missing_binaries.append(binary)
                 else:
@@ -332,9 +332,24 @@ class SessionData:
         model_file = FileToTransfer(**required_model)
         if not model_file.scratch_path:
             return False
-        model_path = os.path.join(self.run_dir, model_file.scratch_path)
-        logger.debug( 'Checking if model is missing: %s', model_path)
-        return not os.path.exists(model_path)
+
+        asset_path = os.path.join(ASSETS_DIR, model_file.scratch_path)
+        if not os.path.exists(asset_path):
+            return True
+        else:
+            current_hash = py_util.sha256sum(asset_path)
+            if current_hash != model_file.hash:
+                logger.debug(f'Hash mismatch for model {model_file.source_path}: '
+                             f'expected {model_file.hash}, found {current_hash}')
+                return True
+            else:
+                dst_path = os.path.join(self.run_dir, model_file.scratch_path)
+                dst_dir = os.path.dirname(dst_path)
+                os.makedirs(dst_dir, exist_ok=True)
+                ln_cmd = f'ln -sf {asset_path} {dst_path}'
+                subprocess.run(ln_cmd, shell=True, check=True)
+
+        return False
 
     def send_model_request(self, required_model: JsonDict):
         if not required_model:
@@ -352,13 +367,19 @@ class SessionData:
             self. _file_ready_cv.wait_for(lambda: not self.is_model_missing(required_model))
 
     def receive_model_file(self, model_dict: JsonDict):
-        py_util.atomic_makedirs(self.run_dir)
+        py_util.atomic_makedirs(ASSETS_DIR)
         model_file = FileToTransfer(**model_dict)
-        model_path = os.path.join(self.run_dir, model_file.scratch_path)
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        self.socket.recv_file(model_path, atomic=True)
+        asset_path = os.path.join(ASSETS_DIR, model_file.scratch_path)
+        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
+        self.socket.recv_file(asset_path, atomic=True)
+        logger.info('Received model file: %s', asset_path)
 
-        logger.info('Received model file: %s', model_path)
+        # create soft link in the run directory
+        dst_path = os.path.join(self.run_dir, model_file.scratch_path)
+        dst_dir = os.path.dirname(dst_path)
+        os.makedirs(dst_dir, exist_ok=True)
+        ln_cmd = f'ln -sf {asset_path} {dst_path}'
+        subprocess.run(ln_cmd, shell=True, check=True)
 
         with self._file_ready_cv:
             self._file_ready_cv.notify_all()
