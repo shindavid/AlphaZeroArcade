@@ -243,12 +243,14 @@ class EvalManager:
         )
         files_required = [eval_binary, benchmark_binary]
 
-        eval_model = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller._organizer.get_model_filename(test_iagent.agent.gen),
-            scratch_path=f'eval-models/{test_iagent.agent.tag}/gen-{test_iagent.agent.gen}.pt',
-            asset_path_mode='scratch'
-        )
-        files_required.append(eval_model)
+        eval_model = None
+        if test_iagent.agent.gen > 0:
+            eval_model = FileToTransfer.from_src_scratch_path(
+                source_path=self._controller._organizer.get_model_filename(test_iagent.agent.gen),
+                scratch_path=f'eval-models/{test_iagent.agent.tag}/gen-{test_iagent.agent.gen}.pt',
+                asset_path_mode='scratch'
+            )
+            files_required.append(eval_model)
 
         benchmark_model = None
         if next_opponent_agent.gen > 0:
@@ -267,7 +269,7 @@ class EvalManager:
                 'set_temp_zero': True,
                 'tag': self._controller._organizer.tag,
                 'binary': eval_binary.scratch_path,
-                'model': eval_model.scratch_path
+                'model': eval_model.scratch_path if eval_model else None
             },
             'agent2': {
                 'gen': next_opponent_agent.gen,

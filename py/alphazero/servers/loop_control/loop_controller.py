@@ -413,10 +413,9 @@ class LoopController:
             organizer = self._persistent_organizer
         else:
             organizer = self._organizer
-        persistent_run_dir = organizer.base_dir
 
         binary_path = self.build_params.get_binary_path(self._run_params.game)
-        target_file = os.path.join(persistent_run_dir, binary_path)
+        target_file = organizer.binary_filename
         if os.path.exists(target_file):
             hash = sha256sum(target_file)
             if hash == sha256sum(binary_path):

@@ -66,9 +66,6 @@ class BuildParams:
             group.add_argument(
                 '--override-binary', action='store_true',
                 help='override the binary file in output/{game}/{tag}/target/{Debug, Release}')
-            group.add_argument(
-                '--metadata-num-entries', type=int, default=defaults.metadata_num_entries,
-                help='number of metadata entries to use (default: %(default)s)')
         else:
             group.add_argument(
                 '--binary-path',
