@@ -4,25 +4,24 @@ from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
-from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.session_data import SessionData, ASSETS_DIR
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from util.logging_util import LoggingParams, get_logger
+from alphazero.servers.gaming.session_data import SessionData
+from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util import subprocess_util
 from util.str_util import make_args_str
 
 from dataclasses import dataclass, fields
+import logging
 import subprocess
 import threading
 import os
 from typing import Optional, List, Dict
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 @dataclass

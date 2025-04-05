@@ -2,17 +2,13 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
-
 from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus,\
     FileToTransfer
 from alphazero.logic.ratings import WinLossDrawCounts
-from util.logging_util import get_logger
 from util.py_util import find_largest_gap, sha256sum
 from util.socket_util import JsonDict, SocketSendException
-from util import ssh_util
 
 from dataclasses import dataclass, field
-from enum import Enum
 import logging
 import threading
 from typing import Optional, TYPE_CHECKING, List

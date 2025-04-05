@@ -21,7 +21,6 @@ from alphazero.logic.signaling import register_standard_server_signals
 from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.logging_util import get_logger
 from util.py_util import sha256sum, atomic_cp
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json

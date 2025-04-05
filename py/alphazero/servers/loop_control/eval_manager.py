@@ -10,12 +10,12 @@ from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.match_runner import MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketSendException
-from util.py_util import sha256sum, atomic_cp
+from util.py_util import sha256sum
 
 import numpy as np
 import threading
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, TYPE_CHECKING
 from enum import Enum
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from .loop_controller import LoopController
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class MatchRequestStatus(Enum):
@@ -210,7 +210,7 @@ class EvalManager:
 
         need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
-            logger.info('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
+            logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
             opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
                 if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
@@ -242,8 +242,6 @@ class EvalManager:
 
         benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag),
                                                  base_dir_root='/workspace')
-        logger.debug(f"Benchmark model: {benchmark_organizer.get_model_filename(next_opponent_agent.gen)}")
-
         benchmark_model = FileToTransfer()
         if next_opponent_agent.gen > 0:
             benchmark_model.source_path = benchmark_organizer.get_model_filename(next_opponent_agent.gen)
@@ -308,19 +306,19 @@ class EvalManager:
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
             if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                 match_status.status = MatchRequestStatus.OBSOLETE
-                logger.info('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
+                logger.debug('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
 
         for ix, n_games in zip(chosen_ixs, num_matches):
             if ix not in self._eval_status_dict[test_ix].ix_match_status:
                 new_opponent_gen = self._evaluator.indexed_agents[ix].agent.gen
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
                     MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
-                logger.info('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                logger.debug('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
             else:
                 self._eval_status_dict[test_ix].ix_match_status[ix].n_games = n_games
                 if self._eval_status_dict[test_ix].ix_match_status[ix].status == MatchRequestStatus.OBSOLETE:
                     self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
-                logger.info('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                logger.debug('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
 
     def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
         W_matrix = self._evaluator._arena._W_matrix
@@ -395,15 +393,15 @@ class EvalManager:
         ix1 = msg['ix1']
         ix2 = msg['ix2']
         counts = WinLossDrawCounts.from_json(msg['record'])
-        logger.info('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
+        logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
         with self._evaluator._db.db_lock:
             self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator._db)
         self._evaluator.refresh_ratings()
         new_rating = self._evaluator.arena_ratings[ix1]
         old_rating = conn.aux.estimated_rating
-        logger.info('Old rating: %s, New rating: %s', old_rating, new_rating)
+        logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
-            logger.info('Rating change too large, requesting new opponents...')
+            logger.debug('Rating change too large, requesting new opponents...')
             conn.aux.needs_new_opponents = True
             conn.aux.estimated_rating = new_rating
 
@@ -426,7 +424,7 @@ class EvalManager:
                 self._evaluator._db.commit_ratings(test_iagents, interpolated_ratings)
             conn.aux.estimated_rating = None
             conn.aux.ix = None
-            logger.info('///Finished evaluating gen %s, rating: %s',
+            logger.debug('///Finished evaluating gen %s, rating: %s',
                         self._evaluator.indexed_agents[ix1].agent.gen,
                         interpolated_ratings[np.where(test_ixs == ix1)[0]])
 

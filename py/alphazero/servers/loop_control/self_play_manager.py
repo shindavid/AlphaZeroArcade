@@ -4,10 +4,8 @@ from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.custom_types import ClientConnection, FileToTransfer
 from alphazero.servers.loop_control.gpu_contention_table import Domain
-from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.socket_util import JsonDict, SocketSendException
-from util import ssh_util
 
 from collections import defaultdict
 from dataclasses import dataclass, field
