@@ -122,7 +122,6 @@ class DirectoryOrganizer:
         self.binary_filename = os.path.join(self.base_dir, 'target/Release/bin', game)
 
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
-        self.binary_info_filename = os.path.join(self.misc_dir, 'binary_info.json')
 
         self.fork_info_filename = os.path.join(self.misc_dir, 'fork-info.json')
         self._fork_info = None
