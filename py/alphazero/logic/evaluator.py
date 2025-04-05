@@ -84,7 +84,7 @@ class Evaluator:
             opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
             chosen_ixs, num_matches = self.gen_matches(estimated_rating, opponent_ix_played, n_games)
             sorted_ixs = np.argsort(num_matches)[::-1]
-            logger.info('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
+            logger.debug('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
             for i in range(len(chosen_ixs)):
                 ix = chosen_ixs[sorted_ixs[i]]
                 n = num_matches[sorted_ixs[i]]
@@ -103,7 +103,7 @@ class Evaluator:
         _, interpolated_ratings = self.interpolate_ratings()
         test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
         self._db.commit_ratings(test_iagents, interpolated_ratings)
-        logger.info('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
+        logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
 
     def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int):

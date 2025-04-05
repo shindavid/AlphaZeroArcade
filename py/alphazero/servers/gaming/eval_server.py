@@ -147,7 +147,7 @@ class EvalServer:
         return False
 
     def _handle_match_request(self, msg: JsonDict):
-        logger.info('Received match request between gen %s and gen %s', msg['agent1']['gen'], msg['agent2']['gen'])
+        logger.debug('Received match request between gen %s and gen %s', msg['agent1']['gen'], msg['agent2']['gen'])
         thread = threading.Thread(target=self._run_match, args=(msg,), daemon=True,
                                   name='run-match')
         thread.start()
@@ -191,7 +191,7 @@ class EvalServer:
         }
         result = self._eval_match(match, self._session_data.game, args)
 
-        logger.info('Played match between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
+        logger.info('Match result between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
         self._running = False
 
@@ -257,5 +257,4 @@ class EvalServer:
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
-        logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
         return record.get(0)

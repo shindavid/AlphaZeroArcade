@@ -419,7 +419,7 @@ class LoopController:
         if os.path.exists(target_file):
             hash = sha256sum(target_file)
             if hash == sha256sum(binary_path):
-                logger.info('Binary file already exists, skipping copy')
+                logger.debug('Binary file already exists, skipping copy')
                 return
             elif not self.build_params.override_binary:
                 message = f"""Hash mismatch for binary file {binary_path}.
@@ -428,7 +428,7 @@ class LoopController:
             else:
                 message = f"""Hash mismatch for binary file {binary_path}.
                 Overriding binary file with the one in {binary_path}"""
-                logger.warning(message)
+                logger.debug(message)
         else:
             logger.info('Copying binary file to persistent run dir...')
 

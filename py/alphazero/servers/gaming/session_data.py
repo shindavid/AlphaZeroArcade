@@ -192,7 +192,7 @@ class SessionData:
             'files': files,
         }
         self.socket.send_json(data)
-        logger.info('Sent file-request for %d files: %s', len(files), files)
+        logger.debug('Sent file-request for %d files: %s', len(files), files)
 
     def receive_file(self, file_to_receive: JsonDict):
         py_util.atomic_makedirs(ASSETS_DIR)

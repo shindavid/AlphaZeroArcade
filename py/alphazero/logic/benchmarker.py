@@ -91,13 +91,13 @@ class Benchmarker:
         incomplete_gen = self.incomplete_gen()
         if incomplete_gen is not None:
             next_gen = incomplete_gen
-            logger.info('Finishing incomplete gen: %d', next_gen)
+            logger.debug('Finishing incomplete gen: %d', next_gen)
         else:
             gap = self.get_biggest_mcts_ratings_gap()
             if gap is None or gap.elo_diff < target_elo_gap:
                 return None
             next_gen = (gap.left_gen + gap.right_gen) // 2
-            logger.info('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
+            logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
         self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)

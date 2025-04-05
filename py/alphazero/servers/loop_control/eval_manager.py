@@ -141,7 +141,7 @@ class EvalManager:
         self._set_priority()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
-        logger.info('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
+        logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
         ix = conn.aux.ix
         if ix is not None:
             with self._lock:
@@ -361,7 +361,7 @@ class EvalManager:
                 if conn.aux.ix is None:
                     self._wait_until_work_exists()
 
-                logger.info(f"Managing eval-server, priority: {table}")
+                logger.debug(f"Managing eval-server, priority: {table}")
                 table.activate(domain)
                 if not table.acquire_lock(domain):
                     break
