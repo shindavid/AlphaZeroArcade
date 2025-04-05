@@ -1,5 +1,5 @@
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -12,9 +12,10 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
+import os
 import subprocess
 import threading
-from typing import Optional
+from typing import Optional, List
 
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,8 @@ class RatingsServer:
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
+        elif msg_type == 'binary-file':
+            self._session_data.receive_binary_file(msg['binary'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -160,6 +163,13 @@ class RatingsServer:
         assert not self._running
         self._running = True
 
+        required_binaries = msg['binaries']
+        missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
+        if missing_binaries:
+            logger.debug('Missing required binaries: %s', missing_binaries)
+            self._session_data.send_binary_request(missing_binaries)
+            self._session_data.wait_for_binaries(required_binaries)
+
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
@@ -167,7 +177,7 @@ class RatingsServer:
         ps1 = self._get_mcts_player_str(mcts_gen)
         ps2 = self._get_reference_player_str(ref_strength)
 
-        binary = self._session_data.binary_path
+        binary = os.path.join(self._session_data.run_dir, msg['binary_path'])
         log_filename = self._session_data.get_log_filename('ratings-worker')
         append_mode = not self._session_data.start_log_sync(log_filename)
 

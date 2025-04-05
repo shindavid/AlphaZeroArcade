@@ -14,7 +14,7 @@ from .training_manager import TrainingManager
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
-    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction, ServerStatus
+    Generation, GpuId, MsgHandler, EvalTag, RatingTag, ShutdownAction, FileToTransfer
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -466,6 +466,20 @@ class LoopController:
             'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
         }
         conn.socket.send_json(reply)
+
+    def handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
+        """
+        Handle binary request from the eval-server. This function sends the requested binaries
+        to the eval-server.
+        """
+        logger.info('Handling binary request from %s: %s', conn, binaries)
+        for binary in binaries:
+            binary_file = FileToTransfer(**binary)
+            conn.socket.send_json({
+                'type': 'binary-file',
+                'binary': binary_file.to_dict(),
+            })
+            conn.socket.send_file(binary_file.source_path)
 
     def _main_loop(self):
         try:

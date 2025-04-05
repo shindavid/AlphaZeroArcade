@@ -171,7 +171,6 @@ class EvalServer:
         self._running = True
 
         required_binaries = msg['binaries']
-
         missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
         if missing_binaries:
             logger.warning('Missing required binaries: %s', missing_binaries)

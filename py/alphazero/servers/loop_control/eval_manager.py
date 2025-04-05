@@ -93,11 +93,6 @@ class EvalManager:
     def add_server(self, conn: ClientConnection):
         conn.aux = EvalManager.ServerAux()
         self._controller.send_handshake_ack(conn)
-        assets_request = conn.socket.recv_json()
-        assert assets_request['type'] == 'assets-request'
-
-        for asset in assets_request['assets']:
-            conn.socket.send_file(asset)
 
         self._start()
         logger.info('Starting eval-recv-loop for %s...', conn)
@@ -561,18 +556,7 @@ class EvalManager:
         self._controller.broadcast_weights(conn, gen)
 
     def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        """
-        Handle binary request from the eval-server. This function sends the requested binaries
-        to the eval-server.
-        """
-        logger.info('Handling binary request from %s: %s', conn, binaries)
-        for binary in binaries:
-            binary_file = FileToTransfer(**binary)
-            conn.socket.send_json({
-                'type': 'binary-file',
-                'binary': binary_file.to_dict(),
-            })
-            conn.socket.send_file(binary_file.source_path)
+        self._controller.handle_binary_request(conn, binaries)
 
     def _handle_model_request(self, conn: ClientConnection, model: JsonDict):
         model_file = FileToTransfer(**model)

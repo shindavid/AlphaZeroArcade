@@ -3,9 +3,11 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag, ServerStatus,\
+    FileToTransfer
 from alphazero.logic.ratings import WinLossDrawCounts
-from util.py_util import find_largest_gap
+from util.logging_util import get_logger
+from util.py_util import find_largest_gap, sha256sum
 from util.socket_util import JsonDict, SocketSendException
 from util import ssh_util
 
@@ -13,7 +15,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import threading
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -59,23 +61,7 @@ class RatingsManager:
 
     def add_server(self, conn: ClientConnection):
         conn.aux = RatingsManager.ServerAux()
-
-        ssh_pub_key = ssh_util.get_pub_key()
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-            'game': self._controller.game_spec.name,
-            'tag': self._controller.run_params.tag,
-            'ssh_pub_key': ssh_pub_key,
-            'on_ephemeral_local_disk_env': self._controller.on_ephemeral_local_disk_env,
-            'asset-requirements': self._controller.get_asset_requirements(),
-        }
-        conn.socket.send_json(reply)
-
-        assets_request = conn.socket.recv_json()
-        assert assets_request['type'] == 'assets-request'
-        for asset in assets_request['assets']:
-            conn.socket.send_file(asset)
+        self._controller.send_handshake_ack(conn)
 
         self._start()
         logger.info('Starting ratings-recv-loop for %s...', conn)
@@ -225,11 +211,25 @@ class RatingsManager:
         strength = rating_data.get_next_strength_to_test()
         assert strength is not None
 
+        game = self._controller._run_params.game
+        eval_binary = FileToTransfer(
+            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
+            scratch_path=f'target/bin/{game}',
+            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
+        )
+        binaries = [eval_binary]
+
+        for dep in self._controller.game_spec.extra_runtime_deps:
+            dep_binary = FileToTransfer(source_path=dep, scratch_path=dep, hash=sha256sum(dep))
+            binaries.append(dep_binary)
+
         data = {
             'type': 'match-request',
             'mcts_gen': rating_data.mcts_gen,
             'ref_strength': strength,
             'n_games': N_GAMES,
+            'binaries': [b.to_dict() for b in binaries],
+            'binary_path': eval_binary.scratch_path,
         }
         conn.socket.send_json(data)
 
@@ -277,6 +277,8 @@ class RatingsManager:
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
+        elif msg_type == 'binary-request':
+            self._handle_binary_request(conn, msg['binaries'])
         else:
             logger.warning('ratings-server: unknown message type: %s', msg)
         return False
@@ -519,3 +521,6 @@ class RatingsManager:
         logger.debug('Rating gen %s (biggest-gap:[%s, %s], latest=%s)...',
                      mid, left, right, latest_gen)
         return mid
+
+    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
+        self._controller.handle_binary_request(conn, binaries)

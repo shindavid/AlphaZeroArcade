@@ -124,9 +124,6 @@ class SessionData:
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)
 
-        asset_requirements = data['asset-requirements']
-        self._setup_run_directory(asset_requirements)
-
         log_filename = self.get_log_filename(role.value)
         configure_logger(params=self._logging_params, filename=log_filename, mode='w')
         self.start_log_sync(log_filename)
