@@ -150,6 +150,10 @@ class GpuContentionTable:
             if top_domain == Domain.SELF_PLAY:
                 self._acquire_lock(top_domain)
 
+    def pre_acquire_lock(self, domain: Domain):
+        with self._lock:
+            return self._pre_acquire_lock(domain)
+
     def acquire_lock(self, domain: Domain) -> bool:
         """
         This method performs a series of carefully orchestrated steps:
@@ -165,7 +169,7 @@ class GpuContentionTable:
         for handling this case appropriately.
 
         In order for this to work, other domains, upon receiving the notification in step 1, are
-        responsible for releasing the lock if they are no longer have priority. This can be
+        responsible for releasing the lock if they no longer have priority. This can be
         accomplished by calling wait_for_lock_expiry() and then release_lock().
 
         The wait in step 2 will end due to one of these scenarios:
@@ -195,6 +199,7 @@ class GpuContentionTable:
         This does not actually release the lock. The caller is responsible for calling
         release_lock() to actually release the lock.
         """
+        logger.debug('..................Waiting for lock expiry for %s: %s', domain, self)
         with self._lock:
             return self._wait_for_lock_expiry(domain)
 
@@ -230,13 +235,16 @@ class GpuContentionTable:
         assert self._lock.locked(), 'LockTable must be locked'
         return self._states[domain].management_status == ManagementStatus.INACTIVE
 
-    def _acquire_lock(self, domain: Domain) -> bool:
-        logger.debug('Acquiring lock for %s: %s', domain, self)
+    def _pre_acquire_lock(self, domain: Domain):
+        logger.debug('Pre-acquiring lock for %s: %s', domain, self)
         assert self._lock.locked(), 'LockTable must be locked'
         if self._states[domain].lock_status == LockStatus.ACQUIRED:
             return True
         self._states[domain].lock_status = LockStatus.ACQUIRING
         self._cond.notify_all()
+
+    def _acquire_lock(self, domain: Domain) -> bool:
+        self._pre_acquire_lock(domain)
         self._cond.wait_for(lambda: self._states[domain].lock_status == LockStatus.ACQUIRED or
                             self._lock_available(domain) or not self._active(domain))
         active = self._active(domain)

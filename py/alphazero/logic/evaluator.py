@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -6,11 +6,11 @@ from alphazero.logic.ratings import win_prob
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
-from scipy.interpolate import interp1d
 import numpy as np
+from scipy.interpolate import interp1d
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import List, Optional
 
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EvalRatingData:
-    evaluated_agents: List[Agent]
+    evaluated_iagents: List[IndexedAgent]
     ratings: np.ndarray
 
 
@@ -32,6 +32,7 @@ class Evaluator:
         self._arena = self._benchmark.clone_arena()
         self._db = RatingDB(self._organizer.eval_db_filename)
         self.load_from_db()
+        self._arena.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)
@@ -80,19 +81,10 @@ class Evaluator:
         committee_ixs = np.where(self.benchmark_committee)[0]
         opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
         while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
-
-            p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
-            var = np.array([q * (1 - q) for q in p])
-            mask = np.zeros(len(var), dtype=bool)
-            committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
-            mask[committee_ix_played] = True
-            var[mask] = 0
-            var = var / np.sum(var)
-
-            sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
-            chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
+            opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
+            chosen_ixs, num_matches = self.gen_matches(estimated_rating, opponent_ix_played, n_games)
             sorted_ixs = np.argsort(num_matches)[::-1]
-            logger.info('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
+            logger.debug('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
             for i in range(len(chosen_ixs)):
                 ix = chosen_ixs[sorted_ixs[i]]
                 n = num_matches[sorted_ixs[i]]
@@ -108,10 +100,25 @@ class Evaluator:
                     estimated_rating = new_estimate
                     break
 
-        interpolated_ratings = self.interpolate_ratings()
+        _, interpolated_ratings = self.interpolate_ratings()
         test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
         self._db.commit_ratings(test_iagents, interpolated_ratings)
-        logger.info('Finished evaluating %s. Interpolated rating: %f', test_agent, interpolated_ratings[-1])
+        logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
+                    test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
+
+    def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int):
+        committee_ixs = np.where(self.benchmark_committee)[0]
+        p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
+        var = np.array([q * (1 - q) for q in p])
+        mask = np.zeros(len(var), dtype=bool)
+        committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
+        mask[committee_ix_played] = True
+        var[mask] = 0
+        var = var / np.sum(var)
+
+        sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
+        chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
+        return chosen_ixs, num_matches
 
     def interpolate_ratings(self) -> np.ndarray:
         benchmark_ixs = self.benchmark_agent_ixs()
@@ -127,7 +134,7 @@ class Evaluator:
         interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value="extrapolate")
         interpolated_ratings = interp_func(test_agents_elo)
 
-        return interpolated_ratings
+        return test_ixs, interpolated_ratings
 
     def test_agent_ixs(self) -> np.ndarray:
         test_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.TEST]
@@ -140,11 +147,14 @@ class Evaluator:
     def read_ratings_from_db(self) -> EvalRatingData:
         rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.TEST)
         ratings = rating_data.ratings
-        evaluated_agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
-        return EvalRatingData(evaluated_agents, ratings)
+        evaluated_iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
+        return EvalRatingData(evaluated_iagents, ratings)
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()
+
+    def add_agent(self, agent: Agent, role: AgentRole, expand_matrix: bool=True, db: Optional[RatingDB]=None):
+        return self._arena._add_agent(agent, role, expand_matrix=expand_matrix, db=db)
 
     @property
     def benchmark_ratings(self) -> np.ndarray:
@@ -158,64 +168,84 @@ class Evaluator:
     def arena_ratings(self) -> np.ndarray:
         return self._arena.ratings
 
+    @property
+    def indexed_agents(self) -> List[Agent]:
+        return self._arena.indexed_agents
+
+    @property
+    def agent_lookup(self) -> dict:
+        return self._arena._agent_lookup
+
 
 class MCTSEvaluator:
     def __init__(self, organizer: DirectoryOrganizer):
         self._organizer = organizer
         self._evaluator = Evaluator(organizer)
         rating_data = self._evaluator.read_ratings_from_db()
-        self._evaluated_gens = [agent.gen for agent in rating_data.evaluated_agents]
+        self._evaluated_ixs = [self._evaluator.agent_lookup[agent].index \
+            for agent in rating_data.evaluated_agents]
 
     def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
         self._evaluator.refresh_ratings()
         while True:
-            gen = self.get_next_gen_to_eval(target_eval_percent)
-            if gen is None:
+            evaluated_gens = [self._evaluator.indexed_agents[ix].agent.gen \
+                for ix in self._evaluated_ixs]
+            last_gen = self._organizer.get_latest_model_generation()
+
+            evaluated_percent = len(evaluated_gens) / (last_gen + 1)
+            if evaluated_percent >= target_eval_percent:
                 break
+            gen = EvalUtils.get_next_gen_to_eval(last_gen, evaluated_gens, target_eval_percent)
 
             test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
                                    tag=self._organizer.tag)
-            init_rating_estimate = self.estimate_rating_nearby_gens(gen)
+            ratings = np.array([self._evaluator.arena_ratings[ix] for ix in self._evaluated_ixs])
+            init_rating_estimate = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens,
+                                                               ratings)
             self._evaluator.eval_agent(test_agent, n_games,
                                        error_threshold=error_threshold,
                                        init_rating_estimate=init_rating_estimate)
-            self._evaluated_gens.append(gen)
+            new_ix = self._evaluator.agent_lookup[test_agent].index
+            assert new_ix == len(self._evaluator.indexed_agents) - 1
+            self._evaluated_ixs.append(new_ix)
 
-    def get_next_gen_to_eval(self, target_eval_percent):
-        last_gen = self._organizer.get_latest_model_generation()
-        evaluated_percent = len(self._evaluated_gens) / (last_gen + 1)
-        if 0 not in self._evaluated_gens:
+
+class EvalUtils:
+    @staticmethod
+    def estimate_rating_nearby_gens(gen: int, evaluated_gens: List[int], ratings: np.ndarray) -> float:
+        assert len(evaluated_gens) == len(ratings)
+        evaluated_gens_arr = np.array(evaluated_gens)
+        sorted_ixs = np.argsort(evaluated_gens_arr)
+
+        for i in range(len(evaluated_gens_arr) - 1):
+            left_gen = evaluated_gens_arr[sorted_ixs[i]]
+            right_gen = evaluated_gens_arr[sorted_ixs[i + 1]]
+            if left_gen < gen < right_gen:
+                left_rating = ratings[sorted_ixs[i]]
+                right_rating = ratings[sorted_ixs[i + 1]]
+                return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
+
+        return None
+
+    @staticmethod
+    def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int], target_eval_percent: float):
+        if 0 not in evaluated_gens:
             return 0
-        if last_gen not in self._evaluated_gens:
-            return last_gen
-        if evaluated_percent >= target_eval_percent:
-            return None
+        if latest_gen not in evaluated_gens:
+            return latest_gen
 
-        left_gen, right_gen = self.get_biggest_gen_gap()
+        left_gen, right_gen = EvalUtils.get_biggest_gen_gap(evaluated_gens)
         if left_gen + 1 < right_gen:
             gen = (left_gen + right_gen) // 2
-            assert gen not in self._evaluated_gens
+            assert gen not in evaluated_gens
         return int(gen)
 
-    def get_biggest_gen_gap(self):
-        gens = self._evaluated_gens.copy()
+    @staticmethod
+    def get_biggest_gen_gap(evaluated_gens: List[int]):
+        gens = evaluated_gens.copy()
         gens = np.sort(gens)
         gaps = np.diff(gens)
         max_gap_ix = np.argmax(gaps)
         left_gen = gens[max_gap_ix]
         right_gen = gens[max_gap_ix + 1]
         return left_gen, right_gen
-
-    def estimate_rating_nearby_gens(self, gen: int) -> float:
-        evaluated_gens = np.array(self._evaluated_gens)
-        sorted_ixs = np.argsort(evaluated_gens)
-
-        for i in range(len(evaluated_gens) - 1):
-            left_gen = evaluated_gens[sorted_ixs[i]]
-            right_gen = evaluated_gens[sorted_ixs[i + 1]]
-            if left_gen < gen < right_gen:
-                left_rating = self._evaluator.arena_ratings[sorted_ixs[i]]
-                right_rating = self._evaluator.arena_ratings[sorted_ixs[i + 1]]
-                return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
-
-        return None

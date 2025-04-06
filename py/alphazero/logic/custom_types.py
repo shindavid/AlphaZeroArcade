@@ -1,8 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional, Literal
 
 from alphazero.logic import constants
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, Socket
 
 
@@ -10,6 +11,7 @@ Generation = int
 ClientId = int
 ThreadId = int
 RatingTag = str
+EvalTag = str
 
 
 class ClientRole(Enum):
@@ -17,10 +19,18 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
+    EVAL_SERVER = 'eval-server'
+    EVAL_WORKER = 'eval-worker'
 
     @staticmethod
     def worker_roles():
         return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
+
+
+class ServerStatus(Enum):
+    DISCONNECTED = 'disconnected'
+    BLOCKED = 'blocked'
+    READY = 'ready'
 
 
 class Domain(Enum):
@@ -34,6 +44,8 @@ class Domain(Enum):
         if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
+            return Domain.RATINGS
+        elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
             return Domain.RATINGS
         else:
             raise ValueError(f'Unexpected role: {role}')
@@ -93,3 +105,45 @@ class ClientConnection:
 ShutdownAction = Callable[[], None]
 MsgHandler = Callable[[ClientConnection, JsonDict], bool]  # return True for loop-break
 DisconnectHandler = Callable[[ClientConnection], None]
+
+
+@dataclass
+class FileToTransfer:
+    """
+    Contains information about a file to be transferred, including:
+    - source_path: the location of the file to be transferred. It is an absolute path.
+    - asset_path: the destination where the file is stored. It is a relative path from the asset
+        directory specified in the session data.
+    - scratch_path: the location that the file will be used or referenced. It is a relative path
+        from the run directory.
+    - SHA256 hash of the file.
+    """
+    source_path: str
+    scratch_path: str
+    asset_path: Optional[str] = None
+    sha256_hash: Optional[str] = None
+
+    @classmethod
+    def from_src_scratch_path(cls, source_path: str, scratch_path: str, asset_path_mode: Literal['hash', 'scratch']):
+        obj = cls(
+            source_path=source_path,
+            scratch_path=scratch_path
+        )
+        obj.sha256_hash = sha256sum(obj.source_path)
+
+        if asset_path_mode == 'hash':
+            obj.asset_path = obj.sha256_hash
+        elif asset_path_mode == 'scratch':
+            obj.asset_path = scratch_path
+        else:
+            raise ValueError(f"Invalid asset_path_mode: {asset_path_mode}. Must be 'hash' or 'scratch'.")
+
+        return obj
+
+    def to_dict(self) -> JsonDict:
+        return {
+            'source_path': self.source_path,
+            'asset_path': self.asset_path,
+            'scratch_path': self.scratch_path,
+            'sha256_hash': self.sha256_hash
+        }

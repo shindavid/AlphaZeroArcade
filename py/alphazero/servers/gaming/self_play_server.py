@@ -1,5 +1,5 @@
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
@@ -11,6 +11,7 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
+import os
 import subprocess
 import threading
 from typing import List, Optional
@@ -120,12 +121,14 @@ class SelfPlayServer:
         elif msg_type == 'stop-gen0':
             self._handle_stop_gen0()
         elif msg_type == 'start':
-            self._handle_start()
+            self._handle_start(msg)
         elif msg_type == 'restart':
             self._handle_restart()
         elif msg_type == 'quit':
             self._quit()
             return True
+        elif msg_type == 'file-transfer':
+            self._session_data.receive_file(msg['file'])
         else:
             raise Exception('Unknown message type: %s', msg_type)
         return False
@@ -152,8 +155,8 @@ class SelfPlayServer:
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
         self._clear_proc()
 
-    def _handle_start(self):
-        thread = threading.Thread(target=self._start, daemon=True, name=f'start')
+    def _handle_start(self, msg: JsonDict):
+        thread = threading.Thread(target=self._start, args=(msg,), daemon=True, name=f'start')
         thread.start()
 
     def _handle_restart(self):
@@ -176,6 +179,13 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_gen0_helper(self, msg):
+        required_binary = FileToTransfer(**msg['binary'])
+        file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
+        if file_to_request:
+            logger.debug('Missing required binaries: %s', file_to_request)
+            self._session_data.send_file_request(file_to_request)
+            self._session_data.wait_for_files([required_binary])
+
         max_rows = msg['max_rows']
 
         player_args = {
@@ -210,7 +220,8 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary = self._session_data.binary_path
+        binary_path = required_binary.scratch_path
+        binary = os.path.join(self._session_data.run_dir, binary_path)
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,
@@ -236,14 +247,21 @@ class SelfPlayServer:
         logger.info('Gen-0 self-play complete!')
         self._session_data.stop_log_sync(log_filename)
 
-    def _start(self):
+    def _start(self, msg: JsonDict):
         try:
-            self._start_helper()
+            self._start_helper(msg)
         except:
             logger.error('Error in start:', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
-    def _start_helper(self):
+    def _start_helper(self, msg: JsonDict):
+        required_binary = FileToTransfer(**msg['binary'])
+        file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
+        if file_to_request:
+            logger.debug('Missing required binaries: %s', file_to_request)
+            self._session_data.send_file_request(file_to_request)
+            self._session_data.wait_for_files([required_binary])
+
         player_args = {
             '--type': 'MCTS-T',
             '--name': 'MCTS',
@@ -270,7 +288,8 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary = self._session_data.binary_path
+        binary_path = required_binary.scratch_path
+        binary = os.path.join(self._session_data.run_dir, binary_path)
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,

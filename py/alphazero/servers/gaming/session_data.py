@@ -2,7 +2,7 @@ from .base_params import BaseParams
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientId, ClientRole
+from alphazero.logic.custom_types import ClientId, ClientRole, FileToTransfer
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
@@ -15,11 +15,15 @@ import logging
 import os
 import socket
 import subprocess
+import threading
 import time
-from typing import Optional
+from typing import List, Optional
 
 
 logger = logging.getLogger(__name__)
+
+
+ASSETS_DIR = '/home/devuser/scratch/assets'
 
 
 class SessionData:
@@ -42,6 +46,7 @@ class SessionData:
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
         self._log_sync_set = set()
+        self._file_transfer_cv = threading.Condition()
 
     def disable_next_returncode_check(self):
         self._skip_next_returncode_check = True
@@ -115,9 +120,6 @@ class SessionData:
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)
 
-        asset_requirements = data['asset-requirements']
-        self._setup_run_directory(asset_requirements)
-
         log_filename = self.get_log_filename(role.value)
         configure_logger(params=self._logging_params, filename=log_filename, mode='w')
         self.start_log_sync(log_filename)
@@ -155,102 +157,63 @@ class SessionData:
         }
         self.socket.send_json(data)
 
-    def _setup_run_directory(self, asset_requirements: JsonDict):
-        """
-        asset_requirements takes the folowing form:
+    def get_files_to_request(self, files_required: List[FileToTransfer]):
+        files_to_request = []
+        for file in files_required:
+            logger.debug('Checking file: %s', file)
+            asset_path = os.path.join(ASSETS_DIR, file.asset_path)
+            if not os.path.exists(asset_path):
+                files_to_request.append(file)
+            else:
+                # Verify the hash matches if the file exists
+                current_hash = py_util.sha256sum(asset_path)
+                if current_hash != file.sha256_hash:
+                    logger.debug(f'Hash mismatch for binary {file.source_path}: '
+                                   f'expected {file.sha256_hash}, found {current_hash}')
+                    files_to_request.append(file)
+                else:
+                    # Create a soft link to the correct binary if necessary
+                    dst_path = os.path.join(self.run_dir, file.scratch_path)
+                    dst_dir = os.path.dirname(dst_path)
+                    os.makedirs(dst_dir, exist_ok=True)
+                    ln_cmd = f'ln -sf {asset_path} {dst_path}'
+                    subprocess.run(ln_cmd, shell=True, check=True)
 
-        {
-            'binary': { path: hash },
-            'extras': {
-                path: hash,
-                path: hash,
-                ...
-            }
-        }
+        return files_to_request
 
-        This method does the following:
+    def send_file_request(self, files_to_request: List[FileToTransfer]):
+        if not files_to_request:
+            return
 
-        1. Create an assets-directory in /home/devuser/scratch/assets/, if it doesn't yet exist.
-           Files in this directory will be named by their hash.
-
-        2. For each asset:
-
-           A. Check if the assets-directory currently contains it. If so, continue.
-           B. Else, check if the target/ directory contains it. If so, copy to the assets-directory,
-              otherwise, continue
-           C. If the asset is still missing, request it from the loop controller, and write the
-              asset to the assets-directory
-
-        3. Create a unique run-directory in /home/devuser/scratch/runs/ to be used by this server
-           and this server only. Add symlinks in this run-directory, named by the asset path, that
-           point to the asset in the assets-directory.
-
-        4. Set appropriate data members to self, that support methods that SelfPlayServer and
-           RatingsServer can use to construct their run-command-strings.
-        """
-        assets_dir = '/home/devuser/scratch/assets'
-        py_util.atomic_makedirs(assets_dir)
-
-        binary_info = asset_requirements['binary']
-        extras_info = asset_requirements['extras']
-
-        if self._build_params.binary_path is not None:
-            self._binary_path = './custom-binary'
-
-            src = os.path.abspath(self._build_params.binary_path)
-            dst = os.path.join(self.run_dir, self._binary_path)
-            dst_dir = os.path.dirname(dst)
-            os.makedirs(dst_dir, exist_ok=True)
-            ln_cmd = f'ln -sf {src} {dst}'
-            subprocess.run(ln_cmd, shell=True, check=True)
-        else:
-            assert len(binary_info) == 1
-            self._binary_path = list(binary_info.keys())[0]
-
-        hash_dict = {}
-        missing_assets = []
-        for info in [binary_info, extras_info]:
-            hash_dict.update(info)
-            for asset_path, asset_hash in info.items():
-                # See 2A above
-                dst_path = os.path.join(assets_dir, asset_hash)
-                if os.path.exists(dst_path):
-                    continue
-
-                # See 2B above
-                workspace_path = os.path.join('/workspace/repo', asset_path)
-                if os.path.exists(workspace_path):
-                    candidate_hash = py_util.sha256sum(workspace_path)
-                    if candidate_hash == asset_hash:
-                        py_util.atomic_cp(workspace_path, dst_path)
-                        continue
-
-                # See 2C above
-                missing_assets.append(asset_path)
-
+        files = [f.to_dict() for f in files_to_request]
         data = {
-            'type': 'assets-request',
-            'assets': missing_assets,
+            'type': 'file-request',
+            'files': files,
         }
         self.socket.send_json(data)
+        logger.debug('Sent file-request for %d files: %s', len(files), files)
 
-        logger.info('DBG sent assets-request %s', data)
-        for asset_path in missing_assets:
-            asset_hash = hash_dict[asset_path]
-            full_asset_path = os.path.join(assets_dir, asset_hash)
-            self.socket.recv_file(full_asset_path, atomic=True)
-            logger.info('DBG received asset: %s', full_asset_path)
-            assert os.path.isfile(full_asset_path)
+    def receive_file(self, file_to_receive: JsonDict):
+        py_util.atomic_makedirs(ASSETS_DIR)
+        file = FileToTransfer(**file_to_receive)
+        asset_path = os.path.join(ASSETS_DIR, file.asset_path)
+        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
+        self.socket.recv_file(asset_path, atomic=True)
 
-        # Create soft links to the assets. Note  that because the run_dir will be unique to each
-        # server, we don't need to worry about atomicity for the filesytem operations below.
-        for asset_path, asset_hash in hash_dict.items():
-            src = os.path.join(assets_dir, asset_hash)
-            dst = os.path.join(self.run_dir, asset_path)
-            dst_dir = os.path.dirname(dst)
-            os.makedirs(dst_dir, exist_ok=True)
-            ln_cmd = f'ln -sf {src} {dst}'
-            subprocess.run(ln_cmd, shell=True, check=True)
+        # create soft link in the run directory
+        src = asset_path
+        dst = os.path.join(self.run_dir, file.scratch_path)
+        dst_dir = os.path.dirname(dst)
+        os.makedirs(dst_dir, exist_ok=True)
+        ln_cmd = f'ln -sf {src} {dst}'
+        subprocess.run(ln_cmd, shell=True, check=True)
+
+        with self._file_transfer_cv:
+            self._file_transfer_cv.notify_all()
+
+    def wait_for_files(self, files_required: List[FileToTransfer]):
+        with  self._file_transfer_cv:
+            self._file_transfer_cv.wait_for(lambda: not self.get_files_to_request(files_required))
 
     @property
     def socket(self) -> Socket:

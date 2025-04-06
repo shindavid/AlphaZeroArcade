@@ -1,6 +1,7 @@
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
+from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
@@ -12,18 +13,19 @@ from .training_manager import TrainingManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
+from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, EvalTag,\
     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.py_util import sha256sum
+from shared.training_params import TrainingParams
+from util.py_util import atomic_cp, sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
+from util import ssh_util
 
 import logging
 import os
@@ -89,6 +91,7 @@ class LoopController:
         self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
+        self._eval_managers: Dict[EvalTag, EvalManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
 
@@ -187,24 +190,7 @@ class LoopController:
     def request_shutdown(self, return_code: int):
         self._shutdown_manager.request_shutdown(return_code)
 
-    def get_asset_requirements(self) -> JsonDict:
-        """
-        Returns information about the assets required for game-playing servers.
-        """
-        binary_path = self.build_params.get_binary_path(self._run_params.game)
-
-        extras = {}
-        for dep in self.game_spec.extra_runtime_deps:
-            extras[dep] = sha256sum(dep)
-
-        return {
-            'binary': {
-                binary_path : sha256sum(binary_path),
-            },
-            'extras': extras,
-        }
-
-    def handle_new_client_connnection(self, conn: ClientConnection):
+    def handle_new_client_connection(self, conn: ClientConnection):
         """
         Dispatches to a manager to handle a new client connection. The manager will spawn a new
         thread.
@@ -219,6 +205,10 @@ class LoopController:
             self._get_ratings_manager(conn.rating_tag).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
             self._get_ratings_manager(conn.rating_tag).add_worker(conn)
+        elif client_role == ClientRole.EVAL_SERVER:
+            self._get_eval_manager(conn.rating_tag).add_server(conn)
+        elif client_role == ClientRole.EVAL_WORKER:
+            self._get_eval_manager(conn.rating_tag).add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -243,6 +233,10 @@ class LoopController:
 
     def handle_new_model(self):
         for tag, manager in self._ratings_managers.items():
+            assert tag is not None  # defensive programming, this indicates a bug
+            manager.notify_of_new_model()
+
+        for tag, manager in self._eval_managers.items():
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
 
@@ -271,6 +265,40 @@ class LoopController:
             send_file(conn.socket.native_socket(), model_filename)
 
         logger.debug('Weights broadcast complete!')
+
+    def send_handshake_ack(self, conn: ClientConnection):
+        ssh_pub_key = ssh_util.get_pub_key()
+        reply = {
+            'type': 'handshake-ack',
+            'client_id': conn.client_id,
+            'game': self.game_spec.name,
+            'tag': self.run_params.tag,
+            'ssh_pub_key': ssh_pub_key,
+            'on_ephemeral_local_disk_env': self.on_ephemeral_local_disk_env,
+        }
+        conn.socket.send_json(reply)
+
+    def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        logger.info('Handling file request from %s: %s', conn, files)
+        for f in files:
+            conn.socket.send_json({
+                'type': 'file-transfer',
+                'file': f,
+            })
+            conn.socket.send_file(f['source_path'])
+
+    def set_priority(self, dict_len: int, rating_in_progress: bool):
+        latest_gen = self.latest_gen()
+        target_rate = self.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
+        self.set_ratings_priority(elevate)
 
     def set_ratings_priority(self, elevate: bool):
         self._gpu_contention_manager.set_ratings_priority(elevate)
@@ -308,6 +336,16 @@ class LoopController:
         if tag not in self._ratings_managers:
             self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
+
+    def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
+        if tag not in self._eval_managers:
+            if not os.path.exists(self.organizer.eval_db_filename):
+                assert self.params.benchmark_tag is not None, "Benchmark tag must be set for eval manager"
+                benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
+                benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
+                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
+            self._eval_managers[tag] = EvalManager(self, tag)
+        return self._eval_managers[tag]
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
@@ -404,10 +442,39 @@ class LoopController:
         logger.info('Prior run restoration complete!')
         return True
 
+    def _copy_binary_file(self):
+        if self._on_ephemeral_local_disk_env:
+            organizer = self._persistent_organizer
+        else:
+            organizer = self._organizer
+
+        binary_path = self.build_params.get_binary_path(self._run_params.game)
+        target_file = organizer.binary_filename
+        if os.path.exists(target_file):
+            hash = sha256sum(target_file)
+            if hash == sha256sum(binary_path):
+                logger.debug('Binary file already exists, skipping copy')
+                return
+            elif not self.build_params.override_binary:
+                message = f"""Hash mismatch for binary file {binary_path}.
+                Include --override-binary to override or have the matching binary: {binary_path}"""
+                raise Exception(message)
+            else:
+                message = f"""Hash mismatch for binary file {binary_path}.
+                Overriding binary file with the one in {binary_path}"""
+                logger.debug(message)
+        else:
+            logger.info('Copying binary file to persistent run dir...')
+
+
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+        atomic_cp(binary_path, target_file)
+
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
             self._setup_output_dir()
+            self._copy_binary_file()
             self._init_socket()
             self._self_play_manager.setup()
             self._training_manager.setup()

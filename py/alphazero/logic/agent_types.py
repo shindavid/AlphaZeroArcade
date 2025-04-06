@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 import numpy as np
+import os
 
 
 class Agent(ABC):
@@ -21,28 +22,33 @@ class Agent(ABC):
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
-    n_iters: int = 0
+    n_iters: Optional[int] = None
     set_temp_zero: bool = None
     tag: str = None
+    binary: str = None
+    model: str = None
 
-    def make_player_str(self, organizer: DirectoryOrganizer) -> str:
-        assert organizer.tag == self.tag
-
+    def make_player_str(self, run_dir, args=None) -> str:
         player_args = {
             '--type': 'MCTS-C',
             '--name': f'MCTS-{self.gen}-{self.n_iters}',
-            '-i': self.n_iters,
             '-n': 1,
         }
+
+        if self.n_iters is not None:
+            player_args['-i'] = self.n_iters
 
         if self.gen == 0:
             player_args['--no-model'] = None
         else:
-            player_args['-m'] = organizer.get_model_filename(self.gen)
+            player_args['-m'] = os.path.join(run_dir, self.model)
 
         if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0
             player_args['--ending-move-temp'] = 0
+
+        if args:
+            player_args.update(args)
 
         return make_args_str(player_args)
 
@@ -89,4 +95,3 @@ class IndexedAgent:
 
 
 BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
-

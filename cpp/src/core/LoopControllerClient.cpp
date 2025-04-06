@@ -22,9 +22,9 @@ void LoopControllerClient::init(const Params& params) {
   instance_ = new LoopControllerClient(params);
 }
 
-void LoopControllerClient::request_weights() {
+void LoopControllerClient::send_worker_ready() {
   boost::json::object msg;
-  msg["type"] = "weights-request";
+  msg["type"] = "worker-ready";
   if (params_.weights_request_generation >= 0) {
     msg["gen"] = params_.weights_request_generation;
   }
@@ -86,6 +86,7 @@ void LoopControllerClient::shutdown() {
   shutdown_initiated_ = true;
   send_done();
   socket_->shutdown();
+
   if (thread_ && thread_->joinable()) {
     thread_->detach();
   }

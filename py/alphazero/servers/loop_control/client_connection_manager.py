@@ -35,7 +35,7 @@ class ClientConnectionManager:
             while True:
                 conn = self._add_connection()
                 if conn is not None:
-                    self._controller.handle_new_client_connnection(conn)
+                    self._controller.handle_new_client_connection(conn)
         except:
             logger.error('Exception in accept_connections():', exc_info=True)
             self._controller.request_shutdown(1)
@@ -55,7 +55,7 @@ class ClientConnectionManager:
         cuda_device = msg.get('cuda_device', '')
         rating_tag = msg.get('rating_tag', '')
         manager_id = msg.get('manager_id', None)
-        client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
+        client_id = None #self._manager_id_to_worker_id_map.get(manager_id, None)
 
         gpu_id = GpuId(ip_address, cuda_device)
         with self._lock:
@@ -67,19 +67,6 @@ class ClientConnectionManager:
             reply = {
                 'type': 'handshake-ack',
                 'rejection': 'connection of same role/cuda-device from same ip already exists',
-            }
-            tmp_socket = Socket(client_socket)
-            tmp_socket.send_json(reply)
-            tmp_socket.close()
-            return None
-
-        if client_id in [c.client_id for c in conns]:
-            logger.warning('Rejecting connection due to bad client-id reuse: %s, %s, %s',
-                           manager_id, client_id, conns)
-
-            reply = {
-                'type': 'handshake-ack',
-                'rejection': 'illegal reuse of client-id',
             }
             tmp_socket = Socket(client_socket)
             tmp_socket.send_json(reply)
