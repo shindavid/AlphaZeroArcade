@@ -167,7 +167,7 @@ class EvalServer:
         assert not self._running
         self._running = True
 
-        files_required = msg['files_required']
+        files_required = [FileToTransfer(**f) for f in msg['files_required']]
         files_to_request: List[FileToTransfer] = self._session_data.get_files_to_request(files_required)
         if files_to_request:
             logger.debug('Missing required files: %s', files_to_request)
@@ -189,7 +189,7 @@ class EvalServer:
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
-        result = self._eval_match(match, self._session_data.game, args)
+        result = self._eval_match(match, args)
 
         logger.info('Match result between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
 
@@ -205,7 +205,7 @@ class EvalServer:
         self._session_data.socket.send_json(data)
         self._send_ready()
 
-    def _eval_match(self, match: Match, game: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
+    def _eval_match(self, match: Match, args: Optional[Dict]=None) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.

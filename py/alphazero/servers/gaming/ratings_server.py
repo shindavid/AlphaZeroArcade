@@ -164,7 +164,7 @@ class RatingsServer:
         assert not self._running
         self._running = True
 
-        files_required = msg['files_required']
+        files_required = [FileToTransfer(**f) for f in msg['files_required']]
         files_to_request: List[FileToTransfer] = self._session_data.get_files_to_request(files_required)
         if files_to_request:
             logger.debug('Missing required files: %s', files_to_request)

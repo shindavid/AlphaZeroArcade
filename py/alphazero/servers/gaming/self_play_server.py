@@ -179,7 +179,7 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_gen0_helper(self, msg):
-        required_binary = msg['binary']
+        required_binary = FileToTransfer(**msg['binary'])
         file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
         if file_to_request:
             logger.debug('Missing required binaries: %s', file_to_request)
@@ -220,7 +220,7 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary_path = FileToTransfer(**required_binary).scratch_path
+        binary_path = required_binary.scratch_path
         binary = os.path.join(self._session_data.run_dir, binary_path)
         self_play_cmd = [
             binary,
@@ -255,7 +255,7 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_helper(self, msg: JsonDict):
-        required_binary = msg['binary']
+        required_binary = FileToTransfer(**msg['binary'])
         file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
         if file_to_request:
             logger.debug('Missing required binaries: %s', file_to_request)
@@ -288,7 +288,7 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
-        binary_path = FileToTransfer(**required_binary).scratch_path
+        binary_path = required_binary.scratch_path
         binary = os.path.join(self._session_data.run_dir, binary_path)
         self_play_cmd = [
             binary,

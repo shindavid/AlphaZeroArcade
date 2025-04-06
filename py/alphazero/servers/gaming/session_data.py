@@ -157,11 +157,10 @@ class SessionData:
         }
         self.socket.send_json(data)
 
-    def get_files_to_request(self, files_required: List[JsonDict]):
+    def get_files_to_request(self, files_required: List[FileToTransfer]):
         files_to_request = []
-        for f in files_required:
-            logger.debug('Checking file: %s', f)
-            file = FileToTransfer(**f)
+        for file in files_required:
+            logger.debug('Checking file: %s', file)
             asset_path = os.path.join(ASSETS_DIR, file.asset_path)
             if not os.path.exists(asset_path):
                 files_to_request.append(file)
@@ -212,9 +211,9 @@ class SessionData:
         with self._file_transfer_cv:
             self._file_transfer_cv.notify_all()
 
-    def wait_for_files(self, files_required: List[JsonDict]):
+    def wait_for_files(self, files_required: List[FileToTransfer]):
         with  self._file_transfer_cv:
-            self._file_transfer_cv.wait_for(lambda: self.get_files_to_request(files_required) == [])
+            self._file_transfer_cv.wait_for(lambda: not self.get_files_to_request(files_required))
 
     @property
     def socket(self) -> Socket:
