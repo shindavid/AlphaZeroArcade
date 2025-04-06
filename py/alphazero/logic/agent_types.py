@@ -28,7 +28,7 @@ class MCTSAgent(Agent):
     binary: str = None
     model: str = None
 
-    def make_player_str(self, run_dir) -> str:
+    def make_player_str(self, run_dir, args=None) -> str:
         player_args = {
             '--type': 'MCTS-C',
             '--name': f'MCTS-{self.gen}-{self.n_iters}',
@@ -46,6 +46,9 @@ class MCTSAgent(Agent):
         if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0
             player_args['--ending-move-temp'] = 0
+
+        if args:
+            player_args.update(args)
 
         return make_args_str(player_args)
 

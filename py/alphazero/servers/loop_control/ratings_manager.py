@@ -3,6 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.py_util import find_largest_gap, sha256sum
@@ -197,24 +198,40 @@ class RatingsManager:
         assert strength is not None
 
         game = self._controller._run_params.game
-        eval_binary = FileToTransfer(
-            source_path=f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}',
-            scratch_path=f'target/bin/{game}',
-            hash=sha256sum(f'output/{game}/{self._controller._organizer.tag}/{self._controller.build_params.get_binary_path(game)}'),
+        tag = self._controller._run_params.tag
+        eval_binary = FileToTransfer.from_src_scratch_path(
+            source_path=self._controller._organizer.binary_filename,
+            scratch_path=f'bin/{game}',
+            asset_path_mode='scratch'
         )
-        binaries = [eval_binary]
+        files_required = [eval_binary]
 
         for dep in self._controller.game_spec.extra_runtime_deps:
-            dep_binary = FileToTransfer(source_path=dep, scratch_path=dep, hash=sha256sum(dep))
-            binaries.append(dep_binary)
+            dep_binary = FileToTransfer.from_src_scratch_path(
+                source_path=dep, scratch_path=dep, asset_path_mode='scratch'
+            )
+            files_required.append(dep_binary)
+
+        model_file = None
+        if rating_data.mcts_gen > 0:
+            model_file = FileToTransfer.from_src_scratch_path(
+                source_path=self._controller._organizer.get_model_filename(rating_data.mcts_gen),
+                scratch_path=f'eval-models/{tag}/gen-{rating_data.mcts_gen}.pt',
+                asset_path_mode='scratch')
+            files_required.append(model_file)
 
         data = {
             'type': 'match-request',
-            'mcts_gen': rating_data.mcts_gen,
+            'mcts_agent': {
+                'gen': rating_data.mcts_gen,
+                'set_temp_zero': True,
+                'tag': tag,
+                'binary': eval_binary.scratch_path,
+                'model': model_file.scratch_path if model_file else None,
+                },
             'ref_strength': strength,
             'n_games': N_GAMES,
-            'binaries': [b.to_dict() for b in binaries],
-            'binary_path': eval_binary.scratch_path,
+            'files_required': [f.to_dict() for f in files_required],
         }
         conn.socket.send_json(data)
 
@@ -262,8 +279,8 @@ class RatingsManager:
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
-        elif msg_type == 'binary-request':
-            self._handle_binary_request(conn, msg['binaries'])
+        elif msg_type == 'file-request':
+            self._handle_file_request(conn, msg['files'])
         else:
             logger.warning('ratings-server: unknown message type: %s', msg)
         return False
@@ -277,7 +294,7 @@ class RatingsManager:
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)
         elif msg_type == 'worker-ready':
-            self._handle_worker_ready(msg, conn)
+            self._handle_worker_ready(conn)
         elif msg_type == 'done':
             return True
         else:
@@ -319,20 +336,18 @@ class RatingsManager:
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
 
-    def _handle_worker_ready(self, msg: JsonDict, conn: ClientConnection):
-        gen = msg['gen']
-        thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
+    def _handle_worker_ready(self, conn: ClientConnection):
+        thread = threading.Thread(target=self._manage_worker, args=(conn,),
                                   daemon=True, name=f'manage-ratings-worker')
         thread.start()
 
-    def _manage_worker(self, gen: Generation, conn: ClientConnection):
+    def _manage_worker(self, conn: ClientConnection):
         try:
             domain = conn.client_domain
             gpu_id = conn.client_gpu_id
 
             table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
             self._pause(conn)
-            self._update_weights(gen, conn)
 
             while table.active(domain):
                 if not table.acquire_lock(domain):
@@ -384,9 +399,6 @@ class RatingsManager:
         with aux.cond:
             aux.pending_unpause_ack = False
             aux.cond.notify_all()
-
-    def _update_weights(self, gen: Generation, conn: ClientConnection):
-        self._controller.broadcast_weights(conn, gen)
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
         """
@@ -507,5 +519,5 @@ class RatingsManager:
                      mid, left, right, latest_gen)
         return mid
 
-    def _handle_binary_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        self._controller.handle_binary_request(conn, binaries)
+    def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        self._controller.handle_file_request(conn, files)

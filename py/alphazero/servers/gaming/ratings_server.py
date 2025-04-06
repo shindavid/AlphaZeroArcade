@@ -1,3 +1,4 @@
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
@@ -134,8 +135,8 @@ class RatingsServer:
         msg_type = msg['type']
         if msg_type == 'match-request':
             self._handle_match_request(msg)
-        elif msg_type == 'binary-file':
-            self._session_data.receive_binary_file(msg['binary'])
+        elif msg_type == 'file-transfer':
+            self._session_data.receive_file(msg['file'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -163,21 +164,23 @@ class RatingsServer:
         assert not self._running
         self._running = True
 
-        required_binaries = msg['binaries']
-        missing_binaries: List[FileToTransfer] = self._session_data.get_missing_binaries(required_binaries)
-        if missing_binaries:
-            logger.debug('Missing required binaries: %s', missing_binaries)
-            self._session_data.send_binary_request(missing_binaries)
-            self._session_data.wait_for_binaries(required_binaries)
+        files_required = msg['files_required']
+        files_to_request: List[FileToTransfer] = self._session_data.get_files_to_request(files_required)
+        if files_to_request:
+            logger.debug('Missing required files: %s', files_to_request)
+            self._session_data.send_file_request(files_to_request)
+            self._session_data.wait_for_files(files_required)
 
-        mcts_gen = msg['mcts_gen']
+        mcts_agent = MCTSAgent(**msg['mcts_agent'])
+        mcts_gen = mcts_agent.gen
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
 
-        ps1 = self._get_mcts_player_str(mcts_gen)
+        ps1 = mcts_agent.make_player_str(self._session_data.run_dir,
+                                         args=self._session_data.game_spec.rating_player_options)
         ps2 = self._get_reference_player_str(ref_strength)
 
-        binary = os.path.join(self._session_data.run_dir, msg['binary_path'])
+        binary = os.path.join(self._session_data.run_dir, mcts_agent.binary)
         log_filename = self._session_data.get_log_filename('ratings-worker')
         append_mode = not self._session_data.start_log_sync(log_filename)
 
@@ -189,7 +192,6 @@ class RatingsServer:
             '--manager-id': self._session_data.client_id,
             '--ratings-tag': f'"{self._params.rating_tag}"',
             '--cuda-device': self._params.cuda_device,
-            '--weights-request-generation': mcts_gen,
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
@@ -204,12 +206,11 @@ class RatingsServer:
         cmd.append(make_args_str(args))
         cmd = ' '.join(map(str, cmd))
 
-        mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
         ref_name = RatingsServer._get_reference_player_name(ref_strength)
 
         cwd = self._session_data.run_dir
         self._proc = subprocess_util.Popen(cmd, cwd=cwd)
-        logger.info('Running %s vs %s match [%s] from %s: %s', mcts_name, ref_name, self._proc.pid,
+        logger.info('Running %s vs %s match [%s] from %s: %s', f'MCTS-{mcts_agent.gen}', ref_name, self._proc.pid,
                     cwd, cmd)
         stdout = self._session_data.wait_for(self._proc)
         self._proc = None
@@ -232,20 +233,6 @@ class RatingsServer:
         self._session_data.socket.send_json(data)
         self._send_ready()
 
-    @staticmethod
-    def _get_mcts_player_name(gen: int):
-        return f'MCTS-{gen}'
-
-    def _get_mcts_player_str(self, gen: int):
-        name = RatingsServer._get_mcts_player_name(gen)
-
-        player_args = {
-            '--type': 'MCTS-C',
-            '--name': name,
-            '--cuda-device': self._params.cuda_device,
-        }
-        player_args.update(self._session_data.game_spec.rating_player_options)
-        return make_args_str(player_args)
 
     @staticmethod
     def _get_reference_player_name(strength: int):

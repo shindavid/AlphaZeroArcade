@@ -244,13 +244,13 @@ class EvalManager:
 
         eval_binary = FileToTransfer.from_src_scratch_path(
             source_path=self._controller._organizer.binary_filename,
-            scratch_path=f'target/bin/{game}',
+            scratch_path=f'bin/{game}',
             asset_path_mode='hash'
         )
         benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
         benchmark_binary = FileToTransfer.from_src_scratch_path(
             source_path= benchmark_organizer.binary_filename,
-            scratch_path=f'target/benchmark-bin/{game}',
+            scratch_path=f'benchmark-bin/{game}',
             asset_path_mode='hash'
         )
         files_required = [eval_binary, benchmark_binary]
@@ -282,7 +282,7 @@ class EvalManager:
                 'tag': self._controller._organizer.tag,
                 'binary': eval_binary.scratch_path,
                 'model': eval_model.scratch_path if eval_model else None
-            },
+                },
             'agent2': {
                 'gen': next_opponent_agent.gen,
                 'n_iters': next_opponent_agent.n_iters,
@@ -290,7 +290,7 @@ class EvalManager:
                 'tag': next_opponent_agent.tag,
                 'binary': benchmark_binary.scratch_path,
                 'model': benchmark_model.scratch_path if benchmark_model else None
-            },
+                },
             'ix1': test_iagent.index,
             'ix2': int(next_opponent_iagent.index),
             'n_games': int(next_n_games),
@@ -550,8 +550,8 @@ class EvalManager:
     def _update_weights(self, gen: Generation, conn: ClientConnection):
         self._controller.broadcast_weights(conn, gen)
 
-    def _handle_file_request(self, conn: ClientConnection, binaries: List[JsonDict]):
-        self._controller.handle_file_request(conn, binaries)
+    def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
+        self._controller.handle_file_request(conn, files)
 
     @property
     def n_games(self):
