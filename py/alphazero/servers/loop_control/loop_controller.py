@@ -279,7 +279,7 @@ class LoopController:
         conn.socket.send_json(reply)
 
     def handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
-        logger.info('Handling file request from %s: %s', conn, files)
+        logger.debug('Handling file request from %s: %s', conn, files)
         conn.socket.send_json({
             'type': 'file-transfer',
             'files': files,
