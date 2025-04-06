@@ -136,7 +136,7 @@ class RatingsServer:
         if msg_type == 'match-request':
             self._handle_match_request(msg)
         elif msg_type == 'file-transfer':
-            self._session_data.receive_file(msg['file'])
+            self._session_data.receive_files(msg['files'])
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -165,11 +165,7 @@ class RatingsServer:
         self._running = True
 
         files_required = [FileToTransfer(**f) for f in msg['files_required']]
-        files_to_request: List[FileToTransfer] = self._session_data.get_files_to_request(files_required)
-        if files_to_request:
-            logger.debug('Missing required files: %s', files_to_request)
-            self._session_data.send_file_request(files_to_request)
-            self._session_data.wait_for_files(files_required)
+        self._session_data.request_files(files_required)
 
         mcts_agent = MCTSAgent(**msg['mcts_agent'])
         mcts_gen = mcts_agent.gen

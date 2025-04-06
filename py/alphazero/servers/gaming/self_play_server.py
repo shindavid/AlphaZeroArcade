@@ -128,7 +128,7 @@ class SelfPlayServer:
             self._quit()
             return True
         elif msg_type == 'file-transfer':
-            self._session_data.receive_file(msg['file'])
+            self._session_data.receive_files(msg['files'])
         else:
             raise Exception('Unknown message type: %s', msg_type)
         return False
@@ -180,11 +180,7 @@ class SelfPlayServer:
 
     def _start_gen0_helper(self, msg):
         required_binary = FileToTransfer(**msg['binary'])
-        file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
-        if file_to_request:
-            logger.debug('Missing required binaries: %s', file_to_request)
-            self._session_data.send_file_request(file_to_request)
-            self._session_data.wait_for_files([required_binary])
+        self._session_data.request_files([required_binary])
 
         max_rows = msg['max_rows']
 
@@ -256,11 +252,7 @@ class SelfPlayServer:
 
     def _start_helper(self, msg: JsonDict):
         required_binary = FileToTransfer(**msg['binary'])
-        file_to_request: List[FileToTransfer] = self._session_data.get_files_to_request([required_binary])
-        if file_to_request:
-            logger.debug('Missing required binaries: %s', file_to_request)
-            self._session_data.send_file_request(file_to_request)
-            self._session_data.wait_for_files([required_binary])
+        self._session_data.request_files([required_binary])
 
         player_args = {
             '--type': 'MCTS-T',

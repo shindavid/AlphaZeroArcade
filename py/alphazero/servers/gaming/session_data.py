@@ -46,6 +46,7 @@ class SessionData:
         self._client_id: Optional[ClientId] = None
         self._skip_next_returncode_check = False
         self._log_sync_set = set()
+        self._pending_file_transfer = False
         self._file_transfer_cv = threading.Condition()
 
     def disable_next_returncode_check(self):
@@ -157,9 +158,14 @@ class SessionData:
         }
         self.socket.send_json(data)
 
-    def get_files_to_request(self, files_required: List[FileToTransfer]):
+    def request_files(self, files: List[FileToTransfer]):
+        """
+        Filters the list of files to only include those that we currently don't have. If the
+        remaining files are not empty, sends a file request to the loop controller and waits
+        until they are received.
+        """
         files_to_request = []
-        for file in files_required:
+        for file in files:
             logger.debug('Checking file: %s', file)
             asset_path = os.path.join(ASSETS_DIR, file.asset_path)
             if not os.path.exists(asset_path):
@@ -179,12 +185,10 @@ class SessionData:
                     ln_cmd = f'ln -sf {asset_path} {dst_path}'
                     subprocess.run(ln_cmd, shell=True, check=True)
 
-        return files_to_request
-
-    def send_file_request(self, files_to_request: List[FileToTransfer]):
         if not files_to_request:
             return
 
+        self._pending_file_transfer = True
         files = [f.to_dict() for f in files_to_request]
         data = {
             'type': 'file-request',
@@ -193,27 +197,38 @@ class SessionData:
         self.socket.send_json(data)
         logger.debug('Sent file-request for %d files: %s', len(files), files)
 
-    def receive_file(self, file_to_receive: JsonDict):
-        py_util.atomic_makedirs(ASSETS_DIR)
-        file = FileToTransfer(**file_to_receive)
-        asset_path = os.path.join(ASSETS_DIR, file.asset_path)
-        os.makedirs(os.path.dirname(asset_path), exist_ok=True)
-        self.socket.recv_file(asset_path, atomic=True)
+        with  self._file_transfer_cv:
+            self._file_transfer_cv.wait_for(lambda: not self._pending_file_transfer)
 
-        # create soft link in the run directory
-        src = asset_path
-        dst = os.path.join(self.run_dir, file.scratch_path)
-        dst_dir = os.path.dirname(dst)
-        os.makedirs(dst_dir, exist_ok=True)
-        ln_cmd = f'ln -sf {src} {dst}'
-        subprocess.run(ln_cmd, shell=True, check=True)
+    def receive_files(self, files_to_receive: List[JsonDict]):
+        py_util.atomic_makedirs(ASSETS_DIR)
+        files = [FileToTransfer(**f) for f in files_to_receive]
+        for file in files:
+            asset_path = os.path.join(ASSETS_DIR, file.asset_path)
+            os.makedirs(os.path.dirname(asset_path), exist_ok=True)
+            self.socket.recv_file(asset_path, atomic=True)
+
+            # create soft link in the run directory
+            src = asset_path
+            dst = os.path.join(self.run_dir, file.scratch_path)
+            dst_dir = os.path.dirname(dst)
+            os.makedirs(dst_dir, exist_ok=True)
+            ln_cmd = f'ln -sf {src} {dst}'
+            subprocess.run(ln_cmd, shell=True, check=True)
+
+            # Sanity check: verify the hash matches
+            #
+            # The sequencing of messages between the loop controller and the client is such that
+            # we should never get concurrent file transfers. If somehow a bug creeps in leading to
+            # concurrent file transfers, this check should catch it.
+            expected_hash = file.sha256_hash
+            actual_hash = py_util.sha256sum(asset_path)
+            if actual_hash != expected_hash:
+                raise Exception(f'Hash mismatch for file {file.asset_path} ({expected_hash} != {actual_hash})')
 
         with self._file_transfer_cv:
+            self._pending_file_transfer = False
             self._file_transfer_cv.notify_all()
-
-    def wait_for_files(self, files_required: List[FileToTransfer]):
-        with  self._file_transfer_cv:
-            self._file_transfer_cv.wait_for(lambda: not self.get_files_to_request(files_required))
 
     @property
     def socket(self) -> Socket:
