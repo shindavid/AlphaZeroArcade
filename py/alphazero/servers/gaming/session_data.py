@@ -216,6 +216,16 @@ class SessionData:
             ln_cmd = f'ln -sf {src} {dst}'
             subprocess.run(ln_cmd, shell=True, check=True)
 
+            # Sanity check: verify the hash matches
+            #
+            # The sequencing of messages between the loop controller and the client is such that
+            # we should never get concurrent file transfers. If somehow a bug creeps in leading to
+            # concurrent file transfers, this check should catch it.
+            expected_hash = file.sha256_hash
+            actual_hash = py_util.sha256sum(asset_path)
+            if actual_hash != expected_hash:
+                raise Exception(f'Hash mismatch for file {file.asset_path} ({expected_hash} != {actual_hash})')
+
         with self._file_transfer_cv:
             self._pending_file_transfer = False
             self._file_transfer_cv.notify_all()
