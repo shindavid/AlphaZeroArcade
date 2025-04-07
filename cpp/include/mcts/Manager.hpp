@@ -92,7 +92,7 @@ class Manager {
     // node-initialization yield info
     StateHistory* initialization_history;
     core::nn_evaluation_sequence_id_t nn_eval_seq_id;
-    node_pool_index_t node_index_under_initialization = -1;
+    node_pool_index_t initialization_index = -1;
     node_pool_index_t inserted_node_index = -1;
     bool expanded_new_node = false;
 
@@ -190,7 +190,7 @@ class Manager {
     mutable std::mutex mutex;
     std::condition_variable cv;
     core::search_context_id_t next_context_id = 0;  // round-robins
-    core::search_context_id_t primary_context_id = -1;
+    core::search_context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
   };
@@ -290,7 +290,6 @@ class Manager {
 
   void prepare_results();
 
-  void announce_shutdown();
   void load_action_symmetries(Node* root, core::action_t* actions);
   void prune_policy_target(const SearchParams&, group::element_t inv_sym);
   static void init_profiling_dir(const std::string& profiling_dir);
