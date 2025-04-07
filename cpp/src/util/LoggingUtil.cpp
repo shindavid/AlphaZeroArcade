@@ -1,5 +1,6 @@
 #include <util/LoggingUtil.hpp>
 
+#include <spdlog/common.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -44,6 +45,9 @@ void Logging::init(const Params& params) {
 
   // Now set up flushing behavior on the logger itself
   spdlog::flush_on(spdlog::level::debug);
+
+  // enable all levels of logging (filtering is done at compile-level)
+  spdlog::set_level(spdlog::level::trace);
 }
 
 }  // namespace util
