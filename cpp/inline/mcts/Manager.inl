@@ -7,6 +7,7 @@
 #include <mcts/UniformNNEvaluationService.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -72,7 +73,6 @@ Manager<Game>::Manager(mutex_cv_vec_sptr_t& mutex_cv_pool, const ManagerParams& 
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {
-  announce_shutdown();
   clear();
 
   nn_eval_service_->disconnect();
@@ -168,26 +168,47 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
   SearchContext& context = search_contexts_[context_id];
 
   if (state_machine_.state == kIdle) {
+    LOG_DEBUG << "search(): context_id=" << context_id
+              << " primary=" << state_machine_.primary_context_id << " state=kIdle, begin search";
     if (context_id == state_machine_.primary_context_id) {
       state_machine_.state = kInitializingRoot;
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kIdle->kInitializingRoot, begin root initialization";
       lock.unlock();
       if (begin_root_initialization(context) == core::kContinue) {
-        std::unique_lock lock2(state_machine_.mutex);
+        LOG_DEBUG << "search(): context_id=" << context_id
+                  << " state=kIdle->kInitializingRoot, root initialization done";
+        lock.lock();
+        LOG_DEBUG << "search(): context_id=" << context_id
+                  << " state=kIdle->kInVisitLoop, updating state machine to in visit loop";
         update_state_machine_to_in_visit_loop();
+        LOG_DEBUG << "search(): context_id=" << context_id
+                  << " state=kIdle->kInVisitLoop, update state machine to in visit loop complete";
       } else {
+        LOG_DEBUG << "search(): context_id=" << context_id
+                  << " state=kIdle->kInitializingRoot, root initialization yielded";
         return nullptr;
       }
     } else {
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kIdle, root initialization yielded";
       return nullptr;
     }
   }
 
+  LOG_DEBUG << "DBG search(): context_id=" << context_id << " state=" << int(state_machine_.state)
+            << " primary=" << state_machine_.primary_context_id
+            << " in_visit_loop_count=" << state_machine_.in_visit_loop_count;
+
   if (state_machine_.state == kInitializingRoot) {
     if (context_id == state_machine_.primary_context_id) {
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kInitializingRoot, resuming root initialization";
       resume_root_initialization(context);
       update_state_machine_to_in_visit_loop();
-      lock.unlock();
     } else {
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kInitializingRoot, root initialization yielded";
       return nullptr;
     }
   }
@@ -195,16 +216,35 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
   util::release_assert(state_machine_.state == kInVisitLoop);
   lock.unlock();
   if (context.mid_search_iteration) {
-    if (resume_search_iteration(context) == core::kYield) return nullptr;
+    LOG_DEBUG << "search(): context_id=" << context_id
+              << " state=kInVisitLoop, resuming search iteration";
+    if (resume_search_iteration(context) == core::kYield) {
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kInVisitLoop, yielding on resumed search iteration";
+      return nullptr;
+    }
   }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
   while (more_search_iterations_needed(root)) {
-    if (begin_search_iteration(context)== core::kYield) return nullptr;
+    LOG_DEBUG << "search(): context_id=" << context_id
+              << " state=kInVisitLoop, beginning search iteration";
+    if (begin_search_iteration(context) == core::kYield) {
+      LOG_DEBUG << "search(): context_id=" << context_id
+                << " state=kInVisitLoop, yielding on begun search iteration";
+      return nullptr;
+    }
   }
 
+  LOG_DEBUG << "search(): context_id=" << context_id
+            << " state=kInVisitLoop, marking as done with visit loop";
   lock.lock();
-  if (!mark_as_done_with_visit_loop(context)) return nullptr;
+  if (!mark_as_done_with_visit_loop(context)) {
+    LOG_DEBUG << "search(): context_id=" << context_id
+              << " state=kInVisitLoop, yielding on marking as done with visit loop";
+    return nullptr;
+  }
+  LOG_DEBUG << "search(): context_id=" << context_id << " state=kInVisitLoop, done with visit loop";
   prepare_results();
   return &results_;
 }
@@ -275,6 +315,7 @@ void Manager<Game>::update_state_machine_to_in_visit_loop() {
 
 template <core::concepts::Game Game>
 bool Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   // Assumes state_machine_.mutex is held
   if (context.in_visit_loop) {
     context.in_visit_loop = false;
@@ -290,6 +331,7 @@ bool Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::init_context(core::search_context_id_t i) {
+  LOG_DEBUG << std::format("{}", __func__);
   SearchContext& context = search_contexts_[i];
   context.id = i;
   if (mcts::kEnableProfiling) {
@@ -303,6 +345,7 @@ void Manager<Game>::init_context(core::search_context_id_t i) {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::init_root_info(bool add_noise) {
+  LOG_DEBUG << std::format("{}", __func__);
   root_info_.add_noise = add_noise;
   if (root_info_.node_index < 0 || add_noise) {
     const StateHistory& canonical_history = root_info_.history_array[root_info_.canonical_sym];
@@ -318,6 +361,7 @@ inline void Manager<Game>::init_root_info(bool add_noise) {
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
   init_root_info(add_noise);
 
@@ -342,19 +386,21 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
 
   context.canonical_history = history;
   context.initialization_history = &context.canonical_history;
-  context.node_index_under_initialization = root_index;
+  context.initialization_index = root_index;
   return begin_node_initialization(context);
 }
 
 template <core::concepts::Game Game>
 void Manager<Game>::resume_root_initialization(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   resume_node_initialization(context);
 }
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.node_index_under_initialization;
+  node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table_.get_node(node_index);
 
   context.mid_node_initialization = true;
@@ -390,8 +436,9 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
 
 template <core::concepts::Game Game>
 void Manager<Game>::resume_node_initialization(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.node_index_under_initialization;
+  node_pool_index_t node_index = context.initialization_index;
 
   Node* node = lookup_table_.get_node(node_index);
   bool is_root = (node_index == root_info_.node_index);
@@ -427,7 +474,11 @@ bool Manager<Game>::more_search_iterations_needed(Node* root) {
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   Node* root = lookup_table_.get_node(root_info_.node_index);
+  context.canonical_sym = root_info_.canonical_sym;
+  context.raw_history = root_info_.history_array[group::kIdentity];
+  context.active_seat = root_info_.active_seat;
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
   context.visit_node = root;
@@ -438,6 +489,7 @@ core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& c
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   if (context.mid_visit) {
     resume_visit(context);
   }
@@ -461,9 +513,11 @@ core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& 
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   Node* node = context.visit_node;
   print_visit_info(context);
   context.mid_visit = true;
+  context.expanded_new_node = false;
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
@@ -519,6 +573,11 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
+      // if (context.expanded_new_node) {
+      //   context.visit_node = nullptr;
+      //   context.mid_visit = false;
+      //   return core::kContinue;
+      // }
     } else if (edge->state == Node::kMidExpansion) {
       util::release_assert(multithreaded());
       return core::kYield;
@@ -555,26 +614,26 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::resume_visit(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   Node* node = context.visit_node;
   Edge* edge = context.visit_edge;
 
   if (context.mid_expansion) {
     resume_expansion(context);
-
-    if (context.expanded_new_node) {
-      context.visit_node = nullptr;
-      context.mid_visit = false;
-      return;
-    }
-  } else {
-    // we could have hit the yield in the kMidExpansion case, as the non-primary context
-    if (edge->state != Node::kExpanded) {
-      std::unique_lock lock(node->mutex());
-      node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
-    }
   }
 
-  util::release_assert(edge->state == Node::kExpanded);
+  if (context.expanded_new_node) {
+    context.visit_node = nullptr;
+    context.mid_visit = false;
+    return;
+  }
+
+  // we could have hit the yield in the kMidExpansion case, as the non-primary context
+  if (edge->state != Node::kExpanded) {
+    std::unique_lock lock(node->mutex());
+    node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+  }
+
   Node* child = node->get_child(edge);
   if (child) {
     context.search_path.emplace_back(child, nullptr);
@@ -605,6 +664,8 @@ void Manager<Game>::resume_visit(SearchContext& context) {
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
+
   context.profiler.record(SearchThreadRegion::kExpand);
   context.mid_expansion = true;
 
@@ -627,12 +688,12 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
   //
   // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
   // keeps the first init_node() and "unwinds" the second one.
-  node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
+  context.initialization_index = lookup_table_.lookup_node(mcts_key);
 
-  context.expanded_new_node = child_index < 0;
+  context.expanded_new_node = context.initialization_index < 0;
   if (context.expanded_new_node) {
-    child_index = lookup_table_.alloc_node();
-    Node* child = lookup_table_.get_node(child_index);
+    context.initialization_index = lookup_table_.alloc_node();
+    Node* child = lookup_table_.get_node(context.initialization_index);
 
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
@@ -655,7 +716,6 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
     }
 
     context.initialization_history = history;
-    context.node_index_under_initialization = child_index;
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
   }
   resume_expansion(context);
@@ -664,36 +724,42 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
 
 template <core::concepts::Game Game>
 void Manager<Game>::resume_expansion(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
+
+  node_pool_index_t child_index = context.initialization_index;
+  Edge* edge = context.visit_edge;
+  Node* parent = context.visit_node;
+
   if (context.mid_node_initialization) {
     resume_node_initialization(context);
   }
-  node_pool_index_t child_index = context.node_index_under_initialization;
-  node_pool_index_t inserted_child_index = context.inserted_node_index;
-  Node* child = lookup_table_.get_node(child_index);
-  Node* parent = context.visit_node;
-  Edge* edge = context.visit_edge;
-  bool terminal = child->is_terminal();
-  bool do_virtual = !terminal && multithreaded();
 
-  edge->child_index = inserted_child_index;
-  if (child_index != inserted_child_index) {
-    // This means that we hit the race-condition described in begin_expansion(). We need to "unwind"
-    // the second init_node() call, and instead use the first one.
-    //
-    // Note that all the work done in constructing child is effectively discarded. We don't
-    // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
-    // when the lookup_table is defragmented.
-    context.search_path.pop_back();
-    if (do_virtual) {
-      undo_virtual_backprop(context);
-    }
-    context.expanded_new_node = false;
-    child_index = edge->child_index;
-  } else {
-    if (terminal) {
-      pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
+  if (context.expanded_new_node) {
+    node_pool_index_t inserted_child_index = context.inserted_node_index;
+    Node* child = lookup_table_.get_node(child_index);
+    bool terminal = child->is_terminal();
+    bool do_virtual = !terminal && multithreaded();
+
+    edge->child_index = inserted_child_index;
+    if (child_index != inserted_child_index) {
+      // This means that we hit the race-condition described in begin_expansion(). We need to
+      // "unwind" the second init_node() call, and instead use the first one.
+      //
+      // Note that all the work done in constructing child is effectively discarded. We don't
+      // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
+      // when the lookup_table is defragmented.
+      context.search_path.pop_back();
+      if (do_virtual) {
+        undo_virtual_backprop(context);
+      }
+      context.expanded_new_node = false;
+      child_index = edge->child_index;
     } else {
-      standard_backprop(context, do_virtual);
+      if (terminal) {
+        pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
+      } else {
+        standard_backprop(context, do_virtual);
+      }
     }
   }
 
@@ -766,6 +832,7 @@ inline void Manager<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
 
 template <core::concepts::Game Game>
 void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
+  LOG_DEBUG << std::format("{}", __func__);
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
 
   // Evaluate every child of the root node
@@ -851,6 +918,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::virtual_backprop(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   context.profiler.record(SearchThreadRegion::kVirtualBackprop);
 
   if (mcts::kEnableSearchDebug) {
@@ -879,6 +947,7 @@ void Manager<Game>::virtual_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
   context.profiler.record(SearchThreadRegion::kUndoVirtualBackprop);
@@ -904,6 +973,7 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArray& value) {
+  LOG_DEBUG << std::format("{}", __func__);
   context.profiler.record(SearchThreadRegion::kPureBackprop);
 
   if (mcts::kEnableSearchDebug) {
@@ -935,6 +1005,7 @@ inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArra
 
 template <core::concepts::Game Game>
 void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual) {
+  LOG_DEBUG << std::format("{}({}, {})", __func__, context.id, undo_virtual);
   context.profiler.record(SearchThreadRegion::kStandardBackprop);
 
   Node* last_node = context.search_path.back().node;
@@ -969,6 +1040,7 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
 
 template <core::concepts::Game Game>
 void Manager<Game>::short_circuit_backprop(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   context.profiler.record(SearchThreadRegion::kShortCircuitBackprop);
 
   if (mcts::kEnableSearchDebug) {
@@ -990,6 +1062,7 @@ void Manager<Game>::short_circuit_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
+  LOG_DEBUG << std::format("{}", __func__);
   context.canonical_history = context.raw_history;
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
@@ -1046,7 +1119,7 @@ std::string Manager<Game>::thread_id_whitespace(const SearchContext& context) co
 template <core::concepts::Game Game>
 std::string Manager<Game>::break_plus_thread_id_whitespace(const SearchContext& context) const {
   return std::format("\n{}", util::make_whitespace(
-    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * context.id).c_str());
+    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * context.id));
 }
 
 template <core::concepts::Game Game>
@@ -1255,14 +1328,6 @@ void Manager<Game>::prepare_results() {
   results_.win_rates = stats.Q;
   results_.value_prior = stable_data.VT;
   results_.action_mode = mode;
-}
-
-template <core::concepts::Game Game>
-void Manager<Game>::announce_shutdown() {
-  throw std::runtime_error("announce_shutdown not implemented");
-  // std::unique_lock<std::mutex> lock(search_mutex_);
-  // shared_data_.shutting_down = true;
-  // shared_data_.cv_search_on.notify_all();
 }
 
 template <core::concepts::Game Game>
