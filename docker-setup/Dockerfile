@@ -48,6 +48,9 @@ RUN apt-get install -y software-properties-common && \
     apt-get install -y gcc-13 g++-13
 
 # Boost
+#
+# TODO: remove libbost-log from below, we don't need it anymore. Refraining from doing this for now
+# so as to not inconvenience devs with a slow pull of a new image.
 RUN add-apt-repository -y ppa:mhier/libboost-latest && \
     apt-get update && \
     apt-get install -y \
@@ -59,6 +62,10 @@ RUN for tool in gcc g++; do \
       update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-13 60 || true; \
     done
 
+#####################
+# Misc dependencies #
+#####################
+
 # clangd, needed for vscode plugin
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -67,8 +74,10 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-19 100 && \
     rm llvm.sh
 
-# Python dependencies
-#
+#######################
+# Python dependencies #
+#######################
+
 # Technically, we don't need the google/runpod stuff within the Docker container, as it's only used
 # externally. But it's common to attach vscode to the container, and having that stuff
 # installed allows for better code completion when working with the Docker-external code.
@@ -78,12 +87,22 @@ RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy ma
     notebook sortedcontainers runpod
 
 ################################################################################################
-# FOR FASTER DOCKER IMAGE REBUILDS: put new apt-get/pip3 installs below this line. This avoids #
+# FOR FASTER DOCKER IMAGE REBUILDS: put new dependencies below this line. This avoids          #
 # re-installing all the above when rebuilding the image. We can periodically move these back   #
 # up for cleanliness.                                                                          #
 ################################################################################################
 
-# Clean up
+# Install spdlog (compiled version)
+RUN git clone --branch v1.15.2 --depth 1 https://github.com/gabime/spdlog.git && \
+    cd spdlog && \
+    mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
+    cmake --build . --target install && \
+    cd ../.. && rm -rf spdlog
+
+###################
+# Clean up + Misc #
+###################
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONPATH=/workspace/repo/py
@@ -95,7 +114,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="3.6.2"
+ARG VERSION="4.0.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
