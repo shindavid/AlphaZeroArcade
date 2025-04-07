@@ -1,14 +1,17 @@
 #include <core/concepts/Game.hpp>
-#include <core/GameTypes.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameTypes.hpp>
+#include <core/tests/Common.hpp>
 #include <games/GameTransforms.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <generic_players/MctsPlayer.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/SearchLog.hpp>
-#include <util/EigenUtil.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/EigenUtil.hpp>
+#include <util/GTestUtil.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <gtest/gtest.h>
 
@@ -149,10 +152,8 @@ TEST_F(tictactoe_test, uniform_search_01247) {
   test_get_action_policy("tictactoe01247", initial_actions);
 }
 
-int main(int argc, char** argv) {
-  util::set_tty_mode(false);
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
-
 }  // namespace generic
+
+int main(int argc, char** argv) {
+  return launch_gtest(argc, argv);
+}

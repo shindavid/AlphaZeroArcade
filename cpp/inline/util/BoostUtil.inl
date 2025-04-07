@@ -2,6 +2,8 @@
 
 #include <util/ScreenUtil.hpp>
 
+#include <fstream>
+
 namespace boost_util {
 
 namespace program_options {

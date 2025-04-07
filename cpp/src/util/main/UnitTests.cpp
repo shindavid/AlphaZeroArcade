@@ -1,5 +1,6 @@
 #include <util/AllocPool.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/GTestUtil.hpp>
 #include <util/Random.hpp>
 #include <util/StringUtil.hpp>
 
@@ -7,7 +8,6 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <iostream>
 
 template <typename T>
 void test_zero_out() {
@@ -577,7 +577,4 @@ TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
 }
 
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

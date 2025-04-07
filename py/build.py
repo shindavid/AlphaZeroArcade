@@ -24,6 +24,7 @@ def run(cmd: str, print_cmd=True):
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
+    parser.add_argument('--enable-debug-logging', action='store_true', help='debug logging')
     parser.add_argument('--clean', action='store_true', help='clean out target/.../{bin,lib}/ directory')
     parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
@@ -72,6 +73,7 @@ def main():
         run('rm -f core.*')
 
     debug = bool(args.debug)
+    enable_debug_logging = bool(args.enable_debug_logging)
 
     targets = args.target.split(',') if args.target else []
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -87,6 +89,8 @@ def main():
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
     if debug:
         macro_defines.append('DEBUG_BUILD=1')
+    if enable_debug_logging:
+        macro_defines.append('SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG')
 
     extra_definitions = ' '.join(f'-D{d}' for d in macro_defines)
 

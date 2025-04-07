@@ -72,3 +72,6 @@
 // Helper macro to detect how many arguments are provided
 #define GTEST_FORWARD_DECLARE_GET_MACRO(_1, _2, NAME, ...) NAME
 #define FRIEND_GTEST_GET_MACRO(_1, _2, NAME, ...) NAME
+
+// Dispatches to standard gtest main function, while adding LoggingUtil cmdline params
+int launch_gtest(int argc, char** argv);

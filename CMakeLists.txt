@@ -14,8 +14,9 @@ project(alphazero LANGUAGES CXX CUDA)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
-find_package(Boost COMPONENTS program_options filesystem json log log_setup REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
+find_package(spdlog REQUIRED)
 
 set(CMAKE_CXX_STANDARD  23)
 
@@ -71,7 +72,9 @@ function(append_target_metadata game_name)
     endforeach()
 endfunction()
 
-set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+# Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
+link_directories(/usr/local/cuda/lib64)
+set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} cupti spdlog::spdlog)
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 add_subdirectory("cpp/src")

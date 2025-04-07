@@ -37,8 +37,8 @@ TrainingDataWriter<Game>::TrainingDataWriter(const Params& params) {
     client->add_listener(this);
     if (client->is_loop_controller_local()) {
       if (client->output_base_dir().empty()) {
-        LOG_WARN << "--output-base-dir not set despite using a local loop controller";
-        LOG_WARN << "Disabling direct-game-log-write optimization";
+        LOG_WARN("--output-base-dir not set despite using a local loop controller");
+        LOG_WARN("Disabling direct-game-log-write optimization");
       } else {
         misc_data_.direct_game_log_write_optimization_enabled = true;
       }
@@ -80,32 +80,32 @@ void TrainingDataWriter<Game>::wait_until_batch_empty() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::pause() {
-  LOG_INFO << "TrainingDataWriter: pausing";
+  LOG_INFO("TrainingDataWriter: pausing");
   std::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
-    LOG_INFO << "TrainingDataWriter: handle_pause_receipt (already paused)";
+    LOG_INFO("TrainingDataWriter: handle_pause_receipt (already paused)");
     core::LoopControllerClient::get()->handle_pause_receipt();
     return;
   }
   game_queue_data_.paused = true;
   lock.unlock();
   game_queue_cv_.notify_one();
-  LOG_INFO << "TrainingDataWriter: pause complete!";
+  LOG_INFO("TrainingDataWriter: pause complete!");
 }
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::unpause() {
-  LOG_INFO << "TrainingDataWriter: unpausing";
+  LOG_INFO("TrainingDataWriter: unpausing");
   std::unique_lock lock(game_queue_mutex_);
   if (!game_queue_data_.paused) {
-    LOG_INFO << "TrainingDataWriter: handle_unpause_receipt (already unpaused)";
+    LOG_INFO("TrainingDataWriter: handle_unpause_receipt (already unpaused)");
     core::LoopControllerClient::get()->handle_unpause_receipt();
     return;
   }
   game_queue_data_.paused = false;
   lock.unlock();
   game_queue_cv_.notify_one();
-  LOG_INFO << "TrainingDataWriter: unpause complete!";
+  LOG_INFO("TrainingDataWriter: unpause complete!");
 }
 
 template <concepts::Game Game>
@@ -194,8 +194,8 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
                        row_count, n_rows);
   util::release_assert(n_games > 0, "TrainingDataWriter: n_games <= 0 (%d)", n_games);
 
-  LOG_INFO << "TrainingDataWriter: sending batch of " << row_count << " rows from " << n_games
-           << " games (of " << n_total_games << " total)";
+  LOG_INFO("TrainingDataWriter: sending batch of {} rows from {} games (of {} total)", row_count,
+           n_games, n_total_games);
 
   // Truncate
   batch_data_.metadata.resize(n_games);
