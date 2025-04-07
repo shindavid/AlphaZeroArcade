@@ -6,7 +6,6 @@
 #include <util/Exception.hpp>
 #include <util/LoggingUtil.hpp>
 
-#include <map>
 #include <thread>
 #include <vector>
 
@@ -39,8 +38,8 @@ void LoopControllerClient::handle_pause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
-  LOG_INFO << "LoopControllerClient: handle_pause_receipt() - done (pause_receipt_count_ = "
-           << pause_receipt_count_ << ")";
+  LOG_INFO("LoopControllerClient: handle_pause_receipt() - done (pause_receipt_count_ = {})",
+           pause_receipt_count_);
 }
 
 void LoopControllerClient::handle_unpause_receipt() {
@@ -154,7 +153,7 @@ void LoopControllerClient::send_unpause_ack() {
 }
 
 void LoopControllerClient::pause() {
-  LOG_INFO << "LoopControllerClient: pausing...";
+  LOG_INFO("LoopControllerClient: pausing...");
   pause_receipt_count_ = 0;
 
   for (auto listener : pause_listeners_) {
@@ -163,7 +162,7 @@ void LoopControllerClient::pause() {
 }
 
 void LoopControllerClient::unpause() {
-  LOG_INFO << "LoopControllerClient: unpausing...";
+  LOG_INFO("LoopControllerClient: unpausing...");
   unpause_receipt_count_ = 0;
 
   for (auto listener : pause_listeners_) {
@@ -173,7 +172,7 @@ void LoopControllerClient::unpause() {
 
 void LoopControllerClient::reload_weights(const std::vector<char>& buf,
                                           const std::string& cuda_device) {
-  LOG_INFO << "LoopControllerClient: reloading weights...";
+  LOG_INFO("LoopControllerClient: reloading weights...");
 
   for (auto listener : reload_weights_listeners_) {
     listener->reload_weights(buf, cuda_device);
@@ -181,7 +180,7 @@ void LoopControllerClient::reload_weights(const std::vector<char>& buf,
 }
 
 void LoopControllerClient::handle_data_request(int n_rows) {
-  LOG_INFO << "LoopControllerClient: handling self-play data request(" << n_rows << ")...";
+  LOG_INFO("LoopControllerClient: handling self-play data request({})...", n_rows);
 
   for (auto listener : data_request_listeners_) {
     listener->handle_data_request(n_rows);
@@ -189,8 +188,7 @@ void LoopControllerClient::handle_data_request(int n_rows) {
 }
 
 void LoopControllerClient::handle_data_pre_request(int n_rows_limit) {
-  LOG_INFO << "LoopControllerClient: handling self-play data pre-request(" << n_rows_limit
-           << ")...";
+  LOG_INFO("LoopControllerClient: handling self-play data pre-request({})...", n_rows_limit);
 
   for (auto listener : data_request_listeners_) {
     listener->handle_data_pre_request(n_rows_limit);
@@ -198,16 +196,16 @@ void LoopControllerClient::handle_data_pre_request(int n_rows_limit) {
 }
 
 void LoopControllerClient::wait_for_pause_receipts() {
-  LOG_INFO << "LoopControllerClient: waiting for pause receipts...";
+  LOG_INFO("LoopControllerClient: waiting for pause receipts...");
   std::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return pause_receipt_count_ == pause_listeners_.size(); });
-  LOG_INFO << "LoopControllerClient: pause receipts received!";
+  LOG_INFO("LoopControllerClient: pause receipts received!");
 }
 
 void LoopControllerClient::wait_for_unpause_receipts() {
   std::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return unpause_receipt_count_ == pause_listeners_.size(); });
-  LOG_INFO << "LoopControllerClient: unpause receipts received!";
+  LOG_INFO("LoopControllerClient: unpause receipts received!");
 }
 
 void LoopControllerClient::loop() {
@@ -215,13 +213,13 @@ void LoopControllerClient::loop() {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
       if (!shutdown_initiated_) {
-        LOG_INFO << "LoopControllerClient: cmd-server socket closed, breaking";
+        LOG_INFO("LoopControllerClient: cmd-server socket closed, breaking");
       }
       break;
     }
 
     std::string type = msg.at("type").as_string().c_str();
-    LOG_INFO << "LoopControllerClient: handling - " << msg;
+    LOG_INFO("LoopControllerClient: handling - {}", fmt::streamed(msg));
     if (type == "pause") {
       pause();
       wait_for_pause_receipts();
@@ -247,7 +245,7 @@ void LoopControllerClient::loop() {
       std::vector<char> buf;
       if (!socket_->recv_file_bytes(buf)) {
         if (!shutdown_initiated_) {
-          LOG_INFO << "LoopControllerClient: cmd-server socket closed, breaking";
+          LOG_INFO("LoopControllerClient: cmd-server socket closed, breaking");
         }
         break;
       }
@@ -260,7 +258,7 @@ void LoopControllerClient::loop() {
     } else {
       throw util::Exception("Unknown loop-controller message type %s", type.c_str());
     }
-    LOG_INFO << "LoopControllerClient: " << type << " handling complete";
+    LOG_INFO("LoopControllerClient: {} handling complete", type);
   }
 }
 

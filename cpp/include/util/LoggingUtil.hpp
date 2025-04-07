@@ -1,15 +1,14 @@
 #pragma once
 
-#include <iostream>
-#include <mutex>
+#include <spdlog/fmt/ostr.h>  // Enables fallback to ostream <<
+#include <spdlog/spdlog.h>
+
 #include <string>
 
-#include <boost/log/trivial.hpp>
-
-#define LOG_INFO BOOST_LOG_TRIVIAL(info)
-#define LOG_DEBUG BOOST_LOG_TRIVIAL(debug)
-#define LOG_WARN BOOST_LOG_TRIVIAL(warning)
-#define LOG_ERROR BOOST_LOG_TRIVIAL(error)
+#define LOG_INFO SPDLOG_INFO
+#define LOG_DEBUG SPDLOG_DEBUG
+#define LOG_WARN SPDLOG_WARN
+#define LOG_ERROR SPDLOG_ERROR
 
 namespace util {
 
@@ -17,7 +16,6 @@ struct Logging {
 
 struct Params {
   std::string log_filename;
-  bool debug = false;
   bool append_mode = false;
   bool omit_timestamps = false;
 

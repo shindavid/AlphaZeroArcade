@@ -524,10 +524,9 @@ void GameServer<Game>::run() {
   results_array_t results = shared_data_.get_results();
 
   fprintf(stderr, "\n");  // flush progress-bar
-  LOG_INFO << "All games complete!";
+  LOG_INFO("All games complete!");
   for (player_id_t p = 0; p < kNumPlayers; ++p) {
-    LOG_INFO << util::create_string("pid=%d name=%s %s", p, shared_data_.get_player_name(p).c_str(),
-                                    get_results_str(results[p]).c_str());
+    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), get_results_str(results[p]));
   }
 
   util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());

@@ -63,7 +63,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     util::Logging::init(log_params);
     util::Random::init(random_params);
 
-    LOG_INFO << "Starting process " << getpid();
+    LOG_INFO("Starting process {}", getpid());
 
     if (loop_controller_params.loop_controller_port > 0) {
       core::LoopControllerClient::init(loop_controller_params);

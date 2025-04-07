@@ -52,7 +52,11 @@ void NNEvaluationService<Game>::disconnect() {
   if (thread_) {
     num_connections_--;
     if (num_connections_ > 0) return;
-    if (thread_->joinable()) thread_->detach();
+    cv_service_loop_.notify_all();
+    cv_evaluate_.notify_all();
+    cv_net_weights_.notify_all();
+    cv_cache_.notify_all();
+    if (thread_->joinable()) thread_->join();
     delete thread_;
     thread_ = nullptr;
   }
@@ -154,7 +158,7 @@ inline NNEvaluationService<Game>::~NNEvaluationService() {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "evaluate() - size: " << request.items().size();
+    LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__, request.items().size());
   }
 
   int eval_count = 0;
@@ -196,7 +200,7 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
 
     eval_count += reservation_count;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << request.thread_id_whitespace() << "  evaluated!";
+      LOG_INFO("{}  evaluated!", request.thread_id_whitespace());
     }
   }
 
@@ -258,8 +262,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
   util::debug_assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
 
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << "<---------------------- NNEvaluationService::"
-             << __func__ << "(" << batch_metadata_.repr() << ") ---------------------->";
+    LOG_INFO("<---------------------- NNEvaluationService::{}({}) ---------------------->",
+             __func__, batch_metadata_.repr());
   }
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
@@ -336,8 +340,8 @@ void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, 
   my_claim_count = 0;
   other_claim_count = 0;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  waiting for cache lock (my_claim_count="
-             << my_claim_count << ", other_claim_count=" << other_claim_count << ")";
+    LOG_INFO("{}  waiting for cache lock (my_claim_count={}, other_claim_count={})",
+             request.thread_id_whitespace(), my_claim_count, other_claim_count);
   }
 
   for (RequestItem& item : request.items()) {
@@ -368,8 +372,7 @@ void NNEvaluationService<Game>::wait_until_batch_reservable(
 
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-             << ")...";
+    LOG_INFO("{}  {}({})...", request.thread_id_whitespace(), func, batch_metadata_.repr());
   }
   cv_evaluate_.wait(metadata_lock, [&] {
     if (batch_metadata_.unread_count == 0 &&
@@ -377,8 +380,8 @@ void NNEvaluationService<Game>::wait_until_batch_reservable(
         batch_metadata_.accepting_reservations)
       return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-               << ") still waiting...";
+      LOG_INFO("{}  {}({}) still waiting...", request.thread_id_whitespace(), func,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -401,8 +404,8 @@ NNEvaluationService<Game>::make_reservation(const NNEvaluationRequest& request, 
 
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-             << ") allocation complete (count=" << count << ", start_index=" << start_index << ")";
+    LOG_INFO("{}  {}({}) allocation complete (count={}, start_index={})",
+             request.thread_id_whitespace(), func, batch_metadata_.repr(), count, start_index);
   }
   cv_service_loop_.notify_one();
 
@@ -463,8 +466,7 @@ void NNEvaluationService<Game>::increment_commit_count(const NNEvaluationRequest
 
   batch_metadata_.commit_count += count;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  " << __func__ << "("
-             << batch_metadata_.repr() << ")...";
+    LOG_INFO("{}  {}({})...", request.thread_id_whitespace(), __func__, batch_metadata_.repr());
   }
   cv_service_loop_.notify_one();
 }
@@ -472,17 +474,15 @@ void NNEvaluationService<Game>::increment_commit_count(const NNEvaluationRequest
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_for_eval(const NNEvaluationRequest& request,
                                               std::unique_lock<std::mutex>& metadata_lock) {
-  const char* func = __func__;
   request.thread_profiler()->record(SearchThreadRegion::kWaitingForReservationProcessing);
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-             << ")...";
+    LOG_INFO("{}  {}({})...", request.thread_id_whitespace(), __func__, batch_metadata_.repr());
   }
   cv_evaluate_.wait(metadata_lock, [&] {
     if (batch_metadata_.reserve_index == 0) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-               << ") still waiting...";
+      LOG_INFO("{}  {}({}) still waiting...", request.thread_id_whitespace(), __func__,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -495,16 +495,14 @@ void NNEvaluationService<Game>::wait_until_all_read(
   batch_metadata_.unread_count -= count;
   cv_service_loop_.notify_all();
 
-  const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-             << ")...";
+    LOG_INFO("{}  {}({})...", request.thread_id_whitespace(), __func__, batch_metadata_.repr());
   }
   cv_evaluate_.wait(metadata_lock, [&] {
     if (batch_metadata_.unread_count == 0) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-               << ") still waiting...";
+      LOG_INFO("{}  {}({}) still waiting...", request.thread_id_whitespace(), __func__,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -514,20 +512,20 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_for_unpause() {
   if (!skip_next_pause_receipt_ && !paused_) return;  // early exit for common case, bypassing lock
 
-  LOG_INFO << "NNEvaluationService: wait_for_unpause - acquiring pause_mutex_";
+  LOG_INFO("NNEvaluationService: wait_for_unpause - acquiring pause_mutex_");
   std::unique_lock lock(pause_mutex_);
   if (skip_next_pause_receipt_) {
-    LOG_INFO << "NNEvaluationService: skipping handle_pause_receipt";
+    LOG_INFO("NNEvaluationService: skipping handle_pause_receipt");
     skip_next_pause_receipt_ = false;
   } else {
     net_.deactivate();
-    LOG_INFO << "NNEvaluationService: handle_pause_receipt";
+    LOG_INFO("NNEvaluationService: handle_pause_receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
   cv_paused_.wait(lock, [&] { return !paused_; });
   lock.unlock();
 
-  LOG_INFO << "NNEvaluationService: handle_unpause_receipt";
+  LOG_INFO("NNEvaluationService: handle_unpause_receipt");
   core::LoopControllerClient::get()->handle_unpause_receipt();
 }
 
@@ -547,18 +545,18 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
     }
   }
 
-  LOG_INFO << "NNEvaluationService: sending worker-ready...";
+  LOG_INFO("NNEvaluationService: sending worker-ready...");
 
   client->send_worker_ready();
   std::unique_lock<std::mutex> net_weights_lock(net_weights_mutex_);
-  cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_; });
-  LOG_INFO << "NNEvaluationService: weights loaded!";
+  cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_ || !active(); });
+  LOG_INFO("NNEvaluationService: weights loaded!");
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
                                                const std::string& cuda_device) {
-  LOG_INFO << "NNEvaluationService: reloading network weights...";
+  LOG_INFO("NNEvaluationService: reloading network weights...");
   util::release_assert(paused_, "%s() called while not paused", __func__);
 
   std::ispanstream stream{std::span<const char>(buf)};
@@ -568,7 +566,7 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
   net_weights_lock.unlock();
   cv_net_weights_.notify_all();
 
-  LOG_INFO << "NNEvaluationService: clearing network cache...";
+  LOG_INFO("NNEvaluationService: clearing network cache...");
   std::unique_lock cache_lock(cache_mutex_);
   cache_.clear();
   cache_lock.unlock();
@@ -578,11 +576,11 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::pause() {
-  LOG_INFO << "NNEvaluationService: pausing";
+  LOG_INFO("NNEvaluationService: pausing");
   std::unique_lock lock(pause_mutex_);
   if (paused_) {
     net_.deactivate();
-    LOG_INFO << "NNEvaluationService: handle_pause_receipt (already paused)";
+    LOG_INFO("NNEvaluationService: handle_pause_receipt (already paused)");
     core::LoopControllerClient::get()->handle_pause_receipt();
     return;
   }
@@ -591,10 +589,10 @@ void NNEvaluationService<Game>::pause() {
   if (!initial_weights_loaded_) {
     net_.deactivate();
     skip_next_pause_receipt_ = true;
-    LOG_INFO << "NNEvaluationService: handle_pause_receipt (skip next)";
+    LOG_INFO("NNEvaluationService: handle_pause_receipt (skip next)");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
-  LOG_INFO << "NNEvaluationService: pause complete!";
+  LOG_INFO("NNEvaluationService: pause complete!");
 
   lock.unlock();
   cv_paused_.notify_all();
@@ -602,18 +600,18 @@ void NNEvaluationService<Game>::pause() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::unpause() {
-  LOG_INFO << "NNEvaluationService: unpausing";
+  LOG_INFO("NNEvaluationService: unpausing");
   std::unique_lock lock(pause_mutex_);
   net_.activate();
   if (!paused_) {
-    LOG_INFO << "NNEvaluationService: handle_unpause_receipt (already unpaused)";
+    LOG_INFO("NNEvaluationService: handle_unpause_receipt (already unpaused)");
     core::LoopControllerClient::get()->handle_unpause_receipt();
     return;
   }
   paused_ = false;
   lock.unlock();
   cv_paused_.notify_all();
-  LOG_INFO << "NNEvaluationService: unpause complete!";
+  LOG_INFO("NNEvaluationService: unpause complete!");
 }
 
 template <core::concepts::Game Game>
@@ -623,14 +621,15 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-             << ") ---------------------->";
+    LOG_INFO("<---------------------- {} {}({}) ---------------------->", cls, func,
+             batch_metadata_.repr());
   }
   cv_service_loop_.wait(lock, [&] {
+    if (!active()) return true;
     if (batch_metadata_.unread_count == 0) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-               << ") still waiting ---------------------->";
+      LOG_INFO("<---------------------- {} {}({}) still waiting ---------------------->", cls, func,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -644,18 +643,19 @@ bool NNEvaluationService<Game>::wait_for_first_reservation() {
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-             << ") ---------------------->";
+    LOG_INFO("<---------------------- {} {}({}) ---------------------->", cls, func,
+             batch_metadata_.repr());
   }
 
   // Without the deadline, we can end up deadlocking here if the loop-controller issues a pause
   // command while we're waiting for the first reservation.
   auto deadline = now + std::chrono::milliseconds(100);
   cv_service_loop_.wait_until(lock, deadline, [&] {
+    if (!active()) return true;
     if (batch_metadata_.reserve_index > 0) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-               << ") still waiting ---------------------->";
+      LOG_INFO("<---------------------- {} {}({}) still waiting ---------------------->", cls, func,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -670,14 +670,15 @@ void NNEvaluationService<Game>::wait_for_last_reservation() {
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-             << ") ---------------------->";
+    LOG_INFO("<---------------------- {} {}({}) ---------------------->", cls, func,
+             batch_metadata_.repr());
   }
   cv_service_loop_.wait_until(lock, deadline_, [&] {
+    if (!active()) return true;
     if (batch_metadata_.reserve_index == params_.batch_size_limit) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-               << ") still waiting ---------------------->";
+      LOG_INFO("<---------------------- {} {}({}) still waiting ---------------------->", cls, func,
+               batch_metadata_.repr());
     }
     return false;
   });
@@ -691,14 +692,15 @@ void NNEvaluationService<Game>::wait_for_commits() {
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-             << ") ---------------------->";
+    LOG_INFO("<---------------------- {} {}({}) ---------------------->", cls, func,
+             batch_metadata_.repr());
   }
   cv_service_loop_.wait(lock, [&] {
+    if (!active()) return true;
     if (batch_metadata_.reserve_index == batch_metadata_.commit_count) return true;
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
-               << ") still waiting ---------------------->";
+      LOG_INFO("<---------------------- {} {}({}) still waiting ---------------------->", cls, func,
+               batch_metadata_.repr());
     }
     return false;
   });

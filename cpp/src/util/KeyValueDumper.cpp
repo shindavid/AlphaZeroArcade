@@ -23,7 +23,7 @@ void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
     throw Exception("KeyValueDumper::add(): char buffer overflow (%d >= %d)", n, N);
   }
 
-  instance()->vec_.emplace_back(util::create_string("%s:", key.c_str()), value);
+  instance()->vec_.emplace_back(std::format("{}:", key), value);
 }
 
 void KeyValueDumper::flush() {
@@ -34,10 +34,8 @@ void KeyValueDumper::flush() {
     max_value_len = std::max(max_value_len, (int)p.second.size());
   }
 
-  std::string fmt_str = util::create_string("%%-%ds %%%ds\n", max_key_len, max_value_len);
-  const char* fmt = fmt_str.c_str();
   for (const auto& p : instance()->vec_) {
-    LOG_INFO << util::create_string(fmt, p.first.c_str(), p.second.c_str());
+    LOG_INFO("{:<{}} {:>{}}", p.first, max_key_len, p.second, max_value_len);
   }
   instance()->vec_.clear();
   std::cout.flush();

@@ -133,7 +133,7 @@ GameServerProxy<Game>::PlayerThread::~PlayerThread() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& payload) {
   if (kEnableDebug) {
-    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
+    LOG_INFO("{}() game_thread:{} player:{}", __func__, game_thread_id_, player_id_);
   }
   game_id_t game_id = payload.game_id;
   player_name_array_t player_names;
@@ -148,7 +148,7 @@ void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& pay
 template <concepts::Game Game>
 void GameServerProxy<Game>::PlayerThread::handle_state_change(const StateChange& payload) {
   if (kEnableDebug) {
-    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
+    LOG_INFO("{}() game_thread:{} player:{}", __func__, game_thread_id_, player_id_);
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -163,7 +163,7 @@ void GameServerProxy<Game>::PlayerThread::handle_state_change(const StateChange&
 template <concepts::Game Game>
 void GameServerProxy<Game>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
   if (kEnableDebug) {
-    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
+    LOG_INFO("{}() game_thread:{} player:{}", __func__, game_thread_id_, player_id_);
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -177,7 +177,7 @@ void GameServerProxy<Game>::PlayerThread::handle_action_prompt(const ActionPromp
 template <concepts::Game Game>
 void GameServerProxy<Game>::PlayerThread::handle_end_game(const EndGame& payload) {
   if (kEnableDebug) {
-    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
+    LOG_INFO("{}() game_thread:{} player:{}", __func__, game_thread_id_, player_id_);
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -211,7 +211,7 @@ void GameServerProxy<Game>::PlayerThread::run() {
   while (true) {
     std::unique_lock lock(mutex_);
     if (kEnableDebug) {
-      LOG_INFO << __func__ << "() loop game_thread:" << game_thread_id_ << " player:" << player_id_;
+      LOG_INFO("{}() loop game_thread:{} player:{}", __func__, game_thread_id_, player_id_);
     }
     cv_.wait(lock, [&] { return !active_ || ready_to_get_action_; });
     if (!active_) break;

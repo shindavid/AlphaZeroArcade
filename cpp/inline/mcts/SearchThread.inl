@@ -283,10 +283,8 @@ inline void SearchThread<Game>::loop() {
 template <core::concepts::Game Game>
 void SearchThread<Game>::print_visit_info(Node* node) {
   if (mcts::kEnableSearchDebug) {
-    std::ostringstream ss;
-    ss << thread_id_whitespace() << "visit " << search_path_str()
-       << " seat=" << (int)node->stable_data().active_seat;
-    LOG_INFO << ss.str();
+    LOG_INFO("{}visit {} seat={}", thread_id_whitespace(), search_path_str(),
+             node->stable_data().active_seat);
   }
 }
 
@@ -414,7 +412,7 @@ inline void SearchThread<Game>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
+    LOG_INFO("{}{} {}", thread_id_whitespace(), __func__, search_path_str());
   }
 
   util::release_assert(!search_path_.empty());
@@ -444,7 +442,7 @@ void SearchThread<Game>::undo_virtual_backprop() {
   profiler_.record(SearchThreadRegion::kUndoVirtualBackprop);
 
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
+    LOG_INFO("{}{} {}", thread_id_whitespace(), __func__, search_path_str());
   }
 
   util::release_assert(!search_path_.empty());
@@ -467,8 +465,8 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << " "
-             << value.transpose();
+    LOG_INFO("{}{} {} {}", thread_id_whitespace(), __func__, search_path_str(),
+             fmt::streamed(value.transpose()));
   }
 
   util::release_assert(!search_path_.empty());
@@ -501,8 +499,8 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
-             << value.transpose();
+    LOG_INFO("{}{} {} {}", thread_id_whitespace(), __func__, search_path_str(),
+             fmt::streamed(value.transpose()));
   }
 
   last_node->update_stats([&] {
@@ -532,7 +530,7 @@ void SearchThread<Game>::short_circuit_backprop() {
   profiler_.record(SearchThreadRegion::kShortCircuitBackprop);
 
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
+    LOG_INFO("{}{} {}", thread_id_whitespace(), __func__, search_path_str());
   }
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -858,7 +856,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
       ss << line << break_plus_thread_id_whitespace();
     }
 
-    LOG_INFO << ss.str();
+    LOG_INFO(ss.str());
   }
 }
 

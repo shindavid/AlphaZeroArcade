@@ -1,15 +1,12 @@
 #include <util/LoggingUtil.hpp>
 
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/log/utility/setup/console.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
-#include <chrono>
 #include <cstdarg>
 #include <ctime>
-#include <iostream>
+#include <vector>
 
 namespace util {
 
@@ -17,29 +14,36 @@ int Logging::kTimestampPrefixLength;
 
 // TODO: Change logging to use nanosecond precision
 void Logging::init(const Params& params) {
-  namespace trivial = boost::log::trivial;
-  namespace keywords = boost::log::keywords;
+  // Collect sinks
+  std::vector<spdlog::sink_ptr> sinks;
 
-  const char* format = "%TimeStamp% %Message%";
+  const char* format = params.omit_timestamps ? "%v" : "%Y-%m-%d %H:%M:%S.%e %v";
+
   if (params.omit_timestamps) {
-    format = "%Message%";
     kTimestampPrefixLength = 0;
   } else {
     kTimestampPrefixLength = 27;  // "2024-03-12 17:13:11.259615 "
   }
 
-  boost::log::add_console_log(std::cout, keywords::auto_flush = true, keywords::format = format);
+  // Console sink
+  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  console_sink->set_pattern(format);
+  sinks.push_back(console_sink);
 
+  // File sink, if needed
   if (!params.log_filename.empty()) {
-    auto open_mode = params.append_mode ? std::ios_base::app : std::ios_base::out;
-    boost::log::add_file_log(keywords::file_name = params.log_filename.c_str(),
-                             keywords::auto_flush = true, keywords::open_mode = open_mode,
-                             keywords::format = format);
+      auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
+          params.log_filename, params.append_mode);
+      file_sink->set_pattern(format);
+      sinks.push_back(file_sink);
   }
-  if (params.debug) {
-    boost::log::core::get()->set_filter(trivial::severity >= trivial::debug);
-  }
-  boost::log::add_common_attributes();
+
+  // Create and set the default logger
+  auto logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+  spdlog::set_default_logger(logger);
+
+  // Now set up flushing behavior on the logger itself
+  spdlog::flush_on(spdlog::level::debug);
 }
 
 }  // namespace util
