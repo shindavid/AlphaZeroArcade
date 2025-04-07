@@ -22,6 +22,9 @@ struct Common {
   static void gtest_action_transforms();
 };
 
+// Dispatches to standard gtest main function, while adding LoggingUtil cmdline params
+int main(int argc, char** argv);
+
 }  // namespace tests
 }  // namespace core
 

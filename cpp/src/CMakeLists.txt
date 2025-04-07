@@ -2,6 +2,7 @@ add_library(util_lib
         core/LoopControllerClient.cpp
         util/BoostUtil.cpp
         util/CudaUtil.cpp
+        util/GTestUtil.cpp
         util/KeyValueDumper.cpp
         util/LoggingUtil.cpp
         util/Math.cpp

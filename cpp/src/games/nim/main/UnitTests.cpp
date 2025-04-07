@@ -1,8 +1,7 @@
 #include <games/nim/Game.hpp>
+#include <util/GTestUtil.hpp>
 
 #include <gtest/gtest.h>
-
-#include <iostream>
 
 using Game = nim::Game;
 using State = Game::State;
@@ -93,6 +92,5 @@ TEST(NimGameTest, tensorize) {
 }
 
 int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  return launch_gtest(argc, argv);
 }

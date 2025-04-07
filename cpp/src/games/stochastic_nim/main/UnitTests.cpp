@@ -1,5 +1,7 @@
+#include <core/tests/Common.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/stochastic_nim/players/PerfectPlayer.hpp>
+#include <util/GTestUtil.hpp>
 
 #include <gtest/gtest.h>
 
@@ -275,7 +277,7 @@ TEST(StochasticNimGameTest, tensorize) {
   }
 }
 
-void print_perfert_strategy_info() {
+void print_perfect_strategy_info() {
   stochastic_nim::PerfectStrategy strategy;
   for (int i = stochastic_nim::kStartingStones; i > 0; --i) {
     std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1
@@ -293,7 +295,6 @@ void print_perfert_strategy_info() {
 }
 
 int main(int argc, char **argv) {
-  print_perfert_strategy_info();
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  print_perfect_strategy_info();
+  return launch_gtest(argc, argv);
 }
