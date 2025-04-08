@@ -81,7 +81,6 @@ class EvalManager(BaseManager):
 
     def __init__(self, controller: LoopController, tag: EvalTag):
         super().__init__(controller, tag)
-        self._new_work_cond = threading.Condition(self._lock)
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 

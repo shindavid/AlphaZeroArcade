@@ -41,15 +41,9 @@ class RatingsManager(BaseManager):
 
     ServerAuxClass = ServerAux
     def __init__(self, controller: LoopController, tag: RatingTag):
-        self._tag = tag
-        self._controller = controller
-
+        super().__init__(controller, tag)
         self._min_ref_strength = controller.game_spec.reference_player_family.min_strength
         self._max_ref_strength = controller.game_spec.reference_player_family.max_strength
-
-        self._started = False
-        self._lock = threading.Lock()
-        self._new_work_cond = threading.Condition(self._lock)
         self._rating_data_dict: RatingDataDict = {}
 
     def _set_priority(self):
