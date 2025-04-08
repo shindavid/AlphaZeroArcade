@@ -134,8 +134,8 @@ class GameServer {
 
    private:
     const Params& params() const { return shared_data_.params(); }
-    void step_chance();
-    void step_non_chance();
+    bool step_chance();  // return true if terminal
+    bool step_non_chance();  // return true if terminal
     void handle_terminal(const ValueTensor& outcome);
 
     SharedData& shared_data_;

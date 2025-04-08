@@ -318,19 +318,21 @@ void GameServer<Game>::GameSlot::step() {
     noisy_mode_ = move_number_ < num_noisy_starting_moves_;
 
     if (Rules::is_chance_mode(action_mode_)) {
-      step_chance();
+      if (step_chance()) return;
     } else {
       if (hit_not_chance) {
         return;
       }
-      step_non_chance();
+      if (step_non_chance()) return;
       hit_not_chance = true;
     }
+
+    if (mid_yield_) return;
   }
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step_chance() {
+bool GameServer<Game>::GameSlot::step_chance() {
   ActionValueTensor* action_values = nullptr;
   for (auto player2 : players_) {
     // ChancePrehandleResponse response = player2->prehandle_chance_event();
@@ -360,11 +362,13 @@ void GameServer<Game>::GameSlot::step_chance() {
   ValueTensor outcome;
   if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
     handle_terminal(outcome);
+    return true;
   }
+  return false;
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step_non_chance() {
+bool GameServer<Game>::GameSlot::step_non_chance() {
   move_number_ += !mid_yield_;
 
   active_seat_ = Rules::get_current_player(state_history_.current());
@@ -374,7 +378,7 @@ void GameServer<Game>::GameSlot::step_non_chance() {
   ActionResponse response = player->get_action_response(request);
   mid_yield_ = response.yield;
   if (mid_yield_) {
-    return;
+    return false;
   }
 
   action_t action = response.action;
@@ -390,12 +394,13 @@ void GameServer<Game>::GameSlot::step_non_chance() {
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
-    handle_terminal(outcome);
     if (params().announce_game_results) {
       printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id_,
             player->get_name().c_str(), int(active_seat_));
       std::cout << std::endl;
     }
+    handle_terminal(outcome);
+    return true;
   } else {
     Rules::apply(state_history_, action);
     if (params().print_game_states) {
@@ -408,8 +413,10 @@ void GameServer<Game>::GameSlot::step_non_chance() {
     ValueTensor outcome;
     if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
       handle_terminal(outcome);
+      return true;
     }
   }
+  return false;
 }
 
 template <concepts::Game Game>
@@ -426,17 +433,18 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
   }
 
   if (params().announce_game_results) {
-    printf("Game %ld complete.\n", game_id_);
+    std::stringstream ss;
+    ss << std::format("Game {} complete.\n", game_id_);
     for (player_id_t p = 0; p < kNumPlayers; ++p) {
-      printf("  pid=%d name=%s %g\n", p, players_[p]->get_name().c_str(), array[p]);
+      ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), array[p]);
     }
-    std::cout << std::endl;
+    printf("%s", ss.str().c_str());
   }
 
   // reindex outcome according to player_id
   ValueArray reindexed_outcome;
   for (int p = 0; p < kNumPlayers; ++p) {
-    reindexed_outcome[player_order_[p].player_id] = outcome[p];
+    reindexed_outcome[player_order_[p].player_id] = array[p];
   }
   shared_data_.update(reindexed_outcome);
 
