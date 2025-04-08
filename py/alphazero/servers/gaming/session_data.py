@@ -17,7 +17,7 @@ import socket
 import subprocess
 import threading
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -85,15 +85,15 @@ class SessionData:
 
         self._socket = Socket(sock)
 
-    def send_handshake(self, role: ClientRole, rating_tag: str = ''):
+    def send_handshake(self, role: ClientRole, addtional_data: Dict = None):
         data = {
             'type': 'handshake',
             'role': role.value,
             'start_timestamp': time.time_ns(),
             'cuda_device': self._params.cuda_device,
         }
-        if rating_tag:
-            data['rating_tag'] = rating_tag
+        if addtional_data:
+            data.update(addtional_data)
 
         self.socket.send_json(data)
 

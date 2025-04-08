@@ -6,6 +6,7 @@ from .rating_data import N_GAMES, RatingData, RatingDataDict
 from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
+from alphazero.servers.loop_control.base_manager import BaseManager, ManagerConstants
 from util.py_util import find_largest_gap, sha256sum
 from util.socket_util import JsonDict, SocketSendException
 
@@ -21,29 +22,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class RatingsManager:
+@dataclass
+class ServerAux:
+    """
+    Auxiliary data stored per server connection.
+    """
+    cond: threading.Condition = field(default_factory=threading.Condition)
+    status: ServerStatus = ServerStatus.BLOCKED
+    gen: Optional[Generation] = None
 
-    @dataclass
-    class ServerAux:
-        """
-        Auxiliary data stored per server connection.
-        """
-        cond: threading.Condition = field(default_factory=threading.Condition)
-        status: ServerStatus = ServerStatus.BLOCKED
-        gen: Optional[Generation] = None
-
-    @dataclass
-    class WorkerAux:
-        """
-        Auxiliary data stored per worker connection.
-        """
-        cond: threading.Condition = field(default_factory=threading.Condition)
-        pending_pause_ack: bool = False
-        pending_unpause_ack: bool = False
-
+class RatingsManager(BaseManager):
     """
     A separate RatingsManager is created for each rating-tag.
     """
+    MANAGER_CONSTANTS = ManagerConstants(
+        server_name='ratings-server',
+        worker_name='ratings-worker')
+
+    ServerAuxClass = ServerAux
     def __init__(self, controller: LoopController, tag: RatingTag):
         self._tag = tag
         self._controller = controller
@@ -56,51 +52,10 @@ class RatingsManager:
         self._new_work_cond = threading.Condition(self._lock)
         self._rating_data_dict: RatingDataDict = {}
 
-    def add_server(self, conn: ClientConnection):
-        conn.aux = RatingsManager.ServerAux()
-        self._controller.send_handshake_ack(conn)
-
-        self._start()
-        logger.info('Starting ratings-recv-loop for %s...', conn)
-        self._controller.launch_recv_loop(
-            self._server_msg_handler, conn, 'ratings-server',
-            disconnect_handler=self._handle_server_disconnect)
-
-        thread = threading.Thread(target=self._manage_server, args=(conn,),
-                                  daemon=True, name=f'manage-self-play-server')
-        thread.start()
-
-    def add_worker(self, conn: ClientConnection):
-        conn.aux = RatingsManager.WorkerAux()
-
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-        }
-        conn.socket.send_json(reply)
-        self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'ratings-worker',
-            disconnect_handler=self._handle_worker_disconnect)
-
-    def notify_of_new_model(self):
-        """
-        Notify manager that there is new work to do.
-        """
-        self._set_priority()
-        with self._lock:
-            self._new_work_cond.notify_all()
-
     def _set_priority(self):
         dict_len = len(self._rating_data_dict)
         rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
         self._controller.set_priority(dict_len, rating_in_progress)
-
-    def _start(self):
-        with self._lock:
-            if self._started:
-                return
-            self._started = True
-            self._load_past_data()
 
     def _load_past_data(self):
         logger.info('Loading past ratings data...')
@@ -126,7 +81,7 @@ class RatingsManager:
         self._set_priority()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
-        aux: RatingsManager.ServerAux = conn.aux
+        aux = conn.aux
         gen = aux.gen
         aux.gen = None
         if gen is not None:
@@ -141,32 +96,6 @@ class RatingsManager:
         with aux.cond:
             aux.status = ServerStatus.DISCONNECTED
             aux.cond.notify_all()
-
-    def _handle_worker_disconnect(self, conn: ClientConnection):
-        aux: RatingsManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_pause_ack = False
-            aux.pending_unpause_ack = False
-            aux.cond.notify_all()
-
-        # We set the management status to DEACTIVATING, rather than INACTIVE, here, so that the
-        # worker loop breaks while the server loop continues.
-        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-        table.mark_as_deactivating(conn.client_domain)
-
-    def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
-        """
-        The server status is initially BLOCKED. This function waits until that status is
-        changed (either to READY or DISCONNECTED). After waiting, it resets the status to
-        BLOCKED, and returns what the status was changed to.
-        """
-        aux: RatingsManager.ServerAux = conn.aux
-
-        with aux.cond:
-            aux.cond.wait_for(lambda: aux.status != ServerStatus.BLOCKED)
-            status = aux.status
-            aux.status = ServerStatus.BLOCKED
-            return status
 
     def _wait_until_work_exists(self):
         with self._lock:
@@ -235,78 +164,6 @@ class RatingsManager:
         }
         conn.socket.send_json(data)
 
-    def _manage_server(self, conn: ClientConnection):
-        try:
-            aux: RatingsManager.ServerAux = conn.aux
-
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
-            table.activate(domain)
-
-            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
-            # only breaks when the table becomes INACTIVE. It is important then to use
-            # (not inactive) in the below loop-condition, rather than (active).
-            while not table.inactive(domain):
-                status = self._wait_for_unblock(conn)
-                if status == ServerStatus.DISCONNECTED:
-                    break
-                if aux.gen is None:
-                    self._wait_until_work_exists()
-
-                table.activate(domain)
-                if not table.acquire_lock(domain):
-                    break
-                self._send_match_request(conn)
-
-                # We do not release the lock here. The lock is released either when a gen is
-                # fully rated, or when the server disconnects.
-        except SocketSendException:
-            logger.warning('Error sending to %s - server likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self._controller.request_shutdown(1)
-
-    def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
-        msg_type = msg['type']
-        logger.debug('ratings-server received json message: %s', msg)
-
-        if msg_type == 'ready':
-            self._handle_ready(conn)
-        elif msg_type == 'log-sync-start':
-            self._controller.start_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'log-sync-stop':
-            self._controller.stop_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'match-result':
-            self._handle_match_result(msg, conn)
-        elif msg_type == 'file-request':
-            self._handle_file_request(conn, msg['files'])
-        else:
-            logger.warning('ratings-server: unknown message type: %s', msg)
-        return False
-
-    def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
-        msg_type = msg['type']
-        logger.debug('ratings-worker received json message: %s', msg)
-
-        if msg_type == 'pause-ack':
-            self._handle_pause_ack(conn)
-        elif msg_type == 'unpause-ack':
-            self._handle_unpause_ack(conn)
-        elif msg_type == 'worker-ready':
-            self._handle_worker_ready(conn)
-        elif msg_type == 'done':
-            return True
-        else:
-            logger.warning('ratings-worker: unknown message type: %s', msg)
-        return False
-
-    def _handle_ready(self, conn: ClientConnection):
-        aux: RatingsManager.ServerAux = conn.aux
-        with aux.cond:
-            aux.status = ServerStatus.READY
-            aux.cond.notify_all()
-
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         aux: RatingsManager.ServerAux = conn.aux
 
@@ -335,70 +192,6 @@ class RatingsManager:
         if rating is not None:
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
-
-    def _handle_worker_ready(self, conn: ClientConnection):
-        thread = threading.Thread(target=self._manage_worker, args=(conn,),
-                                  daemon=True, name=f'manage-ratings-worker')
-        thread.start()
-
-    def _manage_worker(self, conn: ClientConnection):
-        try:
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
-            self._pause(conn)
-
-            while table.active(domain):
-                if not table.acquire_lock(domain):
-                    break
-                self._unpause(conn)
-                if table.wait_for_lock_expiry(domain):
-                    self._pause(conn)
-                    table.release_lock(domain)
-        except SocketSendException:
-            logger.warning('Error sending to %s - worker likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self._controller.request_shutdown(1)
-
-    def _pause(self, conn: ClientConnection):
-        logger.debug('Pausing %s...', conn)
-
-        aux: RatingsManager.WorkerAux = conn.aux
-        aux.pending_pause_ack = True
-
-        conn.socket.send_json({ 'type': 'pause' })
-
-        with aux.cond:
-            aux.cond.wait_for(lambda: not aux.pending_pause_ack)
-
-        logger.debug('Pause of %s complete!', conn)
-
-    def _unpause(self, conn: ClientConnection):
-        logger.debug('Unpausing %s...', conn)
-
-        aux: RatingsManager.WorkerAux = conn.aux
-        aux.pending_unpause_ack = True
-
-        conn.socket.send_json({ 'type': 'unpause' })
-
-        with aux.cond:
-            aux.cond.wait_for(lambda: not aux.pending_unpause_ack)
-
-        logger.debug('Unpause of %s complete!', conn)
-
-    def _handle_pause_ack(self, conn: ClientConnection):
-        aux: RatingsManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_pause_ack = False
-            aux.cond.notify_all()
-
-    def _handle_unpause_ack(self, conn: ClientConnection):
-        aux: RatingsManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_unpause_ack = False
-            aux.cond.notify_all()
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
         """
@@ -518,6 +311,3 @@ class RatingsManager:
         logger.debug('Rating gen %s (biggest-gap:[%s, %s], latest=%s)...',
                      mid, left, right, latest_gen)
         return mid
-
-    def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
-        self._controller.handle_file_request(conn, files)

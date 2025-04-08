@@ -10,7 +10,8 @@ from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from util.socket_util import JsonDict, SocketSendException
+from alphazero.servers.loop_control.base_manager import BaseManager, ManagerConstants
+from util.socket_util import JsonDict
 
 import numpy as np
 
@@ -56,86 +57,38 @@ class EvalStatus:
     status: Optional[EvalRequestStatus] = None
 
 
-class EvalManager:
+@dataclass
+class ServerAux:
+    """
+    Auxiliary data stored per server connection.
+    """
+    status_cond: threading.Condition = field(default_factory=threading.Condition)
+    status: ServerStatus = ServerStatus.BLOCKED
+    needs_new_opponents: bool = True
+    estimated_rating: Optional[float] = None
+    ix: Optional[int] = None  # test agent index
+
+class EvalManager(BaseManager):
     """
     A separate EvalManager is created for each rating-tag.
     """
 
-    @dataclass
-    class ServerAux:
-        """
-        Auxiliary data stored per server connection.
-        """
-        status_cond: threading.Condition = field(default_factory=threading.Condition)
-        status: ServerStatus = ServerStatus.BLOCKED
-        needs_new_opponents: bool = True
-        estimated_rating: Optional[float] = None
-        ix: Optional[int] = None  # test agent index
+    ServerAuxClass = ServerAux
 
-    @dataclass
-    class WorkerAux:
-        """
-        Auxiliary data stored per worker connection.
-        """
-        cond: threading.Condition = field(default_factory=threading.Condition)
-        pending_pause_ack: bool = False
-        pending_unpause_ack: bool = False
+    MANAGER_CONSTANTS = ManagerConstants(
+        server_name='eval-server',
+        worker_name='eval-worker')
 
     def __init__(self, controller: LoopController, tag: EvalTag):
-        self._tag = tag
-        self._controller = controller
-
-        self._started = False
-        self._lock = threading.Lock()
+        super().__init__(controller, tag)
         self._new_work_cond = threading.Condition(self._lock)
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
-
-    def add_server(self, conn: ClientConnection):
-        conn.aux = EvalManager.ServerAux()
-        self._controller.send_handshake_ack(conn)
-
-        self._start()
-        logger.info('Starting eval-recv-loop for %s...', conn)
-        self._controller.launch_recv_loop(
-            self._server_msg_handler, conn, 'eval-server',
-            disconnect_handler=self._handle_server_disconnect)
-
-        thread = threading.Thread(target=self._manage_server, args=(conn,),
-                                  daemon=True, name=f'manage-eval-server')
-        thread.start()
-
-    def add_worker(self, conn: ClientConnection):
-        conn.aux = EvalManager.WorkerAux()
-
-        reply = {
-            'type': 'handshake-ack',
-            'client_id': conn.client_id,
-        }
-        conn.socket.send_json(reply)
-        self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'eval-worker',
-            disconnect_handler=self._handle_worker_disconnect)
-
-    def notify_of_new_model(self):
-        """
-        Notify manager that there is new work to do.
-        """
-        self._set_priority()
-        with self._lock:
-            self._new_work_cond.notify_all()
 
     def _set_priority(self):
         dict_len = len(self._eval_status_dict)
         rating_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
         self._controller.set_priority(dict_len, rating_in_progress)
-
-    def _start(self):
-        with self._lock:
-            if self._started:
-                return
-            self._started = True
-            self._load_past_data()
 
     def _load_past_data(self):
         logger.info('Loading past ratings data...')
@@ -169,18 +122,6 @@ class EvalManager:
             conn.aux.status= ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
-    def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
-        """
-        The server status is initially BLOCKED. This function waits until that status is
-        changed (either to READY or DISCONNECTED). After waiting, it resets the status to
-        BLOCKED, and returns what the status was changed to.
-        """
-        status_cond: threading.Condition = conn.aux.status_cond
-        with status_cond:
-            status_cond.wait_for(lambda: conn.aux.status != ServerStatus.BLOCKED)
-            status = conn.aux.status
-            conn.aux.status = ServerStatus.BLOCKED
-            return status
 
     def _wait_until_work_exists(self):
         with self._lock:
@@ -356,61 +297,6 @@ class EvalManager:
                 match_status_dict[ix] = MatchStatus(gen, int(n_games), MatchRequestStatus.COMPLETE)
         return match_status_dict
 
-    def _manage_server(self, conn: ClientConnection):
-        try:
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
-            table.activate(domain)
-
-            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
-            # only breaks when the table becomes INACTIVE. It is important then to use
-            # (not inactive) in the below loop-condition, rather than (active).
-            while not table.inactive(domain):
-                status = self._wait_for_unblock(conn)
-                if status == ServerStatus.DISCONNECTED:
-                    break
-                if conn.aux.ix is None:
-                    self._wait_until_work_exists()
-
-                logger.debug(f"Managing eval-server, priority: {table}")
-                table.activate(domain)
-                if not table.acquire_lock(domain):
-                    break
-                self._send_match_request(conn)
-
-                # We do not release the lock here. The lock is released either when a gen is
-                # fully rated, or when the server disconnects.
-        except SocketSendException:
-            logger.warning('Error sending to %s - server likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self._controller.request_shutdown(1)
-
-    def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
-        msg_type = msg['type']
-        logger.debug('eval-server received json message: %s', msg)
-
-        if msg_type == 'ready':
-            self._handle_ready(conn)
-        elif msg_type == 'log-sync-start':
-            self._controller.start_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'log-sync-stop':
-            self._controller.stop_log_sync(conn, msg['log_filename'])
-        elif msg_type == 'match-result':
-            self._handle_match_result(msg, conn)
-        elif msg_type == 'file-request':
-            self._handle_file_request(conn, msg['files'])
-        else:
-            logger.warning('eval-server: unknown message type: %s', msg)
-        return False
-
-    def _handle_ready(self, conn: ClientConnection):
-        status_cond: threading.Condition = conn.aux.status_cond
-        with status_cond:
-            conn.aux.status = ServerStatus.READY
-            status_cond.notify_all()
-
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         ix1 = msg['ix1']
         ix2 = msg['ix2']
@@ -453,105 +339,6 @@ class EvalManager:
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
         self._set_priority()
-
-    def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
-        msg_type = msg['type']
-        logger.debug('eval-worker received json message: %s', msg)
-
-        if msg_type == 'pause-ack':
-            self._handle_pause_ack(conn)
-        elif msg_type == 'unpause-ack':
-            self._handle_unpause_ack(conn)
-        elif msg_type == 'worker-ready':
-            self._handle_worker_ready(conn)
-        elif msg_type == 'done':
-            return True
-        else:
-            logger.warning('eval-worker: unknown message type: %s', msg)
-        return False
-
-    def _handle_worker_ready(self, conn: ClientConnection):
-        logger.debug( 'Eval-Worker %s is ready', conn)
-        thread = threading.Thread(target=self._manage_worker, args=(conn,),
-                                  daemon=True, name=f'manage-ratings-worker')
-        thread.start()
-
-    def _manage_worker(self, conn: ClientConnection):
-        try:
-            domain = conn.client_domain
-            gpu_id = conn.client_gpu_id
-
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
-            self._pause(conn)
-
-            while table.active(domain):
-                if not table.acquire_lock(domain):
-                    break
-                self._unpause(conn)
-                if table.wait_for_lock_expiry(domain):
-                    self._pause(conn)
-                    table.release_lock(domain)
-        except SocketSendException:
-            logger.warning('Error sending to %s - worker likely disconnected', conn)
-        except:
-            logger.error('Unexpected error managing %s', conn, exc_info=True)
-            self._controller.request_shutdown(1)
-
-    def _handle_worker_disconnect(self, conn: ClientConnection):
-        aux: EvalManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_pause_ack = False
-            aux.pending_unpause_ack = False
-            aux.cond.notify_all()
-
-        # We set the management status to DEACTIVATING, rather than INACTIVE, here, so that the
-        # worker loop breaks while the server loop continues.
-        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-        table.mark_as_deactivating(conn.client_domain)
-
-    def _pause(self, conn: ClientConnection):
-        logger.debug('Pausing %s...', conn)
-
-        aux: EvalManager.WorkerAux = conn.aux
-        aux.pending_pause_ack = True
-
-        conn.socket.send_json({ 'type': 'pause' })
-
-        with aux.cond:
-            aux.cond.wait_for(lambda: not aux.pending_pause_ack)
-
-        logger.debug('Pause of %s complete!', conn)
-
-    def _unpause(self, conn: ClientConnection):
-        logger.debug('Unpausing %s...', conn)
-
-        aux: EvalManager.WorkerAux = conn.aux
-        aux.pending_unpause_ack = True
-
-        conn.socket.send_json({ 'type': 'unpause' })
-
-        with aux.cond:
-            aux.cond.wait_for(lambda: not aux.pending_unpause_ack)
-
-        logger.debug('Unpause of %s complete!', conn)
-
-    def _handle_pause_ack(self, conn: ClientConnection):
-        aux: EvalManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_pause_ack = False
-            aux.cond.notify_all()
-
-    def _handle_unpause_ack(self, conn: ClientConnection):
-        aux: EvalManager.WorkerAux = conn.aux
-        with aux.cond:
-            aux.pending_unpause_ack = False
-            aux.cond.notify_all()
-
-    def _update_weights(self, gen: Generation, conn: ClientConnection):
-        self._controller.broadcast_weights(conn, gen)
-
-    def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
-        self._controller.handle_file_request(conn, files)
 
     @property
     def n_games(self):
