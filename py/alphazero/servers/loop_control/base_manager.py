@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, ClientId, Generation, ServerStatus
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 import logging
 import threading
-from typing import List, Type, TYPE_CHECKING
+from typing import Dict, List, Optional, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -65,7 +66,7 @@ class BaseManager:
         thread.start()
 
     def add_worker(self, conn: ClientConnection):
-        conn.aux = self.WorkerAux()
+        conn.aux = WorkerAux()
 
         reply = {
             'type': 'handshake-ack',

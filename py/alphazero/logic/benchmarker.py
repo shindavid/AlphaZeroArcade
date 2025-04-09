@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, BenchmarkCommittee, AgentRole
+from alphazero.logic.agent_types import Agent, AgentRole, BenchmarkCommittee, MCTSAgent, IndexedAgent
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -24,7 +24,7 @@ class RatingsGap:
 
 @dataclass
 class BenchmarkRatingData:
-    agents: List[Agent]
+    iagents: List[IndexedAgent]
     ratings: np.ndarray
     committee: BenchmarkCommittee
 
@@ -200,7 +200,7 @@ class Benchmarker:
 
     def read_ratings_from_db(self) -> RatingData:
         rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.BENCHMARK)
-        agents = [self._arena.agent_lookup_db_id[db_id].agent for db_id in rating_data.agent_ids]
         ratings = rating_data.ratings
+        iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         committee = rating_data.committee
-        return BenchmarkRatingData(agents, ratings, committee)
+        return BenchmarkRatingData(iagents, ratings, committee)
