@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import threading
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 
 if TYPE_CHECKING:
