@@ -18,7 +18,7 @@ void Logging::init(const Params& params) {
   // Collect sinks
   std::vector<spdlog::sink_ptr> sinks;
 
-  const char* format = params.omit_timestamps ? "%v" : "%Y-%m-%d %H:%M:%S.%e %v";
+  const char* format = params.omit_timestamps ? "%v" : "%Y-%m-%d %H:%M:%S.%f %v";
 
   if (params.omit_timestamps) {
     kTimestampPrefixLength = 0;
