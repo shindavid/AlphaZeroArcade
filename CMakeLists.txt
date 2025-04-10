@@ -13,7 +13,7 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 project(alphazero LANGUAGES CXX CUDA)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
-find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
+find_package(Torch REQUIRED PATHS "/usr/local/libtorch")
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)
