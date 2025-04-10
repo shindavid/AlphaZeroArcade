@@ -61,8 +61,18 @@ void NNEvaluationRequest<Game>::init(search_thread_profiler_t* thread_profiler, 
 
 template <core::concepts::Game Game>
 void NNEvaluationRequest<Game>::mark_all_as_stale() {
-  util::release_assert(items_[1 - active_index_].empty());
-  active_index_ = 1 - active_index_;
+  if (items_[active_index_].empty()) return;
+  if (items_[1 - active_index_].empty()) {
+    active_index_ = 1 - active_index_;
+    return;
+  }
+
+  // We have both fresh and stale items. We could easily handle this case by moving items from
+  // one vector to the other. But, we don't expect that this case should get hit with the current
+  // MCTS logic. So, I'm going to just throw an error if we get here.
+  throw util::Exception(
+      "NNEvaluationRequest::mark_all_as_stale() - both fresh and stale items exist. "
+      "This should not happen with the current MCTS logic.");
 }
 
 template <core::concepts::Game Game>
