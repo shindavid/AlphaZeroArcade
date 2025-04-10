@@ -40,6 +40,7 @@ void NNEvaluation<Game>::init(const ValueTensor& raw_value, const PolicyTensor& 
 
   value_ = value;
   eigen_util::debug_assert_is_valid_prob_distr(value_);
+  initialized_ = true;
 }
 
 template <core::concepts::Game Game>
@@ -53,6 +54,7 @@ void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
   value_.setConstant(value_entry);
   dynamic_array_.row(0).setConstant(policy_entry);
   dynamic_array_.row(1).setConstant(action_value_entry);
+  initialized_ = true;
 }
 
 template <core::concepts::Game Game>
