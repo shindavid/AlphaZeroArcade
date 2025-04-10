@@ -319,6 +319,7 @@ void Manager<Game>::init_context(core::search_context_id_t i) {
   LOG_DEBUG("{}({})", __func__, i);
   SearchContext& context = search_contexts_[i];
   context.id = i;
+  context.eval_request.init(&context.profiler, i);
   if (mcts::kEnableProfiling) {
     auto dir = params_.profiling_dir();
     auto profiling_file_path = dir / std::format("search{}-{}.txt", manager_id_, i);
@@ -389,7 +390,6 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
   Node* node = lookup_table_.get_node(node_index);
 
   context.mid_node_initialization = true;
-  context.eval_request.init(&context.profiler, context.id);
 
   bool is_root = (node_index == root_info_.node_index);
   if (!node->is_terminal()) {
@@ -402,7 +402,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
         sym = bitset_util::choose_random_on_index(Symmetries::get_mask(history->current()));
       }
       bool incorporate = params_.incorporate_sym_into_cache_key;
-      context.eval_request.items().emplace_back(node, *history, sym, incorporate);
+      context.eval_request.emplace_back(node, *history, sym, incorporate);
     }
     if (eval_all_children) {
       expand_all_children(context, node);
@@ -429,11 +429,11 @@ void Manager<Game>::resume_node_initialization(SearchContext& context) {
   bool is_root = (node_index == root_info_.node_index);
 
   nn_eval_service_->wait_for(context.nn_eval_seq_id);
-  for (auto& item : context.eval_request.items()) {
+  for (auto& item : context.eval_request.fresh_items()) {
     item.node()->load_eval(item.eval(),
                            [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
   }
-  context.eval_request.items().clear();
+  context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
@@ -894,8 +894,8 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
       sym = bitset_util::choose_random_on_index(Symmetries::get_mask(canonical_child_state));
     }
     bool incorporate = params_.incorporate_sym_into_cache_key;
-    context.eval_request.items().emplace_back(child, canonical_history, canonical_child_state, sym,
-                                              incorporate);
+    context.eval_request.emplace_back(child, canonical_history, canonical_child_state, sym,
+                                      incorporate);
   }
 
   node->update_child_expand_count(expand_count);

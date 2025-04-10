@@ -38,12 +38,17 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
   MockNNEvaluationService(bool smart) : smart_(smart) {}
 
   mcts::NNEvaluationResponse evaluate(NNEvaluationRequest& request) override {
+    for (auto& item : request.stale_items()) {
+      this->free_eval(item.eval());
+    }
+    request.clear_stale_items();
+
     ValueTensor value;
     PolicyTensor policy;
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;
 
-    for (NNEvaluationRequest::Item& item : request.items()) {
+    for (NNEvaluationRequest::Item& item : request.fresh_items()) {
       ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
       core::seat_index_t seat = item.node()->stable_data().active_seat;
       core::action_mode_t mode = item.node()->action_mode();
@@ -74,8 +79,9 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
         action_values.setZero();
       }
 
-      item.set_eval(std::make_shared<NNEvaluation>(value, policy, action_values, valid_actions, sym,
-                                                   seat, mode));
+      NNEvaluation* eval = this->alloc_eval();
+      eval->init(value, policy, action_values, valid_actions, sym, seat, mode);
+      item.set_eval(eval);
     }
 
     return mcts::NNEvaluationResponse(0, core::kContinue);
