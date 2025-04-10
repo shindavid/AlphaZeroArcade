@@ -290,7 +290,7 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
     int max_slabs_needed = (B + n - 2) / B + 1;
 
     BatchSlab slabs[max_slabs_needed];
-    allocate_slabs(slabs, result.misses);
+    allocate_slabs(slabs, result.misses, max_slabs_needed);
 
     int slab_index = 0;
     int slab_row = 0;
@@ -444,7 +444,7 @@ void NNEvaluationService<Game>::decrement_ref_count(NNEvaluation* eval) {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::allocate_slabs(BatchSlab* slabs, int n) {
+void NNEvaluationService<Game>::allocate_slabs(BatchSlab* slabs, int n, int limit) {
   std::unique_lock batch_data_lock(main_mutex_);
 
   BatchData* batch_data = pending_batch_datas_.back();
@@ -466,6 +466,9 @@ void NNEvaluationService<Game>::allocate_slabs(BatchSlab* slabs, int n) {
       batch_data = add_batch_data();
     }
   }
+
+  util::release_assert(slab_index <= limit, "Unexpected slab allocation bug (%d > %d)", slab_index,
+                       limit);
 }
 
 template <core::concepts::Game Game>

@@ -253,7 +253,7 @@ class NNEvaluationService
   CacheLookupResult check_cache(NNEvaluationRequest&);
   void decrement_ref_count(NNEvaluation* eval);
 
-  void allocate_slabs(BatchSlab* slabs, int n);
+  void allocate_slabs(BatchSlab* slabs, int n, int limit);
   BatchData* add_batch_data();  // assumes batch_data_mutex_ is held
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);

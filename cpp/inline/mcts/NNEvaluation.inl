@@ -72,6 +72,7 @@ void NNEvaluation<Game>::clear() {
 template <core::concepts::Game Game>
 void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
                               LocalActionValueArray& action_value) {
+  util::release_assert(initialized_, "NNEvaluation not initialized");
   value = value_;
   policy = dynamic_array_.row(0);
   action_value = dynamic_array_.row(1);
