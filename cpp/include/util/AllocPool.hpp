@@ -1,11 +1,13 @@
 #pragma once
 
-#include <bit>
-#include <cstdint>
-#include <mutex>
-#include <vector>
+#include <util/CppUtil.hpp>
 
 #include <boost/dynamic_bitset.hpp>
+
+#include <cstdint>
+#include <mutex>
+#include <type_traits>
+#include <vector>
 
 namespace util {
 
@@ -23,10 +25,10 @@ using pool_index_t = int64_t;
  * The underlying implementation relies on an array of blocks of type T[]. The first two blocks are
  * of size 2^N, and each subsequent block is twice the size of the previous block.
  */
-template<typename T, int N=10>
+template<typename T, int N=10, bool ThreadSafe=true>
 class AllocPool {
  public:
-  static_assert(std::is_trivially_destructible_v<T>);
+  using mutex_t = std::conditional_t<ThreadSafe, std::mutex, dummy_mutex>;
 
   // The below static_assert fails currently because Eigen::Array incorrectly reports itself as
   // non-trivially copyable. So we leave it commented out for now.
@@ -53,7 +55,7 @@ class AllocPool {
 
   uint64_t size_ = 0;
   int num_blocks_ = 2;
-  mutable std::mutex mutex_;
+  mutable mutex_t mutex_;
   Block blocks_[kNumBlocks] = {};
 };
 

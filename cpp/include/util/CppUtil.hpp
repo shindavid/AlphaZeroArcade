@@ -33,6 +33,16 @@
 
 namespace util {
 
+template<typename T>
+size_t hash(const T& t) { return std::hash<T>{}(t); }
+
+// Drop-in replacement for std::mutex that does nothing.
+struct dummy_mutex {
+  void lock() noexcept {}
+  void unlock() noexcept {}
+  bool try_lock() noexcept { return true; }
+};
+
 // Generic hash function for POD types
 template <typename T>
 struct PODHash {
