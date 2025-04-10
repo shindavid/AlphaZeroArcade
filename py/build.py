@@ -82,7 +82,6 @@ def main():
     # build extra deps unconditionally
     run('cd extra_deps && ./build.py')
 
-    torch_dir = os.environ.get('LIBTORCH_CPP_DIR')
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
 
     macro_defines = args.macro_defines if args.macro_defines else []
@@ -107,7 +106,6 @@ def main():
         'CMakeLists.txt',
         f'-B{target_dir}',
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-        f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
