@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/concepts/Game.hpp>
@@ -12,10 +13,15 @@
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/AllocPool.hpp>
 #include <util/FiniteGroups.hpp>
-#include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
+#include <condition_variable>
+#include <list>
+#include <map>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace mcts {
@@ -78,12 +84,9 @@ class NNEvaluationService
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;
-
-  using NNEvaluation_asptr = NNEvaluation::asptr;
-  using NNEvaluation_sptr = NNEvaluation::sptr;
-
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
@@ -101,9 +104,67 @@ class NNEvaluationService
 
   using RequestItem = NNEvaluationRequest::Item;
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
+
   using cache_key_t = NNEvaluationRequest::cache_key_t;
-  using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
+
+  // EvalCache is essentially a LRU hash map. A few details that warrant defining a specialized
+  // data structure rather than using a generic one:
+  //
+  // 1. In order to make the nn eval service thread as lean as possible, we want all hashing to be
+  //    done in other threads. This means that some methods accept a hash as an argument, rather
+  //    than computing it internally.
+  //
+  // 2. Eviction from the cache decrements the ref count of the NNEvaluation object. When the
+  //    ref count reaches zero, we recycle the NNEvaluation object, rather than delete'ing it.
+  //
+  // Thread-safety is guaranteed by the cache_mutex_ member of NNEvaluationService, so we don't
+  // require a mutex internally.
+  class EvalCache {
+   public:
+    using hash_t = uint64_t;
+    using value_creation_func_t = std::function<NNEvaluation*()>;
+    using eviction_func_t = std::function<void(NNEvaluation*)>;
+
+    struct Entry {
+      Entry(const cache_key_t& k, hash_t h, NNEvaluation* e) : key(k), hash(h), eval(e) {}
+
+      cache_key_t key;
+      hash_t hash;
+      NNEvaluation* eval;
+    };
+
+    using Key = hash_t;
+    using EntryList = std::list<Entry>;
+    using EntryListIterator = EntryList::iterator;
+    using MapValue = std::list<EntryListIterator>;
+    using Map = std::unordered_map<uint64_t, MapValue>;
+
+    EvalCache(eviction_func_t f, size_t capacity) : eviction_handler_(f), capacity_(capacity) {}
+
+    // If key is already in the cache, returns the value for it. Otherwise, adds a mapping, calling
+    // value_creator() to create the value. If the cache is full, evicts the least recently used
+    // item, calling eviction_handler() on it.
+    //
+    // hash is the hash of the key.
+    NNEvaluation* insert(const cache_key_t& key, hash_t hash, value_creation_func_t value_creator);
+
+    void clear();
+
+   private:
+    size_t size() const { return size_; }
+
+    void evict(MapValue* protected_list);
+
+    const eviction_func_t eviction_handler_;
+    const size_t capacity_;
+
+    // list_: [(cache_key, hash, eval), ...] in most-recently-used order
+    // map_: {hash -> [iter...]}, where each iter is an iterator into list_
+    EntryList list_;
+    Map map_;
+    size_t size_ = 0;
+  };
 
   /*
    * Constructs an evaluation service and returns it.
@@ -130,50 +191,13 @@ class NNEvaluationService
   core::PerfStats get_perf_stats() override;
 
  private:
-  struct IndexReservation {
-    int start_index;
-    int num_indices;
-  };
+  struct CacheLookupResult {
+    int size() const { return non_pending_hits + pending_hits + misses; }
 
-  NNEvaluationService(const NNEvaluationServiceParams& params);
-  ~NNEvaluationService();
-
-  std::string dump_key(const char* descr);
-
-  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
-
-  void batch_evaluate();
-  void loop();
-
-  void check_cache(NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
-
-  void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  IndexReservation make_reservation(const NNEvaluationRequest&, int count,
-                                       std::unique_lock<std::mutex>&);
-  void tensorize_and_transform_input(const NNEvaluationRequest& request, const RequestItem& item,
-                                     int reserve_index);
-  void increment_commit_count(const NNEvaluationRequest&, int count);
-  void wait_for_eval(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  void wait_until_all_read(const NNEvaluationRequest&, int count, std::unique_lock<std::mutex>&);
-
-  void wait_for_unpause();
-  void load_initial_weights_if_necessary();
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
-  void pause() override;
-  void unpause() override;
-  void wait_until_batch_ready();
-  bool wait_for_first_reservation();  // return true if timeout
-  void wait_for_last_reservation();
-  void wait_for_commits();
-
-  bool active() const { return num_connections_; }
-
-  struct EvalPtrData {
-    NNEvaluation_asptr eval_ptr;
-
-    cache_key_t cache_key;
-    ActionMask valid_actions;
-    group::element_t sym;
+    int non_pending_hits = 0;  // item in cache and in non-pending state
+    int pending_hits = 0;      // item in cache and in pending state
+    int misses = 0;            // item not in cache
+    core::nn_evaluation_sequence_id_t max_pending_sequence_id = 0;
   };
 
   struct TensorGroup {
@@ -184,18 +208,67 @@ class NNEvaluationService
     PolicyTensor policy;
     ValueTensor value;
     ActionValueTensor action_values;
-    EvalPtrData eval_ptr_data;
+
+    NNEvaluation* eval;
+    cache_key_t cache_key;
+    ActionMask valid_actions;
+    group::element_t sym;
     core::action_mode_t action_mode;
     core::seat_index_t active_seat;
   };
 
   struct BatchData {
-    BatchData(int batch_size);
+    BatchData(int capacity);
     void copy_input_to(int num_rows, DynamicInputTensor& full_input);
+    int capacity() const { return tensor_groups.size(); }
+    void clear();
+    bool frozen() const { return !accepting_allocations && write_count == allocate_count; }
 
-    std::mutex mutex;
-    std::vector<TensorGroup> tensor_groups_;
+    // tensor_groups is sized to capacity, and then its size never changes thereafter.
+    std::vector<TensorGroup> tensor_groups;
+
+    core::nn_evaluation_sequence_id_t sequence_id = 0;
+
+    int allocate_count = 0;  // protected by NNEvaluationService::batch_data_mutex_
+    int write_count = 0;
+    bool accepting_allocations = true;
   };
+  using batch_data_vec_t = std::vector<BatchData*>;
+
+  struct BatchSlab {
+    BatchData* batch_data;
+    int offset;
+    int size;
+  };
+
+  NNEvaluationService(const NNEvaluationServiceParams& params);
+  ~NNEvaluationService();
+
+  std::string dump_key(const char* descr);
+
+  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
+
+  // For each item in the request, check if the cache has a value for it. If so, set the item to
+  // that value. Else, insert a placeholder in the cache.
+  CacheLookupResult check_cache(NNEvaluationRequest&);
+  void decrement_ref_count(NNEvaluation* eval);
+
+  void allocate_slabs(BatchSlab* slabs, int n);
+  BatchData* add_batch_data();  // assumes batch_data_mutex_ is held
+  void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
+  void update_perf_stats(const CacheLookupResult& result);
+
+  void loop();
+  void set_deadline();
+  void load_initial_weights_if_necessary();
+  void wait_for_unpause();
+  void wait_until_batch_ready();
+  void batch_evaluate();
+
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
+  void pause() override;
+  void unpause() override;
+  bool active() const { return num_connections_; }
 
   static instance_map_t instance_map_;
   static int instance_count_;
@@ -205,18 +278,18 @@ class NNEvaluationService
 
   profiler_t profiler_;
   std::thread* thread_ = nullptr;
-  std::mutex cache_mutex_;
-  std::mutex connection_mutex_;
-  std::mutex net_weights_mutex_;
 
-  std::condition_variable cv_service_loop_;
-  std::condition_variable cv_evaluate_;
+  mutable std::mutex cache_mutex_;
+  mutable std::mutex connection_mutex_;
+  mutable std::mutex net_weights_mutex_;
+  mutable std::mutex main_mutex_;
+  mutable std::mutex perf_stats_mutex_;
+
   std::condition_variable cv_net_weights_;
-  std::condition_variable cv_cache_;
+  std::condition_variable cv_main_;
+  std::condition_variable cv_eval_;
 
   core::NeuralNet net_;
-
-  BatchData batch_data_;
 
   core::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;
@@ -224,37 +297,28 @@ class NNEvaluationService
   torch::Tensor torch_value_;
   torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
-  cache_t cache_;
+
+  EvalCache eval_cache_;
 
   const std::chrono::nanoseconds timeout_duration_;
 
   time_point_t deadline_;
-  struct BatchMetadata {
-    std::mutex mutex;
-    int reserve_index = 0;
-    int commit_count = 0;
-    int unread_count = 0;
-    bool accepting_reservations = true;
-    std::string repr() const {
-      return util::create_string("res=%d, com=%d, unr=%d, acc=%d", reserve_index, commit_count,
-                                 unread_count, accepting_reservations);
-    }
-  };
-  BatchMetadata batch_metadata_;
+
+  batch_data_vec_t pending_batch_datas_;
+  batch_data_vec_t batch_data_reserve_;
+  core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
 
   bool session_ended_ = false;
   int num_connections_ = 0;
 
-  core::nn_evaluation_sequence_id_t sequence_id_ = 1;
+  core::nn_evaluation_sequence_id_t last_evaluated_sequence_id_ = 0;
+
   bool initial_weights_loaded_ = false;
   bool ready_ = false;
   bool skip_next_pause_receipt_ = false;
   bool paused_ = false;
-  std::mutex pause_mutex_;
-  std::condition_variable cv_paused_;
 
   core::PerfStats perf_stats_;
-  mutable std::mutex perf_stats_mutex_;
 };
 
 }  // namespace mcts

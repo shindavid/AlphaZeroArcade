@@ -1,5 +1,6 @@
 #include <mcts/NNEvaluation.hpp>
 
+#include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Exception.hpp>
@@ -7,11 +8,11 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
-                                 const ActionValueTensor& raw_action_values,
-                                 const ActionMask& valid_actions, group::element_t sym,
-                                 core::seat_index_t active_seat, core::action_mode_t mode)
-    : dynamic_array_(2, valid_actions.count()) {
+void NNEvaluation<Game>::init(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
+                              const ActionValueTensor& raw_action_values,
+                              const ActionMask& valid_actions, group::element_t sym,
+                              core::seat_index_t active_seat, core::action_mode_t mode) {
+  dynamic_array_.resize(2, valid_actions.count());
   ValueTensor value = raw_value;
   PolicyTensor policy = raw_policy;
   ActionValueTensor action_values = raw_action_values;
@@ -42,8 +43,9 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
 }
 
 template <core::concepts::Game Game>
-NNEvaluation<Game>::NNEvaluation(const ActionMask& valid_actions)
-    : dynamic_array_(2, valid_actions.count()) {
+void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
+  dynamic_array_.resize(2, valid_actions.count());
+
   float policy_entry = 1.0 / valid_actions.count();
   float value_entry = 1.0 / value_.size();
   float action_value_entry = 1.0 / Game::Constants::kNumPlayers;
@@ -54,18 +56,26 @@ NNEvaluation<Game>::NNEvaluation(const ActionMask& valid_actions)
 }
 
 template <core::concepts::Game Game>
+bool NNEvaluation<Game>::decrement_ref_count() {
+  ref_count_--;
+  util::debug_assert(ref_count_ >= 0, "ref_count_=%d", ref_count_);
+  return ref_count_ == 0;
+}
+
+template <core::concepts::Game Game>
+void NNEvaluation<Game>::clear() {
+  sequence_id_ = 0;
+  ref_count_ = 0;
+  initialized_ = false;
+}
+
+template <core::concepts::Game Game>
 void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
                               LocalActionValueArray& action_value) {
   value = value_;
   policy = dynamic_array_.row(0);
   action_value = dynamic_array_.row(1);
   eigen_util::debug_assert_is_valid_prob_distr(policy);
-}
-
-template <core::concepts::Game Game>
-typename NNEvaluation<Game>::sptr NNEvaluation<Game>::create_uniform(
-    const ActionMask& valid_actions) {
-  return std::make_shared<NNEvaluation>(valid_actions);
 }
 
 }  // namespace mcts

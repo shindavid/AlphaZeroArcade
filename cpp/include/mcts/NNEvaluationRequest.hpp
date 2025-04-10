@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
+#include <cstdint>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/Node.hpp>
@@ -8,11 +9,20 @@
 #include <util/FiniteGroups.hpp>
 #include <util/StringUtil.hpp>
 
+#include <span>
 #include <string>
 #include <vector>
 
 namespace mcts {
 
+// An NNEvaluationRequest is used to make requests to an NNEvaluationService.
+//
+// The proper usage is for a client to maintain a long-lived NNEvaluationRequest object. Whenever
+// the client wishes to request evaluations for one or more positions, it should call
+// NNEvaluationRequest::emplace_back() to add the positions to the request. It is important that the
+// request is long-lived, because of sensitivities around the reference-counting of NNEvaluation
+// objects. The request will hold onto old NNEvaluation objects from previous evaluations, and the
+// NNEvaluationService will lazily clear those out when it is safe to do so.
 template <core::concepts::Game Game>
 class NNEvaluationRequest {
  public:
@@ -23,18 +33,9 @@ class NNEvaluationRequest {
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
 
-  using NNEvaluation_sptr = NNEvaluation::sptr;
-
   // If group::element_t is -1, that means to pick a random symmetry at the time of evaluation.
   // Otherwise, it is the index of the symmetry to use.
   using cache_key_t = std::tuple<EvalKey, group::element_t>;
-
-  enum eval_state_t : int8_t {
-    kUnknown = 0,
-    kClaimedByMe = 1,
-    kClaimedByOther = 2,
-    kCompleted = 3
-  };
 
   class Item {
    public:
@@ -73,13 +74,12 @@ class NNEvaluationRequest {
     template <typename Func>
     auto compute_over_history(Func f) const;
 
-    void set_eval(NNEvaluation_sptr eval) { eval_ = eval; }
-    void set_eval_state(eval_state_t eval_state) { eval_state_ = eval_state; }
+    void set_eval(NNEvaluation* eval) { eval_ = eval; }
 
     Node* node() const { return node_; }
-    NNEvaluation* eval() const { return eval_.get(); }
-    eval_state_t eval_state() const { return eval_state_; }
+    NNEvaluation* eval() const { return eval_; }
     const cache_key_t& cache_key() const { return cache_key_; }
+    uint64_t hash() const { return hash_; }
     group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
@@ -91,29 +91,42 @@ class NNEvaluationRequest {
     StateHistory* const history_;
     const bool split_history_;
     const cache_key_t cache_key_;
+    const uint64_t hash_;
     const group::element_t sym_;
 
-    NNEvaluation_sptr eval_;
-    eval_state_t eval_state_ = kUnknown;
+    NNEvaluation* eval_ = nullptr;
   };
   using item_vec_t = std::vector<Item>;
 
   void init(search_thread_profiler_t* thread_profiler, int thread_id);
-
-  // void mark_as_pending_eval();
-  // void notify();
-  // void wait_for_eval();
+  void mark_all_as_stale();
 
   std::string thread_id_whitespace() const;
   search_thread_profiler_t* thread_profiler() const { return thread_profiler_; }
   int thread_id() const { return thread_id_; }
-  item_vec_t& items() { return items_; }
+
+  template <typename... Ts>
+  void emplace_back(Ts&&... args) {
+    items_[active_index_].emplace_back(std::forward<Ts>(args)...);
+  }
+
+  auto stale_items() { return std::span<Item>(items_[1 - active_index_]); }
+  auto fresh_items() { return std::span<Item>(items_[active_index_]); }
+  void clear_stale_items() { items_[1 - active_index_].clear(); }
+  int num_fresh_items() const { return items_[active_index_].size(); }
 
  private:
-  item_vec_t items_;
+  // We keep two vectors of items: the active vector and the stale vector. After the active items
+  // is processed by the NNEvaluationService, they get downgraded to stale.
+  //
+  // This allows us to better control when items are destroyed (i.e., when the eval reference count
+  // gets decremented). That needs to be done while holding the NNEvaluationService cache_mutex_,
+  // and in order to do that, we need to destroy lazily.
+  item_vec_t items_[2];
+
   search_thread_profiler_t* thread_profiler_;
   int thread_id_;
-  bool pending_eval_ = false;
+  int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };
 
 }  // namespace mcts

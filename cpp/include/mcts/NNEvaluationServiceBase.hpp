@@ -2,7 +2,11 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
+#include <util/AllocPool.hpp>
+
+#include <vector>
 
 namespace mcts {
 
@@ -26,11 +30,19 @@ struct NNEvaluationResponse {
 /*
  * Base class of NNEvaluationService. We pull out this base class so that we create a mock
  * implementation for testing.
+ *
+ * In this base class, we also add free_eval() and alloc_eval() methods, which can be used in
+ * place of new/delete. Doing so makes use of an underlying object pool and recycles
+ * NNEvaluation objects.
  */
 template <core::concepts::Game Game>
 class NNEvaluationServiceBase {
  public:
+  using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
+
+  virtual ~NNEvaluationServiceBase() {}
 
   virtual void connect() {}
 
@@ -53,6 +65,28 @@ class NNEvaluationServiceBase {
   virtual void wait_for(core::nn_evaluation_sequence_id_t sequence_id) = 0;
 
   virtual void end_session() {}
+
+ protected:
+  void free_eval(NNEvaluation* eval) {
+    eval->clear();
+    recycled_evals_.push_back(eval);
+  }
+
+  NNEvaluation* alloc_eval() {
+    if (recycled_evals_.empty()) {
+      NNEvaluation* eval = &eval_pool_[eval_pool_.alloc(1)];
+      new (eval) NNEvaluation();
+      return eval;
+    } else {
+      NNEvaluation* eval = recycled_evals_.back();
+      recycled_evals_.pop_back();
+      return eval;
+    }
+  }
+
+ private:
+  NNEvaluationPool eval_pool_;
+  std::vector<NNEvaluation*> recycled_evals_;
 };
 
 }  // namespace mcts
