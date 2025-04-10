@@ -262,7 +262,8 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   }
 
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__, request.num_fresh_items());
+    LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__,
+             request.num_fresh_items());
   }
 
   CacheLookupResult result = check_cache(request);
@@ -317,6 +318,10 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) {
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("{}({}) - last={}", __func__, seq, last_evaluated_sequence_id_);
+  }
+
   if (last_evaluated_sequence_id_ >= seq) return;
 
   std::unique_lock lock(main_mutex_);
@@ -341,6 +346,9 @@ void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) 
   }
 
   cv_eval_.wait(lock, [&] { return !active() || last_evaluated_sequence_id_ >= seq; });
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("{}({}) - done waiting, last={}", __func__, seq, last_evaluated_sequence_id_);
+  }
 }
 
 template <core::concepts::Game Game>
@@ -534,6 +542,16 @@ void NNEvaluationService<Game>::update_perf_stats(const CacheLookupResult& resul
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::update_perf_stats(int num_rows) {
+  std::lock_guard guard(perf_stats_mutex_);
+  perf_stats_.positions_evaluated += num_rows;
+  perf_stats_.batches_evaluated++;
+  bool full = num_rows == params_.batch_size_limit;
+  if (full) perf_stats_.full_batches_evaluated++;
+}
+
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::loop() {
   while (active()) {
     set_deadline();
@@ -674,15 +692,6 @@ void NNEvaluationService<Game>::batch_evaluate() {
                      group.active_seat, group.action_mode);
   }
 
-  bool full = num_rows == params_.batch_size_limit;
-
-  {
-    std::lock_guard guard(perf_stats_mutex_);
-    perf_stats_.positions_evaluated += num_rows;
-    perf_stats_.batches_evaluated++;
-    if (full) perf_stats_.full_batches_evaluated++;
-  }
-
   lock.lock();
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
@@ -690,6 +699,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
   batch_data_reserve_.push_back(batch_data);
   lock.unlock();
   cv_eval_.notify_all();
+
+  update_perf_stats(num_rows);
 }
 
 template <core::concepts::Game Game>

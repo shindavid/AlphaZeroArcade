@@ -257,6 +257,7 @@ class NNEvaluationService
   BatchData* add_batch_data();  // assumes batch_data_mutex_ is held
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);
+  void update_perf_stats(int num_rows);
 
   void loop();
   void set_deadline();
