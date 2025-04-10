@@ -177,3 +177,7 @@ class Arena:
     @property
     def agent_lookup_db_id(self) -> Dict[AgentDBId, IndexedAgent]:
         return self._agent_lookup_db_id
+
+    @property
+    def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
+        return self._agent_lookup

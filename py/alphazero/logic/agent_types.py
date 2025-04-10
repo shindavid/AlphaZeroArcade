@@ -95,3 +95,16 @@ class IndexedAgent:
 
 
 BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
+
+
+class MatchType(Enum):
+    BENCHMARK = 'benchmark'
+    EVALUATE = 'evaluate'
+
+
+@dataclass
+class Match:
+    agent1: Agent
+    agent2: Agent
+    n_games: int
+    type: MatchType

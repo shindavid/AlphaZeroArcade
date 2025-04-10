@@ -32,7 +32,7 @@ class Evaluator:
         self._arena = self._benchmark.clone_arena()
         self._db = RatingDB(self._organizer.eval_db_filename)
         self.load_from_db()
-        self._arena.refresh_ratings()
+        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)

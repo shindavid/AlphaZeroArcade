@@ -1,4 +1,5 @@
 from alphazero.logic.agent_types import Agent, AgentRole, BenchmarkCommittee, MCTSAgent, IndexedAgent
+from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -9,7 +10,7 @@ import numpy as np
 import copy
 from dataclasses import dataclass
 import logging
-from typing import Optional, List
+from typing import Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class Benchmarker:
         else:
             self._db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
+        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self._db, role=AgentRole.BENCHMARK)
@@ -100,8 +102,30 @@ class Benchmarker:
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
-        self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
+        next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
+                                             db=self._db)
         matches = [Match(next_agent, indexed_agent.agent, n_games, MatchType.BENCHMARK) for indexed_agent in self._arena.indexed_agents if indexed_agent.agent.gen != next_agent.gen]
+        matches = self.get_unplayed_matches(next_iagent, n_games, against_committee_only=False)
+        return matches
+
+    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, against_committee_only: bool,
+                             is_committee: Optional[np.ndarray]=None) -> List[Match]:
+        """
+        Returns a list of matches that have not been played for the given IndexedAgent.
+        If against_committee_only is True, only returns matches against agents in the committee.
+        """
+        matches = []
+        for ia in self._arena.indexed_agents:
+            if ia.agent.gen == iagent.agent.gen:
+                continue
+            if against_committee_only:
+                if is_committee is None:
+                    raise ValueError("is_committee must be provided if against_committee_only is True")
+                if not is_committee[ia.index]:
+                    continue
+            if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
+                matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
+            logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
 
     def incomplete_gen(self) -> np.ndarray:
@@ -204,3 +228,14 @@ class Benchmarker:
         iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         committee = rating_data.committee
         return BenchmarkRatingData(iagents, ratings, committee)
+
+    def refresh_ratings(self):
+        self._arena.refresh_ratings()
+
+    @property
+    def indexed_agents(self) -> List[IndexedAgent]:
+        return self._arena.indexed_agents
+
+    @property
+    def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
+        return self._arena.agent_lookup

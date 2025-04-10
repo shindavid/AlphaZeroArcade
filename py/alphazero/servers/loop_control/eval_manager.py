@@ -121,7 +121,6 @@ class EvalManager(BaseManager):
             conn.aux.status= ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
-
     def _wait_until_work_exists(self):
         with self._lock:
             self._new_work_cond.wait_for(
