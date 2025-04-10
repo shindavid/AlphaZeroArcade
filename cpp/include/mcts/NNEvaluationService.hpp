@@ -191,15 +191,6 @@ class NNEvaluationService
   core::PerfStats get_perf_stats() override;
 
  private:
-  struct CacheLookupResult {
-    int size() const { return non_pending_hits + pending_hits + misses; }
-
-    int non_pending_hits = 0;  // item in cache and in non-pending state
-    int pending_hits = 0;      // item in cache and in pending state
-    int misses = 0;            // item not in cache
-    core::nn_evaluation_sequence_id_t max_pending_sequence_id = 0;
-  };
-
   struct TensorGroup {
     void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
                           torch::Tensor& torch_action_value);
@@ -217,6 +208,14 @@ class NNEvaluationService
     core::seat_index_t active_seat;
   };
 
+  // BatchData represents a batch of data that is passed to the neural network for evaluation.
+  // It contains a fixed-size-vector of TensorGroup objects, each of which represents a single
+  // position for evaluation.
+  //
+  // Multiple threads can submit evaluation requests to the NNEvaluationService. The service first,
+  // while holding the main_mutex_, allocates portions of BatchData's to each of the requests.
+  // After allocating, it releases the main_mutex_ and allows the threads to write to their
+  // allocated slots concurrently.
   struct BatchData {
     BatchData(int capacity);
     void copy_input_to(int num_rows, DynamicInputTensor& full_input);
@@ -227,18 +226,43 @@ class NNEvaluationService
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;
 
-    core::nn_evaluation_sequence_id_t sequence_id = 0;
+    core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
 
-    int allocate_count = 0;  // protected by NNEvaluationService::batch_data_mutex_
+    // Below fields are protected by the main_mutex_ member of NNEvaluationService.
+    int allocate_count = 0;
     int write_count = 0;
     bool accepting_allocations = true;
   };
   using batch_data_vec_t = std::vector<BatchData*>;
 
-  struct BatchSlab {
+  struct BatchDataSlice {
     BatchData* batch_data;
-    int offset;
-    int size;
+    int start_row;
+    int num_rows;
+  };
+
+  // Whenever we miss cache, we will need to evaluate the item later with the neural net. This
+  // struct is used to store bookkeeping information to facilitate that.
+  struct CacheMissInfo {
+    BatchData* batch_data;  // the BatchData that we will write to
+    int row;                // the row in the BatchData that we will write to
+    int item_index;         // index of the item in the request
+  };
+
+  // Helper struct to pass into check_cache().
+  struct CacheLookupResult {
+    // Constructor accepts an array of CacheMissInfo's. The check_cache() method will populate the
+    // first n entries of this array, where n is the number of cache-misses.
+    CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
+
+    int size() const { return non_pending_hits + pending_hits + misses; }
+
+    CacheMissInfo* miss_infos;
+
+    int non_pending_hits = 0;  // item in cache and in non-pending state
+    int pending_hits = 0;      // item in cache and in pending state
+    int misses = 0;            // item not in cache
+    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
   };
 
   NNEvaluationService(const NNEvaluationServiceParams& params);
@@ -248,12 +272,18 @@ class NNEvaluationService
 
   void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
-  // For each item in the request, check if the cache has a value for it. If so, set the item to
-  // that value. Else, insert a placeholder in the cache.
-  CacheLookupResult check_cache(NNEvaluationRequest&);
+  // For each item in the request, attempt a cache-lookup. If we get a cache-hit, set the item's
+  // eval to the cached value. If we get a cache-miss, we do the following:
+  //
+  // 1. Create a new NNEvaluation (to be populated later)
+  // 2. Insert the NNEvaluation into the cache
+  // 3. Set the item's eval to that.
+  // 4. Populate result.miss_infos with the cache-miss information.
+  void check_cache(NNEvaluationRequest& request, CacheLookupResult& result);
+
   void decrement_ref_count(NNEvaluation* eval);
 
-  void allocate_slabs(BatchSlab* slabs, int n, int limit);
+  void allocate_slices(BatchDataSlice* slices, int n, int max_slices);
   BatchData* add_batch_data();  // assumes batch_data_mutex_ is held
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);
