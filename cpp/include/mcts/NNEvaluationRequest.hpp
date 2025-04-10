@@ -114,6 +114,7 @@ class NNEvaluationRequest {
   auto fresh_items() { return std::span<Item>(items_[active_index_]); }
   void clear_stale_items() { items_[1 - active_index_].clear(); }
   int num_fresh_items() const { return items_[active_index_].size(); }
+  Item& get_fresh_item(int i) { return items_[active_index_][i]; }
 
  private:
   // We keep two vectors of items: the active vector and the stale vector. After the active items

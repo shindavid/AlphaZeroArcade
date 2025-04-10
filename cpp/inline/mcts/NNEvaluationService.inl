@@ -266,54 +266,26 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
              request.num_fresh_items());
   }
 
-  CacheLookupResult result = check_cache(request);
+  int n = request.num_fresh_items();
+  CacheMissInfo miss_infos[n];
+  CacheLookupResult result(miss_infos);
+  check_cache(request, result);
 
   if (result.misses == 0 && result.pending_hits == 0) {
     return NNEvaluationResponse(0, core::kContinue);
   }
 
-  core::nn_evaluation_sequence_id_t seq = result.max_pending_sequence_id;
-
-  if (result.misses > 0) {
-    // max slabs needed: in the most extreme case, the current slab only has one slot left.
-    //
-    //   n  max
-    //   1    1
-    //   2    2
-    //   3    2
-    // ...
-    //   B    2
-    // B+1    3
-    // B+2    3
-    // ...
-    int B = params_.batch_size_limit;
-    int n = result.misses;
-    int max_slabs_needed = (B + n - 2) / B + 1;
-
-    BatchSlab slabs[max_slabs_needed];
-    allocate_slabs(slabs, result.misses, max_slabs_needed);
-
-    int slab_index = 0;
-    int slab_row = 0;
-    for (RequestItem& item : request.fresh_items()) {
-      if (item.eval()->sequence_id() == 0) {
-        BatchSlab& slab = slabs[slab_index];
-        item.eval()->set_sequence_id(slab.batch_data->sequence_id);
-        write_to_batch(item, slab.batch_data, slab.offset + slab_row);
-
-        util::debug_assert(slab.batch_data->sequence_id >= seq);
-        seq = slab.batch_data->sequence_id;
-        slab_row++;
-        if (slab_row == slabs[slab_index].size) {
-          slab_index++;
-          slab_row = 0;
-        }
-      }
-    }
+  // Write to batches
+  for (int i = 0; i < result.misses; ++i) {
+    CacheMissInfo& miss_info = miss_infos[i];
+    RequestItem& item = request.get_fresh_item(miss_info.item_index);
+    BatchData* batch_data = miss_info.batch_data;
+    int row = miss_info.row;
+    write_to_batch(item, batch_data, row);
   }
 
   update_perf_stats(result);
-  return NNEvaluationResponse(seq, core::kYield);
+  return NNEvaluationResponse(result.max_sequence_id, core::kYield);
 }
 
 template <core::concepts::Game Game>
@@ -396,8 +368,8 @@ std::string NNEvaluationService<Game>::dump_key(const char* descr) {
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::CacheLookupResult NNEvaluationService<Game>::check_cache(
-  NNEvaluationRequest& request) {
+void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
+                                            CacheLookupResult& result) {
   std::unique_lock cache_lock(cache_mutex_);
 
   // Lazily decrement old reference counts. We do this here to ensure that all reference-count
@@ -409,9 +381,11 @@ typename NNEvaluationService<Game>::CacheLookupResult NNEvaluationService<Game>:
   }
   request.clear_stale_items();
 
-  CacheLookupResult result;
+  int n = request.num_fresh_items();
+  int item_index = 0;
+
   for (RequestItem& item : request.fresh_items()) {
-    util::debug_assert(item.eval() == nullptr);
+    util::release_assert(item.eval() == nullptr);
 
     bool hit_cache = true;
     uint64_t hash = item.hash();
@@ -419,29 +393,65 @@ typename NNEvaluationService<Game>::CacheLookupResult NNEvaluationService<Game>:
 
     auto value_creator = [&]() {
       hit_cache = false;
-      NNEvaluation* e = this->alloc_eval();
-      e->increment_ref_count();
-      return e;
+      return this->alloc_eval();
     };
 
     NNEvaluation* eval = eval_cache_.insert(cache_key, hash, value_creator);
-    eval->increment_ref_count();
+    eval->increment_ref_count();  // ref_count++ because item is now holding it
     item.set_eval(eval);
     if (hit_cache) {
+      util::release_assert(eval->sequence_id() > 0);
       if (eval->pending()) {
-        result.max_pending_sequence_id =
-            std::max(result.max_pending_sequence_id, eval->sequence_id());
+        result.max_sequence_id = std::max(result.max_sequence_id, eval->sequence_id());
         result.pending_hits++;
       } else {
         result.non_pending_hits++;
       }
     } else {
+      util::release_assert(eval->sequence_id() == 0);
+      eval->increment_ref_count();  // ref_count++ because cache is now holding it
+      result.miss_infos[result.misses].item_index = item_index;
       result.misses++;
+    }
+    item_index++;
+  }
+  util::release_assert(item_index == n);
+
+  if (result.misses) {
+    // Assign the missed items to BatchData's.
+    //
+    // Don't actually write to the BatchData's yet, since we don't need to do that under the
+    // cache_mutex_ lock.
+
+    int B = params_.batch_size_limit;
+    int max_slices_needed = (B + n - 2) / B + 1;  // 1 + ceil((n-1)/B)
+
+    BatchDataSlice slices[max_slices_needed];
+    allocate_slices(slices, result.misses, max_slices_needed);
+
+    int slice_index = 0;
+    int slice_offset = 0;
+    for (int i = 0; i < result.misses; ++i) {
+      CacheMissInfo& miss_info = result.miss_infos[i];
+      RequestItem& item = request.get_fresh_item(miss_info.item_index);
+
+      BatchDataSlice& slice = slices[slice_index];
+      BatchData* batch_data = slice.batch_data;
+      miss_info.batch_data = batch_data;
+      miss_info.row = slice.start_row + slice_offset;
+
+      item.eval()->set_sequence_id(slice.batch_data->sequence_id);
+
+      result.max_sequence_id = std::max(result.max_sequence_id, slice.batch_data->sequence_id);
+      slice_offset++;
+      if (slice_offset == slices[slice_index].num_rows) {
+        slice_index++;
+        slice_offset = 0;
+      }
     }
   }
 
-  util::debug_assert(result.size() == request.num_fresh_items());
-  return result;
+  util::release_assert(result.size() == request.num_fresh_items());
 }
 
 template <core::concepts::Game Game>
@@ -452,21 +462,21 @@ void NNEvaluationService<Game>::decrement_ref_count(NNEvaluation* eval) {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::allocate_slabs(BatchSlab* slabs, int n, int limit) {
-  std::unique_lock batch_data_lock(main_mutex_);
+void NNEvaluationService<Game>::allocate_slices(BatchDataSlice* slices, int n, int max_slices) {
+  std::unique_lock lock(main_mutex_);
 
   BatchData* batch_data = pending_batch_datas_.back();
 
-  int slab_index = 0;
+  int slice_index = 0;
   while (n) {
-    BatchSlab& slab = slabs[slab_index++];
+    BatchDataSlice& slice = slices[slice_index++];
     int m = std::min(n, batch_data->capacity() - batch_data->allocate_count);
     n -= m;
 
     util::release_assert(batch_data->accepting_allocations);
-    slab.batch_data = batch_data;
-    slab.offset = batch_data->allocate_count;
-    slab.size = m;
+    slice.batch_data = batch_data;
+    slice.start_row = batch_data->allocate_count;
+    slice.num_rows = m;
     batch_data->allocate_count += m;
 
     if (batch_data->allocate_count == batch_data->capacity()) {
@@ -475,8 +485,8 @@ void NNEvaluationService<Game>::allocate_slabs(BatchSlab* slabs, int n, int limi
     }
   }
 
-  util::release_assert(slab_index <= limit, "Unexpected slab allocation bug (%d > %d)", slab_index,
-                       limit);
+  util::release_assert(slice_index <= max_slices, "Unexpected slice allocation bug (%d > %d)",
+                       slice_index, max_slices);
 }
 
 template <core::concepts::Game Game>
@@ -558,7 +568,6 @@ void NNEvaluationService<Game>::loop() {
     load_initial_weights_if_necessary();
     wait_for_unpause();
     wait_until_batch_ready();
-    if (paused_) continue;
     batch_evaluate();
     profiler_.dump(64);
   }
@@ -658,6 +667,8 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::batch_evaluate() {
+  if (!active() || paused_) return;
+
   std::unique_lock lock(main_mutex_);
   if (pending_batch_datas_.empty()) return;
   BatchData* batch_data = pending_batch_datas_.front();
@@ -669,8 +680,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->",
-             cls, func, batch_data->allocate_count);
+    LOG_INFO("<---------------------- {}::{}() (seq:{}, count:{}) ---------------------->",
+             cls, func, batch_data->sequence_id, batch_data->allocate_count);
   }
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
