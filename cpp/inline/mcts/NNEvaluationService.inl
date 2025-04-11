@@ -333,11 +333,20 @@ void NNEvaluationService<Game>::end_session() {
   int64_t batches_evaluated = perf_stats_.batches_evaluated;
   int64_t full_batches_evaluated = perf_stats_.full_batches_evaluated;
 
+  int64_t batch_ready_wait_time_ns = perf_stats_.batch_ready_wait_time_ns;
+  int64_t gpu_copy_time_ns = perf_stats_.gpu_copy_time_ns;
+  int64_t model_eval_time_ns = perf_stats_.model_eval_time_ns;
+  int batch_datas_allocated = perf_stats_.batch_datas_allocated;
+
   float max_batch_pct =
       batches_evaluated > 0 ? 100.0 * full_batches_evaluated / batches_evaluated : 0.0f;
 
   float avg_batch_size =
       batches_evaluated > 0 ? positions_evaluated * 1.0 / batches_evaluated : 0.0f;
+
+  float avg_batch_ready_wait_time_ms = 1e-6 * batch_ready_wait_time_ns / batches_evaluated;
+  float avg_gpu_copy_time_ms = 1e-6 * gpu_copy_time_ns / batches_evaluated;
+  float avg_model_eval_time_ms = 1e-6 * model_eval_time_ns / batches_evaluated;
 
   util::KeyValueDumper::add(dump_key("cache hits"), "%ld", cache_hits);
   util::KeyValueDumper::add(dump_key("cache misses"), "%ld", cache_misses);
@@ -346,6 +355,11 @@ void NNEvaluationService<Game>::end_session() {
   util::KeyValueDumper::add(dump_key("batches evaluated"), "%ld", batches_evaluated);
   util::KeyValueDumper::add(dump_key("max batch pct"), "%.2f%%", max_batch_pct);
   util::KeyValueDumper::add(dump_key("avg batch size"), "%.2f", avg_batch_size);
+  util::KeyValueDumper::add(dump_key("avg batch ready wait time"), "%.3fms",
+                            avg_batch_ready_wait_time_ms);
+  util::KeyValueDumper::add(dump_key("avg gpu copy time"), "%.3fms", avg_gpu_copy_time_ms);
+  util::KeyValueDumper::add(dump_key("avg model eval time"), "%.3fms", avg_model_eval_time_ms);
+  util::KeyValueDumper::add(dump_key("batch datas allocated"), "%d", batch_datas_allocated);
   session_ended_ = true;
 }
 
@@ -491,6 +505,7 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::add_ba
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
     batch_data = new BatchData(params_.batch_size_limit);
+    perf_stats_.batch_datas_allocated++;
   } else {
     batch_data = batch_data_reserve_.back();
     batch_data_reserve_.pop_back();
@@ -625,6 +640,8 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingUntilBatchReady);
 
   std::unique_lock lock(main_mutex_);
+  core::PerfStatsClocker clocker(perf_stats_.batch_ready_wait_time_ns);
+
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
@@ -668,6 +685,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
 
   std::unique_lock lock(main_mutex_);
   if (pending_batch_datas_.empty()) return;
+
   BatchData* batch_data = pending_batch_datas_.front();
   pending_batch_datas_.erase(pending_batch_datas_.begin());
   lock.unlock();
@@ -682,6 +700,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
   }
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
+  core::PerfStatsClocker gpu_copy_clocker(perf_stats_.gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, full_input_);
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
@@ -690,15 +709,18 @@ void NNEvaluationService<Game>::batch_evaluate() {
   torch_input_gpu_.copy_(full_input_torch);
 
   profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
+  core::PerfStatsClocker model_eval_clocker(gpu_copy_clocker, perf_stats_.model_eval_time_ns);
   net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
+  core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, perf_stats_.gpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
     TensorGroup& group = batch_data->tensor_groups[i];
     group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
     group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
                      group.active_seat, group.action_mode);
   }
+  gpu_copy_clocker2.stop();
 
   lock.lock();
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
