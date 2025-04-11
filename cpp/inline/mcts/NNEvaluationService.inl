@@ -270,6 +270,7 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   CacheMissInfo miss_infos[n];
   CacheLookupResult result(miss_infos);
   check_cache(request, result);
+  update_perf_stats(result);
 
   if (result.misses == 0 && result.pending_hits == 0) {
     return NNEvaluationResponse(0, core::kContinue);
@@ -284,7 +285,6 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
     write_to_batch(item, batch_data, row);
   }
 
-  update_perf_stats(result);
   return NNEvaluationResponse(result.max_sequence_id, core::kYield);
 }
 
