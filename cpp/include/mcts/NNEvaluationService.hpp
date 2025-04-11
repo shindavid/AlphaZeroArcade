@@ -186,7 +186,7 @@ class NNEvaluationService
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
   void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
 
-  void end_session() override;
+  void end_session(int num_game_threads) override;
 
   core::PerfStats get_perf_stats() override;
 
@@ -259,9 +259,11 @@ class NNEvaluationService
 
     CacheMissInfo* miss_infos;
 
-    int non_pending_hits = 0;  // item in cache and in non-pending state
-    int pending_hits = 0;      // item in cache and in pending state
-    int misses = 0;            // item not in cache
+    int64_t cache_mutex_acquire_time_ns = 0;  // time spent acquiring the cache mutex
+    int64_t check_cache_time_ns = 0;          // time spent in check_cache() after mutex is acquired
+    int non_pending_hits = 0;                 // item in cache and in non-pending state
+    int pending_hits = 0;                     // item in cache and in pending state
+    int misses = 0;                           // item not in cache
     core::nn_evaluation_sequence_id_t max_sequence_id = 0;
   };
 

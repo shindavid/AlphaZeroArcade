@@ -92,8 +92,11 @@ class AbstractPlayerGenerator {
    * aggregate statistics over a series of games. Note that this functionality must exist here,
    * rather than at the player-level. This is because in the parallel case, two different games may
    * be played by different player instances, which don't know about each other.
+   *
+   * num_game_threads is the number of game threads that were used to play the games. This is
+   * useful for reporting statistics that are aggregated over all game threads.
    */
-  virtual void end_session() {}
+  virtual void end_session(int num_game_threads) {}
 
   /*
    * Some extra virtual functions that most subclasses can ignore.

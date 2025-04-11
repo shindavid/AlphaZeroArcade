@@ -202,7 +202,7 @@ auto GameServer<Game>::SharedData::get_results() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::end_session() {
   for (auto& reg : registrations_) {
-    reg.gen->end_session();
+    reg.gen->end_session(params_.num_game_threads);
   }
 }
 
