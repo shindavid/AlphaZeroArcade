@@ -344,7 +344,7 @@ class EvalManager(BaseManager):
 
     @property
     def n_iters(self):
-        return self._controller.params.eval_agent_n_iters
+        return self._controller.params.agent_n_iters
 
     @property
     def error_threshold(self):

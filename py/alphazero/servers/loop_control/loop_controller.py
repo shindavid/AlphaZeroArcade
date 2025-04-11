@@ -1,3 +1,4 @@
+from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
@@ -209,6 +210,10 @@ class LoopController:
             self._get_eval_manager(conn.rating_tag).add_server(conn)
         elif client_role == ClientRole.EVAL_WORKER:
             self._get_eval_manager(conn.rating_tag).add_worker(conn)
+        elif client_role == ClientRole.BENCHMARK_SERVER:
+            self._get_benchmark_manager().add_server(conn)
+        elif client_role == ClientRole.BENCHMARK_WORKER:
+            self._get_benchmark_manager().add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -346,6 +351,10 @@ class LoopController:
                 shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
             self._eval_managers[tag] = EvalManager(self, tag)
         return self._eval_managers[tag]
+
+    def _get_benchmark_manager(self) -> BenchmarkManager:
+        self._benchmark_manager = BenchmarkManager(self)
+        return self._benchmark_manager
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,

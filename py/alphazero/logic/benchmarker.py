@@ -104,7 +104,6 @@ class Benchmarker:
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
                                              db=self._db)
-        matches = [Match(next_agent, indexed_agent.agent, n_games, MatchType.BENCHMARK) for indexed_agent in self._arena.indexed_agents if indexed_agent.agent.gen != next_agent.gen]
         matches = self.get_unplayed_matches(next_iagent, n_games, against_committee_only=False)
         return matches
 

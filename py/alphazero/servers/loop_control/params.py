@@ -13,8 +13,9 @@ class LoopControllerParams:
     target_rating_rate: float = 0.1
     n_games_per_evaluation: int = 1000
     eval_error_threshold: float = 100.0
-    eval_agent_n_iters: Optional[int] = None
+    agent_n_iters: Optional[int] = None
     benchmark_tag: str = None
+    target_elo_gap: float = 500
     ignore_sigint: bool = False
 
     @staticmethod
@@ -49,9 +50,12 @@ class LoopControllerParams:
         group.add_argument('--eval-error-threshold', type=float,
                            default=defaults.eval_error_threshold,
                            help='evaluation error threshold (default: %(default)s)')
-        group.add_argument('-i', '--eval-agent-n-iters', type=int,
-                           default=defaults.eval_agent_n_iters,
+        group.add_argument('-i', '--agent-n-iters', type=int,
+                           default=defaults.agent_n_iters,
                            help='number of iterations to run eval agent for (default: %(default)s)')
+        group.add_argument('--target-elo-gap', type=float,
+                           default=defaults.target_elo_gap,
+                           help='target ELO gap for evaluation (default: %(default).1f)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
 
