@@ -44,23 +44,22 @@ typename NNEvaluationService<Game>::NNEvaluation* NNEvaluationService<Game>::Eva
     it_list = &map_it->second;
   }
 
-  // Before inserting into the cache, let's check if it's full.
-  if (size() >= capacity_) {
-    // Cache is full, evict the least recently used item
-    evict(it_list);
-  }
-
   // Insert the new item
   Entry entry(key, hash, value_creator());
   list_.push_front(entry);
   it_list->push_back(list_.begin());
   size_++;
 
+  if (size() > capacity_) {
+    // Cache is full, evict the least recently used item
+    evict();
+  }
+
   return entry.eval;
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::EvalCache::evict(MapValue* protected_list) {
+void NNEvaluationService<Game>::EvalCache::evict() {
   // Find the least recently used item
   EntryListIterator it = list_.end();
   --it;
@@ -77,9 +76,7 @@ void NNEvaluationService<Game>::EvalCache::evict(MapValue* protected_list) {
     }
   }
 
-  // Do not erase protected_list even if it empty, because we are about to add an entry to it
-  // immediately after this function returns
-  if (it_list != protected_list && it_list->empty()) {
+  if (it_list->empty()) {
     map_.erase(map_it);
   }
 

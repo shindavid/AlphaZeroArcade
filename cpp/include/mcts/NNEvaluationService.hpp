@@ -154,12 +154,12 @@ class NNEvaluationService
    private:
     size_t size() const { return size_; }
 
-    void evict(MapValue* protected_list);
+    void evict();
 
     const eviction_func_t eviction_handler_;
     const size_t capacity_;
 
-    // list_: [(cache_key, hash, eval), ...] in most-recently-used order
+    // list_: [Entry, ...] in most-recently-used order
     // map_: {hash -> [iter...]}, where each iter is an iterator into list_
     EntryList list_;
     Map map_;
