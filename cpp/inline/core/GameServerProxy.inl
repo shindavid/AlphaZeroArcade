@@ -108,8 +108,9 @@ void GameServerProxy<Game>::SharedData::init_socket() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::end_session() {
+  int num_game_threads = 1;  // TODO: set this properly
   for (auto& sg : seat_generators_) {
-    sg.gen->end_session();
+    sg.gen->end_session(num_game_threads);
   }
 }
 

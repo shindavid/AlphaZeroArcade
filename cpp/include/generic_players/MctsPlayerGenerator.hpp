@@ -2,7 +2,6 @@
 
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -37,7 +36,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
    */
   core::AbstractPlayer<Game>* generate(core::game_thread_id_t game_thread_id) override;
 
-  void end_session() override;
+  void end_session(int num_game_threads) override;
 
  protected:
   virtual BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) = 0;
