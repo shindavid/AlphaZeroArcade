@@ -259,8 +259,10 @@ class NNEvaluationService
 
     CacheMissInfo* miss_infos;
 
-    int64_t cache_mutex_acquire_time_ns = 0;  // time spent acquiring the cache mutex
-    int64_t check_cache_time_ns = 0;          // time spent in check_cache() after mutex is acquired
+    int64_t check_cache_mutex_time_ns = 0;    // time spent in check_cache() acquiring the mutex
+    int64_t check_cache_insert_time_ns = 0;   // time spent in check_cache() inserting into map
+    int64_t check_cache_alloc_time_ns = 0;    // time spent in check_cache() allocating batch data
+    int64_t check_cache_set_time_ns = 0;      // time spent in check_cache() setting miss info
     int non_pending_hits = 0;                 // item in cache and in non-pending state
     int pending_hits = 0;                     // item in cache and in pending state
     int misses = 0;                           // item not in cache

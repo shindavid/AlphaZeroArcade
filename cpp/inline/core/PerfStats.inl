@@ -9,8 +9,10 @@ inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
   batches_evaluated += other.batches_evaluated;
   full_batches_evaluated += other.full_batches_evaluated;
 
-  cache_mutex_acquire_time_ns += other.cache_mutex_acquire_time_ns;
-  check_cache_time_ns += other.check_cache_time_ns;
+  check_cache_mutex_time_ns += other.check_cache_mutex_time_ns;
+  check_cache_insert_time_ns += other.check_cache_insert_time_ns;
+  check_cache_alloc_time_ns += other.check_cache_alloc_time_ns;
+  check_cache_set_time_ns += other.check_cache_set_time_ns;
   batch_ready_wait_time_ns += other.batch_ready_wait_time_ns;
   gpu_copy_time_ns += other.gpu_copy_time_ns;
   model_eval_time_ns += other.model_eval_time_ns;
@@ -27,8 +29,10 @@ inline boost::json::object PerfStats::to_json() const {
   obj["batches_evaluated"] = batches_evaluated;
   obj["full_batches_evaluated"] = full_batches_evaluated;
 
-  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns;
-  obj["check_cache_time_ns"] = check_cache_time_ns;
+  obj["check_cache_mutex_time_ns"] = check_cache_mutex_time_ns;
+  obj["check_cache_insert_time_ns"] = check_cache_insert_time_ns;
+  obj["check_cache_alloc_time_ns"] = check_cache_alloc_time_ns;
+  obj["check_cache_set_time_ns"] = check_cache_set_time_ns;
   obj["batch_ready_wait_time_ns"] = batch_ready_wait_time_ns;
   obj["gpu_copy_time_ns"] = gpu_copy_time_ns;
   obj["model_eval_time_ns"] = model_eval_time_ns;

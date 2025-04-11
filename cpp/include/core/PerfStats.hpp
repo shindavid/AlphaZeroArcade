@@ -23,8 +23,10 @@ struct PerfStats {
   int64_t batches_evaluated = 0;
   int64_t full_batches_evaluated = 0;
 
-  int64_t cache_mutex_acquire_time_ns = 0;
-  int64_t check_cache_time_ns = 0;
+  int64_t check_cache_mutex_time_ns = 0;
+  int64_t check_cache_insert_time_ns = 0;
+  int64_t check_cache_alloc_time_ns = 0;
+  int64_t check_cache_set_time_ns = 0;
   int64_t batch_ready_wait_time_ns = 0;
   int64_t gpu_copy_time_ns = 0;
   int64_t model_eval_time_ns = 0;
