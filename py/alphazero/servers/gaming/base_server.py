@@ -162,7 +162,7 @@ class BaseServer:
         args = {
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
-            '--client-role': ClientRole.EVAL_WORKER.value,
+            '--client-role': self.__class__.SERVER_CONSTANTS.worker_role.value,
             '--manager-id': self._session_data.client_id,
             '--ratings-tag': f'"{self._params.rating_tag}"',
             '--cuda-device': self._params.cuda_device,
@@ -224,7 +224,7 @@ class BaseServer:
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
-        logger.debug('Running match between:\n%s\n%s', cmd1, cmd2)
+        logger.debug('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
