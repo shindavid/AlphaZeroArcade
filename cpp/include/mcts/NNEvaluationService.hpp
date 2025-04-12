@@ -15,13 +15,12 @@
 #include <mcts/TypeDefs.hpp>
 #include <util/AllocPool.hpp>
 #include <util/FiniteGroups.hpp>
+#include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
 #include <condition_variable>
-#include <list>
 #include <map>
 #include <mutex>
-#include <unordered_map>
 #include <vector>
 
 namespace mcts {
@@ -105,66 +104,11 @@ class NNEvaluationService
   using RequestItem = NNEvaluationRequest::Item;
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
 
-  using cache_key_t = NNEvaluationRequest::cache_key_t;
+  using CacheKey = NNEvaluationRequest::CacheKey;
+  using CacheKeyHasher = NNEvaluationRequest::CacheKeyHasher;
   using profiler_t = nn_evaluation_service_profiler_t;
 
-  // EvalCache is essentially a LRU hash map. A few details that warrant defining a specialized
-  // data structure rather than using a generic one:
-  //
-  // 1. In order to make the nn eval service thread as lean as possible, we want all hashing to be
-  //    done in other threads. This means that some methods accept a hash as an argument, rather
-  //    than computing it internally.
-  //
-  // 2. Eviction from the cache decrements the ref count of the NNEvaluation object. When the
-  //    ref count reaches zero, we recycle the NNEvaluation object, rather than delete'ing it.
-  //
-  // Thread-safety is guaranteed by the cache_mutex_ member of NNEvaluationService, so we don't
-  // require a mutex internally.
-  class EvalCache {
-   public:
-    using hash_t = uint64_t;
-    using value_creation_func_t = std::function<NNEvaluation*()>;
-    using eviction_func_t = std::function<void(NNEvaluation*)>;
-
-    struct Entry {
-      Entry(const cache_key_t& k, hash_t h, NNEvaluation* e) : key(k), hash(h), eval(e) {}
-
-      cache_key_t key;
-      hash_t hash;
-      NNEvaluation* eval;
-    };
-
-    using Key = hash_t;
-    using EntryList = std::list<Entry>;
-    using EntryListIterator = EntryList::iterator;
-    using MapValue = std::list<EntryListIterator>;
-    using Map = std::unordered_map<uint64_t, MapValue>;
-
-    EvalCache(eviction_func_t f, size_t capacity) : eviction_handler_(f), capacity_(capacity) {}
-
-    // If key is already in the cache, returns the value for it. Otherwise, adds a mapping, calling
-    // value_creator() to create the value. If the cache is full, evicts the least recently used
-    // item, calling eviction_handler() on it.
-    //
-    // hash is the hash of the key.
-    NNEvaluation* insert(const cache_key_t& key, hash_t hash, value_creation_func_t value_creator);
-
-    void clear();
-
-   private:
-    size_t size() const { return size_; }
-
-    void evict();
-
-    const eviction_func_t eviction_handler_;
-    const size_t capacity_;
-
-    // list_: [Entry, ...] in most-recently-used order
-    // map_: {hash -> [iter...]}, where each iter is an iterator into list_
-    EntryList list_;
-    Map map_;
-    size_t size_ = 0;
-  };
+  using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
 
   /*
    * Constructs an evaluation service and returns it.
@@ -201,7 +145,7 @@ class NNEvaluationService
     ActionValueTensor action_values;
 
     NNEvaluation* eval;
-    cache_key_t cache_key;
+    CacheKey cache_key;
     ActionMask valid_actions;
     group::element_t sym;
     core::action_mode_t action_mode;
@@ -333,7 +277,7 @@ class NNEvaluationService
   torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
 
-  EvalCache eval_cache_;
+  LRUCache eval_cache_;
 
   const std::chrono::nanoseconds timeout_duration_;
 

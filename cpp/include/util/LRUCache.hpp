@@ -8,42 +8,80 @@
  *
  * See: https://www.boost.org/doc/libs/1_67_0/boost/compute/detail/lru_cache.hpp
  */
+#include <util/Asserts.hpp>
 
-#include <list>
+#include <boost/intrusive/list.hpp>
+
+#include <functional>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
-
-#include <boost/optional.hpp>
 
 namespace util {
 
 // a cache which evicts the least recently used item when it is full
-template <class Key_, class Value_>
+template <class Key_, class Value_, class Hasher = std::hash<Key_>>
 class LRUCache {
  public:
   using Key = Key_;
   using Value = Value_;
-  using KeyList = std::list<Key>;
-  using MapValue = std::pair<Value, typename KeyList::iterator>;
-  using Map = std::unordered_map<Key, MapValue>;
 
-  LRUCache(size_t capacity) : map_(capacity), capacity_(capacity) {}
+  static_assert(std::is_trivially_default_constructible_v<Key>);
+  static_assert(std::is_trivially_default_constructible_v<Value>);
+
+  static_assert(std::is_trivially_destructible_v<Key>);
+  static_assert(std::is_trivially_destructible_v<Value>);
+
+  static_assert(std::is_move_assignable_v<Key>);
+  static_assert(std::is_move_assignable_v<Value>);
+
+ private:
+  struct Node : public boost::intrusive::list_base_hook<> {
+    Key key;
+    Value value;
+
+    Node() = default;
+    Node(Key k, Value v) : key(std::move(k)), value(std::move(v)) {}
+  };
+
+  using List = boost::intrusive::list<Node>;
+  using Map = std::unordered_map<Key, Node*, Hasher>;
+
+ public:
+  using value_creation_func_t = std::function<Value()>;
+  using eviction_func_t = std::function<void(Value&)>;
+
+  explicit LRUCache(size_t capacity);
+  ~LRUCache() { clear(); }
+
+  // Sets the eviction handler. This function is called when an item is evicted from the cache.
+  // The default handler does nothing.
+  void set_eviction_handler(eviction_func_t f) { eviction_handler_ = std::move(f); }
+
+  // If key is not in the cache, adds a mapping of key -> f(). If the cache is full, evicts the
+  // least recently used item.
+  //
+  // Updates key to the most recently used item regardless of whether it was already in the cache or
+  // not.
+  //
+  // Returns the value that key maps to.
+  Value& insert_if_missing(const Key& key, value_creation_func_t f);
 
   size_t size() const { return map_.size(); }
-  size_t capacity() const { return capacity_; }
   bool empty() const { return map_.empty(); }
-  bool contains(const Key& key) { return map_.find(key) != map_.end(); }
-  void insert(const Key& key, const Value& value);
-  boost::optional<Value> get(const Key& key);
+  bool contains(const Key& key) const { return map_.find(key) != map_.end(); }
+
   void clear();
-  float get_hash_balance_factor() const;  // (1 + max_bucket_size) / (1 + min_bucket_size)
 
  private:
   void evict();
 
+  List list_;
   Map map_;
-  KeyList list_;
+  std::vector<Node> pool_;        // preallocated nodes
+  std::vector<Node*> free_list_;  // available node pointers
   size_t capacity_;
+  eviction_func_t eviction_handler_ = [](Value&) {};
 };
 
 }  // namespace util

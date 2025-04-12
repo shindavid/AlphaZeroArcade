@@ -21,86 +21,6 @@ template <core::concepts::Game Game>
 int NNEvaluationService<Game>::instance_count_ = 0;
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::NNEvaluation* NNEvaluationService<Game>::EvalCache::insert(
-  const cache_key_t& key, hash_t hash, value_creation_func_t value_creator) {
-  auto map_it = map_.find(hash);
-  MapValue* it_list;
-  if (map_it != map_.end()) {
-    // The *hash* is in the map. But is the *key* in the list?
-    it_list = &map_it->second;
-    for (EntryListIterator& i : *it_list) {
-      if (i->key == key) {
-        // Yes, it is. Move item to the front of the most recently used list
-        list_.erase(i);
-        list_.push_front(*i);
-        i = list_.begin();
-        return i->eval;
-      }
-    }
-
-    // No, it is not. So we need to create a new entry.
-  } else {
-    // Not even the *hash* is in the map. Let's first add an entry to the map
-    map_it = map_.emplace(hash, MapValue()).first;
-    it_list = &map_it->second;
-  }
-
-  // Insert the new item
-  Entry entry(key, hash, value_creator());
-  list_.push_front(entry);
-  it_list->push_back(list_.begin());
-  size_++;
-
-  if (size() > capacity_) {
-    // Cache is full, evict the least recently used item
-    evict();
-  }
-
-  return entry.eval;
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::EvalCache::evict() {
-  // Find the least recently used item
-  EntryListIterator it = list_.end();
-  --it;
-  Entry& entry = *it;
-
-  // Remove the item from the cache
-  auto map_it = map_.find(entry.hash);
-  util::debug_assert(map_it != map_.end(), "Key not found in cache");
-  MapValue* it_list = &map_it->second;
-  for (auto i = it_list->begin(); i != it_list->end(); ++i) {
-    if (*i == it) {
-      it_list->erase(i);
-      break;
-    }
-  }
-
-  if (it_list->empty()) {
-    map_.erase(map_it);
-  }
-
-  // Call the eviction handler
-  eviction_handler_(entry.eval);
-
-  // Remove the item from the list
-  list_.erase(it);
-  size_--;
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::EvalCache::clear() {
-  for (Entry& entry : list_) {
-    eviction_handler_(entry.eval);
-  }
-
-  list_.clear();
-  map_.clear();
-  size_ = 0;
-}
-
-template <core::concepts::Game Game>
 NNEvaluationService<Game>* NNEvaluationService<Game>::create(
     const NNEvaluationServiceParams& params) {
   auto it = instance_map_.find(params.model_filename);
@@ -161,7 +81,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(
       params_(params),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      eval_cache_([&](NNEvaluation* e) { decrement_ref_count(e); }, params.cache_size),
+      eval_cache_(params.cache_size),
       timeout_duration_(params.nn_eval_timeout_ns) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
@@ -184,6 +104,8 @@ inline NNEvaluationService<Game>::NNEvaluationService(
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
+
+  eval_cache_.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
 
   add_batch_data();
 
@@ -419,15 +341,14 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
     util::release_assert(item.eval() == nullptr);
 
     bool hit_cache = true;
-    uint64_t hash = item.hash();
-    const cache_key_t& cache_key = item.cache_key();
+    const CacheKey& cache_key = item.cache_key();
 
     auto value_creator = [&]() {
       hit_cache = false;
       return this->alloc_eval();
     };
 
-    NNEvaluation* eval = eval_cache_.insert(cache_key, hash, value_creator);
+    NNEvaluation* eval = eval_cache_.insert_if_missing(cache_key, value_creator);
     eval->increment_ref_count();  // ref_count++ because item is now holding it
     item.set_eval(eval);
     if (hit_cache) {
@@ -541,7 +462,7 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::add_ba
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchData* batch_data,
                                                int row) {
-  const cache_key_t& cache_key = item.cache_key();
+  const CacheKey& cache_key = item.cache_key();
 
   const auto& stable_data = item.node()->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
