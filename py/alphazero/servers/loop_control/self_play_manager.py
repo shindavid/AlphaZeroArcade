@@ -294,8 +294,10 @@ class SelfPlayManager:
 
     def _restart(self, conn: ClientConnection):
         logger.info('Restarting self-play for %s...', conn)
+        binary = self._construct_binary()
         data = {
             'type': 'restart',
+            'binary': binary.to_dict()
         }
         conn.socket.send_json(data)
 

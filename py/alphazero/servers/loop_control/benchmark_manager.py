@@ -74,7 +74,7 @@ class BenchmarkManager(BaseManager):
         super().__init__(controller)
         self._benchmarker = Benchmarker(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {} # ix -> EvalStatus
-        self.is_committee = []
+        self.is_committee = np.array([])
 
     def _set_priority(self):
         latest_gen = self._controller.organizer.get_latest_model_generation()
@@ -86,6 +86,7 @@ class BenchmarkManager(BaseManager):
     def _load_past_data(self):
         self.benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()
         self.is_committee = self.benchmark_rating_data.committee
+        logger.debug('Loaded benchmark committee: %s', self.is_committee)
 
     def _handle_server_disconnect(self, conn: ClientConnection):
         logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
@@ -112,7 +113,7 @@ class BenchmarkManager(BaseManager):
     def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
         for iagent in self._benchmarker.indexed_agents:
-            if iagent.index < len(self.is_committee) and self.is_committee[iagent.index]:
+            if (iagent.index < len(self.is_committee)) and self.is_committee[iagent.index]:
                 latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
@@ -267,9 +268,12 @@ class BenchmarkManager(BaseManager):
                 self._status_dict[ix1].owner = None
             conn.aux.ix = None
 
+            against_committee_only = (len(self.is_committee) > 0)
             matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
-                                                                      self.target_elo_gap,
-                                                                      self.n_games)
+                                                                    self.target_elo_gap,
+                                                                    self.n_games,
+                                                                    against_committee_only=against_committee_only,
+                                                                    is_committee=self.is_committee)
             if not matches:
                 self._update_committee()
                 conn.aux.ready_for_latest_gen = True

@@ -357,7 +357,8 @@ class LoopController:
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
-        self._benchmark_manager = BenchmarkManager(self)
+        if not self._benchmark_manager:
+            self._benchmark_manager = BenchmarkManager(self)
         return self._benchmark_manager
 
     def _launch_recv_loop_inner(

@@ -125,11 +125,11 @@ class Benchmarker:
             if against_committee_only:
                 if is_committee is None:
                     raise ValueError("is_committee must be provided if against_committee_only is True")
-                if ia.index >= len(is_committee) or not is_committee[ia.index]:
+                if ia.index < len(is_committee) and not is_committee[ia.index]:
                     continue
             if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
-            logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
+                logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
 
     def incomplete_gen(self, against_committee_only: bool=False,
@@ -139,15 +139,23 @@ class Benchmarker:
         other generations. This function identifies the newly added generation that was in the middle
         of being played against all other generations, and returns it to be the next gen to be played.
         """
+
         A = self._arena.adjacent_matrix()
-        mask = np.where(is_committee)[0]
         if against_committee_only:
+            include = np.ones(len(self._arena.indexed_agents), dtype=bool)
+            include[:len(is_committee)] = is_committee
+            mask = np.where(include)[0]
             A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)
         incomplete = np.where(num_opponents_played < A.shape[0] - 1)[0]
         if (incomplete.size == 0):
             return None
-        incomplete_ix = np.argmin(num_opponents_played)
+
+        if against_committee_only:
+            incomplete_ix = mask[np.argmin(num_opponents_played)]
+        else:
+            incomplete_ix = np.argmin(num_opponents_played)
+
         return self._arena.indexed_agents[incomplete_ix].agent.gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
@@ -174,6 +182,7 @@ class Benchmarker:
         NOTE: if we want to do partial-gens (i.e., use -i/--num-mcts-iters), then we can change this
         appropriately.
         """
+        self.refresh_ratings()
         elos = self._arena.ratings
         gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self._arena.indexed_agents])
         gens = np.array(gens)
@@ -186,8 +195,9 @@ class Benchmarker:
             left_gen = int(gens[sorted_ix[gap_ix]])
             right_gen = int(gens[sorted_ix[gap_ix + 1]])
             if left_gen + 1 < right_gen:
+                logger.debug(f'Found gap: {left_gen} vs {right_gen}, elo diff: {gaps[gap_ix]}')
                 return RatingsGap(left_gen, right_gen, float(gaps[gap_ix]))
-
+        logger.debug('No gaps found')
         return None
 
     def build_agent(self, gen: int, n_iters):
