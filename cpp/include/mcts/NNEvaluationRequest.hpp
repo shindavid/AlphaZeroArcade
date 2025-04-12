@@ -33,9 +33,24 @@ class NNEvaluationRequest {
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
 
-  // If group::element_t is -1, that means to pick a random symmetry at the time of evaluation.
-  // Otherwise, it is the index of the symmetry to use.
-  using cache_key_t = std::tuple<EvalKey, group::element_t>;
+  struct CacheKey {
+    CacheKey(const EvalKey& e, group::element_t s)
+        : hash(util::hash(std::make_tuple(e, s))), eval_key(e), sym(s) {}
+
+    CacheKey() = default;
+
+    bool operator==(const CacheKey& other) const {
+      return eval_key == other.eval_key && sym == other.sym;
+    }
+
+    uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
+    EvalKey eval_key;
+    group::element_t sym;
+  };
+
+  struct CacheKeyHasher {
+    size_t operator()(const CacheKey& k) const { return k.hash; }
+  };
 
   class Item {
    public:
@@ -78,20 +93,18 @@ class NNEvaluationRequest {
 
     Node* node() const { return node_; }
     NNEvaluation* eval() const { return eval_; }
-    const cache_key_t& cache_key() const { return cache_key_; }
-    uint64_t hash() const { return hash_; }
+    const CacheKey& cache_key() const { return cache_key_; }
     group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
    private:
-    cache_key_t make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
+    CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
     const State state_;
     StateHistory* const history_;
     const bool split_history_;
-    const cache_key_t cache_key_;
-    const uint64_t hash_;
+    const CacheKey cache_key_;
     const group::element_t sym_;
 
     NNEvaluation* eval_ = nullptr;
