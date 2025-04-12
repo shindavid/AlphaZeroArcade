@@ -14,6 +14,8 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from alphazero.servers.loop_control.base_manager import BaseManager, ManagerConstants
 from util.socket_util import JsonDict
 
+import numpy as np
+
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
@@ -72,10 +74,11 @@ class BenchmarkManager(BaseManager):
         super().__init__(controller)
         self._benchmarker = Benchmarker(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {} # ix -> EvalStatus
+        self.is_committee = []
 
     def _set_priority(self):
         latest_gen = self._controller.organizer.get_latest_model_generation()
-        latest_evaluated_gen = self.latest_evaluated_gen()
+        latest_evaluated_gen = self._latest_evaluated_gen()
         elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
         logger.debug('Benchmark priority: latest_eval_gen=%s, latest_gen=%s, elevate=%s', latest_evaluated_gen, latest_gen, elevate)
         self._controller.set_ratings_priority(elevate)
@@ -104,18 +107,24 @@ class BenchmarkManager(BaseManager):
     def _wait_until_work_exists(self):
         with self._lock:
             self._new_work_cond.wait_for(
-                lambda: self.latest_evaluated_gen() < self._controller.latest_gen())
+                lambda: self._latest_evaluated_gen() < self._controller.latest_gen())
 
-    def latest_evaluated_gen(self) -> Generation:
+    def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
-        for ix, status in self._status_dict.items():
-            latest_gen = max(latest_gen, status.mcts_gen)
+        for iagent in self._benchmarker.indexed_agents:
+            if iagent.index < len(self.is_committee) and self.is_committee[iagent.index]:
+                latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
     def _send_match_request(self, conn):
-        self.update_status_with_new_matches(conn)
+        self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
-        assert ix is not None
+        if ix is None:
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+            table.release_lock(conn.client_domain)
+            self._set_priority()
+            self._handle_ready(conn)
+            return
 
         gen = self._benchmarker.indexed_agents[ix].agent.gen
         status_entry = self._status_dict[ix]
@@ -124,12 +133,68 @@ class BenchmarkManager(BaseManager):
             match_status = status_entry.ix_match_status[opponent_ix]
             if match_status.status == MatchRequestStatus.PENDING:
                 opponent_gen = match_status.opponent_gen
-                n_games = match_status.n_games
                 match_status.status = MatchRequestStatus.REQUESTED
                 break
 
         assert opponent_gen is not None
 
+        data = self._compose_match_request(gen, opponent_gen, ix, opponent_ix)
+        conn.socket.send_json(data)
+
+    def _update_status_with_new_matches(self, conn: ClientConnection):
+        ix = conn.aux.ix
+        ready_for_latest_gen = conn.aux.ready_for_latest_gen
+        if ix is not None:
+            return
+
+        if ready_for_latest_gen:
+            latest_gen = self._controller.organizer.get_latest_model_generation()
+            latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
+            latest_iagent = self._benchmarker._arena._add_agent(
+                latest_agent, AgentRole.BENCHMARK, expand_matrix=True,
+                db=self._benchmarker._db)
+
+            matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
+                                                             against_committee_only=True,
+                                                             is_committee=self.is_committee)
+            ix = latest_iagent.index
+            conn.aux.ready_for_latest_gen = False
+
+        else:
+            against_committee_only = (len(self.is_committee) > 0)
+            matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
+                                                                      self.target_elo_gap,
+                                                                      self.n_games,
+                                                                      against_committee_only=against_committee_only,
+                                                                      is_committee=self.is_committee)
+            if not matches:
+                self._update_committee()
+                conn.aux.ready_for_latest_gen = True
+                return
+
+            ix = self._benchmarker.agent_lookup[matches[0].agent1].index
+
+        iagent1 = self._benchmarker.agent_lookup[matches[0].agent1]
+        ix_match_status = {}
+        for m in matches:
+            assert m.agent1 == iagent1.agent
+            iagent2 = self._benchmarker.agent_lookup[m.agent2]
+            ix_match_status[iagent2.index] = MatchStatus(
+                opponent_gen=iagent2.agent.gen,
+                n_games=m.n_games,
+                status=MatchRequestStatus.PENDING)
+
+        with self._lock:
+            self._status_dict[iagent1.index] = BenchmarkStatus(
+                mcts_gen=iagent1.agent.gen,
+                owner=conn.client_id,
+                ix_match_status=ix_match_status,
+                status=BenchmarkRequestStatus.REQUESTED)
+
+        conn.aux.ix = ix
+        self._set_priority()
+
+    def _compose_match_request(self, gen, opponent_gen, ix, opponent_ix):
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
         binary = FileToTransfer.from_src_scratch_path(
@@ -142,7 +207,7 @@ class BenchmarkManager(BaseManager):
         if gen > 0:
             model1 = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'eval-models/{tag}/gen-{gen}.pt',
+                scratch_path=f'benchmark-models/{tag}/gen-{gen}.pt',
                 asset_path_mode='scratch'
             )
             files_required.append(model1)
@@ -151,7 +216,7 @@ class BenchmarkManager(BaseManager):
         if opponent_gen > 0:
             model2 = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(opponent_gen),
-                scratch_path=f'eval-models/{tag}/gen-{opponent_gen}.pt',
+                scratch_path=f'benchmark-models/{tag}/gen-{opponent_gen}.pt',
                 asset_path_mode='scratch'
             )
             files_required.append(model2)
@@ -176,58 +241,11 @@ class BenchmarkManager(BaseManager):
             },
         'ix1': ix,
         'ix2': opponent_ix,
-        'n_games': n_games,
+        'n_games': self.n_games,
         'files_required': [f.to_dict() for f in files_required],
         }
 
-        conn.socket.send_json(data)
-
-    def update_status_with_new_matches(self, conn: ClientConnection):
-        ix = conn.aux.ix
-        ready_for_latest_gen = conn.aux.ready_for_latest_gen
-        if ix is not None:
-            return
-
-        if ready_for_latest_gen:
-            latest_gen = self._controller.organizer.get_latest_model_generation()
-            latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
-            latest_iagent = self._benchmarker._arena._add_agent(
-                latest_agent, AgentRole.BENCHMARK, expand_matrix=True,
-                db=self._benchmarker._db)
-
-            matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
-                                                             against_committee_only=True,
-                                                             is_committee=self.is_committee)
-            ix = latest_iagent.index
-            conn.aux.ready_for_latest_gen = False
-
-        else:
-            matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
-                                                                      self.target_elo_gap,
-                                                                      self.n_games)
-            if matches is None:
-                return
-            ix = self._benchmarker.agent_lookup[matches[0].agent1].index
-
-        iagent1 = self._benchmarker.agent_lookup[matches[0].agent1]
-        ix_match_status = {}
-        for m in matches:
-            assert m.agent1 == iagent1.agent
-            iagent2 = self._benchmarker.agent_lookup[m.agent2]
-            ix_match_status[iagent2.index] = MatchStatus(
-                opponent_gen=iagent2.agent.gen,
-                n_games=m.n_games,
-                status=MatchRequestStatus.PENDING)
-
-        with self._lock:
-            self._status_dict[iagent1.index] = BenchmarkStatus(
-                mcts_gen=iagent1.agent.gen,
-                owner=conn.client_id,
-                ix_match_status=ix_match_status,
-                status=BenchmarkRequestStatus.REQUESTED)
-
-        conn.aux.ix = ix
-        self._set_priority()
+        return data
 
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         ix1 = msg['ix1']
@@ -253,22 +271,25 @@ class BenchmarkManager(BaseManager):
                                                                       self.target_elo_gap,
                                                                       self.n_games)
             if not matches:
-                self._benchmarker.refresh_ratings()
-                committee = self._benchmarker.select_committee(self.target_elo_gap)
-                self.is_committee = committee
-                with self._benchmarker._db.db_lock:
-                    self._benchmarker._db.commit_ratings(self._benchmarker.indexed_agents,
-                                                         self._benchmarker._arena.ratings,
-                                                         committee=committee)
+                self._update_committee()
                 conn.aux.ready_for_latest_gen = True
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
         self._set_priority()
 
+    def _update_committee(self):
+        self._benchmarker.refresh_ratings()
+        committee = self._benchmarker.select_committee(self.target_elo_gap)
+        self.is_committee = committee
+        with self._benchmarker._db.db_lock:
+            self._benchmarker._db.commit_ratings(self._benchmarker.indexed_agents,
+                                                    self._benchmarker._arena.ratings,
+                                                    committee=committee)
+
     @property
     def n_games(self):
-        return self._controller.params.n_games_per_evaluation
+        return self._controller.params.n_games_per_benchmark
 
     @property
     def n_iters(self):

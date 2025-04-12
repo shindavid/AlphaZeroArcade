@@ -192,6 +192,7 @@ class BaseManager:
             table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
             self._pause(conn)
 
+            logger.debug(f"{domain} active: {table.active(domain)}")
             while table.active(domain):
                 if not table.acquire_lock(domain):
                     break

@@ -70,7 +70,9 @@ class Benchmarker:
         committee: BenchmarkCommittee = self.select_committee(target_elo_gap)
         self._db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
 
-    def get_next_matches(self, n_iters, target_elo_gap, n_games):
+    def get_next_matches(self, n_iters, target_elo_gap, n_games,
+                         against_committee_only: bool=False,
+                         is_committee: Optional[np.ndarray]=None) -> Optional[List[Match]]:
         """
         The algorithm for selecting the next batch of matches is as follows:
         1. If there are no matches in the arena, play the first generation against the last
@@ -90,21 +92,24 @@ class Benchmarker:
             self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
-        incomplete_gen = self.incomplete_gen()
+        incomplete_gen = self.incomplete_gen(against_committee_only=against_committee_only,
+                                             is_committee=is_committee)
         if incomplete_gen is not None:
             next_gen = incomplete_gen
             logger.debug('Finishing incomplete gen: %d', next_gen)
         else:
             gap = self.get_biggest_mcts_ratings_gap()
             if gap is None or gap.elo_diff < target_elo_gap:
-                return None
+                return []
             next_gen = (gap.left_gen + gap.right_gen) // 2
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
                                              db=self._db)
-        matches = self.get_unplayed_matches(next_iagent, n_games, against_committee_only=False)
+        matches = self.get_unplayed_matches(next_iagent, n_games,
+                                            against_committee_only=against_committee_only,
+                                            is_committee=is_committee)
         return matches
 
     def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, against_committee_only: bool,
@@ -120,22 +125,26 @@ class Benchmarker:
             if against_committee_only:
                 if is_committee is None:
                     raise ValueError("is_committee must be provided if against_committee_only is True")
-                if not is_committee[ia.index]:
+                if ia.index >= len(is_committee) or not is_committee[ia.index]:
                     continue
             if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
             logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
 
-    def incomplete_gen(self) -> np.ndarray:
+    def incomplete_gen(self, against_committee_only: bool=False,
+                       is_committee: Optional[np.ndarray]=None) -> np.ndarray:
         """
         If a run was interrupted, there may be generations that have not been played against all
         other generations. This function identifies the newly added generation that was in the middle
         of being played against all other generations, and returns it to be the next gen to be played.
         """
         A = self._arena.adjacent_matrix()
+        mask = np.where(is_committee)[0]
+        if against_committee_only:
+            A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)
-        incomplete = np.where(num_opponents_played < len(self._arena.indexed_agents) - 1)[0]
+        incomplete = np.where(num_opponents_played < A.shape[0] - 1)[0]
         if (incomplete.size == 0):
             return None
         incomplete_ix = np.argmin(num_opponents_played)

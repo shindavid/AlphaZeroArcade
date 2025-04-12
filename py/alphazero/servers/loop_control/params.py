@@ -16,6 +16,7 @@ class LoopControllerParams:
     agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
     benchmark_tag: str = None
     benchmark_until_gen_gap: int = 25
+    n_games_per_benchmark: int = 100
     target_elo_gap: float = 100
     ignore_sigint: bool = False
 
@@ -61,6 +62,10 @@ class LoopControllerParams:
                             default=defaults.benchmark_until_gen_gap,
                             help='number of generations to wait for benchmark evaluation '
                             '(default: %(default)s)')
+        group.add_argument('--n-games-per-benchmark', type=int,
+                           default=defaults.n_games_per_benchmark,
+                           help='number of games to run for benchmark evaluation '
+                           '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
 

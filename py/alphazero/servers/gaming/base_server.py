@@ -158,7 +158,7 @@ class BaseServer:
         mcts_agent2 = MCTSAgent(**msg['agent2'])
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
 
-        log_filename = self._session_data.get_log_filename('eval-worker')
+        log_filename = self._session_data.get_log_filename(self.__class__.SERVER_CONSTANTS.worker_name)
         args = {
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
@@ -225,6 +225,7 @@ class BaseServer:
         cmd2 = ' '.join(map(str, cmd2))
 
         logger.debug('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+        logger.debug('cmds:\ncmd1:\n%s\ncmd2:\n%s', cmd1, cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
