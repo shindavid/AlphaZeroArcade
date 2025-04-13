@@ -17,6 +17,7 @@ using game_slot_index_t = int16_t;
 using search_context_id_t = int16_t;
 using nn_evaluation_pool_index_t = int32_t;
 using nn_evaluation_sequence_id_t = int64_t;
+using cache_shard_index_t = int8_t;
 
 // yield_instruction_t is used in various components of the MCTS machinery
 //

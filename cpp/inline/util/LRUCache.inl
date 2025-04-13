@@ -5,11 +5,13 @@
 namespace util {
 
 template <class Key, class Value, class Hasher>
-LRUCache<Key, Value, Hasher>::LRUCache(size_t capacity) : capacity_(capacity) {
+void LRUCache<Key, Value, Hasher>::set_capacity(size_t capacity) {
+  util::release_assert(empty());
+  capacity_ = capacity;
   pool_.resize(capacity_);
-  free_list_.reserve(capacity_);
+  free_list_.resize(capacity_);
   for (size_t i = 0; i < capacity_; ++i) {
-    free_list_.push_back(&pool_[i]);
+    free_list_[i] = &pool_[i];
   }
 }
 
