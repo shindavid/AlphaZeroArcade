@@ -115,6 +115,7 @@ class SelfPlayManager:
         self._stop_gen0_self_play(conn)
 
     def run_until_checkpoint(self):
+        self._controller._training_manager._set_checkpoint()
         checkpoint = self._controller.get_next_checkpoint()
 
         num_rows = self._n_committed_rows

@@ -282,6 +282,7 @@ class BenchmarkManager(BaseManager):
         table.release_lock(conn.client_domain)
         self._set_priority()
 
+
     def _update_committee(self):
         self._benchmarker.refresh_ratings()
         committee = self._benchmarker.select_committee(self.target_elo_gap)
