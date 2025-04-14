@@ -26,8 +26,8 @@ class LRUCache {
   using Key = Key_;
   using Value = Value_;
 
-  static_assert(std::is_trivially_default_constructible_v<Key>);
-  static_assert(std::is_trivially_default_constructible_v<Value>);
+  static_assert(std::is_default_constructible_v<Key>);
+  static_assert(std::is_default_constructible_v<Value>);
 
   static_assert(std::is_trivially_destructible_v<Key>);
   static_assert(std::is_trivially_destructible_v<Value>);
