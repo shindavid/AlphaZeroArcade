@@ -23,10 +23,8 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <array>
 #include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 
 namespace chess {
