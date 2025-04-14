@@ -142,7 +142,7 @@ class BaseManager:
                      self.__class__.MANAGER_CONSTANTS.server_name, msg)
 
         if msg_type == 'ready':
-            self._handle_ready(conn)
+            self._set_ready(conn)
         elif msg_type == 'log-sync-start':
             self._controller.start_log_sync(conn, msg['log_filename'])
         elif msg_type == 'log-sync-stop':
@@ -156,7 +156,7 @@ class BaseManager:
                            self.__class__.MANAGER_CONSTANTS.server_name, msg)
         return False
 
-    def _handle_ready(self, conn: ClientConnection):
+    def _set_ready(self, conn: ClientConnection):
         status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
             conn.aux.status = ServerStatus.READY

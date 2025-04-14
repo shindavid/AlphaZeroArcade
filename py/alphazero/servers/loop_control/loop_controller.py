@@ -238,6 +238,7 @@ class LoopController:
                          daemon=True).start()
 
     def handle_new_model(self):
+        self._gpu_contention_manager.unhijack_all_self_play_tables()
         for tag, manager in self._ratings_managers.items():
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()

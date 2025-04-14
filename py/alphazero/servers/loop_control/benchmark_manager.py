@@ -124,7 +124,7 @@ class BenchmarkManager(BaseManager):
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
             self._set_priority()
-            self._handle_ready(conn)
+            self._set_ready(conn)
             return
 
         gen = self._benchmarker.indexed_agents[ix].agent.gen
@@ -168,14 +168,14 @@ class BenchmarkManager(BaseManager):
                                                                       self.n_games,
                                                                       against_committee_only=against_committee_only,
                                                                       is_committee=self.is_committee)
-            if not matches:
-                self._update_committee()
-                conn.aux.ready_for_latest_gen = True
-                return
+        if not matches:
+            self._update_committee()
+            conn.aux.ready_for_latest_gen = True
+            return
 
-            ix = self._benchmarker.agent_lookup[matches[0].agent1].index
+        ix = self._benchmarker.agent_lookup[matches[0].agent1].index
 
-        iagent1 = self._benchmarker.agent_lookup[matches[0].agent1]
+        iagent1 = self._benchmarker.indexed_agents[ix]
         ix_match_status = {}
         for m in matches:
             assert m.agent1 == iagent1.agent
