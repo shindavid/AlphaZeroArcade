@@ -570,7 +570,7 @@ bool NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
   group.action_mode = action_mode;
   group.active_seat = active_seat;
 
-  batch_data->write_count++;
+  batch_data->write_count.fetch_add(1, std::memory_order_relaxed);
   return batch_data->fully_written();
 }
 
@@ -675,7 +675,7 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
     if (!active() || paused_) return true;
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     util::debug_assert(batch_data);
-    if (batch_data->fully_written()) {
+    if (batch_data && batch_data->fully_written()) {
       if (mcts::kEnableServiceDebug) {
         LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->",
                  cls, func, (int)batch_data->allocate_count);
@@ -709,7 +709,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
   lock.unlock();
 
   util::debug_assert(batch_data && batch_data->fully_written() && batch_data->frozen(),
-                     "batch_data is not fully written or frozen (%d %d %d)", batch_data ? 1 : 0,
+                     "batch_data is not fully written or frozen (%d %d)",
                      (batch_data && batch_data->fully_written()) ? 1 : 0,
                      (batch_data && batch_data->frozen()) ? 1 : 0);
   int num_rows = batch_data->frozen_allocate_count;

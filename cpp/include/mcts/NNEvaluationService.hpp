@@ -176,7 +176,7 @@ class NNEvaluationService
     bool freeze();
     bool frozen() const { return frozen_allocate_count >= 0; }
     bool reached_full_capacity() const { return allocate_count >= capacity(); }
-    bool fully_written() const { return write_count >= capacity(); }
+    bool fully_written() const { return write_count.load(std::memory_order_relaxed) >= capacity(); }
 
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;
