@@ -1,7 +1,9 @@
 #pragma once
 
 #include <bitset>
+#include <cstdint>
 #include <cstdlib>
+#include <type_traits>
 
 /*
  * Helper facilities for std::bitset.

@@ -3,7 +3,7 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/SimpleNNEvaluationService.hpp>
+#include <mcts/NNEvaluationServiceBase.hpp>
 
 namespace mcts {
 
@@ -15,13 +15,17 @@ namespace mcts {
  * The service assigns uniform probabilities to all valid actions.
  */
 template <core::concepts::Game Game>
-class UniformNNEvaluationService : public mcts::SimpleNNEvaluationService<Game> {
+class UniformNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
  public:
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
-  using Item = NNEvaluationRequest::Item;
+  using ValueTensor = NNEvaluation::ValueTensor;
+  using PolicyTensor = NNEvaluation::PolicyTensor;
+  using ActionValueTensor = NNEvaluation::ActionValueTensor;
+  using ActionMask = NNEvaluation::ActionMask;
 
-  UniformNNEvaluationService();
+  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
+  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
 };
 
 }  // namespace mcts

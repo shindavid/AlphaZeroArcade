@@ -429,15 +429,11 @@ void Manager<Game>::resume_node_initialization(SearchContext& context) {
   bool is_root = (node_index == root_info_.node_index);
 
   nn_eval_service_->wait_for(context.nn_eval_seq_id);
-  core::cache_shard_index_t shard_index = 0;
-  for (; shard_index < mcts::kNumCacheShards; ++shard_index) {
-    auto& sub_request = context.eval_request.sub_request(shard_index);
-    for (auto& item : sub_request.fresh_items()) {
-      item.node()->load_eval(item.eval(),
-                             [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
-    }
-    sub_request.mark_all_as_stale();
+  for (auto& item : context.eval_request.fresh_items()) {
+    item.node()->load_eval(item.eval(),
+                           [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
   }
+  context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());

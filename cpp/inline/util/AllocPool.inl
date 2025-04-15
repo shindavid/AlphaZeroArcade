@@ -35,9 +35,6 @@ void AllocPool<T, N, ThreadSafe>::clear() {
 
 template <typename T, int N, bool ThreadSafe>
 pool_index_t AllocPool<T, N, ThreadSafe>::alloc(int n) {
-  // TODO: use std::atomic rather than a mutex here. If an overflow occurs, we should grab the mutex
-  // at that point before calling add_block(), with the awareness that another thread might jump in
-  // and perform the add_block() before we do.
   std::unique_lock lock(mutex_);
   uint64_t old_size = size_;
   size_ += n;
