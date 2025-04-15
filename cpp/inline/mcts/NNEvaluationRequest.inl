@@ -1,6 +1,5 @@
 #include <mcts/NNEvaluationRequest.hpp>
 
-#include <mcts/Constants.hpp>
 #include <util/CppUtil.hpp>
 
 namespace mcts {
@@ -9,13 +8,15 @@ template <core::concepts::Game Game>
 NNEvaluationRequest<Game>::CacheKey::CacheKey(const EvalKey& e, group::element_t s)
     : eval_key(e), sym(s) {
   // Mix to ensure that the hash is uniformly distributed.
-  hash = math::splitmix64(util::hash(std::make_tuple(e, s)));
+  uint64_t h = math::splitmix64(util::hash(std::make_tuple(e, s)));
 
-  // After mixing, we use the upper bits of the hash to determine the cache shard.
+  // After mixing, we use the lower bits of the hash to determine the cache shard.
+  // The upper bits are used as the object's hash value.
   //
-  // It's important to use the upper bits rather than the lower bits, as using the lower bits
-  // could potentially lead to unbalanced buckets in the LRU cache.
-  cache_shard = hash >> (64 - mcts::kCacheShardingFactor);
+  // It's important to use the upper bits of the mixed-hash, rather than the entire mixed-hash,
+  // as otherwise we could have unbalanced buckets in the LRU cache.
+  hash = h >> mcts::kCacheShardingFactor;
+  cache_shard = h & ((1 << mcts::kCacheShardingFactor) - 1);
 }
 
 template <core::concepts::Game Game>
