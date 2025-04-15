@@ -10,6 +10,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include <array>
+#include <bitset>
 #include <cstdint>
 #include <type_traits>
 
