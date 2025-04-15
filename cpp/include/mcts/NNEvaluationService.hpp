@@ -16,6 +16,7 @@
 #include <util/AllocPool.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
+#include <util/RecyclingAllocPool.hpp>
 #include <util/TorchUtil.hpp>
 
 #include <condition_variable>
@@ -109,6 +110,7 @@ class NNEvaluationService
   using profiler_t = nn_evaluation_service_profiler_t;
 
   using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
+  using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
 
   /*
    * Constructs an evaluation service and returns it.
@@ -185,6 +187,59 @@ class NNEvaluationService
     int num_rows;
   };
 
+  // The BatchDataSliceAllocator is responsible for allocating slices of BatchData. It must do this
+  // in a thread-safe but performant manner.
+  //
+  // Each BatchData can be thought of as a fixed sized array of data units, like Data[B]. The
+  // BatchDataSliceAllocator can be thought of as managing a sequence of BatchData's, like
+  // BatchData_0, BatchData_1, BatchData_2, etc.
+  //
+  // The BatchDataSliceAllocator must basically support calls of the form alloc(n), responding to
+  // such calls by telling the caller which BatchData to write to, and which slice of that BatchData
+  // to write to. For example, it might respond to alloc(10) with BatchData_3[3:13], or maybe with
+  // (BatchData_5[57:64], BatchData_6[0:3]).
+  //
+  // Not only must it do this allocation logic, but it must also do the work of constructing the
+  // BatchData's on the fly as needed, recycling them when possible.
+  //
+  // The underlying implementation uses both std::atomic and std::mutex. Usually, it can respond to
+  // requests without locking the mutex. Only when the current batch_data is full does it resort to
+  // locking the mutex. This is done to avoid contention on the mutex.
+  class BatchDataSliceAllocator {
+   public:
+    BatchDataSliceAllocator(int batch_size_limit, core::PerfStats& perf_stats);
+
+    ~BatchDataSliceAllocator();
+
+    // The main interface. The caller constructs an array BatchDataSlice[], and then passes in
+    // that array to this method. The method will fill in the array with the slices that it wants to
+    // allocate. The value n is the number of slots that the caller wants to allocate.
+    //
+    // BatchDataSliceAllocator attempts to do this without locking the mutex, relying on atomic
+    // members of BatchData instead to ensure thread-safety. If it is unable to do this, then it
+    // resorts to locking the passed-in mutex.
+    void allocate_slices(BatchDataSlice* slices, int n, std::mutex& main_mutex);
+
+    void recycle(BatchData* batch_data);
+
+    // Freezes all BatchData's that are pending on a sequence_id <= seq. Returns true if a BatchData
+    // was newly frozen.
+    bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
+
+    // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
+    BatchData* get_frozen_pending_batch_data() const;
+
+   private:
+    BatchData* add_batch_data();
+
+    const int batch_size_limit_;
+    core::PerfStats& perf_stats_;
+
+    batch_data_vec_t pending_batch_datas_;
+    batch_data_vec_t batch_data_reserve_;
+    core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
+  };
+
   // Whenever we miss cache, we will need to evaluate the item later with the neural net. This
   // struct is used to store bookkeeping information to facilitate that.
   struct CacheMissInfo {
@@ -231,8 +286,6 @@ class NNEvaluationService
 
   void decrement_ref_count(NNEvaluation* eval);
 
-  void allocate_slices(BatchDataSlice* slices, int n, int max_slices);
-  BatchData* add_batch_data();  // assumes batch_data_mutex_ is held
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);
   void update_perf_stats(int num_rows);
@@ -278,14 +331,11 @@ class NNEvaluationService
   DynamicInputTensor full_input_;
 
   LRUCache eval_cache_;
+  EvalPool eval_pool_;
 
   const std::chrono::nanoseconds timeout_duration_;
 
   time_point_t deadline_;
-
-  batch_data_vec_t pending_batch_datas_;
-  batch_data_vec_t batch_data_reserve_;
-  core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
 
   bool session_ended_ = false;
   int num_connections_ = 0;
@@ -298,6 +348,7 @@ class NNEvaluationService
   bool paused_ = false;
 
   core::PerfStats perf_stats_;
+  BatchDataSliceAllocator batch_data_slice_allocator_;
 };
 
 }  // namespace mcts
