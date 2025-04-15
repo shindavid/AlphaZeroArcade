@@ -10,8 +10,10 @@ ratings server process. This is useful because it allows us to launch each match
 the loop controller as a separate c++ binary process.
 """
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
-from alphazero.servers.gaming.benchmark_server import BenchmarkServer, BenchmarkServerParams
+from alphazero.servers.gaming.server_base import ServerBase, ServerConfig
+from alphazero.servers.gaming.benchmark_server import BenchmarkServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
@@ -23,7 +25,7 @@ import os
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    BenchmarkServerParams.add_args(parser)
+    BenchmarkServerParams.add_args(parser, server_name='benchmark-server')
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
@@ -43,7 +45,13 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    server = BenchmarkServer(params, logging_params, build_params)
+    server_config = ServerConfig(
+        server_name='benchmark-server',
+        worker_name='benchmark-worker',
+        server_role=ClientRole.BENCHMARK_SERVER,
+        worker_role=ClientRole.BENCHMARK_WORKER)
+
+    server = ServerBase(params, logging_params, build_params, server_config)
     server.run()
 
 

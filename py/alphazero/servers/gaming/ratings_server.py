@@ -2,21 +2,16 @@ from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
-from alphazero.logic.shutdown_manager import ShutdownManager
-from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.base_server import BaseServer, ServerConstants
-from alphazero.servers.gaming.session_data import SessionData
+from alphazero.servers.gaming.server_base import ServerBase, ServerConstants
 from util.logging_util import LoggingParams
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.socket_util import JsonDict
 from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
 import os
-import threading
-from typing import List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -46,17 +41,7 @@ class RatingsServerParams(BaseParams):
                            'sharing the same rating-tag. (default: "%(default)s")')
 
 
-class RatingsServer(BaseServer):
-    SERVER_CONSTANTS = ServerConstants(
-        server_name='rating-server',
-        worker_name='ratings-worker',
-        server_role=ClientRole.RATINGS_SERVER,
-        worker_role=ClientRole.RATINGS_WORKER)
-
-    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams,
-                 build_params: BuildParams):
-        super().__init__(params, logging_params, build_params)
-
+class RatingsServer(ServerBase):
     def _send_handshake(self):
         additional_data = {'rating_tag': self._params.rating_tag}
         self._session_data.send_handshake(ClientRole.RATINGS_SERVER,

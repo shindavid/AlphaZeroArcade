@@ -1,20 +1,11 @@
-from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
-from alphazero.logic.custom_types import ClientRole, FileToTransfer
-from alphazero.logic.match_runner import Match, MatchType
-from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
+from alphazero.logic.custom_types import ClientRole
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.base_server import BaseServer, ServerConstants
+from alphazero.servers.gaming.server_base import ServerBase, ServerConstants
 from util.logging_util import LoggingParams
-from util.socket_util import JsonDict
-from util import subprocess_util
-from util.str_util import make_args_str
 
 from dataclasses import dataclass, fields
 import logging
-import os
-from typing import Optional, Dict
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +35,7 @@ class EvalServerParams(BaseParams):
                            'sharing the same rating-tag. (default: "%(default)s")')
 
 
-class EvalServer(BaseServer):
+class EvalServer(ServerBase):
     SERVER_CONSTANTS = ServerConstants(
         server_name='eval-server',
         worker_name='eval-worker',
