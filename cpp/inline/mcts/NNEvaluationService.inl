@@ -3,11 +3,13 @@
 #include <core/BasicTypes.hpp>
 #include <core/PerfStats.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
+#include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
 
 #include <boost/json/src.hpp>
 
+#include <cstdint>
 #include <mutex>
 #include <spanstream>
 
@@ -75,13 +77,25 @@ inline void NNEvaluationService<Game>::set_profiling_dir(
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::ShardData::init(int cache_size) {
+  eval_cache.set_capacity(cache_size);
+  eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eval) {
+  if (eval->decrement_ref_count()) {
+    eval_pool.free(eval);
+  }
+}
+
+template <core::concepts::Game Game>
 inline NNEvaluationService<Game>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
     : instance_id_(instance_count_++),
       params_(params),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      eval_cache_(params.cache_size),
       timeout_duration_(params.nn_eval_timeout_ns),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
   if (!params.model_filename.empty()) {
@@ -106,7 +120,9 @@ inline NNEvaluationService<Game>::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
-  eval_cache_.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
+  for (int i = 0; i < kNumHashShards; i++) {
+    shard_datas_[i].init(params_.cache_size / kNumHashShards);
+  }
 
   initial_weights_loaded_ = net_.loaded();
   if (core::LoopControllerClient::initialized()) {
@@ -399,100 +415,162 @@ std::string NNEvaluationService<Game>::dump_key(const char* descr) {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
                                             CacheLookupResult& result) {
-  core::PerfStatsClocker clocker1(result.check_cache_mutex_time_ns);
-  std::unique_lock cache_lock(cache_mutex_);
-  core::PerfStatsClocker clocker2(clocker1, result.check_cache_insert_time_ns);
-
-  // Lazily decrement old reference counts. We do this here to ensure that all reference-count
-  // changes to all NNEvaluation objects are done under the same lock. If we did not do it like
-  // this, then we would need to use various synchronization primitives like
-  // std::atomic<std::shared_ptr> for thread-safety, which would add significant overhead.
-  for (RequestItem& item : request.stale_items()) {
-    decrement_ref_count(item.eval());
-  }
-  request.clear_stale_items();
-
+  int m = request.num_stale_items();
   int n = request.num_fresh_items();
-  int item_index = 0;
+  int s = m + n;
+  util::debug_assert(n > 0);
 
-  for (RequestItem& item : request.fresh_items()) {
-    util::release_assert(item.eval() == nullptr);
+  // Sort the items by hash shard, so that we acquire each shard mutex at most once when iterating.
+  SortItem sort_items[m + n];
+  populate_sort_items(sort_items, request);
 
-    bool hit_cache = true;
-    const CacheKey& cache_key = item.cache_key();
+  int misses_for_this_shard = 0;
+  for (int i = 0; i < s; ++i) {
+    SortItem& sort_item = sort_items[i];
+    ShardData& shard = shard_datas_[sort_item.shard];
+    bool fresh = sort_item.fresh;
+    int item_index = sort_item.item_index;
+    bool new_shard = (i == 0 || sort_items[i].shard != sort_items[i - 1].shard);
 
-    auto value_creator = [&]() {
-      hit_cache = false;
-      auto eval = eval_pool_.alloc();
-      eval->clear();
-      return eval;
-    };
+    if (new_shard) {
+      core::PerfStatsClocker clocker(result.check_cache_mutex_time_ns);
+      shard.mutex.lock();  // Lock can be held across loop iterations, thanks to sorting
+    }
 
-    NNEvaluation* eval = eval_cache_.insert_if_missing(cache_key, value_creator);
-    eval->increment_ref_count();  // ref_count++ because item is now holding it
-    item.set_eval(eval);
-    if (hit_cache) {
-      util::release_assert(eval->sequence_id() > 0);
-      if (eval->pending()) {
-        result.max_sequence_id = std::max(result.max_sequence_id, eval->sequence_id());
-        result.pending_hits++;
-      } else {
-        result.non_pending_hits++;
-      }
+    if (!fresh) {
+      // Lazily decrement old reference counts. We do this here to ensure that all reference-count
+      // changes to all NNEvaluation objects are done under the same lock. If we did not do it like
+      // this, then we would need to use various synchronization primitives like
+      // std::atomic<std::shared_ptr> for thread-safety, which would add significant overhead.
+      RequestItem& item = request.get_stale_item(item_index);
+      shard.decrement_ref_count(item.eval());
     } else {
-      util::release_assert(eval->sequence_id() == 0);
-      eval->increment_ref_count();  // ref_count++ because cache is now holding it
-      result.miss_infos[result.misses].item_index = item_index;
-      result.misses++;
-    }
-    item_index++;
-  }
-  util::release_assert(item_index == n);
-
-  if (result.misses) {
-    core::PerfStatsClocker clocker3(clocker2, result.check_cache_alloc_time_ns);
-    // Assign the missed items to BatchData's.
-    //
-    // Don't actually write to the BatchData's yet, since we don't need to do that under the
-    // cache_mutex_ lock.
-
-    int B = params_.batch_size_limit;
-    int max_slices_needed = (B + n - 2) / B + 1;  // 1 + ceil((n-1)/B)
-
-    BatchDataSlice slices[max_slices_needed];
-    batch_data_slice_allocator_.allocate_slices(slices, result.misses, main_mutex_);
-
-    core::PerfStatsClocker clocker4(clocker3, result.check_cache_set_time_ns);
-
-    int slice_index = 0;
-    int slice_offset = 0;
-    for (int i = 0; i < result.misses; ++i) {
-      CacheMissInfo& miss_info = result.miss_infos[i];
-      RequestItem& item = request.get_fresh_item(miss_info.item_index);
-
-      BatchDataSlice& slice = slices[slice_index];
-      BatchData* batch_data = slice.batch_data;
-      miss_info.batch_data = batch_data;
-      miss_info.row = slice.start_row + slice_offset;
-
-      item.eval()->set_sequence_id(slice.batch_data->sequence_id);
-
-      result.max_sequence_id = std::max(result.max_sequence_id, slice.batch_data->sequence_id);
-      slice_offset++;
-      if (slice_offset == slices[slice_index].num_rows) {
-        slice_index++;
-        slice_offset = 0;
+      if (handle_fresh_item(request, result, shard, item_index)) {
+        misses_for_this_shard++;
       }
     }
+
+    bool last_in_shard = (i == s - 1 || sort_items[i].shard != sort_items[i + 1].shard);
+    if (last_in_shard) {
+      if (misses_for_this_shard) {
+        write_miss_infos(request, result, misses_for_this_shard);
+        misses_for_this_shard = 0;
+      }
+
+      shard.mutex.unlock();
+    }
   }
 
+  request.clear_stale_items();
   util::release_assert(result.size() == request.num_fresh_items());
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::decrement_ref_count(NNEvaluation* eval) {
-  if (eval->decrement_ref_count()) {
-    eval_pool_.free(eval);
+void NNEvaluationService<Game>::populate_sort_items(SortItem* sort_items,
+                                                    NNEvaluationRequest& request) {
+  int m = request.num_stale_items();
+  int n = request.num_fresh_items();
+  util::debug_assert(n > 0);
+
+  // First, instantiate the SortItem's.
+  int s = 0;
+  for (int i = 0; i < m; ++i) {
+    sort_items[s].shard = request.get_stale_item(i).hash_shard();
+    sort_items[s].fresh = false;
+    sort_items[s].item_index = i;
+    s++;
+  }
+  for (int i = 0; i < n; ++i) {
+    sort_items[s].shard = request.get_fresh_item(i).hash_shard();
+    sort_items[s].fresh = true;
+    sort_items[s].item_index = i;
+    s++;
+  }
+
+  util::debug_assert(s == m + n);
+
+  // Now use std::sort() to group by hash shard.
+  std::sort(sort_items, sort_items + s);
+}
+
+template <core::concepts::Game Game>
+bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
+                                                  CacheLookupResult& result, ShardData& shard,
+                                                  int item_index) {
+  core::PerfStatsClocker clocker(result.check_cache_insert_time_ns);
+  RequestItem& item = request.get_fresh_item(item_index);
+  util::release_assert(item.eval() == nullptr);
+
+  bool hit_cache = true;
+  const CacheKey& cache_key = item.cache_key();
+
+  auto value_creator = [&]() {
+    hit_cache = false;
+    auto eval = shard.eval_pool.alloc();
+    eval->clear();
+    return eval;
+  };
+
+  NNEvaluation* eval = shard.eval_cache.insert_if_missing(cache_key, value_creator);
+  eval->increment_ref_count();  // ref_count++ because item is now holding it
+  item.set_eval(eval);
+  if (hit_cache) {
+    util::release_assert(eval->sequence_id() > 0);
+    if (eval->pending()) {
+      result.max_sequence_id = std::max(result.max_sequence_id, eval->sequence_id());
+      result.pending_hits++;
+    } else {
+      result.non_pending_hits++;
+    }
+  } else {
+    util::release_assert(eval->sequence_id() == 0);
+    eval->increment_ref_count();  // ref_count++ because cache is now holding it
+    result.miss_infos[result.misses].item_index = item_index;
+    result.misses++;
+    return true;
+  }
+  return false;
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
+                                                 CacheLookupResult& result,
+                                                 int misses_for_this_shard) {
+  core::PerfStatsClocker clocker(result.check_cache_alloc_time_ns);
+
+  // Assign the missed items to BatchData's.
+  //
+  // Don't actually write to the BatchData's yet, since we don't need to do that under the
+  // shard's mutex lock.
+
+  int B = params_.batch_size_limit;
+  int M = misses_for_this_shard;
+  int max_slices_needed = (B + M - 2) / B + 1;  // 1 + ceil((M-1)/B)
+
+  BatchDataSlice slices[max_slices_needed];
+  batch_data_slice_allocator_.allocate_slices(slices, M, main_mutex_);
+
+  core::PerfStatsClocker clocker2(clocker, result.check_cache_set_time_ns);
+
+  int slice_index = 0;
+  int slice_offset = 0;
+  for (int j = 0; j < misses_for_this_shard; ++j) {
+    CacheMissInfo& miss_info = result.miss_infos[j];
+    RequestItem& item = request.get_fresh_item(miss_info.item_index);
+
+    BatchDataSlice& slice = slices[slice_index];
+    BatchData* batch_data = slice.batch_data;
+    miss_info.batch_data = batch_data;
+    miss_info.row = slice.start_row + slice_offset;
+
+    item.eval()->set_sequence_id(slice.batch_data->sequence_id);
+
+    result.max_sequence_id = std::max(result.max_sequence_id, slice.batch_data->sequence_id);
+    slice_offset++;
+    if (slice_offset == slices[slice_index].num_rows) {
+      slice_index++;
+      slice_offset = 0;
+    }
   }
 }
 
@@ -556,7 +634,6 @@ void NNEvaluationService<Game>::update_perf_stats(int num_rows) {
   bool full = num_rows == params_.batch_size_limit;
   if (full) perf_stats_.full_batches_evaluated++;
 }
-
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::loop() {
@@ -725,9 +802,13 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
   cv_net_weights_.notify_all();
 
   LOG_INFO("NNEvaluationService: clearing network cache...");
-  std::unique_lock cache_lock(cache_mutex_);
-  eval_cache_.clear();
-  cache_lock.unlock();
+
+  // TODO: we can clear each shard's cache in parallel for a slight performance boost
+  for (int i = 0; i < kNumHashShards; ++i) {
+    ShardData& shard_data = shard_datas_[i];
+    std::unique_lock shard_lock(shard_data.mutex);
+    shard_data.eval_cache.clear();
+  }
 }
 
 template <core::concepts::Game Game>
