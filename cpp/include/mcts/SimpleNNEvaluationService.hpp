@@ -13,6 +13,9 @@
 
 namespace mcts {
 
+// SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
+// interface. It is simple in the sense that its evaluate() method never yields. It is only
+// suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
 template <core::concepts::Game Game>
 class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
  public:
@@ -24,6 +27,8 @@ class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;
 
   SimpleNNEvaluationService();
+
+  // Set the function that will be called to initialize the NNEvaluation object.
   void set_init_func(init_func_t f) { init_func_ = std::move(f); }
 
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
