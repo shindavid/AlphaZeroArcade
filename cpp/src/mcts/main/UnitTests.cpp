@@ -6,7 +6,7 @@
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
+#include <mcts/SimpleNNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchLog.hpp>
 #include <util/BoostUtil.hpp>
@@ -27,7 +27,7 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
+class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
  public:
   using NNEvaluation = mcts::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
@@ -35,59 +35,50 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
 
-  MockNNEvaluationService(bool smart) : smart_(smart) {}
+  MockNNEvaluationService(bool smart) : smart_(smart) {
+    this->set_init_func([&](NNEvaluation* eval, const Item& item) {
+      this->init_eval(eval, item);
+    });
+  }
 
-  mcts::NNEvaluationResponse evaluate(NNEvaluationRequest& request) override {
-    for (auto& item : request.stale_items()) {
-      this->free_eval(item.eval());
-    }
-    request.clear_stale_items();
-
+  void init_eval(NNEvaluation* eval, const Item& item) {
     ValueTensor value;
     PolicyTensor policy;
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;
 
-    for (NNEvaluationRequest::Item& item : request.fresh_items()) {
-      ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
-      core::seat_index_t seat = item.node()->stable_data().active_seat;
-      core::action_mode_t mode = item.node()->action_mode();
+    ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
+    core::seat_index_t seat = item.node()->stable_data().active_seat;
+    core::action_mode_t mode = item.node()->action_mode();
 
-      const Nim::State& state = item.cur_state();
+    const Nim::State& state = item.cur_state();
 
-      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
-      if (winning) {
-        core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
+    bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
+    if (winning) {
+      core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
-        // these are logits
-        float winning_v = smart_ ? 2 : 0;
-        float losing_v = smart_ ? 0 : 2;
+      // these are logits
+      float winning_v = smart_ ? 2 : 0;
+      float losing_v = smart_ ? 0 : 2;
 
-        float winning_action_p = smart_ ? 2 : 0;
-        float losing_action_p = smart_ ? 0 : 2;
+      float winning_action_p = smart_ ? 2 : 0;
+      float losing_action_p = smart_ ? 0 : 2;
 
-        value.setValues({winning_v, losing_v});
+      value.setValues({winning_v, losing_v});
 
-        policy.setConstant(losing_action_p);
-        policy(winning_move) = winning_action_p;
+      policy.setConstant(losing_action_p);
+      policy(winning_move) = winning_action_p;
 
-        action_values.setConstant(losing_v);
-        action_values(winning_move) = winning_v;
-      } else {
-        value.setZero();
-        policy.setZero();
-        action_values.setZero();
-      }
-
-      NNEvaluation* eval = this->alloc_eval();
-      eval->init(value, policy, action_values, valid_actions, sym, seat, mode);
-      item.set_eval(eval);
+      action_values.setConstant(losing_v);
+      action_values(winning_move) = winning_v;
+    } else {
+      value.setZero();
+      policy.setZero();
+      action_values.setZero();
     }
 
-    return mcts::NNEvaluationResponse(0, core::kContinue);
+    eval->init(value, policy, action_values, valid_actions, sym, seat, mode);
   }
-
-  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
 
  private:
   bool smart_;
@@ -276,6 +267,4 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   test_search("tictactoe_uniform", 40, initial_actions, nullptr);
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }
