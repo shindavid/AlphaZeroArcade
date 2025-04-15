@@ -5,6 +5,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <util/Asserts.hpp>
+#include <util/CppUtil.hpp>
 #include <util/KeyValueDumper.hpp>
 
 #include <boost/json/src.hpp>
@@ -109,10 +110,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
   for (int i = 0; i < n; ++i) {
     int c = params_.cache_size;
     size_t capacity = c * (i + 1) / n - c * i / n;
-
-    Shard& shard = shards_[i];
-    shard.eval_cache.set_capacity(capacity);
-    shard.eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(shard, e); });
+    shards_[i].init(capacity, this);
   }
 
   initial_weights_loaded_ = net_.loaded();
@@ -162,6 +160,11 @@ void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows,
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchData::clear() {
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    for (TensorGroup& group : tensor_groups) {
+      group.eval = nullptr;
+    }
+  }
   sequence_id = 0;
   allocate_count = 0;
   write_count = 0;
@@ -170,9 +173,9 @@ void NNEvaluationService<Game>::BatchData::clear() {
 
 template <core::concepts::Game Game>
 bool NNEvaluationService<Game>::BatchData::freeze() {
-  bool was_frozen = frozen();
+  if (frozen()) return false;
   frozen_allocate_count = std::min((int)allocate_count, (int)tensor_groups.size());
-  return !was_frozen;
+  return true;
 }
 
 template <core::concepts::Game Game>
@@ -194,53 +197,24 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
-                                                                         int n,
-                                                                         std::mutex& main_mutex) {
-  // Attempt a lock-free allocation:
-  BatchData* batch_data = current_batch_data_;  // important to do this to avoid race condition
-  int candidate_pre_allocate_count =
-    batch_data->allocate_count.fetch_add(n, std::memory_order_relaxed);
-  int candidate_post_allocate_count = candidate_pre_allocate_count + n;
+void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(
+  CacheLookupResult& result, BatchDataSlice* slices, int n, std::mutex& main_mutex) {
+  // TODO(dshin) I think it might be possible to do this usually-lock-free, with clever usage of
+  // std::atomic. However, I tried this, and it was too hard, so I abandoned the effort. The
+  // locking of main_mutex here represents a potential common bottleneck among all search threads.
 
-  if (candidate_post_allocate_count <= batch_data->capacity()) {
-    // Nice! We can allocate entirely from the current batch data without contention.
-    slices[0].batch_data = batch_data;
-    slices[0].start_row = candidate_pre_allocate_count;
-    slices[0].num_rows = n;
-    return;
-  }
-
-  // Uh-oh, we overflowed the capacity! We need to acquire the mutex, roll back, and do this safely.
+  core::PerfStatsClocker clocker1(result.alloc_slices_mutex_time_ns);
   std::unique_lock lock(main_mutex);
+  core::PerfStatsClocker clocker2(clocker1, result.alloc_slices_time_ns);
 
-  // Note that capacity could have decreased due to a race condition. Importantly, however, capacity
-  // can never *increase*.
-  int capacity = batch_data->capacity();
-  batch_data->allocate_count = capacity;  // partially roll back the fetch_add()
-  util::release_assert(batch_data->reached_full_capacity());
-  batch_data->freeze();
-
-  // Start by allocating what we were able to validly allocate from the lock-free attempt
-  int slice_index = 0;
-
-  if (candidate_pre_allocate_count < capacity) {
-    slices[slice_index].batch_data = batch_data;
-    slices[slice_index].start_row = candidate_pre_allocate_count;
-    slices[slice_index].num_rows = capacity - candidate_pre_allocate_count;
-    n -= slices[slice_index].num_rows;
-    util::release_assert(n > 0);
-    slice_index++;
+  BatchData* batch_data = pending_batch_datas_.back();
+  if (batch_data->frozen()) {
+    batch_data = add_batch_data();
   }
 
-  // Now allocate the rest
-
-  // current_batch_data_ could have changed before we locked the mutex. We check here whether that
-  // happened. We don't want to touch the initial current_batch_data_ because that is suspectible to
-  // race conditions.
-  batch_data = (batch_data == current_batch_data_) ? add_batch_data() : current_batch_data_;
+  int slice_index = 0;
   while (n) {
-    BatchDataSlice& slice = slices[slice_index++];
+    BatchDataSlice& slice = slices[slice_index];
 
     int m = std::min(n, batch_data->capacity() - batch_data->allocate_count);
     util::release_assert(m > 0);
@@ -255,15 +229,15 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
       batch_data->freeze();
       batch_data = add_batch_data();
     }
-  }
 
-  // Don't update current_batch_data_ until this point, to ensure that we won't encounter race
-  // conditions
-  current_batch_data_ = batch_data;
+    slice_index++;
+  }
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
+  util::debug_assert(!pending_batch_datas_.empty() && batch_data == pending_batch_datas_.front());
+  pending_batch_datas_.erase(pending_batch_datas_.begin());
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
@@ -290,14 +264,11 @@ bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_up_to(
 
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::get_frozen_pending_batch_data() const {
-  if (!pending_batch_datas_.empty()) {
-    BatchData* batch_data = pending_batch_datas_.front();
-    if (batch_data->frozen()) {
-      return batch_data;
-    }
+NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+  if (pending_batch_datas_.empty()) {
+    return nullptr;
   }
-  return nullptr;
+  return pending_batch_datas_.front();
 }
 
 template <core::concepts::Game Game>
@@ -313,6 +284,10 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
     batch_data_reserve_.pop_back();
   }
   batch_data->sequence_id = next_batch_data_sequence_id_++;
+  for (BatchData* bd : pending_batch_datas_) {
+    util::debug_assert(bd != batch_data);
+    util::debug_assert(bd->frozen());
+  }
   pending_batch_datas_.push_back(batch_data);
   return batch_data;
 }
@@ -343,13 +318,18 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   }
 
   // Write to batches
+  bool notify = false;
   for (int i = 0; i < result.misses; ++i) {
     CacheMissInfo& miss_info = miss_infos[i];
     SubRequest& sub_request = request.sub_request(miss_info.shard_index);
     RequestItem& item = sub_request.get_fresh_item(miss_info.item_index);
     BatchData* batch_data = miss_info.batch_data;
     int row = miss_info.row;
-    write_to_batch(item, batch_data, row);
+    notify |= write_to_batch(item, batch_data, row);
+  }
+
+  if (notify) {
+    cv_main_.notify_all();
   }
 
   return NNEvaluationResponse(result.max_sequence_id, core::kYield);
@@ -389,7 +369,8 @@ void NNEvaluationService<Game>::end_session(int num_game_threads) {
 
   int64_t check_cache_mutex_time_ns = perf_stats_.check_cache_mutex_time_ns;
   int64_t check_cache_insert_time_ns = perf_stats_.check_cache_insert_time_ns;
-  int64_t check_cache_alloc_time_ns = perf_stats_.check_cache_alloc_time_ns;
+  int64_t alloc_slices_mutex_time_ns = perf_stats_.alloc_slices_mutex_time_ns;
+  int64_t alloc_slices_time_ns = perf_stats_.alloc_slices_time_ns;
   int64_t check_cache_set_time_ns = perf_stats_.check_cache_set_time_ns;
   int64_t batch_ready_wait_time_ns = perf_stats_.batch_ready_wait_time_ns;
   int64_t gpu_copy_time_ns = perf_stats_.gpu_copy_time_ns;
@@ -405,7 +386,8 @@ void NNEvaluationService<Game>::end_session(int num_game_threads) {
 
   float avg_check_cache_mutex_time_ms = 1e-6 * check_cache_mutex_time_ns / num_game_threads;
   float avg_check_cache_insert_time_ms = 1e-6 * check_cache_insert_time_ns / num_game_threads;
-  float avg_check_cache_alloc_time_ms = 1e-6 * check_cache_alloc_time_ns / num_game_threads;
+  float avg_alloc_slices_mutex_time_ms = 1e-6 * alloc_slices_mutex_time_ns / num_game_threads;
+  float avg_alloc_slices_time_ms = 1e-6 * alloc_slices_time_ns / num_game_threads;
   float avg_check_cache_set_time_ms = 1e-6 * check_cache_set_time_ns / num_game_threads;
   float avg_batch_ready_wait_time_ms = 1e-6 * batch_ready_wait_time_ns / batches_evaluated;
   float avg_gpu_copy_time_ms = 1e-6 * gpu_copy_time_ns / batches_evaluated;
@@ -422,8 +404,9 @@ void NNEvaluationService<Game>::end_session(int num_game_threads) {
                             avg_check_cache_mutex_time_ms);
   util::KeyValueDumper::add(dump_key("check cache insert time"), "%.3fms",
                             avg_check_cache_insert_time_ms);
-  util::KeyValueDumper::add(dump_key("check cache alloc time"), "%.3fms",
-                            avg_check_cache_alloc_time_ms);
+  util::KeyValueDumper::add(dump_key("alloc slices mutex time"), "%.3fms",
+                            avg_alloc_slices_mutex_time_ms);
+  util::KeyValueDumper::add(dump_key("alloc slices time"), "%.3fms", avg_alloc_slices_time_ms);
   util::KeyValueDumper::add(dump_key("check cache set time"), "%.3fms",
                             avg_check_cache_set_time_ms);
   util::KeyValueDumper::add(dump_key("avg batch ready wait time"), "%.3fms",
@@ -483,7 +466,9 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
       const CacheKey& cache_key = item.cache_key();
       auto value_creator = [&]() {
         hit_cache = false;
-        return shard.eval_pool.alloc();
+        NNEvaluation* eval = shard.eval_pool.alloc();
+        eval->clear();
+        return eval;
       };
 
       NNEvaluation* eval = shard.eval_cache.insert_if_missing(cache_key, value_creator);
@@ -506,8 +491,8 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
       }
     }
 
+    clocker2.stop();
     if (result.misses > current_miss_count) {
-      core::PerfStatsClocker clocker3(clocker2, result.check_cache_alloc_time_ns);
       // Assign the missed items to BatchData's.
       //
       // Don't actually write to the BatchData's yet, since we don't need to do that under the
@@ -517,9 +502,9 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
       // the slices array to the number of misses.
       int n_misses_for_shard = result.misses - current_miss_count;
       BatchDataSlice slices[n_misses_for_shard];
-      batch_data_slice_allocator_.allocate_slices(slices, n_misses_for_shard, main_mutex_);
+      batch_data_slice_allocator_.allocate_slices(result, slices, n_misses_for_shard, main_mutex_);
 
-      core::PerfStatsClocker clocker4(clocker3, result.check_cache_set_time_ns);
+      core::PerfStatsClocker clocker3(result.check_cache_set_time_ns);
 
       int slice_index = 0;
       int slice_offset = 0;
@@ -554,7 +539,7 @@ void NNEvaluationService<Game>::decrement_ref_count(Shard& shard, NNEvaluation* 
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchData* batch_data,
+bool NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchData* batch_data,
                                                int row) {
   const CacheKey& cache_key = item.cache_key();
 
@@ -586,9 +571,7 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
   group.active_seat = active_seat;
 
   batch_data->write_count++;
-  if (batch_data->reached_full_capacity()) {
-    cv_main_.notify_all();
-  }
+  return batch_data->fully_written();
 }
 
 template <core::concepts::Game Game>
@@ -598,7 +581,8 @@ void NNEvaluationService<Game>::update_perf_stats(const CacheLookupResult& resul
   perf_stats_.cache_hits += result.non_pending_hits + result.pending_hits;
   perf_stats_.check_cache_mutex_time_ns += result.check_cache_mutex_time_ns;
   perf_stats_.check_cache_insert_time_ns += result.check_cache_insert_time_ns;
-  perf_stats_.check_cache_alloc_time_ns += result.check_cache_alloc_time_ns;
+  perf_stats_.alloc_slices_mutex_time_ns += result.alloc_slices_mutex_time_ns;
+  perf_stats_.alloc_slices_time_ns += result.alloc_slices_time_ns;
   perf_stats_.check_cache_set_time_ns += result.check_cache_set_time_ns;
 }
 
@@ -689,12 +673,14 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
 
   auto predicate = [&] {
     if (!active() || paused_) return true;
-    BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-    if (batch_data) {
+    BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+    util::debug_assert(batch_data);
+    if (batch_data->fully_written()) {
       if (mcts::kEnableServiceDebug) {
         LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->",
                  cls, func, (int)batch_data->allocate_count);
       }
+      batch_data->freeze();
       return true;
     }
     if (mcts::kEnableServiceDebug) {
@@ -706,10 +692,10 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
   cv_main_.wait_until(lock, deadline_, predicate);
 
   if (!active() || paused_) return;
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-  if (!batch_data) {
-    // This means that we timed out, but the current batch is not yet frozen. We need to wait
-    // further until it is frozen.
+  BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+  if (!batch_data || !batch_data->fully_written()) {
+    // This means that we timed out, but the current batch is not yet fully written. We need to wait
+    // further.
     cv_main_.wait(lock, predicate);
   }
 }
@@ -719,39 +705,45 @@ void NNEvaluationService<Game>::batch_evaluate() {
   if (!active() || paused_) return;
 
   std::unique_lock lock(main_mutex_);
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-  if (!batch_data) return;
+  BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
   lock.unlock();
 
-  const char* cls = "NNEvaluationService";
-  const char* func = __func__;
-  if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() (seq:{}, count:{}) ---------------------->",
-             cls, func, batch_data->sequence_id, (int)batch_data->allocate_count);
+  util::debug_assert(batch_data && batch_data->fully_written() && batch_data->frozen(),
+                     "batch_data is not fully written or frozen (%d %d %d)", batch_data ? 1 : 0,
+                     (batch_data && batch_data->fully_written()) ? 1 : 0,
+                     (batch_data && batch_data->frozen()) ? 1 : 0);
+  int num_rows = batch_data->frozen_allocate_count;
+
+  if (num_rows > 0) {
+    const char* cls = "NNEvaluationService";
+    const char* func = __func__;
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("<---------------------- {}::{}() (seq:{}, count:{}) ---------------------->",
+               cls, func, batch_data->sequence_id, num_rows);
+    }
+
+    profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
+    core::PerfStatsClocker gpu_copy_clocker(perf_stats_.gpu_copy_time_ns);
+    batch_data->copy_input_to(num_rows, full_input_);
+    auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
+                                                   eigen_util::to_int64_std_array_v<InputShape>);
+    torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
+    torch_input_gpu_.copy_(full_input_torch);
+
+    profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
+    core::PerfStatsClocker model_eval_clocker(gpu_copy_clocker, perf_stats_.model_eval_time_ns);
+    net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
+
+    profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
+    core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, perf_stats_.gpu_copy_time_ns);
+    for (int i = 0; i < num_rows; ++i) {
+      TensorGroup& group = batch_data->tensor_groups[i];
+      group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
+      group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
+                       group.active_seat, group.action_mode);
+    }
+    gpu_copy_clocker2.stop();
   }
-
-  profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
-  core::PerfStatsClocker gpu_copy_clocker(perf_stats_.gpu_copy_time_ns);
-  int num_rows = batch_data->write_count;
-  batch_data->copy_input_to(num_rows, full_input_);
-  auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
-                                                 eigen_util::to_int64_std_array_v<InputShape>);
-  torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
-  torch_input_gpu_.copy_(full_input_torch);
-
-  profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
-  core::PerfStatsClocker model_eval_clocker(gpu_copy_clocker, perf_stats_.model_eval_time_ns);
-  net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
-
-  profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
-  core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, perf_stats_.gpu_copy_time_ns);
-  for (int i = 0; i < num_rows; ++i) {
-    TensorGroup& group = batch_data->tensor_groups[i];
-    group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
-    group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
-                     group.active_seat, group.action_mode);
-  }
-  gpu_copy_clocker2.stop();
 
   lock.lock();
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
@@ -760,7 +752,9 @@ void NNEvaluationService<Game>::batch_evaluate() {
   lock.unlock();
   cv_eval_.notify_all();
 
-  update_perf_stats(num_rows);
+  if (num_rows) {
+    update_perf_stats(num_rows);
+  }
 }
 
 template <core::concepts::Game Game>
