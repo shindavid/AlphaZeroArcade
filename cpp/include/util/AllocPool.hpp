@@ -4,7 +4,6 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <type_traits>
@@ -29,7 +28,6 @@ using pool_index_t = int64_t;
 template<typename T, int N=10, bool ThreadSafe=true>
 class AllocPool {
  public:
-  using atomic_size_t = std::conditional_t<ThreadSafe, std::atomic<uint64_t>, uint64_t>;
   using mutex_t = std::conditional_t<ThreadSafe, std::mutex, dummy_mutex>;
 
   // The below static_assert fails currently because Eigen::Array incorrectly reports itself as
@@ -50,13 +48,12 @@ class AllocPool {
   void defragment(const boost::dynamic_bitset<>& used_indices);
 
  private:
-  uint64_t fetch_add_to_size(uint64_t n);  // does size_ += n and returns the old size, atomically
-  void add_blocks_if_necessary(int block_index);
+  void add_block();
 
   static constexpr int kNumBlocks = 64 - N;
   using Block = char*;
 
-  atomic_size_t size_ = 0;
+  uint64_t size_ = 0;
   int num_blocks_ = 2;
   mutable mutex_t mutex_;
   Block blocks_[kNumBlocks] = {};
