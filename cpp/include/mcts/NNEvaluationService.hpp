@@ -268,6 +268,28 @@ class NNEvaluationService
     core::nn_evaluation_sequence_id_t max_sequence_id = 0;
   };
 
+  // We empirically found that having a single LRUCache for the entire service leads to a
+  // performance bottleneck, as a significant percentage of the time is spent acquiring the mutex.
+  // We relieve this contention by splitting the cache into kNumHashShards shards, and using a
+  // different mutex for each shard.
+  struct ShardData {
+    void init(int cache_size);
+    void decrement_ref_count(NNEvaluation* eval);
+
+    mutable std::mutex mutex;
+    LRUCache eval_cache;
+    EvalPool eval_pool;
+  };
+
+  // Convenience struct to sort the items in the request by hash shard.
+  struct SortItem {
+    auto operator<=>(const SortItem& other) const = default;
+    hash_shard_t shard;
+    bool fresh;
+    int16_t item_index;
+  };
+  static_assert(sizeof(SortItem) == 4);
+
   NNEvaluationService(const NNEvaluationServiceParams& params);
   ~NNEvaluationService();
 
@@ -284,7 +306,12 @@ class NNEvaluationService
   // 4. Populate result.miss_infos with the cache-miss information.
   void check_cache(NNEvaluationRequest& request, CacheLookupResult& result);
 
-  void decrement_ref_count(NNEvaluation* eval);
+  void populate_sort_items(SortItem* sort_items, NNEvaluationRequest& request);
+
+  // return true if miss cache
+  bool handle_fresh_item(NNEvaluationRequest&, CacheLookupResult&, ShardData&, int item_index);
+
+  void write_miss_infos(NNEvaluationRequest&, CacheLookupResult&, int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);
@@ -311,7 +338,6 @@ class NNEvaluationService
   profiler_t profiler_;
   std::thread* thread_ = nullptr;
 
-  mutable std::mutex cache_mutex_;
   mutable std::mutex connection_mutex_;
   mutable std::mutex net_weights_mutex_;
   mutable std::mutex main_mutex_;
@@ -330,8 +356,7 @@ class NNEvaluationService
   torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
 
-  LRUCache eval_cache_;
-  EvalPool eval_pool_;
+  ShardData shard_datas_[kNumHashShards];
 
   const std::chrono::nanoseconds timeout_duration_;
 

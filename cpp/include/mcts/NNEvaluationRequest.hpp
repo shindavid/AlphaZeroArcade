@@ -7,6 +7,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/FiniteGroups.hpp>
+#include <util/Math.hpp>
 #include <util/StringUtil.hpp>
 
 #include <span>
@@ -35,7 +36,10 @@ class NNEvaluationRequest {
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)
-        : hash(util::hash(std::make_tuple(e, s))), eval_key(e), sym(s) {}
+        : hash(math::splitmix64(util::hash(std::make_tuple(e, s)))),
+          eval_key(e),
+          sym(s),
+          hash_shard(hash >> (64 - kNumHashShardsLog2)) {}
 
     CacheKey() = default;
 
@@ -46,6 +50,7 @@ class NNEvaluationRequest {
     uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
     EvalKey eval_key;
     group::element_t sym;
+    hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
   };
 
   struct CacheKeyHasher {
@@ -94,6 +99,7 @@ class NNEvaluationRequest {
     Node* node() const { return node_; }
     NNEvaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
+    hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
@@ -124,8 +130,11 @@ class NNEvaluationRequest {
   }
 
   auto stale_items() { return std::span<Item>(items_[1 - active_index_]); }
-  auto fresh_items() { return std::span<Item>(items_[active_index_]); }
+  int num_stale_items() const { return items_[1 - active_index_].size(); }
+  Item& get_stale_item(int i) { return items_[1 - active_index_][i]; }
   void clear_stale_items() { items_[1 - active_index_].clear(); }
+
+  auto fresh_items() { return std::span<Item>(items_[active_index_]); }
   int num_fresh_items() const { return items_[active_index_].size(); }
   Item& get_fresh_item(int i) { return items_[active_index_][i]; }
 

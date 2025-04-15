@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -10,6 +11,8 @@
 #include <util/Profiler.hpp>
 
 namespace mcts {
+
+using hash_shard_t = int8_t;
 
 using search_thread_region_t = SearchThreadRegion::region_t;
 #ifdef PROFILE_MCTS
