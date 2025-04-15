@@ -1,15 +1,12 @@
 from alphazero.logic.agent_types import MCTSAgent
-from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
-from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.server_base import ServerBase, ServerConstants
-from util.logging_util import LoggingParams
+from alphazero.servers.gaming.server_base import ServerBase, ServerParams
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 from util import subprocess_util
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 import logging
 import os
 
@@ -18,21 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class RatingsServerParams(BaseParams):
+class RatingsServerParams(ServerParams):
     rating_tag: str = ''
 
     @staticmethod
-    def create(args) -> 'RatingsServerParams':
-        kwargs = {f.name: getattr(args, f.name) for f in fields(RatingsServerParams)}
-        return RatingsServerParams(**kwargs)
-
-    @staticmethod
-    def add_args(parser, omit_base=False):
+    def add_additional_args(group):
         defaults = RatingsServerParams()
-
-        group = parser.add_argument_group(f'RatingsServer options')
-        if not omit_base:
-            BaseParams.add_base_args(group)
 
         group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
                            help='ratings tag. Loop controller collates ratings by this str. It is '
@@ -64,7 +52,7 @@ class RatingsServer(ServerBase):
         ps2 = self._get_reference_player_str(ref_strength)
 
         binary = os.path.join(self._session_data.run_dir, mcts_agent.binary)
-        log_filename = self._session_data.get_log_filename(self.__class__.SERVER_CONSTANTS.worker_name)
+        log_filename = self._session_data.get_log_filename(self._config.worker_name)
         append_mode = not self._session_data.start_log_sync(log_filename)
 
         args = {

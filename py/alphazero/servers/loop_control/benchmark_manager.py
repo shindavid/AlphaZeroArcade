@@ -63,6 +63,9 @@ class ServerAux:
     ix: Optional[int] = None  # test agent index
     ready_for_latest_gen: bool = False
 
+    def work_in_progress(self) -> bool:
+        return self.ix is not None
+
 class BenchmarkManager(BaseManager):
     ServerAuxClass = ServerAux
 

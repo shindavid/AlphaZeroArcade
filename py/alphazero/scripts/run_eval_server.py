@@ -10,8 +10,9 @@ ratings server process. This is useful because it allows us to launch each match
 the loop controller as a separate c++ binary process.
 """
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
-from alphazero.servers.gaming.eval_server import EvalServer, EvalServerParams
+from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
@@ -23,7 +24,7 @@ import os
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    EvalServerParams.add_args(parser)
+    ServerParams.add_args(parser, server_name='eval-server')
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
@@ -33,7 +34,7 @@ def load_args():
 
 def main():
     args = load_args()
-    params = EvalServerParams.create(args)
+    params = ServerParams.create(args)
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
@@ -43,7 +44,13 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    server = EvalServer(params, logging_params, build_params)
+    server_config = ServerConfig(
+        server_name='eval-server',
+        worker_name='eval-worker',
+        server_role=ClientRole.EVAL_SERVER,
+        worker_role=ClientRole.EVAL_WORKER)
+
+    server = ServerBase(params, logging_params, build_params, server_config)
     server.run()
 
 

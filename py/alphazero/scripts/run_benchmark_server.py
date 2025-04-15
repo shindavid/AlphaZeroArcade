@@ -12,8 +12,7 @@ the loop controller as a separate c++ binary process.
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
-from alphazero.servers.gaming.server_base import ServerBase, ServerConfig
-from alphazero.servers.gaming.benchmark_server import BenchmarkServerParams
+from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
@@ -25,7 +24,7 @@ import os
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    BenchmarkServerParams.add_args(parser, server_name='benchmark-server')
+    ServerParams.add_args(parser, server_name='benchmark-server')
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
@@ -35,7 +34,7 @@ def load_args():
 
 def main():
     args = load_args()
-    params = BenchmarkServerParams.create(args)
+    params = ServerParams.create(args)
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)

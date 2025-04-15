@@ -106,7 +106,7 @@ class BaseManager:
                 status = self._wait_for_unblock(conn)
                 if status == ServerStatus.DISCONNECTED:
                     break
-                if conn.aux.ix is None:
+                if not conn.aux.work_in_progress():
                     self._wait_until_work_exists()
 
                 logger.debug(f"Managing {self.__class__.MANAGER_CONSTANTS.server_name}, priority: {table}")

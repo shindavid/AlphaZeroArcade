@@ -68,6 +68,9 @@ class ServerAux:
     estimated_rating: Optional[float] = None
     ix: Optional[int] = None  # test agent index
 
+    def work_in_progress(self) -> bool:
+        return self.ix is not None
+
 class EvalManager(BaseManager):
     """
     A separate EvalManager is created for each rating-tag.

@@ -27,9 +27,12 @@ class ServerAux:
     """
     Auxiliary data stored per server connection.
     """
-    cond: threading.Condition = field(default_factory=threading.Condition)
+    status_cond: threading.Condition = field(default_factory=threading.Condition)
     status: ServerStatus = ServerStatus.BLOCKED
     gen: Optional[Generation] = None
+
+    def work_in_progress(self) -> bool:
+        return self.gen is not None
 
 class RatingsManager(BaseManager):
     """
@@ -87,7 +90,7 @@ class RatingsManager(BaseManager):
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
-        with aux.cond:
+        with aux.status_cond:
             aux.status = ServerStatus.DISCONNECTED
             aux.cond.notify_all()
 
