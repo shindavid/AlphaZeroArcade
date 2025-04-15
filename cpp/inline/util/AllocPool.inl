@@ -2,9 +2,6 @@
 
 #include <util/Asserts.hpp>
 
-#include <mutex>
-#include <type_traits>
-
 namespace util {
 
 namespace detail {
@@ -38,11 +35,17 @@ void AllocPool<T, N, ThreadSafe>::clear() {
 
 template <typename T, int N, bool ThreadSafe>
 pool_index_t AllocPool<T, N, ThreadSafe>::alloc(int n) {
-  uint64_t old_size = fetch_add_to_size(n);
-  uint64_t new_size = old_size + n;
+  // TODO: use std::atomic rather than a mutex here. If an overflow occurs, we should grab the mutex
+  // at that point before calling add_block(), with the awareness that another thread might jump in
+  // and perform the add_block() before we do.
+  std::unique_lock lock(mutex_);
+  uint64_t old_size = size_;
+  size_ += n;
 
-  int block_index = detail::get_block_index<N>(new_size - 1);
-  add_blocks_if_necessary(block_index);
+  int block_index = detail::get_block_index<N>(size_ - 1);
+  for (int i = num_blocks_; i <= block_index; ++i) {
+    add_block();
+  }
   return old_size;
 }
 
@@ -77,11 +80,6 @@ std::vector<T> AllocPool<T, N, ThreadSafe>::to_vector() const {
 
 template <typename T, int N, bool ThreadSafe>
 void AllocPool<T, N, ThreadSafe>::defragment(const boost::dynamic_bitset<>& used_indices) {
-  // The below static_assert() incorrectly fails for some fixed-size Eigen types,
-  // So I comment it out for now. When c++ reflection comes out, I might be able to resurrect it.
-  // static_assert(std::is_trivially_constructible_v<T>);
-
-  static_assert(std::is_trivially_destructible_v<T>);
   util::release_assert(used_indices.size() == size_);
 
   uint64_t r = 0;
@@ -101,25 +99,11 @@ void AllocPool<T, N, ThreadSafe>::defragment(const boost::dynamic_bitset<>& used
 }
 
 template <typename T, int N, bool ThreadSafe>
-uint64_t AllocPool<T, N, ThreadSafe>::fetch_add_to_size(uint64_t n) {
-  if constexpr (ThreadSafe) {
-    return size_.fetch_add(n, std::memory_order_relaxed);
-  } else {
-    uint64_t old_size = size_;
-    size_ += n;
-    return old_size;
+void AllocPool<T, N, ThreadSafe>::add_block() {
+  if (!blocks_[num_blocks_]) {
+    blocks_[num_blocks_] = new char[sizeof(T) * (1 << (N + num_blocks_ - 1))];
   }
-}
-
-template <typename T, int N, bool ThreadSafe>
-void AllocPool<T, N, ThreadSafe>::add_blocks_if_necessary(int block_index) {
-  if (block_index >= num_blocks_) {
-    std::unique_lock lock(mutex_);
-    while (num_blocks_ <= block_index) {
-      blocks_[num_blocks_] = new char[sizeof(T) * (1 << (N + num_blocks_ - 1))];
-      ++num_blocks_;
-    }
-  }
+  ++num_blocks_;
 }
 
 }  // namespace util
