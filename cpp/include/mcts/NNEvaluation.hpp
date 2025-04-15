@@ -2,7 +2,6 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <util/AtomicSharedPtr.hpp>
 #include <util/FiniteGroups.hpp>
 
 namespace mcts {
