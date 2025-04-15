@@ -182,8 +182,8 @@ class NNEvaluationService
     std::vector<TensorGroup> tensor_groups;
 
     core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
-    int frozen_allocate_count = -1;
-    int allocate_count = 0;
+    int frozen_allocate_count = -1;  // protected by main_mutex_
+    int allocate_count = 0;          // protected by main_mutex_
     std::atomic<int> write_count = 0;
   };
   using batch_data_vec_t = std::vector<BatchData*>;
