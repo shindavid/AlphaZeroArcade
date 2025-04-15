@@ -10,7 +10,6 @@
 #include <util/FiniteGroups.hpp>
 #include <util/Math.hpp>
 #include <util/StringUtil.hpp>
-#include <util/TinyBitSet.hpp>
 
 #include <span>
 #include <string>
