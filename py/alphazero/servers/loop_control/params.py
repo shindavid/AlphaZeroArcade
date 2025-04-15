@@ -15,7 +15,7 @@ class LoopControllerParams:
     eval_error_threshold: float = 100.0
     agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
     benchmark_tag: str = None
-    benchmark_until_gen_gap: int = 25
+    benchmark_until_gen_gap: int = 10
     n_games_per_benchmark: int = 100
     target_elo_gap: float = 100
     ignore_sigint: bool = False

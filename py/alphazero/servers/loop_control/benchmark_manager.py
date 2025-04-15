@@ -148,6 +148,8 @@ class BenchmarkManager(BaseManager):
         if ix is not None:
             return
 
+        exclude_agents = self._get_exclude_agents()
+
         if ready_for_latest_gen:
             latest_gen = self._controller.organizer.get_latest_model_generation()
             latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
@@ -156,18 +158,15 @@ class BenchmarkManager(BaseManager):
                 db=self._benchmarker._db)
 
             matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
-                                                             against_committee_only=True,
-                                                             is_committee=self.is_committee)
+                                                             exclude_agents=exclude_agents)
             ix = latest_iagent.index
             conn.aux.ready_for_latest_gen = False
 
         else:
-            against_committee_only = (len(self.is_committee) > 0)
             matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
                                                                       self.target_elo_gap,
                                                                       self.n_games,
-                                                                      against_committee_only=against_committee_only,
-                                                                      is_committee=self.is_committee)
+                                                                      exclude_agents=exclude_agents)
         if not matches:
             self._update_committee()
             conn.aux.ready_for_latest_gen = True
@@ -268,12 +267,11 @@ class BenchmarkManager(BaseManager):
                 self._status_dict[ix1].owner = None
             conn.aux.ix = None
 
-            against_committee_only = (len(self.is_committee) > 0)
+            exclude_agents = self._get_exclude_agents()
             matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
                                                                     self.target_elo_gap,
                                                                     self.n_games,
-                                                                    against_committee_only=against_committee_only,
-                                                                    is_committee=self.is_committee)
+                                                                    exclude_agents=exclude_agents)
             if not matches:
                 self._update_committee()
                 conn.aux.ready_for_latest_gen = True
@@ -290,6 +288,16 @@ class BenchmarkManager(BaseManager):
             self._benchmarker._db.commit_ratings(self._benchmarker.indexed_agents,
                                                     self._benchmarker._arena.ratings,
                                                     committee=committee)
+
+    def _get_exclude_agents(self):
+        if len(self.is_committee) == 0:
+            return np.array([], dtype=int)
+
+        exclude_agents = np.where(self.is_committee == False)[0]
+        exclude_agents = np.concatenate([exclude_agents,
+                                         np.arange(len(self.is_committee),
+                                                   len(self._benchmarker.indexed_agents) - len(self.is_committee))])
+        return exclude_agents
 
     @property
     def n_games(self):

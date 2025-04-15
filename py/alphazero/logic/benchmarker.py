@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, AgentRole, BenchmarkCommittee, MCTSAgent, IndexedAgent
+from alphazero.logic.agent_types import Agent, AgentRole, BenchmarkCommittee, IndexedAgent, MCTSAgent
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -28,6 +28,8 @@ class BenchmarkRatingData:
     iagents: List[IndexedAgent]
     ratings: np.ndarray
     committee: BenchmarkCommittee
+
+IAgentSet = np.ndarray
 
 
 class Benchmarker:
@@ -71,8 +73,7 @@ class Benchmarker:
         self._db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games,
-                         against_committee_only: bool=False,
-                         is_committee: Optional[np.ndarray]=None) -> Optional[List[Match]]:
+                         exclude_agents: IAgentSet) -> List[Match]:
         """
         The algorithm for selecting the next batch of matches is as follows:
         1. If there are no matches in the arena, play the first generation against the last
@@ -92,8 +93,7 @@ class Benchmarker:
             self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
-        incomplete_gen = self.incomplete_gen(against_committee_only=against_committee_only,
-                                             is_committee=is_committee)
+        incomplete_gen = self.incomplete_gen(exclude_agents=exclude_agents)
         if incomplete_gen is not None:
             next_gen = incomplete_gen
             logger.debug('Finishing incomplete gen: %d', next_gen)
@@ -107,55 +107,44 @@ class Benchmarker:
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
                                              db=self._db)
-        matches = self.get_unplayed_matches(next_iagent, n_games,
-                                            against_committee_only=against_committee_only,
-                                            is_committee=is_committee)
+        matches = self.get_unplayed_matches(next_iagent, n_games, exclude_agents=exclude_agents)
         return matches
 
-    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, against_committee_only: bool,
-                             is_committee: Optional[np.ndarray]=None) -> List[Match]:
+    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, exclude_agents: IAgentSet) -> List[Match]:
         """
-        Returns a list of matches that have not been played for the given IndexedAgent.
-        If against_committee_only is True, only returns matches against agents in the committee.
+        Returns a list of matches that have not been played for the given IndexedAgent, only for the
+        agents that are not in the exclude_agents set.
         """
         matches = []
         for ia in self._arena.indexed_agents:
             if ia.agent.gen == iagent.agent.gen:
                 continue
-            if against_committee_only:
-                if is_committee is None:
-                    raise ValueError("is_committee must be provided if against_committee_only is True")
-                if ia.index < len(is_committee) and not is_committee[ia.index]:
-                    continue
+            if ia.index in exclude_agents:
+                continue
             if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
                 logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
 
-    def incomplete_gen(self, against_committee_only: bool=False,
-                       is_committee: Optional[np.ndarray]=None) -> np.ndarray:
+    def incomplete_gen(self, exclude_agents: IAgentSet) -> Optional[Generation]:
         """
-        If a run was interrupted, there may be generations that have not been played against all
-        other generations. This function identifies the newly added generation that was in the middle
-        of being played against all other generations, and returns it to be the next gen to be played.
+        A set of agents is complete if every agent has played every other agent. The set of agents
+        is defined as the set of agents in the arena, excluding the agents in the exclude_agents set.
+        Returns the generation of the agent that has played the least number of matches.
+        Returns None if all agents have played every other agent.
         """
 
         A = self._arena.adjacent_matrix()
-        if against_committee_only:
-            include = np.ones(len(self._arena.indexed_agents), dtype=bool)
-            include[:len(is_committee)] = is_committee
-            mask = np.where(include)[0]
-            A = A[mask][:, mask]
+        include = np.ones(len(self._arena.indexed_agents), dtype=bool)
+        include[exclude_agents] = False
+        mask = np.where(include)[0]
+        A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)
         incomplete = np.where(num_opponents_played < A.shape[0] - 1)[0]
+
         if (incomplete.size == 0):
             return None
-
-        if against_committee_only:
-            incomplete_ix = mask[np.argmin(num_opponents_played)]
-        else:
-            incomplete_ix = np.argmin(num_opponents_played)
-
+        incomplete_ix = mask[np.argmin(num_opponents_played)]
         return self._arena.indexed_agents[incomplete_ix].agent.gen
 
     def get_biggest_mcts_ratings_gap(self) -> Optional[RatingsGap]:
