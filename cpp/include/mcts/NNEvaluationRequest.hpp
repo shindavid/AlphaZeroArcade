@@ -1,6 +1,5 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <cstdint>
 #include <mcts/Constants.hpp>
@@ -8,9 +7,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/FiniteGroups.hpp>
-#include <util/Math.hpp>
 #include <util/StringUtil.hpp>
-#include <util/TinyBitSet.hpp>
 
 #include <span>
 #include <string>
@@ -37,13 +34,17 @@ class NNEvaluationRequest {
   using NNEvaluation = mcts::NNEvaluation<Game>;
 
   struct CacheKey {
-    CacheKey(const EvalKey& e, group::element_t s);
-    CacheKey() = default;
-    bool operator==(const CacheKey& c) const { return eval_key == c.eval_key && sym == c.sym; }
+    CacheKey(const EvalKey& e, group::element_t s)
+        : hash(util::hash(std::make_tuple(e, s))), eval_key(e), sym(s) {}
 
+    CacheKey() = default;
+
+    bool operator==(const CacheKey& other) const {
+      return eval_key == other.eval_key && sym == other.sym;
+    }
+
+    uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
     EvalKey eval_key;
-    uint64_t hash;
-    core::cache_shard_index_t cache_shard;
     group::element_t sym;
   };
 
@@ -110,33 +111,8 @@ class NNEvaluationRequest {
   };
   using item_vec_t = std::vector<Item>;
 
-  // In order to alleviate mutex contention, we shard various data structures. We keep S shards,
-  // and allocate a given item to shard s iff hash(item) % S == s.
-  //
-  // NNEvaluationRequest::sub_requests_[shard_index] contains the items that are in shard s.
-  class SubRequest {
-   public:
-    void mark_all_as_stale();
-    void push_back(const Item& item) { items_[active_index_].push_back(item); }
-    auto stale_items() { return std::span<Item>(items_[1 - active_index_]); }
-    auto fresh_items() { return std::span<Item>(items_[active_index_]); }
-    void clear_stale_items() { items_[1 - active_index_].clear(); }
-    int num_fresh_items() const { return items_[active_index_].size(); }
-    int num_stale_items() const { return items_[1 - active_index_].size(); }
-    Item& get_fresh_item(int i) { return items_[active_index_][i]; }
-
-   private:
-    // We keep two vectors of items: the active vector and the stale vector. After the active items
-    // is processed by the NNEvaluationService, they get downgraded to stale.
-    //
-    // This allows us to better control when items are destroyed (i.e., when the eval reference
-    // count gets decremented). That needs to be done while holding the NNEvaluationService::Shard
-    // mutex, and in order to do that, we need to destroy lazily.
-    item_vec_t items_[2];
-    int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
-  };
-
   void init(search_thread_profiler_t* thread_profiler, int thread_id);
+  void mark_all_as_stale();
 
   std::string thread_id_whitespace() const;
   search_thread_profiler_t* thread_profiler() const { return thread_profiler_; }
@@ -144,25 +120,27 @@ class NNEvaluationRequest {
 
   template <typename... Ts>
   void emplace_back(Ts&&... args) {
-    Item item(std::forward<Ts>(args)...);
-    sub_requests_[item.cache_key().cache_shard].push_back(item);
+    items_[active_index_].emplace_back(std::forward<Ts>(args)...);
   }
 
-  SubRequest& sub_request(core::cache_shard_index_t shard_index) {
-    return sub_requests_[shard_index];
-  }
-
-  const SubRequest& sub_request(core::cache_shard_index_t shard_index) const {
-    return sub_requests_[shard_index];
-  }
-
-  int num_fresh_items() const;
-  void mark_all_as_stale();
+  auto stale_items() { return std::span<Item>(items_[1 - active_index_]); }
+  auto fresh_items() { return std::span<Item>(items_[active_index_]); }
+  void clear_stale_items() { items_[1 - active_index_].clear(); }
+  int num_fresh_items() const { return items_[active_index_].size(); }
+  Item& get_fresh_item(int i) { return items_[active_index_][i]; }
 
  private:
-  SubRequest sub_requests_[mcts::kNumCacheShards];
+  // We keep two vectors of items: the active vector and the stale vector. After the active items
+  // is processed by the NNEvaluationService, they get downgraded to stale.
+  //
+  // This allows us to better control when items are destroyed (i.e., when the eval reference count
+  // gets decremented). That needs to be done while holding the NNEvaluationService cache_mutex_,
+  // and in order to do that, we need to destroy lazily.
+  item_vec_t items_[2];
+
   search_thread_profiler_t* thread_profiler_;
   int thread_id_;
+  int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };
 
 }  // namespace mcts

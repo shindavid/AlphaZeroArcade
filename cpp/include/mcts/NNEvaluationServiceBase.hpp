@@ -4,6 +4,9 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
+#include <util/AllocPool.hpp>
+
+#include <vector>
 
 namespace mcts {
 
@@ -37,6 +40,7 @@ class NNEvaluationServiceBase {
  public:
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   virtual ~NNEvaluationServiceBase() {}
 
@@ -61,6 +65,28 @@ class NNEvaluationServiceBase {
   virtual void wait_for(core::nn_evaluation_sequence_id_t sequence_id) = 0;
 
   virtual void end_session(int num_game_threads) {}
+
+ protected:
+  void free_eval(NNEvaluation* eval) {
+    eval->clear();
+    recycled_evals_.push_back(eval);
+  }
+
+  NNEvaluation* alloc_eval() {
+    if (recycled_evals_.empty()) {
+      NNEvaluation* eval = &eval_pool_[eval_pool_.alloc(1)];
+      new (eval) NNEvaluation();
+      return eval;
+    } else {
+      NNEvaluation* eval = recycled_evals_.back();
+      recycled_evals_.pop_back();
+      return eval;
+    }
+  }
+
+ private:
+  NNEvaluationPool eval_pool_;
+  std::vector<NNEvaluation*> recycled_evals_;
 };
 
 }  // namespace mcts

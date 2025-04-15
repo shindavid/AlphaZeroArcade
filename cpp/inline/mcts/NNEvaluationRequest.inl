@@ -5,21 +5,6 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::CacheKey::CacheKey(const EvalKey& e, group::element_t s)
-    : eval_key(e), sym(s) {
-  // Mix to ensure that the hash is uniformly distributed.
-  uint64_t h = math::splitmix64(util::hash(std::make_tuple(e, s)));
-
-  // After mixing, we use the lower bits of the hash to determine the cache shard.
-  // The upper bits are used as the object's hash value.
-  //
-  // It's important to use the upper bits of the mixed-hash, rather than the entire mixed-hash,
-  // as otherwise we could have unbalanced buckets in the LRU cache.
-  hash = h >> mcts::kCacheShardingFactor;
-  cache_shard = h & ((1 << mcts::kCacheShardingFactor) - 1);
-}
-
-template <core::concepts::Game Game>
 NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const State& state,
                                       group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
@@ -73,7 +58,7 @@ void NNEvaluationRequest<Game>::init(search_thread_profiler_t* thread_profiler, 
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationRequest<Game>::SubRequest::mark_all_as_stale() {
+void NNEvaluationRequest<Game>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
     active_index_ = 1 - active_index_;
@@ -91,22 +76,6 @@ void NNEvaluationRequest<Game>::SubRequest::mark_all_as_stale() {
 template <core::concepts::Game Game>
 std::string NNEvaluationRequest<Game>::thread_id_whitespace() const {
   return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
-}
-
-template <core::concepts::Game Game>
-int NNEvaluationRequest<Game>::num_fresh_items() const {
-  int n = 0;
-  for (int i = 0; i < mcts::kNumCacheShards; ++i) {
-    n += sub_request(i).num_fresh_items();
-  }
-  return n;
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationRequest<Game>::mark_all_as_stale() {
-  for (int i = 0; i < mcts::kNumCacheShards; ++i) {
-    sub_request(i).mark_all_as_stale();
-  }
 }
 
 }  // namespace mcts

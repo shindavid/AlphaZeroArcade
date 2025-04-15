@@ -51,11 +51,8 @@ class LRUCache {
   using value_creation_func_t = std::function<Value()>;
   using eviction_func_t = std::function<void(Value&)>;
 
-  LRUCache(size_t capacity=1024) { set_capacity(capacity); }
+  explicit LRUCache(size_t capacity);
   ~LRUCache() { clear(); }
-
-  // Must be called before performing any inserts.
-  void set_capacity(size_t capacity);
 
   // Sets the eviction handler. This function is called when an item is evicted from the cache.
   // The default handler does nothing.
