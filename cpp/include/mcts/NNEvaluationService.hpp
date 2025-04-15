@@ -176,14 +176,15 @@ class NNEvaluationService
     bool freeze();
     bool frozen() const { return frozen_allocate_count >= 0; }
     bool reached_full_capacity() const { return allocate_count >= capacity(); }
-    bool fully_written() const { return write_count >= capacity(); }
 
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;
 
     core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
     int frozen_allocate_count = -1;
-    int allocate_count = 0;
+
+    // Below fields are protected by the main_mutex_ member of NNEvaluationService.
+    std::atomic<int> allocate_count = 0;
     std::atomic<int> write_count = 0;
   };
   using batch_data_vec_t = std::vector<BatchData*>;
@@ -192,36 +193,6 @@ class NNEvaluationService
     BatchData* batch_data;
     int start_row;
     int num_rows;
-  };
-
-  // Whenever we miss cache, we will need to evaluate the item later with the neural net. This
-  // struct is used to store bookkeeping information to facilitate that.
-  struct CacheMissInfo {
-    BatchData* batch_data;                  // the BatchData that we will write to
-    int row;                                // the row in the BatchData that we will write to
-    int item_index;                         // index of the item in the request
-    core::cache_shard_index_t shard_index;  // the shard that this item belongs to
-  };
-
-  // Helper struct to pass into check_cache().
-  struct CacheLookupResult {
-    // Constructor accepts an array of CacheMissInfo's. The check_cache() method will populate the
-    // first n entries of this array, where n is the number of cache-misses.
-    CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
-
-    int size() const { return non_pending_hits + pending_hits + misses; }
-
-    CacheMissInfo* miss_infos;
-
-    int64_t check_cache_mutex_time_ns = 0;   // time spent in check_cache() acquiring the mutex
-    int64_t check_cache_insert_time_ns = 0;  // time spent in check_cache() inserting into map
-    int64_t alloc_slices_mutex_time_ns = 0;  // time spent in allocate_slices() acquiring the mutex
-    int64_t alloc_slices_time_ns = 0;        // time spent in allocate_slices() allocating slices
-    int64_t check_cache_set_time_ns = 0;     // time spent in check_cache() setting miss info
-    int non_pending_hits = 0;                // item in cache and in non-pending state
-    int pending_hits = 0;                    // item in cache and in pending state
-    int misses = 0;                          // item not in cache
-    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
   };
 
   // The BatchDataSliceAllocator is responsible for allocating slices of BatchData. It must do this
@@ -255,8 +226,7 @@ class NNEvaluationService
     // BatchDataSliceAllocator attempts to do this without locking the mutex, relying on atomic
     // members of BatchData instead to ensure thread-safety. If it is unable to do this, then it
     // resorts to locking the passed-in mutex.
-    void allocate_slices(CacheLookupResult& result, BatchDataSlice* slices, int n,
-                         std::mutex& main_mutex);
+    void allocate_slices(BatchDataSlice* slices, int n, std::mutex& main_mutex);
 
     void recycle(BatchData* batch_data);
 
@@ -264,8 +234,8 @@ class NNEvaluationService
     // was newly frozen.
     bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
 
-    // If pending_batch_datas_ is nonempty, returns its first element. Else, returns nullptr.
-    BatchData* get_first_pending_batch_data() const;
+    // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
+    BatchData* get_frozen_pending_batch_data() const;
 
    private:
     BatchData* add_batch_data();
@@ -273,21 +243,45 @@ class NNEvaluationService
     const int batch_size_limit_;
     core::PerfStats& perf_stats_;
 
+    BatchData* current_batch_data_ = nullptr;
     batch_data_vec_t pending_batch_datas_;
     batch_data_vec_t batch_data_reserve_;
     core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
   };
 
+  // Whenever we miss cache, we will need to evaluate the item later with the neural net. This
+  // struct is used to store bookkeeping information to facilitate that.
+  struct CacheMissInfo {
+    BatchData* batch_data;                  // the BatchData that we will write to
+    int row;                                // the row in the BatchData that we will write to
+    int item_index;                         // index of the item in the request
+    core::cache_shard_index_t shard_index;  // the shard that this item belongs to
+  };
+
+  // Help
+  // er struct to pass into check_cache().
+  struct CacheLookupResult {
+    // Constructor accepts an array of CacheMissInfo's. The check_cache() method will populate the
+    // first n entries of this array, where n is the number of cache-misses.
+    CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
+
+    int size() const { return non_pending_hits + pending_hits + misses; }
+
+    CacheMissInfo* miss_infos;
+
+    int64_t check_cache_mutex_time_ns = 0;   // time spent in check_cache() acquiring the mutex
+    int64_t check_cache_insert_time_ns = 0;  // time spent in check_cache() inserting into map
+    int64_t check_cache_alloc_time_ns = 0;   // time spent in check_cache() allocating batch data
+    int64_t check_cache_set_time_ns = 0;     // time spent in check_cache() setting miss info
+    int non_pending_hits = 0;                // item in cache and in non-pending state
+    int pending_hits = 0;                    // item in cache and in pending state
+    int misses = 0;                          // item not in cache
+    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
+  };
+
   // In order to alleviate mutex contention, we shard various data structures. We keep S shards,
   // and allocate a given item to shard s iff hash(item) % S == s.
   struct Shard {
-    void init(size_t capacity, NNEvaluationService* service) {
-      eval_cache.set_capacity(capacity);
-      eval_cache.set_eviction_handler([&](NNEvaluation* eval) {
-        service->decrement_ref_count(*this, eval);
-      });
-    }
-
     mutable std::mutex mutex;
     LRUCache eval_cache;
     EvalPool eval_pool;
@@ -311,9 +305,7 @@ class NNEvaluationService
 
   void decrement_ref_count(Shard& shard, NNEvaluation* eval);
 
-  // Returns true if the batch is fully written
-  bool write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
-
+  void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
   void update_perf_stats(const CacheLookupResult& result);
   void update_perf_stats(int num_rows);
 

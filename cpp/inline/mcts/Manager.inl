@@ -316,6 +316,7 @@ bool Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::init_context(core::search_context_id_t i) {
+  LOG_DEBUG("{}({})", __func__, i);
   SearchContext& context = search_contexts_[i];
   context.id = i;
   context.eval_request.init(&context.profiler, i);
