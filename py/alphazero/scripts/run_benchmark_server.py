@@ -1,18 +1,30 @@
 #!/usr/bin/env python3
 
 """
-This script serves as a thin wrapper around a c++ binary. It communicates with the loop controller,
-and upon receiving "start" requests from the loop controller, will start the c++ binary. From there,
-the c++ binary and the loop controller communicate directly via TCP.
+Entry point for launching the benchmark server.
 
-This setup allows us to relaunch the c++ binary process as needed under the hood of a single
-ratings server process. This is useful because it allows us to launch each matchup requested by
-the loop controller as a separate c++ binary process.
+This script connects to the loop controller and participates in the distributed benchmarking
+process. It listens for match requests, runs benchmark matches between committee members and
+new agents, and reports match results back to the controller.
+
+### Relevant Loop Controller Parameters
+
+1. `--benchmark_until_gen_gap`:
+   The minimum number of generations between the latest evaluated generation and the latest
+   trained generation before benchmarking is prioritized.
+
+2. `--n_games_per_benchmark`:
+   The number of games to play in each benchmark match between two agents.
+
+3. `--target_elo_gap`:
+   The maximum allowable Elo gap between two agents in a match (used to determine who needs
+   to play whom for accurate rating computation), and also the **minimum** required Elo gap
+   between committee members to ensure they represent a broad distribution of skill levels.
 """
+
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
-from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
+from alphazero.servers.gaming.benchmark_server import BenchmarkServer, BenchmarkServerParams
 from util.logging_util import LoggingParams
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
@@ -24,7 +36,7 @@ import os
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    ServerParams.add_args(parser, server_name='benchmark-server')
+    BenchmarkServerParams.add_args(parser)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
@@ -34,7 +46,7 @@ def load_args():
 
 def main():
     args = load_args()
-    params = ServerParams.create(args)
+    params = BenchmarkServerParams.create(args)
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
@@ -44,13 +56,7 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    server_config = ServerConfig(
-        server_name='benchmark-server',
-        worker_name='benchmark-worker',
-        server_role=ClientRole.BENCHMARK_SERVER,
-        worker_role=ClientRole.BENCHMARK_WORKER)
-
-    server = ServerBase(params, logging_params, build_params, server_config)
+    server = BenchmarkServer(params, logging_params, build_params)
     server.run()
 
 

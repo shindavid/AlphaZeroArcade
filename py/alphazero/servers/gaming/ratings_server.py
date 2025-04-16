@@ -1,7 +1,9 @@
 from alphazero.logic.agent_types import MCTSAgent
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
-from alphazero.servers.gaming.server_base import ServerBase, ServerParams
+from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
+from util.logging_util import LoggingParams
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 from util import subprocess_util
@@ -16,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RatingsServerParams(ServerParams):
+    SERVER_NAME = 'ratings-server'
     rating_tag: str = ''
 
     @staticmethod
     def add_additional_args(group):
         defaults = RatingsServerParams()
-
         group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
                            help='ratings tag. Loop controller collates ratings by this str. It is '
                            'the responsibility of the user to make sure that the same '
@@ -30,6 +32,15 @@ class RatingsServerParams(ServerParams):
 
 
 class RatingsServer(ServerBase):
+    def __init__(self, params: ServerParams, logging_params: LoggingParams, build_params: BuildParams):
+            server_config = ServerConfig(
+                server_name='ratings-server',
+                worker_name='ratings-worker',
+                server_role=ClientRole.RATINGS_SERVER,
+                worker_role=ClientRole.RATINGS_WORKER)
+            super().__init__(params, logging_params, build_params, server_config)
+
+
     def _send_handshake(self):
         additional_data = {'rating_tag': self._params.rating_tag}
         self._session_data.send_handshake(ClientRole.RATINGS_SERVER,

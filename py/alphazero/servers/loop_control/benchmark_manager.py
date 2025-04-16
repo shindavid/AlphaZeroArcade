@@ -320,14 +320,10 @@ class BenchmarkManager(GamingManagerBase):
                                                     committee=committee)
 
     def _get_exclude_agents(self):
+        # if there is no established committee, we look at all agents to determine the next committee
         if len(self.is_committee) == 0:
             return np.array([], dtype=int)
-
-        exclude_agents = np.where(self.is_committee == False)[0]
-        exclude_agents = np.concatenate([exclude_agents,
-                                         np.arange(len(self.is_committee),
-                                                   len(self._benchmarker.indexed_agents) - len(self.is_committee))])
-        return exclude_agents
+        return np.where(self.is_committee == False)[0]
 
     @property
     def n_games(self):

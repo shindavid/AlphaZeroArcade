@@ -29,6 +29,8 @@ class BenchmarkRatingData:
     ratings: np.ndarray
     committee: BenchmarkCommittee
 
+
+# IAgentSet is a set of indices of agents in arena
 IAgentSet = np.ndarray
 
 

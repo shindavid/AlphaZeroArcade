@@ -32,8 +32,9 @@ class ServerConfig:
     worker_role: ClientRole
 
 
-@dataclass
 class ServerParams(BaseParams):
+    SERVER_NAME: str = 'server'
+
     @classmethod
     def create(cls, args) -> 'ServerParams':
         kwargs = {f.name: getattr(args, f.name) for f in fields(cls)}
@@ -41,7 +42,7 @@ class ServerParams(BaseParams):
 
     @classmethod
     def add_args(cls, parser, omit_base=False, server_name: Optional[str]=None):
-        group_title = f'{server_name if server_name else "Server"} options'
+        group_title = f'{cls.SERVER_NAME} options'
         group = parser.add_argument_group(group_title)
 
         if not omit_base:
