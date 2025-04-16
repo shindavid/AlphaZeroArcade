@@ -2,18 +2,36 @@
 
 namespace core {
 
-inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
+
+inline SearchThreadPerfStats& SearchThreadPerfStats::operator+=(
+  const SearchThreadPerfStats& other) {
   cache_hits += other.cache_hits;
   cache_misses += other.cache_misses;
+  cache_mutex_acquire_time_ns += other.cache_mutex_acquire_time_ns;
+  cache_insert_time_ns += other.cache_insert_time_ns;
+  batch_prepare_time_ns += other.batch_prepare_time_ns;
+  batch_write_time_ns += other.batch_write_time_ns;
+  wait_for_nn_eval_time_ns += other.wait_for_nn_eval_time_ns;
+  return *this;
+}
+
+inline void SearchThreadPerfStats::fill_json(boost::json::object& obj) const {
+  obj["cache_hits"] = cache_hits;
+  obj["cache_misses"] = cache_misses;
+  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns;
+  obj["cache_insert_time_ns"] = cache_insert_time_ns;
+  obj["batch_prepare_time_ns"] = batch_prepare_time_ns;
+  obj["batch_write_time_ns"] = batch_write_time_ns;
+  obj["wait_for_nn_eval_time_ns"] = wait_for_nn_eval_time_ns;
+}
+
+inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
+  const NNEvalLoopPerfStats& other) {
   positions_evaluated += other.positions_evaluated;
   batches_evaluated += other.batches_evaluated;
   full_batches_evaluated += other.full_batches_evaluated;
 
-  check_cache_mutex_time_ns += other.check_cache_mutex_time_ns;
-  check_cache_insert_time_ns += other.check_cache_insert_time_ns;
-  check_cache_alloc_time_ns += other.check_cache_alloc_time_ns;
-  check_cache_set_time_ns += other.check_cache_set_time_ns;
-  batch_ready_wait_time_ns += other.batch_ready_wait_time_ns;
+  wait_for_search_threads_time_ns += other.wait_for_search_threads_time_ns;
   gpu_copy_time_ns += other.gpu_copy_time_ns;
   model_eval_time_ns += other.model_eval_time_ns;
 
@@ -21,24 +39,39 @@ inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
   return *this;
 }
 
-inline boost::json::object PerfStats::to_json() const {
-  boost::json::object obj;
-  obj["cache_hits"] = cache_hits;
-  obj["cache_misses"] = cache_misses;
+inline void NNEvalLoopPerfStats::fill_json(boost::json::object& obj) const {
   obj["positions_evaluated"] = positions_evaluated;
   obj["batches_evaluated"] = batches_evaluated;
   obj["full_batches_evaluated"] = full_batches_evaluated;
 
-  obj["check_cache_mutex_time_ns"] = check_cache_mutex_time_ns;
-  obj["check_cache_insert_time_ns"] = check_cache_insert_time_ns;
-  obj["check_cache_alloc_time_ns"] = check_cache_alloc_time_ns;
-  obj["check_cache_set_time_ns"] = check_cache_set_time_ns;
-  obj["batch_ready_wait_time_ns"] = batch_ready_wait_time_ns;
+  obj["wait_for_search_threads_time_ns"] = wait_for_search_threads_time_ns;
   obj["gpu_copy_time_ns"] = gpu_copy_time_ns;
   obj["model_eval_time_ns"] = model_eval_time_ns;
 
   obj["batch_datas_allocated"] = batch_datas_allocated;
+}
+
+inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
+  search_thread_stats += other.search_thread_stats;
+  nn_eval_loop_stats += other.nn_eval_loop_stats;
+  return *this;
+}
+
+inline boost::json::object PerfStats::to_json() const {
+  boost::json::object obj;
+  search_thread_stats.fill_json(obj);
+  nn_eval_loop_stats.fill_json(obj);
   return obj;
+}
+
+inline void PerfStats::update(const SearchThreadPerfStats& stats, std::mutex& mutex) {
+  std::lock_guard<std::mutex> lock(mutex);
+  search_thread_stats += stats;
+}
+
+inline void PerfStats::update(const NNEvalLoopPerfStats& stats, std::mutex& mutex) {
+  std::lock_guard<std::mutex> lock(mutex);
+  nn_eval_loop_stats += stats;
 }
 
 inline PerfStatsClocker::PerfStatsClocker(int64_t& field) : field_(field) {
