@@ -20,6 +20,22 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ServerAuxBase:
+    """
+    Auxiliary data stored per server connection.
+    """
+    status_cond: threading.Condition = field(default_factory=threading.Condition)
+    status: ServerStatus = ServerStatus.BLOCKED
+
+    @abstractmethod
+    def work_in_progress(self) -> bool:
+        """
+        Returns True if the server is in progress of work.
+        """
+        pass
+
+
+@dataclass
 class WorkerAux:
     """
     Auxiliary data stored per worker connection.
@@ -30,43 +46,39 @@ class WorkerAux:
 
 
 @dataclass
-class ManagerConstants:
-  server_name: str
-  worker_name: str
+class ManagerConfig:
+    server_aux_class: Type
+    worker_aux_class: Type
+    server_name: str
+    worker_name: str
 
 
-class BaseManager:
-    """
-    A separate EvalManager is created for each rating-tag.
-    """
-    ServerAuxClass: Type
-    WorkerAuxClass: Type = WorkerAux
-    MANAGER_CONSTANTS: ManagerConstants
-
-    def __init__(self, controller: LoopController, tag: str=None):
+class GamingManagerBase:
+    def __init__(self, controller: LoopController, manager_config: ManagerConfig, tag: str=None):
         self._tag = tag
         self._controller = controller
+        self._config = manager_config
 
         self._started = False
         self._lock = threading.Lock()
         self._new_work_cond = threading.Condition(self._lock)
 
     def add_server(self, conn: ClientConnection):
-        conn.aux = self.ServerAuxClass()
+        conn.aux = self._config.server_aux_class()
         self._controller.send_handshake_ack(conn)
 
         self._start()
-        logger.info('Starting eval-recv-loop for %s...', conn)
+        logger.info('Starting %s recv-loop for %s...', self._config.server_name, conn)
         self._controller.launch_recv_loop(
-            self._server_msg_handler, conn, self.__class__.MANAGER_CONSTANTS.server_name,
-            disconnect_handler=self._handle_server_disconnect)
+            self._server_msg_handler, conn, self._config.server_name,
+            disconnect_handler=self.handle_server_disconnect)
 
         thread = threading.Thread(target=self._manage_server, args=(conn,),
-                                  daemon=True, name=f'manage-{self.__class__.MANAGER_CONSTANTS.server_name}')
+                                  daemon=True, name=f'manage-{self._config.server_name}')
         thread.start()
 
     def add_worker(self, conn: ClientConnection):
-        conn.aux = WorkerAux()
+        conn.aux = self._config.worker_aux_class()
 
         reply = {
             'type': 'handshake-ack',
@@ -74,14 +86,14 @@ class BaseManager:
         }
         conn.socket.send_json(reply)
         self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, self.__class__.MANAGER_CONSTANTS.worker_name,
+            self._worker_msg_handler, conn, self._config.worker_name,
             disconnect_handler=self._handle_worker_disconnect)
 
     def notify_of_new_model(self):
         """
         Notify manager that there is new work to do.
         """
-        self._set_priority()
+        self.set_priority()
         with self._lock:
             self._new_work_cond.notify_all()
 
@@ -90,7 +102,7 @@ class BaseManager:
             if self._started:
                 return
             self._started = True
-            self._load_past_data()
+            self.load_past_data()
 
     def _manage_server(self, conn: ClientConnection):
         try:
@@ -109,11 +121,11 @@ class BaseManager:
                 if not conn.aux.work_in_progress():
                     self._wait_until_work_exists()
 
-                logger.debug(f"Managing {self.__class__.MANAGER_CONSTANTS.server_name}, priority: {table}")
+                logger.debug(f"Managing {self._config.server_name}, priority: {table}")
                 table.activate(domain)
                 if not table.acquire_lock(domain):
                     break
-                self._send_match_request(conn)
+                self.send_match_request(conn)
 
                 # We do not release the lock here. The lock is released either when a gen is
                 # fully rated, or when the server disconnects.
@@ -122,6 +134,11 @@ class BaseManager:
         except:
             logger.error('Unexpected error managing %s', conn, exc_info=True)
             self._controller.request_shutdown(1)
+
+    def _wait_until_work_exists(self):
+        with self._lock:
+            self._new_work_cond.wait_for(
+                lambda: self.num_evaluated_gens() < self._controller.latest_gen())
 
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
         """
@@ -139,7 +156,7 @@ class BaseManager:
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
         logger.debug('%s received json message: %s',
-                     self.__class__.MANAGER_CONSTANTS.server_name, msg)
+                     self._config.server_name, msg)
 
         if msg_type == 'ready':
             self._set_ready(conn)
@@ -148,12 +165,12 @@ class BaseManager:
         elif msg_type == 'log-sync-stop':
             self._controller.stop_log_sync(conn, msg['log_filename'])
         elif msg_type == 'match-result':
-            self._handle_match_result(msg, conn)
+            self.handle_match_result(msg, conn)
         elif msg_type == 'file-request':
             self._handle_file_request(conn, msg['files'])
         else:
             logger.warning('%s: unknown message type: %s',
-                           self.__class__.MANAGER_CONSTANTS.server_name, msg)
+                           self._config.server_name, msg)
         return False
 
     def _set_ready(self, conn: ClientConnection):
@@ -164,7 +181,7 @@ class BaseManager:
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        logger.debug('eval-worker received json message: %s', msg)
+        logger.debug('%s received json message: %s', self._config.worker_name, msg)
 
         if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
@@ -175,13 +192,13 @@ class BaseManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warning('eval-worker: unknown message type: %s', msg)
+            logger.warning('%s: unknown message type: %s', self._config.worker_name, msg)
         return False
 
     def _handle_worker_ready(self, conn: ClientConnection):
         thread = threading.Thread(target=self._manage_worker, args=(conn,),
                                   daemon=True,
-                                  name=f'manage-{self.__class__.MANAGER_CONSTANTS.worker_name}')
+                                  name=f'manage-{self._config.worker_name}')
         thread.start()
 
     def _manage_worker(self, conn: ClientConnection):
@@ -207,7 +224,7 @@ class BaseManager:
             self._controller.request_shutdown(1)
 
     def _handle_worker_disconnect(self, conn: ClientConnection):
-        aux: BaseManager.WorkerAux = conn.aux
+        aux: WorkerAux = conn.aux
         with aux.cond:
             aux.pending_pause_ack = False
             aux.pending_unpause_ack = False
@@ -221,7 +238,7 @@ class BaseManager:
     def _pause(self, conn: ClientConnection):
         logger.debug('Pausing %s...', conn)
 
-        aux: BaseManager.WorkerAux = conn.aux
+        aux: WorkerAux = conn.aux
         aux.pending_pause_ack = True
 
         conn.socket.send_json({ 'type': 'pause' })
@@ -234,7 +251,7 @@ class BaseManager:
     def _unpause(self, conn: ClientConnection):
         logger.debug('Unpausing %s...', conn)
 
-        aux: BaseManager.WorkerAux = conn.aux
+        aux: WorkerAux = conn.aux
         aux.pending_unpause_ack = True
 
         conn.socket.send_json({ 'type': 'unpause' })
@@ -245,13 +262,13 @@ class BaseManager:
         logger.debug('Unpause of %s complete!', conn)
 
     def _handle_pause_ack(self, conn: ClientConnection):
-        aux: BaseManager.WorkerAux = conn.aux
+        aux: WorkerAux = conn.aux
         with aux.cond:
             aux.pending_pause_ack = False
             aux.cond.notify_all()
 
     def _handle_unpause_ack(self, conn: ClientConnection):
-        aux: BaseManager.WorkerAux = conn.aux
+        aux: WorkerAux = conn.aux
         with aux.cond:
             aux.pending_unpause_ack = False
             aux.cond.notify_all()
@@ -260,25 +277,25 @@ class BaseManager:
         self._controller.handle_file_request(conn, files)
 
     @abstractmethod
-    def _set_priority(self):
-        raise NotImplementedError('Must be implemented in subclass')
+    def set_priority(self):
+        pass
 
     @abstractmethod
-    def _load_past_data(self):
-        raise NotImplementedError('Must be implemented in subclass')
+    def load_past_data(self):
+        pass
 
     @abstractmethod
-    def _handle_server_disconnect(self, conn: ClientConnection):
-        raise NotImplementedError('Must be implemented in subclass')
+    def num_evaluated_gens(self) -> int:
+        pass
 
     @abstractmethod
-    def _wait_until_work_exists(self):
-        raise NotImplementedError('Must be implemented in subclass')
+    def handle_server_disconnect(self, conn: ClientConnection):
+        pass
 
     @abstractmethod
-    def _send_match_request(self, conn: ClientConnection):
-        raise NotImplementedError('Must be implemented in subclass')
+    def send_match_request(self, conn: ClientConnection):
+        pass
 
     @abstractmethod
-    def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
-        raise NotImplementedError('Must be implemented in subclass')
+    def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
+        pass

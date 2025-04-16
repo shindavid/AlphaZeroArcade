@@ -41,15 +41,15 @@ class Benchmarker:
         self._arena = Arena()
 
         if db_filename is not None:
-            self._db = RatingDB(db_filename)
+            self.db = RatingDB(db_filename)
         else:
-            self._db = RatingDB(self._organizer.benchmark_db_filename)
+            self.db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
         self.refresh_ratings()
 
     def load_from_db(self):
-        self._arena.load_agents_from_db(self._db, role=AgentRole.BENCHMARK)
-        self._arena.load_matches_from_db(self._db, type=MatchType.BENCHMARK)
+        self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)
+        self._arena.load_matches_from_db(self.db, type=MatchType.BENCHMARK)
 
     def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
         """
@@ -66,11 +66,11 @@ class Benchmarker:
             matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
             if matches is None:
                 break
-            self._arena.play_matches(matches, self._organizer.game, db=self._db)
+            self._arena.play_matches(matches, self._organizer.game, db=self.db)
             self._arena.refresh_ratings()
 
         committee: BenchmarkCommittee = self.select_committee(target_elo_gap)
-        self._db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
+        self.db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games,
                          exclude_agents: IAgentSet) -> List[Match]:
@@ -89,8 +89,8 @@ class Benchmarker:
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
             last_gen_agent = self.build_agent(last_gen, n_iters)
-            self._arena._add_agent(gen0_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
-            self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._db)
+            self._arena._add_agent(gen0_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
+            self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
         incomplete_gen = self.incomplete_gen(exclude_agents=exclude_agents)
@@ -106,7 +106,7 @@ class Benchmarker:
 
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
-                                             db=self._db)
+                                             db=self.db)
         matches = self.get_unplayed_matches(next_iagent, n_games, exclude_agents=exclude_agents)
         return matches
 
@@ -230,7 +230,7 @@ class Benchmarker:
         return copy.deepcopy(self._arena)
 
     def read_ratings_from_db(self) -> RatingData:
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.BENCHMARK)
+        rating_data: RatingData = self._arena.load_ratings_from_db(self.db, AgentRole.BENCHMARK)
         ratings = rating_data.ratings
         iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         committee = rating_data.committee

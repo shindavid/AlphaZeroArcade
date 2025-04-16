@@ -3,17 +3,15 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation, RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
-from alphazero.servers.loop_control.base_manager import BaseManager, ManagerConstants
-from util.py_util import find_largest_gap, sha256sum
-from util.socket_util import JsonDict, SocketSendException
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
+from util.py_util import find_largest_gap
+from util.socket_util import JsonDict
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
-import threading
-from typing import List, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -23,38 +21,32 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ServerAux:
+class RatingsServerAux(ServerAuxBase):
     """
     Auxiliary data stored per server connection.
     """
-    status_cond: threading.Condition = field(default_factory=threading.Condition)
-    status: ServerStatus = ServerStatus.BLOCKED
     gen: Optional[Generation] = None
 
     def work_in_progress(self) -> bool:
         return self.gen is not None
 
-class RatingsManager(BaseManager):
+
+class RatingsManager(GamingManagerBase):
     """
     A separate RatingsManager is created for each rating-tag.
     """
-    MANAGER_CONSTANTS = ManagerConstants(
-        server_name='ratings-server',
-        worker_name='ratings-worker')
-
-    ServerAuxClass = ServerAux
-    def __init__(self, controller: LoopController, tag: RatingTag):
-        super().__init__(controller, tag)
+    def __init__(self, controller: LoopController, manager_config: ManagerConfig, tag: RatingTag):
+        super().__init__(controller, manager_config, tag=tag)
         self._min_ref_strength = controller.game_spec.reference_player_family.min_strength
         self._max_ref_strength = controller.game_spec.reference_player_family.max_strength
         self._rating_data_dict: RatingDataDict = {}
 
-    def _set_priority(self):
+    def set_priority(self):
         dict_len = len(self._rating_data_dict)
         rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
         self._controller.set_priority(dict_len, rating_in_progress)
 
-    def _load_past_data(self):
+    def load_past_data(self):
         logger.info('Loading past ratings data...')
         conn = self._controller.ratings_db_conn_pool.get_connection()
         c = conn.cursor()
@@ -75,9 +67,12 @@ class RatingsManager(BaseManager):
             if data.rating is None:
                 data.est_rating = self._estimate_rating(gen)
 
-        self._set_priority()
+        self.set_priority()
 
-    def _handle_server_disconnect(self, conn: ClientConnection):
+    def num_evaluated_gens(self):
+        return len(self._rating_data_dict)
+
+    def handle_server_disconnect(self, conn: ClientConnection):
         aux = conn.aux
         gen = aux.gen
         aux.gen = None
@@ -94,11 +89,6 @@ class RatingsManager(BaseManager):
             aux.status = ServerStatus.DISCONNECTED
             aux.cond.notify_all()
 
-    def _wait_until_work_exists(self):
-        with self._lock:
-            self._new_work_cond.wait_for(
-                lambda: len(self._rating_data_dict) < self._controller.latest_gen())
-
     def _get_rating_data(self, conn: ClientConnection, gen: Generation) -> RatingData:
         with self._lock:
             rating_data = self._rating_data_dict.get(gen, None)
@@ -106,12 +96,12 @@ class RatingsManager(BaseManager):
                 rating_data = RatingData(gen, self._min_ref_strength, self._max_ref_strength)
                 rating_data.est_rating = self._estimate_rating(gen)
                 self._rating_data_dict[gen] = rating_data
-                self._set_priority()
+                self.set_priority()
 
             rating_data.owner = conn.client_id
             return rating_data
 
-    def _send_match_request(self, conn: ClientConnection):
+    def send_match_request(self, conn: ClientConnection):
         aux: RatingsManager.ServerAux = conn.aux
         gen = aux.gen
         if gen is None:
@@ -161,7 +151,7 @@ class RatingsManager(BaseManager):
         }
         conn.socket.send_json(data)
 
-    def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
+    def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         aux: RatingsManager.ServerAux = conn.aux
 
         mcts_gen = msg['mcts_gen']

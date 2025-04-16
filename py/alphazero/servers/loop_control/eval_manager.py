@@ -3,14 +3,14 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole, IndexedAgent
-from alphazero.logic.custom_types import ClientConnection, ClientId, EvalTag, FileToTransfer, \
+from alphazero.logic.custom_types import ClientConnection, ClientId, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.servers.loop_control.base_manager import BaseManager, ManagerConstants
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
 from util.socket_util import JsonDict
 
 import numpy as np
@@ -58,12 +58,10 @@ class EvalStatus:
 
 
 @dataclass
-class ServerAux:
+class EvalServerAux(ServerAuxBase):
     """
     Auxiliary data stored per server connection.
     """
-    status_cond: threading.Condition = field(default_factory=threading.Condition)
-    status: ServerStatus = ServerStatus.BLOCKED
     needs_new_opponents: bool = True
     estimated_rating: Optional[float] = None
     ix: Optional[int] = None  # test agent index
@@ -71,28 +69,21 @@ class ServerAux:
     def work_in_progress(self) -> bool:
         return self.ix is not None
 
-class EvalManager(BaseManager):
+class EvalManager(GamingManagerBase):
     """
     A separate EvalManager is created for each rating-tag.
     """
-
-    ServerAuxClass = ServerAux
-
-    MANAGER_CONSTANTS = ManagerConstants(
-        server_name='eval-server',
-        worker_name='eval-worker')
-
-    def __init__(self, controller: LoopController, tag: EvalTag):
-        super().__init__(controller, tag)
+    def __init__(self, controller: LoopController, manager_config: ManagerConfig):
+        super().__init__(controller, manager_config)
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
-    def _set_priority(self):
+    def set_priority(self):
         dict_len = len(self._eval_status_dict)
         rating_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
         self._controller.set_priority(dict_len, rating_in_progress)
 
-    def _load_past_data(self):
+    def load_past_data(self):
         logger.info('Loading past ratings data...')
         rating_data = self._evaluator.read_ratings_from_db()
         evaluated_ixs = [iagent.index for iagent in rating_data.evaluated_iagents]
@@ -105,9 +96,12 @@ class EvalManager(BaseManager):
             else:
                 self._eval_status_dict[test_ix].status = EvalRequestStatus.COMPLETE
 
-        self._set_priority()
+        self.set_priority()
 
-    def _handle_server_disconnect(self, conn: ClientConnection):
+    def num_evaluated_gens(self):
+        return len(self._eval_status_dict)
+
+    def handle_server_disconnect(self, conn: ClientConnection):
         logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
         ix = conn.aux.ix
         if ix is not None:
@@ -124,20 +118,14 @@ class EvalManager(BaseManager):
             conn.aux.status= ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
-    def _wait_until_work_exists(self):
-        with self._lock:
-            self._new_work_cond.wait_for(
-                lambda: len(self._eval_status_dict) < self._controller.latest_gen())
-
-    def _send_match_request(self, conn: ClientConnection):
-        #TODO: remove this assert and implement mechasnim to request for binary, extra dependencies or model files
+    def send_match_request(self, conn: ClientConnection):
         assert conn.is_on_localhost()
         ix = conn.aux.ix
         if ix is None:
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
-            test_iagent = self._evaluator.add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator._db)
+            test_iagent = self._evaluator.add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator.db)
             conn.aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
@@ -147,7 +135,7 @@ class EvalManager(BaseManager):
                     self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
                                                                            status=EvalRequestStatus.REQUESTED)
             conn.aux.needs_new_opponents = True
-            self._set_priority()
+            self.set_priority()
         else:
             test_iagent = self._evaluator.indexed_agents[ix]
 
@@ -298,13 +286,13 @@ class EvalManager(BaseManager):
                 match_status_dict[ix] = MatchStatus(gen, int(n_games), MatchRequestStatus.COMPLETE)
         return match_status_dict
 
-    def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
+    def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         ix1 = msg['ix1']
         ix2 = msg['ix2']
         counts = WinLossDrawCounts.from_json(msg['record'])
         logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
-        with self._evaluator._db.db_lock:
-            self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator._db)
+        with self._evaluator.db.db_lock:
+            self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator.db)
         self._evaluator.refresh_ratings()
         new_rating = self._evaluator.arena_ratings[ix1]
         old_rating = conn.aux.estimated_rating
@@ -329,8 +317,8 @@ class EvalManager(BaseManager):
 
             test_ixs, interpolated_ratings = self._evaluator.interpolate_ratings()
             test_iagents = [self._evaluator.indexed_agents[ix] for ix in test_ixs]
-            with self._evaluator._db.db_lock:
-                self._evaluator._db.commit_ratings(test_iagents, interpolated_ratings)
+            with self._evaluator.db.db_lock:
+                self._evaluator.db.commit_ratings(test_iagents, interpolated_ratings)
             conn.aux.estimated_rating = None
             conn.aux.ix = None
             logger.debug('///Finished evaluating gen %s, rating: %s',
@@ -339,7 +327,7 @@ class EvalManager(BaseManager):
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
-        self._set_priority()
+        self.set_priority()
 
     @property
     def n_games(self):
