@@ -3,7 +3,6 @@
 #include <boost/json.hpp>
 
 #include <cstdint>
-#include <mutex>
 
 /*
  * Each mcts::NNEvaluationService keeps track of its own performance statistics, in the form of
@@ -46,10 +45,6 @@ class PerfStatsClocker {
   // Use this to simultaneously start a new PerfStatsClocker and stop a previous one.
   PerfStatsClocker(PerfStatsClocker& previous, int64_t& field);
 
-  // Optionally pass a mutex to protect the field += update to either of the constructors.
-  PerfStatsClocker(int64_t& field, std::mutex& perf_stats_mutex);
-  PerfStatsClocker(PerfStatsClocker& previous, int64_t& field, std::mutex& perf_stats_mutex);
-
   ~PerfStatsClocker() { stop(); }
 
   // Call this to manually stop the timer, without waiting for the destructor to do it.
@@ -57,8 +52,6 @@ class PerfStatsClocker {
 
  private:
   int64_t& field_;
-  std::mutex* perf_stats_mutex_ = nullptr;
-
   std::chrono::steady_clock::time_point start_time_;
   std::chrono::steady_clock::time_point stop_time_;
   bool stopped_ = false;
