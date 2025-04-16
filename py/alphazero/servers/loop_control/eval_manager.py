@@ -340,3 +340,4 @@ class EvalManager(GamingManagerBase):
     @property
     def error_threshold(self):
         return self._controller.params.eval_error_threshold
+

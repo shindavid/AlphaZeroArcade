@@ -121,3 +121,4 @@ class RatingsServer(ServerBase):
             strength_param: strength,
         }
         return make_args_str(player_args)
+

@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, ClientId, Generation, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, ServerStatus
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 import logging
 import threading
-from typing import Dict, List, Optional, Type, TYPE_CHECKING
+from typing import List, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -299,3 +298,4 @@ class GamingManagerBase:
     @abstractmethod
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         pass
+

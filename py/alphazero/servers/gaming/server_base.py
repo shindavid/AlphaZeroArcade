@@ -13,7 +13,6 @@ from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 
-from abc import abstractmethod
 from dataclasses import dataclass, fields
 import os
 import logging
@@ -260,3 +259,4 @@ class ServerBase:
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
         return record.get(0)
+

@@ -246,3 +246,4 @@ class Benchmarker:
     @property
     def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
         return self._arena.agent_lookup
+

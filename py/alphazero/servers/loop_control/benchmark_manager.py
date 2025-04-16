@@ -66,6 +66,41 @@ class BenchmarkServerAux(ServerAuxBase):
 
 
 class BenchmarkManager(GamingManagerBase):
+    """
+    BenchmarkManager is responsible for managing the lifecycle of the benchmarking process.
+
+    ### Benchmark Cadence & Priority
+
+    Benchmarking is usually scheduled at a fixed cadence (e.g., every 25 generations), and runs when the
+    rating domain (used by benchmarking) is elevated above other domains. However, it can also run earlier
+    if other domains lower their priority below the rating domain’s default.
+
+    ### What a Benchmark Is
+
+    A benchmark is a curated committee of agents whose Elo ratings differ by at least a predefined threshold.
+    This ensures the committee spans a representative spectrum of skill levels. Committee selection is
+    handled through the benchmarking process, using match results and Elo gap analysis.
+
+    ### Progressive Benchmarking
+
+    Benchmarking is performed progressively. For example:
+
+    - When benchmarking generations 0 to 26, the system may select a set of 8 agents to form a committee.
+    - At a later generation (e.g., gen-48), it benchmarks gen-48 against the committee.
+    - It then introduces new agents that help close the largest Elo gaps. These agents play matches against:
+        - The committee
+        - Gen-48 and any agents previously introduced (e.g., gen-37 if added earlier)
+
+    This process continues until all Elo gaps fall below the target threshold or are indivisible (e.g., gen-0 and gen-1
+    might still have a large gap that cannot be split further).
+
+    ### Robustness & Continuity
+
+    BenchmarkManager can recover from interruptions. If a benchmark is incomplete, it can resume where it left off,
+    skipping redundant matches and continuing until the benchmark is complete.
+
+    """
+
     def __init__(self, controller: LoopController, manager_config: ManagerConfig):
         super().__init__(controller, manager_config)
         self._benchmarker = Benchmarker(self._controller.organizer)
@@ -309,3 +344,4 @@ class BenchmarkManager(GamingManagerBase):
     @property
     def benchmark_until_gen_gap(self):
         return self._controller.params.benchmark_until_gen_gap
+
