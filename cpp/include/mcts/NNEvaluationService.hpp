@@ -254,17 +254,10 @@ class NNEvaluationService
     // first n entries of this array, where n is the number of cache-misses.
     CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
 
-    int size() const { return non_pending_hits + pending_hits + misses; }
-
     CacheMissInfo* miss_infos;
 
-    int64_t check_cache_mutex_time_ns = 0;    // time spent in check_cache() acquiring the mutex
-    int64_t check_cache_insert_time_ns = 0;   // time spent in check_cache() inserting into map
-    int64_t check_cache_alloc_time_ns = 0;    // time spent in check_cache() allocating batch data
-    int64_t check_cache_set_time_ns = 0;      // time spent in check_cache() setting miss info
-    int non_pending_hits = 0;                 // item in cache and in non-pending state
-    int pending_hits = 0;                     // item in cache and in pending state
-    int misses = 0;                           // item not in cache
+    core::SearchThreadPerfStats stats;
+    bool can_continue = true;
     core::nn_evaluation_sequence_id_t max_sequence_id = 0;
   };
 
@@ -314,15 +307,13 @@ class NNEvaluationService
   void write_miss_infos(NNEvaluationRequest&, CacheLookupResult&, int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
-  void update_perf_stats(const CacheLookupResult& result);
-  void update_perf_stats(int num_rows);
 
   void loop();
   void set_deadline();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
-  void wait_until_batch_ready();
-  void batch_evaluate();
+  void wait_until_batch_ready(core::NNEvalLoopPerfStats&);
+  void batch_evaluate(core::NNEvalLoopPerfStats&);
 
   void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
   void pause() override;

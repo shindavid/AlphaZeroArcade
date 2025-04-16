@@ -3,6 +3,7 @@
 #include <boost/json.hpp>
 
 #include <cstdint>
+#include <mutex>
 
 /*
  * Each mcts::NNEvaluationService keeps track of its own performance statistics, in the form of
@@ -11,26 +12,45 @@
  */
 namespace core {
 
-struct PerfStats {
-  PerfStats& operator+=(const PerfStats& other);
-  boost::json::object to_json() const;
-  bool empty() const { return cache_hits + cache_misses == 0; }
+// Component of PerfStats that tracks performance from the perspective of the search threads.
+struct SearchThreadPerfStats {
+  SearchThreadPerfStats& operator+=(const SearchThreadPerfStats& other);
+  void fill_json(boost::json::object& obj) const;
 
   int64_t cache_hits = 0;
   int64_t cache_misses = 0;
+
+  int64_t cache_mutex_acquire_time_ns = 0;
+  int64_t cache_insert_time_ns = 0;
+  int64_t batch_prepare_time_ns = 0;
+  int64_t batch_write_time_ns = 0;
+  int64_t wait_for_nn_eval_time_ns = 0;
+};
+
+// Component of PerfStats that tracks performance from the perspective of the nn eval service loop.
+struct NNEvalLoopPerfStats {
+  NNEvalLoopPerfStats& operator+=(const NNEvalLoopPerfStats& other);
+  void fill_json(boost::json::object& obj) const;
+
   int64_t positions_evaluated = 0;
   int64_t batches_evaluated = 0;
   int64_t full_batches_evaluated = 0;
 
-  int64_t check_cache_mutex_time_ns = 0;
-  int64_t check_cache_insert_time_ns = 0;
-  int64_t check_cache_alloc_time_ns = 0;
-  int64_t check_cache_set_time_ns = 0;
-  int64_t batch_ready_wait_time_ns = 0;
+  int64_t wait_for_search_threads_time_ns = 0;
   int64_t gpu_copy_time_ns = 0;
   int64_t model_eval_time_ns = 0;
 
   int batch_datas_allocated = 0;
+};
+
+struct PerfStats {
+  PerfStats& operator+=(const PerfStats& other);
+  boost::json::object to_json() const;
+  void update(const SearchThreadPerfStats&, std::mutex& mutex);
+  void update(const NNEvalLoopPerfStats&, std::mutex& mutex);
+
+  SearchThreadPerfStats search_thread_stats;
+  NNEvalLoopPerfStats nn_eval_loop_stats;
 };
 
 // PerfStatsClocker can be used to measure the time taken for a specific operation. Its constructor
