@@ -145,7 +145,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
 
   const SearchResults* mcts_results = get_manager()->search();
   if (!mcts_results) {
-    return ActionResponse::make_yield();
+    return ActionResponse::yield();
   }
   return get_action_response_helper(mcts_results, request.valid_actions);
 }

@@ -3,9 +3,11 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/HibernationManager.hpp>
+#include <core/HibernationNotifier.hpp>
+#include <core/TrainingDataWriter.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <core/TrainingDataWriter.hpp>
 #include <third_party/ProgressBar.hpp>
 
 #include <array>
@@ -131,6 +133,7 @@ class GameServer {
     void step();
     bool start_game();
     bool game_started() const { return game_started_; }
+    yield_instruction_t yield_state() const { return yield_state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -141,6 +144,7 @@ class GameServer {
     SharedData& shared_data_;
     const game_slot_index_t id_;
     player_instantiation_array_t instantiations_;
+    HibernationNotifier hibernation_notifier_;
 
     // Initialized at the start of the game
     game_id_t game_id_;
@@ -157,7 +161,7 @@ class GameServer {
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
-    bool mid_yield_;
+    yield_instruction_t yield_state_;
   };
 
   /*
@@ -173,6 +177,7 @@ class GameServer {
     void init_slots();
     void init_progress_bar();
     void init_random_seat_indices();
+    void run_hibernation_manager();
 
     int num_slots() const { return game_slots_.size(); }
     GameSlot* next();  // returns nullptr if ready to shut down
@@ -195,6 +200,7 @@ class GameServer {
     int num_registrations() const { return registrations_.size(); }
     registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
+    HibernationManager* hibernation_manager() { return &hibernation_manager_; }
 
    private:
     const Params params_;
@@ -222,6 +228,8 @@ class GameServer {
     // game_slots_.size(). When a shutdown commences, queue_ will whittle down to zero.
     std::queue<GameSlot*> queue_;
     int pending_queue_count_ = 0;
+
+    HibernationManager hibernation_manager_;
 
     results_array_t results_array_;  // indexed by player_id
   };
@@ -268,7 +276,6 @@ class GameServer {
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
   void run();
-  void shutdown();
 
  private:
   SharedData shared_data_;
