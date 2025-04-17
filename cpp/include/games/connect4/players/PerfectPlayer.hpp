@@ -32,21 +32,26 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
      * random choice among the slowest losses, to make the agent as strong as possible.
      */
     int strength = 21;
+
+    // The number of oracle processes to use.
+    int num_oracle_procs = 8;
+
     bool verbose = false;
 
     auto make_options_description();
   };
 
-  PerfectPlayer(const Params&);
+  PerfectPlayer(PerfectOraclePool* oracle_pool, const Params&);
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
+  PerfectOraclePool* const oracle_pool_;
   const Params params_;
 
-  PerfectOracle* oracle_;
+  PerfectOracle* oracle_ = nullptr;  // temporary oracle obtained from pool
   PerfectOracle::MoveHistory move_history_;
 };
 

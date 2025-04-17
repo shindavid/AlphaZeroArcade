@@ -11,7 +11,22 @@
 namespace c4 {
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
-  auto result = oracle_->query(move_history_);
+  PerfectOracle::QueryResult result;
+  if (oracle_ == nullptr) {
+    oracle_ = oracle_pool_->get_oracle();
+    if (oracle_) {
+      oracle_->async_query(move_history_);
+    }
+    return ActionResponse::make_yield();
+  } else {
+    if (!oracle_->async_load(result)) {
+      // oracle_ is still working on it
+      return ActionResponse::make_yield();
+    }
+  }
+
+  oracle_pool_->release_oracle(oracle_);
+  oracle_ = nullptr;
 
   ActionResponse response;
 

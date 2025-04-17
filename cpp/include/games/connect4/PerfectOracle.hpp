@@ -5,12 +5,17 @@
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/Asserts.hpp>
 
+#include <boost/asio.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
 
+#include <condition_variable>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace c4 {
@@ -20,9 +25,6 @@ class PerfectOracle {
   using ActionMask = Game::Types::ActionMask;
   using State = Game::State;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
-
-  static constexpr int kNumClientsPerOracle = 16;
-  using oracle_vec_t = std::vector<PerfectOracle*>;
 
   class MoveHistory {
    public:
@@ -35,9 +37,9 @@ class PerfectOracle {
     int length() const { return char_pointer_ - chars_; }
 
    private:
-    void write(boost::process::opstream& in);
+    void write(boost::process::opstream& in) const;
 
-    char chars_[kMaxMovesPerGame + 1];
+    mutable char chars_[kMaxMovesPerGame + 1];
     char* char_pointer_;
     friend class PerfectOracle;
   };
@@ -66,22 +68,65 @@ class PerfectOracle {
     std::string get_overlay() const;
   };
 
-  static PerfectOracle* get_instance();
+  // Query the oracle. Blocks until the oracle has finished processing the query.
+  QueryResult query(const MoveHistory& history);
 
-  QueryResult query(MoveHistory& history);
+  // Asynchronous call to the oracle. The oracle will not block the calling thread. This allows
+  // the caller to continue doing other work while the oracle is processing the query.
+  // To get the results, call async_load() later.
+  void async_query(const MoveHistory& history);
 
- private:
+  // Partner function to async_query(). Returns true and writes to result if the oracle has
+  // finished processing the previous async_query() call. Otherwise, returns false.
+  //
+  // TODO: in certain contexts, we might thrash calling this repeatedly. We need to extend the
+  // yield/continue framework to add a "hibernate" type, with corresponding changes to the
+  // GameServer logic, in order to avoid this.
+  bool async_load(QueryResult& result);
+
   PerfectOracle();
   ~PerfectOracle();
 
-  static oracle_vec_t oracles_;
-  static std::mutex static_mutex_;
+ private:
+  void start_async_read();
+
+  friend class PerfectOraclePool;
+
+  boost::asio::io_context io_;
+  boost::process::ipstream out_pipe_;
+  boost::process::opstream in_pipe_;
+  boost::process::child child_;
+  boost::asio::posix::stream_descriptor out_desc_;
+  boost::asio::streambuf buffer_;
+  std::string output_line_;
+  std::thread io_thread_;
 
   std::mutex mutex_;
-  boost::process::ipstream out_;
-  boost::process::opstream in_;
-  boost::process::child* proc_ = nullptr;
-  int client_count_ = 0;
+  std::condition_variable cv_;
+  int history_length_ = 0;
+  bool output_line_ready_ = false;
+};
+
+class PerfectOraclePool {
+ public:
+  // capacity = max number of oracles instances to create
+  PerfectOraclePool(int capacity = 16) { set_capacity(capacity); }
+
+  void set_capacity(int capacity);
+
+  // If there are fewer than capacity_ busy oracles, then returns a free oracle (creating a new one
+  // if necessary). Otherwise, returns nullptr.
+  PerfectOracle* get_oracle();
+
+  void release_oracle(PerfectOracle* oracle);
+
+ private:
+  using oracle_vec_t = std::vector<PerfectOracle*>;
+
+  oracle_vec_t free_oracles_;
+  mutable std::mutex mutex_;
+  int capacity_;
+  int count_ = 0;
 };
 
 }  // namespace c4
