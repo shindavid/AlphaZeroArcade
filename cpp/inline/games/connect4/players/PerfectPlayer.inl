@@ -6,8 +6,6 @@
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
 
-#include <boost/dll.hpp>
-
 namespace c4 {
 
 inline auto PerfectPlayer::Params::make_options_description() {
