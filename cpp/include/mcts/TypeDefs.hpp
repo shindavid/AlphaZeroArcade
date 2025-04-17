@@ -1,14 +1,14 @@
 #pragma once
 
+#include <mcts/Constants.hpp>
+#include <util/Profiler.hpp>
+
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <vector>
-
-#include <mcts/Constants.hpp>
-#include <util/Profiler.hpp>
 
 namespace mcts {
 
