@@ -29,7 +29,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 
   const SearchResults* mcts_results = this->get_manager()->search();
   if (!mcts_results) {
-    return ActionResponse::make_yield();
+    return ActionResponse::yield();
   }
 
   ActionResponse response =

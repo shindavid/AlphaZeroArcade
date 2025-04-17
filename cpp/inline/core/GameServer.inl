@@ -7,6 +7,7 @@
 
 #include <boost/program_options.hpp>
 
+#include <core/BasicTypes.hpp>
 #include <core/Packet.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/BitSet.hpp>
@@ -67,6 +68,8 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
+  hibernation_manager_.shut_down();
+
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
@@ -126,6 +129,19 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
   util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::run_hibernation_manager() {
+  hibernation_manager_.run([this](game_slot_index_t slot_id) {
+    std::unique_lock lock(mutex_);
+    GameSlot* slot = game_slots_[slot_id];
+    pending_queue_count_--;
+    queue_.push(slot);
+    lock.unlock();
+
+    cv_.notify_all();
+  });
 }
 
 template <concepts::Game Game>
@@ -281,7 +297,9 @@ GameServer<Game>::SharedData::generate_player_order(
 
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
-    : shared_data_(shared_data), id_(id) {
+    : shared_data_(shared_data),
+      id_(id),
+      hibernation_notifier_(shared_data.hibernation_manager(), id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -312,7 +330,7 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::step() {
   bool hit_not_chance = false;
   while (true) {
-    if (!mid_yield_) {
+    if (yield_state_ == kContinue) {
       action_mode_ = Rules::get_action_mode(state_history_.current());
     }
     noisy_mode_ = move_number_ < num_noisy_starting_moves_;
@@ -327,7 +345,7 @@ void GameServer<Game>::GameSlot::step() {
       hit_not_chance = true;
     }
 
-    if (mid_yield_) return;
+    if (yield_state_ != kContinue) return;
   }
 }
 
@@ -369,15 +387,17 @@ bool GameServer<Game>::GameSlot::step_chance() {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance() {
-  move_number_ += !mid_yield_;
+  move_number_ += yield_state_ == kContinue;
 
   active_seat_ = Rules::get_current_player(state_history_.current());
   Player* player = players_[active_seat_];
   auto valid_actions = Rules::get_legal_moves(state_history_);
-  ActionRequest request(state_history_.current(), valid_actions, noisy_mode_);
+  ActionRequest request(state_history_.current(), valid_actions);
+  request.play_noisily = noisy_mode_;
+  request.hibernation_notifier = &hibernation_notifier_;
   ActionResponse response = player->get_action_response(request);
-  mid_yield_ = response.yield;
-  if (mid_yield_) {
+  yield_state_ = response.yield_instruction;
+  if (yield_state_ != kContinue) {
     return false;
   }
 
@@ -482,7 +502,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   action_mode_ = -1;
   active_seat_ = -1;
   noisy_mode_ = false;
-  mid_yield_ = false;
+  yield_state_ = kContinue;
 
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state_history_.current(), -1, &player_names_);
@@ -526,7 +546,9 @@ void GameServer<Game>::GameThread::run() {
         continue;
       }
     }
-    shared_data_.enqueue(slot);
+    if (slot->yield_state() != kHibernate) {
+      shared_data_.enqueue(slot);
+    }
   }
 }
 
@@ -612,6 +634,7 @@ void GameServer<Game>::run() {
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   shared_data_.init_slots();
+  shared_data_.run_hibernation_manager();
 
   int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
   for (int t = 0; t < num_threads; ++t) {
