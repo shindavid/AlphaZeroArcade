@@ -94,9 +94,6 @@ class IndexedAgent:
     db_id: Optional[AgentDBId] = None
 
 
-BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
-
-
 class MatchType(Enum):
     BENCHMARK = 'benchmark'
     EVALUATE = 'evaluate'

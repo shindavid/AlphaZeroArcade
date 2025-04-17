@@ -9,8 +9,8 @@ class BenchmarkServerParams(ServerParams):
 class BenchmarkServer(ServerBase):
     def __init__(self, params: ServerParams, logging_params: LoggingParams, build_params: BuildParams):
         server_config = ServerConfig(
-        server_name='benchmark-server',
-        worker_name='benchmark-worker',
-        server_role=ClientRole.BENCHMARK_SERVER,
-        worker_role=ClientRole.BENCHMARK_WORKER)
+            server_name='benchmark-server',
+            worker_name='benchmark-worker',
+            server_role=ClientRole.BENCHMARK_SERVER,
+            worker_role=ClientRole.BENCHMARK_WORKER)
         super().__init__(params, logging_params, build_params, server_config)

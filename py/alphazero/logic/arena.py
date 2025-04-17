@@ -1,7 +1,8 @@
-from alphazero.logic.agent_types import Agent, IndexedAgent, BenchmarkCommittee, AgentDBId, AgentRole
+from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole
 from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import RatingDB, DBAgentRating
+from util.index_set import IndexSet
 
 import numpy as np
 
@@ -13,7 +14,7 @@ from typing import Dict, List, Optional
 class RatingData:
     agent_ids: np.ndarray
     ratings: np.ndarray
-    committee: BenchmarkCommittee
+    committee: IndexSet
 
 
 class Arena:
@@ -107,7 +108,7 @@ class Arena:
             committee.append(db_agent_rating.is_committee)
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
-        committee = np.array(committee, dtype=bool)
+        committee = IndexSet.from_bits(np.array(committee, dtype=bool))
         return RatingData(db_ids, ratings, committee)
 
     def num_matches(self) -> int:

@@ -1,9 +1,10 @@
-from alphazero.logic.agent_types import Agent, AgentRole, BenchmarkCommittee, IndexedAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
+from util.index_set import IndexSet
 
 import numpy as np
 
@@ -27,11 +28,7 @@ class RatingsGap:
 class BenchmarkRatingData:
     iagents: List[IndexedAgent]
     ratings: np.ndarray
-    committee: BenchmarkCommittee
-
-
-# IAgentSet is a set of indices of agents in arena
-IAgentSet = np.ndarray
+    committee: IndexSet
 
 
 class Benchmarker:
@@ -71,11 +68,11 @@ class Benchmarker:
             self._arena.play_matches(matches, self._organizer.game, db=self.db)
             self._arena.refresh_ratings()
 
-        committee: BenchmarkCommittee = self.select_committee(target_elo_gap)
+        committee: IndexSet = self.select_committee(target_elo_gap)
         self.db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
 
     def get_next_matches(self, n_iters, target_elo_gap, n_games,
-                         exclude_agents: IAgentSet) -> List[Match]:
+                         excluded_indices: IndexSet) -> List[Match]:
         """
         The algorithm for selecting the next batch of matches is as follows:
         1. If there are no matches in the arena, play the first generation against the last
@@ -95,7 +92,7 @@ class Benchmarker:
             self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
-        incomplete_gen = self.incomplete_gen(exclude_agents=exclude_agents)
+        incomplete_gen = self.incomplete_gen(excluded_indices=excluded_indices)
         if incomplete_gen is not None:
             next_gen = incomplete_gen
             logger.debug('Finishing incomplete gen: %d', next_gen)
@@ -109,10 +106,10 @@ class Benchmarker:
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
                                              db=self.db)
-        matches = self.get_unplayed_matches(next_iagent, n_games, exclude_agents=exclude_agents)
+        matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices=excluded_indices)
         return matches
 
-    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, exclude_agents: IAgentSet) -> List[Match]:
+    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, excluded_indices: IndexSet) -> List[Match]:
         """
         Returns a list of matches that have not been played for the given IndexedAgent, only for the
         agents that are not in the exclude_agents set.
@@ -121,14 +118,14 @@ class Benchmarker:
         for ia in self._arena.indexed_agents:
             if ia.agent.gen == iagent.agent.gen:
                 continue
-            if ia.index in exclude_agents:
+            if ia.index in excluded_indices:
                 continue
             if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
                 logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
 
-    def incomplete_gen(self, exclude_agents: IAgentSet) -> Optional[Generation]:
+    def incomplete_gen(self, excluded_indices: IndexSet) -> Optional[Generation]:
         """
         A set of agents is complete if every agent has played every other agent. The set of agents
         is defined as the set of agents in the arena, excluding the agents in the exclude_agents set.
@@ -137,9 +134,8 @@ class Benchmarker:
         """
 
         A = self._arena.adjacent_matrix()
-        include = np.ones(len(self._arena.indexed_agents), dtype=bool)
-        include[exclude_agents] = False
-        mask = np.where(include)[0]
+        included_indices = excluded_indices.invert(A.shape[0])
+        mask = np.where(included_indices)[0]
         A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)
         incomplete = np.where(num_opponents_played < A.shape[0] - 1)[0]
@@ -202,7 +198,7 @@ class Benchmarker:
                              set_temp_zero=True,
                              tag=self._organizer.tag)
 
-    def select_committee(self, target_elo_gap) -> BenchmarkCommittee:
+    def select_committee(self, target_elo_gap) -> IndexSet:
         """
         Selects a committee of generations that are spaced out by the target elo gap.
         The committee is selected by sorting the generations by their elo ratings, and then
@@ -223,7 +219,7 @@ class Benchmarker:
 
         committee = np.zeros(len(self._arena.indexed_agents), dtype=bool)
         committee[committee_ixs] = True
-        return committee
+        return IndexSet.from_bits(committee)
 
     def has_no_matches(self):
         return self._arena.num_matches() == 0
