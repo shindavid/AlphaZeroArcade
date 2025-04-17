@@ -302,7 +302,7 @@ class BenchmarkManager(GamingManagerBase):
     def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
         for iagent in self._benchmarker.indexed_agents:
-            if len(self.excluded_agent_indices) > 0 and iagent.index not in self.excluded_agent_indices:
+            if len(self.excluded_agent_indices) > 0 and iagent.index in self.excluded_agent_indices.invert():
                 latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
