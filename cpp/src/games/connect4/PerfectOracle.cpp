@@ -40,35 +40,25 @@ std::string PerfectOracle::QueryResult::get_overlay() const {
 }
 
 PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
-  async_query(history);
+  std::string s;
+  {
+    std::unique_lock lock(mutex_);
+    history.write(in_pipe_);
+    std::getline(out_pipe_, s);
+  }
 
-  std::unique_lock lock(mutex_);
-  cv_.wait(lock, [&]() { return output_line_ready_; });
-  lock.unlock();
+  // TODO: do a more specialized parse that avoid dynamic allocation
+  auto tokens = util::split(s);
 
   QueryResult result;
-  if (!async_load(result)) {
-    throw util::Exception("Unexpected async_load() failure");
-  }
-  return result;
-}
-
-bool PerfectOracle::async_load(QueryResult& result) {
-  if (!output_line_ready_) {
-    return false;
-  }
-  output_line_ready_ = false;
-
-  auto tokens = util::split(output_line_);
-
   for (int j = 0; j < kNumColumns; ++j) {
     int raw_score = std::stoi(tokens[tokens.size() - kNumColumns + j]);
     if (raw_score == QueryResult::kIllegalMoveScore) {
       result.scores[j] = QueryResult::kIllegalMoveScore;
     } else if (raw_score < 0) {
-      result.scores[j] = -22 + (history_length_ + 1) / 2 - raw_score;
+      result.scores[j] = -22 + (history.length() + 1) / 2 - raw_score;
     } else if (raw_score > 0) {
-      result.scores[j] = 22 - history_length_ / 2 - raw_score;
+      result.scores[j] = 22 - history.length() / 2 - raw_score;
     } else {
       result.scores[j] = 0;
     }
@@ -95,42 +85,17 @@ bool PerfectOracle::async_load(QueryResult& result) {
   } else {
     result.best_score = 0;
   }
-  return true;
+  return result;
 }
 
 PerfectOracle::PerfectOracle()
-    : io_(),
-      out_pipe_(),
+    : out_pipe_(),
       in_pipe_(),
       child_(detail::make_cmd(), bp::std_out > out_pipe_,
-             bp::std_in < in_pipe_, bp::std_err > bp::null),
-      out_desc_(io_, out_pipe_.pipe().native_source()) {
-  start_async_read();
-  io_thread_ = std::thread([this]() { io_.run(); });
-}
+             bp::std_in < in_pipe_, bp::std_err > bp::null) {}
 
 PerfectOracle::~PerfectOracle() {
-  io_.stop();
-  if (io_thread_.joinable())
-      io_thread_.join();
-  child_.terminate();  // or child_.wait() if you're done
-}
-
-void PerfectOracle::start_async_read() {
-  auto func = [&](const boost::system::error_code& ec, std::size_t n) {
-    if (!ec) {
-      std::istream is(&buffer_);
-      std::getline(is, output_line_);
-      mutex_.lock();
-      output_line_ready_ = true;
-      mutex_.unlock();
-      cv_.notify_all();
-      start_async_read();
-    } else {
-      throw std::runtime_error("Error reading from pipe");
-    }
-  };
-  boost::asio::async_read_until(out_desc_, buffer_, '\n', func);
+  child_.terminate();
 }
 
 void PerfectOraclePool::set_capacity(int capacity) {

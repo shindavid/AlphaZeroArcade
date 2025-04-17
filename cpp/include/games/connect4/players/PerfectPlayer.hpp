@@ -2,6 +2,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/HibernationNotifier.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
 #include <games/connect4/PerfectOracle.hpp>
@@ -51,7 +52,6 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
   PerfectOraclePool* const oracle_pool_;
   const Params params_;
 
-  PerfectOracle* oracle_ = nullptr;  // temporary oracle obtained from pool
   PerfectOracle::MoveHistory move_history_;
 };
 

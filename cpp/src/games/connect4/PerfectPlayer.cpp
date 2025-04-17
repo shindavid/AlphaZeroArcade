@@ -6,27 +6,15 @@
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
 
-#include <boost/dll.hpp>
-
 namespace c4 {
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
-  PerfectOracle::QueryResult result;
-  if (oracle_ == nullptr) {
-    oracle_ = oracle_pool_->get_oracle();
-    if (oracle_) {
-      oracle_->async_query(move_history_);
-    }
-    return ActionResponse::make_yield();
-  } else {
-    if (!oracle_->async_load(result)) {
-      // oracle_ is still working on it
-      return ActionResponse::make_yield();
-    }
+  PerfectOracle* oracle = oracle_pool_->get_oracle(request.hibernation_notifier);
+  if (!oracle) {
+    return ActionResponse::hibernate();
   }
-
-  oracle_pool_->release_oracle(oracle_);
-  oracle_ = nullptr;
+  PerfectOracle::QueryResult result = oracle->query(move_history_);
+  oracle_pool_->release_oracle(oracle);
 
   ActionResponse response;
 
