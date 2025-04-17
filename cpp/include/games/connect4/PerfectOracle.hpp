@@ -4,8 +4,8 @@
 #include <core/BasicTypes.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
-#include <util/BoostUtil.hpp>
 #include <util/Asserts.hpp>
+#include <util/BoostUtil.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>

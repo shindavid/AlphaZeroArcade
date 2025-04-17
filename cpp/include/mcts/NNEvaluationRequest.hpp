@@ -1,7 +1,6 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
-#include <cstdint>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/Node.hpp>
@@ -10,6 +9,7 @@
 #include <util/Math.hpp>
 #include <util/StringUtil.hpp>
 
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>

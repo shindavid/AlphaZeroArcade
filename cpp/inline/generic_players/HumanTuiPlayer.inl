@@ -1,9 +1,9 @@
 #include <generic_players/HumanTuiPlayer.hpp>
 
+#include <util/ScreenUtil.hpp>
+
 #include <cstdlib>
 #include <iostream>
-
-#include <util/ScreenUtil.hpp>
 
 namespace generic {
 
