@@ -1,5 +1,6 @@
 set(COMMON_SOURCES
     Game.cpp
+    PerfectOracle.cpp
     PerfectPlayer.cpp
 )
 

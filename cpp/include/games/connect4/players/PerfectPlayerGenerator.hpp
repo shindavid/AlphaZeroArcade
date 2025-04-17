@@ -20,7 +20,7 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::Game> {
     return new PerfectPlayer(params_);
   }
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
-  void parse_args(const std::vector<std::string>& args);
+  void parse_args(const std::vector<std::string>& args) override;
 
  private:
   PerfectPlayer::Params params_;
