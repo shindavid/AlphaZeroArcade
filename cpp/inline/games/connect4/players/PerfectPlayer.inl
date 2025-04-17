@@ -16,16 +16,19 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("c4::PerfectPlayer options");
   return desc
-      .template add_option<"strength", 's'>(
-          po::value<int>(&strength)->default_value(strength),
-          "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is "
-          "random, 21 is perfect.")
-      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "verbose mode");
+    .template add_option<"strength", 's'>(
+      po::value<int>(&strength)->default_value(strength),
+      "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is "
+      "random, 21 is perfect.")
+    .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                         "verbose mode")
+    .template add_option<"num-oracle-procs", 'n'>(
+      po::value<int>(&num_oracle_procs)->default_value(num_oracle_procs),
+      "number of oracle processes to use");
 }
 
-inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
-  oracle_ = PerfectOracle::get_instance();
+inline PerfectPlayer::PerfectPlayer(PerfectOraclePool* oracle_pool, const Params& params)
+    : oracle_pool_(oracle_pool), params_(params) {
   util::clean_assert(params_.strength >= 0 && params_.strength <= 21,
                      "strength must be in [0, 21]");
 }
