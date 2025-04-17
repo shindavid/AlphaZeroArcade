@@ -26,10 +26,10 @@ core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
 }
 
 template <core::concepts::Game Game>
-void MctsPlayerGeneratorBase<Game>::end_session(int num_game_threads) {
+void MctsPlayerGeneratorBase<Game>::end_session() {
   for (auto& pair : shared_data_cache_) {
     for (SharedData_sptr& shared_data : pair.second) {
-      shared_data->manager.end_session(num_game_threads);
+      shared_data->manager.end_session(num_game_threads_);
     }
   }
 }

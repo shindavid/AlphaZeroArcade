@@ -22,7 +22,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
                                          "verbose mode")
     .template add_option<"num-oracle-procs", 'n'>(
       po::value<int>(&num_oracle_procs)->default_value(num_oracle_procs),
-      "number of oracle processes to use");
+      "number of oracle processes to use (defaults to number of game threads)");
 }
 
 inline PerfectPlayer::PerfectPlayer(PerfectOraclePool* oracle_pool, const Params& params)

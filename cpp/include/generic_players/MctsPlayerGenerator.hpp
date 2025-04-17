@@ -36,7 +36,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
    */
   core::AbstractPlayer<Game>* generate(core::game_thread_id_t game_thread_id) override;
 
-  void end_session(int num_game_threads) override;
+  void start_session(int num_game_threads) override { num_game_threads_ = num_game_threads; }
+  void end_session() override;
 
  protected:
   virtual BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) = 0;
@@ -53,6 +54,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
 
   MctsManagerParams manager_params_;
   mcts::mutex_cv_vec_sptr_t common_mutex_cv_pool_;  // only used in multi-threaded mode
+  int num_game_threads_ = 0;
 };
 
 template <core::concepts::Game Game>

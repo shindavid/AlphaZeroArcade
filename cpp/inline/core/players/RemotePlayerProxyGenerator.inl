@@ -23,7 +23,7 @@ AbstractPlayer<Game>* RemotePlayerProxyGenerator<Game>::generate(game_thread_id_
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxyGenerator<Game>::end_session(int num_game_threads) {
+void RemotePlayerProxyGenerator<Game>::end_session() {
   RemotePlayerProxy<Game>::PacketDispatcher::teardown();
 }
 

@@ -15,6 +15,7 @@
 #include <core/Constants.hpp>
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
+#include <util/KeyValueDumper.hpp>
 #include <util/LoggingUtil.hpp>
 
 namespace core {
@@ -107,10 +108,17 @@ void GameServerProxy<Game>::SharedData::init_socket() {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::end_session() {
-  int num_game_threads = 1;  // TODO: set this properly
+void GameServerProxy<Game>::SharedData::start_session() {
+  int n_game_threads = 1;  // TODO: set this properly
   for (auto& sg : seat_generators_) {
-    sg.gen->end_session(num_game_threads);
+    sg.gen->start_session(n_game_threads);
+  }
+}
+
+template <concepts::Game Game>
+void GameServerProxy<Game>::SharedData::end_session() {
+  for (auto& sg : seat_generators_) {
+    sg.gen->end_session();
   }
 }
 
@@ -226,6 +234,7 @@ void GameServerProxy<Game>::PlayerThread::run() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::run() {
   shared_data_.init_socket();
+  shared_data_.start_session();
   init_player_threads();
 
   while (true) {
