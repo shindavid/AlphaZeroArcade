@@ -115,6 +115,7 @@ class SelfPlayManager:
         self._stop_gen0_self_play(conn)
 
     def run_until_checkpoint(self):
+        self._controller._training_manager._set_checkpoint()
         checkpoint = self._controller.get_next_checkpoint()
 
         num_rows = self._n_committed_rows
@@ -294,8 +295,10 @@ class SelfPlayManager:
 
     def _restart(self, conn: ClientConnection):
         logger.info('Restarting self-play for %s...', conn)
+        binary = self._construct_binary()
         data = {
             'type': 'restart',
+            'binary': binary.to_dict()
         }
         conn.socket.send_json(data)
 

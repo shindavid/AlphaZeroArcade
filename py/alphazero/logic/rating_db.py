@@ -1,8 +1,8 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent, \
-BenchmarkCommittee, AgentDBId, IndexedAgent, AgentRole
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, MCTSAgent, ReferenceAgent
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
+from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
 import numpy as np
@@ -124,7 +124,7 @@ class RatingDB:
         conn.commit()
 
     def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
-                      committee: Optional[BenchmarkCommittee]=None):
+                      committee: Optional[IndexSet]=None):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 

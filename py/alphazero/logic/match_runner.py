@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent
+from alphazero.logic.agent_types import Agent, Match, MatchType
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.run_params import RunParams
@@ -17,18 +17,6 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 
-class MatchType(Enum):
-    BENCHMARK = 'benchmark'
-    EVALUATE = 'evaluate'
-
-
-@dataclass
-class Match:
-    agent1: Agent
-    agent2: Agent
-    n_games: int
-    type: MatchType
-
 
 class MatchRunner:
     @staticmethod
@@ -37,16 +25,15 @@ class MatchRunner:
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
         """
+        logger.debug('Running match: %s vs %s', match.agent1, match.agent2)
         agent1 = match.agent1
         agent2 = match.agent2
         n_games = match.n_games
         if n_games < 1:
             return WinLossDrawCounts()
 
-        organizer1 = DirectoryOrganizer(RunParams(game, agent1.tag), base_dir_root='/workspace')
-        organizer2 = DirectoryOrganizer(RunParams(game, agent2.tag), base_dir_root='/workspace')
-        ps1 = agent1.make_player_str(organizer1)
-        ps2 = agent2.make_player_str(organizer2)
+        ps1 = agent1.make_player_str('')
+        ps2 = agent2.make_player_str('')
 
         if args is None:
             args = {}
@@ -58,7 +45,7 @@ class MatchRunner:
         port = DEFAULT_REMOTE_PLAY_PORT
 
         cmd1 = [
-            agent1.tag,
+            agent1.binary,
             '--port', str(port),
             '--player', f'"{ps1}"',
         ]
@@ -66,7 +53,7 @@ class MatchRunner:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            agent2.tag,
+            agent2.binary,
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]
@@ -86,5 +73,5 @@ class MatchRunner:
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
-        logger.info(f'{match.agent1} vs {match.agent2}: {record.get(0)}')
+        logger.info(f'Match Result:\n{match.agent1} vs {match.agent2}: {record.get(0)}')
         return record.get(0)

@@ -123,7 +123,7 @@ class SelfPlayServer:
         elif msg_type == 'start':
             self._handle_start(msg)
         elif msg_type == 'restart':
-            self._handle_restart()
+            self._handle_restart(msg)
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -159,9 +159,9 @@ class SelfPlayServer:
         thread = threading.Thread(target=self._start, args=(msg,), daemon=True, name=f'start')
         thread.start()
 
-    def _handle_restart(self):
+    def _handle_restart(self, msg: JsonDict):
         try:
-            thread = threading.Thread(target=self._restart_helper, daemon=True, name=f'restart')
+            thread = threading.Thread(target=self._restart_helper, args=(msg,), daemon=True, name=f'restart')
             thread.start()
         except:
             logger.error('Error in restart:', exc_info=True)
@@ -304,7 +304,7 @@ class SelfPlayServer:
         self._session_data.wait_for(proc)
         self._clear_proc()
 
-    def _restart_helper(self):
+    def _restart_helper(self, msg: JsonDict):
         proc = self._proc
         assert proc is not None
 
@@ -315,7 +315,7 @@ class SelfPlayServer:
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
         self._clear_proc()
 
-        self._start_helper()
+        self._start_helper(msg)
 
     def _set_proc(self, cmd: List[str], cwd: str) -> subprocess.Popen:
         with self._proc_cond:

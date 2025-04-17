@@ -1,3 +1,4 @@
+from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
@@ -15,6 +16,10 @@ from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, EvalTag,\
     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+from alphazero.servers.loop_control.gaming_manager_base import ManagerConfig, WorkerAux
+from alphazero.servers.loop_control.benchmark_manager import BenchmarkServerAux
+from alphazero.servers.loop_control.eval_manager import EvalServerAux
+from alphazero.servers.loop_control.ratings_manager import RatingsServerAux
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -93,6 +98,7 @@ class LoopController:
         self._self_play_manager = SelfPlayManager(self)
         self._eval_managers: Dict[EvalTag, EvalManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
+        self._benchmark_manager: Optional[BenchmarkManager] = None
         self._gpu_contention_manager = GpuContentionManager(self)
 
         # OutputDirSyncer must be the LAST constructed sub-manager, to ensure proper shutdown
@@ -209,6 +215,10 @@ class LoopController:
             self._get_eval_manager(conn.rating_tag).add_server(conn)
         elif client_role == ClientRole.EVAL_WORKER:
             self._get_eval_manager(conn.rating_tag).add_worker(conn)
+        elif client_role == ClientRole.BENCHMARK_SERVER:
+            self._get_benchmark_manager().add_server(conn)
+        elif client_role == ClientRole.BENCHMARK_WORKER:
+            self._get_benchmark_manager().add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -232,6 +242,7 @@ class LoopController:
                          daemon=True).start()
 
     def handle_new_model(self):
+        self._gpu_contention_manager.unhijack_all_self_play_tables()
         for tag, manager in self._ratings_managers.items():
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
@@ -239,6 +250,9 @@ class LoopController:
         for tag, manager in self._eval_managers.items():
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
+
+        if self._benchmark_manager is not None:
+            self._benchmark_manager.notify_of_new_model()
 
     def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
         self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
@@ -334,7 +348,13 @@ class LoopController:
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
-            self._ratings_managers[tag] = RatingsManager(self, tag)
+            manager_config = ManagerConfig(
+                worker_aux_class=WorkerAux,
+                server_aux_class=RatingsServerAux,
+                server_name='ratings-server',
+                worker_name='ratings-worker',
+            )
+            self._ratings_managers[tag] = RatingsManager(self, manager_config, tag)
         return self._ratings_managers[tag]
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
@@ -344,8 +364,26 @@ class LoopController:
                 benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
                 benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
                 shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
-            self._eval_managers[tag] = EvalManager(self, tag)
+
+            manager_config = ManagerConfig(
+                worker_aux_class=WorkerAux,
+                server_aux_class=EvalServerAux,
+                server_name='eval-server',
+                worker_name='eval-worker',
+            )
+            self._eval_managers[tag] = EvalManager(self, manager_config)
         return self._eval_managers[tag]
+
+    def _get_benchmark_manager(self) -> BenchmarkManager:
+        if not self._benchmark_manager:
+            manager_config = ManagerConfig(
+                worker_aux_class=WorkerAux,
+                server_aux_class=BenchmarkServerAux,
+                server_name='benchmark-server',
+                worker_name='benchmark-worker',
+            )
+            self._benchmark_manager = BenchmarkManager(self, manager_config)
+        return self._benchmark_manager
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,

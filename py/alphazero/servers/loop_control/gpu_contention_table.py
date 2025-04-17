@@ -180,6 +180,7 @@ class GpuContentionTable:
         C. The domain currently does not have priority, but the current lock holder later
            voluntarily releases the lock or decreases its priority.
         """
+        logger.debug('..................Acquiring lock for %s: %s', domain, self)
         with self._lock:
             return self._acquire_lock(domain)
 

@@ -1,14 +1,40 @@
 #!/usr/bin/env python3
 
 """
-This script serves as a thin wrapper around a c++ binary. It communicates with the loop controller,
-and upon receiving "start" requests from the loop controller, will start the c++ binary. From there,
-the c++ binary and the loop controller communicate directly via TCP.
+Entry point for launching the evaluation server.
 
-This setup allows us to relaunch the c++ binary process as needed under the hood of a single
-ratings server process. This is useful because it allows us to launch each matchup requested by
-the loop controller as a separate c++ binary process.
+This script connects to the loop controller and participates in the distributed evaluation process.
+Evaluation is performed against a previously generated benchmark (produced by the benchmark server),
+and the resulting Elo ratings are scaled relative to the agents in that benchmark.
+
+The eval server listens for match requests, executes evaluation matches, and reports results back
+to the loop controller. The eval manager (running in the controller) is responsible for selecting
+which committee members each generation should play against.
+
+### Relevant Loop Controller Parameters
+
+1. `--target_rating_rate`
+   The target percentage of available generations to be evaluated. If the actual percentage is below
+   this value, evaluation is prioritized.
+
+2. `--n_games_per_evaluation`
+   The total number of games assigned to evaluate a single generation. This budget is distributed
+   across committee members based on the expected win probability — assigning more games to
+   agents that are likely to be close in skill. This focuses evaluation on the most informative matches.
+
+3. `--eval_error_threshold`
+   A threshold on the error (uncertainty) in Elo estimation. If the estimated Elo changes significantly
+   after additional games, it means the initial assignment may have been suboptimal. In this case,
+   match distribution is adjusted to better allocate remaining games.
+
+4. `--agent_n_iters`
+   The number of MCTS iterations used by the agent being evaluated. Committee agents use a fixed
+   iteration count based on their benchmark definition; this parameter only affects the evaluation target.
+
+5. `--benchmark-tag`
+   The tag identifying the benchmark database (`benchmark.db`) to use for evaluation.
 """
+
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.servers.gaming.eval_server import EvalServer, EvalServerParams

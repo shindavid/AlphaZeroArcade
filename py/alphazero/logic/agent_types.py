@@ -23,10 +23,10 @@ class Agent(ABC):
 class MCTSAgent(Agent):
     gen: int = 0
     n_iters: Optional[int] = None
-    set_temp_zero: bool = None
-    tag: str = None
-    binary: str = None
-    model: str = None
+    set_temp_zero: bool = False
+    tag: Optional[str] = None
+    binary: Optional[str] = None
+    model: Optional[str] = None
 
     def make_player_str(self, run_dir, args=None) -> str:
         player_args = {
@@ -94,4 +94,14 @@ class IndexedAgent:
     db_id: Optional[AgentDBId] = None
 
 
-BenchmarkCommittee = np.ndarray # committee[k] == True iff iagent with index==k is in committee
+class MatchType(Enum):
+    BENCHMARK = 'benchmark'
+    EVALUATE = 'evaluate'
+
+
+@dataclass
+class Match:
+    agent1: Agent
+    agent2: Agent
+    n_games: int
+    type: MatchType

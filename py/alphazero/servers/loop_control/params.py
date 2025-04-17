@@ -13,8 +13,11 @@ class LoopControllerParams:
     target_rating_rate: float = 0.1
     n_games_per_evaluation: int = 1000
     eval_error_threshold: float = 100.0
-    eval_agent_n_iters: Optional[int] = None
+    agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
     benchmark_tag: str = None
+    benchmark_until_gen_gap: int = 25
+    n_games_per_benchmark: int = 100
+    target_elo_gap: float = 100
     ignore_sigint: bool = False
 
     @staticmethod
@@ -49,9 +52,20 @@ class LoopControllerParams:
         group.add_argument('--eval-error-threshold', type=float,
                            default=defaults.eval_error_threshold,
                            help='evaluation error threshold (default: %(default)s)')
-        group.add_argument('-i', '--eval-agent-n-iters', type=int,
-                           default=defaults.eval_agent_n_iters,
+        group.add_argument('-i', '--agent-n-iters', type=int,
+                           default=defaults.agent_n_iters,
                            help='number of iterations to run eval agent for (default: %(default)s)')
+        group.add_argument('--target-elo-gap', type=float,
+                           default=defaults.target_elo_gap,
+                           help='target ELO gap for evaluation (default: %(default).1f)')
+        group.add_argument('--benchmark-until-gen-gap', type=int,
+                            default=defaults.benchmark_until_gen_gap,
+                            help='number of generations to wait for benchmark evaluation '
+                            '(default: %(default)s)')
+        group.add_argument('--n-games-per-benchmark', type=int,
+                           default=defaults.n_games_per_benchmark,
+                           help='number of games to run for benchmark evaluation '
+                           '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
 
@@ -64,3 +78,4 @@ class LoopControllerParams:
                 cmd.append('--' + f.name)
                 if type(attr) != bool:
                     cmd.append(str(getattr(self, f.name)))
+

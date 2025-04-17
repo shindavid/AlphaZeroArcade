@@ -30,13 +30,13 @@ class Evaluator:
         self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
 
         self._arena = self._benchmark.clone_arena()
-        self._db = RatingDB(self._organizer.eval_db_filename)
+        self.db = RatingDB(self._organizer.eval_db_filename)
         self.load_from_db()
-        self._arena.refresh_ratings()
+        self.refresh_ratings()
 
     def load_from_db(self):
-        self._arena.load_agents_from_db(self._db, role=AgentRole.TEST)
-        self._arena.load_matches_from_db(self._db, type=MatchType.EVALUATE)
+        self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)
+        self._arena.load_matches_from_db(self.db, type=MatchType.EVALUATE)
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100,
                    init_rating_estimate: Optional[float]=None):
@@ -71,7 +71,7 @@ class Evaluator:
         else:
             estimated_rating = np.mean(self.benchmark_ratings)
 
-        test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._db)
+        test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self.db)
 
         n_games_played = self._arena.n_games_played(test_agent)
         if n_games_played > 0:
@@ -91,7 +91,7 @@ class Evaluator:
 
                 opponent = self._arena.indexed_agents[ix].agent
                 match = Match(test_agent, opponent, n, MatchType.EVALUATE)
-                self._arena.play_matches([match], self._organizer.game, db=self._db)
+                self._arena.play_matches([match], self._organizer.game, db=self.db)
                 n_games -= n
                 opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
                 self._arena.refresh_ratings()
@@ -102,7 +102,7 @@ class Evaluator:
 
         _, interpolated_ratings = self.interpolate_ratings()
         test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
-        self._db.commit_ratings(test_iagents, interpolated_ratings)
+        self.db.commit_ratings(test_iagents, interpolated_ratings)
         logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
 
@@ -145,7 +145,7 @@ class Evaluator:
         return np.array(benchmark_ixs)
 
     def read_ratings_from_db(self) -> EvalRatingData:
-        rating_data: RatingData = self._arena.load_ratings_from_db(self._db, AgentRole.TEST)
+        rating_data: RatingData = self._arena.load_ratings_from_db(self.db, AgentRole.TEST)
         ratings = rating_data.ratings
         evaluated_iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         return EvalRatingData(evaluated_iagents, ratings)

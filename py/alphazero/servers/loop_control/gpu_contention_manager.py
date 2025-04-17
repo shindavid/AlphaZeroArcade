@@ -72,7 +72,10 @@ class GpuContentionManager:
 
     def set_ratings_priority(self, elevate: bool):
         all_tables = self._get_all_tables()
-        ratings_tables = [table for table in all_tables if table.active(Domain.RATINGS)]
+
+        # When a worker is disconnected, the domain status becomes DEACTIVATING. We want to set
+        # priority for tables that are not inactive.
+        ratings_tables = [table for table in all_tables if not table.inactive(Domain.RATINGS)]
         if not ratings_tables:
             return
 
