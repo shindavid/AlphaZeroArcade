@@ -96,5 +96,13 @@ class TestIndexSet(unittest.TestCase):
         with self.assertRaises(KeyError):
             s.remove(100)
 
+    def test_subscript(self):
+        s = IndexSet()
+        s.add(1)
+        s.add(3)
+        self.assertTrue(s[1])
+        self.assertTrue(s[3])
+        self.assertFalse(s[0])
+
 if __name__ == '__main__':
     unittest.main()
