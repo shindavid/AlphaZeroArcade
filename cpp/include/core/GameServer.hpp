@@ -187,6 +187,7 @@ class GameServer {
     bool request_game();  // returns false iff hit params_.num_games limit
     void update(const ValueArray& outcome);
     auto get_results() const;
+    void start_session();
     void end_session();
     bool ready_to_start() const;
     void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote = false);

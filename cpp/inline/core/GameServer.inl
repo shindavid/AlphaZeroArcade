@@ -216,9 +216,16 @@ auto GameServer<Game>::SharedData::get_results() const {
 }
 
 template <concepts::Game Game>
+void GameServer<Game>::SharedData::start_session() {
+  for (auto& reg : registrations_) {
+    reg.gen->start_session(params_.num_game_threads);
+  }
+}
+
+template <concepts::Game Game>
 void GameServer<Game>::SharedData::end_session() {
   for (auto& reg : registrations_) {
-    reg.gen->end_session(params_.num_game_threads);
+    reg.gen->end_session();
   }
 }
 
@@ -633,6 +640,7 @@ void GameServer<Game>::run() {
   shared_data_.init_random_seat_indices();
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
+  shared_data_.start_session();
   shared_data_.init_slots();
   shared_data_.run_hibernation_manager();
 

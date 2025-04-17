@@ -88,15 +88,19 @@ class AbstractPlayerGenerator {
   virtual void parse_args(const std::vector<std::string>& args) {}
 
   /*
+   * Called when the GameServer starts. This allows the generator to do any initialization it needs
+   * to do before it starts to construct players. This is useful for generators that need to
+   * to do things like initialize object pools that will be shared among multiple players.
+   */
+  virtual void start_session(int num_game_threads) {}
+
+  /*
    * Called when all games have been played. This is useful for when you want to report some
    * aggregate statistics over a series of games. Note that this functionality must exist here,
    * rather than at the player-level. This is because in the parallel case, two different games may
    * be played by different player instances, which don't know about each other.
-   *
-   * num_game_threads is the number of game threads that were used to play the games. This is
-   * useful for reporting statistics that are aggregated over all game threads.
    */
-  virtual void end_session(int num_game_threads) {}
+  virtual void end_session() {}
 
   /*
    * Some extra virtual functions that most subclasses can ignore.

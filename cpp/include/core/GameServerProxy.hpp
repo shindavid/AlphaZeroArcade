@@ -55,6 +55,7 @@ class GameServerProxy {
     void init_socket();
     io::Socket* socket() const { return socket_; }
     PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
+    void start_session();
     void end_session();
 
    private:

@@ -34,8 +34,9 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
      */
     int strength = 21;
 
-    // The number of oracle processes to use.
-    int num_oracle_procs = 8;
+    // The number of oracle processes to use. If not specified, defaults to the number of game
+    // threads.
+    int num_oracle_procs = 0;
 
     bool verbose = false;
 
