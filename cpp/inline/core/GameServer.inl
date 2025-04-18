@@ -365,23 +365,30 @@ void GameServer<Game>::GameSlot::step() {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance() {
-  ActionValueTensor* action_values = nullptr;
-  for (auto player2 : players_) {
-    // ChancePrehandleResponse response = player2->prehandle_chance_event();
-    ActionValueTensor* action_values2 = player2->prehandle_chance_event();
-    if (!noisy_mode_ && action_values2) {
-      util::release_assert(!action_values,
-                           "Clashing chance-event training info from different players");
-      action_values = action_values2;
+  for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
+    Player* player = players_[step_chance_player_index_];
+    ChanceEventPreHandleResponse response = player->prehandle_chance_event();
+    yield_state_ = response.yield_instruction;
+    if (yield_state_ != kContinue) {
+      return false;
     }
+    if (!noisy_mode_ && response.action_values) {
+      util::release_assert(!chance_action_values_,
+                           "Clashing chance-event training info from different players");
+    }
+    chance_action_values_ = response.action_values;
   }
 
   ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
   action_t action = eigen_util::sample(chance_dist);
   if (game_log_) {
-    game_log_->add(state_history_.current(), action, active_seat_, nullptr, action_values,
-                   action_values);
+    game_log_->add(state_history_.current(), action, active_seat_, nullptr, chance_action_values_,
+                   chance_action_values_);
   }
+
+  // reset for next chance event:
+  step_chance_player_index_ = 0;
+  chance_action_values_ = nullptr;
 
   Rules::apply(state_history_, action);
   if (params().print_game_states) {

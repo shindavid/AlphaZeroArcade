@@ -100,6 +100,18 @@ struct GameTypes {
     TrainingInfo training_info;
   };
 
+  struct ChanceEventPreHandleResponse {
+    ChanceEventPreHandleResponse(ActionValueTensor* a = nullptr,
+                                 core::yield_instruction_t y = core::kContinue)
+        : action_values(a), yield_instruction(y) {}
+
+    static auto yield() { return ChanceEventPreHandleResponse(nullptr, core::kYield); }
+    static auto hibernate() { return ChanceEventPreHandleResponse(nullptr, core::kHibernate); }
+
+    ActionValueTensor* action_values = nullptr;
+    core::yield_instruction_t yield_instruction = core::kContinue;
+  };
+
   /*
    * Return type for an MCTS search.
    *

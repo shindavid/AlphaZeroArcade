@@ -238,19 +238,24 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
  * Here, we do a skimmed-down version of Manager::search()
  */
 template <core::concepts::Game Game>
-inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
-  action_values.setZero();
-  // stop_search_threads();  // stop pondering
+core::yield_instruction_t Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
+  if (!mid_load_root_action_values_) {
+    action_values.setZero();
+    init_root_info(false);
 
-  init_root_info(false);
+    // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
+    // which will expand all the root's children.
+    constexpr int tree_size_limit = 0;
+    constexpr bool full_search = true;
+    constexpr bool ponder = false;
+    SearchParams params{tree_size_limit, full_search, ponder};
+    search_params_ = params;
+    mid_load_root_action_values_ = true;
+  }
 
-  // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
-  // which will expand all the root's children.
-  constexpr int tree_size_limit = 0;
-  constexpr bool full_search = true;
-  constexpr bool ponder = false;
-  SearchParams params{tree_size_limit, full_search, ponder};
-  search_params_ = params;
+  if (search() == nullptr) {
+    return core::kYield;
+  }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
   const auto& stable_data = root->stable_data();
@@ -274,6 +279,9 @@ inline void Manager<Game>::load_root_action_values(ActionValueTensor& action_val
     }
     i++;
   }
+
+  mid_load_root_action_values_ = false;
+  return core::kContinue;
 }
 
 template <core::concepts::Game Game>

@@ -1,7 +1,6 @@
-#pragma once
-
 #include <generic_players/DataExportingMctsPlayer.hpp>
 
+#include <core/BasicTypes.hpp>
 #include <util/BitSet.hpp>
 
 namespace generic {
@@ -53,22 +52,30 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 }
 
 template <core::concepts::Game Game>
-typename DataExportingMctsPlayer<Game>::ActionValueTensor*
+typename DataExportingMctsPlayer<Game>::ChanceEventPreHandleResponse
 DataExportingMctsPlayer<Game>::prehandle_chance_event() {
   // So that only one player outputs the action values.
   if (!this->owns_shared_data_) {
-    return nullptr;
+    return ChanceEventPreHandleResponse();
   }
 
-  // Sample chance events at the same frequency as we do for player events. This seems right, as it
-  // ensures that chance events are represented in the training data proportionally to how often
-  // they occur in the game.
-  if (this->get_random_search_mode() != core::kFull) {
-    return nullptr;
+  if (!mid_prehandle_chance_event_) {
+    // Sample chance events at the same frequency as we do for player events. This seems right, as it
+    // ensures that chance events are represented in the training data proportionally to how often
+    // they occur in the game.
+    if (this->get_random_search_mode() != core::kFull) {
+      return ChanceEventPreHandleResponse();
+    }
+    mid_prehandle_chance_event_ = true;
   }
 
-  this->get_manager()->load_root_action_values(action_values_target_);
-  return &action_values_target_;
+  core::yield_instruction_t i = this->get_manager()->load_root_action_values(action_values_target_);
+  if (i == core::kContinue) {
+    mid_prehandle_chance_event_ = false;
+    return ChanceEventPreHandleResponse(&action_values_target_, core::kContinue);
+  } else {
+    return ChanceEventPreHandleResponse(nullptr, i);
+  }
 }
 
 template <core::concepts::Game Game>
