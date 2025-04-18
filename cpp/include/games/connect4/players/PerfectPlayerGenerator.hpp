@@ -17,7 +17,7 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::Game> {
   std::string get_default_name() const override;
   std::vector<std::string> get_types() const override { return {"Perfect"}; }
   std::string get_description() const override { return "Perfect player"; }
-  core::AbstractPlayer<c4::Game>* generate(core::game_thread_id_t) override;
+  core::AbstractPlayer<c4::Game>* generate(core::game_slot_index_t) override;
   void start_session(int num_game_threads) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;

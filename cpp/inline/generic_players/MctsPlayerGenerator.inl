@@ -12,8 +12,8 @@ typename MctsPlayerGeneratorBase<Game>::shared_data_map_t
 
 template <core::concepts::Game Game>
 core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
-    core::game_thread_id_t game_thread_id) {
-  shared_data_vec_t& vec = shared_data_cache_[game_thread_id];
+  core::game_slot_index_t game_slot_index) {
+  shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {
       return generate_helper(shared_data, false);

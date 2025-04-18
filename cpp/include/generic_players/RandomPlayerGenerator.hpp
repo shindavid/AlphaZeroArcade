@@ -16,7 +16,7 @@ class RandomPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   std::string get_default_name() const override { return "Random"; }
   std::vector<std::string> get_types() const override { return {"Random"}; }
   std::string get_description() const override { return "Random player"; }
-  core::AbstractPlayer<Game>* generate(core::game_thread_id_t) override {
+  core::AbstractPlayer<Game>* generate(core::game_slot_index_t) override {
     return new RandomPlayer<Game>();
   }
 };

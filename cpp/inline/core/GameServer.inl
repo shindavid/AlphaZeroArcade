@@ -1,12 +1,5 @@
 #include <core/GameServer.hpp>
 
-#include <arpa/inet.h>
-#include <iostream>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#include <boost/program_options.hpp>
-
 #include <core/BasicTypes.hpp>
 #include <core/Packet.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
@@ -15,9 +8,17 @@
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/KeyValueDumper.hpp>
+#include <util/LoggingUtil.hpp>
 #include <util/Random.hpp>
 #include <util/SocketUtil.hpp>
 #include <util/StringUtil.hpp>
+
+#include <boost/program_options.hpp>
+
+#include <arpa/inet.h>
+#include <iostream>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 namespace core {
 
@@ -97,10 +98,16 @@ void GameServer<Game>::SharedData::init_slots() {
 
   for (int p = 0; p < n_slots; ++p) {
     GameSlot* slot = new GameSlot(*this, p);
+    game_slots_.push_back(slot);
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::start_games() {
+  for (GameSlot* slot : game_slots_) {
     if (!slot->start_game()) {
       throw util::Exception("ERROR: failed to start game slot");
     }
-    game_slots_.push_back(slot);
     queue_.push(slot);
   }
 }
@@ -240,15 +247,15 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
-                                                        bool implicit_remote) {
+                                                   bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
       util::clean_assert(
-          params_.port > 0,
-          "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
-          "players. In this case, --port must be specified, so that the remote players can connect",
-          kNumPlayers);
+        params_.port > 0,
+        "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
+        "players. In this case, --port must be specified, so that the remote players can connect",
+        kNumPlayers);
     } else {
       util::clean_assert(params_.port > 0, "Cannot use remote players without setting --port");
     }
@@ -592,7 +599,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
 
   io::Socket* server_socket = io::Socket::create_server_socket(port, kNumPlayers);
 
-  std::cout << "Waiting for remote player registrations..." << std::endl;
+  LOG_INFO("Waiting for remote players to connect on port {}", port);
   int n = remote_player_registrations.size();
   int r = 0;
   while (r < n) {
@@ -602,7 +609,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
     do {
       Packet<Registration> packet;
       if (!packet.read_from(socket)) {
-        throw util::Exception("Unexpected socket close");
+        throw util::CleanException("Unexpected socket close");
       }
       const Registration& registration = packet.payload();
       std::string registered_name = registration.dynamic_size_section.player_name;
@@ -643,22 +650,13 @@ void GameServer<Game>::run() {
   shared_data_.start_session();
   shared_data_.init_slots();
   shared_data_.run_hibernation_manager();
-
-  int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
-  for (int t = 0; t < num_threads; ++t) {
-    GameThread* thread = new GameThread(shared_data_, t);
-    threads_.push_back(thread);
-  }
-
+  create_threads();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
+  shared_data_.start_games();
 
   time_point_t start_time = std::chrono::steady_clock::now();
-  for (auto thread : threads_) {
-    thread->launch();
-  }
-  for (auto thread : threads_) {
-    thread->join();
-  }
+  launch_threads();
+  join_threads();
   time_point_t end_time = std::chrono::steady_clock::now();
 
   if (shared_data_.training_data_writer()) {
@@ -688,6 +686,29 @@ void GameServer<Game>::run() {
 
   shared_data_.end_session();
   util::KeyValueDumper::flush();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::create_threads() {
+  int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
+  for (int t = 0; t < num_threads; ++t) {
+    GameThread* thread = new GameThread(shared_data_, t);
+    threads_.push_back(thread);
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::launch_threads() {
+  for (auto thread : threads_) {
+    thread->launch();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::join_threads() {
+  for (auto thread : threads_) {
+    thread->join();
+  }
 }
 
 template <concepts::Game Game>

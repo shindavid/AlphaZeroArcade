@@ -15,6 +15,8 @@ class HibernationManager {
   using game_slot_vec_t = std::vector<game_slot_index_t>;
   using func_t = std::function<void(game_slot_index_t)>;
 
+  ~HibernationManager();
+
   // Launches a loop that awaits notifications for game-slots. Each time game-slot g is notified, it
   // calls the function f(g).
   void run(func_t);

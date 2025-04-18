@@ -27,8 +27,8 @@ void AbstractPlayerGenerator<Game>::set_name(const std::string& name) {
 
 template <concepts::Game Game>
 AbstractPlayer<Game>* AbstractPlayerGenerator<Game>::generate_with_name(
-    game_thread_id_t game_thread_id) {
-  auto player = generate(game_thread_id);
+  game_slot_index_t game_slot_index) {
+  auto player = generate(game_slot_index);
   player->set_name(name_);
   return player;
 }
