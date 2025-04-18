@@ -1,5 +1,6 @@
 from alphazero.logic.custom_types import Domain, GpuId
 
+import copy
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -38,12 +39,24 @@ class DomainState:
         return str(self)
 
 
-PRIORITIZED_RATINGS_PRIORITY = 6
+TOP_PRIORITY = 6
 DEFAULT_TRAINING_PRIORITY = 5
 DEFAULT_SELF_PLAY_PRIORITY = 4
 DEFAULT_RATINGS_PRIORITY = 3
+DEFAULT_BENCHMARK_PRIORITY = 3
+DEFAULT_EVAL_PRIORITY = 3
 DEFAULT_SLEEPING_PRIORITY = 2
 HIJACKED_SELF_PLAY_PRIORITY = 1
+
+
+DEFAULT_PRIORITIES: Dict[Domain, DomainState] = {
+    Domain.TRAINING: DomainState(DEFAULT_TRAINING_PRIORITY),
+    Domain.SELF_PLAY: DomainState(DEFAULT_SELF_PLAY_PRIORITY),
+    Domain.RATINGS: DomainState(DEFAULT_RATINGS_PRIORITY),
+    Domain.BENCHMARK: DomainState(DEFAULT_BENCHMARK_PRIORITY),
+    Domain.EVAL: DomainState(DEFAULT_EVAL_PRIORITY),
+    Domain.SLEEPING: DomainState(DEFAULT_SLEEPING_PRIORITY)
+    }
 
 
 class GpuContentionTable:
@@ -57,13 +70,7 @@ class GpuContentionTable:
     """
     def __init__(self, gpu_id: GpuId):
         self._gpu_id = gpu_id
-        self._states: Dict[Domain, DomainState] = {
-            Domain.TRAINING: DomainState(DEFAULT_TRAINING_PRIORITY),
-            Domain.SELF_PLAY: DomainState(DEFAULT_SELF_PLAY_PRIORITY),
-            Domain.RATINGS: DomainState(DEFAULT_RATINGS_PRIORITY),
-            Domain.SLEEPING: DomainState(DEFAULT_SLEEPING_PRIORITY),
-            }
-
+        self._states: Dict[Domain, DomainState] = copy.deepcopy(DEFAULT_PRIORITIES)
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
 
@@ -118,17 +125,17 @@ class GpuContentionTable:
             state.lock_status = LockStatus.RELEASED
             self._cond.notify_all()
 
-    def ratings_prioritized(self) -> bool:
+    def domain_prioritized(self, domain) -> bool:
         with self._lock:
-            return self._states[Domain.RATINGS].priority == PRIORITIZED_RATINGS_PRIORITY
+            return self._states[domain].priority == TOP_PRIORITY
 
-    def prioritize_ratings(self):
+    def prioritize_domain(self, domain: Domain):
         with self._lock:
-            self._set_priority(Domain.RATINGS, PRIORITIZED_RATINGS_PRIORITY)
+            self._set_priority(domain, TOP_PRIORITY)
 
-    def deprioritize_ratings(self):
+    def deprioritize_domain(self, domain):
         with self._lock:
-            self._set_priority(Domain.RATINGS, DEFAULT_RATINGS_PRIORITY)
+            self._set_priority(domain, DEFAULT_PRIORITIES[domain].priority)
 
     def hijack_self_play(self):
         with self._lock:
@@ -220,7 +227,7 @@ class GpuContentionTable:
                  state.lock_status != LockStatus.RELEASED]
         if not pairs:
             return None
-        return max(pairs)[1]
+        return max(pairs, key=lambda x: x[0])[1]
 
     def _set_priority(self, domain: Domain, priority: int):
         prev_priority = self._states[domain].priority
@@ -266,7 +273,7 @@ class GpuContentionTable:
             s = self._states[d]
             if s.lock_status == LockStatus.ACQUIRED:
                 return False
-            if s.priority > state.priority and s.lock_status == LockStatus.ACQUIRING:
+            if s.priority >= state.priority and s.lock_status == LockStatus.ACQUIRING:
                 return False
 
         return True
@@ -294,11 +301,11 @@ class GpuContentionTable:
 
     def __str__(self):
         g = self._gpu_id
-        t = self._states[Domain.TRAINING]
-        s = self._states[Domain.SELF_PLAY]
-        r = self._states[Domain.RATINGS]
-        u = self._states[Domain.SLEEPING]
-        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r}, sleeping={u})'
+
+        string = f'LockTable(gpu_id={g}):\n'
+        for domain, state in self._states.items():
+            string += f'  {domain}: {state}\n'
+        return string
 
     def __repr__(self) -> str:
         return str(self)

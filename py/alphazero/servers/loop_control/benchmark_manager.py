@@ -4,11 +4,12 @@ from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import AgentRole, Match, MatchType
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.custom_types import ClientConnection, ClientId, FileToTransfer, \
+from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
-from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
+    ServerAuxBase, WorkerAux
 from util.index_set import IndexSet
 from util.socket_util import JsonDict
 
@@ -101,7 +102,14 @@ class BenchmarkManager(GamingManagerBase):
 
     """
 
-    def __init__(self, controller: LoopController, manager_config: ManagerConfig):
+    def __init__(self, controller: LoopController):
+        manager_config = ManagerConfig(
+            worker_aux_class=WorkerAux,
+            server_aux_class=BenchmarkServerAux,
+            server_name='benchmark-server',
+            worker_name='benchmark-worker',
+            domain=Domain.BENCHMARK,
+            )
         super().__init__(controller, manager_config)
         self._benchmarker = Benchmarker(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {} # ix -> EvalStatus
@@ -112,7 +120,8 @@ class BenchmarkManager(GamingManagerBase):
         latest_evaluated_gen = self._latest_evaluated_gen()
         elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
         logger.debug('Benchmark priority: latest_eval_gen=%s, latest_gen=%s, elevate=%s', latest_evaluated_gen, latest_gen, elevate)
-        self._controller.set_ratings_priority(elevate)
+        self._controller.set_domain_priority(self._config.domain, elevate)
+
 
     def load_past_data(self):
         benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()

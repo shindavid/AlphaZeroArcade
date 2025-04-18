@@ -14,8 +14,8 @@ from .training_manager import TrainingManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, EvalTag,\
-    Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
+    EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.servers.loop_control.gaming_manager_base import ManagerConfig, WorkerAux
 from alphazero.servers.loop_control.benchmark_manager import BenchmarkServerAux
 from alphazero.servers.loop_control.eval_manager import EvalServerAux
@@ -308,21 +308,8 @@ class LoopController:
         for f in files:
             conn.socket.send_file(f['source_path'])
 
-    def set_priority(self, dict_len: int, rating_in_progress: bool):
-        latest_gen = self.latest_gen()
-        target_rate = self.params.target_rating_rate
-        num = dict_len + (0 if rating_in_progress else 1)
-        den = max(1, latest_gen)
-        current_rate = num / den
-
-        elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
-                     rating_in_progress, current_rate, target_rate)
-        self.set_ratings_priority(elevate)
-
-    def set_ratings_priority(self, elevate: bool):
-        self._gpu_contention_manager.set_ratings_priority(elevate)
+    def set_domain_priority(self, domain: Domain, elevate: bool):
+        self._gpu_contention_manager.set_domain_priority(domain, elevate)
 
     def hijack_all_self_play_tables(self):
         logger.debug('Hijacking all self-play tables...')
@@ -355,13 +342,7 @@ class LoopController:
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=RatingsServerAux,
-                server_name='ratings-server',
-                worker_name='ratings-worker',
-            )
-            self._ratings_managers[tag] = RatingsManager(self, manager_config, tag)
+            self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
@@ -372,24 +353,12 @@ class LoopController:
                 benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
                 shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
 
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=EvalServerAux,
-                server_name='eval-server',
-                worker_name='eval-worker',
-            )
-            self._eval_managers[tag] = EvalManager(self, manager_config)
+            self._eval_managers[tag] = EvalManager(self)
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
         if not self._benchmark_manager:
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=BenchmarkServerAux,
-                server_name='benchmark-server',
-                worker_name='benchmark-worker',
-            )
-            self._benchmark_manager = BenchmarkManager(self, manager_config)
+            self._benchmark_manager = BenchmarkManager(self)
         return self._benchmark_manager
 
     def _launch_recv_loop_inner(
@@ -515,12 +484,19 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
+    # def _send_socket_ready(self):
+    #     data = {
+    #         'type': 'socket-ready',
+    #     }
+    #     self.
+
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
             self._setup_output_dir()
             self._copy_binary_file()
             self._init_socket()
+            # self._send_socket_ready()
             self._self_play_manager.setup()
             self._training_manager.setup()
             self._output_dir_syncer.start()

@@ -3,9 +3,11 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation, RatingTag, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
+    RatingTag, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
-from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
+    ServerAuxBase, WorkerAux
 from util.py_util import find_largest_gap
 from util.socket_util import JsonDict
 
@@ -35,7 +37,14 @@ class RatingsManager(GamingManagerBase):
     """
     A separate RatingsManager is created for each rating-tag.
     """
-    def __init__(self, controller: LoopController, manager_config: ManagerConfig, tag: RatingTag):
+    def __init__(self, controller: LoopController, tag: RatingTag):
+        manager_config = ManagerConfig(
+            worker_aux_class=WorkerAux,
+            server_aux_class=RatingsServerAux,
+            server_name='ratings-server',
+            worker_name='ratings-worker',
+            domain=Domain.RATINGS,
+        )
         super().__init__(controller, manager_config, tag=tag)
         self._min_ref_strength = controller.game_spec.reference_player_family.min_strength
         self._max_ref_strength = controller.game_spec.reference_player_family.max_strength
@@ -44,7 +53,7 @@ class RatingsManager(GamingManagerBase):
     def set_priority(self):
         dict_len = len(self._rating_data_dict)
         rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
-        self._controller.set_priority(dict_len, rating_in_progress)
+        self._set_domain_priority(dict_len, rating_in_progress)
 
     def load_past_data(self):
         logger.info('Loading past ratings data...')

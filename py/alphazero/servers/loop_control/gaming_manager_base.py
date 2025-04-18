@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, Domain, ServerStatus
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
@@ -50,13 +50,14 @@ class ManagerConfig:
     worker_aux_class: Type
     server_name: str
     worker_name: str
+    domain: Domain
 
 
 class GamingManagerBase:
     def __init__(self, controller: LoopController, manager_config: ManagerConfig, tag: str=None):
         self._tag = tag
-        self._controller = controller
-        self._config = manager_config
+        self._controller: LoopController = controller
+        self._config: ManagerConfig = manager_config
 
         self._started = False
         self._lock = threading.Lock()
@@ -178,6 +179,19 @@ class GamingManagerBase:
             conn.aux.status = ServerStatus.READY
             status_cond.notify_all()
 
+    def _set_domain_priority(self, dict_len: int, rating_in_progress: bool):
+        latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
+        target_rate = self._controller.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
+        self._controller.set_domain_priority(self._config.domain, elevate)
+
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
         logger.debug('%s received json message: %s', self._config.worker_name, msg)
@@ -298,4 +312,3 @@ class GamingManagerBase:
     @abstractmethod
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         pass
-

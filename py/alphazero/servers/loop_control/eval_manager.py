@@ -3,14 +3,15 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import MCTSAgent, AgentRole, IndexedAgent
-from alphazero.logic.custom_types import ClientConnection, ClientId, FileToTransfer, \
+from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import Evaluator, EvalUtils
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
+    ServerAuxBase, WorkerAux
 from util.socket_util import JsonDict
 
 import numpy as np
@@ -74,6 +75,13 @@ class EvalManager(GamingManagerBase):
     A separate EvalManager is created for each rating-tag.
     """
     def __init__(self, controller: LoopController, manager_config: ManagerConfig):
+        manager_config = ManagerConfig(
+            worker_aux_class=WorkerAux,
+            server_aux_class=EvalServerAux,
+            server_name='eval-server',
+            worker_name='eval-worker',
+            domain=Domain.EVAL,
+        )
         super().__init__(controller, manager_config)
         self._evaluator = Evaluator(self._controller._organizer)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
@@ -81,7 +89,7 @@ class EvalManager(GamingManagerBase):
     def set_priority(self):
         dict_len = len(self._eval_status_dict)
         rating_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
-        self._controller.set_priority(dict_len, rating_in_progress)
+        self._set_domain_priority(dict_len, rating_in_progress)
 
     def load_past_data(self):
         logger.info('Loading past ratings data...')
