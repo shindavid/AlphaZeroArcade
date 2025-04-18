@@ -99,7 +99,7 @@ class GameServer {
     seat_index_t seat = -1;      // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
-    PlayerInstantiation instantiate(game_thread_id_t id) const {
+    PlayerInstantiation instantiate(game_slot_index_t id) const {
       return {gen->generate_with_name(id), seat, player_id};
     }
   };
@@ -175,6 +175,7 @@ class GameServer {
     const Params& params() const { return params_; }
 
     void init_slots();
+    void start_games();
     void init_progress_bar();
     void init_random_seat_indices();
     void run_hibernation_manager();
@@ -277,6 +278,9 @@ class GameServer {
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
   void run();
+  void create_threads();
+  void launch_threads();
+  void join_threads();
 
  private:
   SharedData shared_data_;

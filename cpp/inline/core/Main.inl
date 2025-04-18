@@ -71,7 +71,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
 
     core::LoopControllerClient* client = core::LoopControllerClient::get();
     if (game_server_proxy_params.remote_port) {
-      GameServerProxy proxy(game_server_proxy_params);
+      GameServerProxy proxy(game_server_proxy_params, game_server_params.num_game_threads);
 
       for (const auto& pgs : player_factory.parse(args.player_strs)) {
         proxy.register_player(pgs.seat, pgs.generator);

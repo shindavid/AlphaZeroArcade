@@ -23,7 +23,7 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<Game> {
   std::string get_default_name() const override { return "Remote"; }
   std::vector<std::string> get_types() const override { return {"Remote"}; }
   std::string get_description() const override { return "Remote player from another process"; }
-  AbstractPlayer<Game>* generate(game_thread_id_t) override;
+  AbstractPlayer<Game>* generate(game_slot_index_t) override;
   void end_session() override;
   int max_simultaneous_games() const override;
 

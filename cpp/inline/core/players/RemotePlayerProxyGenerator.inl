@@ -16,10 +16,11 @@ void RemotePlayerProxyGenerator<Game>::initialize(io::Socket* socket, int max_si
 }
 
 template <concepts::Game Game>
-AbstractPlayer<Game>* RemotePlayerProxyGenerator<Game>::generate(game_thread_id_t game_thread_id) {
+AbstractPlayer<Game>* RemotePlayerProxyGenerator<Game>::generate(
+  game_slot_index_t game_slot_index) {
   util::clean_assert(initialized(),
                      "RemotePlayerProxyGenerator::generate() called before initialized");
-  return new RemotePlayerProxy<Game>(socket_, player_id_, game_thread_id);
+  return new RemotePlayerProxy<Game>(socket_, player_id_, game_slot_index);
 }
 
 template <concepts::Game Game>

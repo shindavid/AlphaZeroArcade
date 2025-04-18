@@ -30,7 +30,7 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
     }
   };
 
-  core::AbstractPlayer<c4::Game>* generate(core::game_thread_id_t) override;
+  core::AbstractPlayer<c4::Game>* generate(core::game_slot_index_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 

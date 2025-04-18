@@ -30,11 +30,11 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
   /*
-   * If this generator already generated a player for the given game_thread_id, dispatches to
+   * If this generator already generated a player for the given game_slot_index_t, dispatches to
    * generate_from_manager(), passing in the mcts::Manager* of that previous player. Otherwise,
    * dispatches to generate_from_scratch().
    */
-  core::AbstractPlayer<Game>* generate(core::game_thread_id_t game_thread_id) override;
+  core::AbstractPlayer<Game>* generate(core::game_slot_index_t game_slot_index) override;
 
   void start_session(int num_game_threads) override { num_game_threads_ = num_game_threads; }
   void end_session() override;
@@ -46,7 +46,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   void validate_params();
 
   using shared_data_vec_t = std::vector<SharedData_sptr>;
-  using shared_data_map_t = std::map<core::game_thread_id_t, shared_data_vec_t>;
+  using shared_data_map_t = std::map<core::game_slot_index_t, shared_data_vec_t>;
 
   // TODO: instead of making this static, make this an object passed in via a specialized
   // PlayerSubfactory's create() method.

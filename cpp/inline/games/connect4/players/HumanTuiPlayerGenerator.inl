@@ -1,11 +1,13 @@
 #include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
 
+#include <core/BasicTypes.hpp>
+
 #include <boost/program_options.hpp>
 
 namespace c4 {
 
 inline core::AbstractPlayer<c4::Game>* HumanTuiPlayerGenerator::generate(
-    core::game_thread_id_t) {
+    core::game_slot_index_t) {
   return new c4::HumanTuiPlayer(params_.cheat_mode);
 }
 

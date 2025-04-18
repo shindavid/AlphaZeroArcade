@@ -2,6 +2,10 @@
 
 namespace core {
 
+inline HibernationManager::~HibernationManager() {
+  shut_down();
+}
+
 inline void HibernationManager::run(func_t f) {
   thread_ = std::thread([f = std::move(f), this]() {
     loop(f);
@@ -13,7 +17,8 @@ inline void HibernationManager::shut_down() {
   shutting_down_ = true;
   mutex_.unlock();
   cv_.notify_all();
-  thread_.join();
+
+  if (thread_.joinable()) thread_.join();
 }
 
 inline void HibernationManager::notify(game_slot_index_t slot_id) {
@@ -23,7 +28,7 @@ inline void HibernationManager::notify(game_slot_index_t slot_id) {
 }
 
 inline void HibernationManager::loop(func_t f) {
-  while (true) {
+  while (!shutting_down_) {
     std::unique_lock lock(mutex_);
     cv_.wait(lock, [this]() { return !ready_slots_.empty() || shutting_down_; });
     if (shutting_down_) {

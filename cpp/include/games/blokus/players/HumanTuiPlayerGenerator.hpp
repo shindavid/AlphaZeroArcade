@@ -16,7 +16,7 @@ namespace blokus {
 
 class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<blokus::Game> {
  public:
-  core::AbstractPlayer<blokus::Game>* generate(core::game_thread_id_t) override {
+  core::AbstractPlayer<blokus::Game>* generate(core::game_slot_index_t) override {
     return new HumanTuiPlayer();
   }
 };

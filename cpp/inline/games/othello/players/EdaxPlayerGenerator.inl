@@ -10,7 +10,7 @@ inline std::string EdaxPlayerGenerator::get_default_name() const {
   return std::format("Edax-{}", params_.depth);
 }
 
-inline EdaxPlayerGenerator::Player* EdaxPlayerGenerator::generate(core::game_thread_id_t) {
+inline EdaxPlayerGenerator::Player* EdaxPlayerGenerator::generate(core::game_slot_index_t) {
   return new EdaxPlayer(&oracle_pool_, params_);
 }
 

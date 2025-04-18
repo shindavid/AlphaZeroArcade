@@ -17,7 +17,7 @@ namespace chess {
 
 class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<chess::Game> {
  public:
-  core::AbstractPlayer<chess::Game>* generate(core::game_thread_id_t) override {
+  core::AbstractPlayer<chess::Game>* generate(core::game_slot_index_t) override {
     return new HumanTuiPlayer();
   }
 };

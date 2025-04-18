@@ -8,7 +8,7 @@ inline std::string PerfectPlayerGenerator::get_default_name() const {
   return util::create_string("Perfect-%d", params_.strength);
 }
 
-inline core::AbstractPlayer<c4::Game>* PerfectPlayerGenerator::generate(core::game_thread_id_t) {
+inline core::AbstractPlayer<c4::Game>* PerfectPlayerGenerator::generate(core::game_slot_index_t) {
   return new PerfectPlayer(&oracle_pool_, params_);
 }
 
