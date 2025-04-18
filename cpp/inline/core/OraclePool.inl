@@ -19,7 +19,9 @@ void OraclePool<OracleT>::set_capacity(size_t capacity) {
 }
 
 template <class OracleT>
-OracleT* OraclePool<OracleT>::get_oracle(core::HibernationNotifier* notifier) {
+template <typename... Ts>
+OracleT* OraclePool<OracleT>::get_oracle(core::HibernationNotifier* notifier,
+                                         Ts&&... constructor_args) {
   std::unique_lock lock(mutex_);
   if (!free_oracles_.empty()) {
     OracleT* oracle = free_oracles_.back();
@@ -27,7 +29,7 @@ OracleT* OraclePool<OracleT>::get_oracle(core::HibernationNotifier* notifier) {
     return oracle;
   }
   if (all_oracles_.size() < capacity_) {
-    OracleT* oracle = new OracleT();
+    OracleT* oracle = new OracleT(std::forward<Ts>(constructor_args)...);
     all_oracles_.push_back(oracle);
     return oracle;
   }
