@@ -1,15 +1,14 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/OraclePool.hpp>
-
 #include <games/connect4/PerfectOracle.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
+
+#include <string>
+#include <vector>
 
 namespace c4 {
 

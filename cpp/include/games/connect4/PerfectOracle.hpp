@@ -72,8 +72,8 @@ class PerfectOracle {
   ~PerfectOracle();
 
  private:
-  boost::process::ipstream out_pipe_;
-  boost::process::opstream in_pipe_;
+  boost::process::ipstream out_;
+  boost::process::opstream in_;
   boost::process::child child_;
 
   mutable std::mutex mutex_;

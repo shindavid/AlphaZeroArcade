@@ -19,12 +19,9 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <array>
 #include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
-#include <tuple>
 
 namespace othello {
 
@@ -91,6 +88,8 @@ class Game {
     static std::string player_to_str(core::seat_index_t player);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
+
+    static void write_edax_board_str(char* buf, const State& state);
    private:
     static int print_row(char* buf, int n, const State&, const Types::ActionMask&, row_t row,
                          column_t blink_column);

@@ -43,8 +43,8 @@ PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
   std::string s;
   {
     std::unique_lock lock(mutex_);
-    history.write(in_pipe_);
-    std::getline(out_pipe_, s);
+    history.write(in_);
+    std::getline(out_, s);
   }
 
   // TODO: do a more specialized parse that avoid dynamic allocation
@@ -89,10 +89,10 @@ PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
 }
 
 PerfectOracle::PerfectOracle()
-    : out_pipe_(),
-      in_pipe_(),
-      child_(detail::make_cmd(), bp::std_out > out_pipe_,
-             bp::std_in < in_pipe_, bp::std_err > bp::null) {}
+    : out_(),
+      in_(),
+      child_(detail::make_cmd(), bp::std_out > out_,
+             bp::std_in < in_, bp::std_err > bp::null) {}
 
 PerfectOracle::~PerfectOracle() {
   child_.terminate();
