@@ -14,7 +14,6 @@
 
 #include <mutex>
 #include <string>
-#include <vector>
 
 namespace c4 {
 
@@ -73,38 +72,11 @@ class PerfectOracle {
   ~PerfectOracle();
 
  private:
-  friend class PerfectOraclePool;
-
   boost::process::ipstream out_pipe_;
   boost::process::opstream in_pipe_;
   boost::process::child child_;
 
   mutable std::mutex mutex_;
-};
-
-class PerfectOraclePool {
- public:
-  // capacity = max number of oracles instances to create
-  PerfectOraclePool(int capacity = 16) { set_capacity(capacity); }
-
-  void set_capacity(int capacity);
-
-  // If there are fewer than capacity_ busy oracles, then returns a free oracle (creating a new one
-  // if necessary). Otherwise, returns nullptr, and schedules the passed-in notifier to be
-  // notified when an oracle becomes available.
-  PerfectOracle* get_oracle(core::HibernationNotifier* notifier=nullptr);
-
-  void release_oracle(PerfectOracle* oracle);
-
- private:
-  using oracle_vec_t = std::vector<PerfectOracle*>;
-  using notifier_vec_t = std::vector<core::HibernationNotifier*>;
-
-  oracle_vec_t free_oracles_;
-  notifier_vec_t pending_notifiers_;
-  mutable std::mutex mutex_;
-  int capacity_;
-  int count_ = 0;
 };
 
 }  // namespace c4

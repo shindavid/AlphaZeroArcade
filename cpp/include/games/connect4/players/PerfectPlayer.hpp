@@ -3,6 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/HibernationNotifier.hpp>
+#include <core/OraclePool.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
 #include <games/connect4/PerfectOracle.hpp>
@@ -13,6 +14,7 @@ namespace c4 {
 class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
  public:
   using base_t = core::AbstractPlayer<c4::Game>;
+  using OraclePool = core::OraclePool<PerfectOracle>;
 
   struct Params {
     /*
@@ -43,14 +45,14 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
     auto make_options_description();
   };
 
-  PerfectPlayer(PerfectOraclePool* oracle_pool, const Params&);
+  PerfectPlayer(OraclePool* oracle_pool, const Params&);
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
-  PerfectOraclePool* const oracle_pool_;
+  OraclePool* const oracle_pool_;
   const Params params_;
 
   PerfectOracle::MoveHistory move_history_;

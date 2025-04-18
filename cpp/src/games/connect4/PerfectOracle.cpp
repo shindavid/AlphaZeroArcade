@@ -98,9 +98,4 @@ PerfectOracle::~PerfectOracle() {
   child_.terminate();
 }
 
-void PerfectOraclePool::set_capacity(int capacity) {
-  util::release_assert(count_ == 0, "Cannot change capacity after oracles are created");
-  capacity_ = capacity;
-}
-
 }  // namespace c4
