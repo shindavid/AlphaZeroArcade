@@ -137,7 +137,7 @@ GameServerProxy<Game>::SharedData::SharedData(const Params& params, int num_game
     : params_(params), num_game_threads_(num_game_threads) {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
-  std::cout << "Connected to the server!" << std::endl;
+  LOG_INFO("Connected to the server!");
 }
 
 template <concepts::Game Game>

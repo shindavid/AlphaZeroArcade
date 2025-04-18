@@ -633,9 +633,8 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
       response_packet.set_player_name(name);
       response_packet.send_to(socket);
 
-      printf("Registered player: \"%s\" (seat: %d, remaining: %d)\n", name.c_str(), (int)seat,
-             remaining_requests);
-      std::cout.flush();
+      LOG_INFO("Registered player: \"{}\" (seat: {}, remaining: {})\n", name.c_str(), seat,
+               remaining_requests);
     } while (remaining_requests);
   }
 }
