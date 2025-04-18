@@ -1,11 +1,9 @@
 #pragma once
 
-#include <generic_players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TrainingDataWriter.hpp>
-
-#include <vector>
+#include <generic_players/MctsPlayer.hpp>
 
 namespace generic {
 
@@ -31,6 +29,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
+  using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
   using base_t = MctsPlayer<Game>;
@@ -41,7 +40,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using base_t::base_t;
 
   ActionResponse get_action_response(const ActionRequest& request) override;
-  ActionValueTensor* prehandle_chance_event() override;
+  ChanceEventPreHandleResponse prehandle_chance_event() override;
 
  protected:
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
@@ -51,6 +50,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
 
   bool use_for_training_;
   bool previous_used_for_training_;
+  bool mid_prehandle_chance_event_ = false;
 };
 
 }  // namespace generic

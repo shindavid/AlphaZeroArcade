@@ -230,7 +230,7 @@ class Manager {
 
   void set_search_params(const SearchParams& search_params);
   const SearchResults* search();
-  void load_root_action_values(ActionValueTensor& action_values);
+  core::yield_instruction_t load_root_action_values(ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }
 
@@ -314,6 +314,7 @@ class Manager {
   SearchParams search_params_;
   SearchResults results_;
 
+  bool mid_load_root_action_values_ = false;
   bool connected_ = false;
 };
 

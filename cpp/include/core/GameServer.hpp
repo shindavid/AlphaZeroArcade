@@ -57,6 +57,7 @@ class GameServer {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
+  using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
@@ -157,7 +158,9 @@ class GameServer {
 
     // Updated for each move
     StateHistory state_history_;
+    ActionValueTensor* chance_action_values_ = nullptr;
     int move_number_;  // tracks player-actions, not chance-events
+    int step_chance_player_index_ = 0;
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
