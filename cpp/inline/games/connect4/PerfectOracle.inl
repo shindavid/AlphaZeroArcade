@@ -28,33 +28,4 @@ inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) cons
   in.flush();
 }
 
-inline PerfectOracle* PerfectOraclePool::get_oracle(core::HibernationNotifier* notifier) {
-  std::unique_lock lock(mutex_);
-  if (!free_oracles_.empty()) {
-    PerfectOracle* oracle = free_oracles_.back();
-    free_oracles_.pop_back();
-    return oracle;
-  }
-  if (count_ < capacity_) {
-    count_++;
-    PerfectOracle* oracle = new PerfectOracle();
-    return oracle;
-  }
-
-  if (notifier) {
-    pending_notifiers_.push_back(notifier);
-  }
-  return nullptr;
-}
-
-inline void PerfectOraclePool::release_oracle(PerfectOracle* oracle) {
-  std::unique_lock lock(mutex_);
-  free_oracles_.push_back(oracle);
-  if (!pending_notifiers_.empty()) {
-    core::HibernationNotifier* notifier = pending_notifiers_.back();
-    pending_notifiers_.pop_back();
-    notifier->notify();
-  }
-}
-
 }  // namespace c4

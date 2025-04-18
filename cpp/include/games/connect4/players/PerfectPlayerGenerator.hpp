@@ -6,6 +6,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/OraclePool.hpp>
 
 #include <games/connect4/PerfectOracle.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
@@ -23,8 +24,9 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::Game> {
   void parse_args(const std::vector<std::string>& args) override;
 
  private:
+  using OraclePool = core::OraclePool<PerfectOracle>;
   PerfectPlayer::Params params_;
-  PerfectOraclePool oracle_pool_;
+  OraclePool oracle_pool_;
 };
 
 }  // namespace c4
