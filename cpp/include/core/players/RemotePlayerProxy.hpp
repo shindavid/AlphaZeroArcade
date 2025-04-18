@@ -1,17 +1,14 @@
 #pragma once
 
-#include <condition_variable>
-#include <map>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <utility>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/HibernationNotifier.hpp>
 #include <core/Packet.hpp>
 #include <util/SocketUtil.hpp>
+
+#include <map>
+#include <thread>
 
 namespace core {
 
@@ -66,10 +63,8 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   void end_game(const State&, const ValueTensor&) override;
 
  private:
-  std::condition_variable cv_;
-  mutable std::mutex mutex_;
-
   ActionResponse action_response_;
+  core::HibernationNotifier* hibernation_notifier_ = nullptr;
 
   io::Socket* socket_;
   const player_id_t player_id_;
