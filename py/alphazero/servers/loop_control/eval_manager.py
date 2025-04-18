@@ -74,7 +74,7 @@ class EvalManager(GamingManagerBase):
     """
     A separate EvalManager is created for each rating-tag.
     """
-    def __init__(self, controller: LoopController, manager_config: ManagerConfig):
+    def __init__(self, controller: LoopController):
         manager_config = ManagerConfig(
             worker_aux_class=WorkerAux,
             server_aux_class=EvalServerAux,

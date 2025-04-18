@@ -273,7 +273,7 @@ class GpuContentionTable:
             s = self._states[d]
             if s.lock_status == LockStatus.ACQUIRED:
                 return False
-            if s.priority >= state.priority and s.lock_status == LockStatus.ACQUIRING:
+            if s.priority > state.priority and s.lock_status == LockStatus.ACQUIRING:
                 return False
 
         return True
@@ -309,3 +309,7 @@ class GpuContentionTable:
 
     def __repr__(self) -> str:
         return str(self)
+
+    @property
+    def lock(self):
+        return self._lock
