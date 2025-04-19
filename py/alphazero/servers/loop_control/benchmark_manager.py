@@ -128,7 +128,11 @@ class BenchmarkManager(GamingManagerBase):
         self.excluded_agent_indices = benchmark_rating_data.committee.invert()
 
     def num_evaluated_gens(self):
-        return self._latest_evaluated_gen()
+        gen = 0
+        for iagent in self._benchmarker.indexed_agents:
+            if iagent.agent.gen > gen:
+                gen = iagent.agent.gen
+        return gen
 
     def handle_server_disconnect(self, conn: ClientConnection):
         logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
@@ -151,9 +155,9 @@ class BenchmarkManager(GamingManagerBase):
         self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
         if ix is None:
+            self._controller.set_domain_priority(self._config.domain, False)
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
-            self.set_priority()
             self._set_ready(conn)
             return
 

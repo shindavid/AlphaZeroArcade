@@ -78,6 +78,9 @@ class Params:
         group.add_argument('-C', '--num-cuda-devices-to-use', type=int,
                            default=defaults.num_cuda_devices_to_use,
                            help='Num cuda devices to use (default: all)')
+        group.add_argument('--run-benchmark-server', type=bool, default=False)
+        group.add_argument('--run-eval-server', type=bool, default=False)
+        group.add_argument('--run-ratings-server', type=bool, default=False)
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
