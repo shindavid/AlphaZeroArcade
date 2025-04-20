@@ -234,7 +234,7 @@ class Manager {
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }
 
-  void end_session(int num_game_threads) { nn_eval_service_->end_session(num_game_threads); }
+  void end_session() { nn_eval_service_->end_session(); }
 
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 

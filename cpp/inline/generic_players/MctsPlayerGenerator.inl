@@ -1,5 +1,6 @@
 #include <generic_players/MctsPlayerGenerator.hpp>
 
+#include <core/LoopControllerClient.hpp>
 #include <mcts/Constants.hpp>
 
 namespace generic {
@@ -29,7 +30,7 @@ template <core::concepts::Game Game>
 void MctsPlayerGeneratorBase<Game>::end_session() {
   for (auto& pair : shared_data_cache_) {
     for (SharedData_sptr& shared_data : pair.second) {
-      shared_data->manager.end_session(num_game_threads_);
+      shared_data->manager.end_session();
     }
   }
 }

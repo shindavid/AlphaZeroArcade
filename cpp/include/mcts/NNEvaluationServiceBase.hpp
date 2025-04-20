@@ -60,7 +60,7 @@ class NNEvaluationServiceBase {
   // Used in conjunction with evaluate(). See NNEvaluationResponse documentation.
   virtual void wait_for(core::nn_evaluation_sequence_id_t sequence_id) = 0;
 
-  virtual void end_session(int num_game_threads) {}
+  virtual void end_session() {}
 };
 
 }  // namespace mcts

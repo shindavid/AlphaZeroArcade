@@ -22,7 +22,7 @@ class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::Game> 
   std::vector<std::string> get_types() const override { return {"edax"}; }
   std::string get_description() const override { return "edax player"; }
   Player* generate(core::game_slot_index_t) override;
-  void start_session(int num_game_threads) override;
+  void start_session() override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 

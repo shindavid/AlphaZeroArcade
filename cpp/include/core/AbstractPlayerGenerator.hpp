@@ -92,7 +92,7 @@ class AbstractPlayerGenerator {
    * to do before it starts to construct players. This is useful for generators that need to
    * to do things like initialize object pools that will be shared among multiple players.
    */
-  virtual void start_session(int num_game_threads) {}
+  virtual void start_session() {}
 
   /*
    * Called when all games have been played. This is useful for when you want to report some

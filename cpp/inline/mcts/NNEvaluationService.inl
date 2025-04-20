@@ -1,6 +1,7 @@
 #include <mcts/NNEvaluationService.hpp>
 
 #include <core/BasicTypes.hpp>
+#include <core/Globals.hpp>
 #include <core/PerfStats.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -346,8 +347,10 @@ void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) 
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::end_session(int num_game_threads) {
+void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
+
+  int num_game_threads = core::Globals::num_game_threads;
 
   int64_t cache_hits = perf_stats_.search_thread_stats.cache_hits;
   int64_t cache_misses = perf_stats_.search_thread_stats.cache_misses;

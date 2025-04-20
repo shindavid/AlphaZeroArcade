@@ -1,6 +1,7 @@
 #include <core/GameServerProxy.hpp>
 
 #include <core/Constants.hpp>
+#include <core/Globals.hpp>
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
 #include <util/KeyValueDumper.hpp>
@@ -9,7 +10,6 @@
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string>
@@ -203,7 +203,7 @@ void GameServerProxy<Game>::SharedData::init_socket() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::start_session() {
   for (auto& sg : seat_generators_) {
-    sg.gen->start_session(num_game_threads_);
+    sg.gen->start_session();
   }
 }
 
@@ -234,6 +234,7 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
     game_slots_.push_back(new GameSlot(*this, i));
   }
   num_game_threads_ = std::min(num_game_threads_, num_game_slots);
+  core::Globals::num_game_threads = num_game_threads_;
 
   Packet<GameThreadInitializationResponse> send_packet;
   send_packet.send_to(socket_);
@@ -363,6 +364,7 @@ void GameServerProxy<Game>::create_threads() {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
   }
+  core::Globals::num_game_threads = num_threads;
 }
 
 template <concepts::Game Game>

@@ -1,18 +1,18 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include <generic_players/DataExportingMctsPlayer.hpp>
-#include <generic_players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/concepts/Game.hpp>
+#include <generic_players/DataExportingMctsPlayer.hpp>
+#include <generic_players/MctsPlayer.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/TypeDefs.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace generic {
 
@@ -36,7 +36,6 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
    */
   core::AbstractPlayer<Game>* generate(core::game_slot_index_t game_slot_index) override;
 
-  void start_session(int num_game_threads) override { num_game_threads_ = num_game_threads; }
   void end_session() override;
 
  protected:
@@ -54,7 +53,6 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
 
   MctsManagerParams manager_params_;
   mcts::mutex_cv_vec_sptr_t common_mutex_cv_pool_;  // only used in multi-threaded mode
-  int num_game_threads_ = 0;
 };
 
 template <core::concepts::Game Game>

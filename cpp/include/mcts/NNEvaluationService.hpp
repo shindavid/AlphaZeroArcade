@@ -132,7 +132,7 @@ class NNEvaluationService
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
   void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
 
-  void end_session(int num_game_threads) override;
+  void end_session() override;
 
   core::PerfStats get_perf_stats() override;
 

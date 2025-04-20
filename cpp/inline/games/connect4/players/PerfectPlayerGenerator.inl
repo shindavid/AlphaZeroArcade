@@ -1,5 +1,6 @@
 #include <games/connect4/players/PerfectPlayerGenerator.hpp>
 
+#include <core/Globals.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {
@@ -12,7 +13,8 @@ inline core::AbstractPlayer<c4::Game>* PerfectPlayerGenerator::generate(core::ga
   return new PerfectPlayer(&oracle_pool_, params_);
 }
 
-inline void PerfectPlayerGenerator::start_session(int num_game_threads) {
+inline void PerfectPlayerGenerator::start_session() {
+  int num_game_threads = core::Globals::num_game_threads;
   int capacity = params_.num_oracle_procs;
   if (capacity <= 0) {
     capacity = num_game_threads;

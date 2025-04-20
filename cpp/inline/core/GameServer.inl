@@ -1,6 +1,7 @@
 #include <core/GameServer.hpp>
 
 #include <core/BasicTypes.hpp>
+#include <core/Globals.hpp>
 #include <core/Packet.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/BitSet.hpp>
@@ -225,7 +226,7 @@ auto GameServer<Game>::SharedData::get_results() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::start_session() {
   for (auto& reg : registrations_) {
-    reg.gen->start_session(params_.num_game_threads);
+    reg.gen->start_session();
   }
 }
 
@@ -653,10 +654,10 @@ void GameServer<Game>::run() {
   shared_data_.init_random_seat_indices();
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
-  shared_data_.start_session();
   shared_data_.init_slots();
   shared_data_.run_hibernation_manager();
   create_threads();
+  shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
   shared_data_.start_games();
 
@@ -701,6 +702,7 @@ void GameServer<Game>::create_threads() {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
   }
+  core::Globals::num_game_threads = num_threads;
 }
 
 template <concepts::Game Game>

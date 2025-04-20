@@ -1,5 +1,6 @@
 #include <games/othello/players/EdaxPlayerGenerator.hpp>
 
+#include <core/Globals.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <format>
@@ -14,7 +15,8 @@ inline EdaxPlayerGenerator::Player* EdaxPlayerGenerator::generate(core::game_slo
   return new EdaxPlayer(&oracle_pool_, params_);
 }
 
-inline void EdaxPlayerGenerator::start_session(int num_game_threads) {
+inline void EdaxPlayerGenerator::start_session() {
+  int num_game_threads = core::Globals::num_game_threads;
   int capacity = params_.num_oracle_procs;
   if (capacity <= 0) {
     capacity = num_game_threads;
