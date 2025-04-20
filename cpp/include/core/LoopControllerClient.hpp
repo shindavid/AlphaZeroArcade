@@ -80,7 +80,7 @@ class LoopControllerClient {
   void send_worker_ready();
   void handle_pause_receipt();
   void handle_unpause_receipt();
-  PerfStats get_perf_stats() const;
+  PerfStats get_perf_stats();
 
  private:
   LoopControllerClient(const Params&);
@@ -118,6 +118,11 @@ class LoopControllerClient {
   size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
   bool deactivated_ = false;
+
+  core::LoopControllerPerfStats perf_stats_;
+  std::chrono::steady_clock::time_point get_perf_stats_time_;
+  std::chrono::steady_clock::time_point pause_time_;
+  bool paused_ = false;
 };
 
 }  // namespace core

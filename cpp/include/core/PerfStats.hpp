@@ -20,6 +20,7 @@ struct SearchThreadPerfStats {
   int64_t cache_hits = 0;
   int64_t cache_misses = 0;
 
+  int64_t wait_for_game_slot_time_ns = 0;
   int64_t cache_mutex_acquire_time_ns = 0;
   int64_t cache_insert_time_ns = 0;
   int64_t batch_prepare_time_ns = 0;
@@ -44,14 +45,25 @@ struct NNEvalLoopPerfStats {
   int batch_datas_allocated = 0;
 };
 
+struct LoopControllerPerfStats {
+  LoopControllerPerfStats& operator+=(const LoopControllerPerfStats& other);
+  void fill_json(boost::json::object& obj) const;
+
+  int64_t pause_time_ns = 0;
+  int64_t model_load_time_ns = 0;
+  int64_t total_time_ns = 0;
+};
+
 struct PerfStats {
   PerfStats& operator+=(const PerfStats& other);
   boost::json::object to_json() const;
   void update(const SearchThreadPerfStats&, std::mutex& mutex);
   void update(const NNEvalLoopPerfStats&, std::mutex& mutex);
+  void update(const LoopControllerPerfStats&);
 
   SearchThreadPerfStats search_thread_stats;
   NNEvalLoopPerfStats nn_eval_loop_stats;
+  LoopControllerPerfStats loop_controller_stats;
 };
 
 // PerfStatsClocker can be used to measure the time taken for a specific operation. Its constructor

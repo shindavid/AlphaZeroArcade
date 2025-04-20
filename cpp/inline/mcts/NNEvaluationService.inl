@@ -418,13 +418,13 @@ void NNEvaluationService<Game>::end_session() {
 }
 
 template <core::concepts::Game Game>
-core::PerfStats NNEvaluationService<Game>::get_perf_stats() {
+void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
   std::unique_lock lock(perf_stats_mutex_);
   core::PerfStats perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::PerfStats();
   lock.unlock();
 
-  return perf_stats_copy;
+  perf_stats += perf_stats_copy;
 }
 
 template <core::concepts::Game Game>

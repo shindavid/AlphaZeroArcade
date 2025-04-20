@@ -95,6 +95,11 @@ int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
 int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }
 int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
 
+template<typename Rep, typename Period>
+int64_t to_ns(const std::chrono::duration<Rep, Period>& duration) {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+}
+
 /*
  * Usage:
  *

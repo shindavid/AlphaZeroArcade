@@ -1,11 +1,12 @@
 #include <core/LoopControllerClient.hpp>
-
 #include <core/LoopControllerListener.hpp>
+#include <core/PerfStats.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/LoggingUtil.hpp>
 
+#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -52,12 +53,25 @@ void LoopControllerClient::handle_unpause_receipt() {
   }
 }
 
-PerfStats LoopControllerClient::get_perf_stats() const {
+PerfStats LoopControllerClient::get_perf_stats() {
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  perf_stats_.total_time_ns += util::to_ns(now - get_perf_stats_time_);
+  get_perf_stats_time_ = now;
+
+  // pause time includes reload time. Let's undo that.
+  util::release_assert(perf_stats_.pause_time_ns >= perf_stats_.model_load_time_ns,
+                       "pause_time_ns < model_load_time_ns (%ld < %ld)", perf_stats_.pause_time_ns,
+                       perf_stats_.model_load_time_ns);
+  perf_stats_.pause_time_ns -= perf_stats_.model_load_time_ns;
+
   PerfStats stats;
+  stats.loop_controller_stats = perf_stats_;
+  perf_stats_ = LoopControllerPerfStats();  // reset
 
   for (auto listener : metrics_request_listeners_) {
-    stats += listener->get_perf_stats();
+    listener->update_perf_stats(stats);
   }
+
   return stats;
 }
 
@@ -154,7 +168,9 @@ void LoopControllerClient::send_unpause_ack() {
 
 void LoopControllerClient::pause() {
   LOG_INFO("LoopControllerClient: pausing...");
+  paused_ = true;
   pause_receipt_count_ = 0;
+  pause_time_ = std::chrono::steady_clock::now();
 
   for (auto listener : pause_listeners_) {
     listener->pause();
@@ -206,9 +222,16 @@ void LoopControllerClient::wait_for_unpause_receipts() {
   std::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return unpause_receipt_count_ == pause_listeners_.size(); });
   LOG_INFO("LoopControllerClient: unpause receipts received!");
+
+  if (paused_) {
+    auto now = std::chrono::steady_clock::now();
+    perf_stats_.pause_time_ns += util::to_ns(now - pause_time_);
+    paused_ = false;
+  }
 }
 
 void LoopControllerClient::loop() {
+  get_perf_stats_time_ = std::chrono::steady_clock::now();
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
@@ -235,6 +258,7 @@ void LoopControllerClient::loop() {
       int n_rows_limit = msg.at("n_rows_limit").as_int64();
       handle_data_pre_request(n_rows_limit);
     } else if (type == "reload-weights") {
+      core::PerfStatsClocker clocker(perf_stats_.model_load_time_ns);
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {
         cuda_device = msg.at("cuda_device").as_string().c_str();

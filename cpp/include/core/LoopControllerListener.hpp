@@ -52,7 +52,7 @@ template <>
 class LoopControllerListener<LoopControllerInteractionType::kMetricsRequest> {
  public:
   virtual ~LoopControllerListener() = default;
-  virtual PerfStats get_perf_stats() = 0;
+  virtual void update_perf_stats(PerfStats&) = 0;
 };
 
 template <>

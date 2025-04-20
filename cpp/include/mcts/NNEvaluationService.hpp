@@ -134,7 +134,7 @@ class NNEvaluationService
 
   void end_session() override;
 
-  core::PerfStats get_perf_stats() override;
+  void update_perf_stats(core::PerfStats&) override;
 
  private:
   struct TensorGroup {
