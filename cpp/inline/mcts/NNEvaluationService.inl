@@ -748,6 +748,33 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
              cls, func, batch_data->sequence_id, batch_data->allocate_count);
   }
 
+  // NOTE: we could slightly optimize this by moving some of these steps out of the main path.
+  // If the batch is already filled up before we get to this point, we can start copying to
+  // full_input_ in a separate thread, so that it's ready when we get here.
+  //
+  // Furthermore, that thread could also start copying the input to the GPU. We would need to make
+  // sure that we have two separate tensors on the GPU, so that we can copy to one while
+  // evaluating the other. This would require some extra synchronization, and would also limit the
+  // potential batch size by half, and would also mean that the GPU data memory address would change
+  // every time we switch the input tensor. So it's unclear if this is worth it.
+  //
+  // Currently, on dshin's laptop, for a 10,000-game benchmark run of c4, we see:
+  //
+  // NN-0 nn-eval per-batch gpu copy time:                0.131ms
+  // NN-0 nn-eval per-batch model eval time:              3.032ms
+  //
+  // On RunPod, we see:
+  //
+  // NN-0 nn-eval per-batch gpu copy time:                0.261ms
+  // NN-0 nn-eval per-batch model eval time:              1.523ms
+  //
+  // These numbers put a limit on the potential speedup we could get from this optimization.
+  //
+  // Note that "gpu copy time" currently includes both the time to copy the input to the GPU and
+  // the time to copy the output back to the CPU. The suggested optimization would only
+  // improve the first part of that time. We don't currently have clarity on how much of the
+  // "gpu copy time" is spent on the first part vs. the second part, though we could trivially
+  // break down the time into two parts by using a separate timer for the second part.
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
   core::PerfStatsClocker gpu_copy_clocker(loop_stats.gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
