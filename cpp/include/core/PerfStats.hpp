@@ -37,7 +37,8 @@ struct NNEvalLoopPerfStats {
   int64_t full_batches_evaluated = 0;
 
   int64_t wait_for_search_threads_time_ns = 0;
-  int64_t gpu_copy_time_ns = 0;
+  int64_t cpu2gpu_copy_time_ns = 0;
+  int64_t gpu2cpu_copy_time_ns = 0;
   int64_t model_eval_time_ns = 0;
 
   int batch_datas_allocated = 0;

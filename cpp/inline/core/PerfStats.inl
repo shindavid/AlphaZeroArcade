@@ -1,5 +1,7 @@
 #include <core/PerfStats.hpp>
 
+#include <core/Globals.hpp>
+
 namespace core {
 
 
@@ -16,13 +18,14 @@ inline SearchThreadPerfStats& SearchThreadPerfStats::operator+=(
 }
 
 inline void SearchThreadPerfStats::fill_json(boost::json::object& obj) const {
+  int n = core::Globals::num_game_threads;
   obj["cache_hits"] = cache_hits;
   obj["cache_misses"] = cache_misses;
-  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns;
-  obj["cache_insert_time_ns"] = cache_insert_time_ns;
-  obj["batch_prepare_time_ns"] = batch_prepare_time_ns;
-  obj["batch_write_time_ns"] = batch_write_time_ns;
-  obj["wait_for_nn_eval_time_ns"] = wait_for_nn_eval_time_ns;
+  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns / n;
+  obj["cache_insert_time_ns"] = cache_insert_time_ns / n;
+  obj["batch_prepare_time_ns"] = batch_prepare_time_ns / n;
+  obj["batch_write_time_ns"] = batch_write_time_ns / n;
+  obj["wait_for_nn_eval_time_ns"] = wait_for_nn_eval_time_ns / n;
 }
 
 inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
@@ -32,7 +35,8 @@ inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
   full_batches_evaluated += other.full_batches_evaluated;
 
   wait_for_search_threads_time_ns += other.wait_for_search_threads_time_ns;
-  gpu_copy_time_ns += other.gpu_copy_time_ns;
+  cpu2gpu_copy_time_ns += other.cpu2gpu_copy_time_ns;
+  gpu2cpu_copy_time_ns += other.gpu2cpu_copy_time_ns;
   model_eval_time_ns += other.model_eval_time_ns;
 
   batch_datas_allocated += other.batch_datas_allocated;
@@ -45,7 +49,8 @@ inline void NNEvalLoopPerfStats::fill_json(boost::json::object& obj) const {
   obj["full_batches_evaluated"] = full_batches_evaluated;
 
   obj["wait_for_search_threads_time_ns"] = wait_for_search_threads_time_ns;
-  obj["gpu_copy_time_ns"] = gpu_copy_time_ns;
+  obj["cpu2gpu_copy_time_ns"] = cpu2gpu_copy_time_ns;
+  obj["gpu2cpu_copy_time_ns"] = gpu2cpu_copy_time_ns;
   obj["model_eval_time_ns"] = model_eval_time_ns;
 
   obj["batch_datas_allocated"] = batch_datas_allocated;

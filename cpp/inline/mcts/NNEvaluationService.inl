@@ -369,7 +369,8 @@ void NNEvaluationService<Game>::end_session() {
 
   int64_t wait_for_search_threads_time_ns =
     perf_stats_.nn_eval_loop_stats.wait_for_search_threads_time_ns;
-  int64_t gpu_copy_time_ns = perf_stats_.nn_eval_loop_stats.gpu_copy_time_ns;
+  int64_t cpu2gpu_copy_time_ns = perf_stats_.nn_eval_loop_stats.cpu2gpu_copy_time_ns;
+  int64_t gpu2cpu_copy_time_ns = perf_stats_.nn_eval_loop_stats.gpu2cpu_copy_time_ns;
   int64_t model_eval_time_ns = perf_stats_.nn_eval_loop_stats.model_eval_time_ns;
 
   int batch_datas_allocated = perf_stats_.nn_eval_loop_stats.batch_datas_allocated;
@@ -385,7 +386,8 @@ void NNEvaluationService<Game>::end_session() {
 
   float per_batch_wait_for_search_threads_time_ms =
     1e-6 * wait_for_search_threads_time_ns / batches_evaluated;
-  float per_batch_gpu_copy_time_ms = 1e-6 * gpu_copy_time_ns / batches_evaluated;
+  float per_batch_cpu2gpu_copy_time_ms = 1e-6 * cpu2gpu_copy_time_ns / batches_evaluated;
+  float per_batch_gpu2cpu_copy_time_ms = 1e-6 * gpu2cpu_copy_time_ns / batches_evaluated;
   float per_batch_model_eval_time_ms = 1e-6 * model_eval_time_ns / batches_evaluated;
   float per_pos_model_eval_time_us = 1e-3 * model_eval_time_ns / positions_evaluated;
 
@@ -408,7 +410,8 @@ void NNEvaluationService<Game>::end_session() {
   dump("search-thread total wait for nn eval time", "%.3fs", avg_wait_for_nn_eval_time_s);
   dump("nn-eval per-batch wait for search threads time", "%.3fms",
        per_batch_wait_for_search_threads_time_ms);
-  dump("nn-eval per-batch gpu copy time", "%.3fms", per_batch_gpu_copy_time_ms);
+  dump("nn-eval per-batch cpu2gpu copy time", "%.3fms", per_batch_cpu2gpu_copy_time_ms);
+  dump("nn-eval per-batch gpu2cpu copy time", "%.3fms", per_batch_gpu2cpu_copy_time_ms);
   dump("nn-eval per-batch model eval time", "%.3fms", per_batch_model_eval_time_ms);
   dump("nn-eval per-pos model eval time", "%.3fus", per_pos_model_eval_time_us);
   session_ended_ = true;
@@ -761,25 +764,17 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   // potential batch size by half, and would also mean that the GPU data memory address would change
   // every time we switch the input tensor. So it's unclear if this is worth it.
   //
+  // Something similar could potentially be done when copying output back to the CPU.
+  //
   // Currently, on dshin's laptop, for a 10,000-game benchmark run of c4, we see:
   //
-  // NN-0 nn-eval per-batch gpu copy time:                0.131ms
-  // NN-0 nn-eval per-batch model eval time:              3.032ms
-  //
-  // On RunPod, we see:
-  //
-  // NN-0 nn-eval per-batch gpu copy time:                0.261ms
-  // NN-0 nn-eval per-batch model eval time:              1.523ms
+  // NN-0 nn-eval per-batch cpu2gpu time:                 0.061ms
+  // NN-0 nn-eval per-batch gpu2cpu time:                 0.014ms
+  // NN-0 nn-eval per-batch model eval time:              3.243ms
   //
   // These numbers put a limit on the potential speedup we could get from this optimization.
-  //
-  // Note that "gpu copy time" currently includes both the time to copy the input to the GPU and
-  // the time to copy the output back to the CPU. The suggested optimization would only
-  // improve the first part of that time. We don't currently have clarity on how much of the
-  // "gpu copy time" is spent on the first part vs. the second part, though we could trivially
-  // break down the time into two parts by using a separate timer for the second part.
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
-  core::PerfStatsClocker gpu_copy_clocker(loop_stats.gpu_copy_time_ns);
+  core::PerfStatsClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, full_input_);
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
@@ -792,7 +787,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
-  core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu_copy_time_ns);
+  core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
     TensorGroup& group = batch_data->tensor_groups[i];
     group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
