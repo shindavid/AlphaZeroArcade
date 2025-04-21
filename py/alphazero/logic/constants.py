@@ -15,18 +15,48 @@ CLIENTS_TABLE_CREATE_CMDS = [
 ]
 
 
+# Should match what is emitted by core::PerfStat::to_json() in c++
+PERF_STATS_COLUMNS = [
+    # SearchThreadPerfStats
+    'cache_hits',
+    'cache_misses',
+
+    'wait_for_game_slot_time_ns',
+    'cache_mutex_acquire_time_ns',
+    'cache_insert_time_ns',
+    'batch_prepare_time_ns',
+    'batch_write_time_ns',
+    'wait_for_nn_eval_time_ns',
+
+    # NNEvalLoopPerfStats
+    'positions_evaluated',
+    'batches_evaluated',
+    'full_batches_evaluated',
+
+    'wait_for_search_threads_time_ns',
+    'cpu2gpu_copy_time_ns',
+    'gpu2cpu_copy_time_ns',
+    'model_eval_time_ns',
+
+    'batch_datas_allocated',
+
+    # LoopControllerPerfStats
+    'pause_time_ns',
+    'model_load_time_ns',
+    'total_time_ns',
+]
+
 SELF_PLAY_TABLE_CREATE_CMDS = [
+    # metrics columns should match json keys for PerfStats in c++
     """CREATE TABLE metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_id INTEGER,
             gen INTEGER,
             report_timestamp INTEGER,
-            cache_hits INTEGER,
-            cache_misses INTEGER,
-            positions_evaluated INTEGER,
-            batches_evaluated INTEGER,
-            full_batches_evaluated INTEGER
-            )""",
+            %s
+            )""" % ', '.join(
+        '%s INTEGER' % col for col in PERF_STATS_COLUMNS
+    ),
 
     """CREATE TABLE self_play_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

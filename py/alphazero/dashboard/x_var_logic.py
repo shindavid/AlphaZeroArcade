@@ -28,7 +28,9 @@ class SelectVar:
 
 
 SELECT_VARS = [
-    SelectVar('self_play_db_filename', 'self_play_data', 'runtime', '1e-9 * runtime'),
+    SelectVar('self_play_db_filename', 'metrics', 'runtime',
+              '1e-9 * (total_time_ns - pause_time_ns)'),
+    SelectVar('self_play_db_filename', 'metrics', 'mcts_gen', 'gen', index=True),
     SelectVar('self_play_db_filename', 'self_play_data', 'mcts_gen', 'gen', index=True),
     SelectVar('self_play_db_filename', 'self_play_data', 'n_games', 'games'),
     SelectVar('self_play_db_filename', 'self_play_data', 'n_evaluated_positions',

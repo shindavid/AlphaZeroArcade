@@ -1,7 +1,8 @@
-from bokeh.models import CustomJSTickFormatter
+from bokeh.models import ColumnDataSource, CustomJSTickFormatter, Plot
 from bokeh.palettes import Category10, Category20
+import numpy as np
 
-from typing import List
+from typing import List, Optional
 
 
 def get_colors(n: int) -> List[str]:
@@ -49,3 +50,24 @@ def make_time_tick_formatter(resolution: str):
     else:
         raise ValueError(f"Invalid resolution: {resolution}")
     return CustomJSTickFormatter(code=code)
+
+
+def add_stacked_area(p: Plot, source: ColumnDataSource, y_cols: List[str], x_col: str='x',
+                     colors: Optional[List[str]]=None, legend_labels: Optional[List[str]]=None):
+    n = len(y_cols)
+    if colors is None:
+        from bokeh.palettes import Viridis256
+        colors = Viridis256[:n]
+
+    if legend_labels is None:
+        legend_labels = y_cols
+
+    # prev = np.zeros(len(source.data[x_col]))
+    prev = 0
+    x = source.data[x_col]
+
+    for i, y_col in enumerate(y_cols):
+        top = np.array(source.data[y_col]) + prev
+        p.varea(x=x, y1=prev, y2=top, fill_color=colors[i], alpha=0.8,
+                legend_label=legend_labels[i])
+        prev = top
