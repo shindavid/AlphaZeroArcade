@@ -444,6 +444,7 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
   SortItem sort_items[m + n];
   populate_sort_items(sort_items, request);
 
+  int miss_info_write_index = 0;
   int misses_for_this_shard = 0;
   for (int i = 0; i < s; ++i) {
     SortItem& sort_item = sort_items[i];
@@ -473,7 +474,7 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
     bool last_in_shard = (i == s - 1 || sort_items[i].shard != sort_items[i + 1].shard);
     if (last_in_shard) {
       if (misses_for_this_shard) {
-        write_miss_infos(request, result, misses_for_this_shard);
+        write_miss_infos(request, result, miss_info_write_index, misses_for_this_shard);
         misses_for_this_shard = 0;
       }
 
@@ -554,6 +555,7 @@ bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
                                                  CacheLookupResult& result,
+                                                 int& miss_info_write_index,
                                                  int misses_for_this_shard) {
   core::PerfStatsClocker clocker(result.stats.batch_prepare_time_ns);
 
@@ -572,7 +574,7 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
   int slice_index = 0;
   int slice_offset = 0;
   for (int j = 0; j < misses_for_this_shard; ++j) {
-    CacheMissInfo& miss_info = result.miss_infos[j];
+    CacheMissInfo& miss_info = result.miss_infos[miss_info_write_index++];
     RequestItem& item = request.get_fresh_item(miss_info.item_index);
 
     BatchDataSlice& slice = slices[slice_index];

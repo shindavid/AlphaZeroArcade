@@ -304,7 +304,8 @@ class NNEvaluationService
   // return true if miss cache
   bool handle_fresh_item(NNEvaluationRequest&, CacheLookupResult&, ShardData&, int item_index);
 
-  void write_miss_infos(NNEvaluationRequest&, CacheLookupResult&, int misses_for_this_shard);
+  void write_miss_infos(NNEvaluationRequest&, CacheLookupResult&, int& miss_info_write_index,
+                        int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
 

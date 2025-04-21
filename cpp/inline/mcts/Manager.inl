@@ -378,6 +378,11 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
 
   StateHistory& history = root_info_.history_array[context.canonical_sym];
 
+  context.canonical_sym = root_info_.canonical_sym;
+  context.raw_history = root_info_.history_array[group::kIdentity];
+  context.active_seat = root_info_.active_seat;
+  context.root_history_array = root_info_.history_array;
+
   context.canonical_history = history;
   context.initialization_history = &context.canonical_history;
   context.initialization_index = root_index;
