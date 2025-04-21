@@ -26,7 +26,8 @@ def get_args():
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
     parser.add_argument('--enable-debug-logging', action='store_true', help='debug logging')
     parser.add_argument('--clean', action='store_true', help='clean out target/.../{bin,lib}/ directory')
-    parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
+    parser.add_argument("-c", '--clear-core-dumps', action='store_true',
+                        help='rm core.* from cwd and ~/scratch/runs/*/*/*/ before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
     parser.add_argument('-D', '--macro-defines', action='append',
                         help='macro definitions to forward to make cmd (-D FOO -D BAR=2). If a macro name is passed'
@@ -71,6 +72,7 @@ def main():
 
     if args.clear_core_dumps:
         run('rm -f core.*')
+        run('rm -f ~/scratch/runs/*/*/*/core.*')
 
     debug = bool(args.debug)
     enable_debug_logging = bool(args.enable_debug_logging)
