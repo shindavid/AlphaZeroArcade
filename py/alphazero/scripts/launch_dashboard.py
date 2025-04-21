@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from alphazero.dashboard.benchmark_plotting import create_benchmark_figure
+from alphazero.dashboard.eval_plotting import create_eval_figure
 from alphazero.dashboard.training_plotting import create_training_figure, \
     create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
@@ -22,6 +24,11 @@ import sqlite3
 import sys
 from threading import Thread
 from typing import List
+
+from bokeh.models import Select
+from bokeh.layouts import column
+from alphazero.dashboard.benchmark_plotting import create_benchmark_figure
+from alphazero.logic.run_params import RunParams
 
 
 @dataclass
@@ -180,6 +187,48 @@ def ratings(doc):
     doc.add_root(create_ratings_figure(run_params.game, tags))
     doc.theme = theme
 
+def benchmark(doc):
+    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
+    tags = [t for t in tag_str.split(',') if t]
+    if not tags:
+        return
+
+    current_tag = tags[0]
+
+    select = Select(title="Select Tag", value=current_tag, options=tags)
+    plot_container = create_benchmark_figure(run_params.game, current_tag)
+
+    def update_plot(attr, old, new):
+        new_plot = create_benchmark_figure(run_params.game, select.value)
+        layout.children[1] = new_plot
+
+    select.on_change('value', update_plot)
+
+    layout = column(select, plot_container)
+    doc.add_root(layout)
+    doc.theme = theme
+
+def evaluation(doc):
+    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
+    tags = [t for t in tag_str.split(',') if t]
+    if not tags:
+        return
+
+    current_tag = tags[0]
+
+    select = Select(title="Select Tag", value=current_tag, options=tags)
+    plot_container = create_eval_figure(run_params.game, current_tag)
+
+    def update_plot(attr, old, new):
+        new_plot = create_eval_figure(run_params.game, select.value)
+        layout.children[1] = new_plot
+
+    select.on_change('value', update_plot)
+
+    layout = column(select, plot_container)
+    doc.add_root(layout)
+    doc.theme = theme
+
 
 class DocumentCollection:
     def __init__(self, tags: List[str]):
@@ -205,12 +254,16 @@ class DocumentCollection:
         training = make_doc('training')
         self_play = make_doc('self_play')
         ratings = make_doc('ratings')
+        benchmark = make_doc('benchmark')
+        evaluation = make_doc('evaluation')
 
         self.tags = tags
         self.training_heads = training_heads
         self.training = training
         self.self_play = self_play
         self.ratings = ratings
+        self.benchmark = benchmark
+        self.evaluation = evaluation
 
     def get_base_data(self):
         return {
@@ -218,6 +271,8 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
+            'benchmark': self.benchmark,
+            'evaluation': self.evaluation,
             'tags': usable_tags,
             'init_tags': self.tags,
         }
@@ -227,6 +282,8 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
+            'benchmark': self.benchmark,
+            'evaluation': self.evaluation,
             }
         for h, head in enumerate(all_training_heads):
             d[f'training_{head}'] = self.training_heads[h][1]
@@ -262,6 +319,8 @@ def bk_worker():
         '/training': training,
         '/self_play': self_play,
         '/ratings': ratings,
+        '/benchmark': benchmark,
+        '/evaluation': evaluation,
     }
 
     for head in all_training_heads:

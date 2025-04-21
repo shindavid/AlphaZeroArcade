@@ -62,6 +62,13 @@ class Params:
     rating_tag: str = ''
     num_cuda_devices_to_use: Optional[int] = None
 
+    benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
+
+    run_benchmark_server: bool = False
+    run_ratings_server: bool = False
+    without_self_play_server: bool = False
+    run_eval_server: bool = False
+
     @staticmethod
     def create(args) -> 'Params':
         kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
@@ -78,9 +85,14 @@ class Params:
         group.add_argument('-C', '--num-cuda-devices-to-use', type=int,
                            default=defaults.num_cuda_devices_to_use,
                            help='Num cuda devices to use (default: all)')
-        group.add_argument('--run-benchmark-server', type=bool, default=False)
-        group.add_argument('--run-eval-server', type=bool, default=False)
-        group.add_argument('--run-ratings-server', type=bool, default=False)
+        group.add_argument('--run-benchmark-server', action='store_true',
+                           help='Run the benchmark server')
+        group.add_argument('--run-eval-server', action='store_true',
+                            help='Run the eval server')
+        group.add_argument('--run-ratings-server', action='store_true',
+                            help='Run the ratings server')
+        group.add_argument('--without-self-play-server', action='store_true',
+                            help='Do not run the self-play server')
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -147,6 +159,53 @@ def launch_ratings_server(params_dict, cuda_device: int):
     logger.info('Launching ratings server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
+def launch_benchmark_server(params_dict, cuda_device: int):
+    params = params_dict['Params']
+    docker_params = params_dict['DockerParams']
+    logging_params = params_dict['LoggingParams']
+    build_params = params_dict['BuildParams']
+
+    cuda_device = f'cuda:{cuda_device}'
+
+    cmd = [
+        'py/alphazero/scripts/run_benchmark_server.py',
+        '--ignore-sigint',
+        '--cuda-device', cuda_device,
+    ]
+    if default_self_play_server_params.loop_controller_port != params.port:
+        cmd.extend(['--loop_controller_port', str(params.port)])
+
+    docker_params.add_to_cmd(cmd)
+    logging_params.add_to_cmd(cmd)
+    build_params.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info('Launching benchmark server: %s', cmd)
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+def launch_eval_server(params_dict, cuda_device: int):
+    params = params_dict['Params']
+    docker_params = params_dict['DockerParams']
+    logging_params = params_dict['LoggingParams']
+    build_params = params_dict['BuildParams']
+
+    cuda_device = f'cuda:{cuda_device}'
+
+    cmd = [
+        'py/alphazero/scripts/run_eval_server.py',
+        '--ignore-sigint',
+        '--cuda-device', cuda_device,
+    ]
+    if default_self_play_server_params.loop_controller_port != params.port:
+        cmd.extend(['--loop_controller_port', str(params.port)])
+
+    docker_params.add_to_cmd(cmd)
+    logging_params.add_to_cmd(cmd)
+    build_params.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info('Launching eval server: %s', cmd)
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 def launch_loop_controller(params_dict, cuda_device: int):
     params = params_dict['Params']
@@ -169,6 +228,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
+    if params.benchmark_tag:
+        cmd.extend(['--benchmark-tag', params.benchmark_tag])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -235,8 +296,14 @@ def main():
         for self_play_gpu in self_play_gpus:
             procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
-        if game_spec.reference_player_family is not None:
+        if params.run_ratings_server and game_spec.reference_player_family is not None:
             procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
+
+        if params.run_benchmark_server:
+            procs.append(('Benchmark', launch_benchmark_server(params_dict, ratings_gpu)))
+
+        if params.run_eval_server:
+            procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
 
         loop = True
         while loop:
