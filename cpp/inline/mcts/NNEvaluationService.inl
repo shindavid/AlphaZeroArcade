@@ -870,6 +870,7 @@ void NNEvaluationService<Game>::unpause() {
   }
   paused_ = false;
   lock.unlock();
+  cv_main_.notify_all();
   LOG_INFO("NNEvaluationService: unpause complete!");
 }
 
