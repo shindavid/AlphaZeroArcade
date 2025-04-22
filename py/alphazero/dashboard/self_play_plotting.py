@@ -112,7 +112,8 @@ STACKED_SEARCH_THREAD_PLOT = [
     YVar('cache-insert', 'cache_insert_s', func=lambda df: df['cache_insert_time_ns'] * 1e-9),
     YVar('batch-prepare', 'batch_prepare_s', func=lambda df: df['batch_prepare_time_ns'] * 1e-9),
     YVar('batch-write', 'batch_write_s', func=lambda df: df['batch_write_time_ns'] * 1e-9),
-    YVar('wait-nn', 'wait_nn_s', func=lambda df: df['wait_for_nn_eval_time_ns'] * 1e-9),
+    YVar('wait-nn', 'wait_nn_s', func=lambda df:
+        (df['wait_for_nn_eval_time_ns'] - df['pause_time_ns']).clip(lower=0) * 1e-9),
 ]
 
 
