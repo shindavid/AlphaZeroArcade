@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-
 """
-An AlphaZero run has 3 components:
+An AlphaZero run consists of three primary components:
 
-1. loop controller: trains neural net from training data
-2. self-play server(s): uses neural net to generate training data
-3. [optional] ratings server(s): evaluates neural net against reference agents
+1. Loop Controller
+   - Central coordinator that manages training, task orchestration, and system state.
+   - Responsibilities include:
+     - Training the neural network from self-play data.
+     - Managing self-play, evaluation, and benchmarking processes.
+     - Producing benchmark committees.
+     - Evaluating models against benchmark committees.
+     - Rating models against reference players.
 
-These have corresponding launcher scripts in py/alphazero/scripts/:
+2. Self-Play Server(s)
+   - Generates training data by playing games using the current neural network.
+   - Can be run in parallel across multiple GPUs for scalability.
 
+3. Rating Servers
+   These handle different aspects of model evaluation and benchmarking:
+   - Benchmark Server: Evaluates models against themselves to generate a benchmark committee.
+   - Eval Server: Evaluates experimental or new runs against the benchmark.
+   - Ratings Server: Rates models by playing them against reference players.
+
+Each component has a corresponding launcher script in `py/alphazero/scripts/`:
 - run_loop_controller.py
 - run_self_play_server.py
 - run_ratings_server.py
-
-This script launches 1 server of each type on the local machine, using the above launcher scripts.
-If the local machine has multiple GPU's, more than one self-play server can be launched.
+- run_benchmark_server.py
+- run_eval_server.py
 """
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.build_params import BuildParams
@@ -94,6 +106,7 @@ class Params:
         group.add_argument('--without-self-play-server', action='store_true',
                             help='Do not run the self-play server')
 
+
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
@@ -159,6 +172,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     logger.info('Launching ratings server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
+
 def launch_benchmark_server(params_dict, cuda_device: int):
     params = params_dict['Params']
     docker_params = params_dict['DockerParams']
@@ -183,6 +197,7 @@ def launch_benchmark_server(params_dict, cuda_device: int):
     logger.info('Launching benchmark server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
+
 def launch_eval_server(params_dict, cuda_device: int):
     params = params_dict['Params']
     docker_params = params_dict['DockerParams']
@@ -206,6 +221,7 @@ def launch_eval_server(params_dict, cuda_device: int):
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching eval server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
 
 def launch_loop_controller(params_dict, cuda_device: int):
     params = params_dict['Params']
@@ -340,6 +356,6 @@ def main():
                                    descr, proc.pid)
 
 
-
 if __name__ == '__main__':
     main()
+

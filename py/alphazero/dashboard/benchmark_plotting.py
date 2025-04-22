@@ -47,7 +47,7 @@ class BenchmarkData:
         self.valid = len(self.df) > 0
 
 
-class SingleBenchmarkPlotter:
+class BenchmarkPlotter:
     def __init__(self, data: BenchmarkData):
         self.data = data
         self.source = ColumnDataSource(data.df)
@@ -153,7 +153,7 @@ def create_benchmark_figure(game: str, tag: str):
     if not data.valid:
         return figure(title='No benchmark data available')
 
-    plotter = SingleBenchmarkPlotter(data)
+    plotter = BenchmarkPlotter(data)
     if not plotter.valid():
         return figure(title='No benchmark data available')
 
