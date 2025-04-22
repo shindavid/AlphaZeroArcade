@@ -15,6 +15,7 @@ class RatingData:
     agent_ids: np.ndarray
     ratings: np.ndarray
     committee: IndexSet
+    tag: Optional[str] = None
 
 
 class Arena:
@@ -106,10 +107,12 @@ class Arena:
             db_ids.append(db_id)
             ratings.append(db_agent_rating.rating)
             committee.append(db_agent_rating.is_committee)
+
+        tag = db_agent_ratings[0].tag if db_agent_ratings else None
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
         committee = IndexSet.from_bits(np.array(committee, dtype=bool))
-        return RatingData(db_ids, ratings, committee)
+        return RatingData(db_ids, ratings, committee, tag)
 
     def num_matches(self) -> int:
         return np.sum(self._W_matrix)

@@ -29,6 +29,7 @@ class BenchmarkRatingData:
     iagents: List[IndexedAgent]
     ratings: np.ndarray
     committee: IndexSet
+    tag: str
 
 
 class Benchmarker:
@@ -232,7 +233,7 @@ class Benchmarker:
         ratings = rating_data.ratings
         iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         committee = rating_data.committee
-        return BenchmarkRatingData(iagents, ratings, committee)
+        return BenchmarkRatingData(iagents, ratings, committee, rating_data.tag)
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()

@@ -31,6 +31,7 @@ class DBAgentRating:
     agent_id: AgentDBId
     rating: float
     is_committee: Optional[bool] = None
+    tag: Optional[str] = None
 
 
 class RatingDB:
@@ -99,20 +100,22 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         if role == AgentRole.BENCHMARK:
-            query = 'SELECT agent_id, rating, is_committee FROM benchmark_ratings'
+            query = '''SELECT agent_id, rating, is_committee, tag FROM benchmark_ratings JOIN mcts_agents
+                      ON benchmark_ratings.agent_id = mcts_agents.id'''
         elif role == AgentRole.TEST:
-            query = 'SELECT agent_id, rating FROM evaluator_ratings'
+            query = '''SELECT agent_id, rating, tag FROM evaluator_ratings JOIN mcts_agents
+                      ON evaluator_ratings.agent_id = mcts_agents.id'''
         c.execute(query)
         rows = c.fetchall()
 
         db_agent_ratings = []
         for row in rows:
             if role == AgentRole.BENCHMARK:
-                agent_id, rating, is_committee = row
+                agent_id, rating, is_committee, tag = row
             else:
-                agent_id, rating = row
+                agent_id, rating, tag = row
                 is_committee = None
-            db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee)))
+            db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag))
         return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts, type: MatchType):

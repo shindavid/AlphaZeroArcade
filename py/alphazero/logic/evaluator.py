@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class EvalRatingData:
     evaluated_iagents: List[IndexedAgent]
     ratings: np.ndarray
+    tag: str
 
 
 class Evaluator:
@@ -148,7 +149,7 @@ class Evaluator:
         rating_data: RatingData = self._arena.load_ratings_from_db(self.db, AgentRole.TEST)
         ratings = rating_data.ratings
         evaluated_iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
-        return EvalRatingData(evaluated_iagents, ratings)
+        return EvalRatingData(evaluated_iagents, ratings, rating_data.tag)
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()

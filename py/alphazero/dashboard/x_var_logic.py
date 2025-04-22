@@ -212,12 +212,21 @@ class XVarSelector:
             plot.xaxis.axis_label = self.x_label
             start = plot.x_range.start
             end = plot.x_range.end
-            if prev_x_width > 0:
+
+            if start is None or end is None or prev_x_width <= 0:
+                # fallback to full range
+                x_min = self._min_x_dict[x_col]
+                x_max = self._max_x_dict[x_col]
+                plot.x_range.start = x_min
+                plot.x_range.end = x_max
+            else:
                 start_pct = (start - prev_x_min) / prev_x_width
                 end_pct = (end - prev_x_min) / prev_x_width
+
                 x_min = self._min_x_dict[x_col]
                 x_max = self._max_x_dict[x_col]
                 x_width = x_max - x_min
+
                 plot.x_range.start = x_min + start_pct * x_width
                 plot.x_range.end = x_min + end_pct * x_width
 
