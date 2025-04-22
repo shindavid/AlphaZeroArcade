@@ -108,20 +108,6 @@ class SingleBenchmarkPlotter:
             plot.add_layout(span)
             self.committee_spans.append((gen, span))
 
-        # Span updater function
-        def update_spans(x_var):
-            df_indexed = df.set_index('mcts_gen')
-            for gen, span in self.benchmark_spans:
-                if x_var == "mcts_gen":
-                    span.location = gen
-                elif gen in df_indexed.index and x_var in df_indexed.columns:
-                    span.location = df_indexed.at[gen, x_var]
-            for gen, span in self.committee_spans:
-                if x_var == "mcts_gen":
-                    span.location = gen
-                elif gen in df_indexed.index and x_var in df_indexed.columns:
-                    span.location = df_indexed.at[gen, x_var]
-
         # Dummy lines for legend
         plot.line(x=[0, 0], y=[0, 0], line_color='orange', line_dash='dashed', line_width=1,
                   legend_label="Evaluated Gens")
@@ -139,13 +125,26 @@ class SingleBenchmarkPlotter:
 
         def new_set_x_index(x_index, plots, sources, force_refresh=False):
             old_set_x_index(x_index, plots, sources, force_refresh)
-            update_spans(self.x_selector.x_column)
+            self.update_spans(self.x_selector.x_column)
 
         self.x_selector.set_x_index = new_set_x_index
-        update_spans(self.x_selector.x_column)
+        self.update_spans(self.x_selector.x_column)
 
         self.plot = plot
         self.layout = column(plot, row(radio_group))
+
+    def update_spans(self, x_var):
+        df_indexed = self.data.df.set_index('mcts_gen')
+        for gen, span in self.benchmark_spans:
+            if x_var == "mcts_gen":
+                span.location = gen
+            elif gen in df_indexed.index and x_var in df_indexed.columns:
+                span.location = df_indexed.at[gen, x_var]
+        for gen, span in self.committee_spans:
+            if x_var == "mcts_gen":
+                span.location = gen
+            elif gen in df_indexed.index and x_var in df_indexed.columns:
+                span.location = df_indexed.at[gen, x_var]
 
 
 def create_benchmark_figure(game: str, tag: str):
