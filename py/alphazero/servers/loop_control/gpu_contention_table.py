@@ -313,3 +313,4 @@ class GpuContentionTable:
     @property
     def lock(self):
         return self._lock
+

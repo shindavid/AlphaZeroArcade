@@ -1,19 +1,16 @@
 from .x_var_logic import XVarSelector, make_x_df
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Span
-from bokeh.layouts import column
+
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.logic.run_params import RunParams
 from alphazero.logic.benchmarker import Benchmarker
+from alphazero.logic.run_params import RunParams
 from util import bokeh_util
+
+from bokeh.models import ColumnDataSource, Span
+from bokeh.layouts import column, row
+from bokeh.plotting import figure
 import numpy as np
 import pandas as pd
-import sqlite3
-from typing import List, Dict
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Span, Select, CustomJS
-from bokeh.layouts import column, row
-from util import bokeh_util
+
 
 class BenchmarkData:
     def __init__(self, run_params: RunParams):
@@ -162,3 +159,4 @@ def create_benchmark_figure(game: str, tag: str):
         return figure(title='No benchmark data available')
 
     return plotter.layout
+

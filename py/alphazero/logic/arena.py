@@ -15,7 +15,7 @@ class RatingData:
     agent_ids: np.ndarray
     ratings: np.ndarray
     committee: IndexSet
-    tag: Optional[str] = None
+    tag: str
 
 
 class Arena:

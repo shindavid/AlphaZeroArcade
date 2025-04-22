@@ -1,13 +1,13 @@
 from .x_var_logic import XVarSelector, make_x_df
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Span
-from bokeh.layouts import column
+
+from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from alphazero.logic.evaluator import Evaluator
 from util import bokeh_util
-from bokeh.layouts import column, row
 
+from bokeh.plotting import figure
+from bokeh.models import ColumnDataSource, Span
+from bokeh.layouts import column, row
 import numpy as np
 import pandas as pd
 
@@ -182,3 +182,4 @@ def create_eval_figure(game: str, tag: str):
         return figure(title='No evaluation data available')
 
     return plotter.layout
+
