@@ -123,10 +123,11 @@ class Evaluator:
 
     def interpolate_ratings(self) -> np.ndarray:
         benchmark_ixs = self.benchmark_agent_ixs()
+        n_benchmark_ixs = len(benchmark_ixs)
         test_ixs = self.test_agent_ixs()
 
         self._arena.refresh_ratings()
-        xs = self._arena.ratings[benchmark_ixs][self.benchmark_committee]
+        xs = self._arena.ratings[benchmark_ixs][self.benchmark_committee.bool_array(n_benchmark_ixs)]
         ys = self.benchmark_ratings[self.benchmark_committee]
         test_agents_elo = self._arena.ratings[test_ixs]
         sorted_ixs = np.argsort(xs)

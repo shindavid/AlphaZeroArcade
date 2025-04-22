@@ -79,6 +79,24 @@ class IndexSet:
         bits[:k] = ~self.bits[:k]
         return IndexSet.from_bits(bits)
 
+    def bool_array(self, n: Optional[int]=None) ->  'IndexSet':
+        """
+        Returns a boolean array of size n where the i-th element is True if i is in the set.
+        """
+        if n is None:
+            n = self.bits.size
+
+        if n <= 0:
+            return IndexSet()
+
+        bits = np.zeros(n, dtype=bool)
+        if len(self.bits) == 0:
+            return IndexSet.from_bits(bits)
+
+        k = min(n, self.bits.size)
+        bits[:k] = self.bits[:k]
+        return IndexSet.from_bits(bits)
+
     def __contains__(self, value: int) -> bool:
         return 0 <= value < self.bits.size and self.bits[value]
 

@@ -116,14 +116,33 @@ class EvaluationPlotter:
         plot.scatter('x', 'rating', source=self.eval_source,
                      size=8, color='red', legend_label='Test Run')
 
-        # Static annotations on generation axis (optional: translate if you want)
+        # Store spans so we can update them dynamically
+        self.benchmark_spans = []
+        self.committee_spans = []
+
         for gen in self.data.benchmark_gens:
-            plot.add_layout(Span(location=gen, dimension='height', line_color='orange',
-                                 line_dash='dashed', line_width=1))
+            span = Span(location=0, dimension='height', line_color='orange', line_dash='dashed', line_width=1)
+            plot.add_layout(span)
+            self.benchmark_spans.append((gen, span))
 
         for gen in self.data.committee_gens:
-            plot.add_layout(Span(location=gen, dimension='height', line_color='green',
-                                 line_dash='dashed', line_width=2))
+            span = Span(location=0, dimension='height', line_color='green', line_dash='dashed', line_width=2)
+            plot.add_layout(span)
+            self.committee_spans.append((gen, span))
+
+        # Span updater function
+        def update_spans(x_var):
+            df_indexed = df_benchmark.set_index('mcts_gen')
+            for gen, span in self.benchmark_spans:
+                if x_var == "mcts_gen":
+                    span.location = gen
+                elif gen in df_indexed.index and x_var in df_indexed.columns:
+                    span.location = df_indexed.at[gen, x_var]
+            for gen, span in self.committee_spans:
+                if x_var == "mcts_gen":
+                    span.location = gen
+                elif gen in df_indexed.index and x_var in df_indexed.columns:
+                    span.location = df_indexed.at[gen, x_var]
 
         # Dummy lines for legend
         plot.line(x=[0, 0], y=[0, 0], line_color='orange', line_dash='dashed', line_width=1,
@@ -139,6 +158,14 @@ class EvaluationPlotter:
 
         # Shared control for both data sources
         radio_group = self.x_selector.create_radio_group([plot], [self.source, self.eval_source])
+
+        old_set_x_index = self.x_selector.set_x_index
+        def new_set_x_index(x_index, plots, sources, force_refresh=False):
+            old_set_x_index(x_index, plots, sources, force_refresh)
+            update_spans(self.x_selector.x_column)
+
+        self.x_selector.set_x_index = new_set_x_index
+        update_spans(self.x_selector.x_column)
 
         self.plot = plot
         self.layout = column(plot, row(radio_group))
