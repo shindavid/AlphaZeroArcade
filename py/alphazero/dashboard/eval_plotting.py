@@ -47,9 +47,10 @@ class EvaluationData:
             benchmark_x_df = make_x_df(benchmark_organizer)
             self.df = self.df.merge(benchmark_x_df, left_on="mcts_gen", right_index=True, how="left")
 
+        sorted_ix = np.argsort(self.evaluated_gens)
         self.eval_df = pd.DataFrame({
-            "mcts_gen": self.evaluated_gens,
-            "rating": self.evaluated_ratings
+            "mcts_gen": self.evaluated_gens[sorted_ix],
+            "rating": self.evaluated_ratings[sorted_ix]
         })
         x_df = make_x_df(organizer)
         self.eval_df = self.eval_df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
@@ -69,17 +70,17 @@ class EvaluationPlotter:
         return self.data.valid
 
     def make_plot(self):
-        df_benchmark = self.data.df
+        df = self.data.df
         df_eval = self.data.eval_df
 
         # Single XVarSelector for both sources
-        self.x_selector = XVarSelector([df_benchmark, df_eval])
+        self.x_selector = XVarSelector([df, df_eval])
         if not self.x_selector.valid:
             self.plot = figure(title='No valid x-axis data')
             self.layout = column(self.plot)
             return
 
-        self.source = ColumnDataSource(df_benchmark)
+        self.source = ColumnDataSource(df)
         self.eval_source = ColumnDataSource(df_eval)
 
         # Apply x-axis logic to both sources
@@ -113,34 +114,39 @@ class EvaluationPlotter:
                   line_width=2, line_color=self.color, legend_label=self.data.tag)
 
         # Eval run scatter
-        plot.scatter('x', 'rating', source=self.eval_source,
-                     size=8, color='red', legend_label='Test Run')
+        plot.line('x', 'rating', source=self.eval_source,
+                     line_width=1, color='red', legend_label='Test Run')
 
-        # Store spans so we can update them dynamically
-        self.benchmark_spans = []
-        self.committee_spans = []
+        # DataFrames for markers
+        df_indexed = df.set_index('mcts_gen')
 
-        for gen in self.data.benchmark_gens:
-            span = Span(location=0, dimension='height', line_color='orange', line_dash='dashed', line_width=1)
-            plot.add_layout(span)
-            self.benchmark_spans.append((gen, span))
+        # Benchmark markers
+        benchmark_marker_data = {
+            'gen': self.data.benchmark_gens,
+            'x': [df_indexed.at[gen, self.x_selector.x_column] if gen in df_indexed.index else None
+                for gen in self.data.benchmark_gens],
+            'y': [df_indexed.at[gen, 'rating'] if gen in df_indexed.index else None
+                for gen in self.data.benchmark_gens],
+        }
+        self.benchmark_marker_source = ColumnDataSource(benchmark_marker_data)
+        plot.scatter('x', 'y', source=self.benchmark_marker_source, color=self.color, marker='circle', size=8, legend_label="Evaluated Gens")
 
-        for gen in self.data.committee_gens:
-            span = Span(location=0, dimension='height', line_color='green', line_dash='dashed', line_width=2)
-            plot.add_layout(span)
-            self.committee_spans.append((gen, span))
-
-        # Dummy lines for legend
-        plot.line(x=[0, 0], y=[0, 0], line_color='orange', line_dash='dashed', line_width=1,
-                  legend_label="Evaluated Gens")
-        plot.line(x=[0, 0], y=[0, 0], line_color='green', line_dash='dashed', line_width=2,
-                  legend_label="Committee")
+        # Committee markers
+        committee_marker_data = {
+            'gen': self.data.committee_gens,
+            'x': [df_indexed.at[gen, self.x_selector.x_column] if gen in df_indexed.index else None
+                for gen in self.data.committee_gens],
+            'y': [df_indexed.at[gen, 'rating'] if gen in df_indexed.index else None
+                for gen in self.data.committee_gens],
+        }
+        self.committee_marker_source = ColumnDataSource(committee_marker_data)
+        plot.scatter('x', 'y', source=self.committee_marker_source, color='orange', marker='star', size=10, legend_label="Committee")
 
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 
-        plot.y_range.start = df_benchmark["rating"].min() * 0.9
-        plot.y_range.end = max(df_benchmark["rating"].max(), df_eval["rating"].max()) * 1.2
+        plot.y_range.start = df["rating"].min() * 0.9
+        plot.y_range.end = max(df["rating"].max(), df_eval["rating"].max()) * 1.2
 
         # Shared control for both data sources
         radio_group = self.x_selector.create_radio_group([plot], [self.source, self.eval_source])
@@ -148,26 +154,30 @@ class EvaluationPlotter:
         old_set_x_index = self.x_selector.set_x_index
         def new_set_x_index(x_index, plots, sources, force_refresh=False):
             old_set_x_index(x_index, plots, sources, force_refresh)
-            self.update_spans(self.x_selector.x_column)
+            self.update_markers(self.x_selector.x_column)
 
         self.x_selector.set_x_index = new_set_x_index
-        self.update_spans(self.x_selector.x_column)
+        self.update_markers(self.x_selector.x_column)
 
         self.plot = plot
         self.layout = column(plot, row(radio_group))
 
-    def update_spans(self, x_var):
+    def update_markers(self, x_var):
         df_indexed = self.data.df.set_index('mcts_gen')
-        for gen, span in self.benchmark_spans:
-            if x_var == "mcts_gen":
-                span.location = gen
-            elif gen in df_indexed.index and x_var in df_indexed.columns:
-                span.location = df_indexed.at[gen, x_var]
-        for gen, span in self.committee_spans:
-            if x_var == "mcts_gen":
-                span.location = gen
-            elif gen in df_indexed.index and x_var in df_indexed.columns:
-                span.location = df_indexed.at[gen, x_var]
+
+        # Update benchmark marker positions
+        self.benchmark_marker_source.data['x'] = [
+            gen if x_var == 'mcts_gen' else df_indexed.at[gen, x_var]
+            if gen in df_indexed.index and x_var in df_indexed.columns else None
+            for gen in self.data.benchmark_gens
+        ]
+
+        # Update committee marker positions
+        self.committee_marker_source.data['x'] = [
+            gen if x_var == 'mcts_gen' else df_indexed.at[gen, x_var]
+            if gen in df_indexed.index and x_var in df_indexed.columns else None
+            for gen in self.data.committee_gens
+        ]
 
 
 def create_eval_figure(game: str, tag: str):
