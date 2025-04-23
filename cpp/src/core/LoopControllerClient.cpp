@@ -58,12 +58,6 @@ PerfStats LoopControllerClient::get_perf_stats() {
   perf_stats_.total_time_ns += util::to_ns(now - get_perf_stats_time_);
   get_perf_stats_time_ = now;
 
-  // pause time includes reload time. Let's undo that.
-  util::release_assert(perf_stats_.pause_time_ns >= perf_stats_.model_load_time_ns,
-                       "pause_time_ns < model_load_time_ns (%ld < %ld)", perf_stats_.pause_time_ns,
-                       perf_stats_.model_load_time_ns);
-  perf_stats_.pause_time_ns -= perf_stats_.model_load_time_ns;
-
   PerfStats stats;
   stats.loop_controller_stats = perf_stats_;
   perf_stats_ = LoopControllerPerfStats();  // reset

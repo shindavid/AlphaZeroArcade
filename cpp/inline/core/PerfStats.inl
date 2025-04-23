@@ -1,6 +1,6 @@
 #include <core/PerfStats.hpp>
 
-#include <core/Globals.hpp>
+#include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 
 namespace core {
@@ -17,21 +17,31 @@ inline SearchThreadPerfStats& SearchThreadPerfStats::operator+=(
   batch_prepare_time_ns += other.batch_prepare_time_ns;
   batch_write_time_ns += other.batch_write_time_ns;
   wait_for_nn_eval_time_ns += other.wait_for_nn_eval_time_ns;
+  mcts_time_ns += other.mcts_time_ns;
   return *this;
 }
 
 inline void SearchThreadPerfStats::fill_json(boost::json::object& obj) const {
-  int n = core::Globals::num_game_threads;
-
   obj["cache_hits"] = cache_hits;
   obj["cache_misses"] = cache_misses;
 
-  obj["wait_for_game_slot_time_ns"] = wait_for_game_slot_time_ns / n;
-  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns / n;
-  obj["cache_insert_time_ns"] = cache_insert_time_ns / n;
-  obj["batch_prepare_time_ns"] = batch_prepare_time_ns / n;
-  obj["batch_write_time_ns"] = batch_write_time_ns / n;
-  obj["wait_for_nn_eval_time_ns"] = wait_for_nn_eval_time_ns / n;
+  obj["wait_for_game_slot_time_ns"] = wait_for_game_slot_time_ns;
+  obj["cache_mutex_acquire_time_ns"] = cache_mutex_acquire_time_ns;
+  obj["cache_insert_time_ns"] = cache_insert_time_ns;
+  obj["batch_prepare_time_ns"] = batch_prepare_time_ns;
+  obj["batch_write_time_ns"] = batch_write_time_ns;
+  obj["wait_for_nn_eval_time_ns"] = wait_for_nn_eval_time_ns;
+  obj["mcts_time_ns"] = mcts_time_ns;
+}
+
+inline void SearchThreadPerfStats::normalize(int num_game_threads) {
+  wait_for_game_slot_time_ns /= num_game_threads;
+  cache_mutex_acquire_time_ns /= num_game_threads;
+  cache_insert_time_ns /= num_game_threads;
+  batch_prepare_time_ns /= num_game_threads;
+  batch_write_time_ns /= num_game_threads;
+  wait_for_nn_eval_time_ns /= num_game_threads;
+  mcts_time_ns /= num_game_threads;
 }
 
 inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
@@ -92,18 +102,37 @@ inline boost::json::object PerfStats::to_json() const {
   return obj;
 }
 
-inline void PerfStats::update(const SearchThreadPerfStats& stats, std::mutex& mutex) {
-  std::lock_guard<std::mutex> lock(mutex);
+inline void PerfStats::update(const SearchThreadPerfStats& stats) {
   search_thread_stats += stats;
 }
 
-inline void PerfStats::update(const NNEvalLoopPerfStats& stats, std::mutex& mutex) {
-  std::lock_guard<std::mutex> lock(mutex);
+inline void PerfStats::update(const NNEvalLoopPerfStats& stats) {
   nn_eval_loop_stats += stats;
 }
 
 inline void PerfStats::update(const LoopControllerPerfStats& stats) {
   loop_controller_stats += stats;
+}
+
+inline void PerfStats::calibrate(int num_game_threads) {
+  search_thread_stats.normalize(num_game_threads);
+
+  // mcts-time-ns includes everything except for wait-for-game-slot-time-ns. Let's undo that.
+  search_thread_stats.mcts_time_ns -= search_thread_stats.cache_mutex_acquire_time_ns;
+  search_thread_stats.mcts_time_ns -= search_thread_stats.cache_insert_time_ns;
+  search_thread_stats.mcts_time_ns -= search_thread_stats.batch_prepare_time_ns;
+  search_thread_stats.mcts_time_ns -= search_thread_stats.batch_write_time_ns;
+  search_thread_stats.mcts_time_ns -= search_thread_stats.wait_for_nn_eval_time_ns;
+  if (search_thread_stats.mcts_time_ns < 0) {
+    search_thread_stats.mcts_time_ns = 0;
+  }
+
+  // pause time includes reload time. Let's undo that.
+  util::release_assert(
+    loop_controller_stats.pause_time_ns >= loop_controller_stats.model_load_time_ns,
+    "pause_time_ns < model_load_time_ns (%ld < %ld)", loop_controller_stats.pause_time_ns,
+    loop_controller_stats.model_load_time_ns);
+  loop_controller_stats.pause_time_ns -= loop_controller_stats.model_load_time_ns;
 }
 
 inline PerfStatsClocker::PerfStatsClocker(int64_t& field) : field_(field) {

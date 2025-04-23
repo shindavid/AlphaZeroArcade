@@ -32,7 +32,9 @@ class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   void set_init_func(init_func_t f) { init_func_ = std::move(f); }
 
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
-  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {}
+  core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) override {
+    return core::kContinue;
+  }
 
  private:
   std::mutex mutex_;

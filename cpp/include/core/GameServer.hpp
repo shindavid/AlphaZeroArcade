@@ -5,6 +5,8 @@
 #include <core/BasicTypes.hpp>
 #include <core/HibernationManager.hpp>
 #include <core/HibernationNotifier.hpp>
+#include <core/LoopControllerListener.hpp>
+#include <core/PerfStats.hpp>
 #include <core/TrainingDataWriter.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
@@ -43,7 +45,9 @@ namespace core {
 // GameSlot that previously yielded, the nn evaluation will typically be finished, so that a
 // GameThread never spends time waiting.
 template <concepts::Game Game>
-class GameServer {
+class GameServer
+    : public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest>,
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
@@ -184,7 +188,10 @@ class GameServer {
     void run_hibernation_manager();
 
     int num_slots() const { return game_slots_.size(); }
-    GameSlot* next();  // returns nullptr if ready to shut down
+
+    // Returns the next game slot to run. If the server is paused or shutting down, returns nullptr.
+    // The wait_for_game_slot_time_ns is updated with the time spent waiting for a game slot.
+    GameSlot* next(int64_t& wait_for_game_slot_time_ns);
     void enqueue(GameSlot*);
     void skip_enqueue();
 
@@ -206,8 +213,23 @@ class GameServer {
     registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
     HibernationManager* hibernation_manager() { return &hibernation_manager_; }
+    bool paused() const { return paused_; }
+
+    void pause();
+    void unpause();
+    void wait_for_unpause();
+    void increment_active_thread_count();
+    void decrement_active_thread_count();
+    void increment_paused_thread_count();
+    void decrement_paused_thread_count();
+
+    void increment_mcts_time_ns(int64_t ns) { mcts_time_ns_ += ns; }
+    void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
+    void update_perf_stats(PerfStats&);
 
    private:
+    void issue_pause_receipt_if_necessary();  // assumes mutex_ is locked
+
     const Params params_;
 
     TrainingDataWriter* training_data_writer_ = nullptr;
@@ -218,6 +240,7 @@ class GameServer {
 
     std::condition_variable cv_;
     mutable std::mutex mutex_;
+    mutable std::mutex perf_stats_mutex_;
     progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
 
@@ -237,6 +260,14 @@ class GameServer {
     HibernationManager hibernation_manager_;
 
     results_array_t results_array_;  // indexed by player_id
+
+    int active_thread_count_ = 0;
+    int paused_thread_count_ = 0;
+    bool paused_ = false;
+    bool pause_receipt_pending_ = false;
+
+    std::atomic<int64_t> mcts_time_ns_ = 0;
+    std::atomic<int64_t> wait_for_game_slot_time_ns_ = 0;
   };
 
   class GameThread {
@@ -284,6 +315,10 @@ class GameServer {
   void create_threads();
   void launch_threads();
   void join_threads();
+
+  void pause() override { shared_data_.pause(); }
+  void unpause() override { shared_data_.unpause(); }
+  void update_perf_stats(PerfStats&) override;
 
  private:
   SharedData shared_data_;

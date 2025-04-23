@@ -194,7 +194,7 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
   if (state_machine_.state == kInitializingRoot) {
     if (context_id == state_machine_.primary_context_id) {
       LOG_DEBUG("search({}) state=kInitializingRoot, resuming root initialization", context_id);
-      resume_root_initialization(context);
+      if (resume_root_initialization(context) == core::kYield) return nullptr;
       update_state_machine_to_in_visit_loop();
     } else {
       LOG_DEBUG("search({}) state=kInitializingRoot, root initialization yielded", context_id);
@@ -354,6 +354,13 @@ inline void Manager<Game>::init_root_info(bool add_noise) {
 }
 
 template <core::concepts::Game Game>
+bool Manager<Game>::more_search_iterations_needed(Node* root) {
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  if (!search_params_.ponder && root->trivial()) return false;
+  return root->stats().total_count() <= search_params_.tree_size_limit;
+}
+
+template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
   bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
@@ -390,9 +397,9 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::resume_root_initialization(SearchContext& context) {
+core::yield_instruction_t Manager<Game>::resume_root_initialization(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
-  resume_node_initialization(context);
+  return resume_node_initialization(context);
 }
 
 template <core::concepts::Game Game>
@@ -428,12 +435,11 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
     }
   }
 
-  resume_node_initialization(context);
-  return core::kContinue;
+  return resume_node_initialization(context);
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::resume_node_initialization(SearchContext& context) {
+core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
   StateHistory* history = context.initialization_history;
   node_pool_index_t node_index = context.initialization_index;
@@ -441,7 +447,9 @@ void Manager<Game>::resume_node_initialization(SearchContext& context) {
   Node* node = lookup_table_.get_node(node_index);
   bool is_root = (node_index == root_info_.node_index);
 
-  nn_eval_service_->wait_for(context.nn_eval_seq_id);
+  if (nn_eval_service_->wait_for(context.nn_eval_seq_id) == core::kYield) {
+    return core::kYield;
+  }
   for (auto& item : context.eval_request.fresh_items()) {
     item.node()->load_eval(item.eval(),
                            [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
@@ -461,13 +469,7 @@ void Manager<Game>::resume_node_initialization(SearchContext& context) {
   bool overwrite = is_root;
   context.inserted_node_index = lookup_table_.insert_node(mcts_key, node_index, overwrite);
   context.mid_node_initialization = false;
-}
-
-template <core::concepts::Game Game>
-bool Manager<Game>::more_search_iterations_needed(Node* root) {
-  // root->stats() usage here is not thread-safe but this race-condition is benign
-  if (!search_params_.ponder && root->trivial()) return false;
-  return root->stats().total_count() <= search_params_.tree_size_limit;
+  return core::kContinue;
 }
 
 template <core::concepts::Game Game>
@@ -489,7 +491,7 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
   if (context.mid_visit) {
-    resume_visit(context);
+    if (resume_visit(context) == core::kYield) return core::kYield;
   }
 
   while (context.visit_node) {
@@ -571,11 +573,6 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
-      // if (context.expanded_new_node) {
-      //   context.visit_node = nullptr;
-      //   context.mid_visit = false;
-      //   return core::kContinue;
-      // }
     } else if (edge->state == Node::kMidExpansion) {
       util::release_assert(multithreaded());
       return core::kYield;
@@ -606,24 +603,23 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
     }
   }
 
-  resume_visit(context);
-  return core::kContinue;
+  return resume_visit(context);
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::resume_visit(SearchContext& context) {
+core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
   Node* node = context.visit_node;
   Edge* edge = context.visit_edge;
 
   if (context.mid_expansion) {
-    resume_expansion(context);
+    if (resume_expansion(context) == core::kYield) return core::kYield;
   }
 
   if (context.expanded_new_node) {
     context.visit_node = nullptr;
     context.mid_visit = false;
-    return;
+    return core::kContinue;
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
@@ -641,7 +637,7 @@ void Manager<Game>::resume_visit(SearchContext& context) {
       short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
-      return;
+      return core::kContinue;
     }
   }
   if (!context.applied_action) {
@@ -658,6 +654,7 @@ void Manager<Game>::resume_visit(SearchContext& context) {
   }
   context.visit_node = child;
   context.mid_visit = false;
+  return core::kContinue;
 }
 
 template <core::concepts::Game Game>
@@ -716,12 +713,11 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
     context.initialization_history = history;
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
   }
-  resume_expansion(context);
-  return core::kContinue;
+  return resume_expansion(context);
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::resume_expansion(SearchContext& context) {
+core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
 
   node_pool_index_t child_index = context.initialization_index;
@@ -729,7 +725,7 @@ void Manager<Game>::resume_expansion(SearchContext& context) {
   Node* parent = context.visit_node;
 
   if (context.mid_node_initialization) {
-    resume_node_initialization(context);
+    if (resume_node_initialization(context) == core::kYield) return core::kYield;
   }
 
   if (context.expanded_new_node) {
@@ -805,6 +801,8 @@ void Manager<Game>::resume_expansion(SearchContext& context) {
     lock.unlock();
     parent->cv().notify_all();
   }
+
+  return core::kContinue;
 }
 
 template <core::concepts::Game Game>

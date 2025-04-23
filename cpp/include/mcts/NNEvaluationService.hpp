@@ -130,7 +130,7 @@ class NNEvaluationService
   void disconnect() override;
 
   NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
-  void wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
+  core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
 
   void end_session() override;
 
@@ -337,7 +337,6 @@ class NNEvaluationService
 
   std::condition_variable cv_net_weights_;
   std::condition_variable cv_main_;
-  std::condition_variable cv_eval_;
 
   core::NeuralNet net_;
 

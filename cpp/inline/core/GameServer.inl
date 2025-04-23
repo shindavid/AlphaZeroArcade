@@ -3,6 +3,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/Globals.hpp>
 #include <core/Packet.hpp>
+#include <core/PerfStats.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
@@ -154,19 +155,22 @@ void GameServer<Game>::SharedData::run_hibernation_manager() {
 
 template <concepts::Game Game>
 typename GameServer<Game>::GameSlot*
-GameServer<Game>::SharedData::next() {
+GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
+  core::PerfStatsClocker clocker(wait_for_game_slot_time_ns);
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
       cv_.wait(lock, [&] {
-        return pending_queue_count_ == 0 || !queue_.empty();
+        return paused_ || pending_queue_count_ == 0 || !queue_.empty();
       });
     }
     if (queue_.empty()) {
       return nullptr;
     }
   }
+
+  if (paused_) return nullptr;
 
   GameSlot* slot = queue_.front();
   queue_.pop();
@@ -308,6 +312,92 @@ GameServer<Game>::SharedData::generate_player_order(
   }
 
   return player_order;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::pause() {
+  LOG_INFO("GameServer: pausing");
+  std::unique_lock lock(mutex_);
+  util::release_assert(!paused_);
+  paused_ = true;
+  pause_receipt_pending_ = true;
+  lock.unlock();
+  cv_.notify_all();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::unpause() {
+  LOG_INFO("GameServer: unpausing");
+  std::unique_lock lock(mutex_);
+  util::release_assert(paused_);
+  paused_ = false;
+  lock.unlock();
+  cv_.notify_all();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::wait_for_unpause() {
+  LOG_INFO("GameServer: waiting for unpause...");
+  std::unique_lock lock(mutex_);
+  cv_.wait(lock, [&] { return !paused_; });
+  LOG_INFO("GameServer: unpause weight complete!");
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::increment_active_thread_count() {
+  std::unique_lock lock(mutex_);
+  active_thread_count_++;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::decrement_active_thread_count() {
+  std::unique_lock lock(mutex_);
+  active_thread_count_--;
+  issue_pause_receipt_if_necessary();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::increment_paused_thread_count() {
+  std::unique_lock lock(mutex_);
+  util::release_assert(paused_);
+  paused_thread_count_++;
+  LOG_INFO("GameServer: pause_thread_count={} active_thread_count={}",
+           paused_thread_count_, active_thread_count_);
+  issue_pause_receipt_if_necessary();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::decrement_paused_thread_count() {
+  std::unique_lock lock(mutex_);
+  util::release_assert(!paused_);
+  if (paused_thread_count_ == 1) {
+    core::LoopControllerClient::get()->handle_unpause_receipt();
+    paused_thread_count_--;
+    lock.unlock();
+    cv_.notify_all();
+  } else {
+    paused_thread_count_--;
+    cv_.wait(lock, [&] { return paused_thread_count_ == 0; });
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
+  // assumes mutex_ is locked
+  if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
+    pause_receipt_pending_ = false;
+    LOG_INFO("GameServer: handling pause receipt");
+    core::LoopControllerClient::get()->handle_pause_receipt();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
+  core::SearchThreadPerfStats search_thread_stats;
+  search_thread_stats.wait_for_game_slot_time_ns =
+    wait_for_game_slot_time_ns_.exchange(int64_t(0), std::memory_order_relaxed);
+  search_thread_stats.mcts_time_ns = mcts_time_ns_.exchange(int64_t(0), std::memory_order_relaxed);
+  stats.update(search_thread_stats);
 }
 
 template <concepts::Game Game>
@@ -555,10 +645,26 @@ void GameServer<Game>::GameThread::launch() {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameThread::run() {
+  shared_data_.increment_active_thread_count();
   while (true) {
-    GameSlot* slot = shared_data_.next();
-    if (!slot) return;
+    int64_t wait_for_game_slot_time_ns = 0;
+    GameSlot* slot = shared_data_.next(wait_for_game_slot_time_ns);
+    if (!slot) {
+      if (shared_data_.paused()) {
+        shared_data_.increment_paused_thread_count();
+        shared_data_.wait_for_unpause();
+        shared_data_.decrement_paused_thread_count();
+        continue;
+      } else {
+        // no more slots to run, time to exit
+        break;
+      }
+    }
 
+    // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
+    // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
+    int64_t mcts_time_ns = 0;
+    core::PerfStatsClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
     slot->step();
 
@@ -571,13 +677,22 @@ void GameServer<Game>::GameThread::run() {
     if (slot->yield_state() != kHibernate) {
       shared_data_.enqueue(slot);
     }
+    clocker.stop();
+    shared_data_.increment_mcts_time_ns(mcts_time_ns);
+    shared_data_.increment_game_slot_time_ns(wait_for_game_slot_time_ns);
   }
+  shared_data_.decrement_active_thread_count();
 }
 
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : shared_data_(params, training_data_writer_params) {}
+    : shared_data_(params, training_data_writer_params) {
+  if (LoopControllerClient::initialized()) {
+    LoopControllerClient* client = LoopControllerClient::get();
+    client->add_listener(this);
+  }
+}
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {
@@ -717,6 +832,11 @@ void GameServer<Game>::join_threads() {
   for (auto thread : threads_) {
     thread->join();
   }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::update_perf_stats(PerfStats& stats) {
+  shared_data_.update_perf_stats(stats);
 }
 
 template <concepts::Game Game>

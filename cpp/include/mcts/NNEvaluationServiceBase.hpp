@@ -58,7 +58,7 @@ class NNEvaluationServiceBase {
   virtual NNEvaluationResponse evaluate(NNEvaluationRequest& request) = 0;
 
   // Used in conjunction with evaluate(). See NNEvaluationResponse documentation.
-  virtual void wait_for(core::nn_evaluation_sequence_id_t sequence_id) = 0;
+  virtual core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) = 0;
 
   virtual void end_session() {}
 };

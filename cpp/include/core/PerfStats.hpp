@@ -3,7 +3,6 @@
 #include <boost/json.hpp>
 
 #include <cstdint>
-#include <mutex>
 
 /*
  * Each mcts::NNEvaluationService keeps track of its own performance statistics, in the form of
@@ -16,6 +15,7 @@ namespace core {
 struct SearchThreadPerfStats {
   SearchThreadPerfStats& operator+=(const SearchThreadPerfStats& other);
   void fill_json(boost::json::object& obj) const;
+  void normalize(int num_game_threads);
 
   int64_t cache_hits = 0;
   int64_t cache_misses = 0;
@@ -26,6 +26,7 @@ struct SearchThreadPerfStats {
   int64_t batch_prepare_time_ns = 0;
   int64_t batch_write_time_ns = 0;
   int64_t wait_for_nn_eval_time_ns = 0;
+  int64_t mcts_time_ns = 0;
 };
 
 // Component of PerfStats that tracks performance from the perspective of the nn eval service loop.
@@ -57,9 +58,10 @@ struct LoopControllerPerfStats {
 struct PerfStats {
   PerfStats& operator+=(const PerfStats& other);
   boost::json::object to_json() const;
-  void update(const SearchThreadPerfStats&, std::mutex& mutex);
-  void update(const NNEvalLoopPerfStats&, std::mutex& mutex);
+  void update(const SearchThreadPerfStats&);
+  void update(const NNEvalLoopPerfStats&);
   void update(const LoopControllerPerfStats&);
+  void calibrate(int num_game_threads);
 
   SearchThreadPerfStats search_thread_stats;
   NNEvalLoopPerfStats nn_eval_loop_stats;

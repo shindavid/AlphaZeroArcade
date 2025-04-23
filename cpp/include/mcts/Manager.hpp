@@ -257,17 +257,17 @@ class Manager {
 
   void init_context(core::search_context_id_t);
   void init_root_info(bool add_noise);
-  core::yield_instruction_t begin_root_initialization(SearchContext&);
-  void resume_root_initialization(SearchContext&);
-  core::yield_instruction_t begin_node_initialization(SearchContext&);
-  void resume_node_initialization(SearchContext& context);
   bool more_search_iterations_needed(Node* root);
+  core::yield_instruction_t begin_root_initialization(SearchContext&);
+  core::yield_instruction_t resume_root_initialization(SearchContext&);
+  core::yield_instruction_t begin_node_initialization(SearchContext&);
+  core::yield_instruction_t resume_node_initialization(SearchContext& context);
   core::yield_instruction_t begin_search_iteration(SearchContext& context);
   core::yield_instruction_t resume_search_iteration(SearchContext& context);
   core::yield_instruction_t begin_visit(SearchContext& context);
-  void resume_visit(SearchContext& context);
+  core::yield_instruction_t resume_visit(SearchContext& context);
   core::yield_instruction_t begin_expansion(SearchContext& context);
-  void resume_expansion(SearchContext& context);
+  core::yield_instruction_t resume_expansion(SearchContext& context);
 
   void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;

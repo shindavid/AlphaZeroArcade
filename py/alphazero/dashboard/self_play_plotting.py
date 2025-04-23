@@ -112,8 +112,8 @@ STACKED_SEARCH_THREAD_PLOT = [
     YVar('cache-insert', 'cache_insert_s', func=lambda df: df['cache_insert_time_ns'] * 1e-9),
     YVar('batch-prepare', 'batch_prepare_s', func=lambda df: df['batch_prepare_time_ns'] * 1e-9),
     YVar('batch-write', 'batch_write_s', func=lambda df: df['batch_write_time_ns'] * 1e-9),
-    YVar('wait-nn', 'wait_nn_s', func=lambda df:
-        (df['wait_for_nn_eval_time_ns'] - df['pause_time_ns']).clip(lower=0) * 1e-9),
+    YVar('wait-nn', 'wait_nn_s', func=lambda df: df['wait_for_nn_eval_time_ns'] * 1e-9),
+    YVar('mcts', 'mcts_s', func=lambda df: df['mcts_time_ns'] * 1e-9),
 ]
 
 
@@ -198,7 +198,7 @@ class SelfPlayPlotter:
         self.plots.extend(self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, 'Total Runtime',
                                                   'Seconds'))
         self.plots.extend(self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT,
-                                                  'NN Eval Profiling (Per Batch)', 'Milliseconds'))
+                                                  'NN Eval Profiling - Per Batch', 'Milliseconds'))
         self.plots.extend(self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT,
                                                   'Search Thread Profiling', 'Seconds'))
         self.plots.extend([self.make_single_plot(BATCH_SIZE_PLOT),
@@ -253,7 +253,7 @@ class SelfPlayPlotter:
     def make_stacked_plots(self, y_var_list: List[YVar], descr: str, y_axis_label: str = None):
         for data in self.data_list:
             label = data.tag
-            title = f'{descr} - {label}'
+            title = f'{descr} ({label})'
             plot = figure(
                 title=title, x_range=[0, 1],
                 active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')

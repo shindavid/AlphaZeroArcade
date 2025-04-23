@@ -60,7 +60,6 @@ void NNEvaluationService<Game>::disconnect() {
     if (num_connections_ > 0) return;
     cv_net_weights_.notify_all();
     cv_main_.notify_all();
-    cv_eval_.notify_all();
     if (thread_->joinable()) thread_->join();
     delete thread_;
     thread_ = nullptr;
@@ -301,32 +300,37 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   CacheMissInfo miss_infos[n];
   CacheLookupResult result(miss_infos);
   check_cache(request, result);
-  perf_stats_.update(result.stats, perf_stats_mutex_);
 
-  if (result.can_continue) {
-    return NNEvaluationResponse(0, core::kContinue);
+  NNEvaluationResponse response(0, core::kContinue);
+  if (!result.can_continue) {
+    // Write to batches
+    core::PerfStatsClocker clocker(result.stats.batch_write_time_ns);
+    for (int i = 0; i < result.stats.cache_misses; ++i) {
+      CacheMissInfo& miss_info = miss_infos[i];
+      RequestItem& item = request.get_fresh_item(miss_info.item_index);
+      BatchData* batch_data = miss_info.batch_data;
+      int row = miss_info.row;
+      write_to_batch(item, batch_data, row);
+    }
+
+    response = NNEvaluationResponse(result.max_sequence_id, core::kYield);
   }
 
-  // Write to batches
-  core::PerfStatsClocker clocker(result.stats.batch_write_time_ns);
-  for (int i = 0; i < result.stats.cache_misses; ++i) {
-    CacheMissInfo& miss_info = miss_infos[i];
-    RequestItem& item = request.get_fresh_item(miss_info.item_index);
-    BatchData* batch_data = miss_info.batch_data;
-    int row = miss_info.row;
-    write_to_batch(item, batch_data, row);
-  }
+  std::unique_lock perf_stats_lock(perf_stats_mutex_);
+  perf_stats_.update(result.stats);
+  perf_stats_lock.unlock();
 
-  return NNEvaluationResponse(result.max_sequence_id, core::kYield);
+  return response;
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) {
+core::yield_instruction_t NNEvaluationService<Game>::wait_for(
+  core::nn_evaluation_sequence_id_t seq) {
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("{}({}) - last={}", __func__, seq, last_evaluated_sequence_id_);
   }
 
-  if (last_evaluated_sequence_id_ >= seq) return;
+  if (last_evaluated_sequence_id_ >= seq) return core::kContinue;
 
   int64_t wait_for_nn_eval_time_ns = 0;
   core::PerfStatsClocker clocker(wait_for_nn_eval_time_ns);
@@ -335,7 +339,7 @@ void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) 
     cv_main_.notify_all();
   }
 
-  cv_eval_.wait(lock, [&] { return !active() || last_evaluated_sequence_id_ >= seq; });
+  cv_main_.wait(lock, [&] { return paused_ || !active() || last_evaluated_sequence_id_ >= seq; });
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("{}({}) - done waiting, last={}", __func__, seq, last_evaluated_sequence_id_);
   }
@@ -344,45 +348,56 @@ void NNEvaluationService<Game>::wait_for(core::nn_evaluation_sequence_id_t seq) 
 
   std::unique_lock perf_stats_lock(perf_stats_mutex_);
   perf_stats_.search_thread_stats.wait_for_nn_eval_time_ns += wait_for_nn_eval_time_ns;
+  perf_stats_lock.unlock();
+
+  if (last_evaluated_sequence_id_ >= seq) return core::kContinue;
+
+  // Can get here if paused or inactive
+  return core::kYield;
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
 
-  int num_game_threads = core::Globals::num_game_threads;
+  core::PerfStats stats = perf_stats_;
+  stats.search_thread_stats.normalize(core::Globals::num_game_threads);
 
-  int64_t cache_hits = perf_stats_.search_thread_stats.cache_hits;
-  int64_t cache_misses = perf_stats_.search_thread_stats.cache_misses;
+  int64_t cache_hits = stats.search_thread_stats.cache_hits;
+  int64_t cache_misses = stats.search_thread_stats.cache_misses;
   int64_t cache_attempts = cache_hits + cache_misses;
   float cache_hit_pct = cache_attempts > 0 ? 100.0 * cache_hits / cache_attempts : 0.0f;
 
-  int64_t positions_evaluated = perf_stats_.nn_eval_loop_stats.positions_evaluated;
-  int64_t batches_evaluated = perf_stats_.nn_eval_loop_stats.batches_evaluated;
-  int64_t full_batches_evaluated = perf_stats_.nn_eval_loop_stats.full_batches_evaluated;
+  int64_t positions_evaluated = stats.nn_eval_loop_stats.positions_evaluated;
+  int64_t batches_evaluated = stats.nn_eval_loop_stats.batches_evaluated;
+  int64_t full_batches_evaluated = stats.nn_eval_loop_stats.full_batches_evaluated;
 
-  int64_t cache_mutex_acquire_time_ns = perf_stats_.search_thread_stats.cache_mutex_acquire_time_ns;
-  int64_t cache_insert_time_ns = perf_stats_.search_thread_stats.cache_insert_time_ns;
-  int64_t batch_prepare_time_ns = perf_stats_.search_thread_stats.batch_prepare_time_ns;
-  int64_t batch_write_time_ns = perf_stats_.search_thread_stats.batch_write_time_ns;
-  int64_t wait_for_nn_eval_time_ns = perf_stats_.search_thread_stats.wait_for_nn_eval_time_ns;
+  int64_t wait_for_game_slot_time_ns = stats.search_thread_stats.wait_for_game_slot_time_ns;
+  int64_t cache_mutex_acquire_time_ns = stats.search_thread_stats.cache_mutex_acquire_time_ns;
+  int64_t cache_insert_time_ns = stats.search_thread_stats.cache_insert_time_ns;
+  int64_t batch_prepare_time_ns = stats.search_thread_stats.batch_prepare_time_ns;
+  int64_t batch_write_time_ns = stats.search_thread_stats.batch_write_time_ns;
+  int64_t wait_for_nn_eval_time_ns = stats.search_thread_stats.wait_for_nn_eval_time_ns;
+  int64_t mcts_time_ns = stats.search_thread_stats.mcts_time_ns;
 
   int64_t wait_for_search_threads_time_ns =
-    perf_stats_.nn_eval_loop_stats.wait_for_search_threads_time_ns;
-  int64_t cpu2gpu_copy_time_ns = perf_stats_.nn_eval_loop_stats.cpu2gpu_copy_time_ns;
-  int64_t gpu2cpu_copy_time_ns = perf_stats_.nn_eval_loop_stats.gpu2cpu_copy_time_ns;
-  int64_t model_eval_time_ns = perf_stats_.nn_eval_loop_stats.model_eval_time_ns;
+    stats.nn_eval_loop_stats.wait_for_search_threads_time_ns;
+  int64_t cpu2gpu_copy_time_ns = stats.nn_eval_loop_stats.cpu2gpu_copy_time_ns;
+  int64_t gpu2cpu_copy_time_ns = stats.nn_eval_loop_stats.gpu2cpu_copy_time_ns;
+  int64_t model_eval_time_ns = stats.nn_eval_loop_stats.model_eval_time_ns;
 
-  int batch_datas_allocated = perf_stats_.nn_eval_loop_stats.batch_datas_allocated;
+  int batch_datas_allocated = stats.nn_eval_loop_stats.batch_datas_allocated;
 
   float max_batch_pct = 100.0 * full_batches_evaluated / std::max(int64_t(1), batches_evaluated);
   float avg_batch_size = 1.0 * positions_evaluated / std::max(int64_t(1), batches_evaluated);
 
-  float avg_cache_mutex_acquire_time_s = 1e-9 * cache_mutex_acquire_time_ns / num_game_threads;
-  float avg_cache_insert_time_s = 1e-9 * cache_insert_time_ns / num_game_threads;
-  float avg_batch_prepare_time_s = 1e-9 * batch_prepare_time_ns / num_game_threads;
-  float avg_batch_write_time_s = 1e-9 * batch_write_time_ns / num_game_threads;
-  float avg_wait_for_nn_eval_time_s = 1e-9 * wait_for_nn_eval_time_ns / num_game_threads;
+  float wait_for_game_slot_time_s = 1e-9 * wait_for_game_slot_time_ns;
+  float cache_mutex_acquire_time_s = 1e-9 * cache_mutex_acquire_time_ns;
+  float cache_insert_time_s = 1e-9 * cache_insert_time_ns;
+  float batch_prepare_time_s = 1e-9 * batch_prepare_time_ns;
+  float batch_write_time_s = 1e-9 * batch_write_time_ns;
+  float wait_for_nn_eval_time_s = 1e-9 * wait_for_nn_eval_time_ns;
+  float mcts_time_s = 1e-9 * mcts_time_ns;
 
   float per_batch_wait_for_search_threads_time_ms =
     1e-6 * wait_for_search_threads_time_ns / batches_evaluated;
@@ -403,11 +418,13 @@ void NNEvaluationService<Game>::end_session() {
   dump("max batch pct", "%.2f%%", max_batch_pct);
   dump("avg batch size", "%.2f", avg_batch_size);
   dump("batch datas allocated", "%d", batch_datas_allocated);
-  dump("search-thread total cache mutex acquire time", "%.3fs", avg_cache_mutex_acquire_time_s);
-  dump("search-thread total cache insert time", "%.3fs", avg_cache_insert_time_s);
-  dump("search-thread total batch prepare time", "%.3fs", avg_batch_prepare_time_s);
-  dump("search-thread total batch write time", "%.3fs", avg_batch_write_time_s);
-  dump("search-thread total wait for nn eval time", "%.3fs", avg_wait_for_nn_eval_time_s);
+  dump("search-thread total wait for game slot time", "%.3fs", wait_for_game_slot_time_s);
+  dump("search-thread total cache mutex acquire time", "%.3fs", cache_mutex_acquire_time_s);
+  dump("search-thread total cache insert time", "%.3fs", cache_insert_time_s);
+  dump("search-thread total batch prepare time", "%.3fs", batch_prepare_time_s);
+  dump("search-thread total batch write time", "%.3fs", batch_write_time_s);
+  dump("search-thread total wait for nn eval time", "%.3fs", wait_for_nn_eval_time_s);
+  dump("search-thread total mcts time", "%.3fs", mcts_time_s);
   dump("nn-eval per-batch wait for search threads time", "%.3fms",
        per_batch_wait_for_search_threads_time_ms);
   dump("nn-eval per-batch cpu2gpu copy time", "%.3fms", per_batch_cpu2gpu_copy_time_ms);
@@ -803,12 +820,14 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);
   lock.unlock();
-  cv_eval_.notify_all();
+  cv_main_.notify_all();
 
   loop_stats.positions_evaluated = num_rows;
   loop_stats.batches_evaluated = 1;
   loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
-  perf_stats_.update(loop_stats, perf_stats_mutex_);
+
+  std::unique_lock perf_lock(perf_stats_mutex_);
+  perf_stats_.update(loop_stats);
 }
 
 template <core::concepts::Game Game>

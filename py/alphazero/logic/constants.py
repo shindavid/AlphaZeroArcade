@@ -27,6 +27,7 @@ PERF_STATS_COLUMNS = [
     'batch_prepare_time_ns',
     'batch_write_time_ns',
     'wait_for_nn_eval_time_ns',
+    'mcts_time_ns',
 
     # NNEvalLoopPerfStats
     'positions_evaluated',
