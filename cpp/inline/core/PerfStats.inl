@@ -135,19 +135,19 @@ inline void PerfStats::calibrate(int num_game_threads) {
   loop_controller_stats.pause_time_ns -= loop_controller_stats.model_load_time_ns;
 }
 
-inline PerfStatsClocker::PerfStatsClocker(int64_t& field) : field_(field) {
+inline PerfClocker::PerfClocker(int64_t& field) : field_(field) {
   start_time_ = std::chrono::steady_clock::now();
 }
 
-// Use this to simultaneously start a new PerfStatsClocker and stop the previous one.
-inline PerfStatsClocker::PerfStatsClocker(PerfStatsClocker& previous, int64_t& field)
+// Use this to simultaneously start a new PerfClocker and stop the previous one.
+inline PerfClocker::PerfClocker(PerfClocker& previous, int64_t& field)
     : field_(field) {
   previous.stop();
   start_time_ = previous.stop_time_;
 }
 
 // Call this to manually stop the timer, without waiting for the destructor to do it.
-inline void PerfStatsClocker::stop() {
+inline void PerfClocker::stop() {
   if (stopped_) return;
   stopped_ = true;
   stop_time_ = std::chrono::steady_clock::now();

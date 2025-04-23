@@ -304,7 +304,7 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   NNEvaluationResponse response(0, core::kContinue);
   if (!result.can_continue) {
     // Write to batches
-    core::PerfStatsClocker clocker(result.stats.batch_write_time_ns);
+    core::PerfClocker clocker(result.stats.batch_write_time_ns);
     for (int i = 0; i < result.stats.cache_misses; ++i) {
       CacheMissInfo& miss_info = miss_infos[i];
       RequestItem& item = request.get_fresh_item(miss_info.item_index);
@@ -333,7 +333,7 @@ core::yield_instruction_t NNEvaluationService<Game>::wait_for(
   if (last_evaluated_sequence_id_ >= seq) return core::kContinue;
 
   int64_t wait_for_nn_eval_time_ns = 0;
-  core::PerfStatsClocker clocker(wait_for_nn_eval_time_ns);
+  core::PerfClocker clocker(wait_for_nn_eval_time_ns);
   std::unique_lock lock(main_mutex_);
   if (batch_data_slice_allocator_.freeze_up_to(seq)) {
     cv_main_.notify_all();
@@ -471,7 +471,7 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
     bool new_shard = (i == 0 || sort_items[i].shard != sort_items[i - 1].shard);
 
     if (new_shard) {
-      core::PerfStatsClocker clocker(result.stats.cache_mutex_acquire_time_ns);
+      core::PerfClocker clocker(result.stats.cache_mutex_acquire_time_ns);
       shard.mutex.lock();  // Lock can be held across loop iterations, thanks to sorting
     }
 
@@ -534,7 +534,7 @@ template <core::concepts::Game Game>
 bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
                                                   CacheLookupResult& result, ShardData& shard,
                                                   int item_index) {
-  core::PerfStatsClocker clocker(result.stats.cache_insert_time_ns);
+  core::PerfClocker clocker(result.stats.cache_insert_time_ns);
   RequestItem& item = request.get_fresh_item(item_index);
   util::release_assert(item.eval() == nullptr);
 
@@ -574,7 +574,7 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
                                                  CacheLookupResult& result,
                                                  int& miss_info_write_index,
                                                  int misses_for_this_shard) {
-  core::PerfStatsClocker clocker(result.stats.batch_prepare_time_ns);
+  core::PerfClocker clocker(result.stats.batch_prepare_time_ns);
 
   // Assign the missed items to BatchData's.
   //
@@ -720,7 +720,7 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
   profiler_.record(NNEvaluationServiceRegion::kWaitingUntilBatchReady);
 
   std::unique_lock lock(main_mutex_);
-  core::PerfStatsClocker clocker(loop_stats.wait_for_search_threads_time_ns);
+  core::PerfClocker clocker(loop_stats.wait_for_search_threads_time_ns);
 
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
@@ -793,7 +793,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   //
   // These numbers put a limit on the potential speedup we could get from this optimization.
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
-  core::PerfStatsClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
+  core::PerfClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, full_input_);
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
@@ -802,11 +802,11 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   torch_input_gpu_.copy_(full_input_torch);
 
   profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
-  core::PerfStatsClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
+  core::PerfClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
   net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
-  core::PerfStatsClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
+  core::PerfClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
     TensorGroup& group = batch_data->tensor_groups[i];
     group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);

@@ -156,7 +156,7 @@ void GameServer<Game>::SharedData::run_hibernation_manager() {
 template <concepts::Game Game>
 typename GameServer<Game>::GameSlot*
 GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
-  core::PerfStatsClocker clocker(wait_for_game_slot_time_ns);
+  core::PerfClocker clocker(wait_for_game_slot_time_ns);
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
@@ -664,7 +664,7 @@ void GameServer<Game>::GameThread::run() {
     // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
     // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
     int64_t mcts_time_ns = 0;
-    core::PerfStatsClocker clocker(mcts_time_ns);
+    core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
     slot->step();
 

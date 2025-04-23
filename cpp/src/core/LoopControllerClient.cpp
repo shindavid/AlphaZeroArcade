@@ -252,7 +252,7 @@ void LoopControllerClient::loop() {
       int n_rows_limit = msg.at("n_rows_limit").as_int64();
       handle_data_pre_request(n_rows_limit);
     } else if (type == "reload-weights") {
-      core::PerfStatsClocker clocker(perf_stats_.model_load_time_ns);
+      core::PerfClocker clocker(perf_stats_.model_load_time_ns);
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {
         cuda_device = msg.at("cuda_device").as_string().c_str();

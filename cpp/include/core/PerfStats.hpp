@@ -68,19 +68,19 @@ struct PerfStats {
   LoopControllerPerfStats loop_controller_stats;
 };
 
-// PerfStatsClocker can be used to measure the time taken for a specific operation. Its constructor
+// PerfClocker can be used to measure the time taken for a specific operation. Its constructor
 // starts the timer, and its destructor stops the timer and updates a specific passed-in field,
 // which is expected to be a reference to a PerfStats int64_t that represents cumulative time in
 // nanoseconds.
-class PerfStatsClocker {
+class PerfClocker {
  public:
   // Standard constructor: pass in a reference to the nanosecond field to update.
-  PerfStatsClocker(int64_t& field);
+  PerfClocker(int64_t& field);
 
-  // Use this to simultaneously start a new PerfStatsClocker and stop a previous one.
-  PerfStatsClocker(PerfStatsClocker& previous, int64_t& field);
+  // Use this to simultaneously start a new PerfClocker and stop a previous one.
+  PerfClocker(PerfClocker& previous, int64_t& field);
 
-  ~PerfStatsClocker() { stop(); }
+  ~PerfClocker() { stop(); }
 
   // Call this to manually stop the timer, without waiting for the destructor to do it.
   void stop();
