@@ -499,8 +499,6 @@ bool GameServer<Game>::GameSlot::step_chance() {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance() {
-  move_number_ += yield_state_ == kContinue;
-
   active_seat_ = Rules::get_current_player(state_history_.current());
   Player* player = players_[active_seat_];
   auto valid_actions = Rules::get_legal_moves(state_history_);
@@ -513,6 +511,7 @@ bool GameServer<Game>::GameSlot::step_non_chance() {
     return false;
   }
 
+  move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
   if (game_log_) {
