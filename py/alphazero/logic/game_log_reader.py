@@ -41,8 +41,13 @@ class GameLogReader:
         self._lib.init()
         self._shape_info_dict: Optional[ShapeInfoDict] = None
         self._data_loader = None
+        self._closed = False
+
+    def closed(self) -> bool:
+        return self._closed
 
     def close(self):
+        self.closed = True
         if self._data_loader is not None:
             self._lib.DataLoader_delete(self._data_loader)
         self._ffi.dlclose(self._lib)
