@@ -167,11 +167,11 @@ During-or-after a run of the loop-controller, you can launch a web dashboard to 
 
 This will print a URL that you can paste into a web browser on your local machine, which currently looks like this:
 
-![image](https://github.com/user-attachments/assets/baa83673-8c1e-41d9-8a2f-ac1432fc006b)
+![image](https://github.com/user-attachments/assets/66368c68-2f47-4c70-98f2-de3fd6fb98f9)
 
 The "Ratings" item in the sidebar shows a plot like this:
 
-![image](https://github.com/user-attachments/assets/5dd31ea2-df91-4452-9a5c-63b7bdfee48c)
+![image](https://github.com/user-attachments/assets/788439f4-1874-4b3c-8531-57428d36b53b)
 
 This run was performed on my laptop, a Dell Mobile Precision Workstation 7680 equipped with an NVIDIA RTX 5000 Ada Generation GPU.
 
@@ -180,8 +180,8 @@ This curve shows the evolution of an MCTS agent using i=100 iterations per searc
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
 exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
-plot thus indicates that the system attains optimal results against perfect play within about **40 minutes** (i.e., it always wins as
-first player against perfect play).
+plot thus indicates that the system attains optimal results against perfect play within about **15 minutes** (i.e., it exhibits
+flawless performance against a perfect agent over a 100 game sample).
 
 You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above Connect4
 example, you can do this with a command like:
@@ -204,9 +204,9 @@ To summarize:
 
 |               | AlphaZeroArcade     | Oracle Devs         |
 | ------------- | ------------------- | ------------------- |
-| Training Time | 40 GPU-min          | 21 GPU-hours        |
+| Training Time | 15 GPU-min          | 21 GPU-hours        |
 | Test Budget   | 100 MCTS-iters/move | 800 MCTS-iters/move |
-| Test Accuracy | 100%                | 99.76%              |
+| Test Accuracy | ~100%               | 99.76%              |
 
 The test-accuracy comparison may not be completely apples-to-apples, as the Oracle Devs blog post series did not explain in full detail
 how they chose the population of positions that they test on. Still, the overall picture is clear: AlphaZeroArcade, by virtue of an
