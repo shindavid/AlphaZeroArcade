@@ -40,6 +40,10 @@ Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const Mana
     init_profiling_dir(profiling_dir.string());
   }
 
+  if (params_.enable_pondering) {
+    throw util::CleanException("Pondering mode temporarily unsupported");
+  }
+
   if (service) {
     nn_eval_service_ = service;
   } else if (!params.no_model) {
