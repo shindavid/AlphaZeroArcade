@@ -24,6 +24,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
 
 # We protect with this if-condition so that clangd-based IDE tools don't complain, as clang does not
 # support the -ftemplate-backtrace-limit flag

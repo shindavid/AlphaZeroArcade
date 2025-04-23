@@ -1,8 +1,7 @@
 #pragma once
 
 #include <util/FiniteGroups.hpp>
-
-#include <boost/circular_buffer.hpp>
+#include <util/StaticCircularBuffer.hpp>
 
 namespace core {
 
@@ -23,8 +22,6 @@ namespace core {
 template <typename State, int kNumPastStatesNeeded>
 class SimpleStateHistory {
  public:
-  SimpleStateHistory() : buf_(kMaxSize) {}
-
   void clear() { buf_.clear(); }
 
   /*
@@ -77,7 +74,7 @@ class SimpleStateHistory {
   // NOTE(dshin): I dislike that boost::circular_buffer dynamically allocates its storage. In our
   // context, we know the capacity at compile-time. We could roll out our own, backed by std::array,
   // but I'm not sure if it's worth the effort.
-  using buffer_t = boost::circular_buffer<State>;
+  using buffer_t = util::StaticCircularBuffer<State, kMaxSize>;
 
   buffer_t buf_;
 };
