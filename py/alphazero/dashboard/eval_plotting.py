@@ -1,5 +1,6 @@
 from .x_var_logic import XVarSelector, make_x_df
 
+from alphazero.dashboard.benchmark_plotting import BenchmarkPlotter
 from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -70,115 +71,64 @@ class EvaluationPlotter:
         return self.data.valid
 
     def make_plot(self):
-        df = self.data.df
         df_eval = self.data.eval_df
 
-        # Single XVarSelector for both sources
-        self.x_selector = XVarSelector([df, df_eval])
-        if not self.x_selector.valid:
-            self.plot = figure(title='No valid x-axis data')
+        # Instantiate BenchmarkPlotter first
+        benchmark_plotter = BenchmarkPlotter(self.data)
+        if not benchmark_plotter.valid():
+            self.plot = figure(title='No valid benchmark data')
             self.layout = column(self.plot)
             return
 
-        self.source = ColumnDataSource(df)
-        self.eval_source = ColumnDataSource(df_eval)
+        # Use the benchmark's XVarSelector for axis sync
+        self.x_selector = benchmark_plotter.x_selector
 
-        # Apply x-axis logic to both sources
-        self.x_selector.init_source(self.source)
+        # Setup eval source and sync x-axis
+        self.eval_source = ColumnDataSource(df_eval)
         self.x_selector.init_source(self.eval_source)
 
-        # Get initial 'x' data (after x_selector added it)
-        x_vals_benchmark = np.asarray(self.source.data.get('x', []))
+        # Compute x_range based on evaluation data only
         x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
-
-        # Combine and compute min/max
-        all_x = np.concatenate([x_vals_benchmark, x_vals_eval])
-        x_min, x_max = np.min(all_x), np.max(all_x)
+        x_min, x_max = np.min(x_vals_eval), np.max(x_vals_eval)
         padding = (x_max - x_min) * 0.05
         x_range = (x_min - padding, x_max + padding)
 
-        plot = figure(
-            title=f'Evaluation Plot - {self.data.tag}',
-            y_axis_label='Rating',
-            x_range=x_range,
-            tools='pan,box_zoom,xwheel_zoom,reset,save'
-        )
+        # Use benchmark plot as base
+        plot = benchmark_plotter.plot
 
-        if not self.x_selector.init_plot(plot):
-            self.plot = figure(title='Failed to init x-axis')
-            self.layout = column(self.plot)
-            return
+        # Update plot title for Evaluation
+        plot.title.text = f"Evaluate '{self.data.tag}' against '{self.data.benchmark_tag}'"
 
-        # Benchmark line
-        plot.line('x', 'rating', source=self.source,
-                  line_width=2, line_color=self.color, legend_label=self.data.tag)
+        # Update x_range to eval-based range
+        plot.x_range.start = x_range[0]
+        plot.x_range.end = x_range[1]
 
-        # Eval run scatter
+        # Add eval line
         plot.line('x', 'rating', source=self.eval_source,
-                     line_width=1, color='red', legend_label='Test Run')
+                line_width=1, color='red', legend_label='Evaluation')
 
-        # DataFrames for markers
-        df_indexed = df.set_index('mcts_gen')
+        # Adjust y-range to cover both datasets
+        y_min = min(self.data.df["rating"].min(), df_eval["rating"].min()) * 0.9
+        y_max = max(self.data.df["rating"].max(), df_eval["rating"].max()) * 1.2
+        plot.y_range.start = y_min
+        plot.y_range.end = y_max
 
-        # Benchmark markers
-        benchmark_marker_data = {
-            'gen': self.data.benchmark_gens,
-            'x': [df_indexed.at[gen, self.x_selector.x_column] if gen in df_indexed.index else None
-                for gen in self.data.benchmark_gens],
-            'y': [df_indexed.at[gen, 'rating'] if gen in df_indexed.index else None
-                for gen in self.data.benchmark_gens],
-        }
-        self.benchmark_marker_source = ColumnDataSource(benchmark_marker_data)
-        plot.scatter('x', 'y', source=self.benchmark_marker_source, color=self.color, marker='circle', size=8, legend_label="Evaluated Gens")
-
-        # Committee markers
-        committee_marker_data = {
-            'gen': self.data.committee_gens,
-            'x': [df_indexed.at[gen, self.x_selector.x_column] if gen in df_indexed.index else None
-                for gen in self.data.committee_gens],
-            'y': [df_indexed.at[gen, 'rating'] if gen in df_indexed.index else None
-                for gen in self.data.committee_gens],
-        }
-        self.committee_marker_source = ColumnDataSource(committee_marker_data)
-        plot.scatter('x', 'y', source=self.committee_marker_source, color='orange', marker='star', size=10, legend_label="Committee")
-
-        plot.legend.location = 'bottom_right'
-        plot.legend.click_policy = 'hide'
-
-        plot.y_range.start = df["rating"].min() * 0.9
-        plot.y_range.end = max(df["rating"].max(), df_eval["rating"].max()) * 1.2
-
-        # Shared control for both data sources
-        radio_group = self.x_selector.create_radio_group([plot], [self.source, self.eval_source])
-
-        old_set_x_index = self.x_selector.set_x_index
-        def new_set_x_index(x_index, plots, sources, force_refresh=False):
-            old_set_x_index(x_index, plots, sources, force_refresh)
-            self.update_markers(self.x_selector.x_column)
-
-        self.x_selector.set_x_index = new_set_x_index
-        self.update_markers(self.x_selector.x_column)
-
+        # Shared radio group for both sources
+        radio_group = self.x_selector.create_radio_group(
+            [plot], [benchmark_plotter.source, self.eval_source]
+        )
         self.plot = plot
         self.layout = column(plot, row(radio_group))
 
-    def update_markers(self, x_var):
-        df_indexed = self.data.df.set_index('mcts_gen')
+        # Sync markers on x-axis changes
+        old_set_x_index = self.x_selector.set_x_index
 
-        # Update benchmark marker positions
-        self.benchmark_marker_source.data['x'] = [
-            gen if x_var == 'mcts_gen' else df_indexed.at[gen, x_var]
-            if gen in df_indexed.index and x_var in df_indexed.columns else None
-            for gen in self.data.benchmark_gens
-        ]
+        def new_set_x_index(x_index, plots, sources, force_refresh=False):
+            old_set_x_index(x_index, plots, sources, force_refresh)
+            benchmark_plotter.update_markers(self.x_selector.x_column)
 
-        # Update committee marker positions
-        self.committee_marker_source.data['x'] = [
-            gen if x_var == 'mcts_gen' else df_indexed.at[gen, x_var]
-            if gen in df_indexed.index and x_var in df_indexed.columns else None
-            for gen in self.data.committee_gens
-        ]
-
+        self.x_selector.set_x_index = new_set_x_index
+        benchmark_plotter.update_markers(self.x_selector.x_column)
 
 def create_eval_figure(game: str, tag: str):
     run_params = RunParams(game=game, tag=tag)
