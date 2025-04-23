@@ -38,6 +38,7 @@ class StaticCircularBuffer {
 
     iterator(StaticCircularBuffer* buf, std::size_t pos) : buf_(buf), pos_(pos) {}
 
+    pointer operator->() const { return &(*(*this)); }
     reference operator*() const { return (*buf_)[pos_]; }
     reference operator[](difference_type n) const { return (*buf_)[pos_ + n]; }
 
@@ -101,6 +102,7 @@ class StaticCircularBuffer {
 
     const_iterator(const StaticCircularBuffer* buf, std::size_t pos) : buf_(buf), pos_(pos) {}
 
+    pointer operator->() const { return &(*(*this)); }
     reference operator*() const { return (*buf_)[pos_]; }
     reference operator[](difference_type n) const { return (*buf_)[pos_ + n]; }
 
