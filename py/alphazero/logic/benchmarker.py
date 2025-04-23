@@ -135,7 +135,7 @@ class Benchmarker:
         """
 
         A = self._arena.adjacent_matrix()
-        included_indices = excluded_indices.invert(A.shape[0])
+        included_indices = ~excluded_indices.resize(A.shape[0])
         mask = np.where(included_indices)[0]
         A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)

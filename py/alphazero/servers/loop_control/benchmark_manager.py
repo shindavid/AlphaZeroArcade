@@ -125,7 +125,7 @@ class BenchmarkManager(GamingManagerBase):
 
     def load_past_data(self):
         benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()
-        self.excluded_agent_indices = benchmark_rating_data.committee.invert()
+        self.excluded_agent_indices = ~benchmark_rating_data.committee
 
     def num_evaluated_gens(self):
         gen = 0
@@ -315,14 +315,14 @@ class BenchmarkManager(GamingManagerBase):
     def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
         for iagent in self._benchmarker.indexed_agents:
-            if len(self.excluded_agent_indices) > 0 and iagent.index in self.excluded_agent_indices.invert():
+            if len(self.excluded_agent_indices) > 0 and iagent.index in ~self.excluded_agent_indices:
                 latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
     def _update_committee(self):
         self._benchmarker.refresh_ratings()
         committee: IndexSet = self._benchmarker.select_committee(self.target_elo_gap)
-        self.excluded_agent_indices = committee.invert()
+        self.excluded_agent_indices = ~committee
         with self._benchmarker.db.db_lock:
             self._benchmarker.db.commit_ratings(self._benchmarker.indexed_agents,
                                                     self._benchmarker._arena.ratings,

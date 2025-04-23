@@ -187,8 +187,8 @@ class GamingManagerBase:
         current_rate = num / den
 
         elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
+        logger.debug('%s elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', self._config.domain.value, elevate, latest_gen, dict_len,
                      rating_in_progress, current_rate, target_rate)
         self._controller.set_domain_priority(self._config.domain, elevate)
 

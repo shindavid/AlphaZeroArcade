@@ -484,19 +484,12 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    # def _send_socket_ready(self):
-    #     data = {
-    #         'type': 'socket-ready',
-    #     }
-    #     self.
-
     def _main_loop(self):
         try:
             logger.info('Performing LoopController setup...')
             self._setup_output_dir()
             self._copy_binary_file()
             self._init_socket()
-            # self._send_socket_ready()
             self._self_play_manager.setup()
             self._training_manager.setup()
             self._output_dir_syncer.start()
@@ -517,3 +510,4 @@ class LoopController:
         except:
             logger.error('Unexpected error in main_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
+

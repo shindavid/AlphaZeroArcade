@@ -95,7 +95,7 @@ class GpuContentionManager:
                             (table.active(Domain.TRAINING), table.active(Domain.SELF_PLAY)))
 
         table = domain_tables[0]
-        logger.debug('Prioritizing ratings for %s', table)
+        logger.debug('Prioritizing %s for %s', domain.value, table)
         table.prioritize_domain(domain)
 
     def hijack_all_self_play_tables(self):
