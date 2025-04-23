@@ -7,7 +7,7 @@ This script connects to the loop controller and participates in the distributed 
 process. It listens for match requests, runs benchmark matches between committee members and
 new agents, and reports match results back to the controller.
 
-### Relevant Loop Controller Parameters
+* Relevant Loop Controller Parameters
 
 1. `--benchmark_until_gen_gap`:
    The minimum number of generations between the latest evaluated generation and the latest
@@ -68,3 +68,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
