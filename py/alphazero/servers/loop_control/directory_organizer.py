@@ -54,7 +54,7 @@ from typing import Dict, List, Optional, Tuple
 # current code, we should increment VERSION.
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
-VERSION = 2
+VERSION = 3
 
 
 class PathInfo:
