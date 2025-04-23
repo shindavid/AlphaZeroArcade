@@ -166,38 +166,29 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
   std::unique_lock lock(state_machine_.mutex);
   core::search_context_id_t context_id = get_next_context_id();
   SearchContext& context = search_contexts_[context_id];
+  LOG_DEBUG("{}(): context={}[primary={}] state={}", __func__, context_id,
+    state_machine_.primary_context_id, state_machine_.state);
 
   if (state_machine_.state == kIdle) {
-    LOG_DEBUG("search({}): primary={} state=state=kIdle, begin search", context_id,
-              state_machine_.primary_context_id);
     if (context_id == state_machine_.primary_context_id) {
       state_machine_.state = kInitializingRoot;
-      LOG_DEBUG("search({}): primary={} state=kIdle->kInitializingRoot, begin root initialization",
-                context_id, state_machine_.primary_context_id);
       lock.unlock();
       if (begin_root_initialization(context) == core::kContinue) {
-        LOG_DEBUG("search({}): state=kIdle->kInitializingRoot, root initialization done",
-                  context_id);
         lock.lock();
         update_state_machine_to_in_visit_loop();
       } else {
-        LOG_DEBUG("search({}): state=kIdle->kInitializingRoot, root initialization yielded",
-                  context_id);
         return nullptr;
       }
     } else {
-      LOG_DEBUG("search({}): state=kIdle, root initialization yielded", context_id);
       return nullptr;
     }
   }
 
   if (state_machine_.state == kInitializingRoot) {
     if (context_id == state_machine_.primary_context_id) {
-      LOG_DEBUG("search({}) state=kInitializingRoot, resuming root initialization", context_id);
       if (resume_root_initialization(context) == core::kYield) return nullptr;
       update_state_machine_to_in_visit_loop();
     } else {
-      LOG_DEBUG("search({}) state=kInitializingRoot, root initialization yielded", context_id);
       return nullptr;
     }
   }
@@ -205,31 +196,22 @@ const typename Manager<Game>::SearchResults* Manager<Game>::search() {
   util::release_assert(state_machine_.state == kInVisitLoop);
   lock.unlock();
   if (context.mid_search_iteration) {
-    LOG_DEBUG("search({}) state=kInitializingRoot, resuming search iteration", context_id);
     if (resume_search_iteration(context) == core::kYield) {
-      LOG_DEBUG("search({}) state=kInitializingRoot, yielding on resumed search iteration",
-                context_id);
       return nullptr;
     }
   }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
   while (more_search_iterations_needed(root)) {
-    LOG_DEBUG("search({}) state=kInVisitLoop, beginning search iteration", context_id);
     if (begin_search_iteration(context) == core::kYield) {
-      LOG_DEBUG("search({}) state=kInVisitLoop, yielding on begun search iteration", context_id);
       return nullptr;
     }
   }
 
-  LOG_DEBUG("search({}) state=kInVisitLoop, marking as done with visit loop", context_id);
   lock.lock();
   if (!mark_as_done_with_visit_loop(context)) {
-    LOG_DEBUG("search({}) state=kInVisitLoop, yielding on marking as done with visit loop",
-              context_id);
     return nullptr;
   }
-  LOG_DEBUG("search({}) state=kInVisitLoop, done with visit loop", context_id);
   prepare_results();
   return &results_;
 }
