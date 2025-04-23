@@ -77,9 +77,9 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluationService
     : public NNEvaluationServiceBase<Game>,
+      public core::PerfStatsClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
-      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
-      public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;

@@ -90,9 +90,9 @@ void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eva
 }
 
 template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::NNEvaluationService(
-    const NNEvaluationServiceParams& params)
-    : instance_id_(instance_count_++),
+inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params)
+    : core::PerfStatsClient(),
+      instance_id_(instance_count_++),
       params_(params),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
@@ -360,7 +360,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
 
-  core::PerfStats stats = perf_stats_;
+  core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
   stats.search_thread_stats.normalize(core::Globals::num_game_threads);
 
   int64_t cache_hits = stats.search_thread_stats.cache_hits;

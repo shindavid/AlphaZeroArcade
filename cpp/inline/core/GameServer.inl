@@ -340,7 +340,7 @@ void GameServer<Game>::SharedData::wait_for_unpause() {
   LOG_INFO("GameServer: waiting for unpause...");
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return !paused_; });
-  LOG_INFO("GameServer: unpause weight complete!");
+  LOG_INFO("GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
@@ -687,7 +687,7 @@ void GameServer<Game>::GameThread::run() {
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : shared_data_(params, training_data_writer_params) {
+    : PerfStatsClient(), shared_data_(params, training_data_writer_params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);

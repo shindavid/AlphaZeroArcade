@@ -46,7 +46,7 @@ namespace core {
 // GameThread never spends time waiting.
 template <concepts::Game Game>
 class GameServer
-    : public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest>,
+    : public core::PerfStatsClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

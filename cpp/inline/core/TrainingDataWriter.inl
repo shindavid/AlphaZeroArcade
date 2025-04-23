@@ -9,6 +9,7 @@
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
+#include "core/PerfStats.hpp"
 
 namespace core {
 
@@ -232,7 +233,7 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   msg["n_games"] = n_games;
   msg["n_rows"] = row_count;
   if (client->report_metrics()) {
-    PerfStats stats = client->get_perf_stats();
+    PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
     stats.calibrate(core::Globals::num_game_threads);
     msg["metrics"] = stats.to_json();
   }

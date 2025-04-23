@@ -53,25 +53,17 @@ void LoopControllerClient::handle_unpause_receipt() {
   }
 }
 
-PerfStats LoopControllerClient::get_perf_stats() {
+void LoopControllerClient::update_perf_stats(PerfStats& stats) {
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   perf_stats_.total_time_ns += util::to_ns(now - get_perf_stats_time_);
   get_perf_stats_time_ = now;
 
-  PerfStats stats;
-  stats.loop_controller_stats = perf_stats_;
+  stats.update(perf_stats_);
   perf_stats_ = LoopControllerPerfStats();  // reset
-
-  for (auto listener : metrics_request_listeners_) {
-    listener->update_perf_stats(stats);
-  }
-
-  return stats;
 }
 
 LoopControllerClient::LoopControllerClient(const Params& params)
-    : params_(params)
-    , proc_start_ts_(util::ns_since_epoch()) {
+    : PerfStatsClient(), params_(params), proc_start_ts_(util::ns_since_epoch()) {
   if (role().empty()) {
     throw util::CleanException("--client-role must be specified");
   }

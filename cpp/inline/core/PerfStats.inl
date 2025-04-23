@@ -135,6 +135,23 @@ inline void PerfStats::calibrate(int num_game_threads) {
   loop_controller_stats.pause_time_ns -= loop_controller_stats.model_load_time_ns;
 }
 
+inline PerfStatsClient::PerfStatsClient() { PerfStatsRegistry::instance()->add(this); }
+
+inline PerfStatsRegistry* PerfStatsRegistry::instance() {
+  static PerfStatsRegistry instance;
+  return &instance;
+}
+
+inline void PerfStatsRegistry::add(PerfStatsClient* client) { clients_.push_back(client); }
+
+inline PerfStats PerfStatsRegistry::get_perf_stats() {
+  PerfStats stats;
+  for (auto client : clients_) {
+    client->update_perf_stats(stats);
+  }
+  return stats;
+}
+
 inline PerfClocker::PerfClocker(int64_t& field) : field_(field) {
   start_time_ = std::chrono::steady_clock::now();
 }

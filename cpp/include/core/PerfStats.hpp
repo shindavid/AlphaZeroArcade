@@ -68,6 +68,30 @@ struct PerfStats {
   LoopControllerPerfStats loop_controller_stats;
 };
 
+// A PerfStatsClient is an object that profiles its own performance.
+class PerfStatsClient {
+ public:
+  // Constructor registers the client with the PerfStatsRegistry.
+  PerfStatsClient();
+
+  virtual ~PerfStatsClient() = default;
+
+  // Add my stats to the passed-in PerfStats object. Should clear my own stats after updating stats.
+  virtual void update_perf_stats(PerfStats& stats) = 0;
+};
+
+class PerfStatsRegistry {
+ public:
+  static PerfStatsRegistry* instance();
+
+  void add(PerfStatsClient* client);
+
+  PerfStats get_perf_stats();
+
+ private:
+  std::vector<PerfStatsClient*> clients_;
+};
+
 // PerfClocker can be used to measure the time taken for a specific operation. Its constructor
 // starts the timer, and its destructor stops the timer and updates a specific passed-in field,
 // which is expected to be a reference to a PerfStats int64_t that represents cumulative time in
