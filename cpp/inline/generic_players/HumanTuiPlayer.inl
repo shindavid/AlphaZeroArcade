@@ -23,6 +23,7 @@ inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const
   last_action_ = action;
 }
 
+// TODO: return a core::kHibernate, and do the std::cin handling in a separate thread
 template <core::concepts::Game Game>
 typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
     const ActionRequest& request) {
