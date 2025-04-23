@@ -1,6 +1,7 @@
 #include <util/AllocPool.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>
+#include <util/Math.hpp>
 #include <util/Random.hpp>
 #include <util/StringUtil.hpp>
 
@@ -575,6 +576,23 @@ TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width("hello"), 5);
   EXPECT_EQ(util::terminal_width("\033[31m\033[00m"), 0);  // red font
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
+}
+
+TEST(math, splitmix64) {
+  constexpr int log2_num_buckets = 3;
+  constexpr int num_buckets = 1 << log2_num_buckets;
+  constexpr int N = 100000;
+  int counts[num_buckets] = {};
+
+  for (int i = 0; i < N; ++i) {
+    uint64_t h = math::splitmix64(i);
+    int bucket = h >> (64 - log2_num_buckets);
+    counts[bucket]++;
+  }
+  for (int i = 0; i < num_buckets; ++i) {
+    double pct = counts[i] * 1.0 / N;
+    EXPECT_NEAR(pct, 1.0 / num_buckets, 0.01);
+  }
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
