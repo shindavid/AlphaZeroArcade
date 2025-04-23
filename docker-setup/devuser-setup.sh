@@ -15,6 +15,18 @@ cat << 'EOF' >> ~/.sqliterc
 .headers on
 EOF
 
+# write .vimrc:
+cat << 'EOF' >> ~/.vimrc
+" Use spaces instead of tabs
+set expandtab
+
+" Smart way to move between windows
+map <C-j> <C-W>j
+map <C-k> <C-W>k
+map <C-h> <C-W>h
+map <C-l> <C-W>l
+EOF
+
 # write .bashrc:
 cat << 'EOF' >> ~/.bashrc
 # Show git branch name with dirty bit inside parentheses
