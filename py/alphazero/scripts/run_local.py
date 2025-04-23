@@ -33,7 +33,7 @@ Standard Usage Recipes:
 1. First run - creating a benchmark from scratch:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-benchmark-server`
 
-2. Set an existing run as the default benchmark:
+2. Generate a benchmark from an existing run:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-benchmark-server --set-default-benchmark --skip-self-play`
 
 3. Evaluate a new run against a benchmark:
