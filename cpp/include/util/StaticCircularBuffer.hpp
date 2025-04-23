@@ -138,7 +138,6 @@ class StaticCircularBuffer {
     const_iterator operator-(difference_type n) const { return const_iterator(buf_, pos_ - n); }
     difference_type operator-(const const_iterator& other) const { return pos_ - other.pos_; }
 
-
     bool operator==(const const_iterator& other) const { return pos_ == other.pos_; }
     bool operator!=(const const_iterator& other) const { return pos_ != other.pos_; }
     bool operator<(const const_iterator& other) const { return pos_ < other.pos_; }
