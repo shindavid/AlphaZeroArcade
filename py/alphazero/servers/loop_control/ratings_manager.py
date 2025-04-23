@@ -85,10 +85,6 @@ class RatingsManager(GamingManagerBase):
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.deactivate(conn.client_domain)
 
-        with aux.status_cond:
-            aux.status = ServerStatus.DISCONNECTED
-            aux.cond.notify_all()
-
     def _get_rating_data(self, conn: ClientConnection, gen: Generation) -> RatingData:
         with self._lock:
             rating_data = self._rating_data_dict.get(gen, None)
