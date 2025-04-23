@@ -136,7 +136,7 @@ class EvaluationPlotter:
         plot.line(x=[0, 0], y=[0, 0], line_color='green', line_dash='dashed', line_width=2,
                   legend_label="Committee")
 
-        plot.legend.location = 'top_left'
+        plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 
         plot.y_range.start = df_benchmark["rating"].min() * 0.9

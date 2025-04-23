@@ -133,7 +133,7 @@ class Evaluator:
         sorted_ixs = np.argsort(xs)
         xs_sorted = xs[sorted_ixs]
         ys_sorted = ys[sorted_ixs]
-        interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value="extrapolate")
+        interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value=(min(ys), max(ys)), bounds_error=False)
         interpolated_ratings = interp_func(test_agents_elo)
 
         return test_ixs, interpolated_ratings

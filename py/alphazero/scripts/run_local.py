@@ -21,7 +21,7 @@ An AlphaZero run consists of three primary components:
    - Eval Server: Evaluates experimental or new runs against the benchmark.
    - Ratings Server: Rates models by playing them against reference players.
 
-Each component has a corresponding launcher script in `py/alphazero/scripts/`:
+Each component has a corresponding launcher script in py/alphazero/scripts/:
 - run_loop_controller.py
 - run_self_play_server.py
 - run_ratings_server.py
