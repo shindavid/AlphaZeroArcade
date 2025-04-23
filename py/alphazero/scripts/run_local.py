@@ -36,13 +36,16 @@ Standard Usage Recipes:
 2. Generate a benchmark from an existing run:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-benchmark-server --set-default-benchmark --skip-self-play`
 
-3. Evaluate a new run against a benchmark:
+3. Set a finished benchmark as the default:
+`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --skip-self-play --set-default-benchmark`
+
+4. Evaluate a new run against a benchmark:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-eval-server (--benchmark-tag {benchmark_tag})'
 
     - If benchmark_tag is not specified, the default benchmark (in /output/{game}/benchmark_info.json) will be used.
     - If the default benchmark is not found, loop controller will raise an error.
 
-4. Evaluate without training new generations or running self-play:
+5. Evaluate without training new generations or running self-play:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-eval-server (--benchmark-tag {benchmark_tag}) --skip-self-play`
 
 """
@@ -378,6 +381,9 @@ def main():
 
     procs = []
     try:
+        if params.set_default_benchmark:
+            save_default_benchmark(run_params.game, run_params.tag)
+
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.skip_self_play:
@@ -389,8 +395,6 @@ def main():
 
         if params.run_benchmark_server:
             procs.append(('Benchmark', launch_benchmark_server(params_dict, ratings_gpu)))
-            if params.set_default_benchmark:
-                save_default_benchmark(run_params.game, run_params.tag)
 
         if params.run_eval_server:
             procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
