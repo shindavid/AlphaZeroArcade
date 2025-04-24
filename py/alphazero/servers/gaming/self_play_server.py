@@ -150,10 +150,8 @@ class SelfPlayServer:
         proc = self._proc
         assert proc is not None
 
-        logger.info('Stopping gen-0 self-play process [%s]', proc.pid)
-        self._session_data.disable_next_returncode_check()
-        self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
+        assert self._proc.returncode == 0, f'Unexpected returncode: {self._proc.returncode}'
         self._clear_proc()
 
     def _handle_start(self, msg: JsonDict):
