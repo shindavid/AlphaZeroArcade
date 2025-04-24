@@ -52,12 +52,6 @@ typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::ma
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationRequest<Game>::init(search_thread_profiler_t* thread_profiler, int thread_id) {
-  thread_profiler_ = thread_profiler;
-  thread_id_ = thread_id;
-}
-
-template <core::concepts::Game Game>
 void NNEvaluationRequest<Game>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {

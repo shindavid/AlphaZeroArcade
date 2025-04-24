@@ -117,11 +117,10 @@ class NNEvaluationRequest {
   };
   using item_vec_t = std::vector<Item>;
 
-  void init(search_thread_profiler_t* thread_profiler, int thread_id);
+  void init(int thread_id) { thread_id_ = thread_id; }
   void mark_all_as_stale();
 
   std::string thread_id_whitespace() const;
-  search_thread_profiler_t* thread_profiler() const { return thread_profiler_; }
   int thread_id() const { return thread_id_; }
 
   template <typename... Ts>
@@ -147,7 +146,6 @@ class NNEvaluationRequest {
   // and in order to do that, we need to destroy lazily.
   item_vec_t items_[2];
 
-  search_thread_profiler_t* thread_profiler_;
   int thread_id_;
   int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };

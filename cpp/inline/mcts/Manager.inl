@@ -30,16 +30,6 @@ Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const Mana
       root_softmax_temperature_(params.starting_root_softmax_temperature,
         params.ending_root_softmax_temperature,
         params.root_softmax_temperature_half_life) {
-  if (mcts::kEnableProfiling) {
-    auto profiling_dir = params_.profiling_dir();
-    if (profiling_dir.empty()) {
-      throw util::CleanException(
-          "Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in "
-          "config.txt");
-    }
-    init_profiling_dir(profiling_dir.string());
-  }
-
   if (params_.enable_pondering) {
     throw util::CleanException("Pondering mode temporarily unsupported");
   }
@@ -80,10 +70,6 @@ inline Manager<Game>::~Manager() {
   clear();
 
   nn_eval_service_->disconnect();
-  for (auto& context : search_contexts_) {
-    context.profiler.dump(1);
-    context.profiler.close_file();
-  }
 }
 
 template <core::concepts::Game Game>
@@ -313,14 +299,7 @@ void Manager<Game>::init_context(core::search_context_id_t i) {
   LOG_DEBUG("{}({})", __func__, i);
   SearchContext& context = search_contexts_[i];
   context.id = i;
-  context.eval_request.init(&context.profiler, i);
-  if (mcts::kEnableProfiling) {
-    auto dir = params_.profiling_dir();
-    auto profiling_file_path = dir / std::format("search{}-{}.txt", manager_id_, i);
-    context.profiler.initialize_file(profiling_file_path);
-    context.profiler.set_name(std::format("s-{}-{}", manager_id_, i));
-    context.profiler.skip_next_n_dumps(5);
-  }
+  context.eval_request.init(i);
 }
 
 template <core::concepts::Game Game>
@@ -489,7 +468,6 @@ core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& 
   context.canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
   context.active_seat = root_info_.active_seat;
-  context.profiler.dump(64);
   if (!root->trivial()) {  // this if is here to match existing code, to make unit-tests pass
     post_visit_func_();
   }
@@ -647,7 +625,6 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
 
-  context.profiler.record(SearchThreadRegion::kExpand);
   context.mid_expansion = true;
 
   StateHistory* history = context.initialization_history;
@@ -901,8 +878,6 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
 template <core::concepts::Game Game>
 void Manager<Game>::virtual_backprop(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
-  context.profiler.record(SearchThreadRegion::kVirtualBackprop);
-
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
   }
@@ -929,11 +904,10 @@ void Manager<Game>::virtual_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
-  LOG_DEBUG("{}({})", __func__, context.id);
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
-  context.profiler.record(SearchThreadRegion::kUndoVirtualBackprop);
 
+  LOG_DEBUG("{}({})", __func__, context.id);
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
   }
@@ -956,8 +930,6 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
 template <core::concepts::Game Game>
 inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArray& value) {
   LOG_DEBUG("{}({})", __func__, context.id);
-  context.profiler.record(SearchThreadRegion::kPureBackprop);
-
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{}{} {} {}", thread_id_whitespace(context), __func__, search_path_str(context),
              fmt::streamed(value.transpose()));
@@ -987,12 +959,10 @@ inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArra
 
 template <core::concepts::Game Game>
 void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual) {
-  LOG_DEBUG("{}({}, {})", __func__, context.id, undo_virtual);
-  context.profiler.record(SearchThreadRegion::kStandardBackprop);
-
   Node* last_node = context.search_path.back().node;
   auto value = GameResults::to_value_array(last_node->stable_data().VT);
 
+  LOG_DEBUG("{}({}, {})", __func__, context.id, undo_virtual);
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{}{} {} {}", thread_id_whitespace(context), __func__, search_path_str(context),
              fmt::streamed(value.transpose()));
@@ -1023,8 +993,6 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
 template <core::concepts::Game Game>
 void Manager<Game>::short_circuit_backprop(SearchContext& context) {
   LOG_DEBUG("{}({})", __func__, context.id);
-  context.profiler.record(SearchThreadRegion::kShortCircuitBackprop);
-
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
   }
@@ -1117,8 +1085,6 @@ void Manager<Game>::validate_search_path(const SearchContext& context) const {
 template <core::concepts::Game Game>
 int Manager<Game>::get_best_child_index(const SearchContext& context) {
   Node* node = context.visit_node;
-  context.profiler.record(SearchThreadRegion::kPUCT);
-
   bool is_root = (node == lookup_table_.get_node(root_info_.node_index));
   ActionSelector action_selector(params_, search_params_, node, is_root);
 
@@ -1405,24 +1371,6 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
     std::cout << std::endl << "Policy target pruning:" << std::endl;
     eigen_util::print_array(std::cout, data, columns, &fmt_map);
   }
-}
-
-template <core::concepts::Game Game>
-void Manager<Game>::init_profiling_dir(const std::string& profiling_dir) {
-  static std::string pdir;
-  if (!pdir.empty()) {
-    if (pdir == profiling_dir) return;
-    throw util::CleanException("Two different mcts profiling dirs used: %s and %s", pdir.c_str(),
-                               profiling_dir.c_str());
-  }
-  pdir = profiling_dir;
-
-  namespace bf = boost::filesystem;
-  bf::path path(profiling_dir);
-  if (bf::is_directory(path)) {
-    bf::remove_all(path);
-  }
-  bf::create_directories(path);
 }
 
 }  // namespace mcts

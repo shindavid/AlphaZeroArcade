@@ -30,9 +30,6 @@ NNEvaluationService<Game>* NNEvaluationService<Game>::create(
   if (it == instance_map_.end()) {
     auto instance = new NNEvaluationService(params);
 
-    if (mcts::kEnableProfiling) {
-      instance->set_profiling_dir(params.profiling_dir());
-    }
     instance_map_[params.model_filename] = instance;
     return instance;
   }
@@ -64,16 +61,6 @@ void NNEvaluationService<Game>::disconnect() {
     delete thread_;
     thread_ = nullptr;
   }
-  profiler_.close_file();
-}
-
-template <core::concepts::Game Game>
-inline void NNEvaluationService<Game>::set_profiling_dir(
-    const boost::filesystem::path& profiling_dir) {
-  std::string name = util::create_string("eval-%d", instance_id_);
-  auto profiling_file_path = profiling_dir / util::create_string("%s.txt", name.c_str());
-  profiler_.initialize_file(profiling_file_path);
-  profiler_.set_name(name);
 }
 
 template <core::concepts::Game Game>
@@ -661,7 +648,6 @@ void NNEvaluationService<Game>::loop() {
     wait_for_unpause();
     wait_until_batch_ready(loop_stats);
     batch_evaluate(loop_stats);
-    profiler_.dump(64);
   }
 }
 
@@ -717,8 +703,6 @@ void NNEvaluationService<Game>::wait_for_unpause() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats& loop_stats) {
-  profiler_.record(NNEvaluationServiceRegion::kWaitingUntilBatchReady);
-
   std::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(loop_stats.wait_for_search_threads_time_ns);
 
@@ -792,7 +776,6 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   // NN-0 nn-eval per-batch model eval time:              3.243ms
   //
   // These numbers put a limit on the potential speedup we could get from this optimization.
-  profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
   core::PerfClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, full_input_);
@@ -801,11 +784,9 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
   torch_input_gpu_.copy_(full_input_torch);
 
-  profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
   core::PerfClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
   net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
-  profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
   core::PerfClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
     TensorGroup& group = batch_data->tensor_groups[i];

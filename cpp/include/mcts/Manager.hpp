@@ -74,7 +74,6 @@ class Manager {
     core::search_context_id_t id;
 
     search_path_t search_path;
-    mutable search_thread_profiler_t profiler;
 
     NNEvaluationRequest eval_request;
     StateHistory canonical_history;
@@ -292,9 +291,8 @@ class Manager {
 
   void load_action_symmetries(Node* root, core::action_t* actions);
   void prune_policy_target(const SearchParams&, group::element_t inv_sym);
-  static void init_profiling_dir(const std::string& profiling_dir);
 
-  static int next_instance_id_;  // for naming debug/profiling output files
+  static int next_instance_id_;
 
   const ManagerParams params_;
   const SearchParams pondering_search_params_;

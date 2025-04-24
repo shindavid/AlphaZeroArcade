@@ -107,7 +107,6 @@ class NNEvaluationService
 
   using CacheKey = NNEvaluationRequest::CacheKey;
   using CacheKeyHasher = NNEvaluationRequest::CacheKeyHasher;
-  using profiler_t = nn_evaluation_service_profiler_t;
 
   using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
@@ -288,8 +287,6 @@ class NNEvaluationService
 
   std::string dump_key(const char* descr);
 
-  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
-
   // For each item in the request, attempt a cache-lookup. If we get a cache-hit, set the item's
   // eval to the cached value. If we get a cache-miss, we do the following:
   //
@@ -327,7 +324,6 @@ class NNEvaluationService
   const int instance_id_;
   const NNEvaluationServiceParams params_;
 
-  profiler_t profiler_;
   std::thread* thread_ = nullptr;
 
   mutable std::mutex connection_mutex_;
