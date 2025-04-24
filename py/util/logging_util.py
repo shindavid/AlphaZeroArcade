@@ -22,7 +22,7 @@ class LoggingParams:
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group('Logging options')
-        group.add_argument('--debug', action='store_true', help='enable debug loggign')
+        group.add_argument('--debug', action='store_true', help='enable debug logging')
         group.add_argument('--debug-module', type=str, nargs='+', default=[],
                            help='specific module(s) to enable debug logging for. Example: '
                                 '--debug-module=util.sqlite3_util --debug-module=alphazero.servers.gaming.session_data')
