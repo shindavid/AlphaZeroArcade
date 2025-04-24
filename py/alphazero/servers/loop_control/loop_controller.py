@@ -81,7 +81,7 @@ class LoopController:
         # encounter environments where this does not work as intended, we can rethink this.
         scratch_fs = os.stat('/home/devuser/scratch').st_dev
         workspace_fs = os.stat('/workspace').st_dev
-        self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs)
+        self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs) or params.simulate_cloud
 
         if self._on_ephemeral_local_disk_env:
             self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
@@ -357,10 +357,9 @@ class LoopController:
 
                 benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
                 benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
-                shutil.copy2(benchmark_organizer.benchmark_db_filename,
-                             self.organizer.eval_db_filename(self.params.benchmark_tag))
+                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename(self.params.benchmark_tag))
 
-            self._eval_managers[tag] = EvalManager(self, self._params.benchmark_tag)
+            self._eval_managers[tag] = EvalManager(self, self.params.benchmark_tag)
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:

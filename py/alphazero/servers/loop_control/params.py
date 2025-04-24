@@ -19,6 +19,7 @@ class LoopControllerParams:
     n_games_per_benchmark: int = 100
     target_elo_gap: float = 100
     ignore_sigint: bool = False
+    simulate_cloud: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -69,6 +70,8 @@ class LoopControllerParams:
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
 
+        group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
+                           help='simulate cloud environment (default: %(default)s)')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()

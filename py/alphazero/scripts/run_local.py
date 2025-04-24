@@ -87,6 +87,7 @@ class Params:
     num_cuda_devices_to_use: Optional[int] = None
 
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
+    simulate_cloud: bool = default_loop_controller_params.simulate_cloud
 
     run_ratings_server: bool = False
     skip_self_play: bool = False
@@ -254,6 +255,9 @@ def launch_loop_controller(params_dict, cuda_device: int):
     benchmark_tag = get_benchmark_tag(run_params, params)
     if benchmark_tag:
         cmd.extend(['--benchmark-tag', benchmark_tag])
+
+    if params.simulate_cloud:
+        cmd.extend(['--simulate-cloud'])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
