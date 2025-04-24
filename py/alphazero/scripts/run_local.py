@@ -355,7 +355,7 @@ def main():
         else:
             procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
 
-        if params.run_ratings_server:
+        if params.run_ratings_server and game_spec.reference_player_family is not None:
             procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
 
         loop = True
