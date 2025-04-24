@@ -163,8 +163,9 @@ class XVarSelector:
         plot.xaxis.axis_label = self.x_label
         if x_col not in self._min_x_dict:
             return False
-        plot.x_range.start = self._min_x_dict[x_col]
-        plot.x_range.end = self._max_x_dict[x_col]
+        padding = (self._max_x_dict[x_col] - self._min_x_dict[x_col]) * 0.05
+        plot.x_range.start = self._min_x_dict[x_col] - padding
+        plot.x_range.end = self._max_x_dict[x_col] + padding
         return True
 
     def create_radio_group(self, plots: List[figure], sources: List[ColumnDataSource]) -> RadioGroup:
