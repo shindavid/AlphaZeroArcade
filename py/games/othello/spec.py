@@ -108,9 +108,10 @@ class OthelloSpec(GameSpec):
         '-p': 50,  # edax player hogs too much CPU/memory, so limit parallelism
     }
 
+    # (dshin) Temporarily comment out -n 4 because multithreading is currently broken in the c++
     rating_player_options = {
         '-i': 400,
-        '-n': 8,
+        # '-n': 8,
     }
 
 
