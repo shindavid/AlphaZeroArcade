@@ -129,7 +129,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
     while (sample_index < n_samples && sampled_indices_[sample_index] >= file_start) {
       int64_t local_index = sampled_indices_[sample_index] - file_start;
       util::release_assert(local_index >= 0 && local_index < num_rows,
-                           "SamplingManager::sample() bug at %d [local_index:%ld num_rows:%ld]",
+                           "SamplingManager::sample() bug at {} [local_index:{} num_rows:{}]",
                            __LINE__, local_index, num_rows);
       local_indices->push_back(local_index);
       sample_index++;
@@ -292,7 +292,7 @@ void DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_
   for (const WorkUnit& unit : work_units) {
     DataFile* file = unit.file;
     util::release_assert(start_gen == -1 || file->gen() < start_gen,
-                         "DataFileSet::prepare_files() bug at %d", __LINE__);
+                         "DataFileSet::prepare_files() bug at {}", __LINE__);
     start_gen = file->gen();
     if (end_gen == -1) end_gen = file->gen();
     if (file->is_loaded()) {
@@ -308,7 +308,7 @@ void DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_
   }
 
   util::release_assert(memory_usage_ == expected_memory_usage,
-    "DataFileSet::prepare_files() memory-usage-tracking-bug [%ld != %ld]",
+    "DataFileSet::prepare_files() memory-usage-tracking-bug [{} != {}]",
      memory_usage_, expected_memory_usage);
 
   lock.unlock();
@@ -369,7 +369,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
 
   // Something is available to prefetch
   DataFile* file = load_queue_.front();
-  util::release_assert(!file->is_loaded(), "DataFileSet::prefetch_loop() bug at %d", __LINE__);
+  util::release_assert(!file->is_loaded(), "DataFileSet::prefetch_loop() bug at {}", __LINE__);
 
   if (memory_usage_ + file->file_size() <= memory_budget_) {
     // We have sufficient memory
@@ -388,7 +388,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
     return kWait;
   }
 
-  util::release_assert(file->file_size() > memory_budget_, "DataFileSet::prefetch_loop() bug at %d",
+  util::release_assert(file->file_size() > memory_budget_, "DataFileSet::prefetch_loop() bug at {}",
                        __LINE__);
 
   // our memory budget is insufficient to load this single file. In this case let's just violate

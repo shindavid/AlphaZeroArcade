@@ -254,12 +254,12 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
                                                    bool implicit_remote) {
-  util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
+  util::clean_assert(seat < kNumPlayers, "Invalid seat number {}", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
       util::clean_assert(
         params_.port > 0,
-        "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
+        "If specifying fewer than {} --player's, the remaining players are assumed to be remote "
         "players. In this case, --port must be specified, so that the remote players can connect",
         kNumPlayers);
     } else {
@@ -270,11 +270,11 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
   }
   if (seat >= 0) {
     for (const auto& reg : registrations_) {
-      util::clean_assert(reg.seat != seat, "Double-seated player at seat %d", seat);
+      util::clean_assert(reg.seat != seat, "Double-seated player at seat {}", seat);
     }
   }
   player_id_t player_id = registrations_.size();
-  util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
+  util::clean_assert(player_id < kNumPlayers, "Too many players registered (max {})", kNumPlayers);
   std::string name = gen->get_name();
   if (name.empty()) {
     gen->set_name(gen->get_default_name());
@@ -522,7 +522,7 @@ bool GameServer<Game>::GameSlot::step_non_chance() {
 
   // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
   // the server.
-  util::release_assert(valid_actions[action], "Invalid action: %d", action);
+  util::release_assert(valid_actions[action], "Invalid action: {}", action);
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
@@ -697,7 +697,7 @@ GameServer<Game>::GameServer(const Params& params,
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {
   util::clean_assert(num_registered_players() <= kNumPlayers,
-                     "Invalid number of players registered: %d", num_registered_players());
+                     "Invalid number of players registered: {}", num_registered_players());
 
   // fill in missing slots with remote players
   int shortage = kNumPlayers - num_registered_players();
@@ -718,7 +718,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
   if (remote_player_registrations.empty()) return;
 
   int port = get_port();
-  util::clean_assert(port > 0, "Invalid port number %d", port);
+  util::clean_assert(port > 0, "Invalid port number {}", port);
 
   io::Socket* server_socket = io::Socket::create_server_socket(port, kNumPlayers);
 

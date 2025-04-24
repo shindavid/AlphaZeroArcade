@@ -84,7 +84,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
                    ansi::kCircle("Y"), ansi::kReset(""), (*player_names)[kYellow].c_str());
   }
 
-  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
 }
 

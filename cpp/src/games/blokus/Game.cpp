@@ -187,7 +187,7 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
     cx += snprintf(buffer + cx, buf_size - cx, "\n");
   }
 
-  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   os << buffer << std::endl;
 }
 

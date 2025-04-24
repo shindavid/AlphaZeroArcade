@@ -1031,7 +1031,7 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
     }
 
     util::release_assert(cur_canonical_sym == leaf_canonical_sym,
-                         "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
+                         "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
                          leaf_canonical_sym);
   } else {
     Symmetries::apply(context.canonical_history, context.canonical_sym);

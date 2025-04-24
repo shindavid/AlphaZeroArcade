@@ -160,7 +160,7 @@ GameReadLog<Game>::GameReadLog(const char* filename, int game_index,
       metadata_(metadata),
       buffer_(buffer),
       layout_(metadata) {
-  util::release_assert(num_positions() > 0, "Empty game log file %s[%d]", filename, game_index);
+  util::release_assert(num_positions() > 0, "Empty game log file {}[{}]", filename, game_index);
 }
 
 template <concepts::Game Game>
@@ -244,12 +244,12 @@ void GameReadLog<Game>::merge_files(const char** input_filenames, int n_input_fi
     out_buffer.insert(out_buffer.end(), game_buffer, game_buffer + metadata.data_size);
   }
 
-  util::release_assert(out_buffer.size() == out_buffer_size, "Size mismatch %ld != %ld",
+  util::release_assert(out_buffer.size() == out_buffer_size, "Size mismatch {} != {}",
                        out_buffer.size(), out_buffer_size);
 
   std::ofstream output_file(output_filename, std::ios::binary);
   output_file.write(out_buffer.data(), out_buffer.size());
-  util::release_assert(output_file.good(), "Failed to write to %s", output_filename);
+  util::release_assert(output_file.good(), "Failed to write to {}", output_filename);
   output_file.close();
 
   for (const auto& reader : readers) {
@@ -261,8 +261,8 @@ template <concepts::Game Game>
 void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
                              const std::vector<int>& target_indices, float* output_array) const {
   util::release_assert(row_index >= 0 && row_index < num_sampled_positions(),
-                       "Index %d out of bounds [0, %d) in %s[%d]", row_index, num_sampled_positions(),
-                       filename_, game_index_);
+                       "Index {} out of bounds [0, {}) in {}[{}]", row_index,
+                       num_sampled_positions(), filename_, game_index_);
 
   pos_index_t state_index = get_pos_index(row_index);
   mem_offset_t mem_offset = get_mem_offset(state_index);

@@ -512,7 +512,7 @@ void Node<Game>::validate_state() const {
   const auto stats_copy = stats();  // thread-safe because we hold the mutex
   lock.unlock();
 
-  util::debug_assert(N == stats_copy.RN + stats_copy.VN, "[%p] %d != %d + %d", this, N,
+  util::debug_assert(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)this, N,
                      stats_copy.RN, stats_copy.VN);
   util::debug_assert(stats_copy.RN >= 0);
   util::debug_assert(stats_copy.VN >= 0);

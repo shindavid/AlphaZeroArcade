@@ -4,42 +4,42 @@
 #include <util/Exception.hpp>
 
 #include <cstdarg>
-#include <iostream>
 
 namespace util {
 
-inline void debug_assert(bool condition, char const* fmt, ...) {
+inline void debug_assert(bool condition) {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
   if (condition) return;
-  if (!fmt) throw Exception();
-  va_list ap;
-  va_start(ap, fmt);
-  char text[1024];
-  vsnprintf(text, sizeof(text), fmt, ap);
-  va_end(ap);
-  throw Exception("%s", text);
+  throw Exception();
 }
 
-inline void release_assert(bool condition, char const* fmt, ...) {
+inline void release_assert(bool condition) {
   if (condition) return;
-  if (!fmt) throw Exception();
-  va_list ap;
-  va_start(ap, fmt);
-  char text[1024];
-  vsnprintf(text, sizeof(text), fmt, ap);
-  va_end(ap);
-  throw Exception("%s", text);
+  throw Exception();
 }
 
-inline void clean_assert(bool condition, char const* fmt, ...) {
+inline void clean_assert(bool condition) {
   if (condition) return;
-  if (!fmt) throw CleanException();
-  va_list ap;
-  va_start(ap, fmt);
-  char text[1024];
-  vsnprintf(text, sizeof(text), fmt, ap);
-  va_end(ap);
-  throw CleanException("%s", text);
+  throw CleanException();
+}
+
+template <typename... Ts>
+void debug_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (condition) return;
+  throw Exception(fmt, std::forward<Ts>(ts)...);
+}
+
+template <typename... Ts>
+void release_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts) {
+  if (condition) return;
+  throw Exception(fmt, std::forward<Ts>(ts)...);
+}
+
+template <typename... Ts>
+void clean_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts) {
+  if (condition) return;
+  throw CleanException(fmt, std::forward<Ts>(ts)...);
 }
 
 }  // namespace util

@@ -31,7 +31,7 @@ void RemotePlayerProxyGenerator<Game>::end_session() {
 template <concepts::Game Game>
 int RemotePlayerProxyGenerator<Game>::max_simultaneous_games() const {
   util::clean_assert(max_simultaneous_games_ >= 0,
-                     "RemotePlayerProxyGenerator::%s() called before initialized", __func__);
+                     "RemotePlayerProxyGenerator::{}() called before initialized", __func__);
   return max_simultaneous_games_;
 }
 

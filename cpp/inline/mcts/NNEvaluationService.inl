@@ -815,7 +815,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
                                                const std::string& cuda_device) {
   LOG_INFO("NNEvaluationService: reloading network weights...");
-  util::release_assert(paused_, "%s() called while not paused", __func__);
+  util::release_assert(paused_, "{}() called while not paused", __func__);
 
   std::ispanstream stream{std::span<const char>(buf)};
   std::unique_lock net_weights_lock(net_weights_mutex_);

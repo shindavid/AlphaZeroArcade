@@ -60,8 +60,8 @@ typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::p
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      util::clean_assert(seat < Game::Constants::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
-                         seat, player_str.c_str());
+      util::clean_assert(seat < Game::Constants::kNumPlayers,
+                         "Invalid seat ({}) in --player \"{}\"", seat, player_str);
     }
 
     PlayerGeneratorSeat player_generator_seat;
@@ -175,15 +175,15 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
       throw util::Exception("Invalid usage of --copy-from with --type in --player \"{}\"",
                             player_str);
     }
-    util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"%s\"",
-                       player_str.c_str());
+    util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"{}\"",
+                       player_str);
     return parse_helper(player_str, name, name_map_.at(copy_from));
   }
 
-  util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"%s\"",
-                     player_str.c_str());
+  util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"{}\"",
+                     player_str);
   if (!name.empty()) {
-    util::clean_assert(!name_map_.count(name), "Duplicate --name \"%s\"", name.c_str());
+    util::clean_assert(!name_map_.count(name), "Duplicate --name \"{}\"", name);
     name_map_[name] = orig_tokens;
   }
   for (auto* subfactory : subfactories_) {

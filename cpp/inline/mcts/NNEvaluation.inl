@@ -60,7 +60,7 @@ void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
 template <core::concepts::Game Game>
 bool NNEvaluation<Game>::decrement_ref_count() {
   ref_count_--;
-  util::debug_assert(ref_count_ >= 0, "ref_count_=%d", ref_count_);
+  util::debug_assert(ref_count_ >= 0, "ref_count_={}", ref_count_);
   return ref_count_ == 0;
 }
 

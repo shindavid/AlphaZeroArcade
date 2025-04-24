@@ -215,7 +215,7 @@ void BoardString::pretty_print(std::ostream& os) const {
     c += sprintf(buffer + c, "%2d ", row + 1);
     for (int col = 0; col < kBoardDimension; ++col) {
       drawing_t d = colors_[row][col];
-      util::debug_assert(d >= 0 && d < 5, "%d", int(d));
+      util::debug_assert(d >= 0 && d < 5, "{}", int(d));
       c += snprintf(buffer + c, std::max(N - c, 0), "%s", color_strs[d]);
     }
     c += sprintf(buffer + c, " %2d\n", row + 1);
@@ -227,7 +227,7 @@ void BoardString::pretty_print(std::ostream& os) const {
   }
   c += sprintf(buffer + c, "\n");
 
-  util::release_assert(c < N, "BoardString::pretty_print() overflow (%d < %d)", c, N);
+  util::release_assert(c < N, "BoardString::pretty_print() overflow ({} < {})", c, N);
   os << buffer;
 }
 

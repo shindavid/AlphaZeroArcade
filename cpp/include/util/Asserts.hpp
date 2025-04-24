@@ -1,5 +1,7 @@
 #pragma once
 
+#include <format>
+
 /*
  * A variety of assert functions:
  *
@@ -18,12 +20,18 @@
  */
 namespace util {
 
-void debug_assert(bool condition, char const* fmt = nullptr, ...)
-    __attribute__((format(printf, 2, 3)));
-void release_assert(bool condition, char const* fmt = nullptr, ...)
-    __attribute__((format(printf, 2, 3)));
-void clean_assert(bool condition, char const* fmt = nullptr, ...)
-    __attribute__((format(printf, 2, 3)));
+void debug_assert(bool condition);
+void clean_assert(bool condition);
+void release_assert(bool condition);
+
+template <typename... Ts>
+void debug_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
+
+template <typename... Ts>
+void release_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
+
+template <typename... Ts>
+void clean_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
 
 }  // namespace util
 

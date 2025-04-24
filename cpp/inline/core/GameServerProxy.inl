@@ -152,8 +152,8 @@ void GameServerProxy<Game>::SharedData::register_player(seat_index_t seat, Playe
   // TODO: assert that we are not constructing MCTS-T players, since the MCTS-T implementation
   // implicitly assumes that all MCTS-T agents are running in the same process.
   std::string name = gen->get_name();
-  util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"%s\" size=%d)",
-                     name.c_str(), (int)name.size());
+  util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"{}\" size={})",
+                     name, name.size());
   seat_generators_.emplace_back(seat, gen);
 }
 
@@ -188,11 +188,10 @@ void GameServerProxy<Game>::SharedData::init_socket() {
     player_id_t player_id = response.player_id;
     std::string name = response.dynamic_size_section.player_name;
 
-    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d",
-                       (int)player_id);
+    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: {}",
+                       player_id);
     util::clean_assert(registered_name.empty() || registered_name == name,
-                       "Unexpected name in response: \"%s\" != \"%s\"", registered_name.c_str(),
-                       name.c_str());
+                       "Unexpected name in response: \"{}\" != \"{}\"", registered_name, name);
 
     gen->set_name(name);
     players_[player_id] = gen;
