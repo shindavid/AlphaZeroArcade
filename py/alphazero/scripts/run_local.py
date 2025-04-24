@@ -31,9 +31,10 @@ Each component has a corresponding launcher script in py/alphazero/scripts/:
 Standard Usage Recipes:
 
 1. Start a new training run:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag}`
-    - If there is no default benchmark, it will create a benchmark committee from itself.
-    - Otherwise, it will use the default benchmark to evaluate the new run.
+`./py/alphazero/scripts/run_local.py -g {game} -t {tag} [--run-benchmark-server] [--benchmark-tag {tag}]`
+    - If `--run-benchmark-server` is specified, it will create a benchmark committee from itself.
+    - If there is no default benchmark and no specified benchmark, it will create a benchmark committee from itself.
+    - Otherwise, it will use the default benchmark or specified benchmark to evaluate the new run.
 
 2. Set default benchmark:
 `./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}`
@@ -91,6 +92,7 @@ class Params:
 
     run_ratings_server: bool = False
     skip_self_play: bool = False
+    run_benchmark_server: bool = False
 
     @staticmethod
     def create(args) -> 'Params':
@@ -112,6 +114,8 @@ class Params:
                             help='Run the ratings server')
         group.add_argument('--skip-self-play', action='store_true',
                             help='Do not run the self-play server')
+        group.add_argument('--run-benchmark-server', action='store_true',
+                            help='Run the benchmark server')
 
 
 def load_args():
@@ -354,7 +358,7 @@ def main():
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
-        if benchmark_tag is None:
+        if params.run_benchmark_server or benchmark_tag is None:
             procs.append(('Benchmark', launch_benchmark_server(params_dict, ratings_gpu)))
         else:
             procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
