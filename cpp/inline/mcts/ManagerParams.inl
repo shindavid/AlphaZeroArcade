@@ -21,7 +21,7 @@ inline ManagerParams<Game>::ManagerParams(mcts::Mode mode) {
     force_evaluate_all_root_children = true;
     incorporate_sym_into_cache_key = false;
   } else {
-    throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
+    throw util::Exception("Unknown mcts::Mode: {}", (int)mode);
   }
 }
 

@@ -1,26 +1,26 @@
 #pragma once
 
 #include <cstdarg>
-#include <iostream>
+#include <exception>
+#include <format>
 
 namespace util {
 
 /*
- * Like std::runtime_error, but allows printf-style arguments.
- *
- * TODO: dynamic resizing in case the error text exceeds 1024 chars.
- *
- * TODO: once the std::format library is implemented in gcc, use that instead of printf-style
- * formatting. Currently, it is supported in gcc-13, but cuda does not support gcc-13, so we are
- * stuck with this.
+ * Like std::runtime_error, but with std::format() mechanics.
  */
 class Exception : public std::exception {
  public:
-  Exception(char const* fmt = nullptr, ...) __attribute__((format(printf, 2, 3)));
-  char const* what() const throw() { return text_; }
+  Exception() : std::exception() {}
+
+  template <typename... Ts>
+  Exception(std::format_string<Ts...> fmt, Ts&&... ts) : std::exception() {
+    what_ = std::format(fmt, std::forward<Ts>(ts)...);
+  }
+  char const* what() const throw() { return what_.c_str(); }
 
  private:
-  char text_[1024];
+  std::string what_;
 };
 
 /*
@@ -32,19 +32,10 @@ class Exception : public std::exception {
  * message to stderr. This avoids the generation of unnecessary core dumps. The descriptor "clean"
  * comes from the fact that unwanted core-dump files are "dirty", so an exception that doesn't
  * produce them is "clean".
- *
- * NOTE: I would inherit from Exception if I could, but there are some technical issues with that
- * (-Wformat-security).
  */
-class CleanException : public std::exception {
+class CleanException : public Exception {
  public:
-  CleanException(char const* fmt = nullptr, ...) __attribute__((format(printf, 2, 3)));
-  char const* what() const throw() { return text_; }
-
- private:
-  char text_[1024];
+  using Exception::Exception;
 };
 
 }  // namespace util
-
-#include <inline/util/Exception.inl>

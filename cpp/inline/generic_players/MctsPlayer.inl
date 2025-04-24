@@ -31,7 +31,7 @@ MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
     full_pct = 0.25;
     starting_move_temperature = 0.8;
   } else {
-    throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
+    throw util::Exception("Unknown mcts::Mode: {}", (int)mode);
   }
 }
 

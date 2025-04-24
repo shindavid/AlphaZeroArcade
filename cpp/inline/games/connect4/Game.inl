@@ -1,14 +1,13 @@
 #include <games/connect4/Game.hpp>
 
-#include <bit>
-#include <iostream>
-
-#include <boost/lexical_cast.hpp>
-
 #include <core/DefaultCanonicalizer.hpp>
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
+
+#include <boost/lexical_cast.hpp>
+
+#include <bit>
 
 namespace c4 {
 
@@ -33,7 +32,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
       return;
     }
     default: {
-      throw util::Exception("Unknown group element: %d", sym);
+      throw util::Exception("Unknown group element: {}", sym);
     }
   }
 }
@@ -55,7 +54,7 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym
       return;
     }
     default: {
-      throw util::Exception("Unknown group element: %d", sym);
+      throw util::Exception("Unknown group element: {}", sym);
     }
   }
 }
@@ -69,7 +68,7 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
       return;
     }
     default: {
-      throw util::Exception("Unknown group element: %d", sym);
+      throw util::Exception("Unknown group element: {}", sym);
     }
   }
 }

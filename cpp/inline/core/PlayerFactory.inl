@@ -38,7 +38,7 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
     auto* generator = subfactory->create();
     for (const auto& type : generator->get_types()) {
       if (types.count(type)) {
-        throw util::Exception("PlayerFactory: duplicate type: %s", type.c_str());
+        throw util::Exception("PlayerFactory: duplicate type: {}", type);
       }
       types.insert(type);
     }
@@ -172,8 +172,8 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
 
   if (!copy_from.empty()) {
     if (!type.empty()) {
-      throw util::Exception("Invalid usage of --copy-from with --type in --player \"%s\"",
-                            player_str.c_str());
+      throw util::Exception("Invalid usage of --copy-from with --type in --player \"{}\"",
+                            player_str);
     }
     util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"%s\"",
                        player_str.c_str());
@@ -196,7 +196,7 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
     delete generator;
   }
 
-  throw util::CleanException("Unknown type in --player \"%s\"", player_str.c_str());
+  throw util::CleanException("Unknown type in --player \"{}\"", player_str);
 }
 
 }  // namespace core

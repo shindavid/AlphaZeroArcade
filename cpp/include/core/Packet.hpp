@@ -1,20 +1,17 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
+#include <core/Constants.hpp>
+#include <util/CppUtil.hpp>
+#include <util/MetaProgramming.hpp>
+#include <util/SocketUtil.hpp>
+
 #include <array>
 #include <concepts>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
-#include <stdexcept>
 #include <string>
-#include <type_traits>
-
-#include <core/BasicTypes.hpp>
-#include <core/Constants.hpp>
-
-#include <util/CppUtil.hpp>
-#include <util/MetaProgramming.hpp>
-#include <util/SocketUtil.hpp>
 
 /*
  * Unit of data sent between GameServer and remote players.

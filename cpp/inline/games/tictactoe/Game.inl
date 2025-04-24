@@ -100,7 +100,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
     case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.full_mask);
     case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.full_mask);
     default: {
-      throw util::Exception("Unknown group element: %d", sym);
+      throw util::Exception("Unknown group element: {}", sym);
     }
   }
 }
@@ -126,7 +126,7 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
     case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
     case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
     default: {
-      throw util::Exception("Unknown group element: %d", sym);
+      throw util::Exception("Unknown group element: {}", sym);
     }
   }
 }

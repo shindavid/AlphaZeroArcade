@@ -12,7 +12,7 @@ EdaxOracle::EdaxOracle(int depth, bool verbose) : verbose_(verbose) {
   auto edax_bin = edax_dir / edax_relative_bin;
 
   if (!boost::filesystem::is_regular_file(edax_bin)) {
-    throw util::CleanException("File does not exist: %s", edax_bin.c_str());
+    throw util::CleanException("File does not exist: {}", edax_bin.c_str());
   }
 
   namespace bp = boost::process;
@@ -97,7 +97,7 @@ Edax plays D3
     for (size_t i = 0; i < n; ++i) {
       std::cerr << line_buffer_[i] << std::endl;
     }
-    throw util::Exception("EdaxPlayer::get_action_response: invalid action: %d", a);
+    throw util::Exception("EdaxPlayer::get_action_response: invalid action: {}", a);
   }
 
   return a;

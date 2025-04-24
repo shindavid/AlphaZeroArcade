@@ -143,7 +143,7 @@ Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
 Socket* Socket::create_client_socket(std::string const& host, port_t port) {
   auto fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
-    throw util::CleanException("Could not create socket at %s:%d", host.c_str(), port);
+    throw util::CleanException("Could not create socket at {}:{}", host, port);
   }
 
   struct hostent* entry = gethostbyname(host.c_str());
@@ -161,7 +161,7 @@ Socket* Socket::create_client_socket(std::string const& host, port_t port) {
     sleep_time_ms *= 2;
   }
   if (retry_count == 0) {
-    throw util::CleanException("Could not connect to socket at %s:%d", host.c_str(), port);
+    throw util::CleanException("Could not connect to socket at {}:{}", host, port);
   }
 
   return get_instance(fd);
@@ -183,7 +183,7 @@ void Socket::write_helper(const void* data, int size, const char* error_msg) {
   while (bytes_sent < size) {
     int n = send(fd_, data_ptr + bytes_sent, size - bytes_sent, 0);
     if (n < 0) {
-      throw util::Exception("%s", error_msg);
+      throw util::Exception("{}", error_msg);
     }
     bytes_sent += n;
   }
@@ -196,7 +196,7 @@ bool Socket::read_helper(void* data, int size, const char* error_msg) {
   while (bytes_read < size) {
     int n = recv(fd_, data_ptr + bytes_read, size - bytes_read, 0);
     if (n < -1) {
-      throw util::Exception("%s", error_msg);
+      throw util::Exception("{}", error_msg);
     } else if (n <= 0) {
       return false;
     }

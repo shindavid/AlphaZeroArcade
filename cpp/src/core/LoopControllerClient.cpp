@@ -123,7 +123,7 @@ void LoopControllerClient::send_handshake() {
 void LoopControllerClient::recv_handshake() {
   boost::json::value msg;
   if (!socket_->json_read(&msg)) {
-    throw util::Exception("%s(): unexpected loop-controller socket close", __func__);
+    throw util::Exception("{}(): unexpected loop-controller socket close", __func__);
   }
 
   std::string type = msg.at("type").as_string().c_str();
@@ -131,7 +131,7 @@ void LoopControllerClient::recv_handshake() {
 
   if (msg.as_object().contains("rejection")) {
     std::string rejection = msg.at("rejection").as_string().c_str();
-    throw util::CleanException("LoopControllerClient handshake rejected: %s", rejection.c_str());
+    throw util::CleanException("LoopControllerClient handshake rejected: {}", rejection);
   }
 
   int64_t client_id = msg.at("client_id").as_int64();
@@ -266,7 +266,7 @@ void LoopControllerClient::loop() {
       deactivated_ = true;
       break;
     } else {
-      throw util::Exception("Unknown loop-controller message type %s", type.c_str());
+      throw util::Exception("Unknown loop-controller message type {}", type);
     }
     LOG_INFO("LoopControllerClient: {} handling complete", type);
   }

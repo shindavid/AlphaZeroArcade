@@ -6,11 +6,9 @@
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
-#include <algorithm>
-#include <bit>
-#include <iostream>
-
 #include <boost/lexical_cast.hpp>
+
+#include <bit>
 
 namespace othello {
 
@@ -39,7 +37,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
     case D4::kFlipMainDiag: return flip_main_diag(s.cur_player_mask, s.opponent_mask);
     case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
     case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
-    default: throw util::Exception("Unknown group element: %d", sym);
+    default: throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -63,7 +61,7 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
     case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
     case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
     case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
-    default: throw util::Exception("Unknown group element: %d", sym);
+    default: throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -84,7 +82,7 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
     case D4::kFlipMainDiag: flip_main_diag(mask); break;
     case D4::kMirrorHorizontal: mirror_horizontal(mask); break;
     case D4::kFlipAntiDiag: flip_anti_diag(mask); break;
-    default: throw util::Exception("Unknown group element: %d", sym);
+    default: throw util::Exception("Unknown group element: {}", sym);
   }
 
   action = std::countr_zero(mask);

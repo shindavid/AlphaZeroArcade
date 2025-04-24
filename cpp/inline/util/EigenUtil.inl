@@ -332,7 +332,7 @@ void assert_is_valid_prob_distr(const Tensor& distr, float eps) {
   if (m < 0 || abs(s - 1.0) > eps) {
     std::ostringstream ss;
     ss << distr;
-    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+    throw util::Exception("Invalid prob distr: sum={}, min={} distr:\n{}", s, m, ss.str());
   }
 }
 
@@ -344,7 +344,7 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
   if (m < 0 || abs(s - 1.0) > eps) {
     std::ostringstream ss;
     ss << distr;
-    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+    throw util::Exception("Invalid prob distr: sum={}, min={} distr:\n{}", s, m, ss.str());
   }
 }
 

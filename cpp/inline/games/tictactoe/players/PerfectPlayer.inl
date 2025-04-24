@@ -91,7 +91,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   try {
     return lookup_map_.at(key).select();
   } catch (const std::out_of_range&) {
-    throw util::Exception("lookup failed (%08ux|%08ux)", uint32_t(x_mask), uint32_t(o_mask));
+    throw util::Exception("lookup failed ({:08x}|{:08x})", x_mask, o_mask);
   }
 }
 

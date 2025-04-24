@@ -76,7 +76,7 @@ class MiniBoard {
 
     if (left == kMiniBoardLookupSize || tables::kMiniBoardLookup[left].key != mask_) {
       throw util::Exception(
-          "MiniBoard::to_piece_orientation_corner_index() failed to find key %08x", mask_);
+          "MiniBoard::to_piece_orientation_corner_index() failed to find key {:08x}", mask_);
     }
     return tables::kMiniBoardLookup[left].value;
   }

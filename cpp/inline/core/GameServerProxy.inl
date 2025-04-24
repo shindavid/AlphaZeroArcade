@@ -397,7 +397,7 @@ void GameServerProxy<Game>::run_event_loop() {
         shared_data_.handle_end_game(response_packet);
         break;
       default:
-        throw util::Exception("Unexpected packet type: %d", (int)type);
+        throw util::Exception("Unexpected packet type: {}", (int)type);
     }
   }
 }

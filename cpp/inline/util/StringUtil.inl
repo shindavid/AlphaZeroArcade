@@ -36,7 +36,7 @@ inline float atof_safe(const std::string& s) {
   size_t read = 0;
   float f = std::stof(s, &read);
   if (read != s.size() || s.empty()) {
-    throw util::Exception("atof failure %s(\"%s\")", __func__, s.c_str());
+    throw util::Exception("atof failure {}(\"{}\")", __func__, s);
   }
   return f;
 }

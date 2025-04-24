@@ -12,13 +12,13 @@ void AbstractPlayerGenerator<Game>::set_name(const std::string& name) {
   // check that only alphanumeric, dash or underscore are used in name:
   for (char c : name) {
     if (!std::isalnum(c) && c != '-' && c != '_') {
-      throw util::CleanException("Invalid character in player name (\"%s\")", name.c_str());
+      throw util::CleanException("Invalid character in player name (\"{}\")", name);
     }
   }
 
   int name_size = name.size();
   if (name_size > kMaxNameLength) {
-    throw util::CleanException("Player name (\"%s\") too long (%d > %d)", name.c_str(), name_size,
+    throw util::CleanException("Player name (\"{}\") too long ({} > {})", name, name_size,
                                kMaxNameLength);
   }
 

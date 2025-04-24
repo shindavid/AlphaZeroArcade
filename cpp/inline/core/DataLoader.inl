@@ -147,7 +147,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
       return;
     }
   }
-  throw util::Exception("SamplingManager::sample() bug at %d [%ld:%ld] total:%ld sam:%d files:%ld",
+  throw util::Exception("SamplingManager::sample() bug at {} [{}:{}] total:{} sam:{} files:{}",
                         __LINE__, window_start, window_end, n_total_rows, n_samples, files.size());
 }
 
@@ -422,7 +422,7 @@ void DataLoader<Game>::FileManager::prefetch_loop() {
       memory_usage_ -= file->unload();
       unload_queue_.pop_front();
     } else {
-      throw util::Exception("DataFileSet::prefetch_loop() bug at %d", __LINE__);
+      throw util::Exception("DataFileSet::prefetch_loop() bug at {}", __LINE__);
     }
   }
 }
@@ -532,7 +532,7 @@ void DataLoader<Game>::WorkerThread::do_work() {
     offset = limit;
   }
 
-  throw util::Exception("WorkerThread::do_work() bug at %d (%d != %d) num_games=%d", __LINE__, s,
+  throw util::Exception("WorkerThread::do_work() bug at {} ({} != {}) num_games={}", __LINE__, s,
                         num_samples, num_games);
 }
 

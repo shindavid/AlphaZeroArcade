@@ -1,12 +1,10 @@
 #include <util/TorchUtil.hpp>
 
-#include <type_traits>
-
-#include <torch/serialize/archive.h>
-
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Exception.hpp>
+
+#include <torch/serialize/archive.h>
 
 namespace torch_util {
 
@@ -26,7 +24,7 @@ inline CatchTensorMallocs::~CatchTensorMallocs() noexcept(false) {
   catch_count_++;
   if (catch_count_ <= ignore_count_) return;
   throw util::Exception(
-      "The data memory address of Tensor %s changed %d time%s since it was snapshotted at %s:%d",
+      "The data memory address of Tensor {} changed {} time{} since it was snapshotted at {}:{}",
       var_, catch_count_, catch_count_ > 1 ? "s" : "", file_, line_);
 }
 

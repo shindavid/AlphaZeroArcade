@@ -13,7 +13,7 @@ std::string make_cmd() {
 
   for (const auto& path : {c4_solver_bin, c4_solver_book}) {
     if (!boost::filesystem::is_regular_file(path)) {
-      throw util::CleanException("File does not exist: %s", path.c_str());
+      throw util::CleanException("File does not exist: {}", path.c_str());
     }
   }
 

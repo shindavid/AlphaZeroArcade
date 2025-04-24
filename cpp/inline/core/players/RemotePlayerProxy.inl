@@ -88,7 +88,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::loop() {
         handle_action(packet);
         break;
       default:
-        throw util::Exception("Unexpected packet type: %d", (int)type);
+        throw util::Exception("Unexpected packet type: {}", (int)type);
     }
   }
 }

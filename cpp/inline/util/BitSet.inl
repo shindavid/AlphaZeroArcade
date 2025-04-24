@@ -70,7 +70,7 @@ int get_nth_on_index(const std::bitset<N>& bitset, int n) {
     if (n == 0) return k;
     n--;
   }
-  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d] [%d]",
+  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [{}] [{}] [{}]",
                         bitset.to_string().c_str(), orig_n, n);
 }
 
