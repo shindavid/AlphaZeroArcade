@@ -35,6 +35,7 @@ class MctsPlayerTest : public ::testing::Test {
   using StateHistory = Game::StateHistory;
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
+  using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using Rules = Game::Rules;
@@ -54,7 +55,7 @@ class MctsPlayerTest : public ::testing::Test {
   void init(Service* service) {
     auto shared_player_data = std::make_shared<MctsPlayerSharedData>(manager_params_, service);
     auto manager = &shared_player_data->manager;
-    search_log_ = new mcts::SearchLog<Game>(manager->shared_data());
+    search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
     manager->set_post_visit_func([&] { search_log_->update(); });
     mcts_player_ = new MctsPlayer(player_params_, shared_player_data, true);
   }
@@ -80,18 +81,18 @@ class MctsPlayerTest : public ::testing::Test {
     start_manager(initial_actions);
 
     const StateHistory& state_history =
-        mcts_player_->get_manager()->shared_data()->root_info.history_array[group::kIdentity];
+        mcts_player_->get_manager()->root_info()->history_array[group::kIdentity];
     ActionMask valid_actions = Rules::get_legal_moves(state_history);
 
     ActionRequest request(state_history.current(), valid_actions);
-    core::SearchMode search_mode = mcts_player_->choose_search_mode(request);
-    const SearchResults* search_result = mcts_player_->mcts_search(search_mode);
+    mcts_player_->init_search_mode(request);
+    const SearchResults* search_results = mcts_player_->get_manager()->search();
 
     PolicyTensor modified_policy =
-        mcts_player_->get_action_policy(search_mode, search_result, valid_actions);
+        mcts_player_->get_action_policy(search_results, valid_actions);
 
     std::stringstream ss_result, ss_policy;
-    boost_util::pretty_print(ss_result, search_result->to_json());
+    boost_util::pretty_print(ss_result, search_results->to_json());
     boost_util::pretty_print(ss_policy, eigen_util::to_json(modified_policy));
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "generic_players";

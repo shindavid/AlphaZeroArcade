@@ -303,8 +303,12 @@ class TrainingManager:
             self._record_stats(gen, stats)
             self._set_checkpoint()
         except:
-            logger.error('Unexpected error in train_step():', exc_info=True)
-            self._controller.request_shutdown(1)
+            if self._game_log_reader.closed():
+                # This is a shutdown race-condition, it's ok
+                pass
+            else:
+                logger.error('Unexpected error in train_step():', exc_info=True)
+                self._controller.request_shutdown(1)
 
     def _set_checkpoint(self):
         self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)

@@ -121,6 +121,29 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
+void Game::IO::write_edax_board_str(char* buf, const State& state) {
+  char chars[3];
+
+  // if cur_player == 0 (X), then chars should be ".XO"
+  // if cur_player == 1 (O), then chars should be ".OX"
+  chars[0] = '.';
+  chars[state.cur_player + 1] = 'X';
+  chars[2 - state.cur_player] = 'O';
+
+  int cx = 0;
+  cx += snprintf(buf + cx, 76, "setboard ");
+  for (int i = 0; i < 64; ++i) {
+    int cur = (state.cur_player_mask >> i) & 1;
+    int opp = (state.opponent_mask >> i) & 1;
+    int x = 2 * opp + cur;  // 0 = empty, 1 = cur, 2 = opp
+    buf[cx++] = chars[x];
+  }
+  buf[cx++] = ' ';
+  buf[cx++] = (state.cur_player == kBlack) ? 'X' : 'O';
+  buf[cx++] = '\n';
+  util::debug_assert(cx == 76, "Unexpected error (%d != %d)", cx, 76);
+}
+
 int Game::IO::print_row(char* buf, int n, const State& state,
                         const Types::ActionMask& valid_actions, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);

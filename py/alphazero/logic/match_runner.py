@@ -2,6 +2,7 @@ from alphazero.logic.agent_types import Agent, Match, MatchType
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
 from util.str_util import make_args_str
@@ -38,6 +39,7 @@ class MatchRunner:
         if args is None:
             args = {}
         args['-G'] = n_games
+        platform_overrides.update_cpp_bin_args(args)
 
         args1 = dict(args)
         args2 = dict(args)

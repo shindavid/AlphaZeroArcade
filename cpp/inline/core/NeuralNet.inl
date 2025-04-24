@@ -25,6 +25,10 @@ inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy,
   util::release_assert(activated_, "NeuralNet::predict() called while deactivated");
   torch::NoGradGuard no_grad;
 
+  // TODO: the outputs variable here incurs dynamic memory allocation on the GPU, contributing to
+  // inefficiency. We should be able to avoid this by using a preallocated tensor for the output.
+  // Based on conversations with ChatGPT, it seems like this might be challenging in libtorch, but
+  // easy if/when we migrate to onnx or TensorRT.
   auto outputs = module_.forward(input).toTuple();
   policy.copy_(outputs->elements()[0].toTensor());
   value.copy_(outputs->elements()[1].toTensor());

@@ -33,7 +33,7 @@ namespace core {
  * To listen to messages from the loop-controller, implement the LoopControllerListener interface
  * and subscribe to the client via client->add_listener(listener).
  */
-class LoopControllerClient {
+class LoopControllerClient : public PerfStatsClient {
  public:
   struct Params {
     auto make_options_description();
@@ -52,7 +52,6 @@ class LoopControllerClient {
 
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
   using ReloadWeightsListener = LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
-  using MetricsRequestListener = LoopControllerListener<LoopControllerInteractionType::kMetricsRequest>;
   using DataRequestListener = LoopControllerListener<LoopControllerInteractionType::kDataRequest>;
 
   static void init(const Params&);
@@ -80,7 +79,8 @@ class LoopControllerClient {
   void send_worker_ready();
   void handle_pause_receipt();
   void handle_unpause_receipt();
-  PerfStats get_perf_stats() const;
+
+  void update_perf_stats(PerfStats& stats) override;
 
  private:
   LoopControllerClient(const Params&);
@@ -107,7 +107,6 @@ class LoopControllerClient {
   std::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
-  std::vector<MetricsRequestListener*> metrics_request_listeners_;
   std::vector<DataRequestListener*> data_request_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
   int cur_generation_ = 0;
@@ -118,6 +117,11 @@ class LoopControllerClient {
   size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
   bool deactivated_ = false;
+
+  core::LoopControllerPerfStats perf_stats_;
+  std::chrono::steady_clock::time_point get_perf_stats_time_;
+  std::chrono::steady_clock::time_point pause_time_;
+  bool paused_ = false;
 };
 
 }  // namespace core

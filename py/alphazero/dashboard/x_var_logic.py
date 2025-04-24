@@ -28,7 +28,9 @@ class SelectVar:
 
 
 SELECT_VARS = [
-    SelectVar('self_play_db_filename', 'self_play_data', 'runtime', '1e-9 * runtime'),
+    SelectVar('self_play_db_filename', 'metrics', 'runtime',
+              '1e-9 * (total_time_ns - pause_time_ns)'),
+    SelectVar('self_play_db_filename', 'metrics', 'mcts_gen', 'gen', index=True),
     SelectVar('self_play_db_filename', 'self_play_data', 'mcts_gen', 'gen', index=True),
     SelectVar('self_play_db_filename', 'self_play_data', 'n_games', 'games'),
     SelectVar('self_play_db_filename', 'self_play_data', 'n_evaluated_positions',
@@ -89,7 +91,7 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     full_x_df = x_df_list[0]
     for x_df in x_df_list[1:]:
         full_x_df = full_x_df.merge(x_df, how='outer', left_index=True, right_index=True)
-    full_x_df = full_x_df.fillna(0)
+    full_x_df = full_x_df.fillna(0).infer_objects(copy=False)
 
     for x_var in X_VARS:
         if x_var.func is not None:

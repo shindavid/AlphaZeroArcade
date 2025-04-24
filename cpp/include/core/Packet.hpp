@@ -89,7 +89,7 @@ struct RegistrationResponse {
 struct GameThreadInitialization {
   static constexpr PacketHeader::Type kType = PacketHeader::kGameThreadInitialization;
 
-  int num_game_threads;
+  int num_game_slots;
 };
 
 struct GameThreadInitializationResponse {
@@ -113,7 +113,7 @@ struct StartGame {
   void parse_player_names(std::array<std::string, N>& player_names) const;
 
   game_id_t game_id;
-  game_thread_id_t game_thread_id;
+  game_slot_index_t game_slot_index;
   player_id_t player_id;
   seat_index_t seat_assignment;
   DynamicSizeSection dynamic_size_section;
@@ -125,7 +125,7 @@ struct StateChange {
     char buf[kSerializationLimit];
   };
 
-  game_thread_id_t game_thread_id;
+  game_slot_index_t game_slot_index;
   player_id_t player_id;
   DynamicSizeSection dynamic_size_section;
 };
@@ -136,8 +136,9 @@ struct ActionPrompt {
     char buf[kSerializationLimit];
   };
 
-  game_thread_id_t game_thread_id;
+  game_slot_index_t game_slot_index;
   player_id_t player_id;
+  bool play_noisily;
   DynamicSizeSection dynamic_size_section;
 };
 
@@ -147,7 +148,7 @@ struct ActionDecision {
     char buf[kSerializationLimit];
   };
 
-  game_thread_id_t game_thread_id;
+  game_slot_index_t game_slot_index;
   player_id_t player_id;
   DynamicSizeSection dynamic_size_section;
 };
@@ -158,7 +159,7 @@ struct EndGame {
     char buf[kSerializationLimit];
   };
 
-  game_thread_id_t game_thread_id;
+  game_slot_index_t game_slot_index;
   player_id_t player_id;
   DynamicSizeSection dynamic_size_section;
 };

@@ -3,14 +3,12 @@
 #include <games/nim/Game.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
-#include <mcts/SearchLog.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
+#include <mcts/SimpleNNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SearchThread.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/SearchLog.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -29,7 +27,7 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
+class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
  public:
   using NNEvaluation = mcts::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
@@ -37,48 +35,49 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
 
-  MockNNEvaluationService(bool smart) : smart_(smart) {}
+  MockNNEvaluationService(bool smart) : smart_(smart) {
+    this->set_init_func([&](NNEvaluation* eval, const Item& item) {
+      this->init_eval(eval, item);
+    });
+  }
 
-  void evaluate(const NNEvaluationRequest& request) override {
+  void init_eval(NNEvaluation* eval, const Item& item) {
     ValueTensor value;
     PolicyTensor policy;
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;
 
-    for (NNEvaluationRequest::Item& item : request.items()) {
-      ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
-      core::seat_index_t seat = item.node()->stable_data().active_seat;
-      core::action_mode_t mode = item.node()->action_mode();
+    ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
+    core::seat_index_t seat = item.node()->stable_data().active_seat;
+    core::action_mode_t mode = item.node()->action_mode();
 
-      const Nim::State& state = item.cur_state();
+    const Nim::State& state = item.cur_state();
 
-      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
-      if (winning) {
-        core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
+    bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
+    if (winning) {
+      core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
-        // these are logits
-        float winning_v = smart_ ? 2 : 0;
-        float losing_v = smart_ ? 0 : 2;
+      // these are logits
+      float winning_v = smart_ ? 2 : 0;
+      float losing_v = smart_ ? 0 : 2;
 
-        float winning_action_p = smart_ ? 2 : 0;
-        float losing_action_p = smart_ ? 0 : 2;
+      float winning_action_p = smart_ ? 2 : 0;
+      float losing_action_p = smart_ ? 0 : 2;
 
-        value.setValues({winning_v, losing_v});
+      value.setValues({winning_v, losing_v});
 
-        policy.setConstant(losing_action_p);
-        policy(winning_move) = winning_action_p;
+      policy.setConstant(losing_action_p);
+      policy(winning_move) = winning_action_p;
 
-        action_values.setConstant(losing_v);
-        action_values(winning_move) = winning_v;
-      } else {
-        value.setZero();
-        policy.setZero();
-        action_values.setZero();
-      }
-
-      item.set_eval(std::make_shared<NNEvaluation>(value, policy, action_values, valid_actions, sym,
-                                                   seat, mode));
+      action_values.setConstant(losing_v);
+      action_values(winning_move) = winning_v;
+    } else {
+      value.setZero();
+      policy.setZero();
+      action_values.setZero();
     }
+
+    eval->init(value, policy, action_values, valid_actions, sym, seat, mode);
   }
 
  private:
@@ -92,7 +91,6 @@ class ManagerTest : public testing::Test {
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
   using StateHistory = Game::StateHistory;
-  using SearchThread = mcts::SearchThread<Game>;
   using action_t = core::action_t;
   using Edge = mcts::Node<Game>::Edge;
   using LookupTable = mcts::Node<Game>::LookupTable;
@@ -122,26 +120,24 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    const mcts::SharedData<Game>* shared_data = manager_->shared_data();
-    search_log_ = new mcts::SearchLog<Game>(shared_data);
+    search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
     manager_->start();
     for (core::action_t action : initial_actions) {
-      manager_->shared_data()->update_state(action);
+      manager_->update(action);
     }
     this->initial_actions_ = initial_actions;
   }
 
   ManagerParams& manager_params() { return manager_params_; }
 
-  void start_threads() { manager_->start_threads(); }
-
   const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
-    return manager_->search(search_params);
+    manager_->set_search_params(search_params);
+    return manager_->search();
   }
 
   Node* get_node_by_index(node_pool_index_t index) {
@@ -155,7 +151,6 @@ class ManagerTest : public testing::Test {
                    const std::vector<core::action_t>& initial_actions, Service* service) {
     init_manager(service);
     start_manager(initial_actions);
-    start_threads();
     const SearchResult* result = search(num_search);
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
@@ -272,6 +267,4 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   test_search("tictactoe_uniform", 40, initial_actions, nullptr);
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

@@ -3,11 +3,13 @@
 #include <format>
 #include <string>
 
+#include <core/Globals.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
+#include "core/PerfStats.hpp"
 
 namespace core {
 
@@ -231,7 +233,9 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   msg["n_games"] = n_games;
   msg["n_rows"] = row_count;
   if (client->report_metrics()) {
-    msg["metrics"] = client->get_perf_stats().to_json();
+    PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
+    stats.calibrate(core::Globals::num_game_threads);
+    msg["metrics"] = stats.to_json();
   }
 
   // Optimization: if we are on the same machine as the loop-controller, we can write the file

@@ -6,6 +6,7 @@ from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
+from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util import subprocess_util
@@ -190,6 +191,7 @@ class ServerBase:
             '--do-not-report-metrics': None,
             '--log-filename': log_filename,
         }
+        platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
 
         logger.info('Match result between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
@@ -260,4 +262,3 @@ class ServerBase:
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
         return record.get(0)
-

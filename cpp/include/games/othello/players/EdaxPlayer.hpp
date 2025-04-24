@@ -1,14 +1,11 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include <boost/process.hpp>
-#include <boost/program_options.hpp>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/HibernationNotifier.hpp>
+#include <core/OraclePool.hpp>
 #include <games/othello/Constants.hpp>
+#include <games/othello/EdaxOracle.hpp>
 #include <games/othello/Game.hpp>
 #include <util/BoostUtil.hpp>
 
@@ -26,29 +23,27 @@ namespace othello {
  */
 class EdaxPlayer : public core::AbstractPlayer<Game> {
  public:
-  // using base_t = Player;
+  using OraclePool = core::OraclePool<EdaxOracle>;
 
   struct Params {
     int depth = 21;  // matches edax default
+
+    // The number of oracle processes to use. If not specified, defaults to the number of game
+    // threads.
+    int num_oracle_procs = 0;
+
     bool verbose = false;
 
     auto make_options_description();
   };
 
-  EdaxPlayer(const Params&);
+  EdaxPlayer(OraclePool* oracle_pool, const Params&);
 
-  void start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
-  void submit_action(const core::action_t);
-
+  OraclePool* const oracle_pool_;
   const Params params_;
-  std::vector<std::string> line_buffer_;
-  boost::process::ipstream out_;
-  boost::process::opstream in_;
-  boost::process::child* proc_ = nullptr;
 };
 
 }  // namespace othello

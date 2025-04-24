@@ -2,6 +2,7 @@ from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
+from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict
@@ -80,6 +81,8 @@ class RatingsServer(ServerBase):
         if append_mode:
             args['--log-append-mode'] = None
         args.update(self._session_data.game_spec.rating_options)
+
+        platform_overrides.update_cpp_bin_args(args)
         cmd = [
             binary,
             '--player', f'"{ps1}"',
@@ -132,4 +135,3 @@ class RatingsServer(ServerBase):
             strength_param: strength,
         }
         return make_args_str(player_args)
-

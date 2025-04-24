@@ -2,6 +2,7 @@
 
 #include <sys/socket.h>
 
+#include <core/BasicTypes.hpp>
 #include <core/Packet.hpp>
 
 namespace core {
@@ -23,13 +24,13 @@ RemotePlayerProxy<Game>::PacketDispatcher::create(io::Socket* socket) {
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::PacketDispatcher::start_all(int num_game_threads) {
+void RemotePlayerProxy<Game>::PacketDispatcher::start_all(int num_game_slots) {
   for (auto it : dispatcher_map_) {
     io::Socket* socket = it.first;
     PacketDispatcher* dispatcher = it.second;
 
     Packet<GameThreadInitialization> packet;
-    packet.payload().num_game_threads = num_game_threads;
+    packet.payload().num_game_slots = num_game_slots;
     packet.send_to(socket);
 
     Packet<GameThreadInitializationResponse> response;
@@ -52,15 +53,16 @@ void RemotePlayerProxy<Game>::PacketDispatcher::teardown() {
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::PacketDispatcher::add_player(
     RemotePlayerProxy<Game>* player) {
-  game_thread_id_t game_thread_id = player->game_thread_id_;
+  game_slot_index_t game_slot_index = player->game_slot_index_;
   player_id_t player_id = player->player_id_;
 
   util::clean_assert(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id (%d)",
                      (int)player_id);
   auto& vec = player_vec_array_[player_id];
 
-  util::clean_assert((int)game_thread_id == (int)vec.size(), "Unexpected game_thread_id (%d != %d)",
-                     (int)game_thread_id, (int)vec.size());
+  util::clean_assert((int)game_slot_index == (int)vec.size(),
+                     "Unexpected game_slot_index (%d != %d)", (int)game_slot_index,
+                     (int)vec.size());
 
   vec.push_back(player);
 }
@@ -99,21 +101,21 @@ template <concepts::Game Game>
 void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacket& packet) {
   const ActionDecision& payload = packet.payload_as<ActionDecision>();
 
-  game_thread_id_t game_thread_id = payload.game_thread_id;
+  game_slot_index_t game_slot_index = payload.game_slot_index;
   player_id_t player_id = payload.player_id;
 
-  RemotePlayerProxy* player = player_vec_array_[player_id][game_thread_id];
+  RemotePlayerProxy* player = player_vec_array_[player_id][game_slot_index];
 
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
   const char* buf = payload.dynamic_size_section.buf;
   player->action_response_ = *reinterpret_cast<const ActionResponse*>(buf);
-  player->cv_.notify_one();
+  player->hibernation_notifier_->notify();
 }
 
 template <concepts::Game Game>
 RemotePlayerProxy<Game>::RemotePlayerProxy(io::Socket* socket, player_id_t player_id,
-                                           game_thread_id_t game_thread_id)
-    : socket_(socket), player_id_(player_id), game_thread_id_(game_thread_id) {
+                                           game_slot_index_t game_slot_index)
+    : socket_(socket), player_id_(player_id), game_slot_index_(game_slot_index) {
   action_response_.action = -1;
   auto dispatcher = PacketDispatcher::create(socket);
   dispatcher->add_player(this);
@@ -125,7 +127,7 @@ void RemotePlayerProxy<Game>::start_game() {
   StartGame& payload = packet.payload();
   payload.game_id = this->get_game_id();
   payload.player_id = player_id_;
-  payload.game_thread_id = game_thread_id_;
+  payload.game_slot_index = game_slot_index_;
   payload.seat_assignment = this->get_my_seat();
   payload.load_player_names(packet, this->get_player_names());
   packet.send_to(socket_);
@@ -136,7 +138,7 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
                                                    action_t action) {
   ActionResponse action_response(action);
   Packet<StateChange> packet;
-  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
   auto& section = packet.payload().dynamic_size_section;
   memcpy(section.buf, &action_response, sizeof(action_response));
@@ -147,27 +149,31 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
     const ActionRequest& request) {
+  if (hibernation_notifier_) {
+    hibernation_notifier_ = nullptr;
+    return action_response_;
+  }
   const ActionMask& valid_actions = request.valid_actions;
 
   action_response_.action = -1;
 
   Packet<ActionPrompt> packet;
-  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
+  packet.payload().play_noisily = request.play_noisily;
   auto& section = packet.payload().dynamic_size_section;
   memcpy(section.buf, &valid_actions, sizeof(valid_actions));
   packet.set_dynamic_section_size(sizeof(valid_actions));
   packet.send_to(socket_);
 
-  std::unique_lock lock(mutex_);
-  cv_.wait(lock, [&] { return action_response_.action >= 0; });
-  return action_response_;
+  hibernation_notifier_ = request.hibernation_notifier;
+  return ActionResponse::hibernate();
 }
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::end_game(const State& state, const ValueTensor& outcome) {
   Packet<EndGame> packet;
-  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
   auto& section = packet.payload().dynamic_size_section;
   memcpy(section.buf, &outcome, sizeof(outcome));

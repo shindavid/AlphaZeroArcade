@@ -65,7 +65,6 @@ template <typename T>
 void LoopControllerClient::add_listener(T* listener) {
   detail::add_listener(pause_listeners_, listener);
   detail::add_listener(reload_weights_listeners_, listener);
-  detail::add_listener(metrics_request_listeners_, listener);
   detail::add_listener(data_request_listeners_, listener);
 }
 

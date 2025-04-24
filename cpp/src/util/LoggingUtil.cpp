@@ -34,7 +34,7 @@ void Logging::init(const Params& params) {
   // File sink, if needed
   if (!params.log_filename.empty()) {
       auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-          params.log_filename, params.append_mode);
+          params.log_filename, !params.append_mode);
       file_sink->set_pattern(format);
       sinks.push_back(file_sink);
   }

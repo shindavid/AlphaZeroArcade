@@ -2,6 +2,7 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
+from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams
@@ -216,6 +217,8 @@ class SelfPlayServer:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
 
+        platform_overrides.update_cpp_bin_args(args)
+
         binary_path = required_binary.scratch_path
         binary = os.path.join(self._session_data.run_dir, binary_path)
         self_play_cmd = [
@@ -279,6 +282,8 @@ class SelfPlayServer:
         if self._session_data.directory_organizer is not None:
             # Needed for direct-game-log-write optimization
             args['--output-base-dir'] = self._session_data.directory_organizer.base_dir
+
+        platform_overrides.update_cpp_bin_args(args)
 
         binary_path = required_binary.scratch_path
         binary = os.path.join(self._session_data.run_dir, binary_path)

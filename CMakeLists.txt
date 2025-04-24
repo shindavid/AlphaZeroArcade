@@ -13,7 +13,7 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 project(alphazero LANGUAGES CXX CUDA)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
-find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
+find_package(Torch REQUIRED PATHS "/usr/local/libtorch")
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)
@@ -24,6 +24,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
 
 # We protect with this if-condition so that clangd-based IDE tools don't complain, as clang does not
 # support the -ftemplate-backtrace-limit flag

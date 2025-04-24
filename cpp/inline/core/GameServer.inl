@@ -1,22 +1,26 @@
 #include <core/GameServer.hpp>
 
-#include <arpa/inet.h>
-#include <iostream>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#include <boost/program_options.hpp>
-
+#include <core/BasicTypes.hpp>
+#include <core/Globals.hpp>
 #include <core/Packet.hpp>
+#include <core/PerfStats.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/KeyValueDumper.hpp>
+#include <util/LoggingUtil.hpp>
 #include <util/Random.hpp>
 #include <util/SocketUtil.hpp>
 #include <util/StringUtil.hpp>
+
+#include <boost/program_options.hpp>
+
+#include <arpa/inet.h>
+#include <iostream>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 namespace core {
 
@@ -28,30 +32,32 @@ auto GameServer<Game>::Params::make_options_description() {
   po2::options_description desc("GameServer options");
 
   return desc
-      .template add_option<"port">(po::value<int>(&port)->default_value(port),
-                                   "port for external players to connect to (must be set to a "
-                                   "nonzero value if using external players)")
-      .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
-                                             "num games (<=0 means run indefinitely)")
-      .template add_option<"parallelism", 'p'>(
-          po::value<int>(&parallelism)->default_value(parallelism),
-          "max num games to play simultaneously. Participating players can request lower values "
-          "and the server will respect their requests")
-      .template add_option<"mean-noisy-moves", 'n'>(
-          po2::float_value("%.2f", &mean_noisy_moves, mean_noisy_moves),
-          "mean number of noisy moves to make at the start of each game")
-      .template add_flag<"display-progress-bar", "hide-progress-bar">(
-          &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
-          "hide progress bar")
-      .template add_flag<"print-game-states", "do-not-print-game-states">(
-          &print_game_states, "print game state between moves",
-          "do not print game state between moves")
-      .template add_flag<"announce-game-results", "do-not-announce-game-results">(
-          &announce_game_results, "announce result after each individual game",
-          "do not announce result after each individual game")
-      .template add_hidden_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
-          &respect_victory_hints, "immediately exit game if a player claims imminent victory",
-          "ignore imminent victory claims from players");
+    .template add_option<"port">(po::value<int>(&port)->default_value(port),
+                                 "port for external players to connect to (must be set to a "
+                                 "nonzero value if using external players)")
+    .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
+                                           "num games (<=0 means run indefinitely)")
+    .template add_option<"parallelism", 'p'>(
+      po::value<int>(&parallelism)->default_value(parallelism),
+      "max num games to play simultaneously. Participating players can request lower values "
+      "and the server will respect their requests")
+    .template add_option<"num-game-threads", 't'>(
+      po::value<int>(&num_game_threads)->default_value(num_game_threads),
+      "num threads to use for running games")
+    .template add_option<"mean-noisy-moves", 'n'>(
+      po2::float_value("%.2f", &mean_noisy_moves, mean_noisy_moves),
+      "mean number of noisy moves to make at the start of each game")
+    .template add_flag<"display-progress-bar", "hide-progress-bar">(
+      &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
+      "hide progress bar")
+    .template add_flag<"print-game-states", "do-not-print-game-states">(
+      &print_game_states, "print game state between moves", "do not print game state between moves")
+    .template add_flag<"announce-game-results", "do-not-announce-game-results">(
+      &announce_game_results, "announce result after each individual game",
+      "do not announce result after each individual game")
+    .template add_hidden_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
+      &respect_victory_hints, "immediately exit game if a player claims imminent victory",
+      "ignore imminent victory claims from players");
 }
 
 template <concepts::Game Game>
@@ -65,13 +71,47 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
+  hibernation_manager_.shut_down();
+
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
     delete reg.gen;
   }
 
+  for (GameSlot* slot : game_slots_) {
+    delete slot;
+  }
+
   delete training_data_writer_;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::init_slots() {
+  int n_slots = params_.parallelism;
+  if (params_.num_games > 0) {
+    n_slots = std::min(n_slots, params_.num_games);
+  }
+
+  for (const auto& reg : registrations_) {
+    int n = reg.gen->max_simultaneous_games();
+    if (n > 0) n_slots = std::min(n_slots, n);
+  }
+
+  for (int p = 0; p < n_slots; ++p) {
+    GameSlot* slot = new GameSlot(*this, p);
+    game_slots_.push_back(slot);
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::start_games() {
+  for (GameSlot* slot : game_slots_) {
+    if (!slot->start_game()) {
+      throw util::Exception("ERROR: failed to start game slot");
+    }
+    queue_.push(slot);
+  }
 }
 
 template <concepts::Game Game>
@@ -86,24 +126,98 @@ void GameServer<Game>::SharedData::init_progress_bar() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::SharedData::request_game(int num_games) {
+void GameServer<Game>::SharedData::init_random_seat_indices() {
+  std::bitset<kNumPlayers> fixed_seat_indices;
+  for (PlayerRegistration& reg : registrations_) {
+    if (reg.seat >= 0) {
+      fixed_seat_indices.set(reg.seat);
+    }
+  }
+
+  for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
+    random_seat_indices_[num_random_seats_++] = random_seat;
+  }
+  util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::run_hibernation_manager() {
+  hibernation_manager_.run([this](game_slot_index_t slot_id) {
+    std::unique_lock lock(mutex_);
+    GameSlot* slot = game_slots_[slot_id];
+    pending_queue_count_--;
+    queue_.push(slot);
+    lock.unlock();
+
+    cv_.notify_all();
+  });
+}
+
+template <concepts::Game Game>
+typename GameServer<Game>::GameSlot*
+GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
+  core::PerfClocker clocker(wait_for_game_slot_time_ns);
+  std::unique_lock lock(mutex_);
+
+  if (queue_.empty()) {
+    if (pending_queue_count_ > 0) {
+      cv_.wait(lock, [&] {
+        return paused_ || pending_queue_count_ == 0 || !queue_.empty();
+      });
+    }
+    if (queue_.empty()) {
+      return nullptr;
+    }
+  }
+
+  if (paused_) return nullptr;
+
+  GameSlot* slot = queue_.front();
+  queue_.pop();
+  pending_queue_count_++;
+  return slot;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::enqueue(GameSlot* slot) {
+  std::unique_lock lock(mutex_);
+  bool empty = queue_.empty();
+  queue_.push(slot);
+  pending_queue_count_--;
+  if (empty) {
+    lock.unlock();
+    cv_.notify_all();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::skip_enqueue() {
+  std::unique_lock lock(mutex_);
+  pending_queue_count_--;
+  if (pending_queue_count_ == 0 && queue_.empty()) {
+    lock.unlock();
+    cv_.notify_all();
+  }
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::SharedData::request_game() {
   if (LoopControllerClient::deactivated()) return false;
+  if (training_data_writer_ && training_data_writer_->closed()) return false;
+
   std::lock_guard<std::mutex> guard(mutex_);
-  if (num_games > 0 && num_games_started_ >= num_games) return false;
+  if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return false;
   num_games_started_++;
   return true;
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::update(const ValueArray& outcome, int64_t ns) {
+void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
   std::lock_guard<std::mutex> guard(mutex_);
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
     results_array_[s][outcome[s]]++;
   }
 
-  total_ns_ += ns;
-  min_ns_ = std::min(min_ns_, ns);
-  max_ns_ = std::max(max_ns_, ns);
   if (bar_) bar_->update();
 }
 
@@ -111,6 +225,13 @@ template <concepts::Game Game>
 auto GameServer<Game>::SharedData::get_results() const {
   std::lock_guard<std::mutex> guard(mutex_);
   return results_array_;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::start_session() {
+  for (auto& reg : registrations_) {
+    reg.gen->start_session();
+  }
 }
 
 template <concepts::Game Game>
@@ -130,30 +251,16 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 }
 
 template <concepts::Game Game>
-int GameServer<Game>::SharedData::compute_parallelism_factor() const {
-  int parallelism = params_.parallelism;
-  if (params_.num_games > 0) {
-    parallelism = std::min(parallelism, params_.num_games);
-  }
-
-  for (const auto& reg : registrations_) {
-    int n = reg.gen->max_simultaneous_games();
-    if (n > 0) parallelism = std::min(parallelism, n);
-  }
-  return parallelism;
-}
-
-template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
-                                                        bool implicit_remote) {
+                                                   bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
       util::clean_assert(
-          params_.port > 0,
-          "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
-          "players. In this case, --port must be specified, so that the remote players can connect",
-          kNumPlayers);
+        params_.port > 0,
+        "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
+        "players. In this case, --port must be specified, so that the remote players can connect",
+        kNumPlayers);
     } else {
       util::clean_assert(params_.port > 0, "Cannot use remote players without setting --port");
     }
@@ -172,21 +279,6 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
     gen->set_name(gen->get_default_name());
   }
   registrations_.emplace_back(gen, seat, player_id);
-}
-
-template <concepts::Game Game>
-void GameServer<Game>::SharedData::init_random_seat_indices() {
-  std::bitset<kNumPlayers> fixed_seat_indices;
-  for (PlayerRegistration& reg : registrations_) {
-    if (reg.seat >= 0) {
-      fixed_seat_indices.set(reg.seat);
-    }
-  }
-
-  for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
-    random_seat_indices_[num_random_seats_++] = random_seat;
-  }
-  util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
 
 template <concepts::Game Game>
@@ -223,8 +315,96 @@ GameServer<Game>::SharedData::generate_player_order(
 }
 
 template <concepts::Game Game>
-GameServer<Game>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
-    : shared_data_(shared_data), id_(id) {
+void GameServer<Game>::SharedData::pause() {
+  LOG_INFO("GameServer: pausing");
+  std::unique_lock lock(mutex_);
+  util::release_assert(!paused_);
+  paused_ = true;
+  pause_receipt_pending_ = true;
+  lock.unlock();
+  cv_.notify_all();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::unpause() {
+  LOG_INFO("GameServer: unpausing");
+  std::unique_lock lock(mutex_);
+  util::release_assert(paused_);
+  paused_ = false;
+  lock.unlock();
+  cv_.notify_all();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::wait_for_unpause() {
+  LOG_INFO("GameServer: waiting for unpause...");
+  std::unique_lock lock(mutex_);
+  cv_.wait(lock, [&] { return !paused_; });
+  LOG_INFO("GameServer: unpause wait complete!");
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::increment_active_thread_count() {
+  std::unique_lock lock(mutex_);
+  active_thread_count_++;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::decrement_active_thread_count() {
+  std::unique_lock lock(mutex_);
+  active_thread_count_--;
+  issue_pause_receipt_if_necessary();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::increment_paused_thread_count() {
+  std::unique_lock lock(mutex_);
+  util::release_assert(paused_);
+  paused_thread_count_++;
+  LOG_INFO("GameServer: pause_thread_count={} active_thread_count={}",
+           paused_thread_count_, active_thread_count_);
+  issue_pause_receipt_if_necessary();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::decrement_paused_thread_count() {
+  std::unique_lock lock(mutex_);
+  util::release_assert(!paused_);
+  if (paused_thread_count_ == 1) {
+    core::LoopControllerClient::get()->handle_unpause_receipt();
+    paused_thread_count_--;
+    lock.unlock();
+    cv_.notify_all();
+  } else {
+    paused_thread_count_--;
+    cv_.wait(lock, [&] { return paused_thread_count_ == 0; });
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
+  // assumes mutex_ is locked
+  if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
+    pause_receipt_pending_ = false;
+    LOG_INFO("GameServer: handling pause receipt");
+    core::LoopControllerClient::get()->handle_pause_receipt();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
+  core::SearchThreadPerfStats search_thread_stats;
+  search_thread_stats.wait_for_game_slot_time_ns =
+    wait_for_game_slot_time_ns_.exchange(int64_t(0), std::memory_order_relaxed);
+  search_thread_stats.mcts_time_ns = mcts_time_ns_.exchange(int64_t(0), std::memory_order_relaxed);
+  stats.update(search_thread_stats);
+}
+
+template <concepts::Game Game>
+GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
+    : shared_data_(shared_data),
+      id_(id),
+      hibernation_notifier_(shared_data.hibernation_manager(), id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -245,180 +425,273 @@ GameServer<Game>::GameThread::GameThread(SharedData& shared_data, game_thread_id
 }
 
 template <concepts::Game Game>
-GameServer<Game>::GameThread::~GameThread() {
-  if (thread_) delete thread_;
+GameServer<Game>::GameSlot::~GameSlot() {
+  for (const auto& reg : instantiations_) {
+    delete reg.player;
+  }
+}
 
-  for (const auto& reg : instantiations_) delete reg.player;
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::step() {
+  bool hit_not_chance = false;
+  while (true) {
+    if (yield_state_ == kContinue) {
+      action_mode_ = Rules::get_action_mode(state_history_.current());
+    }
+    noisy_mode_ = move_number_ < num_noisy_starting_moves_;
+
+    if (Rules::is_chance_mode(action_mode_)) {
+      if (step_chance()) return;
+    } else {
+      if (hit_not_chance) {
+        return;
+      }
+      if (step_non_chance()) return;
+      hit_not_chance = true;
+    }
+
+    if (yield_state_ != kContinue) return;
+  }
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::step_chance() {
+  for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
+    Player* player = players_[step_chance_player_index_];
+    ChanceEventPreHandleResponse response = player->prehandle_chance_event();
+    yield_state_ = response.yield_instruction;
+    if (yield_state_ != kContinue) {
+      return false;
+    }
+    if (!noisy_mode_ && response.action_values) {
+      util::release_assert(!chance_action_values_,
+                           "Clashing chance-event training info from different players");
+    }
+    chance_action_values_ = response.action_values;
+  }
+
+  ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
+  action_t action = eigen_util::sample(chance_dist);
+  if (game_log_) {
+    game_log_->add(state_history_.current(), action, active_seat_, nullptr, chance_action_values_,
+                   chance_action_values_);
+  }
+
+  // reset for next chance event:
+  step_chance_player_index_ = 0;
+  chance_action_values_ = nullptr;
+
+  Rules::apply(state_history_, action);
+  if (params().print_game_states) {
+    Game::IO::print_state(std::cout, state_history_.current(), action, &player_names_);
+  }
+  for (auto player2 : players_) {
+    player2->receive_state_change(active_seat_, state_history_.current(), action);
+  }
+
+  ValueTensor outcome;
+  if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
+    handle_terminal(outcome);
+    return true;
+  }
+  return false;
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::step_non_chance() {
+  active_seat_ = Rules::get_current_player(state_history_.current());
+  Player* player = players_[active_seat_];
+  auto valid_actions = Rules::get_legal_moves(state_history_);
+  ActionRequest request(state_history_.current(), valid_actions);
+  request.play_noisily = noisy_mode_;
+  request.hibernation_notifier = &hibernation_notifier_;
+  ActionResponse response = player->get_action_response(request);
+  yield_state_ = response.yield_instruction;
+  if (yield_state_ != kContinue) {
+    return false;
+  }
+
+  move_number_++;
+  action_t action = response.action;
+  const TrainingInfo& training_info = response.training_info;
+  if (game_log_) {
+    game_log_->add(state_history_.current(), action, active_seat_, training_info.policy_target,
+                   training_info.action_values_target, training_info.use_for_training);
+  }
+
+  // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
+  // the server.
+  util::release_assert(valid_actions[action], "Invalid action: %d", action);
+
+  if (response.victory_guarantee && params().respect_victory_hints) {
+    ValueTensor outcome = GameResults::win(active_seat_);
+    if (params().announce_game_results) {
+      printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id_,
+            player->get_name().c_str(), int(active_seat_));
+      std::cout << std::endl;
+    }
+    handle_terminal(outcome);
+    return true;
+  } else {
+    Rules::apply(state_history_, action);
+    if (params().print_game_states) {
+      Game::IO::print_state(std::cout, state_history_.current(), action, &player_names_);
+    }
+    for (auto player2 : players_) {
+      player2->receive_state_change(active_seat_, state_history_.current(), action);
+    }
+
+    ValueTensor outcome;
+    if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
+      handle_terminal(outcome);
+      return true;
+    }
+  }
+  return false;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
+  ValueArray array = GameResults::to_value_array(outcome);
+  for (auto player2 : players_) {
+    player2->end_game(state_history_.current(), outcome);
+  }
+
+  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
+  if (training_data_writer) {
+    game_log_->add_terminal(state_history_.current(), outcome);
+    training_data_writer->add(game_log_);
+  }
+
+  if (params().announce_game_results) {
+    std::stringstream ss;
+    ss << std::format("Game {} complete.\n", game_id_);
+    for (player_id_t p = 0; p < kNumPlayers; ++p) {
+      ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), array[p]);
+    }
+    printf("%s", ss.str().c_str());
+  }
+
+  // reindex outcome according to player_id
+  ValueArray reindexed_outcome;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    reindexed_outcome[player_order_[p].player_id] = array[p];
+  }
+  shared_data_.update(reindexed_outcome);
+
+  game_started_ = false;
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::start_game() {
+  if (!shared_data_.request_game()) return false;
+
+  game_id_ = util::get_unique_id();
+  if (shared_data_.training_data_writer()) {
+    game_log_ = std::make_shared<GameWriteLog>(game_id_, util::ns_since_epoch());
+  }
+
+  player_order_ = shared_data_.generate_player_order(instantiations_);
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p] = player_order_[p].player;
+    player_names_[p] = players_[p]->get_name();
+  }
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p]->init_game(game_id_, player_names_, p, game_log_);
+    players_[p]->start_game();
+  }
+
+  if (params().mean_noisy_moves) {
+    num_noisy_starting_moves_ = util::Random::exponential(1.0 / params().mean_noisy_moves);
+  }
+  game_started_ = true;
+
+  state_history_.initialize(Rules{});
+  move_number_ = 0;
+  action_mode_ = -1;
+  active_seat_ = -1;
+  noisy_mode_ = false;
+  yield_state_ = kContinue;
+
+  if (params().print_game_states) {
+    Game::IO::print_state(std::cout, state_history_.current(), -1, &player_names_);
+  }
+
+  return true;
+}
+
+template <concepts::Game Game>
+GameServer<Game>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
+    : shared_data_(shared_data), id_(id) {
+}
+
+template <concepts::Game Game>
+GameServer<Game>::GameThread::~GameThread() {
+  join();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameThread::join() {
+  if (thread_.joinable()) thread_.join();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameThread::launch() {
+  thread_ = std::thread([&] { run(); });
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::GameThread::run() {
-  const Params& params = shared_data_.params();
-
-  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
-  while (!decommissioned_) {
-    if (training_data_writer && training_data_writer->closed()) return;
-    if (!shared_data_.request_game(params.num_games)) return;
-
-    player_instantiation_array_t player_order = shared_data_.generate_player_order(instantiations_);
-
-    player_array_t players;
-    for (int p = 0; p < kNumPlayers; ++p) {
-      players[p] = player_order[p].player;
-    }
-
-    time_point_t t1 = std::chrono::steady_clock::now();
-    ValueArray outcome = play_game(players);
-    time_point_t t2 = std::chrono::steady_clock::now();
-
-    // reindex outcome according to player_id
-    ValueArray reindexed_outcome;
-    for (int p = 0; p < kNumPlayers; ++p) {
-      reindexed_outcome[player_order[p].player_id] = outcome[p];
-    }
-    duration_t duration = t2 - t1;
-    int64_t ns = duration.count();
-    shared_data_.update(reindexed_outcome, ns);
-  }
-}
-
-template <concepts::Game Game>
-typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
-    player_array_t& players) {
-  const Params& params = shared_data_.params();
-  game_id_t game_id = util::get_unique_id();
-
-  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
-  GameWriteLog_sptr game_log(
-      training_data_writer ? new GameWriteLog(game_id, util::ns_since_epoch()) : nullptr);
-
-  player_name_array_t player_names;
-  for (size_t p = 0; p < players.size(); ++p) {
-    player_names[p] = players[p]->get_name();
-  }
-  for (size_t p = 0; p < players.size(); ++p) {
-    players[p]->init_game(game_id, player_names, p, game_log);
-    players[p]->start_game();
-  }
-
-  int num_noisy_starting_moves = 0;
-  if (params.mean_noisy_moves) {
-    num_noisy_starting_moves = util::Random::exponential(1.0 / params.mean_noisy_moves);
-  }
-  int move_number = 0;  // tracks player-actions, not chance-events
-  bool noisy_mode = move_number < num_noisy_starting_moves;
-
-  StateHistory state_history;
-  state_history.initialize(Rules{});
-  seat_index_t active_seat = -1;
-
-  if (params.print_game_states) {
-    Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
-  }
-
+  shared_data_.increment_active_thread_count();
   while (true) {
-    core::action_mode_t action_mode = Rules::get_action_mode(state_history.current());
-    core::action_t action;
-    ValueTensor outcome;
-    bool terminal = false;
-
-    if (Rules::is_chance_mode(action_mode)) {
-      ActionValueTensor* action_values = nullptr;
-      for (auto player2 : players) {
-        ActionValueTensor* action_values2 = player2->prehandle_chance_event();
-        if (!noisy_mode && action_values2) {
-          util::release_assert(!action_values,
-                               "Clashing chance-event training info from different players");
-          action_values = action_values2;
-        }
-      }
-
-      ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
-      action = eigen_util::sample(chance_dist);
-      if (game_log) {
-        game_log->add(state_history.current(), action, active_seat, nullptr,
-                      action_values, action_values);
-      }
-
-      Rules::apply(state_history, action);
-      if (params.print_game_states) {
-        Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
-      }
-      for (auto player2 : players) {
-        player2->receive_state_change(active_seat, state_history.current(), action);
-      }
-
-      terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
-    } else {
-      noisy_mode = move_number < num_noisy_starting_moves;
-      move_number++;
-
-      active_seat = Rules::get_current_player(state_history.current());
-      Player* player = players[active_seat];
-      auto valid_actions = Rules::get_legal_moves(state_history);
-      ActionRequest request(state_history.current(), valid_actions, noisy_mode);
-      ActionResponse response = player->get_action_response(request);
-      action = response.action;
-      const TrainingInfo& training_info = response.training_info;
-      if (game_log) {
-        game_log->add(state_history.current(), action, active_seat, training_info.policy_target,
-                      training_info.action_values_target, training_info.use_for_training);
-      }
-
-      // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
-      // the server.
-      util::release_assert(valid_actions[action], "Invalid action: %d", action);
-
-      if (response.victory_guarantee && params.respect_victory_hints) {
-        outcome = GameResults::win(active_seat);
-        terminal = true;
-        if (params.announce_game_results) {
-          printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
-                player->get_name().c_str(), int(active_seat));
-          std::cout << std::endl;
-        }
+    int64_t wait_for_game_slot_time_ns = 0;
+    GameSlot* slot = shared_data_.next(wait_for_game_slot_time_ns);
+    if (!slot) {
+      if (shared_data_.paused()) {
+        shared_data_.increment_paused_thread_count();
+        shared_data_.wait_for_unpause();
+        shared_data_.decrement_paused_thread_count();
+        continue;
       } else {
-        Rules::apply(state_history, action);
-        if (params.print_game_states) {
-          Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
-        }
-        for (auto player2 : players) {
-          player2->receive_state_change(active_seat, state_history.current(), action);
-        }
-
-        terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
+        // no more slots to run, time to exit
+        break;
       }
     }
 
-    if (terminal) {
-      ValueArray array = GameResults::to_value_array(outcome);
-      for (auto player2 : players) {
-        player2->end_game(state_history.current(), outcome);
-      }
+    // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
+    // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
+    int64_t mcts_time_ns = 0;
+    core::PerfClocker clocker(mcts_time_ns);
+    util::release_assert(slot->game_started());
+    slot->step();
 
-      if (training_data_writer) {
-        game_log->add_terminal(state_history.current(), outcome);
-        training_data_writer->add(game_log);
+    if (!slot->game_started()) {
+      if (!slot->start_game()) {
+        shared_data_.skip_enqueue();
+        continue;
       }
-
-      if (params.announce_game_results) {
-        printf("Game %ld complete.\n", game_id);
-        for (player_id_t p = 0; p < kNumPlayers; ++p) {
-          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(), array[p]);
-        }
-        std::cout << std::endl;
-      }
-      return array;
     }
+    if (slot->yield_state() != kHibernate) {
+      shared_data_.enqueue(slot);
+    }
+    clocker.stop();
+    shared_data_.increment_mcts_time_ns(mcts_time_ns);
+    shared_data_.increment_game_slot_time_ns(wait_for_game_slot_time_ns);
   }
-
-  throw std::runtime_error("should not get here");
+  shared_data_.decrement_active_thread_count();
 }
 
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : shared_data_(params, training_data_writer_params) {}
+    : PerfStatsClient(), shared_data_(params, training_data_writer_params) {
+  if (LoopControllerClient::initialized()) {
+    LoopControllerClient* client = LoopControllerClient::get();
+    client->add_listener(this);
+  }
+}
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {
@@ -448,7 +721,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
 
   io::Socket* server_socket = io::Socket::create_server_socket(port, kNumPlayers);
 
-  std::cout << "Waiting for remote player registrations..." << std::endl;
+  LOG_INFO("Waiting for remote players to connect on port {}", port);
   int n = remote_player_registrations.size();
   int r = 0;
   while (r < n) {
@@ -458,7 +731,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
     do {
       Packet<Registration> packet;
       if (!packet.read_from(socket)) {
-        throw util::Exception("Unexpected socket close");
+        throw util::CleanException("Unexpected socket close");
       }
       const Registration& registration = packet.payload();
       std::string registered_name = registration.dynamic_size_section.player_name;
@@ -482,9 +755,8 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
       response_packet.set_player_name(name);
       response_packet.send_to(socket);
 
-      printf("Registered player: \"%s\" (seat: %d, remaining: %d)\n", name.c_str(), (int)seat,
-             remaining_requests);
-      std::cout.flush();
+      LOG_INFO("Registered player: \"{}\" (seat: {}, remaining: {})\n", name.c_str(), seat,
+               remaining_requests);
     } while (remaining_requests);
   }
 }
@@ -496,21 +768,16 @@ void GameServer<Game>::run() {
   shared_data_.init_random_seat_indices();
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
-  int parallelism = shared_data_.compute_parallelism_factor();
-  for (int p = 0; p < parallelism; ++p) {
-    GameThread* thread = new GameThread(shared_data_, (int)threads_.size());
-    threads_.push_back(thread);
-  }
-
-  RemotePlayerProxy<Game>::PacketDispatcher::start_all(parallelism);
+  shared_data_.init_slots();
+  shared_data_.run_hibernation_manager();
+  create_threads();
+  shared_data_.start_session();
+  RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
+  shared_data_.start_games();
 
   time_point_t start_time = std::chrono::steady_clock::now();
-  for (auto thread : threads_) {
-    thread->launch();
-  }
-  for (auto thread : threads_) {
-    thread->join();
-  }
+  launch_threads();
+  join_threads();
   time_point_t end_time = std::chrono::steady_clock::now();
 
   if (shared_data_.training_data_writer()) {
@@ -540,6 +807,35 @@ void GameServer<Game>::run() {
 
   shared_data_.end_session();
   util::KeyValueDumper::flush();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::create_threads() {
+  int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
+  for (int t = 0; t < num_threads; ++t) {
+    GameThread* thread = new GameThread(shared_data_, t);
+    threads_.push_back(thread);
+  }
+  core::Globals::num_game_threads = num_threads;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::launch_threads() {
+  for (auto thread : threads_) {
+    thread->launch();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::join_threads() {
+  for (auto thread : threads_) {
+    thread->join();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::update_perf_stats(PerfStats& stats) {
+  shared_data_.update_perf_stats(stats);
 }
 
 template <concepts::Game Game>

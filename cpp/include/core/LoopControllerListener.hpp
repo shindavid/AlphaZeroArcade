@@ -12,7 +12,6 @@ namespace core {
 enum class LoopControllerInteractionType {
   kPause,
   kReloadWeights,
-  kMetricsRequest,
   kDataRequest
 };
 
@@ -46,13 +45,6 @@ class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
   virtual ~LoopControllerListener() = default;
   virtual void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) = 0;
-};
-
-template <>
-class LoopControllerListener<LoopControllerInteractionType::kMetricsRequest> {
- public:
-  virtual ~LoopControllerListener() = default;
-  virtual PerfStats get_perf_stats() = 0;
 };
 
 template <>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
+from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientConnection, FileToTransfer
 from alphazero.servers.loop_control.gpu_contention_table import Domain
 from util.socket_util import JsonDict, SocketSendException
@@ -13,7 +14,7 @@ import os
 import subprocess
 import threading
 import time
-from typing import List, Optional, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -39,8 +40,6 @@ class SelfPlayManager:
         cond: threading.Condition = field(default_factory=threading.Condition)
         pending_pause_ack: bool = False
         pending_unpause_ack: bool = False
-        start_ts: Optional[int] = None
-        total_runtime: int = 0
         gen: int = -1
 
     @dataclass
@@ -65,14 +64,7 @@ class SelfPlayManager:
         n_rows: int = 0
         n_games: int = 0
         timestamp: int = 0
-        runtime: int = 0
-
-        # metrics
-        n_cache_hits: int = 0
-        n_cache_misses: int = 0
-        n_positions_evaluated: int = 0
-        n_batches_evaluated: int = 0
-        n_full_batches_evaluated: int = 0
+        metrics: Dict[str, int] = field(default_factory=dict)
 
         staged: bool = False  # see docstring for explanation
 
@@ -362,19 +354,12 @@ class SelfPlayManager:
     def _handle_pause_ack(self, conn: ClientConnection):
         aux: SelfPlayManager.WorkerAux = conn.aux
         with aux.cond:
-            start_ts = aux.start_ts
-            if start_ts is not None:
-                elapsed = time.time_ns() - start_ts
-                aux.total_runtime += elapsed
-                aux.start_ts = None
             aux.pending_pause_ack = False
             aux.cond.notify_all()
 
     def _handle_unpause_ack(self, conn: ClientConnection):
         aux: SelfPlayManager.WorkerAux = conn.aux
         with aux.cond:
-            if aux.start_ts is None:
-                aux.start_ts = time.time_ns()
             aux.pending_unpause_ack = False
             aux.cond.notify_all()
 
@@ -447,16 +432,6 @@ class SelfPlayManager:
         metrics = msg.get('metrics', None)
         no_file = msg.get('no_file', False)
 
-        aux: SelfPlayManager.WorkerAux = conn.aux
-        with aux.cond:
-            start_ts = aux.start_ts
-            total_runtime = aux.total_runtime
-            if start_ts is not None:
-                now = time.time_ns()
-                elapsed = now - start_ts
-                total_runtime += elapsed
-                aux.start_ts = now
-
         # the JSON msg is immediately followed by the game data file. We receive it and save it to
         # scratch dir, to be merged later.
         game_filename = os.path.join(self._scratch_dir, f'{conn.client_id}.data')
@@ -474,14 +449,10 @@ class SelfPlayManager:
             info.n_rows = n_rows
             info.n_games = n_games
             info.timestamp = timestamp
-            info.runtime = total_runtime
 
             if metrics is not None:
-                info.n_cache_hits = metrics['cache_hits']
-                info.n_cache_misses = metrics['cache_misses']
-                info.n_positions_evaluated = metrics['positions_evaluated']
-                info.n_batches_evaluated = metrics['batches_evaluated']
-                info.n_full_batches_evaluated = metrics['full_batches_evaluated']
+                for column in constants.PERF_STATS_COLUMNS:
+                    info.metrics[column] = metrics[column]
 
             info.staged = True
             if self._commit_data_fully_staged():
@@ -529,33 +500,29 @@ class SelfPlayManager:
             positions = cumulative_positions - self._n_committed_rows
             commit_info = dict(self._commit_info)
 
+        has_metrics = any(info.metrics for info in commit_info.values())
+        if has_metrics:
+            assert all(info.metrics for info in commit_info.values()), \
+                'Some workers have no metrics, but others do. This should not happen.'
+
         metrics_columns = [
             'client_id',
             'gen',
             'report_timestamp',
-            'cache_hits',
-            'cache_misses',
-            'positions_evaluated',
-            'batches_evaluated',
-            'full_batches_evaluated',
-        ]
+        ] + constants.PERF_STATS_COLUMNS
+
+        metrics_insert_list = None
+        if has_metrics:
+            metrics_insert_list = [(client_id, gen, info.timestamp,
+                                    *[info.metrics[col] for col in constants.PERF_STATS_COLUMNS])
+                                   for client_id, info in commit_info.items()]
+
         values_str = ', '.join(['?' for _ in metrics_columns])
 
-        metrics_insert_list = [
-            (client_id,
-             gen,
-             info.timestamp,
-             info.n_cache_hits,
-             info.n_cache_misses,
-             info.n_positions_evaluated,
-             info.n_batches_evaluated,
-             info.n_full_batches_evaluated)
-            for client_id, info in commit_info.items()]
-
-        n_positions_evaluated = sum(info.n_positions_evaluated for info in commit_info.values())
-        n_batches_evaluated = sum(info.n_batches_evaluated for info in commit_info.values())
+        infos = list(commit_info.values())
+        n_positions_evaluated = sum(info.metrics.get('positions_evaluated', 0) for info in infos)
+        n_batches_evaluated = sum(info.metrics.get('batches_evaluated', 0) for info in infos)
         n_games = sum(info.n_games for info in commit_info.values())
-        runtime = sum(info.runtime for info in commit_info.values())
 
         self_play_data_columns = [
             'gen',
@@ -564,7 +531,6 @@ class SelfPlayManager:
             'positions_evaluated',
             'batches_evaluated',
             'games',
-            'runtime',
             'file_size',
         ]
 
@@ -575,7 +541,6 @@ class SelfPlayManager:
             n_positions_evaluated,
             n_batches_evaluated,
             n_games,
-            runtime,
             file_size,
         )
 
@@ -583,7 +548,7 @@ class SelfPlayManager:
             db_conn = self._controller.self_play_db_conn_pool.get_connection()
             cursor = db_conn.cursor()
 
-            if metrics_insert_list:
+            if has_metrics:
                 cursor.executemany(f"""INSERT INTO metrics ({', '.join(metrics_columns)})
                                     VALUES ({values_str})""", metrics_insert_list)
 

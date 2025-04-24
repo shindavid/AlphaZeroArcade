@@ -1,17 +1,14 @@
 #pragma once
 
-#include <condition_variable>
-#include <map>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <utility>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/HibernationNotifier.hpp>
 #include <core/Packet.hpp>
 #include <util/SocketUtil.hpp>
+
+#include <map>
+#include <thread>
 
 namespace core {
 
@@ -29,13 +26,13 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
   using Player = AbstractPlayer<Game>;
-  using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t
+  using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_slot_index_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
 
   class PacketDispatcher {
    public:
     static PacketDispatcher* create(io::Socket* socket);
-    static void start_all(int num_game_threads);
+    static void start_all(int num_game_slots);
     static void teardown();
 
     void add_player(RemotePlayerProxy* player);
@@ -58,7 +55,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
     player_vec_array_t player_vec_array_;
   };
 
-  RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id);
+  RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_slot_index_t game_slot_index);
 
   void start_game() override;
   void receive_state_change(seat_index_t, const State&, action_t) override;
@@ -66,14 +63,12 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   void end_game(const State&, const ValueTensor&) override;
 
  private:
-  std::condition_variable cv_;
-  mutable std::mutex mutex_;
-
   ActionResponse action_response_;
+  core::HibernationNotifier* hibernation_notifier_ = nullptr;
 
   io::Socket* socket_;
   const player_id_t player_id_;
-  const game_thread_id_t game_thread_id_;
+  const game_slot_index_t game_slot_index_;
 };
 
 }  // namespace core

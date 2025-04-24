@@ -1,16 +1,18 @@
 #pragma once
 
+#include <core/AbstractPlayerGenerator.hpp>
+#include <core/BasicTypes.hpp>
+#include <core/concepts/Game.hpp>
+#include <core/HibernationManager.hpp>
+#include <core/HibernationNotifier.hpp>
+#include <core/Packet.hpp>
+#include <util/CppUtil.hpp>
+#include <util/SocketUtil.hpp>
+
 #include <condition_variable>
 #include <mutex>
 #include <string>
 #include <vector>
-
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/Packet.hpp>
-#include <util/CppUtil.hpp>
-#include <util/SocketUtil.hpp>
 
 namespace core {
 
@@ -47,64 +49,110 @@ class GameServerProxy {
     int remote_port = 0;
   };
 
-  class SharedData {
-   public:
-    SharedData(const Params& params);
-    ~SharedData();
-    void register_player(seat_index_t seat, PlayerGenerator* gen);
-    void init_socket();
-    io::Socket* socket() const { return socket_; }
-    PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
-    void end_session();
+  class SharedData;  // forward declaration
 
-   private:
-    seat_generator_vec_t seat_generators_;   // temp storage
-    player_generator_array_t players_ = {};  // indexed by player_id_t
-    Params params_;
-    io::Socket* socket_ = nullptr;
-  };
-
-  class PlayerThread {
+  class GameSlot {
    public:
-    PlayerThread(SharedData& shared_data, Player* player, game_thread_id_t game_thread_id,
-                 player_id_t player_id);
-    ~PlayerThread();
+    GameSlot(SharedData&, game_slot_index_t);
+    ~GameSlot();
 
     void handle_start_game(const StartGame& payload);
     void handle_state_change(const StateChange& payload);
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    void join() {
-      if (thread_ && thread_->joinable()) thread_->join();
-    }
-    void stop();
+    void step();
+    bool game_started() const { return game_started_; }
+    yield_instruction_t yield_state() const { return yield_state_; }
 
    private:
+    const Params& params() const { return shared_data_.params(); }
+    bool step_chance();      // return true if terminal
+    bool step_non_chance();  // return true if terminal
+    void handle_terminal(const ValueTensor& outcome);
     void send_action_packet(const ActionResponse&);
-    void run();
+
+    SharedData& shared_data_;
+    const game_slot_index_t id_;
+    player_array_t players_;
+    HibernationNotifier hibernation_notifier_;
+
+    // Initialized at the start of the game
+    game_id_t game_id_;
+    player_name_array_t player_names_;
+    bool game_started_ = false;
+
+    // Updated for each move
+    StateHistory history_;
+    ActionMask valid_actions_;
+    bool play_noisily_;
+    player_id_t prompted_player_id_;
+    yield_instruction_t yield_state_;
+  };
+
+  class SharedData {
+   public:
+    SharedData(const Params& params, int num_game_threads);
+    ~SharedData();
+    void register_player(seat_index_t seat, PlayerGenerator* gen);
+    void init_socket();
+    io::Socket* socket() const { return socket_; }
+    PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
+    void start_session();
+    void end_session();
+    void shutdown();
+    void init_game_slots();
+    void run_hibernation_manager();
+    HibernationManager* hibernation_manager() { return &hibernation_manager_; }
+    int num_slots() const { return game_slots_.size(); }
+    int num_game_threads() const { return num_game_threads_; }
+    bool running() const { return running_; }
+
+    GameSlot* next();  // returns nullptr if ready to shut down
+    void enqueue(GameSlot*);
+
+    void handle_start_game(const GeneralPacket& packet);
+    void handle_state_change(const GeneralPacket& packet);
+    void handle_action_prompt(const GeneralPacket& packet);
+    void handle_end_game(const GeneralPacket& packet);
+
+   private:
+    seat_generator_vec_t seat_generators_;   // temp storage
+    player_generator_array_t players_ = {};  // indexed by player_id_t
+    Params params_;
+    int num_game_threads_;
+    io::Socket* socket_ = nullptr;
 
     std::condition_variable cv_;
     mutable std::mutex mutex_;
+    bool running_ = true;
+
+    // Below fields mirror their usage in GameServer. See GameServer::SharedData comments for
+    // details.
+    std::vector<GameSlot*> game_slots_;
+    std::queue<GameSlot*> queue_;
+
+    HibernationManager hibernation_manager_;
+  };
+
+  class GameThread {
+   public:
+    GameThread(SharedData& shared_data, game_thread_id_t);
+    ~GameThread();
+
+    void join();
+    void launch();
+
+   private:
+    void run();
 
     SharedData& shared_data_;
-    Player* const player_;
-    const game_thread_id_t game_thread_id_;
-    const player_id_t player_id_;
-    std::thread* thread_ = nullptr;
-
-    StateHistory history_;
-
-    // below fields are used for inter-thread communication
-    ActionMask valid_actions_;
-    bool active_ = true;
-    bool ready_to_get_action_ = false;
+    std::thread thread_;
+    game_thread_id_t id_;
   };
-  using thread_array_t = std::array<PlayerThread*, kNumPlayers>;  // indexed by player_id_t
-  using thread_vec_t = std::vector<thread_array_t>;               // index by game_thread_id_t
 
-  GameServerProxy(const Params& params) : shared_data_(params) {}
-  ~GameServerProxy();
+  GameServerProxy(const Params& params, int num_game_threads)
+      : shared_data_(params, num_game_threads) {}
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -123,15 +171,16 @@ class GameServerProxy {
   void run();
 
  private:
-  void init_player_threads();
-  void destroy_player_threads();
-  void handle_start_game(const GeneralPacket& packet);
-  void handle_state_change(const GeneralPacket& packet);
-  void handle_action_prompt(const GeneralPacket& packet);
-  void handle_end_game(const GeneralPacket& packet);
+  const Params& params() const { return shared_data_.params(); }
+
+  void create_threads();
+  void launch_threads();
+  void run_event_loop();
+  void shutdown_threads();
+  void join_threads();
 
   SharedData shared_data_;
-  thread_vec_t thread_vec_;
+  std::vector<GameThread*> threads_;
 };
 
 }  // namespace core

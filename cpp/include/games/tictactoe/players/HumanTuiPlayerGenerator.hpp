@@ -16,7 +16,7 @@ namespace tictactoe {
 
 class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<tictactoe::Game> {
  public:
-  core::AbstractPlayer<tictactoe::Game>* generate(core::game_thread_id_t) override {
+  core::AbstractPlayer<tictactoe::Game>* generate(core::game_slot_index_t) override {
     return new tictactoe::HumanTuiPlayer();
   }
 };

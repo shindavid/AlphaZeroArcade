@@ -2,6 +2,7 @@
 
 #include <core/ActionSymmetryTable.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/HibernationNotifier.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/concepts/GameResults.hpp>
 #include <util/EigenUtil.hpp>
@@ -59,15 +60,19 @@ struct GameTypes {
   };
 
   struct ActionRequest {
-    ActionRequest(const State& s, const ActionMask& va, bool pn = false)
-        : state(s), valid_actions(va), play_noisily(pn) {}
+    ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
     const State& state;
     const ActionMask& valid_actions;
 
+    // If the player wishes to hibernate, it must later, when it's done with its asynchronous work,
+    // call hibernation_notifier->notify() to notify the GameServer that the corresponding
+    // GameSlot is ready to continue.
+    HibernationNotifier* hibernation_notifier = nullptr;
+
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
-    bool play_noisily;
+    bool play_noisily = false;;
   };
 
   /*
@@ -77,14 +82,34 @@ struct GameTypes {
    *     configured to trust this guarantee, and immediately end the game. This can speed up
    *     simulations.
    *
-   * - training_info: a pointer to a TrainingInfo object, to be used for NN training.
+   * - training_info: used to generate targets for NN training.
+   *
+   * - yield_instruction: Indicates whether the player needs more time to think asynchronously. If
+   *     set to a non-kYield value, then all other fields are ignored.
    */
   struct ActionResponse {
-    ActionResponse(action_t a=-1) : action(a) {}
+    ActionResponse(action_t a = -1, core::yield_instruction_t y = core::kContinue)
+        : action(a), yield_instruction(y) {}
+
+    static ActionResponse yield() { return ActionResponse(-1, core::kYield); }
+    static ActionResponse hibernate() { return ActionResponse(-1, core::kHibernate); }
 
     action_t action = -1;
+    core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
     TrainingInfo training_info;
+  };
+
+  struct ChanceEventPreHandleResponse {
+    ChanceEventPreHandleResponse(ActionValueTensor* a = nullptr,
+                                 core::yield_instruction_t y = core::kContinue)
+        : action_values(a), yield_instruction(y) {}
+
+    static auto yield() { return ChanceEventPreHandleResponse(nullptr, core::kYield); }
+    static auto hibernate() { return ChanceEventPreHandleResponse(nullptr, core::kHibernate); }
+
+    ActionValueTensor* action_values = nullptr;
+    core::yield_instruction_t yield_instruction = core::kContinue;
   };
 
   /*

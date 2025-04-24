@@ -57,12 +57,12 @@ class AbstractPlayerGenerator {
   /*
    * Generate a new player. The caller is responsible for taking ownership of the pointer.
    *
-   * game_thread_id designates a logical thread (which might be local or remote) where the player
+   * game_slot_index designates a GameSlot (which might be local or remote) where the player
    * will be playing. Most subclasses can ignore this parameter. However, certain player types, as
    * an optimization, may wish to share data structures with other players sharing the same
-   * game_thread_id. This parameter facilitates such sharing.
+   * game_slot_index. This parameter facilitates such sharing.
    */
-  virtual AbstractPlayer<Game>* generate(game_thread_id_t game_thread_id) = 0;
+  virtual AbstractPlayer<Game>* generate(game_slot_index_t game_slot_index) = 0;
 
   /*
    * Print help for this player generator, describing what parse_args() expects. This should
@@ -86,6 +86,13 @@ class AbstractPlayerGenerator {
    * overriden.
    */
   virtual void parse_args(const std::vector<std::string>& args) {}
+
+  /*
+   * Called when the GameServer starts. This allows the generator to do any initialization it needs
+   * to do before it starts to construct players. This is useful for generators that need to
+   * to do things like initialize object pools that will be shared among multiple players.
+   */
+  virtual void start_session() {}
 
   /*
    * Called when all games have been played. This is useful for when you want to report some
@@ -116,7 +123,7 @@ class AbstractPlayerGenerator {
   /*
    * Convenience method that composes generate() with set_name().
    */
-  AbstractPlayer<Game>* generate_with_name(game_thread_id_t game_thread_id);
+  AbstractPlayer<Game>* generate_with_name(game_slot_index_t);
 
  protected:
   /*

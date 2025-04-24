@@ -1,91 +1,63 @@
 #include <util/LRUCache.hpp>
 
+#include <util/Asserts.hpp>
+
 namespace util {
 
-template <class Key_, class Value_>
-void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value) {
-  typename Map::iterator i = map_.find(key);
-  if (i == map_.end()) {
-    // insert item into the cache, but first check if it is full
+template <class Key, class Value, class Hasher>
+void LRUCache<Key, Value, Hasher>::set_capacity(size_t capacity) {
+  util::release_assert(empty(), "Cannot set capacity on a non-empty cache");
+  capacity_ = capacity;
+  pool_.resize(capacity_);
+  free_list_.resize(capacity_);
+  for (size_t i = 0; i < capacity_; ++i) {
+    free_list_[i] = &pool_[i];
+  }
+}
+
+template <class Key, class Value, class Hasher>
+Value& LRUCache<Key, Value, Hasher>::insert_if_missing(const Key& key, value_creation_func_t f) {
+  auto it = map_.find(key);
+  if (it == map_.end()) {
     if (size() >= capacity_) {
-      // cache is full, evict the least recently used item
       evict();
     }
-
-    // insert the new item
-    list_.push_front(key);
-    map_[key] = std::make_pair(value, list_.begin());
+    util::release_assert(!free_list_.empty());
+    Node* node = free_list_.back();
+    free_list_.pop_back();
+    node->key = key;
+    node->value = f();
+    list_.push_front(*node);
+    map_[key] = node;
+    return node->value;
   } else {
-    // move item to the front of the most recently used list
-    typename KeyList::iterator j = i->second.second;
-    if (j != list_.begin()) {
-      list_.erase(j);
-      list_.push_front(key);
-      j = list_.begin();
-      i->second.second = j;
+    Node* node = it->second;
+    if (&list_.front() != node) {
+      list_.erase(List::s_iterator_to(*node));
+      list_.push_front(*node);
     }
-
-    // update the value of the existing item
-    i->second.first = value;
+    return node->value;
   }
 }
 
-template <class Key_, class Value_>
-boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key) {
-  // lookup value in the cache
-  typename Map::iterator i = map_.find(key);
-  if (i == map_.end()) {
-    // value not in cache
-    return boost::none;
+template <class Key, class Value, class Hasher>
+void LRUCache<Key, Value, Hasher>::clear() {
+  for (Node& node : list_) {
+    eviction_handler_(node.value);
+    free_list_.push_back(&node);
   }
-
-  // return the value, but first update its place in the most
-  // recently used list
-  typename KeyList::iterator j = i->second.second;
-  if (j != list_.begin()) {
-    // move item to the front of the most recently used list
-    list_.erase(j);
-    list_.push_front(key);
-
-    // update iterator in map
-    j = list_.begin();
-    const Value& value = i->second.first;
-    map_[key] = std::make_pair(value, j);
-
-    return value;
-  } else {
-    // the item is already at the front of the most recently
-    // used list so just return it
-    return i->second.first;
-  }
-}
-
-template <class Key_, class Value_>
-void LRUCache<Key_, Value_>::clear() {
-  map_.clear();
   list_.clear();
+  map_.clear();
 }
 
-template <class Key_, class Value_>
-float LRUCache<Key_, Value_>::get_hash_balance_factor() const {
-  size_t min_size = std::numeric_limits<size_t>::max() - 1;
-  size_t max_size = 0;
-  for (size_t b = 0; b < map_.bucket_count(); ++b) {
-    size_t size = map_.bucket_size(b);
-    min_size = std::min(min_size, size);
-    max_size = std::max(max_size, size);
-  }
-  size_t den = std::max(min_size, 1UL);
-  size_t num = std::max(den, max_size);
-  return 1.0 * num / den;
-}
-
-template <class Key_, class Value_>
-void LRUCache<Key_, Value_>::evict() {
-  // evict item from the end of most recently used list
-  typename KeyList::iterator i = --list_.end();
-  map_.erase(*i);
-  list_.erase(i);
+template <class Key, class Value, class Hasher>
+void LRUCache<Key, Value, Hasher>::evict() {
+  util::release_assert(!list_.empty());
+  Node& node = list_.back();
+  eviction_handler_(node.value);
+  map_.erase(node.key);
+  list_.pop_back();
+  free_list_.push_back(&node);
 }
 
 }  // namespace util

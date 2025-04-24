@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/concepts/Game.hpp>
@@ -11,12 +12,16 @@
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/AllocPool.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
+#include <util/RecyclingAllocPool.hpp>
 #include <util/TorchUtil.hpp>
 
+#include <condition_variable>
+#include <map>
+#include <mutex>
 #include <vector>
 
 namespace mcts {
@@ -72,20 +77,16 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluationService
     : public NNEvaluationServiceBase<Game>,
+      public core::PerfStatsClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
-      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
-      public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
-  using SharedData = mcts::SharedData<Game>;
+  using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;
-
-  using NNEvaluation_asptr = NNEvaluation::asptr;
-  using NNEvaluation_sptr = NNEvaluation::sptr;
-
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
@@ -103,9 +104,13 @@ class NNEvaluationService
 
   using RequestItem = NNEvaluationRequest::Item;
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = NNEvaluationRequest::cache_key_t;
-  using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+
+  using CacheKey = NNEvaluationRequest::CacheKey;
+  using CacheKeyHasher = NNEvaluationRequest::CacheKeyHasher;
   using profiler_t = nn_evaluation_service_profiler_t;
+
+  using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
+  using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
 
   /*
    * Constructs an evaluation service and returns it.
@@ -124,74 +129,14 @@ class NNEvaluationService
 
   void disconnect() override;
 
-  /*
-   * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the
-   * service thread.
-   *
-   * Note that historically, parallel MCTS did evaluations asynchronously. AlphaGo Zero was the
-   * first version that switched to blocking evaluations.
-   *
-   * "Compared to the MCTS in AlphaGo Fan and AlphaGo Lee, the principal differences are...each
-   * search thread simply waits for the neural network evaluation, rather than performing evaluation
-   * and backup asynchronously"
-   *
-   * - Mastering the Game of Go without Human Knowledge (page 27)
-   *
-   * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-   */
-  void evaluate(const NNEvaluationRequest&) override;
+  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
+  core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
 
   void end_session() override;
 
-  core::PerfStats get_perf_stats() override;
+  void update_perf_stats(core::PerfStats&) override;
 
  private:
-  struct IndexReservation {
-    int start_index;
-    int num_indices;
-  };
-
-  NNEvaluationService(const NNEvaluationServiceParams& params);
-  ~NNEvaluationService();
-
-  std::string dump_key(const char* descr);
-
-  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
-
-  void batch_evaluate();
-  void loop();
-
-  void check_cache(const NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
-
-  void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  IndexReservation make_reservation(const NNEvaluationRequest&, int count,
-                                       std::unique_lock<std::mutex>&);
-  void tensorize_and_transform_input(const NNEvaluationRequest& request, const RequestItem& item,
-                                     int reserve_index);
-  void increment_commit_count(const NNEvaluationRequest&, int count);
-  void wait_for_eval(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  void wait_until_all_read(const NNEvaluationRequest&, int count, std::unique_lock<std::mutex>&);
-
-  void wait_for_unpause();
-  void load_initial_weights_if_necessary();
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
-  void pause() override;
-  void unpause() override;
-  void wait_until_batch_ready();
-  bool wait_for_first_reservation();  // return true if timeout
-  void wait_for_last_reservation();
-  void wait_for_commits();
-
-  bool active() const { return num_connections_; }
-
-  struct EvalPtrData {
-    NNEvaluation_asptr eval_ptr;
-
-    cache_key_t cache_key;
-    ActionMask valid_actions;
-    group::element_t sym;
-  };
-
   struct TensorGroup {
     void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
                           torch::Tensor& torch_action_value);
@@ -200,18 +145,181 @@ class NNEvaluationService
     PolicyTensor policy;
     ValueTensor value;
     ActionValueTensor action_values;
-    EvalPtrData eval_ptr_data;
+
+    NNEvaluation* eval;
+    CacheKey cache_key;
+    ActionMask valid_actions;
+    group::element_t sym;
     core::action_mode_t action_mode;
     core::seat_index_t active_seat;
   };
 
+  // BatchData represents a batch of data that is passed to the neural network for evaluation.
+  // It contains a fixed-size-vector of TensorGroup objects, each of which represents a single
+  // position for evaluation.
+  //
+  // Multiple threads can submit evaluation requests to the NNEvaluationService. The service first,
+  // while holding the main_mutex_, allocates portions of BatchData's to each of the requests.
+  // After allocating, it releases the main_mutex_ and allows the threads to write to their
+  // allocated slots concurrently.
   struct BatchData {
-    BatchData(int batch_size);
+    BatchData(int capacity);
     void copy_input_to(int num_rows, DynamicInputTensor& full_input);
+    int capacity() const { return tensor_groups.size(); }
+    void clear();
+    bool frozen() const { return !accepting_allocations && write_count == allocate_count; }
 
-    std::mutex mutex;
-    std::vector<TensorGroup> tensor_groups_;
+    // tensor_groups is sized to capacity, and then its size never changes thereafter.
+    std::vector<TensorGroup> tensor_groups;
+
+    core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
+
+    // Below fields are protected by the main_mutex_ member of NNEvaluationService.
+    int allocate_count = 0;
+    int write_count = 0;
+    bool accepting_allocations = true;
   };
+  using batch_data_vec_t = std::vector<BatchData*>;
+
+  struct BatchDataSlice {
+    BatchData* batch_data;
+    int start_row;
+    int num_rows;
+  };
+
+  // The BatchDataSliceAllocator is responsible for allocating slices of BatchData. It must do this
+  // in a thread-safe but performant manner.
+  //
+  // Each BatchData can be thought of as a fixed sized array of data units, like Data[B]. The
+  // BatchDataSliceAllocator can be thought of as managing a sequence of BatchData's, like
+  // BatchData_0, BatchData_1, BatchData_2, etc.
+  //
+  // The BatchDataSliceAllocator must basically support calls of the form alloc(n), responding to
+  // such calls by telling the caller which BatchData to write to, and which slice of that BatchData
+  // to write to. For example, it might respond to alloc(10) with BatchData_3[3:13], or maybe with
+  // (BatchData_5[57:64], BatchData_6[0:3]).
+  //
+  // Not only must it do this allocation logic, but it must also do the work of constructing the
+  // BatchData's on the fly as needed, recycling them when possible.
+  //
+  // The underlying implementation uses both std::atomic and std::mutex. Usually, it can respond to
+  // requests without locking the mutex. Only when the current batch_data is full does it resort to
+  // locking the mutex. This is done to avoid contention on the mutex.
+  class BatchDataSliceAllocator {
+   public:
+    BatchDataSliceAllocator(int batch_size_limit, core::PerfStats& perf_stats);
+
+    ~BatchDataSliceAllocator();
+
+    // The main interface. The caller constructs an array BatchDataSlice[], and then passes in
+    // that array to this method. The method will fill in the array with the slices that it wants to
+    // allocate. The value n is the number of slots that the caller wants to allocate.
+    //
+    // BatchDataSliceAllocator attempts to do this without locking the mutex, relying on atomic
+    // members of BatchData instead to ensure thread-safety. If it is unable to do this, then it
+    // resorts to locking the passed-in mutex.
+    void allocate_slices(BatchDataSlice* slices, int n, std::mutex& main_mutex);
+
+    void recycle(BatchData* batch_data);
+
+    // Freezes all BatchData's that are pending on a sequence_id <= seq. Returns true if a BatchData
+    // was newly frozen.
+    bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
+
+    // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
+    BatchData* get_frozen_pending_batch_data() const;
+
+   private:
+    BatchData* add_batch_data();
+
+    const int batch_size_limit_;
+    core::PerfStats& perf_stats_;
+
+    batch_data_vec_t pending_batch_datas_;
+    batch_data_vec_t batch_data_reserve_;
+    core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
+  };
+
+  // Whenever we miss cache, we will need to evaluate the item later with the neural net. This
+  // struct is used to store bookkeeping information to facilitate that.
+  struct CacheMissInfo {
+    BatchData* batch_data;  // the BatchData that we will write to
+    int row;                // the row in the BatchData that we will write to
+    int item_index;         // index of the item in the request
+  };
+
+  // Helper struct to pass into check_cache().
+  struct CacheLookupResult {
+    // Constructor accepts an array of CacheMissInfo's. The check_cache() method will populate the
+    // first n entries of this array, where n is the number of cache-misses.
+    CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
+
+    CacheMissInfo* miss_infos;
+
+    core::SearchThreadPerfStats stats;
+    bool can_continue = true;
+    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
+  };
+
+  // We empirically found that having a single LRUCache for the entire service leads to a
+  // performance bottleneck, as a significant percentage of the time is spent acquiring the mutex.
+  // We relieve this contention by splitting the cache into kNumHashShards shards, and using a
+  // different mutex for each shard.
+  struct ShardData {
+    void init(int cache_size);
+    void decrement_ref_count(NNEvaluation* eval);
+
+    mutable std::mutex mutex;
+    LRUCache eval_cache;
+    EvalPool eval_pool;
+  };
+
+  // Convenience struct to sort the items in the request by hash shard.
+  struct SortItem {
+    auto operator<=>(const SortItem& other) const = default;
+    hash_shard_t shard;
+    bool fresh;
+    int16_t item_index;
+  };
+  static_assert(sizeof(SortItem) == 4);
+
+  NNEvaluationService(const NNEvaluationServiceParams& params);
+  ~NNEvaluationService();
+
+  std::string dump_key(const char* descr);
+
+  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
+
+  // For each item in the request, attempt a cache-lookup. If we get a cache-hit, set the item's
+  // eval to the cached value. If we get a cache-miss, we do the following:
+  //
+  // 1. Create a new NNEvaluation (to be populated later)
+  // 2. Insert the NNEvaluation into the cache
+  // 3. Set the item's eval to that.
+  // 4. Populate result.miss_infos with the cache-miss information.
+  void check_cache(NNEvaluationRequest& request, CacheLookupResult& result);
+
+  void populate_sort_items(SortItem* sort_items, NNEvaluationRequest& request);
+
+  // return true if miss cache
+  bool handle_fresh_item(NNEvaluationRequest&, CacheLookupResult&, ShardData&, int item_index);
+
+  void write_miss_infos(NNEvaluationRequest&, CacheLookupResult&, int& miss_info_write_index,
+                        int misses_for_this_shard);
+
+  void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
+
+  void loop();
+  void set_deadline();
+  void load_initial_weights_if_necessary();
+  void wait_for_unpause();
+  void wait_until_batch_ready(core::NNEvalLoopPerfStats&);
+  void batch_evaluate(core::NNEvalLoopPerfStats&);
+
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
+  void pause() override;
+  void unpause() override;
+  bool active() const { return num_connections_; }
 
   static instance_map_t instance_map_;
   static int instance_count_;
@@ -221,18 +329,16 @@ class NNEvaluationService
 
   profiler_t profiler_;
   std::thread* thread_ = nullptr;
-  std::mutex cache_mutex_;
-  std::mutex connection_mutex_;
-  std::mutex net_weights_mutex_;
 
-  std::condition_variable cv_service_loop_;
-  std::condition_variable cv_evaluate_;
+  mutable std::mutex connection_mutex_;
+  mutable std::mutex net_weights_mutex_;
+  mutable std::mutex main_mutex_;
+  mutable std::mutex perf_stats_mutex_;
+
   std::condition_variable cv_net_weights_;
-  std::condition_variable cv_cache_;
+  std::condition_variable cv_main_;
 
   core::NeuralNet net_;
-
-  BatchData batch_data_;
 
   core::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;
@@ -240,36 +346,25 @@ class NNEvaluationService
   torch::Tensor torch_value_;
   torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
-  cache_t cache_;
+
+  ShardData shard_datas_[kNumHashShards];
 
   const std::chrono::nanoseconds timeout_duration_;
 
   time_point_t deadline_;
-  struct BatchMetadata {
-    std::mutex mutex;
-    int reserve_index = 0;
-    int commit_count = 0;
-    int unread_count = 0;
-    bool accepting_reservations = true;
-    std::string repr() const {
-      return util::create_string("res=%d, com=%d, unr=%d, acc=%d", reserve_index, commit_count,
-                                 unread_count, accepting_reservations);
-    }
-  };
-  BatchMetadata batch_metadata_;
 
   bool session_ended_ = false;
   int num_connections_ = 0;
+
+  core::nn_evaluation_sequence_id_t last_evaluated_sequence_id_ = 0;
 
   bool initial_weights_loaded_ = false;
   bool ready_ = false;
   bool skip_next_pause_receipt_ = false;
   bool paused_ = false;
-  std::mutex pause_mutex_;
-  std::condition_variable cv_paused_;
 
   core::PerfStats perf_stats_;
-  mutable std::mutex perf_stats_mutex_;
+  BatchDataSliceAllocator batch_data_slice_allocator_;
 };
 
 }  // namespace mcts
