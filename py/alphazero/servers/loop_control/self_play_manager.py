@@ -244,9 +244,14 @@ class SelfPlayManager:
         conn.socket.send_json(data)
 
     def _construct_binary(self) -> FileToTransfer:
+        if self._controller._on_ephemeral_local_disk_env:
+            organizer = self._controller._persistent_organizer
+        else:
+            organizer = self._controller._organizer
+
         game = self._controller.run_params.game
         binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller._organizer.binary_filename,
+            source_path=organizer.binary_filename,
             scratch_path=f'target/bin/{game}',
             asset_path_mode='hash'
         )
