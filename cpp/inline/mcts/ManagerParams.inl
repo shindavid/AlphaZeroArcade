@@ -39,8 +39,8 @@ inline auto ManagerParams<Game>::make_options_description() {
       desc.template add_option<"num-search-threads", 'n'>(
               po::value<int>(&num_search_threads)->default_value(num_search_threads),
               "num search threads")
-          .template add_option<"cpuct", 'c'>(po2::default_value<"{:.2f}">(&cPUCT), "cPUCT value")
-          .template add_option<"dirichlet-mult", 'd'>(po2::default_value<"{:.2f}">(&dirichlet_mult),
+          .template add_option<"cpuct", 'c'>(po2::default_value("{:.2f}", &cPUCT), "cPUCT value")
+          .template add_option<"dirichlet-mult", 'd'>(po2::default_value("{:.2f}", &dirichlet_mult),
                                                       "dirichlet mult")
           .template add_hidden_option<"starting-root-softmax-temp">(
               po::value<float>(&starting_root_softmax_temperature)
@@ -55,7 +55,7 @@ inline auto ManagerParams<Game>::make_options_description() {
                   ->default_value(root_softmax_temperature_half_life),
               "root softmax temperature half-life")
           .template add_option<"dirichlet-alpha-factor">(
-              po2::default_value<"{:.2f}">(&dirichlet_alpha_factor), "dirichlet alpha factor")
+              po2::default_value("{:.2f}", &dirichlet_alpha_factor), "dirichlet alpha factor")
           .template add_flag<"enable-pondering", "disable-pondering">(
               &enable_pondering, "enable pondering (search during opponent's turn)",
               "disable pondering (search during opponent's turn)")

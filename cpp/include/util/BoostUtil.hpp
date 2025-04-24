@@ -7,6 +7,7 @@
 #include <boost/program_options.hpp>
 #include <boost/json.hpp>
 
+#include <format>
 #include <string>
 
 namespace boost_util {
@@ -37,21 +38,22 @@ namespace program_options {
  * default_value(), but that can be clunky. This default_value() function provides a cleaner way to
  * specify that string. Usage:
  *
- * boost_util::program_options::default_value<"{:.3f}">(&f)
+ * boost_util::program_options::default_value("{:.3f}", &f)
  *
  * OR:
  *
- * boost_util::program_options::default_value<"{:.3f}"">(&f, default_value)
+ * boost_util::program_options::default_value("{:.3f}", &f, default_value)
  */
-template <util::StringLiteral StrLit, typename T>
-auto default_value(T* dest, T default_value) {
-  std::string s = std::format(StrLit.value, default_value);
-  return boost::program_options::value<float>(dest)->default_value(default_value, s);
+template <typename T>
+auto default_value(std::format_string<T> fmt, T* dest, T t) {
+  // move t into format so it's an rvalue and deduces Args... = {T}
+  std::string s = std::format(fmt, std::move(t));
+  return boost::program_options::value<T>(dest)->default_value(t, s);
 }
 
-template <util::StringLiteral StrLit, typename T>
-inline auto default_value(T* dest) {
-  return default_value<StrLit>(dest, *dest);
+template <typename T>
+auto default_value(std::format_string<T> fmt, T* dest) {
+  return default_value(fmt, dest, *dest);
 }
 
 struct Settings {

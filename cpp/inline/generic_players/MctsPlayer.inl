@@ -60,7 +60,7 @@ auto MctsPlayer<Game>::Params::make_options_description() {
       .template add_option<"num-full-iters", 'i'>(
           po::value<int>(&num_full_iters)->default_value(num_full_iters),
           "num mcts iterations to do per full move")
-      .template add_option<"full-pct", 'f'>(po2::default_value<"{:.2f}">(&full_pct, full_pct),
+      .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
                                             "pct of moves that should be full")
       .template add_hidden_option<"starting-move-temp">(
           po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
