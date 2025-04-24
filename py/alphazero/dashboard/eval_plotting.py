@@ -8,18 +8,19 @@ from util import bokeh_util
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Span
-from bokeh.layouts import column, row
+from bokeh.layouts import gridplot, column, row
 import numpy as np
+import os
 import pandas as pd
 
 
 class EvaluationData:
-    def __init__(self, run_params: RunParams):
+    def __init__(self, run_params: RunParams, benchmark_tag: str):
         self.tag = run_params.tag
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
         try:
-            evaluator = Evaluator(organizer)
+            evaluator = Evaluator(organizer, benchmark_tag)
             benchmark_rating_data = evaluator._benchmark.read_ratings_from_db()
             eval_rating_data = evaluator.read_ratings_from_db()
         except Exception as e:
@@ -87,21 +88,22 @@ class EvaluationPlotter:
         self.eval_source = ColumnDataSource(df_eval)
         self.x_selector.init_source(self.eval_source)
 
-        # Compute x_range based on evaluation data only
-        x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
-        x_min, x_max = np.min(x_vals_eval), np.max(x_vals_eval)
-        padding = (x_max - x_min) * 0.05
-        x_range = (x_min - padding, x_max + padding)
-
         # Use benchmark plot as base
         plot = benchmark_plotter.plot
 
         # Update plot title for Evaluation
         plot.title.text = f"Evaluate '{self.data.tag}' against '{self.data.benchmark_tag}'"
 
-        # Update x_range to eval-based range
-        plot.x_range.start = x_range[0]
-        plot.x_range.end = x_range[1]
+        # Calculate x_range
+        x_vals_benchmark = np.asarray(benchmark_plotter.source.data.get('x', []))
+        x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
+
+        combined_x = np.concatenate([x_vals_benchmark, x_vals_eval])
+        if len(combined_x) > 0:
+            x_min, x_max = np.min(combined_x), np.max(combined_x)
+            padding = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
+            plot.x_range.start = x_min - padding
+            plot.x_range.end = x_max + padding
 
         # Add eval line
         plot.line('x', 'rating', source=self.eval_source,
@@ -127,18 +129,49 @@ class EvaluationPlotter:
             old_set_x_index(x_index, plots, sources, force_refresh)
             benchmark_plotter.update_markers(self.x_selector.x_column)
 
+            # Recalculate x_range after axis change
+            x_vals_benchmark = np.asarray(benchmark_plotter.source.data.get('x', []))
+            x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
+
+            combined_x = np.concatenate([x_vals_benchmark, x_vals_eval])
+            if len(combined_x) > 0:
+                x_min, x_max = np.min(combined_x), np.max(combined_x)
+                padding = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
+                plot.x_range.start = x_min - padding
+                plot.x_range.end = x_max + padding
+
         self.x_selector.set_x_index = new_set_x_index
         benchmark_plotter.update_markers(self.x_selector.x_column)
 
 def create_eval_figure(game: str, tag: str):
     run_params = RunParams(game=game, tag=tag)
-    data = EvaluationData(run_params)
-    if not data.valid:
-        return figure(title='No evaluation data available')
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
-    plotter = EvaluationPlotter(data)
-    if not plotter.valid():
-        return figure(title='No evaluation data available')
+    if not os.path.exists(organizer.eval_db_dir):
+        return figure(title='No evaluation data directory available')
 
-    return plotter.layout
+    files = [f for f in os.listdir(organizer.eval_db_dir) if f.endswith('.db')]  # or appropriate extension
+    if not files:
+        return figure(title='No evaluation data files available')
+
+    plots = []
+    for f in files:
+        benchmark_tag = os.path.splitext(f)[0]  # Strip file extension for tag
+
+        data = EvaluationData(run_params, benchmark_tag)
+        if not data.valid:
+            print(f"Skipping invalid data from {f}")
+            continue
+
+        plotter = EvaluationPlotter(data)
+        if not plotter.valid():
+            print(f"Skipping invalid plot from {f}")
+            continue
+
+        plots.append(plotter.layout)
+
+    if not plots:
+        return figure(title='No valid evaluation plots found')
+
+    return column(*plots)
 

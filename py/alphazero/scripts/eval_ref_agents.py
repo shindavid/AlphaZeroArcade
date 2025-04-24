@@ -28,8 +28,8 @@ def main():
     game_spec = get_game_spec(run_params.game)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
-    if not os.path.exists(organizer.eval_db_filename):
-        shutil.copy2(organizer.benchmark_db_filename, organizer.eval_db_filename)
+    if not os.path.exists(organizer.eval_db_filename('ref')):
+        shutil.copy2(organizer.benchmark_db_filename, organizer.eval_db_filename('ref'))
 
     family = game_spec.reference_player_family
     type_str = family.type_str
@@ -38,7 +38,7 @@ def main():
     for strength in range(1, 22, 5):
         ref_agents.append(ReferenceAgent(type_str, strength_param, strength, tag=organizer.tag))
 
-    evaluator = Evaluator(organizer)
+    evaluator = Evaluator(organizer, 'ref')
     for agent in ref_agents:
         evaluator.eval_agent(agent, n_games=args.n_games,
                              error_threshold=args.error_threshold)

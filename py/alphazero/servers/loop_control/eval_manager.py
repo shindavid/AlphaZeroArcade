@@ -74,7 +74,7 @@ class EvalManager(GamingManagerBase):
     """
     A separate EvalManager is created for each rating-tag.
     """
-    def __init__(self, controller: LoopController):
+    def __init__(self, controller: LoopController, benchmark_tag: str):
         manager_config = ManagerConfig(
             worker_aux_class=WorkerAux,
             server_aux_class=EvalServerAux,
@@ -83,7 +83,7 @@ class EvalManager(GamingManagerBase):
             domain=Domain.EVAL,
         )
         super().__init__(controller, manager_config)
-        self._evaluator = Evaluator(self._controller._organizer)
+        self._evaluator = Evaluator(self._controller._organizer, benchmark_tag)
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
     def set_priority(self):

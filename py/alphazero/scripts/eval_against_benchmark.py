@@ -31,9 +31,9 @@ def main():
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
     if not os.path.exists(organizer.eval_db_filename):
-        shutil.copy2(benchmark_organizer.benchmark_db_filename, organizer.eval_db_filename)
+        shutil.copy2(benchmark_organizer.benchmark_db_filename, organizer.eval_db_filename(benchmark_tag))
 
-    evaluator = MCTSEvaluator(organizer)
+    evaluator = MCTSEvaluator(organizer, benchmark_tag)
     evaluator.run(n_iters=args.n_iters, target_eval_percent=args.target_eval_percent,
                   n_games=args.n_games, error_threshold=args.error_threshold)
 

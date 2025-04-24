@@ -25,13 +25,13 @@ class EvalRatingData:
 
 
 class Evaluator:
-    def __init__(self, organizer: DirectoryOrganizer):
+    def __init__(self, organizer: DirectoryOrganizer, benchmark_tag: str):
         self._organizer = organizer
-        self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename)
+        self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename(benchmark_tag))
         self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
 
         self._arena = self._benchmark.clone_arena()
-        self.db = RatingDB(self._organizer.eval_db_filename)
+        self.db = RatingDB(self._organizer.eval_db_filename(benchmark_tag))
         self.load_from_db()
         self.refresh_ratings()
 
@@ -180,9 +180,9 @@ class Evaluator:
 
 
 class MCTSEvaluator:
-    def __init__(self, organizer: DirectoryOrganizer):
+    def __init__(self, organizer: DirectoryOrganizer, benchmark_tag: str):
         self._organizer = organizer
-        self._evaluator = Evaluator(organizer)
+        self._evaluator = Evaluator(organizer, benchmark_tag)
         rating_data = self._evaluator.read_ratings_from_db()
         self._evaluated_ixs = [self._evaluator.agent_lookup[agent].index \
             for agent in rating_data.evaluated_agents]

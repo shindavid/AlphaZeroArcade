@@ -112,13 +112,13 @@ class DirectoryOrganizer:
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.misc_dir = os.path.join(self.base_dir, 'misc')
+        self.eval_db_dir = os.path.join(self.databases_dir, 'evaluation')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
         self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
-        self.eval_db_filename = os.path.join(self.databases_dir, 'evaluation.db')
         self.binary_filename = os.path.join(self.base_dir, 'bin', game)
 
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
@@ -147,6 +147,9 @@ class DirectoryOrganizer:
     def fork_info(self, value: ForkInfo):
         self._fork_info = value
         self._fork_info_loaded = True
+
+    def eval_db_filename(self, benchmark_tag: str) -> str:
+        return os.path.join(self.eval_db_dir, f'{benchmark_tag}.db')
 
     def version_check(self):
         """
@@ -179,6 +182,7 @@ class DirectoryOrganizer:
         """
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
+        os.makedirs(self.eval_db_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
