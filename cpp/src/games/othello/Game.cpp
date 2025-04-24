@@ -1,14 +1,15 @@
 #include <games/othello/Game.hpp>
 
-#include <algorithm>
-#include <bit>
-#include <iostream>
-
-#include <boost/lexical_cast.hpp>
-
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
+
+#include <boost/lexical_cast.hpp>
+
+#include <algorithm>
+#include <bit>
+#include <format>
+#include <iostream>
 
 namespace othello {
 
@@ -190,9 +191,8 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
 
 std::string Game::IO::player_to_str(core::seat_index_t player) {
   return (player == othello::kBlack)
-             ? util::create_string("%s%s%s", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""))
-             : util::create_string("%s%s%s", ansi::kWhite(""), ansi::kCircle("0"),
-                                   ansi::kReset(""));
+             ? std::format("{}{}{}", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""))
+             : std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""));
 }
 
 }  // namespace othello

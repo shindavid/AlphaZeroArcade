@@ -34,21 +34,25 @@ namespace program_options {
 /*
  * pos::value<float>(...)->default_value(...) sucks because it prints the default value with
  * undesirable precision. The official solution is to pass a second string argument to
- * default_value(), but that can be clunky. This float_value() function provides a cleaner way to
+ * default_value(), but that can be clunky. This default_value() function provides a cleaner way to
  * specify that string. Usage:
  *
- * boost_util::program_options::float_value("%.3f", &f)
+ * boost_util::program_options::default_value<"{:.3f}">(&f)
  *
  * OR:
  *
- * boost_util::program_options::float_value("%.3f", &f, default_value)
+ * boost_util::program_options::default_value<"{:.3f}"">(&f, default_value)
  */
-inline auto float_value(const char* fmt, float* dest, float default_value) {
-  std::string s = util::create_string(fmt, default_value);
+template <util::StringLiteral StrLit, typename T>
+auto default_value(T* dest, T default_value) {
+  std::string s = std::format(StrLit.value, default_value);
   return boost::program_options::value<float>(dest)->default_value(default_value, s);
 }
 
-inline auto float_value(const char* fmt, float* dest) { return float_value(fmt, dest, *dest); }
+template <util::StringLiteral StrLit, typename T>
+inline auto default_value(T* dest) {
+  return default_value<StrLit>(dest, *dest);
+}
 
 struct Settings {
   static bool help_full;

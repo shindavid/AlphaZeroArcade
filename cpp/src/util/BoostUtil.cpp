@@ -2,6 +2,8 @@
 
 #include <util/Asserts.hpp>
 
+#include <format>
+
 namespace boost_util {
 
 std::string get_option_value(const std::vector<std::string>& args,
@@ -34,7 +36,7 @@ std::string pop_option_value(std::vector<std::string>& args,
     if (arg == dashed_option_name) {
       if (i + 1 >= args.size()) {
         throw std::runtime_error(
-            util::create_string("Missing value for option '%s'", option_name.c_str()));
+            std::format("Missing value for option '{}'", option_name.c_str()));
       }
       std::string value = args[i + 1];
       args.erase(args.begin() + i, args.begin() + i + 2);

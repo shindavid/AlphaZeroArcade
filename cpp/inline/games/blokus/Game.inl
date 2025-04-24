@@ -25,7 +25,7 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
     Location loc = Location::unflatten(action);
     int row = loc.row + 1;
     char col = 'A' + loc.col;
-    return util::create_string("%c%d", col, row);
+    return std::format("{}{}", col, row);
   } else {
     PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);
     return poc.name();

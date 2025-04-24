@@ -86,23 +86,6 @@ inline std::vector<std::string> splitlines(const std::string &s) {
   return result;
 }
 
-template<int N>
-inline std::string create_string(char const *fmt, ...) {
-  char text[N];
-  va_list ap;
-  va_start(ap, fmt);
-  int n = vsnprintf(text, sizeof(text), fmt, ap);
-  va_end(ap);
-
-  if (n < 0) {
-    throw Exception("create_string<%d>(): encountered encoding error (fmt=%s)", N, fmt);
-  }
-  if (n >= N) {
-    throw Exception("create_string<%d>(): char buffer overflow (%d)", N, n);
-  }
-  return std::string(text);
-}
-
 inline bool ends_with(const std::string& value, const std::string& ending) {
   if (ending.size() > value.size()) return false;
   return std::equal(ending.rbegin(), ending.rend(), value.rbegin());

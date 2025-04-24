@@ -2,7 +2,7 @@
 
 #include <util/AnsiCodes.hpp>
 
-#include <iomanip>
+#include <format>
 
 namespace blokus {
 
@@ -226,7 +226,7 @@ inline void Location::set(int8_t r, int8_t c) {
 inline bool Location::valid() const { return row >= 0 && col >= 0; }
 
 inline std::string Location::to_string() const {
-  return util::create_string("%c%d", 'A' + col, row + 1);
+  return std::format("{}{}", 'A' + col, row + 1);
 }
 
 inline Location Location::from_string(const std::string& s) {

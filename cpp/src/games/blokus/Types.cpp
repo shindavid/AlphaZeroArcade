@@ -3,6 +3,7 @@
 #include <util/Asserts.hpp>
 
 #include <algorithm>
+#include <format>
 #include <bit>
 
 namespace blokus {
@@ -264,7 +265,7 @@ void Piece::write_to(TuiPrompt& prompt, color_t color) const {
 }
 
 void PieceOrientation::write_to(TuiPrompt& prompt, color_t color, int label) const {
-  std::string label_str = util::create_string("%d", label);
+  std::string label_str = std::format("{}", label);
 
   const uint8_t* row_masks = this->row_masks();
   int height = this->height();

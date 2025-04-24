@@ -23,20 +23,18 @@ std::string make_cmd() {
 }  // namespace detail
 
 std::string PerfectOracle::QueryResult::get_overlay() const {
-  char chars[kNumColumns];
+  char chars[2 * kNumColumns + 1];
+  char array[3] = {'-', '0', '+'};
 
+  char* c = chars;
   for (int i = 0; i < kNumColumns; ++i) {
     int score = scores[i];
-    if (score < 0) {
-      chars[i] = ' ';
-    } else if (score == 0) {
-      chars[i] = '0';
-    } else {
-      chars[i] = '+';
-    }
+    *(c++) = ' ';
+    int k = (score < 0) ? 0 : (score > 0) ? 2 : 1;
+    *(c++) = array[k];
   }
-  return util::create_string(" %c %c %c %c %c %c %c", chars[0], chars[1], chars[2], chars[3],
-                             chars[4], chars[5], chars[6]);
+  *c = '\0';
+  return std::string(chars);
 }
 
 PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {

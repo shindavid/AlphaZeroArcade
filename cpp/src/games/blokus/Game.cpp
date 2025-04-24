@@ -4,6 +4,8 @@
 #include <util/CppUtil.hpp>
 #include <util/StringUtil.hpp>
 
+#include <format>
+
 namespace blokus {
 
 void Game::Rules::init_state(State& state) {
@@ -168,10 +170,10 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
   int cx = 0;
 
   static std::string color_strs[kNumColors] = {
-      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
+      std::format("{}{}{}", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
+      std::format("{}{}{}", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
+      std::format("{}{}{}", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
+      std::format("{}{}{}", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
 
   cx += snprintf(buffer + cx, buf_size - cx, "\nScore: Player\n");
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -282,16 +284,13 @@ bool Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLog
 std::string Game::IO::player_to_str(core::seat_index_t player) {
   switch (player) {
     case blokus::kBlue:
-      return util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"),
-                                 ansi::kReset(""));
+      return std::format("{}{}{}", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset(""));
     case blokus::kYellow:
-      return util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"),
-                                 ansi::kReset(""));
+      return std::format("{}{}{}", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset(""));
     case blokus::kRed:
-      return util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset(""));
+      return std::format("{}{}{}", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset(""));
     case blokus::kGreen:
-      return util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"),
-                                 ansi::kReset(""));
+      return std::format("{}{}{}", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""));
     default:
       return "?";
   }

@@ -2,6 +2,7 @@
 
 #include <util/ScreenUtil.hpp>
 
+#include <format>
 #include <fstream>
 
 namespace boost_util {
@@ -99,7 +100,7 @@ auto options_description<StrSeq, CharSeq>::augment() const {
 
   std::string full_name(StrLit.value);
   if (UsingAbbrev) {
-    full_name = util::create_string("%s,%c", full_name.c_str(), Char);
+    full_name = std::format("{},{}", full_name, Char);
   }
   out.tmp_str_ = full_name;
 

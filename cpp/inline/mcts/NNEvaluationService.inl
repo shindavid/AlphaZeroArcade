@@ -433,7 +433,7 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
 
 template <core::concepts::Game Game>
 std::string NNEvaluationService<Game>::dump_key(const char* descr) {
-  return util::create_string("NN-%d %s", instance_id_, descr);
+  return std::format("NN-{} {}", instance_id_, descr);
 }
 
 template <core::concepts::Game Game>

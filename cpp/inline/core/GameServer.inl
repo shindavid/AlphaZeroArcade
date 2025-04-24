@@ -18,6 +18,7 @@
 #include <boost/program_options.hpp>
 
 #include <arpa/inet.h>
+#include <format>
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -45,7 +46,7 @@ auto GameServer<Game>::Params::make_options_description() {
       po::value<int>(&num_game_threads)->default_value(num_game_threads),
       "num threads to use for running games")
     .template add_option<"mean-noisy-moves", 'n'>(
-      po2::float_value("%.2f", &mean_noisy_moves, mean_noisy_moves),
+      po2::default_value<"{:.2f}">(&mean_noisy_moves, mean_noisy_moves),
       "mean number of noisy moves to make at the start of each game")
     .template add_flag<"display-progress-bar", "hide-progress-bar">(
       &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
@@ -856,7 +857,7 @@ std::string GameServer<Game>::get_results_str(const results_map_t& map) {
     else
       draw += count;
   }
-  return util::create_string("W%d L%d D%d [%.16g]", win, loss, draw, score);
+  return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);;
 }
 
 }  // namespace core

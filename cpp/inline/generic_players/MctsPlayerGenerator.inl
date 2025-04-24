@@ -3,6 +3,8 @@
 #include <core/LoopControllerClient.hpp>
 #include <mcts/Constants.hpp>
 
+#include <format>
+
 namespace generic {
 
 // MctsPlayerGeneratorBase
@@ -57,7 +59,7 @@ CompetitiveMctsPlayerGenerator<Game>::CompetitiveMctsPlayerGenerator()
 
 template <core::concepts::Game Game>
 std::string CompetitiveMctsPlayerGenerator<Game>::get_default_name() const {
-  return util::create_string("MCTS-C-%d", mcts_player_params_.num_fast_iters);
+  return std::format("MCTS-C-{}", mcts_player_params_.num_fast_iters);
 }
 
 template <core::concepts::Game Game>
@@ -81,7 +83,7 @@ TrainingMctsPlayerGenerator<Game>::TrainingMctsPlayerGenerator()
 
 template <core::concepts::Game Game>
 std::string TrainingMctsPlayerGenerator<Game>::get_default_name() const {
-  return util::create_string("MCTS-T-%d", mcts_player_params_.num_fast_iters);
+  return std::format("MCTS-T-{}", mcts_player_params_.num_fast_iters);
 }
 
 template <core::concepts::Game Game>

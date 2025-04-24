@@ -3,10 +3,12 @@
 #include <core/Globals.hpp>
 #include <util/BoostUtil.hpp>
 
+#include <format>
+
 namespace c4 {
 
 inline std::string PerfectPlayerGenerator::get_default_name() const {
-  return util::create_string("Perfect-%d", params_.strength);
+  return std::format("Perfect-{}", params_.strength);
 }
 
 inline core::AbstractPlayer<c4::Game>* PerfectPlayerGenerator::generate(core::game_slot_index_t) {

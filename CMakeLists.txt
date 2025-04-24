@@ -23,13 +23,12 @@ set(CMAKE_CXX_STANDARD  23)
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} ${EXTRA_DEFINITIONS}")
 
 # We protect with this if-condition so that clangd-based IDE tools don't complain, as clang does not
-# support the -ftemplate-backtrace-limit flag
+# support these flags
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50 -fconcepts-diagnostics-depth=5")
 endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
