@@ -30,25 +30,15 @@ Each component has a corresponding launcher script in py/alphazero/scripts/:
 
 Standard Usage Recipes:
 
-1. First run - creating a benchmark from scratch:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-benchmark-server`
+1. Start a new training run:
+`./py/alphazero/scripts/run_local.py -g {game} -t {tag}`
+    - If there is no default benchmark, it will create a benchmark committee from itself.
+    - Otherwise, it will use the default benchmark to evaluate the new run.
 
-2. Generate a benchmark from an existing run:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-benchmark-server --set-default-benchmark --skip-self-play`
-
-3. Set a finished benchmark as the default:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --skip-self-play --set-default-benchmark`
-
-4. Evaluate a new run against a benchmark:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-eval-server (--benchmark-tag {benchmark_tag})'
-
-    - If benchmark_tag is not specified, the default benchmark (in /output/{game}/benchmark_info.json) will be used.
-    - If the default benchmark is not found, loop controller will raise an error.
-
-5. Evaluate without training new generations or running self-play:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --run-eval-server (--benchmark-tag {benchmark_tag}) --skip-self-play`
-
+2. Set default benchmark:
+`./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}`
 """
+
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
@@ -98,12 +88,8 @@ class Params:
 
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
 
-    run_benchmark_server: bool = False
     run_ratings_server: bool = False
     skip_self_play: bool = False
-    run_eval_server: bool = False
-
-    set_default_benchmark: bool = False
 
     @staticmethod
     def create(args) -> 'Params':
@@ -121,16 +107,10 @@ class Params:
         group.add_argument('-C', '--num-cuda-devices-to-use', type=int,
                            default=defaults.num_cuda_devices_to_use,
                            help='Num cuda devices to use (default: all)')
-        group.add_argument('--run-benchmark-server', action='store_true',
-                           help='Run the benchmark server')
-        group.add_argument('--run-eval-server', action='store_true',
-                            help='Run the eval server')
         group.add_argument('--run-ratings-server', action='store_true',
                             help='Run the ratings server')
         group.add_argument('--skip-self-play', action='store_true',
                             help='Do not run the self-play server')
-        group.add_argument('--set-default-benchmark', action='store_true',
-                            help='Set the default benchmark for the game')
 
 
 def load_args():
@@ -271,12 +251,9 @@ def launch_loop_controller(params_dict, cuda_device: int):
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
 
-    if params.benchmark_tag:
-        cmd.extend(['--benchmark-tag', params.benchmark_tag])
-    else:
-        benchmark_tag = load_benchmark_info(run_params.game)
-        if benchmark_tag:
-            cmd.extend(['--benchmark-tag', benchmark_tag])
+    benchmark_tag = get_benchmark_tag(run_params, params)
+    if benchmark_tag:
+        cmd.extend(['--benchmark-tag', benchmark_tag])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -287,29 +264,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
-
-
-def save_default_benchmark(game: str, benchmark_tag: str):
-    """
-    Save the default benchmark tag for a given game to a JSON file.
-
-    This will create or overwrite the file:
-        /workspace/output/{game}/benchmark_info.json
-    """
-
-    output_dir = f"/workspace/output/{game}"
-    os.makedirs(output_dir, exist_ok=True)
-
-    benchmark_info = {
-        "benchmark_tag": benchmark_tag
-    }
-
-    file_path = os.path.join(output_dir, "benchmark_info.json")
-
-    with open(file_path, 'w') as f:
-        json.dump(benchmark_info, f, indent=4)
-
-    print(f"Benchmark tag '{benchmark_tag}' saved to {file_path}")
 
 
 def load_benchmark_info(game: str):
@@ -330,6 +284,13 @@ def load_benchmark_info(game: str):
         benchmark_info = json.load(f)
 
     return benchmark_info.get("benchmark_tag")
+
+
+def get_benchmark_tag(run_params: RunParams, params: Params) -> Optional[str]:
+    benchmark_tag = params.benchmark_tag
+    if benchmark_tag is None:
+        benchmark_tag = load_benchmark_info(run_params.game)
+    return benchmark_tag
 
 
 def main():
@@ -379,25 +340,23 @@ def main():
     register_signal_exception(signal.SIGINT, KeyboardInterrupt,
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
+    benchmark_tag = get_benchmark_tag(run_params, params)
+
     procs = []
     try:
-        if params.set_default_benchmark:
-            save_default_benchmark(run_params.game, run_params.tag)
-
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.skip_self_play:
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
-        if params.run_ratings_server and game_spec.reference_player_family is not None:
-            procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
-
-        if params.run_benchmark_server:
+        if benchmark_tag is None:
             procs.append(('Benchmark', launch_benchmark_server(params_dict, ratings_gpu)))
-
-        if params.run_eval_server:
+        else:
             procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
+
+        if params.run_ratings_server:
+            procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
 
         loop = True
         while loop:
