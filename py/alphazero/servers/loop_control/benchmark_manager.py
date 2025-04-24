@@ -250,7 +250,7 @@ class BenchmarkManager(GamingManagerBase):
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
         binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller._organizer.binary_filename,
+            source_path=self._controller.organizer_binary_path,
             scratch_path=f'bin/{game}',
             asset_path_mode='hash')
 
@@ -330,4 +330,3 @@ class BenchmarkManager(GamingManagerBase):
     @property
     def benchmark_until_gen_gap(self):
         return self._controller.params.benchmark_until_gen_gap
-

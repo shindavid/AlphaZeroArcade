@@ -147,6 +147,13 @@ class LoopController:
         return self._persistent_organizer
 
     @property
+    def organizer_binary_path(self) -> str:
+        if self._on_ephemeral_local_disk_env:
+            return self._persistent_organizer.get_binary_path(self._run_params.game)
+        else:
+            return self._organizer.get_binary_path(self._run_params.game)
+
+    @property
     def params(self) -> LoopControllerParams:
         return self._params
 

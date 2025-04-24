@@ -173,13 +173,13 @@ class EvalManager(GamingManagerBase):
         next_opponent_agent = next_opponent_iagent.agent
 
         eval_binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller._organizer.binary_filename,
+            source_path=self._controller.organizer_binary_path,
             scratch_path=f'bin/{game}',
             asset_path_mode='hash'
         )
         benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
         benchmark_binary = FileToTransfer.from_src_scratch_path(
-            source_path= benchmark_organizer.binary_filename,
+            source_path=benchmark_organizer.binary_filename,
             scratch_path=f'benchmark-bin/{game}',
             asset_path_mode='hash'
         )
@@ -340,4 +340,3 @@ class EvalManager(GamingManagerBase):
     @property
     def error_threshold(self):
         return self._controller.params.eval_error_threshold
-
