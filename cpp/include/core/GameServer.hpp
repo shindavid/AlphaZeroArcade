@@ -135,15 +135,17 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    void step();
+    int step();  // return number of times we should enqueue the slot
     bool start_game();
     bool game_started() const { return game_started_; }
+    bool game_ended() const { return !game_started_; }
     yield_instruction_t yield_state() const { return yield_state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
-    bool step_chance();  // return true if terminal
-    bool step_non_chance();  // return true if terminal
+    void pre_step();
+    void step_chance();
+    int step_non_chance();  // return number of times we should enqueue the slot
     void handle_terminal(const ValueTensor& outcome);
 
     SharedData& shared_data_;
@@ -162,6 +164,7 @@ class GameServer
 
     // Updated for each move
     StateHistory state_history_;
+    ActionMask valid_actions_;
     ActionValueTensor* chance_action_values_ = nullptr;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
@@ -192,8 +195,8 @@ class GameServer
     // Returns the next game slot to run. If the server is paused or shutting down, returns nullptr.
     // The wait_for_game_slot_time_ns is updated with the time spent waiting for a game slot.
     GameSlot* next(int64_t& wait_for_game_slot_time_ns);
-    void enqueue(GameSlot*);
-    void skip_enqueue();
+    void enqueue(GameSlot*, int count);
+    void drop_slot();
 
     bool request_game();  // returns false iff hit params_.num_games limit
     void update(const ValueArray& outcome);

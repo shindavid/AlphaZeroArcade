@@ -180,10 +180,12 @@ GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::enqueue(GameSlot* slot) {
+void GameServer<Game>::SharedData::enqueue(GameSlot* slot, int count) {
   std::unique_lock lock(mutex_);
   bool empty = queue_.empty();
-  queue_.push(slot);
+  for (int i = 0; i < count; ++i) {
+    queue_.push(slot);
+  }
   pending_queue_count_--;
   if (empty) {
     lock.unlock();
@@ -192,7 +194,7 @@ void GameServer<Game>::SharedData::enqueue(GameSlot* slot) {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::skip_enqueue() {
+void GameServer<Game>::SharedData::drop_slot() {
   std::unique_lock lock(mutex_);
   pending_queue_count_--;
   if (pending_queue_count_ == 0 && queue_.empty()) {
@@ -433,36 +435,46 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step() {
-  bool hit_not_chance = false;
-  while (true) {
-    if (yield_state_ == kContinue) {
-      action_mode_ = Rules::get_action_mode(state_history_.current());
-    }
+int GameServer<Game>::GameSlot::step() {
+  int enqueue_count = 1;
+  pre_step();
+
+  if (!Rules::is_chance_mode(action_mode_)) {
+    enqueue_count = step_non_chance();
+    pre_step();
+  }
+
+  if (yield_state_ == kContinue && Rules::is_chance_mode(action_mode_)) {
+    step_chance();
+    util::release_assert(yield_state_ == kContinue || yield_state_ == kYield,
+                         "Unexpected yield_state_:{}", int(yield_state_));
+    util::release_assert(enqueue_count == 1, "Unexpected enqueue_count_:{}", enqueue_count);
+  }
+  return enqueue_count;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::pre_step() {
+  if (yield_state_ == kContinue) {
+    // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
+    // get here with multiple threads
+    action_mode_ = Rules::get_action_mode(state_history_.current());
     noisy_mode_ = move_number_ < num_noisy_starting_moves_;
-
-    if (Rules::is_chance_mode(action_mode_)) {
-      if (step_chance()) return;
-    } else {
-      if (hit_not_chance) {
-        return;
-      }
-      if (step_non_chance()) return;
-      hit_not_chance = true;
+    if (!Rules::is_chance_mode(action_mode_)) {
+      active_seat_ = Rules::get_current_player(state_history_.current());
+      valid_actions_ = Rules::get_legal_moves(state_history_);
     }
-
-    if (yield_state_ != kContinue) return;
   }
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_chance() {
+void GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     ChanceEventPreHandleResponse response = player->prehandle_chance_event();
     yield_state_ = response.yield_instruction;
     if (yield_state_ != kContinue) {
-      return false;
+      return;
     }
     if (!noisy_mode_ && response.action_values) {
       util::release_assert(!chance_action_values_,
@@ -493,23 +505,21 @@ bool GameServer<Game>::GameSlot::step_chance() {
   ValueTensor outcome;
   if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
     handle_terminal(outcome);
-    return true;
   }
-  return false;
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance() {
-  active_seat_ = Rules::get_current_player(state_history_.current());
+int GameServer<Game>::GameSlot::step_non_chance() {
   Player* player = players_[active_seat_];
-  auto valid_actions = Rules::get_legal_moves(state_history_);
-  ActionRequest request(state_history_.current(), valid_actions);
+  ActionRequest request(state_history_.current(), valid_actions_);
   request.play_noisily = noisy_mode_;
   request.hibernation_notifier = &hibernation_notifier_;
   ActionResponse response = player->get_action_response(request);
   yield_state_ = response.yield_instruction;
-  if (yield_state_ != kContinue) {
-    return false;
+  switch (yield_state_) {
+    case kContinue: break;
+    case kYield: return 1 + response.extra_enqueue_count;
+    default: return 0;
   }
 
   move_number_++;
@@ -522,7 +532,7 @@ bool GameServer<Game>::GameSlot::step_non_chance() {
 
   // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
   // the server.
-  util::release_assert(valid_actions[action], "Invalid action: {}", action);
+  util::release_assert(valid_actions_[action], "Invalid action: {}", action);
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
@@ -532,7 +542,6 @@ bool GameServer<Game>::GameSlot::step_non_chance() {
       std::cout << std::endl;
     }
     handle_terminal(outcome);
-    return true;
   } else {
     Rules::apply(state_history_, action);
     if (params().print_game_states) {
@@ -545,10 +554,9 @@ bool GameServer<Game>::GameSlot::step_non_chance() {
     ValueTensor outcome;
     if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
       handle_terminal(outcome);
-      return true;
     }
   }
-  return false;
+  return 1;
 }
 
 template <concepts::Game Game>
@@ -666,17 +674,16 @@ void GameServer<Game>::GameThread::run() {
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    slot->step();
+    int enqueue_count = slot->step();
 
-    if (!slot->game_started()) {
+    if (slot->game_ended()) {
+      util::release_assert(enqueue_count == 1);
       if (!slot->start_game()) {
-        shared_data_.skip_enqueue();
+        shared_data_.drop_slot();
         continue;
       }
     }
-    if (slot->yield_state() != kHibernate) {
-      shared_data_.enqueue(slot);
-    }
+    shared_data_.enqueue(slot, enqueue_count);
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
     shared_data_.increment_game_slot_time_ns(wait_for_game_slot_time_ns);

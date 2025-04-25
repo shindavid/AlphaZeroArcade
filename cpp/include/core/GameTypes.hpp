@@ -86,6 +86,10 @@ struct GameTypes {
    *
    * - yield_instruction: Indicates whether the player needs more time to think asynchronously. If
    *     set to a non-kYield value, then all other fields are ignored.
+   *
+   * - extra_enqueue_count: If set to a nonzero value, this instructs the GameServer to enqueue the
+   *     current GameSlot this many additional times. This is useful for players that want to
+   *     engage in multithreaded search. This should only be used for instruction type kYield.
    */
   struct ActionResponse {
     ActionResponse(action_t a = -1, core::yield_instruction_t y = core::kContinue)
@@ -96,6 +100,7 @@ struct GameTypes {
 
     action_t action = -1;
     core::yield_instruction_t yield_instruction = core::kContinue;
+    int8_t extra_enqueue_count = 0;
     bool victory_guarantee = false;
     TrainingInfo training_info;
   };
