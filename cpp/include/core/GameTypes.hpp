@@ -98,11 +98,11 @@ struct GameTypes {
     static ActionResponse yield() { return ActionResponse(-1, core::kYield); }
     static ActionResponse hibernate() { return ActionResponse(-1, core::kHibernate); }
 
-    action_t action = -1;
-    core::yield_instruction_t yield_instruction = core::kContinue;
-    int8_t extra_enqueue_count = 0;
-    bool victory_guarantee = false;
     TrainingInfo training_info;
+    action_t action = -1;
+    int extra_enqueue_count = 0;
+    core::yield_instruction_t yield_instruction = core::kContinue;
+    bool victory_guarantee = false;
   };
 
   struct ChanceEventPreHandleResponse {

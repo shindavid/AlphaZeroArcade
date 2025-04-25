@@ -172,6 +172,12 @@ class GameServer
     seat_index_t active_seat_;
     bool noisy_mode_;
     yield_instruction_t yield_state_;
+
+    // Used for synchronization in multithreaded case
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    int concurrent_thread_count_ = 0;
+    bool pre_step_complete_ = false;
   };
 
   /*

@@ -455,6 +455,11 @@ int GameServer<Game>::GameSlot::step() {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
+  if (pre_step_complete_) return;
+
+  std::unique_lock lock(mutex_);
+  if (pre_step_complete_) return;
+
   if (yield_state_ == kContinue) {
     // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
     // get here with multiple threads
@@ -464,6 +469,7 @@ void GameServer<Game>::GameSlot::pre_step() {
       active_seat_ = Rules::get_current_player(state_history_.current());
       valid_actions_ = Rules::get_legal_moves(state_history_);
     }
+    pre_step_complete_ = true;
   }
 }
 
@@ -516,12 +522,37 @@ int GameServer<Game>::GameSlot::step_non_chance() {
   request.hibernation_notifier = &hibernation_notifier_;
   ActionResponse response = player->get_action_response(request);
   yield_state_ = response.yield_instruction;
+  if (response.extra_enqueue_count) {
+    std::unique_lock lock(mutex_);
+    concurrent_thread_count_ += response.extra_enqueue_count;
+  }
   switch (yield_state_) {
     case kContinue: break;
     case kYield: return 1 + response.extra_enqueue_count;
+    case kHibernate: return 0;
+    case kDrop: {
+      std::unique_lock lock(mutex_);
+      concurrent_thread_count_--;
+      if (concurrent_thread_count_ == 0) {
+        lock.unlock();
+        cv_.notify_all();
+      }
+      return 0;
+    }
     default: return 0;
   }
 
+  util::release_assert(yield_state_ == kContinue);
+
+  // NOTE: a compliant multithreaded player should only return kContinue for one of its threads,
+  // while the other threads should return kDrop.
+  if (concurrent_thread_count_ > 0) {
+    // Block until all concurrent search threads have issued a kDrop
+    std::unique_lock lock(mutex_);
+    cv_.wait(lock, [&] { return concurrent_thread_count_ == 0; });
+  }
+
+  pre_step_complete_ = false;
   move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
@@ -623,6 +654,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   active_seat_ = -1;
   noisy_mode_ = false;
   yield_state_ = kContinue;
+  pre_step_complete_ = false;
 
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state_history_.current(), -1, &player_names_);
