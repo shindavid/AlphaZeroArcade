@@ -119,8 +119,6 @@ class SelfPlayServer:
         msg_type = msg['type']
         if msg_type == 'start-gen0':
             self._handle_start_gen0(msg)
-        elif msg_type == 'stop-gen0':
-            self._handle_stop_gen0()
         elif msg_type == 'start':
             self._handle_start(msg)
         elif msg_type == 'restart':
@@ -142,17 +140,6 @@ class SelfPlayServer:
         thread = threading.Thread(target=self._start_gen0, args=(msg,),
                                   daemon=True, name=f'start-gen0')
         thread.start()
-
-    def _handle_stop_gen0(self):
-        # NOTE: although my intention is for this to be the point at which the process is killed,
-        # the gen-0 c++ process seems to exit on its own. I'm not exactly sure why, but it doesn't
-        # really matter, so I'm not going to investigate further.
-        proc = self._proc
-        assert proc is not None
-
-        self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
-        assert self._proc.returncode == 0, f'Unexpected returncode: {self._proc.returncode}'
-        self._clear_proc()
 
     def _handle_start(self, msg: JsonDict):
         thread = threading.Thread(target=self._start, args=(msg,), daemon=True, name=f'start')

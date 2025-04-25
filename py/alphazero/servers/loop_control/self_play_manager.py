@@ -104,7 +104,6 @@ class SelfPlayManager:
         checkpoint = self._controller.get_next_checkpoint()
         self._launch_gen0_self_play(conn, checkpoint)
         self._collect_and_process_game_data()
-        self._stop_gen0_self_play(conn)
 
     def run_until_checkpoint(self):
         self._controller._training_manager._set_checkpoint()
@@ -243,15 +242,6 @@ class SelfPlayManager:
             asset_path_mode='hash'
         )
         return binary
-
-    def _stop_gen0_self_play(self, conn: ClientConnection):
-        logger.info('Requesting %s to stop gen-0 self-play...', conn)
-
-        data = {
-            'type': 'stop-gen0',
-        }
-
-        conn.socket.send_json(data)
 
     def _launch_self_play(self, conn: ClientConnection):
         binary = self._construct_binary()
