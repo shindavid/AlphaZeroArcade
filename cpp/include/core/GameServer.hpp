@@ -140,7 +140,6 @@ class GameServer
     bool start_game();
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
-    yield_instruction_t yield_state() const { return yield_state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -178,7 +177,7 @@ class GameServer
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
-    yield_instruction_t yield_state_;
+    bool mid_yield_;
 
     // Used for synchronization in multithreaded case
     mutable std::mutex mutex_;

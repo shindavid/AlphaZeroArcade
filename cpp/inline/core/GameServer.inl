@@ -451,16 +451,13 @@ int GameServer<Game>::GameSlot::step() {
     if (step_chance()) {
       pre_step();
     }
-    util::release_assert(yield_state_ == kContinue || yield_state_ == kYield,
-                         "Unexpected yield_state_:{}", int(yield_state_));
-    util::release_assert(enqueue_count == 1, "Unexpected enqueue_count_:{}", enqueue_count);
   }
   return enqueue_count;
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
-  util::debug_assert(yield_state_ == kContinue);
+  util::debug_assert(!mid_yield_);
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
   action_mode_ = Rules::get_action_mode(state_history_.current());
@@ -476,8 +473,8 @@ bool GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     ChanceEventPreHandleResponse response = player->prehandle_chance_event();
-    yield_state_ = response.yield_instruction;
-    if (yield_state_ != kContinue) {
+    mid_yield_ = response.yield_instruction != kContinue;
+    if (mid_yield_) {
       return false;
     }
     if (!noisy_mode_ && response.action_values) {
@@ -531,17 +528,17 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
         enqueue_count = 1;
         return false;
       }
-      yield_state_ = kContinue;
+      mid_yield_ = false;
       break;
     }
     case kYield: {
-      yield_state_ = kYield;
+      mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
       enqueue_count = 1 + response.extra_enqueue_count;
       return false;
     }
     case kHibernate: {
-      yield_state_ = kHibernate;
+      mid_yield_ = true;
       enqueue_count = 0;
       return false;
     }
@@ -555,7 +552,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
     }
   }
 
-  util::debug_assert(yield_state_ == kContinue);
+  util::debug_assert(!mid_yield_);
 
   enqueue_count = 1;
   move_number_++;
@@ -660,7 +657,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   action_mode_ = -1;
   active_seat_ = -1;
   noisy_mode_ = false;
-  yield_state_ = kContinue;
+  mid_yield_ = false;
   pre_step();
 
   if (params().print_game_states) {
