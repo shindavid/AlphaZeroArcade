@@ -143,11 +143,14 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   init_search_mode(request);
   lock.unlock();
 
-  const SearchResults* mcts_results = get_manager()->search();
-  if (!mcts_results) {
-    return ActionResponse::yield();
+  SearchResponse response = get_manager()->search();
+  if (response.yield_instruction == core::kYield) {
+    return ActionResponse::yield(response.extra_enqueue_count);
+  } else if (response.yield_instruction == core::kDrop) {
+    return ActionResponse::drop();
   }
-  return get_action_response_helper(mcts_results, request.valid_actions);
+  util::release_assert(response.yield_instruction == core::kContinue);
+  return get_action_response_helper(response.results, request.valid_actions);
 }
 
 template <core::concepts::Game Game>

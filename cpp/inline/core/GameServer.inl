@@ -171,7 +171,9 @@ GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
     }
   }
 
-  if (paused_) return nullptr;
+  if (paused_) {
+    return nullptr;
+  }
 
   GameSlot* slot = queue_.front();
   queue_.pop();
@@ -437,15 +439,18 @@ GameServer<Game>::GameSlot::~GameSlot() {
 template <concepts::Game Game>
 int GameServer<Game>::GameSlot::step() {
   int enqueue_count = 1;
-  pre_step();
-
   if (!Rules::is_chance_mode(action_mode_)) {
-    enqueue_count = step_non_chance();
-    pre_step();
+    if (step_non_chance(enqueue_count)) {
+      pre_step();
+    } else {
+      return enqueue_count;
+    }
   }
 
-  if (yield_state_ == kContinue && Rules::is_chance_mode(action_mode_)) {
-    step_chance();
+  if (Rules::is_chance_mode(action_mode_)) {
+    if (step_chance()) {
+      pre_step();
+    }
     util::release_assert(yield_state_ == kContinue || yield_state_ == kYield,
                          "Unexpected yield_state_:{}", int(yield_state_));
     util::release_assert(enqueue_count == 1, "Unexpected enqueue_count_:{}", enqueue_count);
@@ -455,32 +460,25 @@ int GameServer<Game>::GameSlot::step() {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
-  if (pre_step_complete_) return;
-
-  std::unique_lock lock(mutex_);
-  if (pre_step_complete_) return;
-
-  if (yield_state_ == kContinue) {
-    // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
-    // get here with multiple threads
-    action_mode_ = Rules::get_action_mode(state_history_.current());
-    noisy_mode_ = move_number_ < num_noisy_starting_moves_;
-    if (!Rules::is_chance_mode(action_mode_)) {
-      active_seat_ = Rules::get_current_player(state_history_.current());
-      valid_actions_ = Rules::get_legal_moves(state_history_);
-    }
-    pre_step_complete_ = true;
+  util::debug_assert(yield_state_ == kContinue);
+  // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
+  // get here with multiple threads
+  action_mode_ = Rules::get_action_mode(state_history_.current());
+  noisy_mode_ = move_number_ < num_noisy_starting_moves_;
+  if (!Rules::is_chance_mode(action_mode_)) {
+    active_seat_ = Rules::get_current_player(state_history_.current());
+    valid_actions_ = Rules::get_legal_moves(state_history_);
   }
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step_chance() {
+bool GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     ChanceEventPreHandleResponse response = player->prehandle_chance_event();
     yield_state_ = response.yield_instruction;
     if (yield_state_ != kContinue) {
-      return;
+      return false;
     }
     if (!noisy_mode_ && response.action_values) {
       util::release_assert(!chance_action_values_,
@@ -511,48 +509,55 @@ void GameServer<Game>::GameSlot::step_chance() {
   ValueTensor outcome;
   if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
     handle_terminal(outcome);
+    return false;
   }
+  return true;
 }
 
 template <concepts::Game Game>
-int GameServer<Game>::GameSlot::step_non_chance() {
+bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
   Player* player = players_[active_seat_];
   ActionRequest request(state_history_.current(), valid_actions_);
   request.play_noisily = noisy_mode_;
   request.hibernation_notifier = &hibernation_notifier_;
   ActionResponse response = player->get_action_response(request);
-  yield_state_ = response.yield_instruction;
-  if (response.extra_enqueue_count) {
-    std::unique_lock lock(mutex_);
-    concurrent_thread_count_ += response.extra_enqueue_count;
-  }
-  switch (yield_state_) {
-    case kContinue: break;
-    case kYield: return 1 + response.extra_enqueue_count;
-    case kHibernate: return 0;
-    case kDrop: {
-      std::unique_lock lock(mutex_);
-      concurrent_thread_count_--;
-      if (concurrent_thread_count_ == 0) {
-        lock.unlock();
-        cv_.notify_all();
+  util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+                     "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+                     int(response.yield_instruction));
+
+  switch (response.yield_instruction) {
+    case kContinue: {
+      if (pending_drop_count_ > 0) {
+        enqueue_count = 1;
+        return false;
       }
-      return 0;
+      yield_state_ = kContinue;
+      break;
     }
-    default: return 0;
+    case kYield: {
+      yield_state_ = kYield;
+      pending_drop_count_ += response.extra_enqueue_count;
+      enqueue_count = 1 + response.extra_enqueue_count;
+      return false;
+    }
+    case kHibernate: {
+      yield_state_ = kHibernate;
+      enqueue_count = 0;
+      return false;
+    }
+    case kDrop: {
+      pending_drop_count_--;
+      enqueue_count = 0;
+      return false;
+    }
+    default: {
+      throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
+    }
   }
 
-  util::release_assert(yield_state_ == kContinue);
+  util::debug_assert(yield_state_ == kContinue);
 
-  // NOTE: a compliant multithreaded player should only return kContinue for one of its threads,
-  // while the other threads should return kDrop.
-  if (concurrent_thread_count_ > 0) {
-    // Block until all concurrent search threads have issued a kDrop
-    std::unique_lock lock(mutex_);
-    cv_.wait(lock, [&] { return concurrent_thread_count_ == 0; });
-  }
-
-  pre_step_complete_ = false;
+  enqueue_count = 1;
   move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
@@ -573,6 +578,7 @@ int GameServer<Game>::GameSlot::step_non_chance() {
       std::cout << std::endl;
     }
     handle_terminal(outcome);
+    return false;
   } else {
     Rules::apply(state_history_, action);
     if (params().print_game_states) {
@@ -585,9 +591,10 @@ int GameServer<Game>::GameSlot::step_non_chance() {
     ValueTensor outcome;
     if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
       handle_terminal(outcome);
+      return false;
     }
   }
-  return 1;
+  return true;
 }
 
 template <concepts::Game Game>
@@ -654,7 +661,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   active_seat_ = -1;
   noisy_mode_ = false;
   yield_state_ = kContinue;
-  pre_step_complete_ = false;
+  pre_step();
 
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state_history_.current(), -1, &player_names_);
@@ -708,14 +715,17 @@ void GameServer<Game>::GameThread::run() {
     util::release_assert(slot->game_started());
     int enqueue_count = slot->step();
 
+    bool dropped = false;
     if (slot->game_ended()) {
       util::release_assert(enqueue_count == 1);
       if (!slot->start_game()) {
         shared_data_.drop_slot();
-        continue;
+        dropped = true;
       }
     }
-    shared_data_.enqueue(slot, enqueue_count);
+
+    if (!dropped) shared_data_.enqueue(slot, enqueue_count);
+
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
     shared_data_.increment_game_slot_time_ns(wait_for_game_slot_time_ns);

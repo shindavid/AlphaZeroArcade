@@ -26,15 +26,19 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   }
   lock.unlock();
 
-  const SearchResults* mcts_results = this->get_manager()->search();
-  if (!mcts_results) {
-    return ActionResponse::yield();
+  SearchResponse response = this->get_manager()->search();
+  if (response.yield_instruction == core::kYield) {
+    return ActionResponse::yield(response.extra_enqueue_count);
+  } else if (response.yield_instruction == core::kDrop) {
+    return ActionResponse::drop();
   }
+  util::release_assert(response.yield_instruction == core::kContinue);
 
-  ActionResponse response =
+  const SearchResults* mcts_results = response.results;
+  ActionResponse action_response =
       base_t::get_action_response_helper(mcts_results, valid_actions);
 
-  TrainingInfo& training_info = response.training_info;
+  TrainingInfo& training_info = action_response.training_info;
   training_info.policy_target = nullptr;
   training_info.action_values_target = nullptr;
   training_info.use_for_training = use_for_training_;
@@ -48,7 +52,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
     training_info.action_values_target = &action_values_target_;
   }
 
-  return response;
+  return action_response;
 }
 
 template <core::concepts::Game Game>

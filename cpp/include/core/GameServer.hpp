@@ -13,6 +13,7 @@
 #include <third_party/ProgressBar.hpp>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <map>
@@ -144,8 +145,14 @@ class GameServer
    private:
     const Params& params() const { return shared_data_.params(); }
     void pre_step();
-    void step_chance();
-    int step_non_chance();  // return number of times we should enqueue the slot
+
+    // Returns true if it successfully processed a non-terminal game state transition.
+    bool step_chance();
+
+    // Sets enqueue_count to the number of times this slot should be enqueued.
+    // Returns true if it successfully processed a non-terminal game state transition.
+    bool step_non_chance(int& enqueue_count);
+
     void handle_terminal(const ValueTensor& outcome);
 
     SharedData& shared_data_;
@@ -175,9 +182,7 @@ class GameServer
 
     // Used for synchronization in multithreaded case
     mutable std::mutex mutex_;
-    std::condition_variable cv_;
-    int concurrent_thread_count_ = 0;
-    bool pre_step_complete_ = false;
+    std::atomic<int> pending_drop_count_ = 0;
   };
 
   /*
