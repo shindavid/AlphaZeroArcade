@@ -47,7 +47,7 @@ class GameLogReader:
         return self._closed
 
     def close(self):
-        self.closed = True
+        self._closed = True
         if self._data_loader is not None:
             self._lib.DataLoader_delete(self._data_loader)
         self._ffi.dlclose(self._lib)
