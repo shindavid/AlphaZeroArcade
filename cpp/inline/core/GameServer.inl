@@ -342,10 +342,10 @@ void GameServer<Game>::SharedData::unpause() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::wait_for_unpause() {
-  LOG_INFO("GameServer: waiting for unpause...");
+  LOG_DEBUG("GameServer: waiting for unpause...");
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return !paused_; });
-  LOG_INFO("GameServer: unpause wait complete!");
+  LOG_DEBUG("GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
@@ -366,8 +366,8 @@ void GameServer<Game>::SharedData::increment_paused_thread_count() {
   std::unique_lock lock(mutex_);
   util::release_assert(paused_);
   paused_thread_count_++;
-  LOG_INFO("GameServer: pause_thread_count={} active_thread_count={}",
-           paused_thread_count_, active_thread_count_);
+  LOG_DEBUG("GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
+            active_thread_count_);
   issue_pause_receipt_if_necessary();
 }
 
@@ -391,7 +391,7 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   // assumes mutex_ is locked
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
     pause_receipt_pending_ = false;
-    LOG_INFO("GameServer: handling pause receipt");
+    LOG_DEBUG("GameServer: handling pause receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
 }

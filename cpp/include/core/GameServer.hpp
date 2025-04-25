@@ -180,7 +180,6 @@ class GameServer
     bool mid_yield_;
 
     // Used for synchronization in multithreaded case
-    mutable std::mutex mutex_;
     std::atomic<int> pending_drop_count_ = 0;
   };
 
