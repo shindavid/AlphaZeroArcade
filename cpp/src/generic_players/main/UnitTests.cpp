@@ -86,7 +86,7 @@ class MctsPlayerTest : public ::testing::Test {
 
     ActionRequest request(state_history.current(), valid_actions);
     mcts_player_->init_search_mode(request);
-    const SearchResults* search_results = mcts_player_->get_manager()->search();
+    const SearchResults* search_results = mcts_player_->get_manager()->search().results;
 
     PolicyTensor modified_policy =
         mcts_player_->get_action_policy(search_results, valid_actions);

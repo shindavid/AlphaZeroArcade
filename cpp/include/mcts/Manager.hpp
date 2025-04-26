@@ -1,6 +1,5 @@
 #pragma once
 
-#include <condition_variable>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <mcts/ActionSelector.hpp>
@@ -14,7 +13,10 @@
 #include <mcts/TypeDefs.hpp>
 #include <util/Math.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 #include <array>
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <vector>
@@ -70,6 +72,18 @@ class Manager {
   };
   using search_path_t = std::vector<Visitation>;
 
+  struct SearchResponse {
+    static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
+    static SearchResponse make_yield(int e) { return SearchResponse(nullptr, core::kYield, e); }
+
+    SearchResponse(const SearchResults* r, core::yield_instruction_t y=core::kContinue, int e=0)
+        : results(r), yield_instruction(y), extra_enqueue_count(e) {}
+
+    const SearchResults* results;
+    core::yield_instruction_t yield_instruction;
+    int extra_enqueue_count;
+  };
+
   struct SearchContext {
     core::search_context_id_t id;
 
@@ -101,6 +115,9 @@ class Manager {
     StateHistory* history;
     group::element_t inv_canonical_sym;
     bool applied_action = false;
+
+    // For kYield responses
+    int extra_enqueue_count = 0;
   };
 
   enum execution_state_t : int8_t {
@@ -188,7 +205,7 @@ class Manager {
   struct StateMachine {
     mutable std::mutex mutex;
     std::condition_variable cv;
-    core::search_context_id_t next_context_id = 0;  // round-robins
+    boost::circular_buffer<core::search_context_id_t> available_context_ids;
     core::search_context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
@@ -228,7 +245,7 @@ class Manager {
   void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
-  const SearchResults* search();
+  SearchResponse search();
   core::yield_instruction_t load_root_action_values(ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }
@@ -247,12 +264,21 @@ class Manager {
   // Assumes state_matchine_.mutex is held
   core::search_context_id_t get_next_context_id();
 
-  // Assumes state_matchine_.mutex is held
-  void update_state_machine_to_in_visit_loop();
+  // Does NOT assume state_machine_.mutex is held
+  void recycle_context(core::search_context_id_t context_id);
+
+  SearchResponse search_helper(core::search_context_id_t& context_id);
 
   // Assumes state_matchine_.mutex is held
-  // Returns true if all threads are done with the visit loop
-  bool mark_as_done_with_visit_loop(SearchContext& context);
+  //
+  // If state_machine_.state is already kInVisitLoop, this function does nothing.
+  //
+  // Otherwise, sets state_machine_.state to kInVisitLoop and does various bookkeeping on
+  // context and the other SearchContext's.
+  void update_state_machine_to_in_visit_loop(SearchContext& context);
+
+  // Assumes state_matchine_.mutex is held
+  core::yield_instruction_t mark_as_done_with_visit_loop(SearchContext& context);
 
   void init_context(core::search_context_id_t);
   void init_root_info(bool add_noise);

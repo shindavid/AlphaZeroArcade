@@ -29,9 +29,13 @@ class MCTSAgent(Agent):
     model: Optional[str] = None
 
     def make_player_str(self, run_dir, args=None) -> str:
+        name_tokens = ['MCTS', str(self.gen)]
+        if self.n_iters is not None:
+            name_tokens.append(str(self.n_iters))
+        name = '-'.join(name_tokens)
         player_args = {
             '--type': 'MCTS-C',
-            '--name': f'MCTS-{self.gen}-{self.n_iters}',
+            '--name': name,
             '-n': 1,
         }
 

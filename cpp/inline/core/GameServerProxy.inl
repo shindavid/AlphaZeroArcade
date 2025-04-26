@@ -59,12 +59,15 @@ GameServerProxy<Game>::GameSlot::~GameSlot() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload) {
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, payload.game_id,
+            payload.player_id);
+
   game_id_ = payload.game_id;
   payload.parse_player_names(player_names_);
 
   game_started_ = true;
   history_.initialize(Rules{});
-  yield_state_ = kContinue;
+  mid_yield_ = false;
 
   Player* player = players_[payload.player_id];
   player->init_game(game_id_, player_names_, payload.seat_assignment, nullptr);
@@ -80,6 +83,8 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   action_t action = action_response.action;
   Rules::apply(history_, action);
 
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+
   Player* player = players_[payload.player_id];
   player->receive_state_change(seat, history_.current(), action);
 }
@@ -91,11 +96,14 @@ void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& p
   play_noisily_ = payload.play_noisily;
   prompted_player_id_ = payload.player_id;
 
-  shared_data_.enqueue(this);
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+
+  shared_data_.enqueue(this, 1);
 }
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
   const char* buf = payload.dynamic_size_section.buf;
 
   game_started_ = false;
@@ -106,17 +114,51 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::GameSlot::step() {
+void GameServerProxy<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
   Player* player = players_[prompted_player_id_];
+
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, prompted_player_id_);
 
   ActionRequest request(history_.current(), valid_actions_);
   request.play_noisily = play_noisily_;
   request.hibernation_notifier = &hibernation_notifier_;
   ActionResponse response = player->get_action_response(request);
-  yield_state_ = response.yield_instruction;
-  if (yield_state_ == kContinue) {
-    send_action_packet(response);
+  util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+                     "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+                     int(response.yield_instruction));
+
+  switch (response.yield_instruction) {
+    case kContinue: {
+      if (pending_drop_count_ > 0) {
+        enqueue_count = 1;
+        return;
+      }
+      mid_yield_ = false;
+      break;
+    }
+    case kYield: {
+      mid_yield_ = true;
+      pending_drop_count_ += response.extra_enqueue_count;
+      enqueue_count = 1 + response.extra_enqueue_count;
+      return;
+    }
+    case kHibernate: {
+      mid_yield_ = true;
+      enqueue_count = 0;
+      hibernate = true;
+      return;
+    }
+    case kDrop: {
+      pending_drop_count_--;
+      enqueue_count = 0;
+      return;
+    }
+    default: {
+      throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
+    }
   }
+  send_action_packet(response);
+  enqueue_count = 0;
 }
 
 template <concepts::Game Game>
@@ -124,6 +166,8 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   Packet<ActionDecision> packet;
   ActionDecision& decision = packet.payload();
   auto& section = decision.dynamic_size_section;
+
+  LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_, prompted_player_id_, response.action);
 
   decision.game_slot_index = id_;
   decision.player_id = prompted_player_id_;
@@ -269,10 +313,13 @@ typename GameServerProxy<Game>::GameSlot* GameServerProxy<Game>::SharedData::nex
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::enqueue(GameSlot* slot) {
+void GameServerProxy<Game>::SharedData::enqueue(GameSlot* slot, int count) {
+  if (count == 0) return;
   std::unique_lock lock(mutex_);
   bool empty = queue_.empty();
-  queue_.push(slot);
+  for (int i = 0; i < count; ++i) {
+    queue_.push(slot);
+  }
   if (empty) {
     lock.unlock();
     cv_.notify_all();
@@ -330,12 +377,12 @@ void GameServerProxy<Game>::GameThread::run() {
     if (!slot) return;
 
     util::release_assert(slot->game_started());
-    slot->step();
+    int enqueue_count = 1;
+    bool hibernate = false;
+    slot->step(enqueue_count, hibernate);
 
-    if (slot->game_started()) {
-      if (slot->yield_state() == kYield) {
-        shared_data_.enqueue(slot);
-      }
+    if (slot->game_started() && !hibernate) {
+      shared_data_.enqueue(slot, enqueue_count);
     }
   }
 }

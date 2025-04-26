@@ -85,19 +85,27 @@ struct GameTypes {
    * - training_info: used to generate targets for NN training.
    *
    * - yield_instruction: Indicates whether the player needs more time to think asynchronously. If
-   *     set to a non-kYield value, then all other fields are ignored.
+   *     set to a non-kContinue value, then the action/training_info/victory_guarantee fields are
+   *     ignored. If set to kDrop, this indicates that this was an auxiliary thread launched for
+   *     multithreaded search, and that the multithreaded part is over.
+   *
+   * - extra_enqueue_count: If set to a nonzero value, this instructs the GameServer to enqueue the
+   *     current GameSlot this many additional times. This is useful for players that want to
+   *     engage in multithreaded search. This should only be used for instruction type kYield.
    */
   struct ActionResponse {
-    ActionResponse(action_t a = -1, core::yield_instruction_t y = core::kContinue)
-        : action(a), yield_instruction(y) {}
+    ActionResponse(action_t a = -1, int e = 0, core::yield_instruction_t y = core::kContinue)
+        : action(a), extra_enqueue_count(e), yield_instruction(y) {}
 
-    static ActionResponse yield() { return ActionResponse(-1, core::kYield); }
-    static ActionResponse hibernate() { return ActionResponse(-1, core::kHibernate); }
+    static ActionResponse yield(int e=0) { return ActionResponse(-1, e, core::kYield); }
+    static ActionResponse hibernate() { return ActionResponse(-1, 0, core::kHibernate); }
+    static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
 
+    TrainingInfo training_info;
     action_t action = -1;
+    int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
-    TrainingInfo training_info;
   };
 
   struct ChanceEventPreHandleResponse {

@@ -20,9 +20,11 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
   column_t col = last_action;
   mask_t piece_mask = ((state.full_mask + _bottom_mask(col)) & (_column_mask(col) << 1)) >> 1;
 
-  util::release_assert(last_player != get_current_player(state));
-  util::release_assert(last_action >= 0);
-  util::release_assert(std::popcount(piece_mask) == 1);
+  util::release_assert(last_player != get_current_player(state), "Wrong player ({} == {})",
+                       last_player, get_current_player(state));
+  util::release_assert(last_action >= 0, "Bad last_action: {}", last_action);
+  util::release_assert(std::popcount(piece_mask) == 1, "Wrong popcount({})={}",
+                       piece_mask, std::popcount(piece_mask));
 
   mask_t masks[] = {
       (piece_mask << 1) - (piece_mask >> 3),      // vertical

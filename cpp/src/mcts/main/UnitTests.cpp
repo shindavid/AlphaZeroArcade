@@ -137,7 +137,7 @@ class ManagerTest : public testing::Test {
   const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
-    return manager_->search();
+    return manager_->search().results;
   }
 
   Node* get_node_by_index(node_pool_index_t index) {

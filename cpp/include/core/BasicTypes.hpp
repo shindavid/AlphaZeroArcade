@@ -32,10 +32,18 @@ using nn_evaluation_sequence_id_t = int64_t;
 // instead awaits an explicit notification from the thread that its hibernation is over. An example
 // use case for this is for a human player waiting for a TUI input. We don't know how long the
 // human will take to respond, so we don't want to waste CPU cycles polling for it.
+//
+// kDrop indicates that the current thread should be dropped. This is used in the context of
+// multithreaded search: the first search thread to process a state will return kYield with
+// extra_enqueue_count = n > 0. This spawns n extra threads to process the same state. When the
+// multi-threaded search is complete, the thread that finishes the job will return kContinue, and
+// the other n will return kDrop. The GameServer will then drop the n threads, going back to only
+// have one copy of the GameSlot in the queue.
 enum yield_instruction_t : int8_t {
   kContinue,
   kYield,
-  kHibernate
+  kHibernate,
+  kDrop
 };
 
 }  // namespace core
