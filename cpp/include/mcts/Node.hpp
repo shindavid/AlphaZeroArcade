@@ -1,17 +1,14 @@
 #pragma once
 
-#include <condition_variable>
-#include <cstdint>
-#include <iterator>
-#include <memory>
-#include <mutex>
-
 #include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/AllocPool.hpp>
+
+#include <cstdint>
+#include <mutex>
 
 namespace mcts {
 
