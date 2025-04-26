@@ -104,10 +104,6 @@ class OthelloSpec(GameSpec):
         '--mean-noisy-moves': 4,
     }
 
-    rating_options = {
-        '-p': 50,  # edax player hogs too much CPU/memory, so limit parallelism
-    }
-
     # NOTE: we set -n for the rating player because:
     #
     # 1. It improves performance when running a small number of games (as we do for rating)

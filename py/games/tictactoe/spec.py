@@ -70,16 +70,8 @@ class TicTacToeSpec(GameSpec):
         minibatches_per_epoch=64,
     )
 
-    # Tic-tac-toe is so simple that most nn evals end up hitting the cache. As a result, the
-    # binary tends to be CPU-bound, rather than GPU-bound. Using the default parallelism of 256
-    # leads to CPU-starving, so we drop it.
     training_options = {
-        '-p': 16,
         '--mean-noisy-moves': 2,
-    }
-
-    rating_options = {
-        '-p': 64,  # see above comment
     }
 
     rating_player_options = {

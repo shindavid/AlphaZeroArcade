@@ -74,14 +74,6 @@ class StochasticNimSpec(GameSpec):
         minibatches_per_epoch=64,
     )
 
-    training_options = {
-        '-p': 4,
-    }
-
-    rating_options = {
-        '-p': 4,
-    }
-
     rating_player_options = {
         '-i': 100,
         '--starting-move-temp': 0,  # zero-move-temp so we don't do silly misplays
