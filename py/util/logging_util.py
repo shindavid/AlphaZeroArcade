@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import datetime
 import logging
+from logging.handlers import QueueHandler, QueueListener
 import os
 import queue
 import sys
@@ -36,37 +37,9 @@ class LoggingParams:
                 cmd.append(module)
 
 
-class QueueStream:
-    def __init__(self):
-        self.log_queue = queue.Queue()
-
-    def write(self, msg):
-        self.log_queue.put(msg)
-
-    def flush(self):
-        pass  # This could be implemented if needed
-
-
-class CustomFormatter(logging.Formatter):
-    """
-    Python's logging module only supports second-level precision. This class allows for finer
-    precision.
-    """
-
-    # def format(self, record):
-    #     record.thread_id = threading.get_ident()
-    #     return super(CustomFormatter, self).format(record)
-
-    def formatTime(self, record, datefmt):
-        dt = datetime.datetime.fromtimestamp(record.created)
-        formatted_time = dt.strftime(datefmt)
-        return formatted_time
-
-
-class NonErrorStreamHandler(logging.StreamHandler):
-    def emit(self, record):
-        if record.levelno < logging.ERROR:
-            super().emit(record)
+# Module-level queue and listener
+_log_queue = queue.Queue(-1)
+_listener: QueueListener | None = None
 
 
 def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
@@ -82,18 +55,21 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
     If filename is provided, then the logger will additionally log to the file, using the specified
     mode: 'a' (default) or 'w'.
     """
-    debug = params.debug if params else False
-    level = logging.DEBUG if debug else logging.INFO
+    global _listener
 
+    # Determine log level
+    level = logging.DEBUG if (params and params.debug) else logging.INFO
+
+    # Build formatter
     custom_datefmt = '%Y-%m-%d %H:%M:%S.%f'
     fmt = '%(asctime)s [%(levelname)s] %(message)s'
     if prefix:
         fmt = f'{prefix} {fmt}'
-    formatter = CustomFormatter(fmt, datefmt=custom_datefmt)
+    formatter = logging.Formatter(fmt, datefmt=custom_datefmt)
 
-    handlers = []
+    # Build actual handlers list
+    handlers: list[logging.Handler] = []
     if filename:
-        # Create a file handler and add it to the logger
         directory = os.path.dirname(filename)
         if directory:
             os.makedirs(directory, exist_ok=True)
@@ -102,19 +78,38 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
         file_handler.setFormatter(formatter)
         handlers.append(file_handler)
 
+    # stderr for ERROR+
     error_handler = logging.StreamHandler(sys.stderr)
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
-
-    non_error_handler = NonErrorStreamHandler(sys.stdout)
-    non_error_handler.setLevel(logging.DEBUG)
-    non_error_handler.setFormatter(formatter)
-
     handlers.append(error_handler)
+
+    # stdout for BELOW ERROR
+    non_error_handler = logging.StreamHandler(sys.stdout)
+    non_error_handler.setLevel(logging.DEBUG)
+    non_error_handler.addFilter(lambda record: record.levelno < logging.ERROR)
+    non_error_handler.setFormatter(formatter)
     handlers.append(non_error_handler)
 
-    logging.basicConfig(level=level, handlers=handlers)
+    # Reconfigure root logger to use queue
+    root = logging.getLogger()
+    root.setLevel(level)
 
-    if params.debug_module is not None:
+    # Remove any existing handlers
+    for h in list(root.handlers):
+        root.removeHandler(h)
+
+    # Attach the QueueHandler
+    queue_handler = QueueHandler(_log_queue)
+    root.addHandler(queue_handler)
+
+    # Set per-module debug levels if requested
+    if params and params.debug_module:
         for module in params.debug_module:
             logging.getLogger(module).setLevel(logging.DEBUG)
+
+    # Start or restart the listener
+    if _listener:
+        _listener.stop()
+    _listener = QueueListener(_log_queue, *handlers, respect_handler_level=True)
+    _listener.start()

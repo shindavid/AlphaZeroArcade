@@ -44,7 +44,6 @@ from util.repo_util import Repo
 
 import argparse
 import os
-import packaging.tags   # ChatGPT's recommendation to avoid rare logging deadlock
 
 
 def load_args():

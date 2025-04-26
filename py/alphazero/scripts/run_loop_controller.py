@@ -13,7 +13,6 @@ from util.repo_util import Repo
 import argparse
 import logging
 import os
-import packaging.tags   # ChatGPT's recommendation to avoid rare logging deadlock
 from typing import Optional
 
 
