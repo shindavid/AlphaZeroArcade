@@ -79,8 +79,6 @@ class BuildParams:
         if loop_controller:
             if self.debug_build:
                 cmd.append('--debug-build')
-            if self.binary_path != defaults.binary_path:
-                cmd.extend(['--binary-path', self.binary_path])
             if self.ffi_lib_path != defaults.ffi_lib_path:
                 cmd.extend(['--ffi-lib-path', self.ffi_lib_path])
             if self.override_binary:
