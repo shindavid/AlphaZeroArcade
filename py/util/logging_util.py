@@ -37,6 +37,17 @@ class LoggingParams:
                 cmd.append(module)
 
 
+class CustomFormatter(logging.Formatter):
+    """
+    Python's logging module only supports second-level precision. This class allows for finer
+    precision.
+    """
+    def formatTime(self, record, datefmt):
+        dt = datetime.datetime.fromtimestamp(record.created)
+        formatted_time = dt.strftime(datefmt)
+        return formatted_time
+
+
 # Module-level queue and listener
 _log_queue = queue.Queue(-1)
 _listener: QueueListener | None = None
@@ -75,7 +86,7 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
     fmt = '%(asctime)s [%(levelname)s] %(message)s'
     if prefix:
         fmt = f'{prefix} {fmt}'
-    formatter = logging.Formatter(fmt, datefmt=custom_datefmt)
+    formatter = CustomFormatter(fmt, datefmt=custom_datefmt)
 
     # Build actual handlers list
     handlers: list[logging.Handler] = []
