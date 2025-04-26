@@ -1,6 +1,7 @@
 from .x_var_logic import XVarSelector, make_x_df
 
 from alphazero.dashboard.benchmark_plotting import BenchmarkPlotter
+from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -18,9 +19,15 @@ from typing import Dict, List
 class EvaluationData:
     def __init__(self, run_params: RunParams, benchmark_tag: str):
         self.tag = run_params.tag
-        self.benchmark_tag = benchmark_tag
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.df = self.make_df(organizer, benchmark_tag)
+
+        x_df = make_x_df(organizer)
+        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
+        self.valid = len(self.df) > 0
+
+    def make_df(self, organizer: DirectoryOrganizer, benchmark_tag: str):
         try:
             evaluator = Evaluator(organizer, benchmark_tag)
             eval_rating_data = evaluator.read_ratings_from_db()
@@ -29,18 +36,54 @@ class EvaluationData:
             self.valid = False
             return
 
-        self.evaluated_gens = np.array([ia.agent.gen for ia in eval_rating_data.evaluated_iagents])
-        self.evaluated_ratings = eval_rating_data.ratings
-        self.eval_tag = eval_rating_data.tag
+        evaluated_gens = np.array([ia.agent.gen for ia in eval_rating_data.evaluated_iagents])
+        evaluated_ratings = eval_rating_data.ratings
+        sorted_ix = np.argsort(evaluated_gens)
 
-        sorted_ix = np.argsort(self.evaluated_gens)
-        self.df = pd.DataFrame({
-            "mcts_gen": self.evaluated_gens[sorted_ix],
-            "rating": self.evaluated_ratings[sorted_ix]
+        df = pd.DataFrame({
+            "mcts_gen": evaluated_gens[sorted_ix],
+            "rating": evaluated_ratings[sorted_ix]
         })
+
+        return df
+
+class BenchmarkData:
+    def __init__(self, run_params: RunParams):
+        self.tag = run_params.tag
+
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.df = self.make_df(organizer)
+
         x_df = make_x_df(organizer)
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
         self.valid = len(self.df) > 0
+
+    def make_df(self, organizer: DirectoryOrganizer):
+        try:
+            benchmarker = Benchmarker(organizer)
+            benchmark_rating_data = benchmarker.read_ratings_from_db()
+        except Exception as e:
+            print(f"Error loading benchmark for {self.tag}: {e}")
+            self.valid = False
+            return
+
+        benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
+        benchmark_ratings = benchmark_rating_data.ratings
+        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in benchmark_rating_data.committee]
+
+        sorted_ix = np.argsort(benchmark_gens)
+        gens_sorted = benchmark_gens[sorted_ix]
+        ratings_sorted = benchmark_ratings[sorted_ix]
+
+        df = pd.DataFrame({
+            "mcts_gen": gens_sorted,
+            "rating": ratings_sorted
+        })
+        df['is_committee'] = False
+        df.loc[df['mcts_gen'].isin(committee_gens), 'is_committee'] = True
+        df = df[df['is_committee'] == True]
+
+        return df
 
 
 def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[EvaluationData]:
@@ -53,30 +96,35 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
     return data_list
 
 
-class EvaluationPlotter:
-    def __init__(self, data_list: List[EvaluationData]):
-        self.x_selector = XVarSelector([data.df for data in data_list])
+class Plotter:
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
+        self.benchmark_tag = benchmark_data.tag
+        self.x_selector = XVarSelector([data.df for data in (benchmark_data, *data_list)])
         self.sources: Dict[str, ColumnDataSource] = {}
+        self.min_y = 0
         self.max_y = 0
-        self.load(data_list)
+        self.load(data_list, benchmark_data)
         self.plotted_labels = set()
         self.figure = self.make_figure()
 
-    def load(self, data_list: List[EvaluationData]):
+    def load(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
         self.data_list = data_list
-        for data in data_list:
+        self.benchmark_data = benchmark_data
+        for data in (benchmark_data, *data_list):
             df = data.df
             source = ColumnDataSource(df)
             source.data['y'] = df['rating']
             self.x_selector.init_source(source)
             self.sources[data.tag] = source
             self.max_y = max(self.max_y, max(df['rating']))
+            self.min_y = min(self.min_y, min(df['rating']))
 
     def add_lines(self, plot):
         data_list = self.data_list
+        benchmark_data = self.benchmark_data
         n = len(data_list)
-        colors = bokeh_util.get_colors(n)
-        for data, color in zip(data_list, colors):
+        colors = bokeh_util.get_colors(n+1)
+        for data, color in zip((benchmark_data, *data_list), colors):
             label = data.tag
             if label in self.plotted_labels:
                 continue
@@ -84,109 +132,31 @@ class EvaluationPlotter:
             source = self.sources[label]
             plot.line('x', 'y', source=source, line_width=1, color=color, legend_label=label)
 
-
     def make_figure(self):
-        df_eval = self.data.eval_df
+        padding = (self.max_y - self.min_y) * 0.05
+        y_range = [self.min_y - padding, self.max_y + padding]
+        title = f'Evaluation Ratings on benchmark: {self.benchmark_tag}'
+        plot = figure(title=title, x_range=[0, 1], y_range=y_range, y_axis_label='Rating',
+                      active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
 
-        # Instantiate BenchmarkPlotter first
-        benchmark_plotter = BenchmarkPlotter(self.data)
-        if not benchmark_plotter.valid():
-            self.plot = figure(title='No valid benchmark data')
-            self.layout = column(self.plot)
-            return
+        if not self.x_selector.init_plot(plot):
+            return None
 
-        # Use the benchmark's XVarSelector for axis sync
-        self.x_selector = benchmark_plotter.x_selector
+        self.add_lines(plot)
 
-        # Setup eval source and sync x-axis
-        self.eval_source = ColumnDataSource(df_eval)
-        self.x_selector.init_source(self.eval_source)
+        plot.legend.location = 'bottom_right'
+        plot.legend.click_policy = 'hide'
 
-        # Use benchmark plot as base
-        plot = benchmark_plotter.plot
+        radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        # Update plot title for Evaluation
-        plot.title.text = f"Evaluate '{self.data.tag}' against '{self.data.benchmark_tag}'"
-
-        # Calculate x_range
-        x_vals_benchmark = np.asarray(benchmark_plotter.source.data.get('x', []))
-        x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
-
-        combined_x = np.concatenate([x_vals_benchmark, x_vals_eval])
-        if len(combined_x) > 0:
-            x_min, x_max = np.min(combined_x), np.max(combined_x)
-            padding = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
-            plot.x_range.start = x_min - padding
-            plot.x_range.end = x_max + padding
-
-        # Add eval line
-        plot.line('x', 'rating', source=self.eval_source,
-                line_width=1, color='red', legend_label='Evaluation')
-
-        # Adjust y-range to cover both datasets
-        y_min = min(self.data.df["rating"].min(), df_eval["rating"].min()) * 0.9
-        y_max = max(self.data.df["rating"].max(), df_eval["rating"].max()) * 1.2
-        plot.y_range.start = y_min
-        plot.y_range.end = y_max
-
-        # Shared radio group for both sources
-        radio_group = self.x_selector.create_radio_group(
-            [plot], [benchmark_plotter.source, self.eval_source]
-        )
-        self.plot = plot
-        self.layout = column(plot, row(radio_group))
-
-        # Sync markers on x-axis changes
-        old_set_x_index = self.x_selector.set_x_index
-
-        def new_set_x_index(x_index, plots, sources, force_refresh=False):
-            old_set_x_index(x_index, plots, sources, force_refresh)
-            benchmark_plotter.update_markers(self.x_selector.x_column)
-
-            # Recalculate x_range after axis change
-            x_vals_benchmark = np.asarray(benchmark_plotter.source.data.get('x', []))
-            x_vals_eval = np.asarray(self.eval_source.data.get('x', []))
-
-            combined_x = np.concatenate([x_vals_benchmark, x_vals_eval])
-            if len(combined_x) > 0:
-                x_min, x_max = np.min(combined_x), np.max(combined_x)
-                padding = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
-                plot.x_range.start = x_min - padding
-                plot.x_range.end = x_max + padding
-
-        self.x_selector.set_x_index = new_set_x_index
-        benchmark_plotter.update_markers(self.x_selector.x_column)
+        return column(plot, radio_group)
 
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
-    run_params = RunParams(game=game, tag=tag)
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-
-    if not os.path.exists(organizer.eval_db_dir):
-        return figure(title='No evaluation data directory available')
-
-    files = [f for f in os.listdir(organizer.eval_db_dir) if f.endswith('.db')]  # or appropriate extension
-    if not files:
-        return figure(title='No evaluation data files available')
-
-    plots = []
-    for f in files:
-        benchmark_tag = os.path.splitext(f)[0]  # Strip file extension for tag
-
-        data = EvaluationData(run_params, benchmark_tag)
-        if not data.valid:
-            print(f"Skipping invalid data from {f}")
-            continue
-
-        plotter = EvaluationPlotter(data)
-        if not plotter.valid():
-            print(f"Skipping invalid plot from {f}")
-            continue
-
-        plots.append(plotter.layout)
-
-    if not plots:
-        return figure(title='No valid evaluation plots found')
-
-    return column(*plots)
+    data_list = get_eval_data_list(game, benchmark_tag, tags)
+    benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    if not data_list:
+        return figure(title='No data available')
+    plotter = Plotter(data_list, benchmark_data)
+    return plotter.figure
 

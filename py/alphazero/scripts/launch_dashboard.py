@@ -157,7 +157,8 @@ default_tags = tags
 
 def get_benchmark_tags(tag: str) -> List[str]:
     benchmark_tags = []
-    if os.path.isfile(os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')):
+    filename = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')
+    if os.path.isfile(filename):
         benchmark_tags.append(tag)
 
     eval_dir = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'evaluation')
@@ -205,27 +206,6 @@ def ratings(doc):
     doc.add_root(create_ratings_figure(run_params.game, tags))
     doc.theme = theme
 
-def benchmark(doc):
-    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    tags = [t for t in tag_str.split(',') if t]
-    if not tags:
-        return
-
-    current_tag = tags[0]
-
-    select = Select(title="Select Tag", value=current_tag, options=tags)
-    plot_container = create_benchmark_figure(run_params.game, current_tag)
-
-    def update_plot(attr, old, new):
-        new_plot = create_benchmark_figure(run_params.game, select.value)
-        layout.children[1] = new_plot
-
-    select.on_change('value', update_plot)
-
-    layout = column(select, plot_container)
-    doc.add_root(layout)
-    doc.theme = theme
-
 def evaluation(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
     tags = [t for t in tag_str.split(',') if t]
@@ -236,7 +216,7 @@ def evaluation(doc):
     benchmark_tags = list(benchmark_dict.keys())
     current_benchmark_tag = benchmark_tags[0]
 
-    select = Select(title="Select Tag", value=current_benchmark_tag, options=benchmark_tags)
+    select = Select(title="Select Benchmark Tag", value=current_benchmark_tag, options=benchmark_tags)
     plot_container = create_eval_figure(run_params.game, current_benchmark_tag, benchmark_dict[current_benchmark_tag])
 
     def update_plot(attr, old, new):
@@ -274,7 +254,6 @@ class DocumentCollection:
         training = make_doc('training')
         self_play = make_doc('self_play')
         ratings = make_doc('ratings')
-        benchmark = make_doc('benchmark')
         evaluation = make_doc('evaluation')
 
         self.tags = tags
@@ -282,7 +261,6 @@ class DocumentCollection:
         self.training = training
         self.self_play = self_play
         self.ratings = ratings
-        self.benchmark = benchmark
         self.evaluation = evaluation
 
     def get_base_data(self):
@@ -291,7 +269,6 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
-            'benchmark': self.benchmark,
             'evaluation': self.evaluation,
             'tags': usable_tags,
             'init_tags': self.tags,
@@ -302,7 +279,6 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
-            'benchmark': self.benchmark,
             'evaluation': self.evaluation,
             }
         for h, head in enumerate(all_training_heads):
@@ -339,7 +315,6 @@ def bk_worker():
         '/training': training,
         '/self_play': self_play,
         '/ratings': ratings,
-        '/benchmark': benchmark,
         '/evaluation': evaluation,
     }
 

@@ -25,7 +25,6 @@
 
       <a href="#" class="sidebar-link" data-plot-id="self_play">Self-Play</a>
       <a href="#" class="sidebar-link" data-plot-id="ratings">Ratings</a>
-      <a href="#" class="sidebar-link" data-plot-id="benchmark">Benchmark</a>
       <a href="#" class="sidebar-link" data-plot-id="evaluation">Evaluation</a>
 
 
@@ -46,7 +45,6 @@
       {% endfor %}
       <div id="self_play" class="bokeh-plot hidden">{{ self_play|safe }}</div>
       <div id="ratings" class="bokeh-plot hidden">{{ ratings|safe }}</div>
-      <div id="benchmark" class="bokeh-plot hidden">{{ benchmark|safe }}</div>
       <div id="evaluation" class="bokeh-plot hidden">{{ evaluation|safe }}</div>
     </div>
 
