@@ -18,6 +18,7 @@ from util.repo_util import Repo
 
 import argparse
 import os
+import packaging.tags   # ChatGPT's recommendation to avoid rare logging deadlock
 
 
 def load_args():
@@ -49,4 +50,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -36,6 +36,7 @@ import argparse
 from dataclasses import dataclass, fields
 import logging
 import os
+import packaging.tags   # ChatGPT's recommendation to avoid rare logging deadlock
 from pipes import quote
 import signal
 import subprocess
