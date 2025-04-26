@@ -19,6 +19,7 @@ from typing import Dict, List
 class EvaluationData:
     def __init__(self, run_params: RunParams, benchmark_tag: str):
         self.tag = run_params.tag
+        self.benchmark_tag = benchmark_tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
         self.df = self.make_df(organizer, benchmark_tag)
@@ -47,44 +48,6 @@ class EvaluationData:
 
         return df
 
-class BenchmarkData:
-    def __init__(self, run_params: RunParams):
-        self.tag = run_params.tag
-
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-        self.df = self.make_df(organizer)
-
-        x_df = make_x_df(organizer)
-        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
-        self.valid = len(self.df) > 0
-
-    def make_df(self, organizer: DirectoryOrganizer):
-        try:
-            benchmarker = Benchmarker(organizer)
-            benchmark_rating_data = benchmarker.read_ratings_from_db()
-        except Exception as e:
-            print(f"Error loading benchmark for {self.tag}: {e}")
-            self.valid = False
-            return
-
-        benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
-        benchmark_ratings = benchmark_rating_data.ratings
-        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in benchmark_rating_data.committee]
-
-        sorted_ix = np.argsort(benchmark_gens)
-        gens_sorted = benchmark_gens[sorted_ix]
-        ratings_sorted = benchmark_ratings[sorted_ix]
-
-        df = pd.DataFrame({
-            "mcts_gen": gens_sorted,
-            "rating": ratings_sorted
-        })
-        df['is_committee'] = False
-        df.loc[df['mcts_gen'].isin(committee_gens), 'is_committee'] = True
-        df = df[df['is_committee'] == True]
-
-        return df
-
 
 def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[EvaluationData]:
     data_list = []
@@ -97,20 +60,19 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
 
 
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
-        self.benchmark_tag = benchmark_data.tag
-        self.x_selector = XVarSelector([data.df for data in (benchmark_data, *data_list)])
+    def __init__(self, data_list: List[EvaluationData]):
+        self.benchmark_tag = data_list[0].benchmark_tag
+        self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
         self.max_y = 0
-        self.load(data_list, benchmark_data)
+        self.load(data_list)
         self.plotted_labels = set()
         self.figure = self.make_figure()
 
-    def load(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
+    def load(self, data_list: List[EvaluationData]):
         self.data_list = data_list
-        self.benchmark_data = benchmark_data
-        for data in (benchmark_data, *data_list):
+        for data in data_list:
             df = data.df
             source = ColumnDataSource(df)
             source.data['y'] = df['rating']
@@ -121,10 +83,9 @@ class Plotter:
 
     def add_lines(self, plot):
         data_list = self.data_list
-        benchmark_data = self.benchmark_data
         n = len(data_list)
         colors = bokeh_util.get_colors(n+1)
-        for data, color in zip((benchmark_data, *data_list), colors):
+        for data, color in zip(data_list, colors):
             label = data.tag
             if label in self.plotted_labels:
                 continue
@@ -154,9 +115,8 @@ class Plotter:
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
     if not data_list:
         return figure(title='No data available')
-    plotter = Plotter(data_list, benchmark_data)
+    plotter = Plotter(data_list)
     return plotter.figure
 

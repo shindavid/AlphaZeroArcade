@@ -15,36 +15,40 @@ import pandas as pd
 class BenchmarkData:
     def __init__(self, run_params: RunParams):
         self.tag = run_params.tag
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.df = self.make_df(organizer)
+
+        x_df = make_x_df(organizer)
+        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
+        self.valid = len(self.df) > 0
+
+    def make_df(self, organizer: DirectoryOrganizer):
         try:
             benchmarker = Benchmarker(organizer)
-            rating_data = benchmarker.read_ratings_from_db()
+            benchmark_rating_data = benchmarker.read_ratings_from_db()
         except Exception as e:
             print(f"Error loading benchmark for {self.tag}: {e}")
             self.valid = False
             return
 
-        benchmark_gens = np.array([iagent.agent.gen for iagent in rating_data.iagents])
-        benchmark_ratings = rating_data.ratings
-        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in rating_data.committee]
-        latest_gen = organizer.get_latest_model_generation()
+        benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
+        benchmark_ratings = benchmark_rating_data.ratings
+        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in benchmark_rating_data.committee]
 
         sorted_ix = np.argsort(benchmark_gens)
         gens_sorted = benchmark_gens[sorted_ix]
         ratings_sorted = benchmark_ratings[sorted_ix]
 
-        self.df = pd.DataFrame({
+        df = pd.DataFrame({
             "mcts_gen": gens_sorted,
             "rating": ratings_sorted
         })
+        df['is_committee'] = False
+        df.loc[df['mcts_gen'].isin(committee_gens), 'is_committee'] = True
+        df = df[df['is_committee'] == True]
 
-        x_df = make_x_df(organizer)
-        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
-        self.committee_gens = committee_gens
-        self.benchmark_gens = benchmark_gens
-        self.latest_gen = latest_gen
-        self.valid = len(self.df) > 0
+        return df
 
 
 class BenchmarkPlotter:
