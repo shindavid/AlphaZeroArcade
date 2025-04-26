@@ -61,9 +61,11 @@ class GameServerProxy {
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    void step();
+    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
+    // true if hibernating.
+    void step(int& enqueue_count, bool& hibernate);
+
     bool game_started() const { return game_started_; }
-    yield_instruction_t yield_state() const { return yield_state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -87,7 +89,10 @@ class GameServerProxy {
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_;
-    yield_instruction_t yield_state_;
+    bool mid_yield_;
+
+    // Used for synchronization in multithreaded case
+    std::atomic<int> pending_drop_count_ = 0;
   };
 
   class SharedData {
@@ -109,7 +114,7 @@ class GameServerProxy {
     bool running() const { return running_; }
 
     GameSlot* next();  // returns nullptr if ready to shut down
-    void enqueue(GameSlot*);
+    void enqueue(GameSlot*, int count);
 
     void handle_start_game(const GeneralPacket& packet);
     void handle_state_change(const GeneralPacket& packet);
