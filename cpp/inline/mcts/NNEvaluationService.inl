@@ -348,7 +348,7 @@ void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
 
   core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
-  stats.search_thread_stats.normalize(core::Globals::num_game_threads);
+  stats.calibrate(core::Globals::num_game_threads);
 
   int64_t cache_hits = stats.search_thread_stats.cache_hits;
   int64_t cache_misses = stats.search_thread_stats.cache_misses;
