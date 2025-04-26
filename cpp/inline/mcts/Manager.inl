@@ -589,12 +589,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
         standard_backprop(context, false);
       }
 
-      lock.lock();
       edge->state = Node::kExpanded;
-      if (multithreaded()) {
-        lock.unlock();
-        node->cv().notify_all();
-      }
       context.visit_node = nullptr;
       context.mid_visit = false;
       return core::kContinue;
@@ -617,13 +612,14 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   if (context.expanded_new_node) {
     context.visit_node = nullptr;
     context.mid_visit = false;
+    LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
     return core::kContinue;
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
   if (edge->state != Node::kExpanded) {
-    std::unique_lock lock(node->mutex());
-    node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+    LOG_DEBUG("{:>{}}{}()  yielding @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
+    return core::kYield;
   }
 
   Node* child = node->get_child(edge);
@@ -635,6 +631,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
       short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
+      LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
       return core::kContinue;
     }
   }
@@ -652,6 +649,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
   context.visit_node = child;
   context.mid_visit = false;
+  LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
   return core::kContinue;
 }
 
@@ -792,13 +790,9 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
   std::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
   edge->state = Node::kExpanded;
+  lock.unlock();
 
   context.mid_expansion = false;
-  if (multithreaded()) {
-    lock.unlock();
-    parent->cv().notify_all();
-  }
-
   return core::kContinue;
 }
 
