@@ -54,6 +54,16 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
 
     If filename is provided, then the logger will additionally log to the file, using the specified
     mode: 'a' (default) or 'w'.
+
+    Besides these user-visible options, this function serves an important purpose. In python, if you
+    mix logging.getLogger() with threads, you can get deadlocks. See:
+
+    https://bugs.python.org/issue6721
+
+    This function sets up a QueueHandler and QueueListener to prevent this deadlock. To get this
+    benefit, you must call this function before any threads are created. Note that you can call this
+    function a second time to reconfigure the logger, if for example the filename you want to pass
+    into this function is not known until after a thread is spawned.
     """
     global _listener
 
