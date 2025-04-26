@@ -437,13 +437,12 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-int GameServer<Game>::GameSlot::step() {
-  int enqueue_count = 1;
+void GameServer<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(enqueue_count)) {
+    if (step_non_chance(enqueue_count, hibernate)) {
       pre_step();
     } else {
-      return enqueue_count;
+      return;
     }
   }
 
@@ -452,7 +451,6 @@ int GameServer<Game>::GameSlot::step() {
       pre_step();
     }
   }
-  return enqueue_count;
 }
 
 template <concepts::Game Game>
@@ -512,7 +510,7 @@ bool GameServer<Game>::GameSlot::step_chance() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
+bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hibernate) {
   Player* player = players_[active_seat_];
   ActionRequest request(state_history_.current(), valid_actions_);
   request.play_noisily = noisy_mode_;
@@ -525,6 +523,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
   switch (response.yield_instruction) {
     case kContinue: {
       if (pending_drop_count_ > 0) {
+        // TODO: mark that we already got the response, and don't bother calling
+        // get_action_response() again on the rebound?
         enqueue_count = 1;
         return false;
       }
@@ -540,6 +540,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count) {
     case kHibernate: {
       mid_yield_ = true;
       enqueue_count = 0;
+      hibernate = true;
       return false;
     }
     case kDrop: {
@@ -710,7 +711,9 @@ void GameServer<Game>::GameThread::run() {
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    int enqueue_count = slot->step();
+    int enqueue_count = 1;
+    bool hibernate = false;
+    slot->step(enqueue_count, hibernate);
 
     bool dropped = false;
     if (slot->game_ended()) {
@@ -721,7 +724,7 @@ void GameServer<Game>::GameThread::run() {
       }
     }
 
-    if (!dropped) shared_data_.enqueue(slot, enqueue_count);
+    if (!dropped && !hibernate) shared_data_.enqueue(slot, enqueue_count);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);

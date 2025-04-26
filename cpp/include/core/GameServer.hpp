@@ -136,7 +136,10 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    int step();  // return number of times we should enqueue the slot
+    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
+    // true if hibernating.
+    void step(int& enqueue_count, bool& hibernate);
+
     bool start_game();
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
@@ -148,9 +151,10 @@ class GameServer
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance();
 
-    // Sets enqueue_count to the number of times this slot should be enqueued.
+    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
+    // true if hibernating.
     // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_non_chance(int& enqueue_count);
+    bool step_non_chance(int& enqueue_count, bool& hibernate);
 
     void handle_terminal(const ValueTensor& outcome);
 
