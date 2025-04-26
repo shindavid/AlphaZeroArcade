@@ -170,7 +170,7 @@ class Node {
       index_vec_t edge_index_remappings_;
     };
 
-    LookupTable(mutex_cv_vec_sptr_t mutex_cv_pool);
+    LookupTable(mutex_vec_sptr_t mutex_pool);
     LookupTable(const LookupTable&) = delete;
     LookupTable& operator=(const LookupTable&) = delete;
 
@@ -201,15 +201,14 @@ class Node {
 
     int get_random_mutex_id() const;
     std::mutex& get_mutex(int mutex_id);
-    std::condition_variable& get_cv(int mutex_id);
 
    private:
     friend class Defragmenter;
     map_t map_;
     util::AllocPool<Edge> edge_pool_;
     util::AllocPool<Node> node_pool_;
-    mutex_cv_vec_sptr_t mutex_cv_pool_;
-    const int mutex_cv_pool_size_;
+    mutex_vec_sptr_t mutex_pool_;
+    const int mutex_pool_size_;
     mutable std::mutex map_mutex_;
   };
 
@@ -248,7 +247,6 @@ class Node {
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
   std::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
-  std::condition_variable& cv() const { return lookup_table_->get_cv(mutex_id_); }
 
   void initialize_edges();
 

@@ -17,13 +17,13 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const ManagerParams& params,
+Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
                        NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
       manager_id_(next_instance_id_++),
-      lookup_table_(mutex_cv_pool),
+      lookup_table_(mutex_pool),
       root_softmax_temperature_(params.starting_root_softmax_temperature,
         params.ending_root_softmax_temperature,
         params.root_softmax_temperature_half_life) {
@@ -54,12 +54,12 @@ Manager<Game>::Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const Mana
 
 template <core::concepts::Game Game>
 Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
-    : Manager(true, std::make_shared<mutex_cv_vec_t>(1), params, service) {}
+    : Manager(true, std::make_shared<mutex_vec_t>(1), params, service) {}
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(mutex_cv_vec_sptr_t& mutex_cv_pool, const ManagerParams& params,
+Manager<Game>::Manager(mutex_vec_sptr_t& mutex_pool, const ManagerParams& params,
                        NNEvaluationServiceBase* service)
-    : Manager(true, mutex_cv_pool, params, service) {}
+    : Manager(true, mutex_pool, params, service) {}
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {

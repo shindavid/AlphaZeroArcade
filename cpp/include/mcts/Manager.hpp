@@ -16,7 +16,6 @@
 #include <boost/circular_buffer.hpp>
 
 #include <array>
-#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <vector>
@@ -204,7 +203,6 @@ class Manager {
   // is still processing the search results.
   struct StateMachine {
     mutable std::mutex mutex;
-    std::condition_variable cv;
     boost::circular_buffer<core::search_context_id_t> available_context_ids;
     core::search_context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
@@ -226,11 +224,11 @@ class Manager {
    * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
    * for testing.
    *
-   * Can optionally pass a mutex_cv_pool to be used by the nodes. If not provided, the Manager will
+   * Can optionally pass a mutex_pool to be used by the nodes. If not provided, the Manager will
    * create a separate single-element mutex-pool.
    */
   Manager(const ManagerParams& params, NNEvaluationServiceBase* service = nullptr);
-  Manager(mutex_cv_vec_sptr_t& mutex_cv_pool, const ManagerParams& params,
+  Manager(mutex_vec_sptr_t& mutex_pool, const ManagerParams& params,
           NNEvaluationServiceBase* service = nullptr);
 
   ~Manager();
@@ -258,7 +256,7 @@ class Manager {
   using search_context_vec_t = std::vector<SearchContext>;
   using search_context_id_queue_t = std::queue<core::search_context_id_t>;
 
-  Manager(bool dummy, mutex_cv_vec_sptr_t mutex_cv_pool, const ManagerParams& params,
+  Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
           NNEvaluationServiceBase* service);
 
   // Assumes state_matchine_.mutex is held
