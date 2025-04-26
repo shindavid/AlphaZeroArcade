@@ -13,7 +13,7 @@ to increase the number of MCTS simulations.
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.servers.gaming.self_play_server import SelfPlayServer, SelfPlayServerParams
-from util.logging_util import LoggingParams
+from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
 
@@ -40,6 +40,12 @@ def main():
     build_params = BuildParams.create(args)
 
     os.chdir(Repo.root())
+
+    # The logger will actually be reconfigured later in the server. We have this call here to cover
+    # any logging that happens before that point. Also, configure_logger() contains a key piece of
+    # logic to prevent logging race-condition deadlocks, which needs to be set up before any threads
+    # are spawned, making it important to call this here.
+    configure_logger(params=logging_params)
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()
