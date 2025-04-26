@@ -1,9 +1,11 @@
+import atexit
 from dataclasses import dataclass, field
 import datetime
 import logging
 from logging.handlers import QueueHandler, QueueListener
 import os
 import queue
+import signal
 import sys
 from typing import List, Optional
 
@@ -51,6 +53,38 @@ class CustomFormatter(logging.Formatter):
 # Module-level queue and listener
 _log_queue = queue.Queue(-1)
 _listener: QueueListener | None = None
+
+
+def _shutdown_logging():
+    """
+    Flush and stop the logging listener, then shutdown the logging system.
+    We temporarily ignore SIGINT/SIGTERM so that your signal handlers
+    (which raise exceptions) can't fire in the middle of shutdown.
+    """
+    global _listener
+
+    # 1) Temporarily ignore SIGINT and SIGTERM
+    old_int = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    old_term = signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+    try:
+        if _listener:
+            try:
+                _listener.stop()   # this will inject the sentinel and join the thread
+            except Exception:
+                pass
+    finally:
+        # 2) Restore whatever handlers you had before
+        signal.signal(signal.SIGINT, old_int)
+        signal.signal(signal.SIGTERM, old_term)
+
+    # 3) Shutdown the rest of the logging system
+    logging.shutdown()
+
+# Ensure clean shutdown on normal exit or SIGINT/SIGTERM
+atexit.register(_shutdown_logging)
+for _sig in (signal.SIGINT, signal.SIGTERM):
+    signal.signal(_sig, lambda *args, **kw: _shutdown_logging())
 
 
 def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
