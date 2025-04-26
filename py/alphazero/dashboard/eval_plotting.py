@@ -12,66 +12,80 @@ from bokeh.layouts import gridplot, column, row
 import numpy as np
 import os
 import pandas as pd
+from typing import Dict, List
 
 
 class EvaluationData:
     def __init__(self, run_params: RunParams, benchmark_tag: str):
         self.tag = run_params.tag
+        self.benchmark_tag = benchmark_tag
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
         try:
             evaluator = Evaluator(organizer, benchmark_tag)
-            benchmark_rating_data = evaluator._benchmark.read_ratings_from_db()
             eval_rating_data = evaluator.read_ratings_from_db()
         except Exception as e:
             print(f"Error loading evaluation for {self.tag}: {e}")
             self.valid = False
             return
 
-        self.benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
-        self.benchmark_tag = benchmark_rating_data.tag
-        self.benchmark_ratings = benchmark_rating_data.ratings
-        self.committee_gens = [evaluator._benchmark.indexed_agents[ix].agent.gen for ix in benchmark_rating_data.committee]
-
         self.evaluated_gens = np.array([ia.agent.gen for ia in eval_rating_data.evaluated_iagents])
         self.evaluated_ratings = eval_rating_data.ratings
         self.eval_tag = eval_rating_data.tag
 
-        sorted_ix = np.argsort(self.benchmark_gens)
-        self.df = pd.DataFrame({
-            "mcts_gen": self.benchmark_gens[sorted_ix],
-            "rating": self.benchmark_ratings[sorted_ix]
-        })
-
-        if self.benchmark_tag:
-            benchmark_run_params = RunParams(game=run_params.game, tag=self.benchmark_tag)
-            benchmark_organizer = DirectoryOrganizer(benchmark_run_params, base_dir_root='/workspace')
-            benchmark_x_df = make_x_df(benchmark_organizer)
-            self.df = self.df.merge(benchmark_x_df, left_on="mcts_gen", right_index=True, how="left")
-
         sorted_ix = np.argsort(self.evaluated_gens)
-        self.eval_df = pd.DataFrame({
+        self.df = pd.DataFrame({
             "mcts_gen": self.evaluated_gens[sorted_ix],
             "rating": self.evaluated_ratings[sorted_ix]
         })
         x_df = make_x_df(organizer)
-        self.eval_df = self.eval_df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
-
+        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
         self.valid = len(self.df) > 0
 
 
+def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[EvaluationData]:
+    data_list = []
+    for tag in tags:
+        run_params = RunParams(game=game, tag=tag)
+        data = EvaluationData(run_params, benchmark_tag)
+        if data.valid:
+            data_list.append(data)
+    return data_list
+
+
 class EvaluationPlotter:
-    def __init__(self, data: EvaluationData):
-        self.data = data
-        self.color = bokeh_util.get_colors(1)[0]
-        self.plot = None
-        self.layout = None
-        self.make_plot()
+    def __init__(self, data_list: List[EvaluationData]):
+        self.x_selector = XVarSelector([data.df for data in data_list])
+        self.sources: Dict[str, ColumnDataSource] = {}
+        self.max_y = 0
+        self.load(data_list)
+        self.plotted_labels = set()
+        self.figure = self.make_figure()
 
-    def valid(self):
-        return self.data.valid
+    def load(self, data_list: List[EvaluationData]):
+        self.data_list = data_list
+        for data in data_list:
+            df = data.df
+            source = ColumnDataSource(df)
+            source.data['y'] = df['rating']
+            self.x_selector.init_source(source)
+            self.sources[data.tag] = source
+            self.max_y = max(self.max_y, max(df['rating']))
 
-    def make_plot(self):
+    def add_lines(self, plot):
+        data_list = self.data_list
+        n = len(data_list)
+        colors = bokeh_util.get_colors(n)
+        for data, color in zip(data_list, colors):
+            label = data.tag
+            if label in self.plotted_labels:
+                continue
+            self.plotted_labels.add(label)
+            source = self.sources[label]
+            plot.line('x', 'y', source=source, line_width=1, color=color, legend_label=label)
+
+
+    def make_figure(self):
         df_eval = self.data.eval_df
 
         # Instantiate BenchmarkPlotter first
@@ -143,7 +157,8 @@ class EvaluationPlotter:
         self.x_selector.set_x_index = new_set_x_index
         benchmark_plotter.update_markers(self.x_selector.x_column)
 
-def create_eval_figure(game: str, tag: str):
+
+def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     run_params = RunParams(game=game, tag=tag)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 

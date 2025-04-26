@@ -88,6 +88,8 @@ class Benchmarker:
         if self.has_no_matches():
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
+            if last_gen is None or last_gen <2:
+                return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
             self._arena._add_agent(gen0_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
             self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)

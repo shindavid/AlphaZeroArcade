@@ -17,7 +17,7 @@ class LoopControllerParams:
     benchmark_tag: Optional[str] = None
     benchmark_until_gen_gap: int = 25
     n_games_per_benchmark: int = 100
-    target_elo_gap: float = 100
+    target_elo_gap: float = 500
     ignore_sigint: bool = False
     simulate_cloud: bool = False
 
@@ -69,7 +69,6 @@ class LoopControllerParams:
                            '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
-
         group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
                            help='simulate cloud environment (default: %(default)s)')
 

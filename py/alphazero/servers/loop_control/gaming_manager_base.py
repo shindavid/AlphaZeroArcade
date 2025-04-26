@@ -119,6 +119,7 @@ class GamingManagerBase:
                 if status == ServerStatus.DISCONNECTED:
                     break
                 if not conn.aux.work_in_progress():
+                    logger.debug(f'waiting for work to do')
                     self._wait_until_work_exists()
 
                 logger.debug(f"Managing {self._config.server_name}, priority: {table}")
@@ -137,8 +138,11 @@ class GamingManagerBase:
 
     def _wait_until_work_exists(self):
         with self._lock:
-            self._new_work_cond.wait_for(
-                lambda: self.num_evaluated_gens() < self._controller.latest_gen())
+            self._new_work_cond.wait_for(self._has_work)
+
+    def _has_work(self) -> bool:
+        logger.debug(f'num_evaluated_gens={self.num_evaluated_gens()}, latest_gen={self._controller.latest_gen()}')
+        return self.num_evaluated_gens() < self._controller.latest_gen()
 
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
         """

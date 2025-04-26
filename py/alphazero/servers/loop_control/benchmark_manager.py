@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import AgentRole, Match, MatchType
+from alphazero.logic.agent_types import AgentRole, IndexedAgent, Match, MatchType
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
@@ -114,22 +114,27 @@ class BenchmarkManager(GamingManagerBase):
         self._benchmarker = Benchmarker(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {} # ix -> EvalStatus
         self.excluded_agent_indices: IndexSet = IndexSet()
+        self.evaluated_iagents: List[IndexedAgent] = []
 
     def set_priority(self):
         latest_gen = self._controller.organizer.get_latest_model_generation()
-        latest_evaluated_gen = self._latest_evaluated_gen()
-        elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
+        latest_evaluated_gen = self.num_evaluated_gens()
+        if latest_gen is None:
+            elevate = False
+        else:
+            elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
         logger.debug('Benchmark priority: latest_eval_gen=%s, latest_gen=%s, elevate=%s', latest_evaluated_gen, latest_gen, elevate)
         self._controller.set_domain_priority(self._config.domain, elevate)
 
 
     def load_past_data(self):
         benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()
+        self.evaluated_iagents = benchmark_rating_data.iagents
         self.excluded_agent_indices = ~benchmark_rating_data.committee
 
     def num_evaluated_gens(self):
         gen = 0
-        for iagent in self._benchmarker.indexed_agents:
+        for iagent in self.evaluated_iagents:
             if iagent.agent.gen > gen:
                 gen = iagent.agent.gen
         return gen
@@ -159,6 +164,7 @@ class BenchmarkManager(GamingManagerBase):
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
             self._set_ready(conn)
+            logger.info('DONE. No matches available for %s', conn)
             return
 
         gen = self._benchmarker.indexed_agents[ix].agent.gen
@@ -219,8 +225,7 @@ class BenchmarkManager(GamingManagerBase):
             latest_gen = self._controller.organizer.get_latest_model_generation()
             latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
             latest_iagent = self._benchmarker._arena._add_agent(
-                latest_agent, AgentRole.BENCHMARK, expand_matrix=True,
-                db=self._benchmarker.db)
+                latest_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._benchmarker.db)
 
             matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
                                                              excluded_indices=self.excluded_agent_indices)
@@ -323,10 +328,27 @@ class BenchmarkManager(GamingManagerBase):
         self._benchmarker.refresh_ratings()
         committee: IndexSet = self._benchmarker.select_committee(self.target_elo_gap)
         self.excluded_agent_indices = ~committee
+        self.evaluated_iagents = self._benchmarker.indexed_agents
         with self._benchmarker.db.db_lock:
             self._benchmarker.db.commit_ratings(self._benchmarker.indexed_agents,
                                                     self._benchmarker._arena.ratings,
                                                     committee=committee)
+        logger.info(f"Benchmark committee updated.\n committee gens: {[self._benchmarker.indexed_agents[i].agent.gen for i in committee]}")
+
+    def _has_work(self) -> bool:
+        has_new_gen = super()._has_work()
+        has_work = has_new_gen
+        if not has_new_gen:
+            matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
+                                                                      self.target_elo_gap,
+                                                                      self.n_games,
+                                                                      excluded_indices=self.excluded_agent_indices)
+            has_more_matches = len(matches) > 0
+            has_work = has_work or has_more_matches
+
+            if not has_work:
+                logger.info(f"Benchmarking Complete.")
+        return has_work
 
     @property
     def n_games(self):

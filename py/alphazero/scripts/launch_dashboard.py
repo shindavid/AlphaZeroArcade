@@ -11,24 +11,22 @@ from util.py_util import CustomHelpFormatter
 from util.str_util import rreplace
 
 from bokeh.embed import server_document
+from bokeh.layouts import column
+from bokeh.models import Select
 from bokeh.server.server import Server
 from bokeh.themes import Theme
 from flask import Flask, jsonify, render_template, request, session
 from tornado.ioloop import IOLoop
 
 import argparse
+from collections import defaultdict
 from dataclasses import dataclass
 import os
 import secrets
 import sqlite3
 import sys
 from threading import Thread
-from typing import List
-
-from bokeh.models import Select
-from bokeh.layouts import column
-from alphazero.dashboard.benchmark_plotting import create_benchmark_figure
-from alphazero.logic.run_params import RunParams
+from typing import Dict, List
 
 
 @dataclass
@@ -157,6 +155,26 @@ else:
 default_tags = tags
 
 
+def get_benchmark_tags(tag: str) -> List[str]:
+    benchmark_tags = []
+    if os.path.isfile(os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')):
+        benchmark_tags.append(tag)
+
+    eval_dir = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'evaluation')
+    for f in os.listdir(eval_dir):
+        if f.endswith('.db'):
+            benchmark_tags.append(os.path.splitext(f)[0])
+    return benchmark_tags
+
+def get_benchmark_dict(tags) -> Dict[str, List[str]]:
+    tag_dict = {tag: get_benchmark_tags(tag) for tag in tags}
+    benchmark_dict = defaultdict(list)
+    for tag, benchmark_tags in tag_dict.items():
+        for benchmark_tag in benchmark_tags:
+            benchmark_dict[benchmark_tag].append(tag)
+    return benchmark_dict
+
+
 def training_head(head: str):
     def training_inner(doc):
         tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
@@ -214,13 +232,15 @@ def evaluation(doc):
     if not tags:
         return
 
-    current_tag = tags[0]
+    benchmark_dict = get_benchmark_dict(tags)
+    benchmark_tags = list(benchmark_dict.keys())
+    current_benchmark_tag = benchmark_tags[0]
 
-    select = Select(title="Select Tag", value=current_tag, options=tags)
-    plot_container = create_eval_figure(run_params.game, current_tag)
+    select = Select(title="Select Tag", value=current_benchmark_tag, options=benchmark_tags)
+    plot_container = create_eval_figure(run_params.game, current_benchmark_tag, benchmark_dict[current_benchmark_tag])
 
     def update_plot(attr, old, new):
-        new_plot = create_eval_figure(run_params.game, select.value)
+        new_plot = create_eval_figure(run_params.game, select.value, benchmark_dict[select.value])
         layout.children[1] = new_plot
 
     select.on_change('value', update_plot)
