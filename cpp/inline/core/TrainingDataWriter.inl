@@ -68,10 +68,12 @@ void TrainingDataWriter<Game>::add(GameWriteLog_sptr data) {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::shut_down() {
+  LOG_INFO("TrainingDataWriter: shutting down");
   misc_data_.closed = true;
   game_queue_cv_.notify_one();
   if (misc_data_.thread->joinable()) misc_data_.thread->join();
   delete misc_data_.thread;
+  LOG_INFO("TrainingDataWriter: shutdown complete!");
 }
 
 template <concepts::Game Game>
