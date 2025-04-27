@@ -138,6 +138,8 @@ class Arena:
 
         if iagent is not None:
             iagent.roles.update(roles)
+            if db:
+                db.update_agent_roles(iagent)
             return iagent
 
         index = len(self._indexed_agents)

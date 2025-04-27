@@ -179,6 +179,14 @@ class RatingDB:
         conn.commit()
         iagent.db_id = c.lastrowid
 
+    def update_agent_roles(self, iagent: IndexedAgent):
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+
+        agent_roles = ','.join([role.value for role in iagent.roles])
+        c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
+        conn.commit()
+
     @property
     def db_lock(self):
         return self.db_conn_pool._db_lock

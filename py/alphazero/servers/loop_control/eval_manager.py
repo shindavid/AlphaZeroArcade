@@ -141,7 +141,9 @@ class EvalManager(GamingManagerBase):
                     assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
                     self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
                 else:
+                    ix_match_status = self._load_ix_match_status(test_iagent.index)
                     self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
+                                                                           ix_match_status=ix_match_status,
                                                                            status=EvalRequestStatus.REQUESTED)
             conn.aux.needs_new_opponents = True
             self.set_priority()
@@ -172,16 +174,16 @@ class EvalManager(GamingManagerBase):
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
             opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
                 if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
-            chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
+            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.index, estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
             conn.aux.needs_new_opponents = False
 
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
-        next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[-1]
+        next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[0]
         next_opponent_iagent = self._evaluator.indexed_agents[next_opponent_ix]
 
-        data = self._gen_match_request_data( test_iagent, next_opponent_iagent, next_n_games)
+        data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
         conn.socket.send_json(data)
         self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
 

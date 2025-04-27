@@ -107,18 +107,40 @@ class Evaluator:
         logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
 
-    def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int):
+    def gen_matches(self, eval_ix: int, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
         committee_ixs = np.where(self.benchmark_committee)[0]
-        p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in committee_ixs]
+        test_ixs = self.test_agent_ixs()
+        test_peer_ixs = test_ixs[test_ixs != eval_ix]
+        potential_opponent_ixs = np.union1d(committee_ixs, test_peer_ixs)
+        #TODO: exclude the eval agent
+
+
+        p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in potential_opponent_ixs]
         var = np.array([q * (1 - q) for q in p])
         mask = np.zeros(len(var), dtype=bool)
-        committee_ix_played = np.where(np.isin(committee_ixs, opponent_ix_played))[0]
-        mask[committee_ix_played] = True
+        potential_opponents_played = np.where(np.isin(potential_opponent_ixs, opponent_ix_played))[0]
+        mask[potential_opponents_played] = True
         var[mask] = 0
         var = var / np.sum(var)
 
-        sample_ixs = committee_ixs[np.random.choice(len(committee_ixs), p=var, size=n_games)]
+        sample_ixs = potential_opponent_ixs[np.random.choice(len(potential_opponent_ixs), p=var, size=n_games)]
         chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
+
+        if len(chosen_ixs) > top_k:
+            top_k_ixs = np.argsort(num_matches)[-top_k:]
+            top_chosen_ixs = chosen_ixs[top_k_ixs]
+            top_num_matches = num_matches[top_k_ixs]
+            top_match_percent = top_num_matches / np.sum(top_num_matches)
+            tail_matches = np.sum(num_matches) - np.sum(top_num_matches)
+            redistrubution = top_match_percent * tail_matches
+            num_matches = np.round(top_num_matches + redistrubution).astype(int)
+            rounding_error = np.sum(num_matches) - n_games
+            if rounding_error > 0:
+                num_matches[-1] -= rounding_error
+            elif rounding_error < 0:
+                num_matches[-1] += abs(rounding_error)
+            chosen_ixs = top_chosen_ixs
+
         return chosen_ixs, num_matches
 
     def interpolate_ratings(self) -> np.ndarray:

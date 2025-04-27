@@ -90,6 +90,7 @@ class Params:
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
     target_elo_gap: float = default_loop_controller_params.target_elo_gap
     simulate_cloud: bool = default_loop_controller_params.simulate_cloud
+    agent_n_iters: Optional[int] = default_loop_controller_params.agent_n_iters
 
     run_ratings_server: bool = False
     skip_self_play: bool = False
@@ -258,6 +259,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
     if default_loop_controller_params.target_elo_gap != params.target_elo_gap:
         cmd.extend(['--target-elo-gap', str(params.target_elo_gap)])
+    if default_loop_controller_params.agent_n_iters != params.agent_n_iters:
+        cmd.extend(['--agent-n-iters', str(params.agent_n_iters)])
 
     benchmark_tag = get_benchmark_tag(run_params, params)
     if benchmark_tag:

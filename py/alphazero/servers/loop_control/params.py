@@ -12,7 +12,7 @@ class LoopControllerParams:
     model_cfg: str = 'default'
     target_rating_rate: float = 0.1
     n_games_per_evaluation: int = 1000
-    eval_error_threshold: float = 100.0
+    eval_error_threshold: float = 50.0
     agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
     benchmark_tag: Optional[str] = None
     benchmark_until_gen_gap: int = 25
