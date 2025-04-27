@@ -59,8 +59,47 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
     return data_list
 
 
+class BenchmarkData:
+    def __init__(self, run_params: RunParams):
+        self.tag = run_params.tag
+
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.df = self.make_df(organizer)
+
+        x_df = make_x_df(organizer)
+        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
+        self.valid = len(self.df) > 0
+
+    def make_df(self, organizer: DirectoryOrganizer):
+        try:
+            benchmarker = Benchmarker(organizer)
+            benchmark_rating_data = benchmarker.read_ratings_from_db()
+        except Exception as e:
+            print(f"Error loading benchmark for {self.tag}: {e}")
+            self.valid = False
+            return
+
+        benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
+        benchmark_ratings = benchmark_rating_data.ratings
+        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in benchmark_rating_data.committee]
+
+        sorted_ix = np.argsort(benchmark_gens)
+        gens_sorted = benchmark_gens[sorted_ix]
+        ratings_sorted = benchmark_ratings[sorted_ix]
+
+        df = pd.DataFrame({
+            "mcts_gen": gens_sorted,
+            "rating": ratings_sorted
+        })
+        df['is_committee'] = False
+        df.loc[df['mcts_gen'].isin(committee_gens), 'is_committee'] = True
+        df = df[df['is_committee'] == True]
+
+        return df
+
+
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData]):
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData = None):
         self.benchmark_tag = data_list[0].benchmark_tag
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
@@ -68,7 +107,12 @@ class Plotter:
         self.max_y = 0
         self.load(data_list)
         self.plotted_labels = set()
-        self.figure = self.make_figure()
+        if data_list:
+            self.figure = self.make_eval_figure()
+        elif BenchmarkData:
+            self.figure = self.make_benchmark_figure()
+        else:
+            raise ValueError("No data available for plotting")
 
     def load(self, data_list: List[EvaluationData]):
         self.data_list = data_list
@@ -93,7 +137,7 @@ class Plotter:
             source = self.sources[label]
             plot.line('x', 'y', source=source, line_width=1, color=color, legend_label=label)
 
-    def make_figure(self):
+    def make_eval_figure(self):
         padding = (self.max_y - self.min_y) * 0.05
         y_range = [self.min_y - padding, self.max_y + padding]
         title = f'Evaluation Ratings on benchmark: {self.benchmark_tag}'
@@ -112,6 +156,8 @@ class Plotter:
 
         return column(plot, radio_group)
 
+    def make_benchmark_figure(self):
+        pass
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
