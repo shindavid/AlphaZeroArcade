@@ -15,7 +15,7 @@ from typing import List, Iterable, Optional
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
-    role: AgentRole
+    roles: List[AgentRole]
 
 
 @dataclass
@@ -58,9 +58,10 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, gen, n_iters, tag, set_temp_zero, role in c.fetchall():
+        for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
             agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
-            yield DBAgent(agent, agent_id, AgentRole(role))
+            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            yield DBAgent(agent, agent_id, agent_roles)
 
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
                    FROM agents
@@ -70,9 +71,10 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, type_str, strength_param, strength, tag, role in c.fetchall():
+        for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
-            yield DBAgent(agent, agent_id, AgentRole(role))
+            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            yield DBAgent(agent, agent_id, AgentRole(agent_roles))
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
         """
@@ -136,12 +138,10 @@ class RatingDB:
         for i in range(len(iagents)):
             iagent = iagents[i]
             rating = ratings[i]
-            if iagent.role == AgentRole.BENCHMARK:
+            if AgentRole.BENCHMARK in iagent.roles and committee is not None:
                 benchmark_tuples.append((iagent.db_id, rating, int(committee[i])))
-            elif iagent.role == AgentRole.TEST:
+            if AgentRole.TEST in iagent.roles:
                 evaluator_tuples.append((iagent.db_id, rating))
-            else:
-                raise ValueError(f'Unknown agent role: {iagent.role}')
 
         c.executemany('''REPLACE INTO benchmark_ratings (agent_id, rating, is_committee)
                       VALUES (?, ?, ?)''', benchmark_tuples)
@@ -174,7 +174,8 @@ class RatingDB:
             raise ValueError(f'Unknown agent type: {type(agent)}')
 
         insert = '''INSERT INTO agents (sub_id, subtype, role) VALUES (?, ?, ?)'''
-        c.execute(insert, (sub_id, subtype, iagent.role.value))
+        agent_roles = ','.join([role.value for role in iagent.roles])
+        c.execute(insert, (sub_id, subtype, agent_roles))
         conn.commit()
         iagent.db_id = c.lastrowid
 

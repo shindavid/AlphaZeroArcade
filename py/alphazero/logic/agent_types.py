@@ -4,8 +4,7 @@ from util.str_util import make_args_str
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-import numpy as np
+from typing import Optional, Set
 import os
 
 
@@ -94,7 +93,7 @@ class IndexedAgent:
     """
     agent: Agent
     index: ArenaIndex
-    role: AgentRole
+    roles: Set[AgentRole]
     db_id: Optional[AgentDBId] = None
 
 

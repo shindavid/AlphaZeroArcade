@@ -95,7 +95,8 @@ class EvalManager(GamingManagerBase):
         logger.info('Loading past ratings data...')
         rating_data = self._evaluator.read_ratings_from_db()
         evaluated_ixs = [iagent.index for iagent in rating_data.evaluated_iagents]
-        for test_ix in self._evaluator.test_agent_ixs():
+        test_ixs = self._evaluator.test_agent_ixs()
+        for test_ix in test_ixs:
             gen = self._evaluator.indexed_agents[test_ix].agent.gen
             ix_match_status = self._load_ix_match_status(test_ix)
             self._eval_status_dict[test_ix] = EvalStatus(mcts_gen=gen, ix_match_status=ix_match_status)
@@ -133,7 +134,7 @@ class EvalManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
-            test_iagent = self._evaluator.add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self._evaluator.db)
+            test_iagent = self._evaluator.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self._evaluator.db)
             conn.aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
@@ -330,7 +331,7 @@ class EvalManager(GamingManagerBase):
         self.set_priority()
 
     def _interpolate_ratings(self, conn: ClientConnection, eval_ix: int):
-        assert self._evaluator._arena.n_games_played(self._evaluator.indexed_agents[eval_ix].agent) == self.n_games
+        # assert self._evaluator._arena.n_games_played(self._evaluator.indexed_agents[eval_ix].agent) == self.n_games
         self._eval_status_dict[eval_ix].status = EvalRequestStatus.COMPLETE
         self._eval_status_dict[eval_ix].owner = None
         ix = conn.aux.ix

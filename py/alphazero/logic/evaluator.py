@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 
 import logging
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Set
 
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class Evaluator:
         else:
             estimated_rating = np.mean(self.benchmark_ratings)
 
-        test_iagent = self._arena._add_agent(test_agent, AgentRole.TEST, expand_matrix=True, db=self.db)
+        test_iagent = self._arena._add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self.db)
 
         n_games_played = self._arena.n_games_played(test_agent)
         if n_games_played > 0:
@@ -102,7 +102,7 @@ class Evaluator:
                     break
 
         _, interpolated_ratings = self.interpolate_ratings()
-        test_iagents = [ia for ia in self._arena.indexed_agents if ia.role == AgentRole.TEST]
+        test_iagents = [ia for ia in self._arena.indexed_agents if AgentRole.TEST in ia.roles]
         self.db.commit_ratings(test_iagents, interpolated_ratings)
         logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
@@ -139,11 +139,11 @@ class Evaluator:
         return test_ixs, interpolated_ratings
 
     def test_agent_ixs(self) -> np.ndarray:
-        test_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.TEST]
+        test_ixs = [iagent.index for iagent in self._arena.indexed_agents if AgentRole.TEST in iagent.roles]
         return np.array(test_ixs)
 
     def benchmark_agent_ixs(self) -> np.ndarray:
-        benchmark_ixs = [iagent.index for iagent in self._arena.indexed_agents if iagent.role == AgentRole.BENCHMARK]
+        benchmark_ixs = [iagent.index for iagent in self._arena.indexed_agents if AgentRole.BENCHMARK in iagent.roles]
         return np.array(benchmark_ixs)
 
     def read_ratings_from_db(self) -> EvalRatingData:
@@ -155,8 +155,8 @@ class Evaluator:
     def refresh_ratings(self):
         self._arena.refresh_ratings()
 
-    def add_agent(self, agent: Agent, role: AgentRole, expand_matrix: bool=True, db: Optional[RatingDB]=None):
-        return self._arena._add_agent(agent, role, expand_matrix=expand_matrix, db=db)
+    def add_agent(self, agent: Agent, roles: Set[AgentRole], expand_matrix: bool=True, db: Optional[RatingDB]=None):
+        return self._arena._add_agent(agent, roles, expand_matrix=expand_matrix, db=db)
 
     @property
     def benchmark_ratings(self) -> np.ndarray:

@@ -225,7 +225,7 @@ class BenchmarkManager(GamingManagerBase):
             latest_gen = self._controller.organizer.get_latest_model_generation()
             latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
             latest_iagent = self._benchmarker._arena._add_agent(
-                latest_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self._benchmarker.db)
+                latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._benchmarker.db)
 
             matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
                                                              excluded_indices=self.excluded_agent_indices)

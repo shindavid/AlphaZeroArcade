@@ -33,11 +33,9 @@ class Arena:
 
     def load_agents_from_db(self, db: RatingDB, role: Optional[AgentRole]=None):
         for db_agent in db.fetch_agents():
-            if role is not None and db_agent.role != role:
+            if role not in db_agent.roles:
                 continue
-            self._add_agent(db_agent.agent,
-                            role=db_agent.role, db_id=db_agent.db_id,
-                            expand_matrix=False)
+            self._add_agent(db_agent.agent, roles=db_agent.roles, db_id=db_agent.db_id, expand_matrix=False)
         self._expand_matrix()
 
     def load_matches_from_db(self, db: RatingDB, type: Optional[MatchType]=None) -> List[Agent]:
@@ -129,7 +127,7 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def _add_agent(self, agent: Agent, role: AgentRole, db_id: Optional[AgentDBId]=None,
+    def _add_agent(self, agent: Agent, roles: {AgentRole}, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.
@@ -139,10 +137,11 @@ class Arena:
         iagent = self._agent_lookup.get(agent, None)
 
         if iagent is not None:
+            iagent.roles.update(roles)
             return iagent
 
         index = len(self._indexed_agents)
-        iagent = IndexedAgent(agent=agent, index=index, role=role, db_id=db_id)
+        iagent = IndexedAgent(agent=agent, index=index, roles=roles, db_id=db_id)
         self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
 
