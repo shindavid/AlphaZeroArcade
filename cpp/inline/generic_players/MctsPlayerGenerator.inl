@@ -23,7 +23,7 @@ core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
     }
   }
 
-  SharedData_sptr shared_data = std::make_shared<SharedData>(manager_params_);
+  SharedData_sptr shared_data = generate_shared_data();
   vec.push_back(shared_data);
   return generate_helper(shared_data, true);
 }
