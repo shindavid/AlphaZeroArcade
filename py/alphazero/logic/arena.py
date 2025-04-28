@@ -7,7 +7,7 @@ from util.index_set import IndexSet
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 
 @dataclass
@@ -127,7 +127,7 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def _add_agent(self, agent: Agent, roles: {AgentRole}, db_id: Optional[AgentDBId]=None,
+    def _add_agent(self, agent: Agent, roles: Set[AgentRole], db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.

@@ -89,12 +89,12 @@ class Evaluator:
 
         The match generating process follows these steps:
 
-        1. Compute the test agent's probability of winning against each committee member and test agent
+        1. Compute the test agent's probability of winning against each committee member and peer test agent
            in the same run based on the difference in their estimated Elo ratings. By default, the initial
            estimated rating of the test agent is set to be the mean of the committee members' ratings
            if it has not played any matches yet. The initial estimate can be provided by the caller.
            In the MCTSEvaluator, the initial estimate is interpolated using the near by gens' ratings if available.
-        2. Calculate the variance of the win probability for each committee member and test agents using
+        2. Calculate the variance of the win probability for each committee member and peer test agents using
            p * (1 - p), where p is the win probability.
         3. Select opponents in proportion to their win probability variance.
         4. Remove any opponents that the test agent has already played from the sampling pool.

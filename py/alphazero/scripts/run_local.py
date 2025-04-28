@@ -38,6 +38,10 @@ Standard Usage Recipes:
 
 2. Set default benchmark:
 `./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}`
+
+3. Evaluate an existing run without self-play/training:
+`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --skip-self-play`
+    - Make sure either the default benchmark is set or a benchmark tag is specified.
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer

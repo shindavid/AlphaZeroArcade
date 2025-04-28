@@ -89,6 +89,8 @@ class IndexedAgent:
     A dataclass for storing an agent with auxiliary info.
 
     - index refers to the index of the agent in the Arena's data structures.
+    - roles is a set of roles that the agent can play in the arena. An agent could be both a
+      benchmark and a test agent.
     - db_id is the id of the agent in the database. This might be set after initial creation.
     """
     agent: Agent

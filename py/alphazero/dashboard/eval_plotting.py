@@ -1,6 +1,21 @@
+"""
+This module handles the plotting of evaluation data for the "Evaluation" tab in the dashboard.
+
+When runs are evaluated against a benchmark, only their evaluation data is plotted. Benchmark data
+from the reference run (i.e., /output/{game}/{tag}/databases/evaluation/{benchmark_tag}.db) will be
+included only if evaluation data for that benchmark exists.
+
+This design choice helps avoid misleading plots when the benchmark run has not been evaluated on a
+comparable cadence with other runs. For instance, if the benchmark run is evaluated more densely across
+generations, its Elo curve may appear to achieve higher ratings sooner—not because it performed better,
+but because its performance was measured more frequently. This can falsely suggest superior performance
+compared to other runs.
+
+If no other runs have been evaluated against the benchmark, only the benchmark's Elo data will be plotted.
+"""
+
 from .x_var_logic import XVarSelector, make_x_df
 
-from alphazero.dashboard.benchmark_plotting import BenchmarkPlotter
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.evaluator import Evaluator
 from alphazero.logic.run_params import RunParams
@@ -8,10 +23,9 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from util import bokeh_util
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Span
-from bokeh.layouts import gridplot, column, row
+from bokeh.models import ColumnDataSource
+from bokeh.layouts import column
 import numpy as np
-import os
 import pandas as pd
 from typing import Dict, List
 
@@ -81,7 +95,6 @@ class BenchmarkData:
 
         benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
         benchmark_ratings = benchmark_rating_data.ratings
-        committee_gens = [benchmarker.indexed_agents[i].agent.gen for i in benchmark_rating_data.committee]
 
         sorted_ix = np.argsort(benchmark_gens)
         gens_sorted = benchmark_gens[sorted_ix]
@@ -91,28 +104,25 @@ class BenchmarkData:
             "mcts_gen": gens_sorted,
             "rating": ratings_sorted
         })
-        df['is_committee'] = False
-        df.loc[df['mcts_gen'].isin(committee_gens), 'is_committee'] = True
-        df = df[df['is_committee'] == True]
 
         return df
 
 
 class Plotter:
     def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData = None):
-        self.benchmark_tag = data_list[0].benchmark_tag
+        if not data_list:
+            data_list = [benchmark_data]
+            self.benchmark_tag = benchmark_data.tag
+        else:
+            self.benchmark_tag = data_list[0].benchmark_tag
+
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
         self.max_y = 0
         self.load(data_list)
         self.plotted_labels = set()
-        if data_list:
-            self.figure = self.make_eval_figure()
-        elif BenchmarkData:
-            self.figure = self.make_benchmark_figure()
-        else:
-            raise ValueError("No data available for plotting")
+        self.figure = self.make_eval_figure()
 
     def load(self, data_list: List[EvaluationData]):
         self.data_list = data_list
@@ -156,13 +166,10 @@ class Plotter:
 
         return column(plot, radio_group)
 
-    def make_benchmark_figure(self):
-        pass
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    if not data_list:
-        return figure(title='No data available')
-    plotter = Plotter(data_list)
+    benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    plotter = Plotter(data_list, benchmark_data)
     return plotter.figure
 

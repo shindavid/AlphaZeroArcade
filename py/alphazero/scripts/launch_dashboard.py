@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from alphazero.dashboard.benchmark_plotting import create_benchmark_figure
 from alphazero.dashboard.eval_plotting import create_eval_figure
 from alphazero.dashboard.training_plotting import create_training_figure, \
     create_combined_training_figure
