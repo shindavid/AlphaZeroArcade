@@ -70,7 +70,7 @@ class LoopControllerParams:
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
         group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
-                           help='simulate cloud environment (default: %(default)s)')
+                           help='simulate cloud environment')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
