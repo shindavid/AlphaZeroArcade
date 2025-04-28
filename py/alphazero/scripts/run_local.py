@@ -65,9 +65,8 @@ from pipes import quote
 import signal
 import subprocess
 import time
-from typing import Optional
-
 import torch
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)

@@ -41,31 +41,6 @@ class Evaluator:
 
     def eval_agent(self, test_agent: Agent, n_games, error_threshold=100,
                    init_rating_estimate: Optional[float]=None):
-        """
-        Generic evaluation function for all types of agents.
-
-        The opponent selection algorithm is adapted from KataGo:
-        "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).
-
-        The evaluation process follows these steps:
-
-        1. Compute the test agent's probability of winning against each committee member
-           based on the difference in their estimated Elo ratings. By default, the initial estimated rating of
-           the test agent is set to be the mean of the committee members' ratings if it has not
-           played any matches yet. The initial estimate can be provided by the caller. In the MCTSEvaluator,
-           the initial estimate is interpolated using the near by gens' ratings if available.
-        2. Calculate the variance of the win probability for each committee member using
-           p * (1 - p), where p is the win probability.
-        3. Select opponents from the committee in proportion to their win probability variance.
-        4. Remove any opponents that the test agent has already played from the sampling pool.
-        5. After each match, update the test agent's estimated rating. If the new rating
-           deviates beyond `error_threshold` from the original estimate, it indicates that
-           the initial estimate was unreliable. In this case, reset the process and return to step 1.
-        6. If the test agent has played against all committee members or has completed
-           a sufficient number of matches, stop further evaluation.
-        7. Compute the final rating by interpolating from the benchmark committee's ratings
-           before any games were played against the test agent.
-        """
         self._arena.refresh_ratings()
         if init_rating_estimate is not None:
             estimated_rating = init_rating_estimate
@@ -108,12 +83,37 @@ class Evaluator:
                     test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
 
     def gen_matches(self, eval_ix: int, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
+        """
+        The opponent selection algorithm is adapted from KataGo:
+        "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).
+
+        The match generating process follows these steps:
+
+        1. Compute the test agent's probability of winning against each committee member and test agent
+           in the same run based on the difference in their estimated Elo ratings. By default, the initial
+           estimated rating of the test agent is set to be the mean of the committee members' ratings
+           if it has not played any matches yet. The initial estimate can be provided by the caller.
+           In the MCTSEvaluator, the initial estimate is interpolated using the near by gens' ratings if available.
+        2. Calculate the variance of the win probability for each committee member and test agents using
+           p * (1 - p), where p is the win probability.
+        3. Select opponents in proportion to their win probability variance.
+        4. Remove any opponents that the test agent has already played from the sampling pool.
+        5. Pick the top k opponents with the highest number of matches played and redistribute the
+           remaining matches among them. The redistribution is done by calculating the percentage of
+           matches played by each opponent and multiplying it by the number of remaining matches.
+        6. After each match, update the test agent's estimated rating. If the new rating
+           deviates beyond `error_threshold` from the original estimate, it indicates that
+           the initial estimate was unreliable. In this case, reset the process and return to step 1.
+        7. If the test agent has played against all committee members or has completed
+           a sufficient number of matches, stop further evaluation.
+        8. Compute the final rating by interpolating from the benchmark committee's ratings
+           before any games were played against the test agent.
+        """
+
         committee_ixs = np.where(self.benchmark_committee)[0]
         test_ixs = self.test_agent_ixs()
         test_peer_ixs = test_ixs[test_ixs != eval_ix]
         potential_opponent_ixs = np.union1d(committee_ixs, test_peer_ixs)
-        #TODO: exclude the eval agent
-
 
         p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in potential_opponent_ixs]
         var = np.array([q * (1 - q) for q in p])

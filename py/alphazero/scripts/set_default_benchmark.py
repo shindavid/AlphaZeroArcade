@@ -8,7 +8,7 @@ import json
 import os
 import signal
 
-target_elo_gap = 100
+default_target_elo_gap = 100
 
 def save_default_benchmark(game: str, benchmark_tag: str):
     """
@@ -36,7 +36,7 @@ def save_default_benchmark(game: str, benchmark_tag: str):
 def main():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
-    parser.add_argument('--target-elo-gap', type=int, default=100,
+    parser.add_argument('--target-elo-gap', type=int, default=default_target_elo_gap,
                         help='Target ELO gap for benchmarking (default: 100)')
     args = parser.parse_args()
     run_params = RunParams.create(args)
@@ -71,3 +71,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
