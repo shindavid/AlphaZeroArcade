@@ -348,6 +348,8 @@ class BenchmarkManager(GamingManagerBase):
 
             if not has_work:
                 logger.info(f"Benchmarking Complete.")
+                if self._controller.params.task_mode:
+                    self._controller._shutdown_manager.request_shutdown(1)
         return has_work
 
     @property

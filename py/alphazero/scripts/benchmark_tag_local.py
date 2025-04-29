@@ -52,22 +52,7 @@ def main():
     print(f"Running command: {' '.join(cmd)}")
     process = subprocess_util.Popen(cmd, stderr=None, text=True, bufsize=1,
                                     preexec_fn=os.setsid)
-
-    benchmark_complete = False
-    for line in process.stdout:
-        print(line.strip())
-        if "Benchmarking Complete" in line:
-            print("Detected Benchmarking Complete!")
-            benchmark_complete = True
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-            break
-
-    process.wait()
-
-    if benchmark_complete:
-        save_default_benchmark(run_params.game, run_params.tag)
-    else:
-        print("Benchmarking failed.")
+    save_default_benchmark(run_params.game, run_params.tag)
 
 
 if __name__ == "__main__":
