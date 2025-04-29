@@ -44,7 +44,7 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerPar
   if (params.enable_pondering) {
     throw util::CleanException("pondering mode temporarily unsupported");
   }
-  search_contexts_.resize(num_search_threads());
+  contexts_.resize(num_search_threads());
   state_machine_.available_context_ids.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     init_context(i);
@@ -149,7 +149,7 @@ void Manager<Game>::set_search_params(const SearchParams& params) {
 
 template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search() {
-  core::search_context_id_t context_id;
+  core::context_id_t context_id;
 
   SearchResponse response = search_helper(context_id);
   LOG_DEBUG("{:>{}}{}() exit: manager={} state={} instr={} extra={}", "",
@@ -157,7 +157,7 @@ typename Manager<Game>::SearchResponse Manager<Game>::search() {
             (int)state_machine_.state, (int)response.yield_instruction,
             response.extra_enqueue_count);
 
-  search_contexts_[context_id].extra_enqueue_count = 0;
+  contexts_[context_id].extra_enqueue_count = 0;
   recycle_context(context_id);
   return response;
 }
@@ -215,29 +215,29 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(ActionValueTens
 }
 
 template <core::concepts::Game Game>
-core::search_context_id_t Manager<Game>::get_next_context_id() {
+core::context_id_t Manager<Game>::get_next_context_id() {
   // Assumes state_machine_.mutex is held
   util::release_assert(!state_machine_.available_context_ids.empty(), "No available context IDs");
-  core::search_context_id_t id = state_machine_.available_context_ids.front();
+  core::context_id_t id = state_machine_.available_context_ids.front();
   state_machine_.available_context_ids.pop_front();
   return id;
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::recycle_context(core::search_context_id_t id) {
+void Manager<Game>::recycle_context(core::context_id_t id) {
   std::unique_lock lock(state_machine_.mutex);
   state_machine_.available_context_ids.push_back(id);
 }
 
 template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search_helper(
-  core::search_context_id_t& context_id) {
+  core::context_id_t& context_id) {
   std::unique_lock lock(state_machine_.mutex);
   context_id = get_next_context_id();
   LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "", kThreadWhitespaceLength * context_id,
             (uint64_t)this, (int)state_machine_.state, context_id, state_machine_.primary_context_id);
 
-  SearchContext& context = search_contexts_[context_id];
+  SearchContext& context = contexts_[context_id];
 
   if (state_machine_.state == kIdle) {
     if (context_id == state_machine_.primary_context_id) {
@@ -303,7 +303,7 @@ void Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context
   state_machine_.state = kInVisitLoop;
   state_machine_.in_visit_loop_count = num_search_threads();
 
-  for (auto& context2 : search_contexts_) {
+  for (auto& context2 : contexts_) {
     context2.extra_enqueue_count = 0;
     context2.in_visit_loop = true;
   }
@@ -329,9 +329,9 @@ core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchCont
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::init_context(core::search_context_id_t i) {
+void Manager<Game>::init_context(core::context_id_t i) {
   LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * i, __func__);
-  SearchContext& context = search_contexts_[i];
+  SearchContext& context = contexts_[i];
   context.id = i;
   context.eval_request.init(i);
 }

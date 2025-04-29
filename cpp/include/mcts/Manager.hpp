@@ -84,7 +84,7 @@ class Manager {
   };
 
   struct SearchContext {
-    core::search_context_id_t id;
+    core::context_id_t id;
 
     search_path_t search_path;
 
@@ -203,8 +203,8 @@ class Manager {
   // is still processing the search results.
   struct StateMachine {
     mutable std::mutex mutex;
-    boost::circular_buffer<core::search_context_id_t> available_context_ids;
-    core::search_context_id_t primary_context_id = 0;
+    boost::circular_buffer<core::context_id_t> available_context_ids;
+    core::context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
   };
@@ -253,19 +253,19 @@ class Manager {
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 
  private:
-  using search_context_vec_t = std::vector<SearchContext>;
-  using search_context_id_queue_t = std::queue<core::search_context_id_t>;
+  using context_vec_t = std::vector<SearchContext>;
+  using context_id_queue_t = std::queue<core::context_id_t>;
 
   Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
           NNEvaluationServiceBase* service);
 
   // Assumes state_matchine_.mutex is held
-  core::search_context_id_t get_next_context_id();
+  core::context_id_t get_next_context_id();
 
   // Does NOT assume state_machine_.mutex is held
-  void recycle_context(core::search_context_id_t context_id);
+  void recycle_context(core::context_id_t context_id);
 
-  SearchResponse search_helper(core::search_context_id_t& context_id);
+  SearchResponse search_helper(core::context_id_t& context_id);
 
   // Assumes state_matchine_.mutex is held
   //
@@ -278,7 +278,7 @@ class Manager {
   // Assumes state_matchine_.mutex is held
   core::yield_instruction_t mark_as_done_with_visit_loop(SearchContext& context);
 
-  void init_context(core::search_context_id_t);
+  void init_context(core::context_id_t);
   void init_root_info(bool add_noise);
   bool more_search_iterations_needed(Node* root);
   core::yield_instruction_t begin_root_initialization(SearchContext&);
@@ -329,7 +329,7 @@ class Manager {
   RootInfo root_info_;
   post_visit_func_t post_visit_func_ = []() {};
 
-  search_context_vec_t search_contexts_;
+  context_vec_t contexts_;
   StateMachine state_machine_;
   NNEvaluationServiceBase* nn_eval_service_ = nullptr;
 

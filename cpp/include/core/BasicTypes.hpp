@@ -14,7 +14,7 @@ using action_t = int32_t;
 using game_id_t = int64_t;
 using game_thread_id_t = int16_t;
 using game_slot_index_t = int16_t;
-using search_context_id_t = int16_t;
+using context_id_t = int16_t;
 using nn_evaluation_pool_index_t = int32_t;
 using nn_evaluation_sequence_id_t = int64_t;
 
