@@ -31,13 +31,14 @@ Each component has a corresponding launcher script in py/alphazero/scripts/:
 Standard Usage Recipes:
 
 1. Start a new training run:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} [--run-benchmark-server] [--benchmark-tag {tag}]`
-    - If `--run-benchmark-server` is specified, it will create a benchmark committee from itself.
-    - If there is no default benchmark and no specified benchmark, it will create a benchmark committee from itself.
+`./py/alphazero/scripts/run_local.py -g {game} -t {tag} [--benchmark-tag {tag}]`
+    - If there is no default benchmark and no specified benchmark, it will evaluate the new run against itself.
+      This evaluation is achieved by running the benchmark server with a large target-elo-gap.
+      The matches will be saved to 'output/{game}/{tag}/databases/benchmark.db'.
     - Otherwise, it will use the default benchmark or specified benchmark to evaluate the new run.
 
 2. Set default benchmark:
-`./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}`
+`./py/alphazero/scripts/run_benchmarking.py -g {game} -t {tag}`
 
 3. Evaluate an existing run without self-play/training:
 `./py/alphazero/scripts/run_local.py -g {game} -t {tag} --skip-self-play`
@@ -120,7 +121,7 @@ class Params:
         group.add_argument('--skip-self-play', action='store_true',
                             help='Do not run the self-play server')
         group.add_argument('--run-benchmark-server', action='store_true',
-                            help='Run the benchmark server')
+                            help=argparse.SUPPRESS)
 
 
 def load_args():
