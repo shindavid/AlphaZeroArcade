@@ -20,6 +20,7 @@ class LoopControllerParams:
     target_elo_gap: float = 500
     ignore_sigint: bool = False
     simulate_cloud: bool = False
+    task_mode: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -71,6 +72,8 @@ class LoopControllerParams:
                            help=argparse.SUPPRESS)
         group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
                            help='simulate cloud environment')
+        group.add_argument('--task-mode', action='store_true', default=defaults.task_mode,
+                           help='run without self-play/training; exit after task is done.')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
@@ -80,4 +83,3 @@ class LoopControllerParams:
                 cmd.append('--' + f.name)
                 if type(attr) != bool:
                     cmd.append(str(getattr(self, f.name)))
-

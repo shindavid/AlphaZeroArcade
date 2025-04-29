@@ -95,9 +95,9 @@ class Params:
     target_elo_gap: float = default_loop_controller_params.target_elo_gap
     simulate_cloud: bool = default_loop_controller_params.simulate_cloud
     agent_n_iters: Optional[int] = default_loop_controller_params.agent_n_iters
+    task_mode: bool = default_loop_controller_params.task_mode
 
     run_ratings_server: bool = False
-    skip_self_play: bool = False
     run_benchmark_server: bool = False
 
     @staticmethod
@@ -118,8 +118,6 @@ class Params:
                            help='Num cuda devices to use (default: all)')
         group.add_argument('--run-ratings-server', action='store_true',
                             help='Run the ratings server')
-        group.add_argument('--skip-self-play', action='store_true',
-                            help='Do not run the self-play server')
         group.add_argument('--run-benchmark-server', action='store_true',
                             help=argparse.SUPPRESS)
 
@@ -265,6 +263,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--target-elo-gap', str(params.target_elo_gap)])
     if default_loop_controller_params.agent_n_iters != params.agent_n_iters:
         cmd.extend(['--agent-n-iters', str(params.agent_n_iters)])
+    if params.task_mode:
+        cmd.extend(['--task-mode'])
 
     benchmark_tag = get_benchmark_tag(run_params, params)
     if benchmark_tag:
@@ -364,7 +364,7 @@ def main():
     try:
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
-        if not params.skip_self_play:
+        if not params.task_mode:
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
@@ -413,4 +413,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

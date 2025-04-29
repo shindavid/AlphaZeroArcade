@@ -44,9 +44,10 @@ def main():
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--game', run_params.game,
            '--tag', run_params.tag,
-           '--skip-self-play',
+           '--task-mode',
            '--run-benchmark-server',
-           '--target-elo-gap', str(args.target_elo_gap),]
+           '--target-elo-gap', str(args.target_elo_gap),
+           '--benchmarking-mode', str]
 
     print(f"Running command: {' '.join(cmd)}")
     process = subprocess_util.Popen(cmd, stderr=None, text=True, bufsize=1,
@@ -71,4 +72,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

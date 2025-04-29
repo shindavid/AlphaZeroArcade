@@ -111,8 +111,13 @@ class LoopController:
         """
         Entry-point into the LoopController.
         """
+        if self._params.task_mode:
+            loop = self._task_loop
+        else:
+            loop = self._training_loop
+
         try:
-            threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
+            threading.Thread(target=loop, name='main_loop', daemon=True).start()
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
             logger.info('Caught Ctrl-C')
@@ -490,16 +495,11 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    def _main_loop(self):
+    def _training_loop(self):
         try:
-            logger.info('Performing LoopController setup...')
-            self._setup_output_dir()
-            self._copy_binary_file()
-            self._init_socket()
+            self._setup()
             self._self_play_manager.setup()
             self._training_manager.setup()
-            self._output_dir_syncer.start()
-            self._client_connection_manager.start()
 
             if self._organizer.requires_retraining():
                 self._training_manager.retrain_models()
@@ -517,3 +517,22 @@ class LoopController:
             logger.error('Unexpected error in main_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
+    def _task_loop(self):
+        """
+        task loop is used for performing tasks such as evaluation, ratings and benchmarking without
+        running self-play or training.
+        """
+        try:
+            self._setup()
+        except:
+            logger.error('Unexpected error in main_loop():', exc_info=True)
+            self._shutdown_manager.request_shutdown(1)
+
+    def _setup(self):
+        logger.info('Performing LoopController setup...')
+        self._setup_output_dir()
+        self._copy_binary_file()
+        self._init_socket()
+
+        self._output_dir_syncer.start()
+        self._client_connection_manager.start()
