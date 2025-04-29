@@ -65,7 +65,7 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
-        self._procs: Set[subprocess.Popen] = {}
+        self._procs: Set[subprocess.Popen] = set()
 
         self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)

@@ -49,6 +49,7 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
+from alphazero.logic.runtime import acquire_lock, is_frozen, FREEZE_FILE
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
@@ -365,6 +366,8 @@ def main():
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
+            if is_frozen(run_params):
+                logger.info(f"game: {run_params.game} tag: {run_params.tag} is frozen.\n To unfreeze, rm the entry in {FREEZE_FILE}")
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
@@ -412,4 +415,5 @@ def main():
 
 
 if __name__ == '__main__':
+    acquire_lock()
     main()
