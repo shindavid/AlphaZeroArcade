@@ -89,7 +89,7 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         else:
             agent = db_agent.agent
 
-        iagent = arena._add_agent(agent, db_agent.roles, db=new_db)
+        iagent = arena.add_agent(agent, db_agent.roles, db=new_db)
         db_id_map[db_agent.db_id] = iagent.db_id
 
     for result in db.fetch_match_results():

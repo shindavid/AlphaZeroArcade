@@ -47,7 +47,7 @@ class Evaluator:
         else:
             estimated_rating = np.mean(self.benchmark_ratings)
 
-        test_iagent = self._arena._add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self.db)
+        test_iagent = self._arena.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self.db)
 
         n_games_played = self._arena.n_games_played(test_agent)
         if n_games_played > 0:
@@ -178,7 +178,7 @@ class Evaluator:
         self._arena.refresh_ratings()
 
     def add_agent(self, agent: Agent, roles: Set[AgentRole], expand_matrix: bool=True, db: Optional[RatingDB]=None):
-        return self._arena._add_agent(agent, roles, expand_matrix=expand_matrix, db=db)
+        return self._arena.add_agent(agent, roles, expand_matrix=expand_matrix, db=db)
 
     @property
     def benchmark_ratings(self) -> np.ndarray:
