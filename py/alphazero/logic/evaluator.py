@@ -93,7 +93,6 @@ class Evaluator:
            in the same run based on the difference in their estimated Elo ratings. By default, the initial
            estimated rating of the test agent is set to be the mean of the committee members' ratings
            if it has not played any matches yet. The initial estimate can be provided by the caller.
-           In the MCTSEvaluator, the initial estimate is interpolated using the near by gens' ratings if available.
         2. Calculate the variance of the win probability for each committee member and peer test agents using
            p * (1 - p), where p is the win probability.
         3. Select opponents in proportion to their win probability variance.
@@ -199,39 +198,6 @@ class Evaluator:
     @property
     def agent_lookup(self) -> dict:
         return self._arena._agent_lookup
-
-
-class MCTSEvaluator:
-    def __init__(self, organizer: DirectoryOrganizer, benchmark_tag: str):
-        self._organizer = organizer
-        self._evaluator = Evaluator(organizer, benchmark_tag)
-        rating_data = self._evaluator.read_ratings_from_db()
-        self._evaluated_ixs = [self._evaluator.agent_lookup[agent].index \
-            for agent in rating_data.evaluated_agents]
-
-    def run(self, n_iters: int=100, target_eval_percent: float=1.0, n_games: int=100, error_threshold=100):
-        self._evaluator.refresh_ratings()
-        while True:
-            evaluated_gens = [self._evaluator.indexed_agents[ix].agent.gen \
-                for ix in self._evaluated_ixs]
-            last_gen = self._organizer.get_latest_model_generation()
-
-            evaluated_percent = len(evaluated_gens) / (last_gen + 1)
-            if evaluated_percent >= target_eval_percent:
-                break
-            gen = EvalUtils.get_next_gen_to_eval(last_gen, evaluated_gens, target_eval_percent)
-
-            test_agent = MCTSAgent(gen, n_iters, set_temp_zero=True,
-                                   tag=self._organizer.tag)
-            ratings = np.array([self._evaluator.arena_ratings[ix] for ix in self._evaluated_ixs])
-            init_rating_estimate = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens,
-                                                               ratings)
-            self._evaluator.eval_agent(test_agent, n_games,
-                                       error_threshold=error_threshold,
-                                       init_rating_estimate=init_rating_estimate)
-            new_ix = self._evaluator.agent_lookup[test_agent].index
-            assert new_ix == len(self._evaluator.indexed_agents) - 1
-            self._evaluated_ixs.append(new_ix)
 
 
 class EvalUtils:

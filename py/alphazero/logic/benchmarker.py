@@ -51,27 +51,6 @@ class Benchmarker:
         self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)
         self._arena.load_matches_from_db(self.db, type=MatchType.BENCHMARK)
 
-    def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
-        """
-        Runs the benchmarker. The general idea is to find the largest gap in ratings that is greater
-        than the target elo gap, and play the next generation in the middle of the two generations
-        with the biggest gap until there is no elo gap greater than the target elo gap. The elo ratings
-        are recomputed after each batch of matches (for a generation to be played against). After this,
-        we have a set of generations whose elo rating gaps are all within the target elo gap. To avoid
-        having two generations with ratings that are too similar, we select a committee of generations
-        that are spaced out by the target elo gap.
-        """
-        self._arena.refresh_ratings()
-        while True:
-            matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
-            if matches is None:
-                break
-            self._arena.play_matches(matches, self._organizer.game, db=self.db)
-            self._arena.refresh_ratings()
-
-        committee: IndexSet = self.select_committee(target_elo_gap)
-        self.db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
-
     def get_next_matches(self, n_iters, target_elo_gap, n_games,
                          excluded_indices: IndexSet) -> List[Match]:
         """
