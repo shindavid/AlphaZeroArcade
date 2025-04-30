@@ -252,7 +252,7 @@ class EvalUtils:
         return None
 
     @staticmethod
-    def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int], target_eval_percent: float):
+    def get_next_gen_to_eval(latest_gen: int, evaluated_gens: List[int]):
         if 1 not in evaluated_gens:
             return 1
         if latest_gen not in evaluated_gens:

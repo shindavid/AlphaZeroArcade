@@ -31,25 +31,32 @@ Each component has a corresponding launcher script in py/alphazero/scripts/:
 Standard Usage Recipes:
 
 1. Start a new training run:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} [--benchmark-tag {tag}]`
-    - If there is no default benchmark and no specified benchmark, it will evaluate the new run against itself.
-      This evaluation is achieved by running the benchmark server with a large target-elo-gap.
-      The matches will be saved to 'output/{game}/{tag}/databases/benchmark.db'.
-    - Otherwise, it will use the default benchmark or specified benchmark to evaluate the new run.
+    ./py/alphazero/scripts/run_local.py -g {game} -t {tag}
 
-2. Set default benchmark:
-`./py/alphazero/scripts/run_benchmarking.py -g {game} -t {tag}`
+    Wait for a few generations to be written, and then launch the dashboard in a separate tab to visualize:
 
-3. Evaluate an existing run without self-play/training:
-`./py/alphazero/scripts/run_local.py -g {game} -t {tag} --skip-self-play`
-    - Make sure either the default benchmark is set or a benchmark tag is specified.
+    ./py/alphazero/scripts/launch_dashboard.py -g {game}
+
+    The dashboard has an "Evaluation" tab, which shows the skill progression of the run.
+
+    On your first run, you won't have a benchmark established. If this is the case, the
+    "Evaluation" tab will show the results when agents are scored against themselves.
+
+2. Establish a benchmark:
+    ./py/alphazero/scripts/benchmark_tag_local.py -g {game} -t {tag}
+
+    Once a benchmark has been established, you can promote it to be the default benchmark for the game.
+    After this, future runs will be rated relative to this benchmark.
+
+3. Set a run to be a default benchmark:
+    ./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
-from alphazero.logic.runtime import acquire_lock, is_frozen, FREEZE_FILE
+from alphazero.logic.runtime import acquire_lock, is_frozen
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
@@ -267,7 +274,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     if params.task_mode:
         cmd.extend(['--task-mode'])
 
-    benchmark_tag = get_benchmark_tag(run_params, params)
+    benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
     if benchmark_tag:
         cmd.extend(['--benchmark-tag', benchmark_tag])
 
@@ -279,7 +286,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     build_params.add_to_cmd(cmd, loop_controller=True)
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
-
+    print(cmd)
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
@@ -305,10 +312,10 @@ def load_benchmark_info(game: str):
     return benchmark_info.get("benchmark_tag")
 
 
-def get_benchmark_tag(run_params: RunParams, params: Params) -> Optional[str]:
-    benchmark_tag = params.benchmark_tag
+def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]) -> Optional[str]:
     if benchmark_tag is None:
         benchmark_tag = load_benchmark_info(run_params.game)
+    print(f"Using benchmark tag: {benchmark_tag}")
     return benchmark_tag
 
 
@@ -321,6 +328,8 @@ def main():
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+
+    acquire_lock(run_params)
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()
@@ -359,7 +368,7 @@ def main():
     register_signal_exception(signal.SIGINT, KeyboardInterrupt,
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
-    benchmark_tag = get_benchmark_tag(run_params, params)
+    benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
 
     procs = []
     try:
@@ -367,7 +376,10 @@ def main():
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
             if is_frozen(run_params):
-                logger.info(f"game: {run_params.game} tag: {run_params.tag} is frozen.\n To unfreeze, rm the entry in {FREEZE_FILE}")
+                raise Exception(
+                    f"game {run_params.game} tag {run_params.tag} is frozen.\n"
+                    f"To unfreeze, remove the freeze file in "
+                    f"/output/{run_params.game}/{run_params.game}/.runtime/freeze")
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
@@ -415,5 +427,4 @@ def main():
 
 
 if __name__ == '__main__':
-    acquire_lock()
     main()

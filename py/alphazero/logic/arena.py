@@ -138,7 +138,7 @@ class Arena:
 
         if iagent is not None:
             iagent.roles.update(roles)
-            if db:
+            if db and roles != iagent.roles:
                 db.update_agent_roles(iagent)
             return iagent
 

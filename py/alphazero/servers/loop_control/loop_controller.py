@@ -16,10 +16,7 @@ from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
-from alphazero.servers.loop_control.gaming_manager_base import ManagerConfig, WorkerAux
-from alphazero.servers.loop_control.benchmark_manager import BenchmarkServerAux
-from alphazero.servers.loop_control.eval_manager import EvalServerAux
-from alphazero.servers.loop_control.ratings_manager import RatingsServerAux
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -352,7 +349,8 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            if not os.path.exists(self.organizer.eval_db_filename(self.params.benchmark_tag)):
+            db_file = self.organizer.eval_db_filename(self.params.benchmark_tag)
+            if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
                 if self.params.benchmark_tag is None:
                     raise Exception(
                         f"Benchmark tag is not set and default benchmark info file not found.\n"

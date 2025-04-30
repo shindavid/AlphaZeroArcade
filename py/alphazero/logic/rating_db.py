@@ -187,6 +187,14 @@ class RatingDB:
         c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
         conn.commit()
 
+    def is_empty(self):
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+
+        c.execute('''SELECT COUNT(*) FROM agents''')
+        count = c.fetchone()[0]
+        return count == 0
+
     @property
     def db_lock(self):
         return self.db_conn_pool._db_lock

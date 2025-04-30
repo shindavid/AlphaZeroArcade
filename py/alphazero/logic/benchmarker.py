@@ -248,3 +248,6 @@ class Benchmarker:
     def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
         return self._arena.agent_lookup
 
+    @property
+    def adjacent_matrix(self) -> np.ndarray:
+        return self._arena.adjacent_matrix()

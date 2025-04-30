@@ -197,6 +197,7 @@ class BenchmarkManager(GamingManagerBase):
             has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._status_dict[ix1].ix_match_status.values())
 
         if not has_pending:
+            self._update_committee()
             with self._lock:
                 self._status_dict[ix1].status = BenchmarkRequestStatus.COMPLETE
                 self._status_dict[ix1].owner = None
@@ -207,7 +208,6 @@ class BenchmarkManager(GamingManagerBase):
                                                                     self.n_games,
                                                                     excluded_indices=self.excluded_agent_indices)
             if not matches:
-                self._update_committee()
                 conn.aux.ready_for_latest_gen = True
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
@@ -346,10 +346,9 @@ class BenchmarkManager(GamingManagerBase):
             has_more_matches = len(matches) > 0
             has_work = has_work or has_more_matches
 
-            if not has_work:
+            if self._controller.params.task_mode and not has_work:
                 logger.info(f"Benchmarking Complete.")
-                if self._controller.params.task_mode:
-                    self._controller._shutdown_manager.request_shutdown(1)
+                self._controller._shutdown_manager.request_shutdown(1)
         return has_work
 
     @property

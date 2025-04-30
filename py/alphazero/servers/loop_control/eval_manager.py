@@ -108,7 +108,7 @@ class EvalManager(GamingManagerBase):
         self.set_priority()
 
     def num_evaluated_gens(self):
-        return len(self._eval_status_dict)
+        return sum(1 for data in self._eval_status_dict.values() if data.status == EvalRequestStatus.COMPLETE)
 
     def handle_server_disconnect(self, conn: ClientConnection):
         logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
@@ -245,14 +245,14 @@ class EvalManager(GamingManagerBase):
             'n_games': int(next_n_games),
             'files_required': [f.to_dict() for f in files_required],
         }
+        logger.info(f"Evaluating ix {data['ix1']} vs {data['ix2']}, gen {data['agent1']['gen']} vs {data['agent2']['gen']}, n_games {data['n_games']}")
         return data
 
     def _get_next_gen_to_eval(self):
-        latest_gen = self._controller.latest_gen()
+        latest_gen = self._controller._organizer.get_latest_model_generation()
         evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values() \
             if data.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)]
-        target_rating_rate = self._controller.params.target_rating_rate
-        gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens, target_rating_rate)
+        gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens)
         return gen
 
     def _estimate_rating(self, test_iagent):
@@ -350,6 +350,16 @@ class EvalManager(GamingManagerBase):
         logger.debug('///Finished evaluating gen %s, rating: %s',
                     self._evaluator.indexed_agents[eval_ix].agent.gen,
                     interpolated_ratings[np.where(test_ixs == eval_ix)[0]])
+
+    def _has_work(self) -> bool:
+        if self._controller.params.task_mode:
+            rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
+            logger.info('Rated %s%% of generations', rated_percent * 100)
+            if rated_percent >= self._controller.params.target_rating_rate:
+                logger.info('Evaluation is complete. Rated %s%% of generations, stopping eval manager', rated_percent * 100)
+                self._controller._shutdown_manager.request_shutdown(1)
+
+        return super()._has_work()
 
     @property
     def n_games(self):

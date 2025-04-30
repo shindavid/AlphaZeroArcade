@@ -113,6 +113,7 @@ class DirectoryOrganizer:
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.misc_dir = os.path.join(self.base_dir, 'misc')
         self.eval_db_dir = os.path.join(self.databases_dir, 'evaluation')
+        self.runtime_dir = os.path.join(self.base_dir, '.runtime')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')

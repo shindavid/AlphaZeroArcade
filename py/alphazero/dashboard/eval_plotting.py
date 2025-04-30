@@ -172,4 +172,3 @@ def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure
-
