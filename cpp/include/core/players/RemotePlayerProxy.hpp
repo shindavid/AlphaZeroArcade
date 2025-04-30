@@ -2,9 +2,9 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/YieldManager.hpp>
 #include <core/Packet.hpp>
+#include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/SocketUtil.hpp>
 
 #include <map>

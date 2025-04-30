@@ -1,8 +1,8 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
 #include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>

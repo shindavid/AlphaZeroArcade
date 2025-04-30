@@ -3,8 +3,8 @@
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/YieldManager.hpp>
 #include <core/Packet.hpp>
+#include <core/YieldManager.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 

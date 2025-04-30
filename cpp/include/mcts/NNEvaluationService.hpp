@@ -1,12 +1,12 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/YieldManager.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
-#include <core/concepts/Game.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
+#include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
