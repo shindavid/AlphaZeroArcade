@@ -35,7 +35,7 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
             ...
         ...
 """
-from alphazero.logic.custom_types import ClientId, Generation
+from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
 from util import sqlite3_util
 
@@ -114,13 +114,15 @@ class DirectoryOrganizer:
         self.misc_dir = os.path.join(self.base_dir, 'misc')
         self.eval_db_dir = os.path.join(self.databases_dir, 'evaluation')
         self.runtime_dir = os.path.join(self.base_dir, '.runtime')
+        self.binary_dir = os.path.join(self.base_dir, 'bin')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
         self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
-        self.binary_filename = os.path.join(self.base_dir, 'bin', game)
+
+        self.binary_filename = os.path.join(self.binary_dir, game)
 
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
 
@@ -189,6 +191,7 @@ class DirectoryOrganizer:
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.misc_dir, exist_ok=True)
+        os.makedirs(self.binary_dir, exist_ok=True)
 
         if not os.path.isfile(self.version_filename):
             with open(self.version_filename, 'w') as f:
@@ -296,11 +299,13 @@ class DirectoryOrganizer:
 
         if not retrain_models:
             if last_gen is None:
-                shutil.copyfile(self.ratings_db_filename, target.ratings_db_filename)
+                if os.path.exists(target.ratings_db_filename):
+                    shutil.copyfile(self.ratings_db_filename, target.ratings_db_filename)
                 shutil.copyfile(self.training_db_filename, target.training_db_filename)
             else:
-                sqlite3_util.copy_db(self.ratings_db_filename, target.ratings_db_filename,
-                                    f'mcts_gen <= {last_gen}')
+                if os.path.exists(target.ratings_db_filename):
+                    sqlite3_util.copy_db(self.ratings_db_filename, target.ratings_db_filename,
+                                        f'mcts_gen <= {last_gen}')
                 sqlite3_util.copy_db(self.training_db_filename, target.training_db_filename,
                                     f'gen <= {last_gen}')
 
@@ -309,6 +314,11 @@ class DirectoryOrganizer:
         else:
             sqlite3_util.copy_db(self.self_play_db_filename, target.self_play_db_filename,
                                  f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
+
+    def copy_binary(self, target: 'DirectoryOrganizer'):
+        if not os.path.isfile(self.binary_filename):
+            raise ValueError(f'Binary file does not exist: {self.binary_filename}')
+        shutil.copyfile(self.binary_filename, target.binary_filename)
 
     def write_fork_info(self, from_organizer: 'DirectoryOrganizer',
                         retrain_models: bool, last_gen: Optional[Generation]):

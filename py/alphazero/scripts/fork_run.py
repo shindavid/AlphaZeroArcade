@@ -7,7 +7,10 @@ Usage:
 
 ./fork_run.py -g GAME -f FROM_TAG -t TO_TAG
 """
-
+from alphazero.logic.agent_types import AgentRole, MCTSAgent
+from alphazero.logic.arena import Arena
+from alphazero.logic.custom_types import Generation
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
@@ -16,6 +19,7 @@ from util.logging_util import configure_logger
 import argparse
 import logging
 import os
+from typing import Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +60,44 @@ Noteworthy options:
                        'using the same self-play data and training-windows as the previous run.')
 
     return parser.parse_args()
+
+
+def copy_eval_databases(from_organizer: DirectoryOrganizer, to_organizer: DirectoryOrganizer,
+                        last_gen: Optional[Generation]=None):
+    for f in os.listdir(from_organizer.eval_db_dir):
+        if f.endswith('.db') and f != f'{from_organizer.tag}.db':
+            benchmark_tag = f.split('.')[0]
+            db = RatingDB(from_organizer.eval_db_filename(benchmark_tag))
+            new_db = RatingDB(to_organizer.eval_db_filename(benchmark_tag))
+            copy_eval_db(db, new_db, to_organizer.tag, last_gen)
+
+
+def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optional[Generation]=None):
+    db_id_map: Dict[int, int] = {}
+    arena = Arena()
+    for db_agent in db.fetch_agents():
+        assert len(db_agent.roles) == 1
+
+        if isinstance(db_agent.agent, MCTSAgent) and db_agent.roles == {AgentRole.TEST}:
+            if last_gen is not None and db_agent.agent.gen > last_gen:
+                continue
+
+            agent = MCTSAgent(gen=db_agent.agent.gen,
+                                n_iters=db_agent.agent.n_iters,
+                                set_temp_zero=db_agent.agent.set_temp_zero,
+                                tag=new_tag)
+        else:
+            agent = db_agent.agent
+
+        iagent = arena._add_agent(agent, db_agent.roles, db=new_db)
+        db_id_map[db_agent.db_id] = iagent.db_id
+
+    for result in db.fetch_match_results():
+        if result.agent_id1 not in db_id_map or result.agent_id2 not in db_id_map:
+            continue
+        new_db_id1 = db_id_map[result.agent_id1]
+        new_db_id2 = db_id_map[result.agent_id2]
+        new_db.commit_counts(new_db_id1, new_db_id2, result.counts, result.type)
 
 
 def main():
@@ -109,6 +151,12 @@ def main():
 
     logger.info('Copying database files...')
     from_organizer.copy_databases(to_organizer, retrain_models, last_gen)
+
+    logger.info('Copying evaluation databases...')
+    copy_eval_databases(from_organizer, to_organizer, last_gen)
+
+    logger.info('Copying binary files...')
+    from_organizer.copy_binary(to_organizer)
 
     logger.info('Writing fork info...')
     to_organizer.write_fork_info(from_organizer, retrain_models, last_gen)
