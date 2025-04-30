@@ -17,6 +17,7 @@ from util.str_util import make_args_str
 from dataclasses import dataclass, fields
 import os
 import logging
+import signal
 import subprocess
 import threading
 from typing import Dict, Optional, Set
@@ -65,8 +66,6 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
-        self._procs: Set[subprocess.Popen] = set()
-
         self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
@@ -85,15 +84,6 @@ class ServerBase:
             self._session_data.socket.close()
         except:
             pass
-
-        if self._procs:
-            for p in self._procs:
-                try:
-                    p.terminate()
-                    subprocess_util.wait_for(p, expected_return_code=None)
-                    logger.info('Terminated %s process %s', self._config.worker_name ,p.pid)
-                except:
-                    pass
         logger.info('%s server shutdown complete!', self._config.server_name)
 
     def _main_loop(self):
@@ -253,12 +243,10 @@ class ServerBase:
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
-        self._procs.update({proc1, proc2})
 
         expected_rc = None
         print_fn = logger.error
         stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
-        self._procs.difference_update({proc1, proc2})
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the

@@ -1,6 +1,8 @@
 from alphazero.logic.custom_types import ShutdownAction
 
 import logging
+import os
+import signal
 import sys
 import threading
 from typing import List, Optional
@@ -44,6 +46,11 @@ class ShutdownManager:
                 action()
             except:
                 logger.error('Error while shutting down', exc_info=True)
+        try:
+            os.killpg(os.getpgrp(), signal.SIGTERM)
+        except Exception as e:
+            logger.info("Failed to kill process group: %s", e)
+
         sys.exit(code)
 
     def register(self, action: ShutdownAction):

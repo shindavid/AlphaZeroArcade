@@ -417,16 +417,10 @@ def main():
     except:
         logger.error('Unexpected error:', exc_info=True)
     finally:
-        for descr, proc in procs:
-            if proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(10)
-                    logger.info('Terminated %s process %s', descr, proc.pid)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    logger.warning('Forcibly killed %s process %s due to time-out during terminate',
-                                   descr, proc.pid)
+        try:
+            os.killpg(os.getpgrp(), signal.SIGTERM)
+        except Exception as e:
+            logger.info("Failed to kill process group: %s", e)
 
 
 if __name__ == '__main__':

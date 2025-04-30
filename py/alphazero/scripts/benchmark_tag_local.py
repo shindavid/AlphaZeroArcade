@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
     parser.add_argument('--target-elo-gap', type=int, default=DEFAULT_TARGET_ELO_GAP,
-                        help='Target ELO gap for benchmarking (default: 100)')
+                        help=f'Target ELO gap for benchmarking (default: {DEFAULT_TARGET_ELO_GAP})')
     args = parser.parse_args()
     run_params = RunParams.create(args)
 

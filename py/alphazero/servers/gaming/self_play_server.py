@@ -15,7 +15,6 @@ import logging
 import os
 import subprocess
 import threading
-from typing import List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -41,10 +40,6 @@ class SelfPlayServer:
         self._build_params = build_params
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
-
-        self._proc: Optional[subprocess.Popen] = None
-        self._proc_cond = threading.Condition()
-
         self._shutdown_manager.register(lambda: self._shutdown())
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
@@ -63,14 +58,6 @@ class SelfPlayServer:
             self._session_data.socket.close()
         except:
             pass
-
-        if self._proc is not None:
-            try:
-                self._proc.terminate()
-                subprocess_util.wait_for(self._proc, expected_return_code=None)
-                logger.info('Terminated ratings-worker process %s', self._proc.pid)
-            except:
-                pass
         logger.info('Self-play server shutdown complete!')
 
     def _main_loop(self):
@@ -223,10 +210,9 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         cwd = self._session_data.run_dir
-        proc = self._set_proc(self_play_cmd, cwd)
+        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
         logger.info('Running gen-0 self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
-        self._clear_proc()
 
         logger.info('Gen-0 self-play complete!')
         self._session_data.stop_log_sync(log_filename)
@@ -289,10 +275,9 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         cwd = self._session_data.run_dir
-        proc = self._set_proc(self_play_cmd, cwd)
+        proc = subprocess_util.Popen(self_play_cmd, cwd=cwd, stdout=subprocess.DEVNULL)
         logger.info('Running self-play [%s] from %s: %s', proc.pid, cwd, self_play_cmd)
         self._session_data.wait_for(proc)
-        self._clear_proc()
 
     def _restart_helper(self, msg: JsonDict):
         proc = self._proc
@@ -303,18 +288,4 @@ class SelfPlayServer:
         self._session_data.disable_next_returncode_check()
         self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
-        self._clear_proc()
-
         self._start_helper(msg)
-
-    def _set_proc(self, cmd: List[str], cwd: str) -> subprocess.Popen:
-        with self._proc_cond:
-            self._proc_cond.wait_for(lambda: self._proc is None)
-            proc = subprocess_util.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL)
-            self._proc = proc
-            return proc
-
-    def _clear_proc(self):
-        with self._proc_cond:
-            self._proc = None
-            self._proc_cond.notify_all()
