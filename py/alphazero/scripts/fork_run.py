@@ -16,6 +16,8 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 import games.index as game_index
 from util.logging_util import configure_logger
 
+import numpy as np
+
 import argparse
 import logging
 import os
@@ -98,6 +100,19 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         new_db_id1 = db_id_map[result.agent_id1]
         new_db_id2 = db_id_map[result.agent_id2]
         new_db.commit_counts(new_db_id1, new_db_id2, result.counts, result.type)
+
+    ratings_data = db.load_ratings(AgentRole.TEST)
+    iagents = []
+    ratings = []
+    for data in ratings_data:
+        if data.agent_id not in db_id_map:
+            continue
+        new_db_id = db_id_map[data.agent_id]
+        iagent = arena.agent_lookup_db_id[new_db_id]
+        iagents.append(iagent)
+        ratings.append(data.rating)
+    ratings = np.array(ratings)
+    new_db.commit_ratings(iagents, ratings)
 
 
 def main():
