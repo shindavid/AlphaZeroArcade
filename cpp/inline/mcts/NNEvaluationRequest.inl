@@ -53,7 +53,7 @@ typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::ma
 
 template <core::concepts::Game Game>
 void NNEvaluationRequest<Game>::set_notification_task_info(
-  const core::HibernationNotificationUnit& unit) {
+  const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 

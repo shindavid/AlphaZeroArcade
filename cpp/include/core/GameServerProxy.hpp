@@ -3,7 +3,7 @@
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <core/Packet.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
@@ -60,8 +60,8 @@ class GameServerProxy {
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
-    // true if hibernating.
+    // Sets re_enqueue to true if the game slot should be re-enqueued.
+    // Sets extra_enqueue_count to the number of times this slot should be enqueued.
     void step(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
 
     bool game_started() const { return game_started_; }
@@ -107,8 +107,8 @@ class GameServerProxy {
     void end_session();
     void shutdown();
     void init_game_slots();
-    void run_hibernation_manager();
-    HibernationManager* hibernation_manager() { return &hibernation_manager_; }
+    void run_yield_manager();
+    YieldManager* yield_manager() { return &yield_manager_; }
     int num_slots() const { return game_slots_.size(); }
     int num_game_threads() const { return num_game_threads_; }
     bool running() const { return running_; }
@@ -140,7 +140,7 @@ class GameServerProxy {
     std::vector<GameSlot*> game_slots_;
     std::queue<SlotContext> queue_;
 
-    HibernationManager hibernation_manager_;
+    YieldManager yield_manager_;
   };
 
   class GameThread {

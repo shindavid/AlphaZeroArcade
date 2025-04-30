@@ -72,7 +72,7 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
-  hibernation_manager_.shut_down();
+  yield_manager_.shut_down();
 
   if (bar_) delete bar_;
 
@@ -142,8 +142,8 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::run_hibernation_manager() {
-  hibernation_manager_.run([this](const slot_context_vec_t& slot_contexts) {
+void GameServer<Game>::SharedData::run_yield_manager() {
+  yield_manager_.run([this](const slot_context_vec_t& slot_contexts) {
     std::unique_lock lock(mutex_);
 
     for (SlotContext item : slot_contexts) {
@@ -485,7 +485,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
-    HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, 0);
+    YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
     ChangeEventPreHandleRequest request(notification_unit);
     ChanceEventPreHandleResponse response = player->prehandle_chance_event(request);
     mid_yield_ = response.yield_instruction != kContinue;
@@ -530,7 +530,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, bool& re_enqueue,
                                                  int& extra_enqueue_count) {
   Player* player = players_[active_seat_];
-  HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, context);
+  YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
 
@@ -833,7 +833,7 @@ void GameServer<Game>::run() {
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   shared_data_.init_slots();
-  shared_data_.run_hibernation_manager();
+  shared_data_.run_yield_manager();
   create_threads();
   shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());

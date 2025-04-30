@@ -1,18 +1,18 @@
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 
 namespace core {
 
-inline HibernationManager::~HibernationManager() {
+inline YieldManager::~YieldManager() {
   shut_down();
 }
 
-inline void HibernationManager::run(func_t f) {
+inline void YieldManager::run(func_t f) {
   thread_ = std::thread([f = std::move(f), this]() {
     loop(f);
   });
 }
 
-inline void HibernationManager::shut_down() {
+inline void YieldManager::shut_down() {
   mutex_.lock();
   shutting_down_ = true;
   mutex_.unlock();
@@ -21,7 +21,7 @@ inline void HibernationManager::shut_down() {
   if (thread_.joinable()) thread_.join();
 }
 
-inline void HibernationManager::notify(const core::slot_context_vec_t& vec) {
+inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
   std::unique_lock lock(mutex_);
   for (const auto& item : vec) {
     ready_items_.push_back(item);
@@ -30,7 +30,7 @@ inline void HibernationManager::notify(const core::slot_context_vec_t& vec) {
   cv_.notify_all();
 }
 
-inline void HibernationManager::notify(const SlotContext& item) {
+inline void YieldManager::notify(const SlotContext& item) {
   std::unique_lock lock(mutex_);
   ready_items_.push_back(item);
   lock.unlock();
@@ -38,7 +38,7 @@ inline void HibernationManager::notify(const SlotContext& item) {
 }
 
 
-inline void HibernationManager::loop(func_t f) {
+inline void YieldManager::loop(func_t f) {
   while (!shutting_down_) {
     std::unique_lock lock(mutex_);
     cv_.wait(lock, [this]() { return !ready_items_.empty() || shutting_down_; });

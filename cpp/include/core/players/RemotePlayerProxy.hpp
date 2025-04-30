@@ -3,7 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <core/Packet.hpp>
 #include <util/SocketUtil.hpp>
 
@@ -64,8 +64,8 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
  private:
   ActionResponse action_response_;
-  HibernationNotificationUnit hibernation_notification_unit_;
-  bool hibernating_ = false;
+  YieldNotificationUnit yield_notification_unit_;
+  bool yielding_ = false;
 
   io::Socket* socket_;
   const player_id_t player_id_;

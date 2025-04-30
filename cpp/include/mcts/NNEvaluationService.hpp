@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/concepts/Game.hpp>
@@ -368,7 +368,7 @@ class NNEvaluationService
 
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;
-  core::HibernationManager* hibernation_manager_ = nullptr;
+  core::YieldManager* yield_manager_ = nullptr;
 };
 
 }  // namespace mcts

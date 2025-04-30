@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 
 #include <mutex>
 
@@ -28,13 +28,13 @@ class OraclePool {
   // If a new oracle needs to be created, then the constructor of OracleT is called with the
   // passed-in arguments.
   template<typename... Ts>
-  OracleT* get_oracle(const HibernationNotificationUnit& unit, Ts&&... constructor_args);
+  OracleT* get_oracle(const YieldNotificationUnit& unit, Ts&&... constructor_args);
 
   void release_oracle(OracleT* oracle);
 
  private:
   using oracle_vec_t = std::vector<OracleT*>;
-  using notification_unit_vec_t = std::vector<HibernationNotificationUnit>;
+  using notification_unit_vec_t = std::vector<YieldNotificationUnit>;
 
   oracle_vec_t free_oracles_;
   oracle_vec_t all_oracles_;

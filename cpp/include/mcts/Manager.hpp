@@ -2,7 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -72,16 +72,16 @@ class Manager {
   using search_path_t = std::vector<Visitation>;
 
   struct SearchRequest {
-    SearchRequest(const core::HibernationNotificationUnit& u) : notification_unit(u) {}
+    SearchRequest(const core::YieldNotificationUnit& u) : notification_unit(u) {}
     SearchRequest() = default;
 
-    core::HibernationManager* hibernation_manager() const {
-      return notification_unit.hibernation_manager;
+    core::YieldManager* yield_manager() const {
+      return notification_unit.yield_manager;
     }
     core::context_id_t context_id() const { return notification_unit.context_id; }
     core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
 
-    core::HibernationNotificationUnit notification_unit;
+    core::YieldNotificationUnit notification_unit;
   };
 
   struct SearchResponse {
@@ -259,7 +259,7 @@ class Manager {
 
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
-  core::yield_instruction_t load_root_action_values(const core::HibernationNotificationUnit&,
+  core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
                                                     ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }

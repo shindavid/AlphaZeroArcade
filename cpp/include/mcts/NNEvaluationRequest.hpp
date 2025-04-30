@@ -2,7 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/Node.hpp>
@@ -120,7 +120,7 @@ class NNEvaluationRequest {
   using item_vec_t = std::vector<Item>;
 
   void init(int thread_id) { thread_id_ = thread_id; }
-  void set_notification_task_info(const core::HibernationNotificationUnit& unit);
+  void set_notification_task_info(const core::YieldNotificationUnit& unit);
   void mark_all_as_stale();
 
   std::string thread_id_whitespace() const;
@@ -140,7 +140,7 @@ class NNEvaluationRequest {
   int num_fresh_items() const { return items_[active_index_].size(); }
   Item& get_fresh_item(int i) { return items_[active_index_][i]; }
 
-  const core::HibernationNotificationUnit& notification_unit() const { return notification_unit_; }
+  const core::YieldNotificationUnit& notification_unit() const { return notification_unit_; }
 
  private:
   // We keep two vectors of items: the active vector and the stale vector. After the active items
@@ -152,7 +152,7 @@ class NNEvaluationRequest {
   item_vec_t items_[2];
 
   // Propagated from Manager::ActionRequest
-  core::HibernationNotificationUnit notification_unit_;
+  core::YieldNotificationUnit notification_unit_;
 
   int thread_id_;
   int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale

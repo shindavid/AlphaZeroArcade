@@ -2,7 +2,7 @@
 
 #include <core/ActionSymmetryTable.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/concepts/GameResults.hpp>
 #include <util/EigenUtil.hpp>
@@ -60,20 +60,20 @@ struct GameTypes {
   };
 
   struct ChangeEventPreHandleRequest {
-    ChangeEventPreHandleRequest(const HibernationNotificationUnit& u) : notification_unit(u) {}
+    ChangeEventPreHandleRequest(const YieldNotificationUnit& u) : notification_unit(u) {}
 
-    HibernationNotificationUnit notification_unit;
+    YieldNotificationUnit notification_unit;
   };
 
   struct ActionRequest {
-    ActionRequest(const State& s, const ActionMask& va, const HibernationNotificationUnit& u)
+    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u)
         : state(s), valid_actions(va), notification_unit(u) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
     const State& state;
     const ActionMask& valid_actions;
-    HibernationNotificationUnit notification_unit;
+    YieldNotificationUnit notification_unit;
 
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.

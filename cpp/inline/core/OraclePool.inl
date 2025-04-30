@@ -20,7 +20,7 @@ void OraclePool<OracleT>::set_capacity(size_t capacity) {
 
 template <class OracleT>
 template <typename... Ts>
-OracleT* OraclePool<OracleT>::get_oracle(const HibernationNotificationUnit& unit,
+OracleT* OraclePool<OracleT>::get_oracle(const YieldNotificationUnit& unit,
                                          Ts&&... constructor_args) {
   std::unique_lock lock(mutex_);
   if (!free_oracles_.empty()) {
@@ -34,7 +34,7 @@ OracleT* OraclePool<OracleT>::get_oracle(const HibernationNotificationUnit& unit
     return oracle;
   }
 
-  if (unit.hibernation_manager) {
+  if (unit.yield_manager) {
     pending_notification_units_.push_back(unit);
   }
   return nullptr;
@@ -45,10 +45,10 @@ void OraclePool<OracleT>::release_oracle(OracleT* oracle) {
   std::unique_lock lock(mutex_);
   free_oracles_.push_back(oracle);
   if (!pending_notification_units_.empty()) {
-    HibernationNotificationUnit unit = pending_notification_units_.back();
+    YieldNotificationUnit unit = pending_notification_units_.back();
     pending_notification_units_.pop_back();
     SlotContext slot_context(unit.game_slot_index, unit.context_id);
-    unit.hibernation_manager->notify(slot_context);
+    unit.yield_manager->notify(slot_context);
   }
 }
 

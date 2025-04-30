@@ -171,7 +171,7 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
  */
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::load_root_action_values(
-  const core::HibernationNotificationUnit& notification_unit, ActionValueTensor& action_values) {
+  const core::YieldNotificationUnit& notification_unit, ActionValueTensor& action_values) {
   if (!mid_load_root_action_values_) {
     action_values.setZero();
     init_root_info(false);

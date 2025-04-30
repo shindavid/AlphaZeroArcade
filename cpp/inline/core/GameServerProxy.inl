@@ -125,7 +125,7 @@ void GameServerProxy<Game>::GameSlot::step(context_id_t context, bool& re_enqueu
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
-  HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, context);
+  YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(history_.current(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
 
@@ -285,8 +285,8 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::run_hibernation_manager() {
-  hibernation_manager_.run([this](const slot_context_vec_t& slot_contexts) {
+void GameServerProxy<Game>::SharedData::run_yield_manager() {
+  yield_manager_.run([this](const slot_context_vec_t& slot_contexts) {
     std::unique_lock lock(mutex_);
 
     for (SlotContext item : slot_contexts) {
@@ -415,7 +415,7 @@ void GameServerProxy<Game>::run() {
   shared_data_.init_socket();
   shared_data_.init_game_slots();
   shared_data_.start_session();
-  shared_data_.run_hibernation_manager();
+  shared_data_.run_yield_manager();
   create_threads();
   launch_threads();
   run_event_loop();

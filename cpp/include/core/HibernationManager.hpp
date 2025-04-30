@@ -9,11 +9,11 @@
 
 namespace core {
 
-class HibernationManager {
+class YieldManager {
  public:
   using func_t = std::function<void(const slot_context_vec_t&)>;
 
-  ~HibernationManager();
+  ~YieldManager();
 
   // Launches a loop that awaits notifications for game-slots. Each time game-slot g is notified, it
   // calls the function f(g).
@@ -35,21 +35,21 @@ class HibernationManager {
   bool shutting_down_ = false;
 };
 
-struct HibernationNotificationUnit {
-  HibernationNotificationUnit(core::HibernationManager* h, core::game_slot_index_t g,
+struct YieldNotificationUnit {
+  YieldNotificationUnit(core::YieldManager* h, core::game_slot_index_t g,
                               core::context_id_t c)
-      : hibernation_manager(h), game_slot_index(g), context_id(c) {}
+      : yield_manager(h), game_slot_index(g), context_id(c) {}
 
-  HibernationNotificationUnit() = default;
+  YieldNotificationUnit() = default;
 
-  bool valid() const { return hibernation_manager != nullptr; }
+  bool valid() const { return yield_manager != nullptr; }
   SlotContext slot_context() const { return SlotContext(game_slot_index, context_id); }
 
-  core::HibernationManager* hibernation_manager = nullptr;
+  core::YieldManager* yield_manager = nullptr;
   core::game_slot_index_t game_slot_index = -1;
   core::context_id_t context_id = 0;
 };
 
 }  // namespace core
 
-#include <inline/core/HibernationManager.inl>
+#include <inline/core/YieldManager.inl>

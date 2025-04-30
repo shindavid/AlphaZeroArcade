@@ -3,7 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationManager.hpp>
+#include <core/YieldManager.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <core/TrainingDataWriter.hpp>
@@ -150,7 +150,8 @@ class GameServer
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance();
 
-    // Sets enqueue_count to the number of times this slot should be enqueued.
+    // Sets re_enqueue to true if the game slot should be re-enqueued.
+    // Sets extra_enqueue_count to the number of times this slot should be enqueued.
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_non_chance(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
 
@@ -198,7 +199,7 @@ class GameServer
     void start_games();
     void init_progress_bar();
     void init_random_seat_indices();
-    void run_hibernation_manager();
+    void run_yield_manager();
 
     int num_slots() const { return game_slots_.size(); }
 
@@ -228,7 +229,7 @@ class GameServer
     int num_registrations() const { return registrations_.size(); }
     registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
-    HibernationManager* hibernation_manager() { return &hibernation_manager_; }
+    YieldManager* yield_manager() { return &yield_manager_; }
     bool paused() const { return paused_; }
 
     void pause();
@@ -273,7 +274,7 @@ class GameServer
     std::queue<SlotContext> queue_;
     int pending_queue_count_ = 0;
 
-    HibernationManager hibernation_manager_;
+    YieldManager yield_manager_;
 
     results_array_t results_array_;  // indexed by player_id
 

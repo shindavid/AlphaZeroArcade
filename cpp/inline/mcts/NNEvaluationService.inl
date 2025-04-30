@@ -646,15 +646,15 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
                                                            BatchData* batch_data) {
-  // NOTE: in principle, we can initialize hibernation_manager_ at startup to avoid doing it here.
-  // There should only ever be one hibernation_manager_ for the entire process. We do it here to
+  // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
+  // There should only ever be one yield_manager_ for the entire process. We do it here to
   // avoid having to pass it around all over the place during initialization.
-  const core::HibernationNotificationUnit& unit = request.notification_unit();
-  if (this->hibernation_manager_ == nullptr) {
-    hibernation_manager_ = unit.hibernation_manager;
+  const core::YieldNotificationUnit& unit = request.notification_unit();
+  if (this->yield_manager_ == nullptr) {
+    yield_manager_ = unit.yield_manager;
   } else {
     // Verify that there is only one
-    util::debug_assert(hibernation_manager_ == unit.hibernation_manager);
+    util::debug_assert(yield_manager_ == unit.yield_manager);
   }
 
   batch_data->notification_tasks.push_back(unit.slot_context());
