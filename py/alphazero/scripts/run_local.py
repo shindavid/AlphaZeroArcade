@@ -50,6 +50,9 @@ Standard Usage Recipes:
 
 3. Set a run to be a default benchmark:
     ./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}
+
+4. Evaluate a finished run against a different benchmark:
+    ./py/alphazero/scripts/evaluate_tag_local.py -g {game} -t {tag} --benchmark-tag {benchmark_tag}
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
