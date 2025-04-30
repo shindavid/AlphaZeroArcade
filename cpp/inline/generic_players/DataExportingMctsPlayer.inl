@@ -26,7 +26,9 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   }
   lock.unlock();
 
-  SearchResponse response = this->get_manager()->search();
+  SearchRequest search_request(request.notification_unit);
+  SearchResponse response = this->get_manager()->search(search_request);
+
   if (response.yield_instruction == core::kYield) {
     return ActionResponse::yield(response.extra_enqueue_count);
   } else if (response.yield_instruction == core::kDrop) {
@@ -57,7 +59,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
 
 template <core::concepts::Game Game>
 typename DataExportingMctsPlayer<Game>::ChanceEventPreHandleResponse
-DataExportingMctsPlayer<Game>::prehandle_chance_event() {
+DataExportingMctsPlayer<Game>::prehandle_chance_event(const ChangeEventPreHandleRequest& request) {
   // So that only one player outputs the action values.
   if (!this->owns_shared_data_) {
     return ChanceEventPreHandleResponse();
@@ -73,7 +75,9 @@ DataExportingMctsPlayer<Game>::prehandle_chance_event() {
     mid_prehandle_chance_event_ = true;
   }
 
-  core::yield_instruction_t i = this->get_manager()->load_root_action_values(action_values_target_);
+  core::yield_instruction_t i =
+    this->get_manager()->load_root_action_values(request.notification_unit, action_values_target_);
+
   if (i == core::kContinue) {
     mid_prehandle_chance_event_ = false;
     return ChanceEventPreHandleResponse(&action_values_target_, core::kContinue);

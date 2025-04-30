@@ -111,7 +111,7 @@ void GameServer<Game>::SharedData::start_games() {
     if (!slot->start_game()) {
       throw util::Exception("ERROR: failed to start game slot");
     }
-    queue_.push(slot);
+    queue_.emplace(slot->id());
   }
 }
 
@@ -143,11 +143,13 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::run_hibernation_manager() {
-  hibernation_manager_.run([this](game_slot_index_t slot_id) {
+  hibernation_manager_.run([this](const slot_context_vec_t& slot_contexts) {
     std::unique_lock lock(mutex_);
-    GameSlot* slot = game_slots_[slot_id];
-    pending_queue_count_--;
-    queue_.push(slot);
+
+    for (SlotContext item : slot_contexts) {
+      queue_.push(item);
+    }
+    pending_queue_count_ -= slot_contexts.size();
     lock.unlock();
 
     cv_.notify_all();
@@ -155,8 +157,7 @@ void GameServer<Game>::SharedData::run_hibernation_manager() {
 }
 
 template <concepts::Game Game>
-typename GameServer<Game>::GameSlot*
-GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
+bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, SlotContext& item) {
   core::PerfClocker clocker(wait_for_game_slot_time_ns);
   std::unique_lock lock(mutex_);
 
@@ -166,27 +167,41 @@ GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
         return paused_ || pending_queue_count_ == 0 || !queue_.empty();
       });
     }
-    if (queue_.empty()) {
-      return nullptr;
-    }
+    if (queue_.empty()) return false;
   }
 
-  if (paused_) {
-    return nullptr;
-  }
+  if (paused_) return false;
 
-  GameSlot* slot = queue_.front();
+  item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
-  return slot;
+  return true;
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::enqueue(GameSlot* slot, int count) {
+void GameServer<Game>::SharedData::enqueue(SlotContext item, bool re_enqueue,
+                                           int extra_enqueue_count) {
   std::unique_lock lock(mutex_);
   bool empty = queue_.empty();
-  for (int i = 0; i < count; ++i) {
-    queue_.push(slot);
+  if (re_enqueue) {
+    util::release_assert(extra_enqueue_count == 0);
+    queue_.push(item);
+  } else if (extra_enqueue_count > 0) {
+    // Push back the item's siblings
+    //
+    // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
+    // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
+    // if the player uses 4 threads, this current thread might be context=2. The siblings then are
+    // contexts 3, 0, and 1.
+    //
+    // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
+    // this code will need to change.
+    util::release_assert(item.context >= 0 && item.context <= extra_enqueue_count);
+    for (int i = 0; i < extra_enqueue_count; ++i) {
+      item.context++;
+      if (item.context == extra_enqueue_count + 1) item.context = 0;
+      queue_.push(item);
+    }
   }
   pending_queue_count_--;
   if (empty) {
@@ -408,8 +423,7 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data),
-      id_(id),
-      hibernation_notifier_(shared_data.hibernation_manager(), id) {
+      id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -437,9 +451,10 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
+void GameServer<Game>::GameSlot::step(context_id_t context, bool& re_enqueue,
+                                      int& extra_enqueue_count) {
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(enqueue_count, hibernate)) {
+    if (step_non_chance(context, re_enqueue, extra_enqueue_count)) {
       pre_step();
     } else {
       return;
@@ -470,7 +485,9 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
-    ChanceEventPreHandleResponse response = player->prehandle_chance_event();
+    HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, 0);
+    ChangeEventPreHandleRequest request(notification_unit);
+    ChanceEventPreHandleResponse response = player->prehandle_chance_event(request);
     mid_yield_ = response.yield_instruction != kContinue;
     if (mid_yield_) {
       return false;
@@ -510,11 +527,13 @@ bool GameServer<Game>::GameSlot::step_chance() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hibernate) {
+bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, bool& re_enqueue,
+                                                 int& extra_enqueue_count) {
   Player* player = players_[active_seat_];
-  ActionRequest request(state_history_.current(), valid_actions_);
+  HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, context);
+  ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
-  request.hibernation_notifier = &hibernation_notifier_;
+
   ActionResponse response = player->get_action_response(request);
   util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
@@ -525,7 +544,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
       if (pending_drop_count_ > 0) {
         // TODO: mark that we already got the response, and don't bother calling
         // get_action_response() again on the rebound?
-        enqueue_count = 1;
         return false;
       }
       mid_yield_ = false;
@@ -534,18 +552,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
     case kYield: {
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
-      enqueue_count = 1 + response.extra_enqueue_count;
-      return false;
-    }
-    case kHibernate: {
-      mid_yield_ = true;
-      enqueue_count = 0;
-      hibernate = true;
+      re_enqueue = false;
+      extra_enqueue_count = response.extra_enqueue_count;
       return false;
     }
     case kDrop: {
       pending_drop_count_--;
-      enqueue_count = 0;
+      re_enqueue = false;
       return false;
     }
     default: {
@@ -555,7 +568,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
 
   util::debug_assert(!mid_yield_);
 
-  enqueue_count = 1;
   move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
@@ -693,8 +705,8 @@ void GameServer<Game>::GameThread::run() {
   shared_data_.increment_active_thread_count();
   while (true) {
     int64_t wait_for_game_slot_time_ns = 0;
-    GameSlot* slot = shared_data_.next(wait_for_game_slot_time_ns);
-    if (!slot) {
+    SlotContext item;
+    if (!shared_data_.next(wait_for_game_slot_time_ns, item)) {
       if (shared_data_.paused()) {
         shared_data_.increment_paused_thread_count();
         shared_data_.wait_for_unpause();
@@ -706,25 +718,27 @@ void GameServer<Game>::GameThread::run() {
       }
     }
 
+    GameSlot* slot = shared_data_.get_game_slot(item.slot);
+
     // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
     // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    int enqueue_count = 1;
-    bool hibernate = false;
-    slot->step(enqueue_count, hibernate);
+    bool re_enqueue = true;
+    int extra_enqueue_count = 0;
+    slot->step(item.context, re_enqueue, extra_enqueue_count);
 
     bool dropped = false;
     if (slot->game_ended()) {
-      util::release_assert(enqueue_count == 1);
+      util::release_assert(re_enqueue && extra_enqueue_count == 0);
       if (!slot->start_game()) {
         shared_data_.drop_slot();
         dropped = true;
       }
     }
 
-    if (!dropped && !hibernate) shared_data_.enqueue(slot, enqueue_count);
+    if (!dropped) shared_data_.enqueue(item, re_enqueue, extra_enqueue_count);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);

@@ -4,7 +4,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/HibernationManager.hpp>
-#include <core/HibernationNotifier.hpp>
 #include <core/Packet.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
@@ -63,9 +62,11 @@ class GameServerProxy {
 
     // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
     // true if hibernating.
-    void step(int& enqueue_count, bool& hibernate);
+    void step(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
 
     bool game_started() const { return game_started_; }
+    bool game_ended() const { return !game_started_; }
+    game_slot_index_t id() const { return id_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -77,7 +78,6 @@ class GameServerProxy {
     SharedData& shared_data_;
     const game_slot_index_t id_;
     player_array_t players_;
-    HibernationNotifier hibernation_notifier_;
 
     // Initialized at the start of the game
     game_id_t game_id_;
@@ -113,8 +113,11 @@ class GameServerProxy {
     int num_game_threads() const { return num_game_threads_; }
     bool running() const { return running_; }
 
-    GameSlot* next();  // returns nullptr if ready to shut down
-    void enqueue(GameSlot*, int count);
+    // If the server is shutting down, returns false. Else, returns true, and sets item to the next
+    // queue item.
+    bool next(SlotContext& item);
+    void enqueue(SlotContext item, bool re_enqueue, int extra_enqueue_count);
+    GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
 
     void handle_start_game(const GeneralPacket& packet);
     void handle_state_change(const GeneralPacket& packet);
@@ -135,7 +138,7 @@ class GameServerProxy {
     // Below fields mirror their usage in GameServer. See GameServer::SharedData comments for
     // details.
     std::vector<GameSlot*> game_slots_;
-    std::queue<GameSlot*> queue_;
+    std::queue<SlotContext> queue_;
 
     HibernationManager hibernation_manager_;
   };

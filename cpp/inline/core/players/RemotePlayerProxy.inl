@@ -108,7 +108,8 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
   const char* buf = payload.dynamic_size_section.buf;
   player->action_response_ = *reinterpret_cast<const ActionResponse*>(buf);
-  player->hibernation_notifier_->notify();
+  const HibernationNotificationUnit& unit = player->hibernation_notification_unit_;
+  unit.hibernation_manager->notify(unit.slot_context());
 }
 
 template <concepts::Game Game>
@@ -148,8 +149,8 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
     const ActionRequest& request) {
-  if (hibernation_notifier_) {
-    hibernation_notifier_ = nullptr;
+  if (hibernating_) {
+    hibernating_ = false;
     return action_response_;
   }
   const ActionMask& valid_actions = request.valid_actions;
@@ -158,6 +159,7 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
 
   Packet<ActionPrompt> packet;
   packet.payload().game_slot_index = game_slot_index_;
+  packet.payload().context_id = request.notification_unit.context_id;
   packet.payload().player_id = player_id_;
   packet.payload().play_noisily = request.play_noisily;
   auto& section = packet.payload().dynamic_size_section;
@@ -165,8 +167,9 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
   packet.set_dynamic_section_size(sizeof(valid_actions));
   packet.send_to(socket_);
 
-  hibernation_notifier_ = request.hibernation_notifier;
-  return ActionResponse::hibernate();
+  hibernation_notification_unit_ = request.notification_unit;
+  hibernating_ = true;
+  return ActionResponse::yield();
 }
 
 template <concepts::Game Game>

@@ -52,6 +52,12 @@ typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::ma
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationRequest<Game>::set_notification_task_info(
+  const core::HibernationNotificationUnit& unit) {
+  notification_unit_ = unit;
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationRequest<Game>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {

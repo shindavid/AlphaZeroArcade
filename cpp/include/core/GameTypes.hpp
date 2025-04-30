@@ -2,7 +2,7 @@
 
 #include <core/ActionSymmetryTable.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationNotifier.hpp>
+#include <core/HibernationManager.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/concepts/GameResults.hpp>
 #include <util/EigenUtil.hpp>
@@ -59,16 +59,21 @@ struct GameTypes {
     bool use_for_training = false;
   };
 
+  struct ChangeEventPreHandleRequest {
+    ChangeEventPreHandleRequest(const HibernationNotificationUnit& u) : notification_unit(u) {}
+
+    HibernationNotificationUnit notification_unit;
+  };
+
   struct ActionRequest {
+    ActionRequest(const State& s, const ActionMask& va, const HibernationNotificationUnit& u)
+        : state(s), valid_actions(va), notification_unit(u) {}
+
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
     const State& state;
     const ActionMask& valid_actions;
-
-    // If the player wishes to hibernate, it must later, when it's done with its asynchronous work,
-    // call hibernation_notifier->notify() to notify the GameServer that the corresponding
-    // GameSlot is ready to continue.
-    HibernationNotifier* hibernation_notifier = nullptr;
+    HibernationNotificationUnit notification_unit;
 
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
@@ -98,7 +103,6 @@ struct GameTypes {
         : action(a), extra_enqueue_count(e), yield_instruction(y) {}
 
     static ActionResponse yield(int e=0) { return ActionResponse(-1, e, core::kYield); }
-    static ActionResponse hibernate() { return ActionResponse(-1, 0, core::kHibernate); }
     static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
 
     TrainingInfo training_info;
@@ -114,7 +118,6 @@ struct GameTypes {
         : action_values(a), yield_instruction(y) {}
 
     static auto yield() { return ChanceEventPreHandleResponse(nullptr, core::kYield); }
-    static auto hibernate() { return ChanceEventPreHandleResponse(nullptr, core::kHibernate); }
 
     ActionValueTensor* action_values = nullptr;
     core::yield_instruction_t yield_instruction = core::kContinue;

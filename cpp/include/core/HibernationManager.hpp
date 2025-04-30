@@ -6,14 +6,12 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <vector>
 
 namespace core {
 
 class HibernationManager {
  public:
-  using game_slot_vec_t = std::vector<game_slot_index_t>;
-  using func_t = std::function<void(game_slot_index_t)>;
+  using func_t = std::function<void(const slot_context_vec_t&)>;
 
   ~HibernationManager();
 
@@ -24,7 +22,8 @@ class HibernationManager {
   // Shuts down the loop.
   void shut_down();
 
-  void notify(game_slot_index_t slot_id);
+  void notify(const core::slot_context_vec_t&);
+  void notify(const SlotContext&);
 
  private:
   void loop(func_t f);
@@ -32,8 +31,23 @@ class HibernationManager {
   std::condition_variable cv_;
   std::mutex mutex_;
   std::thread thread_;
-  game_slot_vec_t ready_slots_;
+  slot_context_vec_t ready_items_;
   bool shutting_down_ = false;
+};
+
+struct HibernationNotificationUnit {
+  HibernationNotificationUnit(core::HibernationManager* h, core::game_slot_index_t g,
+                              core::context_id_t c)
+      : hibernation_manager(h), game_slot_index(g), context_id(c) {}
+
+  HibernationNotificationUnit() = default;
+
+  bool valid() const { return hibernation_manager != nullptr; }
+  SlotContext slot_context() const { return SlotContext(game_slot_index, context_id); }
+
+  core::HibernationManager* hibernation_manager = nullptr;
+  core::game_slot_index_t game_slot_index = -1;
+  core::context_id_t context_id = 0;
 };
 
 }  // namespace core

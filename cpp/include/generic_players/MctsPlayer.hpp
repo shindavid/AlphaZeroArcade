@@ -48,6 +48,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using MctsManagerParams = mcts::ManagerParams<Game>;
   using MctsSearchParams = mcts::SearchParams;
   using SearchResults = Game::Types::SearchResults;
+  using SearchRequest = MctsManager::SearchRequest;
   using SearchResponse = MctsManager::SearchResponse;
   using player_name_array_t = Game::Types::player_name_array_t;
 

@@ -99,6 +99,7 @@ class ManagerTest : public testing::Test {
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using State = Game::State;
+  using SearchRequest = Manager::SearchRequest;
   using SearchResult = Game::Types::SearchResults;
 
   static_assert(Node::kStoreStates, "state-storage required for search-log tests");
@@ -137,7 +138,8 @@ class ManagerTest : public testing::Test {
   const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
-    return manager_->search().results;
+    SearchRequest request;
+    return manager_->search(request).results;
   }
 
   Node* get_node_by_index(node_pool_index_t index) {

@@ -161,6 +161,7 @@ void NNEvaluationService<Game>::BatchData::clear() {
   allocate_count = 0;
   write_count = 0;
   accepting_allocations = true;
+  notification_tasks.clear();
 }
 
 template <core::concepts::Game Game>
@@ -297,6 +298,10 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
       RequestItem& item = request.get_fresh_item(miss_info.item_index);
       BatchData* batch_data = miss_info.batch_data;
       int row = miss_info.row;
+      if (i + 1 == result.stats.cache_misses) {
+        // Important to do this BEFORE the write_to_batch() call to avoid race condition
+        register_notification_task(request, batch_data);
+      }
       write_to_batch(item, batch_data, row);
     }
 
@@ -636,6 +641,23 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
   if (notify) {
     cv_main_.notify_all();
   }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
+                                                           BatchData* batch_data) {
+  // NOTE: in principle, we can initialize hibernation_manager_ at startup to avoid doing it here.
+  // There should only ever be one hibernation_manager_ for the entire process. We do it here to
+  // avoid having to pass it around all over the place during initialization.
+  const core::HibernationNotificationUnit& unit = request.notification_unit();
+  if (this->hibernation_manager_ == nullptr) {
+    hibernation_manager_ = unit.hibernation_manager;
+  } else {
+    // Verify that there is only one
+    util::debug_assert(hibernation_manager_ == unit.hibernation_manager);
+  }
+
+  batch_data->notification_tasks.push_back(unit.slot_context());
 }
 
 template <core::concepts::Game Game>

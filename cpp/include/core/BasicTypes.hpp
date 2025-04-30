@@ -1,9 +1,7 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-#include <util/FiniteGroups.hpp>
-
 #include <cstdint>
+#include <vector>
 
 namespace core {
 
@@ -13,10 +11,29 @@ using action_mode_t = int8_t;
 using action_t = int32_t;
 using game_id_t = int64_t;
 using game_thread_id_t = int16_t;
-using game_slot_index_t = int16_t;
-using context_id_t = int16_t;
 using nn_evaluation_pool_index_t = int32_t;
 using nn_evaluation_sequence_id_t = int64_t;
+
+// A game_slot_index_t specifies a GameSlot within a GameServer/GameServerProxy.
+using game_slot_index_t = int16_t;
+
+// Each player can manage 1 or more "Contexts". This is a notion that is internal to each player.
+// For single-threaded players, this is always 0. For multi-threaded players, this can be thought of
+// as a zero-indexed thread-id.
+//
+// The GameServer paradigm allows a player to inform the GameServer that it will use multiple
+// contexts (i.e., threads). The GameServer needs this information from the player in order to
+// optimally schedule work across the set of all parallel games.
+using context_id_t = int16_t;
+
+// SlotContext is essentially a (game_slot_index_t, context_id_t) pair.
+struct SlotContext {
+  SlotContext(game_slot_index_t s = -1, context_id_t c = 0) : slot(s), context(c) {}
+
+  game_slot_index_t slot;
+  context_id_t context;
+};
+using slot_context_vec_t = std::vector<SlotContext>;
 
 // yield_instruction_t is used in various components of the MCTS machinery
 //
@@ -24,14 +41,8 @@ using nn_evaluation_sequence_id_t = int64_t;
 //
 // kYield indicates that the current thread is blocked waiting for some asynchronous event to
 // finish (such as the completion of an NN evaluation). It is requesting the caller to move onto
-// a different unit of work. When the caller comes back to this thread, it is required to return
-// kContinue. Thus, kYield should only be used when the block is expected to be short-lived.
-//
-// kHibernate is similar to kYield, but indicates that the block is expected to be long-lived. When
-// GameServer receives a kHibernate response, it does not cycle back to this thread on its own, and
-// instead awaits an explicit notification from the thread that its hibernation is over. An example
-// use case for this is for a human player waiting for a TUI input. We don't know how long the
-// human will take to respond, so we don't want to waste CPU cycles polling for it.
+// a different unit of work. When the asynchronous event is completed, the GameServer will be
+// notified, at which point it can put the GameSlot back in its queue.
 //
 // kDrop indicates that the current thread should be dropped. This is used in the context of
 // multithreaded search: the first search thread to process a state will return kYield with
@@ -42,7 +53,6 @@ using nn_evaluation_sequence_id_t = int64_t;
 enum yield_instruction_t : int8_t {
   kContinue,
   kYield,
-  kHibernate,
   kDrop
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <core/HibernationManager.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/concepts/Game.hpp>
@@ -171,6 +172,11 @@ class NNEvaluationService
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;
 
+    core::slot_context_vec_t notification_tasks;
+
+    // TODO: I'm skeptical that sequence-id's are needed anymore, now that we are passing
+    // notification task info to the evaluate() method. If so, we can remove
+    // core::nn_evaluation_sequence_id_t completely, along with all the code that uses it.
     core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
 
     // Below fields are protected by the main_mutex_ member of NNEvaluationService.
@@ -305,6 +311,7 @@ class NNEvaluationService
                         int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
+  void register_notification_task(const NNEvaluationRequest& request, BatchData* batch_data);
 
   void loop();
   void set_deadline();
@@ -361,6 +368,7 @@ class NNEvaluationService
 
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;
+  core::HibernationManager* hibernation_manager_ = nullptr;
 };
 
 }  // namespace mcts

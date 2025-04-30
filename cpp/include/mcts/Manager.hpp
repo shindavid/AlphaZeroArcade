@@ -2,6 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/HibernationManager.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -12,8 +13,6 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Math.hpp>
-
-#include <boost/circular_buffer.hpp>
 
 #include <array>
 #include <mutex>
@@ -47,6 +46,7 @@ class Manager {
 
   using ActionSelector = mcts::ActionSelector<Game>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
+  using ActionRequest = Game::Types::ActionRequest;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
   using Symmetries = Game::Symmetries;
@@ -70,6 +70,19 @@ class Manager {
     Edge* edge;  // emanates from node, possibly nullptr
   };
   using search_path_t = std::vector<Visitation>;
+
+  struct SearchRequest {
+    SearchRequest(const core::HibernationNotificationUnit& u) : notification_unit(u) {}
+    SearchRequest() = default;
+
+    core::HibernationManager* hibernation_manager() const {
+      return notification_unit.hibernation_manager;
+    }
+    core::context_id_t context_id() const { return notification_unit.context_id; }
+    core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
+
+    core::HibernationNotificationUnit notification_unit;
+  };
 
   struct SearchResponse {
     static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
@@ -117,6 +130,9 @@ class Manager {
 
     // For kYield responses
     int extra_enqueue_count = 0;
+
+    // For convenience
+    const SearchRequest* search_request = nullptr;
   };
 
   enum execution_state_t : int8_t {
@@ -203,7 +219,6 @@ class Manager {
   // is still processing the search results.
   struct StateMachine {
     mutable std::mutex mutex;
-    boost::circular_buffer<core::context_id_t> available_context_ids;
     core::context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
@@ -243,8 +258,9 @@ class Manager {
   void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
-  SearchResponse search();
-  core::yield_instruction_t load_root_action_values(ActionValueTensor& action_values);
+  SearchResponse search(const SearchRequest& request);
+  core::yield_instruction_t load_root_action_values(const core::HibernationNotificationUnit&,
+                                                    ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }
 
@@ -259,13 +275,7 @@ class Manager {
   Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
           NNEvaluationServiceBase* service);
 
-  // Assumes state_matchine_.mutex is held
-  core::context_id_t get_next_context_id();
-
-  // Does NOT assume state_machine_.mutex is held
-  void recycle_context(core::context_id_t context_id);
-
-  SearchResponse search_helper(core::context_id_t& context_id);
+  SearchResponse search_helper(const SearchRequest& request);
 
   // Assumes state_matchine_.mutex is held
   //

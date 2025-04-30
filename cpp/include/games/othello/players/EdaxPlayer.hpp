@@ -2,7 +2,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationNotifier.hpp>
 #include <core/OraclePool.hpp>
 #include <games/othello/Constants.hpp>
 #include <games/othello/EdaxOracle.hpp>

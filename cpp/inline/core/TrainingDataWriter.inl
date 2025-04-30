@@ -4,12 +4,12 @@
 #include <string>
 
 #include <core/Globals.hpp>
+#include <core/PerfStats.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
-#include "core/PerfStats.hpp"
 
 namespace core {
 

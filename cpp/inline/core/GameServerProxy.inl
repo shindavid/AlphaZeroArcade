@@ -39,8 +39,7 @@ auto GameServerProxy<Game>::Params::make_options_description() {
 template <concepts::Game Game>
 GameServerProxy<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data),
-      id_(id),
-      hibernation_notifier_(shared_data.hibernation_manager(), id) {
+      id_(id) {
   for (player_id_t p = 0; p < (player_id_t)kNumPlayers; ++p) {
     players_[p] = nullptr;
     PlayerGenerator* gen = shared_data_.get_gen(p);
@@ -93,12 +92,17 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
   const char* buf = payload.dynamic_size_section.buf;
   valid_actions_ = *reinterpret_cast<const ActionMask*>(buf);
-  play_noisily_ = payload.play_noisily;
+  context_id_t context_id = payload.context_id;
   prompted_player_id_ = payload.player_id;
+  play_noisily_ = payload.play_noisily;
 
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+  LOG_DEBUG("{}() id={} game_id={} context_id={} player_id={}", __func__, id_, game_id_, context_id,
+            payload.player_id);
 
-  shared_data_.enqueue(this, 1);
+  SlotContext slot_context(id_, context_id);
+  bool re_enqueue = true;
+  int extra_enqueue_count = 0;
+  shared_data_.enqueue(slot_context, re_enqueue, extra_enqueue_count);
 }
 
 template <concepts::Game Game>
@@ -114,14 +118,17 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
+void GameServerProxy<Game>::GameSlot::step(context_id_t context, bool& re_enqueue,
+                                           int& extra_enqueue_count) {
   Player* player = players_[prompted_player_id_];
 
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, prompted_player_id_);
+  LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
+            prompted_player_id_);
 
-  ActionRequest request(history_.current(), valid_actions_);
+  HibernationNotificationUnit notification_unit(shared_data_.hibernation_manager(), id_, context);
+  ActionRequest request(history_.current(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
-  request.hibernation_notifier = &hibernation_notifier_;
+
   ActionResponse response = player->get_action_response(request);
   util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
@@ -130,7 +137,6 @@ void GameServerProxy<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) 
   switch (response.yield_instruction) {
     case kContinue: {
       if (pending_drop_count_ > 0) {
-        enqueue_count = 1;
         return;
       }
       mid_yield_ = false;
@@ -139,18 +145,13 @@ void GameServerProxy<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) 
     case kYield: {
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
-      enqueue_count = 1 + response.extra_enqueue_count;
-      return;
-    }
-    case kHibernate: {
-      mid_yield_ = true;
-      enqueue_count = 0;
-      hibernate = true;
+      re_enqueue = false;
+      extra_enqueue_count = response.extra_enqueue_count;
       return;
     }
     case kDrop: {
       pending_drop_count_--;
-      enqueue_count = 0;
+      re_enqueue = false;
       return;
     }
     default: {
@@ -158,7 +159,7 @@ void GameServerProxy<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) 
     }
   }
   send_action_packet(response);
-  enqueue_count = 0;
+  re_enqueue = false;
 }
 
 template <concepts::Game Game>
@@ -285,10 +286,12 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::run_hibernation_manager() {
-  hibernation_manager_.run([this](game_slot_index_t slot_id) {
+  hibernation_manager_.run([this](const slot_context_vec_t& slot_contexts) {
     std::unique_lock lock(mutex_);
-    GameSlot* slot = game_slots_[slot_id];
-    queue_.push(slot);
+
+    for (SlotContext item : slot_contexts) {
+      queue_.push(item);
+    }
     lock.unlock();
 
     cv_.notify_all();
@@ -296,7 +299,7 @@ void GameServerProxy<Game>::SharedData::run_hibernation_manager() {
 }
 
 template <concepts::Game Game>
-typename GameServerProxy<Game>::GameSlot* GameServerProxy<Game>::SharedData::next() {
+bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
@@ -304,21 +307,38 @@ typename GameServerProxy<Game>::GameSlot* GameServerProxy<Game>::SharedData::nex
   }
 
   if (!running_) {
-    return nullptr;
+    return false;
   }
 
-  GameSlot* slot = queue_.front();
+  item = queue_.front();
   queue_.pop();
-  return slot;
+  return true;
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::enqueue(GameSlot* slot, int count) {
-  if (count == 0) return;
+void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, bool re_enqueue,
+                                                int extra_enqueue_count) {
   std::unique_lock lock(mutex_);
   bool empty = queue_.empty();
-  for (int i = 0; i < count; ++i) {
-    queue_.push(slot);
+  if (re_enqueue) {
+    util::release_assert(extra_enqueue_count == 0);
+    queue_.push(item);
+  } else if (extra_enqueue_count > 0) {
+    // Push back the item's siblings
+    //
+    // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
+    // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
+    // if the player uses 4 threads, this current thread might be context=2. The siblings then are
+    // contexts 3, 0, and 1.
+    //
+    // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
+    // this code will need to change.
+    util::release_assert(item.context >= 0 && item.context <= extra_enqueue_count);
+    for (int i = 0; i < extra_enqueue_count; ++i) {
+      item.context++;
+      if (item.context == extra_enqueue_count + 1) item.context = 0;
+      queue_.push(item);
+    }
   }
   if (empty) {
     lock.unlock();
@@ -373,16 +393,18 @@ void GameServerProxy<Game>::GameThread::launch() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameThread::run() {
   while (shared_data_.running()) {
-    GameSlot* slot = shared_data_.next();
-    if (!slot) return;
+    SlotContext item;
+    if (!shared_data_.next(item)) return;
+
+    GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
     util::release_assert(slot->game_started());
-    int enqueue_count = 1;
-    bool hibernate = false;
-    slot->step(enqueue_count, hibernate);
+    bool re_enqueue = true;
+    int extra_enqueue_count = 0;
+    slot->step(item.context, re_enqueue, extra_enqueue_count);
 
-    if (slot->game_started() && !hibernate) {
-      shared_data_.enqueue(slot, enqueue_count);
+    if (!slot->game_ended()) {
+      shared_data_.enqueue(item, re_enqueue, extra_enqueue_count);
     }
   }
 }

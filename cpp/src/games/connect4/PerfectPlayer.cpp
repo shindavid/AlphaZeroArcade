@@ -9,9 +9,9 @@
 namespace c4 {
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
-  PerfectOracle* oracle = oracle_pool_->get_oracle(request.hibernation_notifier);
+  PerfectOracle* oracle = oracle_pool_->get_oracle(request.notification_unit);
   if (!oracle) {
-    return ActionResponse::hibernate();
+    return ActionResponse::yield();
   }
   PerfectOracle::QueryResult result = oracle->query(move_history_);
   oracle_pool_->release_oracle(oracle);

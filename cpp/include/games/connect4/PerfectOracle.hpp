@@ -2,7 +2,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationNotifier.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
 #include <util/Asserts.hpp>

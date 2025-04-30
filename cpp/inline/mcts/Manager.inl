@@ -45,10 +45,8 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerPar
     throw util::CleanException("pondering mode temporarily unsupported");
   }
   contexts_.resize(num_search_threads());
-  state_machine_.available_context_ids.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     init_context(i);
-    state_machine_.available_context_ids.push_back(i);
   }
 }
 
@@ -148,17 +146,23 @@ void Manager<Game>::set_search_params(const SearchParams& params) {
 }
 
 template <core::concepts::Game Game>
-typename Manager<Game>::SearchResponse Manager<Game>::search() {
-  core::context_id_t context_id;
+typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest& request) {
+  auto context_id = request.context_id();
+  util::debug_assert(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
+                     context_id, num_search_threads());
 
-  SearchResponse response = search_helper(context_id);
+  LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "",
+            kThreadWhitespaceLength * context_id, (uint64_t)this, (int)state_machine_.state,
+            context_id, state_machine_.primary_context_id);
+
+  SearchResponse response = search_helper(request);
+
   LOG_DEBUG("{:>{}}{}() exit: manager={} state={} instr={} extra={}", "",
             kThreadWhitespaceLength * context_id, __func__, (uint64_t)this,
             (int)state_machine_.state, (int)response.yield_instruction,
             response.extra_enqueue_count);
 
   contexts_[context_id].extra_enqueue_count = 0;
-  recycle_context(context_id);
   return response;
 }
 
@@ -166,7 +170,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search() {
  * Here, we do a skimmed-down version of Manager::search()
  */
 template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::load_root_action_values(ActionValueTensor& action_values) {
+core::yield_instruction_t Manager<Game>::load_root_action_values(
+  const core::HibernationNotificationUnit& notification_unit, ActionValueTensor& action_values) {
   if (!mid_load_root_action_values_) {
     action_values.setZero();
     init_root_info(false);
@@ -181,7 +186,8 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(ActionValueTens
     mid_load_root_action_values_ = true;
   }
 
-  SearchResponse response = search();
+  SearchRequest request(notification_unit);
+  SearchResponse response = search(request);
   if (response.yield_instruction == core::kYield) {
     return core::kYield;
   }
@@ -215,29 +221,11 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(ActionValueTens
 }
 
 template <core::concepts::Game Game>
-core::context_id_t Manager<Game>::get_next_context_id() {
-  // Assumes state_machine_.mutex is held
-  util::release_assert(!state_machine_.available_context_ids.empty(), "No available context IDs");
-  core::context_id_t id = state_machine_.available_context_ids.front();
-  state_machine_.available_context_ids.pop_front();
-  return id;
-}
-
-template <core::concepts::Game Game>
-void Manager<Game>::recycle_context(core::context_id_t id) {
+typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const SearchRequest& request) {
   std::unique_lock lock(state_machine_.mutex);
-  state_machine_.available_context_ids.push_back(id);
-}
-
-template <core::concepts::Game Game>
-typename Manager<Game>::SearchResponse Manager<Game>::search_helper(
-  core::context_id_t& context_id) {
-  std::unique_lock lock(state_machine_.mutex);
-  context_id = get_next_context_id();
-  LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "", kThreadWhitespaceLength * context_id,
-            (uint64_t)this, (int)state_machine_.state, context_id, state_machine_.primary_context_id);
-
+  auto context_id = request.context_id();
   SearchContext& context = contexts_[context_id];
+  context.search_request = &request;
 
   if (state_machine_.state == kIdle) {
     if (context_id == state_machine_.primary_context_id) {
@@ -427,6 +415,8 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
       expand_all_children(context, node);
     }
 
+    const SearchRequest& search_request = *context.search_request;
+    context.eval_request.set_notification_task_info(search_request.notification_unit);
     NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
     context.nn_eval_seq_id = response.sequence_id;
     if (response.yield_instruction == core::kYield) {

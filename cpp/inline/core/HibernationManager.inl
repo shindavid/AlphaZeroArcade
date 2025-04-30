@@ -21,22 +21,32 @@ inline void HibernationManager::shut_down() {
   if (thread_.joinable()) thread_.join();
 }
 
-inline void HibernationManager::notify(game_slot_index_t slot_id) {
+inline void HibernationManager::notify(const core::slot_context_vec_t& vec) {
   std::unique_lock lock(mutex_);
-  ready_slots_.push_back(slot_id);
+  for (const auto& item : vec) {
+    ready_items_.push_back(item);
+  }
+  lock.unlock();
   cv_.notify_all();
 }
+
+inline void HibernationManager::notify(const SlotContext& item) {
+  std::unique_lock lock(mutex_);
+  ready_items_.push_back(item);
+  lock.unlock();
+  cv_.notify_all();
+}
+
 
 inline void HibernationManager::loop(func_t f) {
   while (!shutting_down_) {
     std::unique_lock lock(mutex_);
-    cv_.wait(lock, [this]() { return !ready_slots_.empty() || shutting_down_; });
+    cv_.wait(lock, [this]() { return !ready_items_.empty() || shutting_down_; });
     if (shutting_down_) {
       break;
     }
-    game_slot_index_t slot_id = ready_slots_.back();
-    f(slot_id);
-    ready_slots_.pop_back();
+    f(ready_items_);
+    ready_items_.clear();
   }
 }
 

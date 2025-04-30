@@ -134,6 +134,7 @@ struct ActionPrompt {
   };
 
   game_slot_index_t game_slot_index;
+  context_id_t context_id;
   player_id_t player_id;
   bool play_noisily;
   DynamicSizeSection dynamic_size_section;

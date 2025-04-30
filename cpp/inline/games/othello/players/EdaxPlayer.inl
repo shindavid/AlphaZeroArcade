@@ -35,9 +35,9 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
   }
 
   EdaxOracle* oracle =
-    oracle_pool_->get_oracle(request.hibernation_notifier, params_.depth, params_.verbose);
+    oracle_pool_->get_oracle(request.notification_unit, params_.depth, params_.verbose);
   if (!oracle) {
-    return ActionResponse::hibernate();
+    return ActionResponse::yield();
   }
 
   core::action_t action = oracle->query(state, request.valid_actions);
