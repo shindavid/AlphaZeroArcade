@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from alphazero.logic.run_params import RunParams
+from alphazero.logic.runtime import acquire_lock
 from util import subprocess_util
 from util.py_util import CustomHelpFormatter
 
@@ -16,6 +17,8 @@ def main():
                         help=f'Target ELO gap for benchmarking (default: {DEFAULT_TARGET_ELO_GAP})')
     args = parser.parse_args()
     run_params = RunParams.create(args)
+
+    acquire_lock(run_params)
 
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--game', run_params.game,

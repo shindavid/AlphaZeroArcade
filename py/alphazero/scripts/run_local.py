@@ -331,8 +331,6 @@ def main():
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
 
-    acquire_lock(run_params)
-
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
@@ -377,6 +375,7 @@ def main():
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
+            acquire_lock(run_params)
             if is_frozen(run_params):
                 raise Exception(
                     f"game {run_params.game} tag {run_params.tag} is frozen.\n"
