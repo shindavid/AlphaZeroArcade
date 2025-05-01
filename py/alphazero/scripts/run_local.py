@@ -289,7 +289,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
     build_params.add_to_cmd(cmd, loop_controller=True)
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
-    print(cmd)
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)

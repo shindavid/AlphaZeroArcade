@@ -155,6 +155,9 @@ default_tags = tags
 
 
 def get_benchmark_tags(tag: str) -> List[str]:
+    """
+    returns a list of benchmark tags used for evaluating the given run tag
+    """
     benchmark_tags = []
     filename = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')
     if os.path.isfile(filename):
@@ -166,7 +169,10 @@ def get_benchmark_tags(tag: str) -> List[str]:
             benchmark_tags.append(os.path.splitext(f)[0])
     return benchmark_tags
 
-def get_benchmark_dict(tags) -> Dict[str, List[str]]:
+def get_benchmark_eval_mapping(tags: List[str]) -> Dict[str, List[str]]:
+    """
+    returns a dict mapping a benchmark tag to a list of run tags that are evaluated against it.
+    """
     tag_dict = {tag: get_benchmark_tags(tag) for tag in tags}
     benchmark_dict = defaultdict(list)
     for tag, benchmark_tags in tag_dict.items():
@@ -211,7 +217,7 @@ def evaluation(doc):
     if not tags:
         return
 
-    benchmark_dict = get_benchmark_dict(tags)
+    benchmark_dict = get_benchmark_eval_mapping(tags)
     benchmark_tags = list(benchmark_dict.keys())
     current_benchmark_tag = benchmark_tags[0]
 

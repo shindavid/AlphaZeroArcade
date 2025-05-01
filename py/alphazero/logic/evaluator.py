@@ -39,49 +39,6 @@ class Evaluator:
         self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)
         self._arena.load_matches_from_db(self.db, type=MatchType.EVALUATE)
 
-    def eval_agent(self, test_agent: Agent, n_games, error_threshold=100,
-                   init_rating_estimate: Optional[float]=None):
-        self._arena.refresh_ratings()
-        if init_rating_estimate is not None:
-            estimated_rating = init_rating_estimate
-        else:
-            estimated_rating = np.mean(self.benchmark_ratings)
-
-        test_iagent = self._arena.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self.db)
-
-        n_games_played = self._arena.n_games_played(test_agent)
-        if n_games_played > 0:
-            n_games -= n_games_played
-            estimated_rating = self._arena.ratings[test_iagent.index]
-
-        committee_ixs = np.where(self.benchmark_committee)[0]
-        opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
-        while n_games > 0 and len(opponent_ix_played) < len(committee_ixs):
-            opponent_ix_played = self._arena.get_past_opponents_ix(test_agent)
-            chosen_ixs, num_matches = self.gen_matches(estimated_rating, opponent_ix_played, n_games)
-            sorted_ixs = np.argsort(num_matches)[::-1]
-            logger.debug('evaluating %s against %d opponents. Estimated rating: %f', test_agent, len(chosen_ixs), estimated_rating)
-            for i in range(len(chosen_ixs)):
-                ix = chosen_ixs[sorted_ixs[i]]
-                n = num_matches[sorted_ixs[i]]
-
-                opponent = self._arena.indexed_agents[ix].agent
-                match = Match(test_agent, opponent, n, MatchType.EVALUATE)
-                self._arena.play_matches([match], self._organizer.game, db=self.db)
-                n_games -= n
-                opponent_ix_played = np.concatenate([opponent_ix_played, [ix]])
-                self._arena.refresh_ratings()
-                new_estimate = self._arena.ratings[test_iagent.index]
-                if abs(new_estimate - estimated_rating) > error_threshold:
-                    estimated_rating = new_estimate
-                    break
-
-        _, interpolated_ratings = self.interpolate_ratings()
-        test_iagents = [ia for ia in self._arena.indexed_agents if AgentRole.TEST in ia.roles]
-        self.db.commit_ratings(test_iagents, interpolated_ratings)
-        logger.debug('Finished evaluating %s. Interpolated rating: %f. Before interp: %f',
-                    test_agent, interpolated_ratings[-1], self.arena_ratings[-1])
-
     def gen_matches(self, eval_ix: int, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
         """
         The opponent selection algorithm is adapted from KataGo:
