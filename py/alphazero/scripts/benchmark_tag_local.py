@@ -18,8 +18,6 @@ def main():
     args = parser.parse_args()
     run_params = RunParams.create(args)
 
-    acquire_lock(run_params)
-
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--game', run_params.game,
            '--tag', run_params.tag,

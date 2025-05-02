@@ -17,6 +17,7 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.rating_db import RatingDB
+from alphazero.logic.runtime import acquire_lock, release_lock
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -60,6 +61,7 @@ class LoopController:
         self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
+        self._acquired_lock: bool = False
 
         # On cloud setups like runpod.io or GCP, we typically have access to two filesystems:
         #
@@ -108,16 +110,12 @@ class LoopController:
         """
         Entry-point into the LoopController.
         """
-        if self._params.task_mode:
-            loop = self._task_loop
-        else:
-            loop = self._training_loop
-
         try:
-            threading.Thread(target=loop, name='main_loop', daemon=True).start()
+            self._setup()
+            self._start_threads()
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
-            logger.info('Caught Ctrl-C')
+            logger.info('loop_controller caught Ctrl-C')
         finally:
             self._shutdown_manager.shutdown()
 
@@ -366,6 +364,10 @@ class LoopController:
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
+        if not self._acquired_lock and self.params.task_mode:
+            acquire_lock(self._run_params, self._shutdown_manager.register)
+            self._acquired_lock = True
+
         if not self._benchmark_manager:
             self._benchmark_manager = BenchmarkManager(self)
         return self._benchmark_manager
@@ -495,7 +497,6 @@ class LoopController:
 
     def _training_loop(self):
         try:
-            self._setup()
             self._self_play_manager.setup()
             self._training_manager.setup()
 
@@ -532,5 +533,11 @@ class LoopController:
         self._copy_binary_file()
         self._init_socket()
 
+    def _start_threads(self):
         self._output_dir_syncer.start()
         self._client_connection_manager.start()
+
+        if not self._acquired_lock and not self.params.task_mode:
+            acquire_lock(self._run_params, self._shutdown_manager.register)
+            self._acquired_lock = True
+            threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

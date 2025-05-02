@@ -74,7 +74,7 @@ class ServerBase:
             threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
-            logger.info('Caught Ctrl-C')
+            logger.info('server_base Caught Ctrl-C')
         finally:
             self._shutdown_manager.shutdown()
 
