@@ -1,9 +1,9 @@
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
+import json
 import logging
 import os
-import sys
 from typing import Any, Callable
 
 
@@ -17,9 +17,9 @@ def acquire_lock(run_params: RunParams, register_func: Callable[[Callable[[], No
     lock_file = os.path.join(runtime_dir, 'lock')
 
     if os.path.exists(lock_file):
-        logger.info("Another instance of run_local or benchmark_tag_local is already running. Exiting.")
-        logger.info(f"To force this instance to run, remove the lock file: {lock_file}")
-        sys.exit(1)
+        raise RuntimeError(
+            f"Another instance of run_local or benchmark_tag_local is already running.\n"
+            f"Exiting. To force this instance to run, remove the lock file: {lock_file}")
 
     with open(lock_file, 'w') as f:
         f.write('locked')
@@ -48,3 +48,27 @@ def is_frozen(run_params: RunParams) -> bool:
     os.makedirs(runtime_dir, exist_ok=True)
     freeze_file = os.path.join(runtime_dir, 'freeze')
     return os.path.exists(freeze_file)
+
+
+def save_default_benchmark(run_params: RunParams):
+    """
+    Save the default benchmark tag for a given game to a JSON file.
+
+    This will create or overwrite the file:
+        /workspace/output/{game}/benchmark_info.json
+    """
+    game = run_params.game
+    benchmark_tag = run_params.tag
+    output_dir = f"/workspace/output/{game}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    benchmark_info = {
+        "benchmark_tag": benchmark_tag
+    }
+
+    file_path = os.path.join(output_dir, "benchmark_info.json")
+
+    with open(file_path, 'w') as f:
+        json.dump(benchmark_info, f, indent=4)
+
+    logger.info(f"Benchmark tag '{benchmark_tag}' saved to {file_path}")

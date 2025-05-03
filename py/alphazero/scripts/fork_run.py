@@ -15,12 +15,15 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 from util.logging_util import configure_logger
+from util import sqlite3_util
 
 import numpy as np
 
 import argparse
+from dataclasses import replace
 import logging
 import os
+import shutil
 from typing import Dict, Optional
 
 
@@ -64,6 +67,31 @@ Noteworthy options:
     return parser.parse_args()
 
 
+def copy_databases(source: DirectoryOrganizer, target: DirectoryOrganizer,
+                   retrain_models: bool=False, last_gen: Optional[Generation]=None):
+    shutil.copyfile(source.clients_db_filename, target.clients_db_filename)
+
+    if not retrain_models:
+        if last_gen is None:
+            if os.path.exists(target.ratings_db_filename):
+                shutil.copyfile(source.ratings_db_filename, target.ratings_db_filename)
+            shutil.copyfile(source.training_db_filename, target.training_db_filename)
+        else:
+            if os.path.exists(target.ratings_db_filename):
+                sqlite3_util.copy_db(source.ratings_db_filename, target.ratings_db_filename,
+                                    f'mcts_gen <= {last_gen}')
+            sqlite3_util.copy_db(source.training_db_filename, target.training_db_filename,
+                                f'gen <= {last_gen}')
+
+    if last_gen is None:
+        shutil.copyfile(source.self_play_db_filename, target.self_play_db_filename)
+    else:
+        sqlite3_util.copy_db(source.self_play_db_filename, target.self_play_db_filename,
+                                f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
+
+    copy_eval_databases(source, target, last_gen=last_gen)
+
+
 def copy_eval_databases(from_organizer: DirectoryOrganizer, to_organizer: DirectoryOrganizer,
                         last_gen: Optional[Generation]=None):
     for f in os.listdir(from_organizer.eval_db_dir):
@@ -83,11 +111,7 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         if isinstance(db_agent.agent, MCTSAgent) and db_agent.roles == {AgentRole.TEST}:
             if last_gen is not None and db_agent.agent.gen > last_gen:
                 continue
-
-            agent = MCTSAgent(gen=db_agent.agent.gen,
-                                n_iters=db_agent.agent.n_iters,
-                                set_temp_zero=db_agent.agent.set_temp_zero,
-                                tag=new_tag)
+            agent = replace(db_agent.agent, tag=new_tag)
         else:
             agent = db_agent.agent
 
@@ -165,10 +189,7 @@ def main():
         from_organizer.copy_models_and_checkpoints(to_organizer, last_gen)
 
     logger.info('Copying database files...')
-    from_organizer.copy_databases(to_organizer, retrain_models, last_gen)
-
-    logger.info('Copying evaluation databases...')
-    copy_eval_databases(from_organizer, to_organizer, last_gen)
+    copy_databases(from_organizer, to_organizer, retrain_models, last_gen)
 
     logger.info('Copying binary files...')
     from_organizer.copy_binary(to_organizer)

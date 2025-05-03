@@ -17,10 +17,8 @@ from util.str_util import make_args_str
 from dataclasses import dataclass, fields
 import os
 import logging
-import signal
-import subprocess
 import threading
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -75,6 +73,8 @@ class ServerBase:
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
             logger.info('server_base Caught Ctrl-C')
+        except SystemExit:
+            logger.info('server_base caught SystemExit')
         finally:
             self._shutdown_manager.shutdown()
 

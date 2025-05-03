@@ -36,6 +36,7 @@ class ShutdownManager:
             return not self._shutdown_in_progress
 
     def shutdown(self):
+        logger.info(f'shutdown manager shutting down with code {self._shutdown_code}')
         with self._lock:
             code = self._shutdown_code
             self._shutdown_in_progress = True
@@ -46,10 +47,6 @@ class ShutdownManager:
                 action()
             except:
                 logger.error('Error while shutting down', exc_info=True)
-        try:
-            os.killpg(os.getpgrp(), signal.SIGTERM)
-        except Exception as e:
-            logger.info("Failed to kill process group: %s", e)
 
         sys.exit(code)
 

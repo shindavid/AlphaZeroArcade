@@ -351,15 +351,9 @@ class EvalManager(GamingManagerBase):
                     self._evaluator.indexed_agents[eval_ix].agent.gen,
                     interpolated_ratings[np.where(test_ixs == eval_ix)[0]])
 
-    def _has_work(self) -> bool:
-        if self._controller.params.task_mode:
-            rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
-            logger.info('Rated %s%% of generations', rated_percent * 100)
-            if rated_percent >= self._controller.params.target_rating_rate:
-                logger.info('Evaluation is complete. Rated %s%% of generations, stopping eval manager', rated_percent * 100)
-                self._controller._shutdown_manager.request_shutdown(1)
-
-        return super()._has_work()
+    def _task_finished(self) -> None:
+        rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
+        return rated_percent >= self._controller.params.target_rating_rate
 
     @property
     def n_games(self):

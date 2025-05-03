@@ -81,6 +81,10 @@ class RatingsManager(GamingManagerBase):
     def num_evaluated_gens(self):
         return len(self._rating_data_dict)
 
+    def _task_finished(self):
+        rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
+        return rated_percent >= self._controller.params.target_rating_rate
+
     def handle_server_disconnect(self, conn: ClientConnection):
         aux = conn.aux
         gen = aux.gen

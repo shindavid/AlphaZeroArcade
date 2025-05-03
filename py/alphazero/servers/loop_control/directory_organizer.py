@@ -293,28 +293,6 @@ class DirectoryOrganizer:
             target_checkpoint_filename = target.get_checkpoint_filename(gen)
             shutil.copyfile(checkpoint_filename, target_checkpoint_filename)
 
-    def copy_databases(self, target: 'DirectoryOrganizer', retrain_models: bool=False,
-                       last_gen: Optional[Generation]=None):
-        shutil.copyfile(self.clients_db_filename, target.clients_db_filename)
-
-        if not retrain_models:
-            if last_gen is None:
-                if os.path.exists(target.ratings_db_filename):
-                    shutil.copyfile(self.ratings_db_filename, target.ratings_db_filename)
-                shutil.copyfile(self.training_db_filename, target.training_db_filename)
-            else:
-                if os.path.exists(target.ratings_db_filename):
-                    sqlite3_util.copy_db(self.ratings_db_filename, target.ratings_db_filename,
-                                        f'mcts_gen <= {last_gen}')
-                sqlite3_util.copy_db(self.training_db_filename, target.training_db_filename,
-                                    f'gen <= {last_gen}')
-
-        if last_gen is None:
-            shutil.copyfile(self.self_play_db_filename, target.self_play_db_filename)
-        else:
-            sqlite3_util.copy_db(self.self_play_db_filename, target.self_play_db_filename,
-                                 f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
-
     def copy_binary(self, target: 'DirectoryOrganizer'):
         if not os.path.isfile(self.binary_filename):
             raise ValueError(f'Binary file does not exist: {self.binary_filename}')

@@ -1,5 +1,11 @@
+import logging
+import os
+import signal
 import subprocess
 from typing import Union, List, Dict, Any, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 def defaultize_kwargs(cmd: Union[str, List[str]], **kwargs) -> Dict[str, Any]:
@@ -64,3 +70,11 @@ def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.Co
     if validate_rc and proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, proc.args)
     return proc
+
+
+def safe_killpg(pid, signal: signal.Signals):
+    try:
+        logger.debug(f'Killing process group {pid} with signal {signal}')
+        os.killpg(pid, signal)
+    except ProcessLookupError:
+        pass  # process group already gone

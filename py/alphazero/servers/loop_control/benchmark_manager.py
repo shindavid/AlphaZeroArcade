@@ -335,21 +335,20 @@ class BenchmarkManager(GamingManagerBase):
                                                     committee=committee)
         logger.info(f"Benchmark committee updated.\n committee gens: {[self._benchmarker.indexed_agents[i].agent.gen for i in committee]}")
 
-    def _has_work(self) -> bool:
-        has_new_gen = super()._has_work()
-        has_work = has_new_gen
-        if not has_new_gen:
+    def _task_finished(self):
+        has_new_gen = self.num_evaluated_gens() < self._controller._organizer.get_latest_model_generation(default=0)
+        if has_new_gen:
+            return False
+        else:
             matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
                                                                       self.target_elo_gap,
                                                                       self.n_games,
                                                                       excluded_indices=self.excluded_agent_indices)
-            has_more_matches = len(matches) > 0
-            has_work = has_work or has_more_matches
+            if len(matches) > 0:
+                return False
 
-            if self._controller.params.task_mode and not has_work:
-                logger.info(f"Benchmarking Complete.")
-                self._controller._shutdown_manager.request_shutdown(1)
-        return has_work
+        logger.info(f"Benchmarking Complete.")
+        return True
 
     @property
     def n_games(self):

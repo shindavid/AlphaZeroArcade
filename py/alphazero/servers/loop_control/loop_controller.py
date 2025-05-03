@@ -17,7 +17,7 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.rating_db import RatingDB
-from alphazero.logic.runtime import acquire_lock, release_lock
+from alphazero.logic.runtime import acquire_lock, is_frozen
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -34,6 +34,7 @@ import logging
 import os
 import shutil
 import socket
+import sys
 import threading
 from typing import Callable, Dict, List, Optional
 
@@ -116,6 +117,13 @@ class LoopController:
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
             logger.info('loop_controller caught Ctrl-C')
+            self._shutdown_manager.request_shutdown(1)
+        except SystemExit:
+            logger.info('loop_controller caught SystemExit')
+            self._shutdown_manager.request_shutdown(1)
+        except Exception as e:
+            logger.error('Unexpected error in run(): %s', e, exc_info=True)
+            self._shutdown_manager.request_shutdown(1)
         finally:
             self._shutdown_manager.shutdown()
 
@@ -537,7 +545,15 @@ class LoopController:
         self._output_dir_syncer.start()
         self._client_connection_manager.start()
 
-        if not self._acquired_lock and not self.params.task_mode:
-            acquire_lock(self._run_params, self._shutdown_manager.register)
-            self._acquired_lock = True
+        if not self.params.task_mode:
+            if not self._acquired_lock:
+                acquire_lock(self._run_params, self._shutdown_manager.register)
+                self._acquired_lock = True
+
+            if is_frozen(self.run_params):
+                raise Exception(
+                    f"game {self.run_params.game} tag {self.run_params.tag} is frozen.\n"
+                    f"To unfreeze, remove the freeze file in "
+                    f"/output/{self.run_params.game}/{self.run_params.game}/.runtime/freeze")
+
             threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

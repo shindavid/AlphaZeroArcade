@@ -69,6 +69,7 @@ from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
 from util import subprocess_util
 
+import atexit
 import argparse
 from dataclasses import dataclass, fields
 import json
@@ -77,6 +78,7 @@ import os
 from pipes import quote
 import signal
 import subprocess
+import sys
 import time
 import torch
 from typing import Optional
@@ -166,7 +168,9 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching self-play server: %s', cmd)
-    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
+    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
+    return proc
 
 
 def launch_ratings_server(params_dict, cuda_device: int):
@@ -193,7 +197,9 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching ratings server: %s', cmd)
-    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
+    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
+    return proc
 
 
 def launch_benchmark_server(params_dict, cuda_device: int):
@@ -218,7 +224,9 @@ def launch_benchmark_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching benchmark server: %s', cmd)
-    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
+    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
+    return proc
 
 
 def launch_eval_server(params_dict, cuda_device: int):
@@ -243,7 +251,9 @@ def launch_eval_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching eval server: %s', cmd)
-    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
+    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
+    return proc
 
 
 def launch_loop_controller(params_dict, cuda_device: int):
@@ -288,7 +298,9 @@ def launch_loop_controller(params_dict, cuda_device: int):
     training_params.add_to_cmd(cmd, default_training_params)
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
-    return subprocess_util.Popen(cmd, stdout=None, stderr=None)
+    proc = subprocess_util.Popen(cmd, stdout=None, stderr=None, preexec_fn=os.setsid)
+    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
+    return proc
 
 
 def load_benchmark_info(game: str):
@@ -340,7 +352,7 @@ def main():
         'BuildParams': build_params,
         }
 
-    configure_logger(params=logging_params, prefix='[main]')
+    configure_logger(params=logging_params, prefix='[run_local]')
 
     os.chdir(Repo.root())
 
@@ -366,7 +378,6 @@ def main():
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
-    lock = ''
     procs = []
     try:
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
@@ -396,21 +407,26 @@ def main():
                     print('*' * 80)
                     if proc.stderr is not None:
                         print(proc.stderr.read())
+
+                    raise subprocess.CalledProcessError(
+                        returncode=proc.returncode,
+                        cmd=proc.args if hasattr(proc, 'args') else descr)
                 else:
                     print('*' * 80)
-                    logger.error('%s process %s exited with code %s', descr, proc.pid,
+                    logger.info('%s process %s exited with code %s', descr, proc.pid,
                                  proc.returncode)
             time.sleep(1)
     except KeyboardInterrupt:
-        logger.info('run_local Caught Ctrl-C')
-    except:
-        logger.error('Unexpected error:', exc_info=True)
-    finally:
-        try:
-            os.killpg(os.getpgrp(), signal.SIGTERM)
-        except Exception as e:
-            logger.info("Failed to kill process group: %s", e)
+        logger.info('run_local caught Ctrl-C')
+        sys.exit(1)
 
+    except subprocess.CalledProcessError as e:
+        logger.error('Error in subprocess: %s', e)
+        if e.stderr:
+            logger.error('Subprocess stderr: %s', e.stderr.decode())
+        sys.exit(1)
+
+    logger.info('All processes exited cleanly')
 
 if __name__ == '__main__':
     main()

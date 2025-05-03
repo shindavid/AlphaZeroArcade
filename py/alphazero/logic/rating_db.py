@@ -190,10 +190,8 @@ class RatingDB:
     def is_empty(self):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-
-        c.execute('''SELECT COUNT(*) FROM agents''')
-        count = c.fetchone()[0]
-        return count == 0
+        c.execute('SELECT 1 FROM agents LIMIT 1')
+        return c.fetchone() is None
 
     @property
     def db_lock(self):

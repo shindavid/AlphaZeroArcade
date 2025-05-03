@@ -118,7 +118,12 @@ class GamingManagerBase:
                 status = self._wait_for_unblock(conn)
                 if status == ServerStatus.DISCONNECTED:
                     break
-                if not conn.aux.work_in_progress():
+
+                if self._controller.params.task_mode:
+                    if self._task_finished():
+                        self._controller.request_shutdown(0)
+                        break
+                elif not conn.aux.work_in_progress():
                     logger.debug(f'waiting for work to do')
                     self._wait_until_work_exists()
 
@@ -315,4 +320,8 @@ class GamingManagerBase:
 
     @abstractmethod
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
+        pass
+
+    @abstractmethod
+    def _task_finished(self) -> bool:
         pass
