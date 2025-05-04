@@ -20,7 +20,7 @@ from util import sqlite3_util
 import numpy as np
 
 import argparse
-from dataclasses import replace
+import dataclasses
 import logging
 import os
 import shutil
@@ -111,7 +111,7 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         if isinstance(db_agent.agent, MCTSAgent) and db_agent.roles == {AgentRole.TEST}:
             if last_gen is not None and db_agent.agent.gen > last_gen:
                 continue
-            agent = replace(db_agent.agent, tag=new_tag)
+            agent = dataclasses.replace(db_agent.agent, tag=new_tag)
         else:
             agent = db_agent.agent
 

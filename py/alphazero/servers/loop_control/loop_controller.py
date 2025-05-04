@@ -17,7 +17,6 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.rating_db import RatingDB
-from alphazero.logic.runtime import acquire_lock, is_frozen
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -373,7 +372,7 @@ class LoopController:
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
         if not self._acquired_lock and self.params.task_mode:
-            acquire_lock(self._run_params, self._shutdown_manager.register)
+            self._organizer.acquire_lock(self._shutdown_manager.register)
             self._acquired_lock = True
 
         if not self._benchmark_manager:
@@ -547,13 +546,8 @@ class LoopController:
 
         if not self.params.task_mode:
             if not self._acquired_lock:
-                acquire_lock(self._run_params, self._shutdown_manager.register)
+                self._organizer.acquire_lock(self._shutdown_manager.register)
                 self._acquired_lock = True
 
-            if is_frozen(self.run_params):
-                raise Exception(
-                    f"game {self.run_params.game} tag {self.run_params.tag} is frozen.\n"
-                    f"To unfreeze, remove the freeze file in "
-                    f"/output/{self.run_params.game}/{self.run_params.game}/.runtime/freeze")
-
+            self._organizer.assert_not_frozen()
             threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

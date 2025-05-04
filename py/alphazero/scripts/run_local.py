@@ -48,9 +48,6 @@ Standard Usage Recipes:
     Once a benchmark has been established, you can promote it to be the default benchmark for the game.
     After this, future runs will be rated relative to this benchmark.
 
-3. Set a run to be a default benchmark:
-    ./py/alphazero/scripts/set_default_benchmark.py -g {game} -t {tag}
-
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -383,6 +380,7 @@ def main():
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
+
             for self_play_gpu in self_play_gpus:
                 procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
@@ -396,26 +394,28 @@ def main():
 
         loop = True
         while loop:
+            any_subprocess_error = False
             for descr, proc in procs:
                 if proc.poll() is None:
                     continue
                 loop = False
                 if proc.returncode != 0:
+                    any_subprocess_error = True
                     print('*' * 80)
                     logger.error('%s process %s exited with code %s', descr, proc.pid,
                                  proc.returncode)
                     print('*' * 80)
                     if proc.stderr is not None:
                         print(proc.stderr.read())
-
-                    raise subprocess.CalledProcessError(
-                        returncode=proc.returncode,
-                        cmd=proc.args if hasattr(proc, 'args') else descr)
                 else:
                     print('*' * 80)
                     logger.info('%s process %s exited with code %s', descr, proc.pid,
                                  proc.returncode)
             time.sleep(1)
+
+        if any_subprocess_error:
+            raise subprocess.CalledProcessError(1, 'Subprocess exited with error')
+
     except KeyboardInterrupt:
         logger.info('run_local caught Ctrl-C')
         sys.exit(1)

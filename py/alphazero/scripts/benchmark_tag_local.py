@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 from alphazero.logic.run_params import RunParams
-from alphazero.logic.runtime import freeze_tag, save_default_benchmark
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
 import logging
-import os
 import subprocess
 
 
@@ -19,9 +18,14 @@ def main():
     RunParams.add_args(parser)
     LoggingParams.add_args(parser)
     parser.add_argument('--target-elo-gap', type=int, default=DEFAULT_TARGET_ELO_GAP,
-                        help=f'Target ELO gap for benchmarking (default: {DEFAULT_TARGET_ELO_GAP})')
+                        help=f'Target ELO gap for benchmarking (default: %(default)s).')
+    parser.add_argument('--skip-set-as-default', action='store_true',
+                        help='Skip setting the benchmark as default.')
     args = parser.parse_args()
     run_params = RunParams.create(args)
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer.assert_unlocked()
+
     logging_params = LoggingParams.create(args)
     configure_logger(params=logging_params, prefix='[benchmark_tag_local]')
 
@@ -40,8 +44,10 @@ def main():
         logger.error(f"Command: {cmd} failed.")
         return
 
-    save_default_benchmark(run_params)
-    freeze_tag(run_params)
+
+    if not args.skip_set_as_default:
+        organizer.save_default_benchmark()
+        organizer.freeze_tag()
 
 if __name__ == "__main__":
     main()
