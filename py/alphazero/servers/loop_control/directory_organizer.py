@@ -329,7 +329,7 @@ class DirectoryOrganizer:
     def acquire_lock(self, register_func: Callable[[Callable[[], None]], Any]) -> str:
         if os.path.exists(self.lock_filename):
             raise RuntimeError(
-                f"Another instance of run_local or benchmark_tag_local is already running.\n"
+                f"Another instance of loop controller is already running.\n"
                 f"Exiting. To force this instance to run, remove the lock file: {self.lock_filename}")
 
         with open(self.lock_filename, 'w') as f:
@@ -350,7 +350,7 @@ class DirectoryOrganizer:
 
     def assert_unlocked(self) -> bool:
         assert not os.path.exists(self.lock_filename), \
-            f"Lock file {self.lock_filename} exists. Another instance may be running."
+            f"Lock file {self.lock_filename} exists. Another loop controller is already running."
 
     def freeze_tag(self):
         with open(self.freeze_filename, 'w') as f:

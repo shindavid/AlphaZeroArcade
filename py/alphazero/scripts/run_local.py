@@ -377,6 +377,8 @@ def main():
     benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
     procs = []
     try:
+        organizer.assert_unlocked()
+
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:

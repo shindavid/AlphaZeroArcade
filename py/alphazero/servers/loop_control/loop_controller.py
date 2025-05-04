@@ -61,7 +61,6 @@ class LoopController:
         self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
-        self._acquired_lock: bool = False
 
         # On cloud setups like runpod.io or GCP, we typically have access to two filesystems:
         #
@@ -371,10 +370,6 @@ class LoopController:
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
-        if not self._acquired_lock and self.params.task_mode:
-            self._organizer.acquire_lock(self._shutdown_manager.register)
-            self._acquired_lock = True
-
         if not self._benchmark_manager:
             self._benchmark_manager = BenchmarkManager(self)
         return self._benchmark_manager
@@ -537,6 +532,7 @@ class LoopController:
     def _setup(self):
         logger.info('Performing LoopController setup...')
         self._setup_output_dir()
+        self._organizer.acquire_lock(self._shutdown_manager.register)
         self._copy_binary_file()
         self._init_socket()
 
@@ -545,9 +541,5 @@ class LoopController:
         self._client_connection_manager.start()
 
         if not self.params.task_mode:
-            if not self._acquired_lock:
-                self._organizer.acquire_lock(self._shutdown_manager.register)
-                self._acquired_lock = True
-
             self._organizer.assert_not_frozen()
             threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

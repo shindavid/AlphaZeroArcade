@@ -44,7 +44,6 @@ def main():
         logger.error(f"Command: {cmd} failed.")
         return
 
-
     if not args.skip_set_as_default:
         organizer.save_default_benchmark()
         organizer.freeze_tag()
