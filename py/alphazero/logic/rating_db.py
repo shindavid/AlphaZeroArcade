@@ -15,7 +15,7 @@ from typing import List, Iterable, Optional
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
-    role: AgentRole
+    roles: List[AgentRole]
 
 
 @dataclass
@@ -31,6 +31,7 @@ class DBAgentRating:
     agent_id: AgentDBId
     rating: float
     is_committee: Optional[bool] = None
+    tag: Optional[str] = None
 
 
 class RatingDB:
@@ -57,9 +58,10 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, gen, n_iters, tag, set_temp_zero, role in c.fetchall():
+        for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
             agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
-            yield DBAgent(agent, agent_id, AgentRole(role))
+            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            yield DBAgent(agent, agent_id, agent_roles)
 
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
                    FROM agents
@@ -69,9 +71,10 @@ class RatingDB:
                    '''
 
         c.execute(query)
-        for agent_id, type_str, strength_param, strength, tag, role in c.fetchall():
+        for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
-            yield DBAgent(agent, agent_id, AgentRole(role))
+            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            yield DBAgent(agent, agent_id, AgentRole(agent_roles))
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
         """
@@ -99,20 +102,22 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         if role == AgentRole.BENCHMARK:
-            query = 'SELECT agent_id, rating, is_committee FROM benchmark_ratings'
+            query = '''SELECT agent_id, rating, is_committee, tag FROM benchmark_ratings JOIN mcts_agents
+                      ON benchmark_ratings.agent_id = mcts_agents.id'''
         elif role == AgentRole.TEST:
-            query = 'SELECT agent_id, rating FROM evaluator_ratings'
+            query = '''SELECT agent_id, rating, tag FROM evaluator_ratings JOIN mcts_agents
+                      ON evaluator_ratings.agent_id = mcts_agents.id'''
         c.execute(query)
         rows = c.fetchall()
 
         db_agent_ratings = []
         for row in rows:
             if role == AgentRole.BENCHMARK:
-                agent_id, rating, is_committee = row
+                agent_id, rating, is_committee, tag = row
             else:
-                agent_id, rating = row
+                agent_id, rating, tag = row
                 is_committee = None
-            db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee)))
+            db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag))
         return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts, type: MatchType):
@@ -133,12 +138,10 @@ class RatingDB:
         for i in range(len(iagents)):
             iagent = iagents[i]
             rating = ratings[i]
-            if iagent.role == AgentRole.BENCHMARK:
+            if AgentRole.BENCHMARK in iagent.roles and committee is not None:
                 benchmark_tuples.append((iagent.db_id, rating, int(committee[i])))
-            elif iagent.role == AgentRole.TEST:
+            if AgentRole.TEST in iagent.roles:
                 evaluator_tuples.append((iagent.db_id, rating))
-            else:
-                raise ValueError(f'Unknown agent role: {iagent.role}')
 
         c.executemany('''REPLACE INTO benchmark_ratings (agent_id, rating, is_committee)
                       VALUES (?, ?, ?)''', benchmark_tuples)
@@ -171,9 +174,24 @@ class RatingDB:
             raise ValueError(f'Unknown agent type: {type(agent)}')
 
         insert = '''INSERT INTO agents (sub_id, subtype, role) VALUES (?, ?, ?)'''
-        c.execute(insert, (sub_id, subtype, iagent.role.value))
+        agent_roles = ','.join([role.value for role in iagent.roles])
+        c.execute(insert, (sub_id, subtype, agent_roles))
         conn.commit()
         iagent.db_id = c.lastrowid
+
+    def update_agent_roles(self, iagent: IndexedAgent):
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+
+        agent_roles = ','.join([role.value for role in iagent.roles])
+        c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
+        conn.commit()
+
+    def is_empty(self):
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
+        c.execute('SELECT 1 FROM agents LIMIT 1')
+        return c.fetchone() is None
 
     @property
     def db_lock(self):

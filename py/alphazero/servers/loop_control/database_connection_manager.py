@@ -22,6 +22,10 @@ class DatabaseConnectionManager:
             organizer.training_db_filename, constants.TRAINING_TABLE_CREATE_CMDS)
         self.ratings_db_conn_pool = DatabaseConnectionPool(
             organizer.ratings_db_filename, constants.RATINGS_TABLE_CREATE_CMDS)
+        self.benchmark_db_conn_pool = DatabaseConnectionPool(
+            organizer.benchmark_db_filename, constants.ARENA_TABLE_CREATE_CMDS)
+        self.eval_db_conn_pool = DatabaseConnectionPool(
+            organizer.eval_db_filename(controller.params.benchmark_tag), constants.ARENA_TABLE_CREATE_CMDS)
 
     def pools(self) -> List[DatabaseConnectionPool]:
         pools = [
@@ -29,6 +33,8 @@ class DatabaseConnectionManager:
             self.self_play_db_conn_pool,
             self.training_db_conn_pool,
             self.ratings_db_conn_pool,
+            self.benchmark_db_conn_pool,
+            self.eval_db_conn_pool,
         ]
         return pools
 

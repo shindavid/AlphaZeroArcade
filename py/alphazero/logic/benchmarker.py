@@ -29,6 +29,7 @@ class BenchmarkRatingData:
     iagents: List[IndexedAgent]
     ratings: np.ndarray
     committee: IndexSet
+    tag: str
 
 
 class Benchmarker:
@@ -50,27 +51,6 @@ class Benchmarker:
         self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)
         self._arena.load_matches_from_db(self.db, type=MatchType.BENCHMARK)
 
-    def run(self, n_iters: int=100, n_games: int=100, target_elo_gap: int=100):
-        """
-        Runs the benchmarker. The general idea is to find the largest gap in ratings that is greater
-        than the target elo gap, and play the next generation in the middle of the two generations
-        with the biggest gap until there is no elo gap greater than the target elo gap. The elo ratings
-        are recomputed after each batch of matches (for a generation to be played against). After this,
-        we have a set of generations whose elo rating gaps are all within the target elo gap. To avoid
-        having two generations with ratings that are too similar, we select a committee of generations
-        that are spaced out by the target elo gap.
-        """
-        self._arena.refresh_ratings()
-        while True:
-            matches = self.get_next_matches(n_iters, target_elo_gap, n_games)
-            if matches is None:
-                break
-            self._arena.play_matches(matches, self._organizer.game, db=self.db)
-            self._arena.refresh_ratings()
-
-        committee: IndexSet = self.select_committee(target_elo_gap)
-        self.db.commit_ratings(self._arena.indexed_agents, self._arena.ratings, committee)
-
     def get_next_matches(self, n_iters, target_elo_gap, n_games,
                          excluded_indices: IndexSet) -> List[Match]:
         """
@@ -87,9 +67,11 @@ class Benchmarker:
         if self.has_no_matches():
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
+            if last_gen is None or last_gen <2:
+                return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
-            self._arena._add_agent(gen0_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
-            self._arena._add_agent(last_gen_agent, AgentRole.BENCHMARK, expand_matrix=True, db=self.db)
+            self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
+            self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
         incomplete_gen = self.incomplete_gen(excluded_indices=excluded_indices)
@@ -104,7 +86,7 @@ class Benchmarker:
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
-        next_iagent = self._arena._add_agent(next_agent, AgentRole.BENCHMARK, expand_matrix=True,
+        next_iagent = self._arena.add_agent(next_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
                                              db=self.db)
         matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices=excluded_indices)
         return matches
@@ -134,7 +116,7 @@ class Benchmarker:
         """
 
         A = self._arena.adjacent_matrix()
-        included_indices = excluded_indices.invert(A.shape[0])
+        included_indices = ~excluded_indices.resize(A.shape[0])
         mask = np.where(included_indices)[0]
         A = A[mask][:, mask]
         num_opponents_played = np.sum(A, axis=1)
@@ -232,7 +214,7 @@ class Benchmarker:
         ratings = rating_data.ratings
         iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         committee = rating_data.committee
-        return BenchmarkRatingData(iagents, ratings, committee)
+        return BenchmarkRatingData(iagents, ratings, committee, rating_data.tag)
 
     def refresh_ratings(self):
         self._arena.refresh_ratings()
@@ -245,3 +227,6 @@ class Benchmarker:
     def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
         return self._arena.agent_lookup
 
+    @property
+    def adjacent_matrix(self) -> np.ndarray:
+        return self._arena.adjacent_matrix()

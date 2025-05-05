@@ -383,7 +383,8 @@ class SelfPlayManager:
 
     def _collect_and_process_game_data(self):
         self._wait_until_checkpoint_reached()
-        self._controller.get_gpu_lock_table_for_training().pre_acquire_lock(Domain.TRAINING)
+        table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
+        table.pre_acquire_lock(Domain.TRAINING)
         self._controller.hijack_all_self_play_tables()
 
         self._request_all_game_data()

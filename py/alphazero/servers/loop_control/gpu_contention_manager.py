@@ -70,33 +70,33 @@ class GpuContentionManager:
                 subtable[gpu_id.device] = table
             return table
 
-    def set_ratings_priority(self, elevate: bool):
+    def set_domain_priority(self, domain: Domain, elevate: bool):
         all_tables = self._get_all_tables()
 
         # When a worker is disconnected, the domain status becomes DEACTIVATING. We want to set
         # priority for tables that are not inactive.
-        ratings_tables = [table for table in all_tables if not table.inactive(Domain.RATINGS)]
-        if not ratings_tables:
+        domain_tables = [table for table in all_tables if not table.inactive(domain)]
+        if not domain_tables:
             return
 
-        currently_elevated = [table for table in ratings_tables if table.ratings_prioritized()]
+        currently_elevated = [table for table in domain_tables if table.domain_prioritized(domain)]
 
         # TODO: this assert fails sometimes, figure out a fix
         assert len(currently_elevated) <= 1, currently_elevated
         if not elevate:
             for table in currently_elevated:
-                table.deprioritize_ratings()
+                table.deprioritize_domain(domain)
             return
         elif len(currently_elevated) == 1:
             # elevated table already exists, just keep it
             return
 
-        ratings_tables.sort(key=lambda table:
+        domain_tables.sort(key=lambda table:
                             (table.active(Domain.TRAINING), table.active(Domain.SELF_PLAY)))
 
-        table = ratings_tables[0]
-        logger.debug('Prioritizing ratings for %s', table)
-        table.prioritize_ratings()
+        table = domain_tables[0]
+        logger.debug('Prioritizing %s for %s', domain.value, table)
+        table.prioritize_domain(domain)
 
     def hijack_all_self_play_tables(self):
         self._self_play_hijacked = True

@@ -1,6 +1,8 @@
 from alphazero.logic.custom_types import ShutdownAction
 
 import logging
+import os
+import signal
 import sys
 import threading
 from typing import List, Optional
@@ -34,6 +36,7 @@ class ShutdownManager:
             return not self._shutdown_in_progress
 
     def shutdown(self):
+        logger.info(f'shutdown manager shutting down with code {self._shutdown_code}')
         with self._lock:
             code = self._shutdown_code
             self._shutdown_in_progress = True
@@ -44,6 +47,7 @@ class ShutdownManager:
                 action()
             except:
                 logger.error('Error while shutting down', exc_info=True)
+
         sys.exit(code)
 
     def register(self, action: ShutdownAction):

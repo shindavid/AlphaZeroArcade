@@ -94,11 +94,15 @@ class RatingsServer(ServerBase):
         ref_name = RatingsServer._get_reference_player_name(ref_strength)
 
         cwd = self._session_data.run_dir
-        self._proc = subprocess_util.Popen(cmd, cwd=cwd)
-        logger.info('Running %s vs %s match [%s] from %s: %s', f'MCTS-{mcts_agent.gen}', ref_name, self._proc.pid,
+        proc = subprocess_util.Popen(cmd, cwd=cwd)
+
+        self._procs.add(proc)
+
+        logger.info('Running %s vs %s match [%s] from %s: %s', f'MCTS-{mcts_agent.gen}', ref_name, proc.pid,
                     cwd, cmd)
-        stdout = self._session_data.wait_for(self._proc)
-        self._proc = None
+        stdout = self._session_data.wait_for(proc)
+
+        self._procs.remove(proc)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the

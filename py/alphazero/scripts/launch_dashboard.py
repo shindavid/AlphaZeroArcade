@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from alphazero.dashboard.eval_plotting import create_eval_figure
 from alphazero.dashboard.training_plotting import create_training_figure, \
     create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
@@ -9,19 +10,22 @@ from util.py_util import CustomHelpFormatter
 from util.str_util import rreplace
 
 from bokeh.embed import server_document
+from bokeh.layouts import column
+from bokeh.models import Select
 from bokeh.server.server import Server
 from bokeh.themes import Theme
 from flask import Flask, jsonify, render_template, request, session
 from tornado.ioloop import IOLoop
 
 import argparse
+from collections import defaultdict
 from dataclasses import dataclass
 import os
 import secrets
 import sqlite3
 import sys
 from threading import Thread
-from typing import List
+from typing import Dict, List
 
 
 @dataclass
@@ -150,6 +154,33 @@ else:
 default_tags = tags
 
 
+def get_benchmark_tags(tag: str) -> List[str]:
+    """
+    returns a list of benchmark tags used for evaluating the given run tag
+    """
+    benchmark_tags = []
+    filename = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')
+    if os.path.isfile(filename):
+        benchmark_tags.append(tag)
+
+    eval_dir = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'evaluation')
+    for f in os.listdir(eval_dir):
+        if f.endswith('.db'):
+            benchmark_tags.append(os.path.splitext(f)[0])
+    return benchmark_tags
+
+def get_benchmark_eval_mapping(tags: List[str]) -> Dict[str, List[str]]:
+    """
+    returns a dict mapping a benchmark tag to a list of run tags that are evaluated against it.
+    """
+    tag_dict = {tag: get_benchmark_tags(tag) for tag in tags}
+    benchmark_dict = defaultdict(list)
+    for tag, benchmark_tags in tag_dict.items():
+        for benchmark_tag in benchmark_tags:
+            benchmark_dict[benchmark_tag].append(tag)
+    return benchmark_dict
+
+
 def training_head(head: str):
     def training_inner(doc):
         tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
@@ -180,6 +211,29 @@ def ratings(doc):
     doc.add_root(create_ratings_figure(run_params.game, tags))
     doc.theme = theme
 
+def evaluation(doc):
+    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
+    tags = [t for t in tag_str.split(',') if t]
+    if not tags:
+        return
+
+    benchmark_dict = get_benchmark_eval_mapping(tags)
+    benchmark_tags = list(benchmark_dict.keys())
+    current_benchmark_tag = benchmark_tags[0]
+
+    select = Select(title="Select Benchmark Tag", value=current_benchmark_tag, options=benchmark_tags)
+    plot_container = create_eval_figure(run_params.game, current_benchmark_tag, benchmark_dict[current_benchmark_tag])
+
+    def update_plot(attr, old, new):
+        new_plot = create_eval_figure(run_params.game, select.value, benchmark_dict[select.value])
+        layout.children[1] = new_plot
+
+    select.on_change('value', update_plot)
+
+    layout = column(select, plot_container)
+    doc.add_root(layout)
+    doc.theme = theme
+
 
 class DocumentCollection:
     def __init__(self, tags: List[str]):
@@ -205,12 +259,14 @@ class DocumentCollection:
         training = make_doc('training')
         self_play = make_doc('self_play')
         ratings = make_doc('ratings')
+        evaluation = make_doc('evaluation')
 
         self.tags = tags
         self.training_heads = training_heads
         self.training = training
         self.self_play = self_play
         self.ratings = ratings
+        self.evaluation = evaluation
 
     def get_base_data(self):
         return {
@@ -218,6 +274,7 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
+            'evaluation': self.evaluation,
             'tags': usable_tags,
             'init_tags': self.tags,
         }
@@ -227,6 +284,7 @@ class DocumentCollection:
             'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
+            'evaluation': self.evaluation,
             }
         for h, head in enumerate(all_training_heads):
             d[f'training_{head}'] = self.training_heads[h][1]
@@ -262,6 +320,7 @@ def bk_worker():
         '/training': training,
         '/self_play': self_play,
         '/ratings': ratings,
+        '/evaluation': evaluation,
     }
 
     for head in all_training_heads:

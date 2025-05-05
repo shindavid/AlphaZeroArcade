@@ -12,13 +12,15 @@ class LoopControllerParams:
     model_cfg: str = 'default'
     target_rating_rate: float = 0.1
     n_games_per_evaluation: int = 1000
-    eval_error_threshold: float = 100.0
+    eval_error_threshold: float = 50.0
     agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
-    benchmark_tag: str = None
+    benchmark_tag: Optional[str] = None
     benchmark_until_gen_gap: int = 25
     n_games_per_benchmark: int = 100
-    target_elo_gap: float = 100
+    target_elo_gap: float = 500
     ignore_sigint: bool = False
+    simulate_cloud: bool = False
+    task_mode: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -68,7 +70,10 @@ class LoopControllerParams:
                            '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
-
+        group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
+                           help='simulate cloud environment')
+        group.add_argument('--task-mode', action='store_true', default=defaults.task_mode,
+                           help='run without self-play/training; exit after task is done.')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
@@ -78,4 +83,3 @@ class LoopControllerParams:
                 cmd.append('--' + f.name)
                 if type(attr) != bool:
                     cmd.append(str(getattr(self, f.name)))
-

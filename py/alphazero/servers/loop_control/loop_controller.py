@@ -14,12 +14,9 @@ from .training_manager import TrainingManager
 
 from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, EvalTag,\
-    Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
-from alphazero.servers.loop_control.gaming_manager_base import ManagerConfig, WorkerAux
-from alphazero.servers.loop_control.benchmark_manager import BenchmarkServerAux
-from alphazero.servers.loop_control.eval_manager import EvalServerAux
-from alphazero.servers.loop_control.ratings_manager import RatingsServerAux
+from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
+    EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -36,6 +33,7 @@ import logging
 import os
 import shutil
 import socket
+import sys
 import threading
 from typing import Callable, Dict, List, Optional
 
@@ -81,7 +79,7 @@ class LoopController:
         # encounter environments where this does not work as intended, we can rethink this.
         scratch_fs = os.stat('/home/devuser/scratch').st_dev
         workspace_fs = os.stat('/workspace').st_dev
-        self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs)
+        self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs) or params.simulate_cloud
 
         if self._on_ephemeral_local_disk_env:
             self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
@@ -112,10 +110,18 @@ class LoopController:
         Entry-point into the LoopController.
         """
         try:
-            threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
+            self._setup()
+            self._start_threads()
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
-            logger.info('Caught Ctrl-C')
+            logger.info('loop_controller caught Ctrl-C')
+            self._shutdown_manager.request_shutdown(1)
+        except SystemExit:
+            logger.info('loop_controller caught SystemExit')
+            self._shutdown_manager.request_shutdown(1)
+        except Exception as e:
+            logger.error('Unexpected error in run(): %s', e, exc_info=True)
+            self._shutdown_manager.request_shutdown(1)
         finally:
             self._shutdown_manager.shutdown()
 
@@ -308,21 +314,8 @@ class LoopController:
         for f in files:
             conn.socket.send_file(f['source_path'])
 
-    def set_priority(self, dict_len: int, rating_in_progress: bool):
-        latest_gen = self.latest_gen()
-        target_rate = self.params.target_rating_rate
-        num = dict_len + (0 if rating_in_progress else 1)
-        den = max(1, latest_gen)
-        current_rate = num / den
-
-        elevate = current_rate < target_rate
-        logger.debug('Ratings elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
-                     'current=%.2f, target=%.2f)', elevate, latest_gen, dict_len,
-                     rating_in_progress, current_rate, target_rate)
-        self.set_ratings_priority(elevate)
-
-    def set_ratings_priority(self, elevate: bool):
-        self._gpu_contention_manager.set_ratings_priority(elevate)
+    def set_domain_priority(self, domain: Domain, elevate: bool):
+        self._gpu_contention_manager.set_domain_priority(domain, elevate)
 
     def hijack_all_self_play_tables(self):
         logger.debug('Hijacking all self-play tables...')
@@ -355,41 +348,30 @@ class LoopController:
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=RatingsServerAux,
-                server_name='ratings-server',
-                worker_name='ratings-worker',
-            )
-            self._ratings_managers[tag] = RatingsManager(self, manager_config, tag)
+            self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            if not os.path.exists(self.organizer.eval_db_filename):
-                assert self.params.benchmark_tag is not None, "Benchmark tag must be set for eval manager"
+            db_file = self.organizer.eval_db_filename(self.params.benchmark_tag)
+            if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
+                if self.params.benchmark_tag is None:
+                    raise Exception(
+                        f"Benchmark tag is not set and default benchmark info file not found.\n"
+                        f"Please specify a benchmark tag by using the --benchmark-tag argument\n"
+                        f"Or run the benchmark server with the --set-default-benchmark argument first."
+                    )
+
                 benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
                 benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
-                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename)
+                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename(self.params.benchmark_tag))
 
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=EvalServerAux,
-                server_name='eval-server',
-                worker_name='eval-worker',
-            )
-            self._eval_managers[tag] = EvalManager(self, manager_config)
+            self._eval_managers[tag] = EvalManager(self, self.params.benchmark_tag)
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
         if not self._benchmark_manager:
-            manager_config = ManagerConfig(
-                worker_aux_class=WorkerAux,
-                server_aux_class=BenchmarkServerAux,
-                server_name='benchmark-server',
-                worker_name='benchmark-worker',
-            )
-            self._benchmark_manager = BenchmarkManager(self, manager_config)
+            self._benchmark_manager = BenchmarkManager(self)
         return self._benchmark_manager
 
     def _launch_recv_loop_inner(
@@ -515,16 +497,10 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    def _main_loop(self):
+    def _training_loop(self):
         try:
-            logger.info('Performing LoopController setup...')
-            self._setup_output_dir()
-            self._copy_binary_file()
-            self._init_socket()
             self._self_play_manager.setup()
             self._training_manager.setup()
-            self._output_dir_syncer.start()
-            self._client_connection_manager.start()
 
             if self._organizer.requires_retraining():
                 self._training_manager.retrain_models()
@@ -541,3 +517,29 @@ class LoopController:
         except:
             logger.error('Unexpected error in main_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
+
+    def _task_loop(self):
+        """
+        task loop is used for performing tasks such as evaluation, ratings and benchmarking without
+        running self-play or training.
+        """
+        try:
+            self._setup()
+        except:
+            logger.error('Unexpected error in main_loop():', exc_info=True)
+            self._shutdown_manager.request_shutdown(1)
+
+    def _setup(self):
+        logger.info('Performing LoopController setup...')
+        self._setup_output_dir()
+        self._organizer.acquire_lock(self._shutdown_manager.register)
+        self._copy_binary_file()
+        self._init_socket()
+
+    def _start_threads(self):
+        self._output_dir_syncer.start()
+        self._client_connection_manager.start()
+
+        if not self.params.task_mode:
+            self._organizer.assert_not_frozen()
+            threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

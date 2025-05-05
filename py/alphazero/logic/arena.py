@@ -7,7 +7,7 @@ from util.index_set import IndexSet
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 
 @dataclass
@@ -15,6 +15,7 @@ class RatingData:
     agent_ids: np.ndarray
     ratings: np.ndarray
     committee: IndexSet
+    tag: str
 
 
 class Arena:
@@ -32,11 +33,9 @@ class Arena:
 
     def load_agents_from_db(self, db: RatingDB, role: Optional[AgentRole]=None):
         for db_agent in db.fetch_agents():
-            if role is not None and db_agent.role != role:
+            if role not in db_agent.roles:
                 continue
-            self._add_agent(db_agent.agent,
-                            role=db_agent.role, db_id=db_agent.db_id,
-                            expand_matrix=False)
+            self.add_agent(db_agent.agent, roles=db_agent.roles, db_id=db_agent.db_id, expand_matrix=False)
         self._expand_matrix()
 
     def load_matches_from_db(self, db: RatingDB, type: Optional[MatchType]=None) -> List[Agent]:
@@ -106,10 +105,12 @@ class Arena:
             db_ids.append(db_id)
             ratings.append(db_agent_rating.rating)
             committee.append(db_agent_rating.is_committee)
+
+        tag = db_agent_ratings[0].tag if db_agent_ratings else None
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
         committee = IndexSet.from_bits(np.array(committee, dtype=bool))
-        return RatingData(db_ids, ratings, committee)
+        return RatingData(db_ids, ratings, committee, tag)
 
     def num_matches(self) -> int:
         return np.sum(self._W_matrix)
@@ -126,7 +127,7 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def _add_agent(self, agent: Agent, role: AgentRole, db_id: Optional[AgentDBId]=None,
+    def add_agent(self, agent: Agent, roles: Set[AgentRole], db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.
@@ -136,10 +137,13 @@ class Arena:
         iagent = self._agent_lookup.get(agent, None)
 
         if iagent is not None:
+            iagent.roles.update(roles)
+            if db and roles != iagent.roles:
+                db.update_agent_roles(iagent)
             return iagent
 
         index = len(self._indexed_agents)
-        iagent = IndexedAgent(agent=agent, index=index, role=role, db_id=db_id)
+        iagent = IndexedAgent(agent=agent, index=index, roles=roles, db_id=db_id)
         self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
 

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import AgentRole, Match, MatchType
+from alphazero.logic.agent_types import AgentRole, IndexedAgent, Match, MatchType
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.custom_types import ClientConnection, ClientId, FileToTransfer, \
+from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
-from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, ServerAuxBase
+from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
+    ServerAuxBase, WorkerAux
 from util.index_set import IndexSet
 from util.socket_util import JsonDict
 
@@ -101,25 +102,42 @@ class BenchmarkManager(GamingManagerBase):
 
     """
 
-    def __init__(self, controller: LoopController, manager_config: ManagerConfig):
+    def __init__(self, controller: LoopController):
+        manager_config = ManagerConfig(
+            worker_aux_class=WorkerAux,
+            server_aux_class=BenchmarkServerAux,
+            server_name='benchmark-server',
+            worker_name='benchmark-worker',
+            domain=Domain.BENCHMARK,
+            )
         super().__init__(controller, manager_config)
         self._benchmarker = Benchmarker(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {} # ix -> EvalStatus
         self.excluded_agent_indices: IndexSet = IndexSet()
+        self.evaluated_iagents: List[IndexedAgent] = []
 
     def set_priority(self):
         latest_gen = self._controller.organizer.get_latest_model_generation()
-        latest_evaluated_gen = self._latest_evaluated_gen()
-        elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
+        latest_evaluated_gen = self.num_evaluated_gens()
+        if latest_gen is None:
+            elevate = False
+        else:
+            elevate = latest_evaluated_gen + self.benchmark_until_gen_gap < latest_gen
         logger.debug('Benchmark priority: latest_eval_gen=%s, latest_gen=%s, elevate=%s', latest_evaluated_gen, latest_gen, elevate)
-        self._controller.set_ratings_priority(elevate)
+        self._controller.set_domain_priority(self._config.domain, elevate)
+
 
     def load_past_data(self):
         benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()
-        self.excluded_agent_indices = benchmark_rating_data.committee.invert()
+        self.evaluated_iagents = benchmark_rating_data.iagents
+        self.excluded_agent_indices = ~benchmark_rating_data.committee
 
     def num_evaluated_gens(self):
-        return self._latest_evaluated_gen()
+        gen = 0
+        for iagent in self.evaluated_iagents:
+            if iagent.agent.gen > gen:
+                gen = iagent.agent.gen
+        return gen
 
     def handle_server_disconnect(self, conn: ClientConnection):
         logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
@@ -142,10 +160,11 @@ class BenchmarkManager(GamingManagerBase):
         self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
         if ix is None:
+            self._controller.set_domain_priority(self._config.domain, False)
             table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
             table.release_lock(conn.client_domain)
-            self.set_priority()
             self._set_ready(conn)
+            logger.info('DONE. No matches available for %s', conn)
             return
 
         gen = self._benchmarker.indexed_agents[ix].agent.gen
@@ -178,6 +197,7 @@ class BenchmarkManager(GamingManagerBase):
             has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._status_dict[ix1].ix_match_status.values())
 
         if not has_pending:
+            self._update_committee()
             with self._lock:
                 self._status_dict[ix1].status = BenchmarkRequestStatus.COMPLETE
                 self._status_dict[ix1].owner = None
@@ -188,7 +208,6 @@ class BenchmarkManager(GamingManagerBase):
                                                                     self.n_games,
                                                                     excluded_indices=self.excluded_agent_indices)
             if not matches:
-                self._update_committee()
                 conn.aux.ready_for_latest_gen = True
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
@@ -205,9 +224,8 @@ class BenchmarkManager(GamingManagerBase):
         if ready_for_latest_gen:
             latest_gen = self._controller.organizer.get_latest_model_generation()
             latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
-            latest_iagent = self._benchmarker._arena._add_agent(
-                latest_agent, AgentRole.BENCHMARK, expand_matrix=True,
-                db=self._benchmarker.db)
+            latest_iagent = self._benchmarker._arena.add_agent(
+                latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._benchmarker.db)
 
             matches = self._benchmarker.get_unplayed_matches(latest_iagent, self.n_iters,
                                                              excluded_indices=self.excluded_agent_indices)
@@ -296,24 +314,41 @@ class BenchmarkManager(GamingManagerBase):
             'n_games': self.n_games,
             'files_required': [f.to_dict() for f in files_required],
             }
-
+        logger.info(f"Benchmarking request ix: {data['ix1']} vs {data['ix2']}, gen: {data['agent1']['gen']} vs {data['agent2']['gen']}")
         return data
 
     def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
         for iagent in self._benchmarker.indexed_agents:
-            if len(self.excluded_agent_indices) > 0 and iagent.index in self.excluded_agent_indices.invert():
+            if len(self.excluded_agent_indices) > 0 and iagent.index in ~self.excluded_agent_indices:
                 latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
     def _update_committee(self):
         self._benchmarker.refresh_ratings()
         committee: IndexSet = self._benchmarker.select_committee(self.target_elo_gap)
-        self.excluded_agent_indices = committee.invert()
+        self.excluded_agent_indices = ~committee
+        self.evaluated_iagents = self._benchmarker.indexed_agents
         with self._benchmarker.db.db_lock:
             self._benchmarker.db.commit_ratings(self._benchmarker.indexed_agents,
                                                     self._benchmarker._arena.ratings,
                                                     committee=committee)
+        logger.info(f"Benchmark committee updated.\n committee gens: {[self._benchmarker.indexed_agents[i].agent.gen for i in committee]}")
+
+    def _task_finished(self):
+        has_new_gen = self.num_evaluated_gens() < self._controller._organizer.get_latest_model_generation(default=0)
+        if has_new_gen:
+            return False
+        else:
+            matches: List[Match] = self._benchmarker.get_next_matches(self.n_iters,
+                                                                      self.target_elo_gap,
+                                                                      self.n_games,
+                                                                      excluded_indices=self.excluded_agent_indices)
+            if len(matches) > 0:
+                return False
+
+        logger.info(f"Benchmarking Complete.")
+        return True
 
     @property
     def n_games(self):

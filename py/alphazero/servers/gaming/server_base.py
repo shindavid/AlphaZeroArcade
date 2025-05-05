@@ -17,9 +17,9 @@ from util.str_util import make_args_str
 from dataclasses import dataclass, fields
 import os
 import logging
-import subprocess
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
+import subprocess
 
 
 logger = logging.getLogger(__name__)
@@ -65,9 +65,8 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
-        self._proc: Optional[subprocess.Popen] = None
-
-        self._shutdown_manager.register(lambda: self._shutdown())
+        self._shutdown_manager.register(self._shutdown)
+        self._procs: Set[subprocess.Popen] = set()
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
     def run(self):
@@ -75,7 +74,9 @@ class ServerBase:
             threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
             self._shutdown_manager.wait_for_shutdown_request()
         except KeyboardInterrupt:
-            logger.info('Caught Ctrl-C')
+            logger.info('server_base Caught Ctrl-C')
+        except SystemExit:
+            logger.info('server_base caught SystemExit')
         finally:
             self._shutdown_manager.shutdown()
 
@@ -86,13 +87,9 @@ class ServerBase:
         except:
             pass
 
-        if self._proc is not None:
-            try:
-                self._proc.terminate()
-                subprocess_util.wait_for(self._proc, expected_return_code=None)
-                logger.info('Terminated %s process %s', self._config.worker_name ,self._proc.pid)
-            except:
-                pass
+        subprocess_util.terminate_processes(self._procs)
+        self._procs.clear()
+
         logger.info('%s server shutdown complete!', self._config.server_name)
 
     def _main_loop(self):
@@ -252,10 +249,13 @@ class ServerBase:
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
+        self._procs.update({proc1, proc2})
 
         expected_rc = None
         print_fn = logger.error
         stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+
+        self._procs.difference_update({proc1, proc2})
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the

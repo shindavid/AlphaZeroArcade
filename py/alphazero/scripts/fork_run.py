@@ -7,15 +7,24 @@ Usage:
 
 ./fork_run.py -g GAME -f FROM_TAG -t TO_TAG
 """
-
+from alphazero.logic.agent_types import AgentRole, MCTSAgent
+from alphazero.logic.arena import Arena
+from alphazero.logic.custom_types import Generation
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 from util.logging_util import configure_logger
+from util import sqlite3_util
+
+import numpy as np
 
 import argparse
+import dataclasses
 import logging
 import os
+import shutil
+from typing import Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +65,78 @@ Noteworthy options:
                        'using the same self-play data and training-windows as the previous run.')
 
     return parser.parse_args()
+
+
+def copy_databases(source: DirectoryOrganizer, target: DirectoryOrganizer,
+                   retrain_models: bool=False, last_gen: Optional[Generation]=None):
+    shutil.copyfile(source.clients_db_filename, target.clients_db_filename)
+
+    if not retrain_models:
+        if last_gen is None:
+            if os.path.exists(target.ratings_db_filename):
+                shutil.copyfile(source.ratings_db_filename, target.ratings_db_filename)
+            shutil.copyfile(source.training_db_filename, target.training_db_filename)
+        else:
+            if os.path.exists(target.ratings_db_filename):
+                sqlite3_util.copy_db(source.ratings_db_filename, target.ratings_db_filename,
+                                    f'mcts_gen <= {last_gen}')
+            sqlite3_util.copy_db(source.training_db_filename, target.training_db_filename,
+                                f'gen <= {last_gen}')
+
+    if last_gen is None:
+        shutil.copyfile(source.self_play_db_filename, target.self_play_db_filename)
+    else:
+        sqlite3_util.copy_db(source.self_play_db_filename, target.self_play_db_filename,
+                                f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
+
+    copy_eval_databases(source, target, last_gen=last_gen)
+
+
+def copy_eval_databases(from_organizer: DirectoryOrganizer, to_organizer: DirectoryOrganizer,
+                        last_gen: Optional[Generation]=None):
+    for f in os.listdir(from_organizer.eval_db_dir):
+        if f.endswith('.db') and f != f'{from_organizer.tag}.db':
+            benchmark_tag = f.split('.')[0]
+            db = RatingDB(from_organizer.eval_db_filename(benchmark_tag))
+            new_db = RatingDB(to_organizer.eval_db_filename(benchmark_tag))
+            copy_eval_db(db, new_db, to_organizer.tag, last_gen)
+
+
+def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optional[Generation]=None):
+    db_id_map: Dict[int, int] = {}
+    arena = Arena()
+    for db_agent in db.fetch_agents():
+        assert len(db_agent.roles) == 1
+
+        if isinstance(db_agent.agent, MCTSAgent) and db_agent.roles == {AgentRole.TEST}:
+            if last_gen is not None and db_agent.agent.gen > last_gen:
+                continue
+            agent = dataclasses.replace(db_agent.agent, tag=new_tag)
+        else:
+            agent = db_agent.agent
+
+        iagent = arena.add_agent(agent, db_agent.roles, db=new_db)
+        db_id_map[db_agent.db_id] = iagent.db_id
+
+    for result in db.fetch_match_results():
+        if result.agent_id1 not in db_id_map or result.agent_id2 not in db_id_map:
+            continue
+        new_db_id1 = db_id_map[result.agent_id1]
+        new_db_id2 = db_id_map[result.agent_id2]
+        new_db.commit_counts(new_db_id1, new_db_id2, result.counts, result.type)
+
+    ratings_data = db.load_ratings(AgentRole.TEST)
+    iagents = []
+    ratings = []
+    for data in ratings_data:
+        if data.agent_id not in db_id_map:
+            continue
+        new_db_id = db_id_map[data.agent_id]
+        iagent = arena.agent_lookup_db_id[new_db_id]
+        iagents.append(iagent)
+        ratings.append(data.rating)
+    ratings = np.array(ratings)
+    new_db.commit_ratings(iagents, ratings)
 
 
 def main():
@@ -108,7 +189,10 @@ def main():
         from_organizer.copy_models_and_checkpoints(to_organizer, last_gen)
 
     logger.info('Copying database files...')
-    from_organizer.copy_databases(to_organizer, retrain_models, last_gen)
+    copy_databases(from_organizer, to_organizer, retrain_models, last_gen)
+
+    logger.info('Copying binary files...')
+    from_organizer.copy_binary(to_organizer)
 
     logger.info('Writing fork info...')
     to_organizer.write_fork_info(from_organizer, retrain_models, last_gen)

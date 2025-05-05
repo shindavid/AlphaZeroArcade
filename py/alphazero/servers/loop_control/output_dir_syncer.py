@@ -111,6 +111,9 @@ class OutputDirSyncer:
                                os.path.basename(src))
             logger.debug("OutputDirSyncer: syncing database file: %s -> %s", src, dst)
 
+            if not os.path.exists(src):
+                continue
+
             # Create a unique temporary file in /tmp/
             fd, tmp_path = tempfile.mkstemp(suffix=".sqlite3", prefix="db_copy_", dir="/tmp")
             os.close(fd)  # Close the open file descriptor immediately

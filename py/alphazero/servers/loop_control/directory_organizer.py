@@ -35,17 +35,18 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
             ...
         ...
 """
-from alphazero.logic.custom_types import ClientId, Generation
+from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
 from util import sqlite3_util
 
 from natsort import natsorted
 
 import json
+import logging
 import os
 import shutil
 import sqlite3
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 # VERSION is stored in the version_file in the base directory
@@ -55,6 +56,7 @@ from typing import Dict, List, Optional, Tuple
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
 VERSION = 3
+logger = logging.getLogger(__name__)
 
 
 class PathInfo:
@@ -105,23 +107,29 @@ class DirectoryOrganizer:
         self.args = args
 
         self.base_dir_root = base_dir_root
-        self.base_dir = os.path.join(base_dir_root, 'output', game, tag)
+        self.game_dir = os.path.join(base_dir_root, 'output', game)
+        self.base_dir = os.path.join(self.game_dir, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
         self.models_dir = os.path.join(self.base_dir, 'models')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.misc_dir = os.path.join(self.base_dir, 'misc')
+        self.eval_db_dir = os.path.join(self.databases_dir, 'evaluation')
+        self.runtime_dir = os.path.join(self.base_dir, 'runtime')
+        self.binary_dir = os.path.join(self.base_dir, 'bin')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
         self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
         self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
-        self.eval_db_filename = os.path.join(self.databases_dir, 'evaluation.db')
-        self.binary_filename = os.path.join(self.base_dir, 'bin', game)
 
+        self.benchmark_info_filename = os.path.join(self.game_dir, 'benchmark_info.json')
+        self.binary_filename = os.path.join(self.binary_dir, game)
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
+        self.lock_filename = os.path.join(self.runtime_dir, 'lock')
+        self.freeze_filename = os.path.join(self.runtime_dir, 'freeze')
 
         self.fork_info_filename = os.path.join(self.misc_dir, 'fork-info.json')
         self._fork_info = None
@@ -147,6 +155,9 @@ class DirectoryOrganizer:
     def fork_info(self, value: ForkInfo):
         self._fork_info = value
         self._fork_info_loaded = True
+
+    def eval_db_filename(self, benchmark_tag: str) -> str:
+        return os.path.join(self.eval_db_dir, f'{benchmark_tag}.db')
 
     def version_check(self):
         """
@@ -179,11 +190,14 @@ class DirectoryOrganizer:
         """
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
+        os.makedirs(self.eval_db_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.misc_dir, exist_ok=True)
+        os.makedirs(self.binary_dir, exist_ok=True)
+        os.makedirs(self.runtime_dir, exist_ok=True)
 
         if not os.path.isfile(self.version_filename):
             with open(self.version_filename, 'w') as f:
@@ -285,25 +299,10 @@ class DirectoryOrganizer:
             target_checkpoint_filename = target.get_checkpoint_filename(gen)
             shutil.copyfile(checkpoint_filename, target_checkpoint_filename)
 
-    def copy_databases(self, target: 'DirectoryOrganizer', retrain_models: bool=False,
-                       last_gen: Optional[Generation]=None):
-        shutil.copyfile(self.clients_db_filename, target.clients_db_filename)
-
-        if not retrain_models:
-            if last_gen is None:
-                shutil.copyfile(self.ratings_db_filename, target.ratings_db_filename)
-                shutil.copyfile(self.training_db_filename, target.training_db_filename)
-            else:
-                sqlite3_util.copy_db(self.ratings_db_filename, target.ratings_db_filename,
-                                    f'mcts_gen <= {last_gen}')
-                sqlite3_util.copy_db(self.training_db_filename, target.training_db_filename,
-                                    f'gen <= {last_gen}')
-
-        if last_gen is None:
-            shutil.copyfile(self.self_play_db_filename, target.self_play_db_filename)
-        else:
-            sqlite3_util.copy_db(self.self_play_db_filename, target.self_play_db_filename,
-                                 f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
+    def copy_binary(self, target: 'DirectoryOrganizer'):
+        if not os.path.isfile(self.binary_filename):
+            raise ValueError(f'Binary file does not exist: {self.binary_filename}')
+        shutil.copyfile(self.binary_filename, target.binary_filename)
 
     def write_fork_info(self, from_organizer: 'DirectoryOrganizer',
                         retrain_models: bool, last_gen: Optional[Generation]):
@@ -325,3 +324,45 @@ class DirectoryOrganizer:
                 self.fork_info.train_windows[gen] = (window_start, window_end)
 
         self.fork_info.save(self.fork_info_filename)
+
+    def acquire_lock(self, register_func: Callable[[Callable[[], None]], Any]) -> str:
+        self.assert_unlocked()
+
+        with open(self.lock_filename, 'w') as f:
+            f.write('The existence of this file indicates that this run is currently active.')
+        logger.debug(f"Lock acquired: {self.lock_filename}")
+        register_func(self.release_lock)
+
+    def release_lock(self):
+        if os.path.exists(self.lock_filename):
+            os.remove(self.lock_filename)
+            logger.info(f"Lock {self.lock_filename} released.")
+
+    def assert_not_frozen(self):
+        if os.path.exists(self.freeze_filename):
+            raise RuntimeError(
+                f"game {self.game} tag {self.tag} is frozen.\n"
+                f"To unfreeze, remove the freeze file in "
+                f"{self.freeze_filename}")
+
+    def assert_unlocked(self):
+        if os.path.exists(self.lock_filename):
+            raise RuntimeError(
+                f"game {self.game} tag {self.tag} is locked.\n"
+                f"To unlock, remove the lock file in "
+                f"{self.lock_filename}")
+
+    def freeze_tag(self):
+        with open(self.freeze_filename, 'w') as f:
+            f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
+        logger.info(f"Froze run {self.game}: {self.tag}.")
+
+    def save_default_benchmark(self):
+        benchmark_info = {
+            "benchmark_tag": self.tag
+        }
+
+        with open(self.benchmark_info_filename, 'w') as f:
+            json.dump(benchmark_info, f, indent=4)
+
+        logger.info(f"Benchmark tag '{self.tag}' saved to {self.benchmark_info_filename}")

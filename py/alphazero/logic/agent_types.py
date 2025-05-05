@@ -4,8 +4,7 @@ from util.str_util import make_args_str
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-import numpy as np
+from typing import Optional, Set
 import os
 
 
@@ -90,11 +89,13 @@ class IndexedAgent:
     A dataclass for storing an agent with auxiliary info.
 
     - index refers to the index of the agent in the Arena's data structures.
+    - roles is a set of roles that the agent can play in the arena. An agent could be both a
+      benchmark and a test agent.
     - db_id is the id of the agent in the database. This might be set after initial creation.
     """
     agent: Agent
     index: ArenaIndex
-    role: AgentRole
+    roles: Set[AgentRole]
     db_id: Optional[AgentDBId] = None
 
 

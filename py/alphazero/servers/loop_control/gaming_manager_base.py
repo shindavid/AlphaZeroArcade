@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, Domain, ServerStatus
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
@@ -50,13 +50,14 @@ class ManagerConfig:
     worker_aux_class: Type
     server_name: str
     worker_name: str
+    domain: Domain
 
 
 class GamingManagerBase:
     def __init__(self, controller: LoopController, manager_config: ManagerConfig, tag: str=None):
         self._tag = tag
-        self._controller = controller
-        self._config = manager_config
+        self._controller: LoopController = controller
+        self._config: ManagerConfig = manager_config
 
         self._started = False
         self._lock = threading.Lock()
@@ -117,7 +118,13 @@ class GamingManagerBase:
                 status = self._wait_for_unblock(conn)
                 if status == ServerStatus.DISCONNECTED:
                     break
-                if not conn.aux.work_in_progress():
+
+                if self._controller.params.task_mode:
+                    if self._task_finished():
+                        self._controller.request_shutdown(0)
+                        break
+                elif not conn.aux.work_in_progress():
+                    logger.debug(f'waiting for work to do')
                     self._wait_until_work_exists()
 
                 logger.debug(f"Managing {self._config.server_name}, priority: {table}")
@@ -136,8 +143,11 @@ class GamingManagerBase:
 
     def _wait_until_work_exists(self):
         with self._lock:
-            self._new_work_cond.wait_for(
-                lambda: self.num_evaluated_gens() < self._controller.latest_gen())
+            self._new_work_cond.wait_for(self._has_work)
+
+    def _has_work(self) -> bool:
+        logger.debug(f'num_evaluated_gens={self.num_evaluated_gens()}, latest_gen={self._controller.latest_gen()}')
+        return self.num_evaluated_gens() < self._controller._organizer.get_latest_model_generation(default=0)
 
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
         """
@@ -177,6 +187,19 @@ class GamingManagerBase:
         with status_cond:
             conn.aux.status = ServerStatus.READY
             status_cond.notify_all()
+
+    def _set_domain_priority(self, dict_len: int, rating_in_progress: bool):
+        latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
+        target_rate = self._controller.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug('%s elevate-priority:%s (latest=%s, dict_len=%s, in_progress=%s, '
+                     'current=%.2f, target=%.2f)', self._config.domain.value, elevate, latest_gen, dict_len,
+                     rating_in_progress, current_rate, target_rate)
+        self._controller.set_domain_priority(self._config.domain, elevate)
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
@@ -299,3 +322,6 @@ class GamingManagerBase:
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         pass
 
+    @abstractmethod
+    def _task_finished(self) -> bool:
+        pass
