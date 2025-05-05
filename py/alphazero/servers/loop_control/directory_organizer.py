@@ -326,10 +326,7 @@ class DirectoryOrganizer:
         self.fork_info.save(self.fork_info_filename)
 
     def acquire_lock(self, register_func: Callable[[Callable[[], None]], Any]) -> str:
-        if os.path.exists(self.lock_filename):
-            raise RuntimeError(
-                f"Another instance of loop controller is already running.\n"
-                f"Exiting. To force this instance to run, remove the lock file: {self.lock_filename}")
+        self.assert_unlocked()
 
         with open(self.lock_filename, 'w') as f:
             f.write('The existence of this file indicates that this run is currently active.')
