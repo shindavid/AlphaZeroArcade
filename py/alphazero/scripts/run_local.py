@@ -42,11 +42,11 @@ Standard Usage Recipes:
     On your first run, you won't have a benchmark established. If this is the case, the
     "Evaluation" tab will show the results when agents are scored against themselves.
 
-2. Establish a benchmark:
+2. Promote that run to become a benchmark:
+
     ./py/alphazero/scripts/benchmark_tag_local.py -g {game} -t {tag}
 
-    Once a benchmark has been established, you can promote it to be the default benchmark for the game.
-    After this, future runs will be rated relative to this benchmark.
+    Once promoted, future runs will be rated relative to this run.
 
 """
 

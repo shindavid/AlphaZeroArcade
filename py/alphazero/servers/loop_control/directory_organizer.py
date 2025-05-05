@@ -116,9 +116,8 @@ class DirectoryOrganizer:
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.misc_dir = os.path.join(self.base_dir, 'misc')
         self.eval_db_dir = os.path.join(self.databases_dir, 'evaluation')
-        self.runtime_dir = os.path.join(self.base_dir, '.runtime')
+        self.runtime_dir = os.path.join(self.base_dir, 'runtime')
         self.binary_dir = os.path.join(self.base_dir, 'bin')
-        self.runtime_dir = os.path.join(self.base_dir, '.runtime')
 
         self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
@@ -333,7 +332,7 @@ class DirectoryOrganizer:
                 f"Exiting. To force this instance to run, remove the lock file: {self.lock_filename}")
 
         with open(self.lock_filename, 'w') as f:
-            f.write('locked')
+            f.write('The existence of this file indicates that this run is currently active.')
         logger.debug(f"Lock acquired: {self.lock_filename}")
         register_func(self.release_lock)
 
@@ -354,7 +353,7 @@ class DirectoryOrganizer:
 
     def freeze_tag(self):
         with open(self.freeze_filename, 'w') as f:
-            f.write('frozen')
+            f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
     def save_default_benchmark(self):
