@@ -165,9 +165,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching self-play server: %s', cmd)
-    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
-    return proc
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def launch_ratings_server(params_dict, cuda_device: int):
@@ -194,9 +192,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching ratings server: %s', cmd)
-    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
-    return proc
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def launch_benchmark_server(params_dict, cuda_device: int):
@@ -221,9 +217,7 @@ def launch_benchmark_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching benchmark server: %s', cmd)
-    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
-    return proc
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def launch_eval_server(params_dict, cuda_device: int):
@@ -248,9 +242,7 @@ def launch_eval_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching eval server: %s', cmd)
-    proc = subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
-    return proc
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def launch_loop_controller(params_dict, cuda_device: int):
@@ -295,9 +287,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     training_params.add_to_cmd(cmd, default_training_params)
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
-    proc = subprocess_util.Popen(cmd, stdout=None, stderr=None, preexec_fn=os.setsid)
-    atexit.register(subprocess_util.safe_killpg, proc.pid, signal.SIGTERM)
-    return proc
+    return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
 
 def load_benchmark_info(game: str):
@@ -375,29 +365,36 @@ def main():
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+    descs = []
     procs = []
+    atexit.register(subprocess_util.terminate_processes, procs)
     try:
         organizer.assert_unlocked()
 
-        procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
+        descs.append('Loop-controller')
+        procs.append(launch_loop_controller(params_dict, loop_controller_gpu))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
 
             for self_play_gpu in self_play_gpus:
-                procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
+                descs.append('Self-play')
+                procs.append( launch_self_play_server(params_dict, self_play_gpu))
 
         if params.run_benchmark_server or benchmark_tag is None:
-            procs.append(('Benchmark', launch_benchmark_server(params_dict, ratings_gpu)))
+            descs.append('Benchmark')
+            procs.append(launch_benchmark_server(params_dict, ratings_gpu))
         else:
-            procs.append(('Eval', launch_eval_server(params_dict, ratings_gpu)))
+            descs.append('Eval')
+            procs.append(launch_eval_server(params_dict, ratings_gpu))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
-            procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
+            descs.append('Ratings')
+            procs.append(launch_ratings_server(params_dict, ratings_gpu))
 
         loop = True
         while loop:
             any_subprocess_error = False
-            for descr, proc in procs:
+            for descr, proc in zip(descs, procs):
                 if proc.poll() is None:
                     continue
                 loop = False

@@ -2,7 +2,7 @@ import logging
 import os
 import signal
 import subprocess
-from typing import Union, List, Dict, Any, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 
 logger = logging.getLogger(__name__)
@@ -78,3 +78,29 @@ def safe_killpg(pid, signal: signal.Signals):
         os.killpg(pid, signal)
     except ProcessLookupError:
         pass  # process group already gone
+
+
+def terminate_processes(procs: Iterable[subprocess.Popen], timeout: float = 5.0):
+    for proc in procs:
+        if proc.poll() is None:
+            logger.debug(f'Terminating process {proc.pid}')
+            try:
+                proc.terminate()
+            except Exception as e:
+                logger.error(f'Error terminating process {proc.pid}: {e}')
+        else:
+            logger.debug(f'Process {proc.pid} already exited with code {proc.returncode}')
+
+    for proc in procs:
+        if proc.poll() is None:
+            try:
+                proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                logger.warning(f'Process {proc.pid} did not terminate in time; killing it')
+                try:
+                    proc.kill()
+                    proc.wait(timeout=timeout)
+                except Exception as e:
+                    logger.error(f'Failed to kill process {proc.pid}: {e}')
+            except Exception as e:
+                logger.error(f'Error waiting for process {proc.pid}: {e}')
