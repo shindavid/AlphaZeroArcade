@@ -341,15 +341,19 @@ class DirectoryOrganizer:
             os.remove(self.lock_filename)
             logger.info(f"Lock {self.lock_filename} released.")
 
-    def assert_not_frozen(self) -> bool:
-        assert not os.path.exists(self.freeze_filename), \
-            f"game {self.game} tag {self.tag} is frozen.\n" \
-            f"To unfreeze, remove the freeze file in " \
-            f"/output/{self.game}/{self.game}/.runtime/freeze"
+    def assert_not_frozen(self):
+        if os.path.exists(self.freeze_filename):
+            raise RuntimeError(
+                f"game {self.game} tag {self.tag} is frozen.\n"
+                f"To unfreeze, remove the freeze file in "
+                f"{self.freeze_filename}")
 
-    def assert_unlocked(self) -> bool:
-        assert not os.path.exists(self.lock_filename), \
-            f"Lock file {self.lock_filename} exists. Another loop controller is already running."
+    def assert_unlocked(self):
+        if os.path.exists(self.lock_filename):
+            raise RuntimeError(
+                f"game {self.game} tag {self.tag} is locked.\n"
+                f"To unlock, remove the lock file in "
+                f"{self.lock_filename}")
 
     def freeze_tag(self):
         with open(self.freeze_filename, 'w') as f:
