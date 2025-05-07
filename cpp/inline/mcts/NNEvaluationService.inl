@@ -279,11 +279,6 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
     return NNEvaluationResponse(0, core::kContinue);
   }
 
-  if (mcts::kEnableServiceDebug) {
-    LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__,
-             request.num_fresh_items());
-  }
-
   int n = request.num_fresh_items();
   CacheMissInfo miss_infos[n];
   CacheLookupResult result(miss_infos);

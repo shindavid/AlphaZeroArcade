@@ -119,12 +119,8 @@ class NNEvaluationRequest {
   };
   using item_vec_t = std::vector<Item>;
 
-  void init(int thread_id) { thread_id_ = thread_id; }
   void set_notification_task_info(const core::YieldNotificationUnit& unit);
   void mark_all_as_stale();
-
-  std::string thread_id_whitespace() const;
-  int thread_id() const { return thread_id_; }
 
   template <typename... Ts>
   void emplace_back(Ts&&... args) {
@@ -154,7 +150,6 @@ class NNEvaluationRequest {
   // Propagated from Manager::ActionRequest
   core::YieldNotificationUnit notification_unit_;
 
-  int thread_id_;
   int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };
 

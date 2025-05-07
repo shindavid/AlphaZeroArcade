@@ -97,6 +97,8 @@ class Manager {
   };
 
   struct SearchContext {
+    int log_prefix_n() const { return kThreadWhitespaceLength * id; }
+
     core::context_id_t id;
 
     search_path_t search_path;
@@ -312,8 +314,6 @@ class Manager {
   void short_circuit_backprop(SearchContext& context);
   void calc_canonical_state_data(SearchContext& context);
   void print_visit_info(const SearchContext& context);
-  std::string thread_id_whitespace(const SearchContext& context) const;
-  std::string break_plus_thread_id_whitespace(const SearchContext& context) const;
   void validate_search_path(const SearchContext& context) const;
   int get_best_child_index(const SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);

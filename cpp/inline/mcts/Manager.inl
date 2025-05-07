@@ -148,21 +148,22 @@ void Manager<Game>::set_search_params(const SearchParams& params) {
 template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest& request) {
   auto context_id = request.context_id();
+  SearchContext& context = contexts_[context_id];
   util::debug_assert(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
                      context_id, num_search_threads());
 
   LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "",
-            kThreadWhitespaceLength * context_id, (uint64_t)this, (int)state_machine_.state,
+            context.log_prefix_n(), (uint64_t)this, (int)state_machine_.state,
             context_id, state_machine_.primary_context_id);
 
   SearchResponse response = search_helper(request);
 
   LOG_DEBUG("{:>{}}{}() exit: manager={} state={} instr={} extra={}", "",
-            kThreadWhitespaceLength * context_id, __func__, (uint64_t)this,
+            context.log_prefix_n(), __func__, (uint64_t)this,
             (int)state_machine_.state, (int)response.yield_instruction,
             response.extra_enqueue_count);
 
-  contexts_[context_id].extra_enqueue_count = 0;
+  context.extra_enqueue_count = 0;
   return response;
 }
 
@@ -284,7 +285,7 @@ void Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return;
 
-  LOG_DEBUG("{:>{}}{}(): manager={}", "", kThreadWhitespaceLength * context.id, __func__,
+  LOG_DEBUG("{:>{}}{}(): manager={}", "", context.log_prefix_n(), __func__,
             (uint64_t)this);
 
   state_machine_.state = kInVisitLoop;
@@ -328,10 +329,9 @@ core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchCont
 
 template <core::concepts::Game Game>
 void Manager<Game>::init_context(core::context_id_t i) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * i, __func__);
   SearchContext& context = contexts_[i];
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.id = i;
-  context.eval_request.init(i);
 }
 
 template <core::concepts::Game Game>
@@ -358,7 +358,7 @@ bool Manager<Game>::more_search_iterations_needed(Node* root) {
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
   init_root_info(add_noise);
 
@@ -394,13 +394,13 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_root_initialization(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   return resume_node_initialization(context);
 }
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
   node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table_.get_node(node_index);
@@ -427,6 +427,11 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
 
     const SearchRequest& search_request = *context.search_request;
     context.eval_request.set_notification_task_info(search_request.notification_unit);
+
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("{:>{}}{}() - size: {}", "", context.log_prefix_n(), __func__,
+               context.eval_request.num_fresh_items());
+    }
     NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
     context.nn_eval_seq_id = response.sequence_id;
     if (response.yield_instruction == core::kYield) return core::kYield;
@@ -437,7 +442,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
   node_pool_index_t node_index = context.initialization_index;
 
@@ -471,7 +476,7 @@ core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContex
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* root = lookup_table_.get_node(root_info_.node_index);
   context.canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
@@ -486,7 +491,7 @@ core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& c
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
   }
@@ -509,7 +514,7 @@ core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& 
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   print_visit_info(context);
   context.mid_visit = true;
@@ -599,7 +604,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   Edge* edge = context.visit_edge;
 
@@ -610,7 +615,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   if (context.expanded_new_node) {
     context.visit_node = nullptr;
     context.mid_visit = false;
-    LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
+    LOG_DEBUG("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
     return core::kContinue;
   }
 
@@ -628,7 +633,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
       short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
-      LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
+      LOG_DEBUG("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
       return core::kContinue;
     }
   }
@@ -646,13 +651,13 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
   context.visit_node = child;
   context.mid_visit = false;
-  LOG_DEBUG("{:>{}}{}() continuing @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
+  LOG_DEBUG("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
   return core::kContinue;
 }
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   context.mid_expansion = true;
 
@@ -710,7 +715,7 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
 
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   node_pool_index_t child_index = context.initialization_index;
   Edge* edge = context.visit_edge;
@@ -816,7 +821,7 @@ inline void Manager<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
 
 template <core::concepts::Game Game>
 void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
 
   // Evaluate every child of the root node
@@ -902,9 +907,9 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::virtual_backprop(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
   }
 
   util::release_assert(!context.search_path.empty());
@@ -932,9 +937,9 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
 
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
   }
 
   util::release_assert(!context.search_path.empty());
@@ -954,9 +959,9 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArray& value) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{}{} {} {}", thread_id_whitespace(context), __func__, search_path_str(context),
+    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, search_path_str(context),
              fmt::streamed(value.transpose()));
   }
 
@@ -987,9 +992,9 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
   Node* last_node = context.search_path.back().node;
   auto value = GameResults::to_value_array(last_node->stable_data().VT);
 
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{}{} {} {}", thread_id_whitespace(context), __func__, search_path_str(context),
+    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, search_path_str(context),
              fmt::streamed(value.transpose()));
   }
 
@@ -1017,9 +1022,9 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
 
 template <core::concepts::Game Game>
 void Manager<Game>::short_circuit_backprop(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{}{} {}", thread_id_whitespace(context), __func__, search_path_str(context));
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
   }
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
@@ -1037,7 +1042,7 @@ void Manager<Game>::short_circuit_backprop(SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
-  LOG_DEBUG("{:>{}}{}()", "", kThreadWhitespaceLength * context.id, __func__);
+  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.canonical_history = context.raw_history;
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
@@ -1081,20 +1086,9 @@ template <core::concepts::Game Game>
 void Manager<Game>::print_visit_info(const SearchContext& context) {
   if (mcts::kEnableSearchDebug) {
     Node* node = context.visit_node;
-    LOG_INFO("{}visit {} seat={}", thread_id_whitespace(context),
+    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(),
              search_path_str(context), node->stable_data().active_seat);
   }
-}
-
-template <core::concepts::Game Game>
-std::string Manager<Game>::thread_id_whitespace(const SearchContext& context) const {
-  return util::make_whitespace(kThreadWhitespaceLength * context.id);;
-}
-
-template <core::concepts::Game Game>
-std::string Manager<Game>::break_plus_thread_id_whitespace(const SearchContext& context) const {
-  return std::format("\n{}", util::make_whitespace(
-    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * context.id));
 }
 
 template <core::concepts::Game Game>
@@ -1177,7 +1171,7 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
   Node* node = context.visit_node;
   if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
-    ss << thread_id_whitespace(context);
+    ss << std::format("{:>{}}", "", context.log_prefix_n());
 
     core::seat_index_t seat = node->stable_data().active_seat;
 
@@ -1203,7 +1197,7 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
 
     for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << break_plus_thread_id_whitespace(context);
+      ss << line << std::format("\n{:>{}}", "", context.log_prefix_n());
     }
 
     const LocalPolicyArray& P = selector.P;
@@ -1248,7 +1242,7 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
 
     for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << break_plus_thread_id_whitespace(context);
+      ss << line << std::format("\n{:>{}}", "", context.log_prefix_n());
     }
 
     LOG_INFO(ss.str());

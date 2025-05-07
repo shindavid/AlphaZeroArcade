@@ -73,9 +73,4 @@ void NNEvaluationRequest<Game>::mark_all_as_stale() {
       "This should not happen with the current MCTS logic.");
 }
 
-template <core::concepts::Game Game>
-std::string NNEvaluationRequest<Game>::thread_id_whitespace() const {
-  return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
-}
-
 }  // namespace mcts
