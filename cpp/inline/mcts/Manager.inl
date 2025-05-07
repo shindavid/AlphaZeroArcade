@@ -667,8 +667,8 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
 
   MCTSKey mcts_key = InputTensorizor::mcts_key(*history);
 
-  // NOTE: we do a lookup_node() call here, and then later, inside init_node(), we do a
-  // corresponding insert_node() call. This is analagous to:
+  // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
+  // do a corresponding insert_node() call. This is analagous to:
   //
   // if key not in dict:
   //   ...
@@ -679,7 +679,7 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
   // this would hold the mutex for far too long.
   //
   // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
-  // keeps the first init_node() and "unwinds" the second one.
+  // keeps the first resume_node_initialization() and "unwinds" the second one.
   context.initialization_index = lookup_table_.lookup_node(mcts_key);
 
   context.expanded_new_node = context.initialization_index < 0;
@@ -734,7 +734,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
     edge->child_index = inserted_child_index;
     if (child_index != inserted_child_index) {
       // This means that we hit the race-condition described in begin_expansion(). We need to
-      // "unwind" the second init_node() call, and instead use the first one.
+      // "unwind" the second resume_node_initialization() call, and instead use the first one.
       //
       // Note that all the work done in constructing child is effectively discarded. We don't
       // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
