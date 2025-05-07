@@ -22,6 +22,8 @@ inline void YieldManager::shut_down() {
 }
 
 inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
+  if (vec.empty()) return;
+
   std::unique_lock lock(mutex_);
   for (const auto& item : vec) {
     ready_items_.push_back(item);

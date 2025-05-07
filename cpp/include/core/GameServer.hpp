@@ -255,6 +255,7 @@ class GameServer
     void update_perf_stats(PerfStats&);
 
    private:
+    bool queue_pending() const { return pending_queue_count_ > 0 && queue_.empty(); }
     void issue_pause_receipt_if_necessary();  // assumes mutex_ is locked
 
     const Params params_;

@@ -188,9 +188,7 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
 
   SearchRequest request(notification_unit);
   SearchResponse response = search(request);
-  if (response.yield_instruction == core::kYield) {
-    return core::kYield;
-  }
+  if (response.yield_instruction == core::kYield) return core::kYield;
   util::release_assert(response.yield_instruction == core::kContinue);
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
@@ -271,7 +269,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   lock.lock();
   core::yield_instruction_t yield_instruction = mark_as_done_with_visit_loop(context);
   if (yield_instruction == core::kYield) {
-    return SearchResponse::make_yield(context.extra_enqueue_count);
+    throw util::Exception("Manager::{}(): unexpected yield instruction (context:{})", __func__,
+                          context.id);
   } else if (yield_instruction == core::kDrop) {
     return SearchResponse::make_drop();
   }
@@ -309,11 +308,22 @@ core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchCont
     if (state_machine_.in_visit_loop_count == context.extra_enqueue_count) {
       state_machine_.state = kIdle;
       state_machine_.primary_context_id = context.id;
+
+      if (context.extra_enqueue_count > 0) {
+        // This means that we did update_state_machine_to_in_visit_loop() in the current search()
+        // call. The significance of this is that the other context never got a chance to actually
+        // do any work. We can't count the other contexts to get to this function and set their
+        // own in_visit_loop to false, so we need to do it here.
+        for (auto& context2 : contexts_) {
+          context2.in_visit_loop = false;
+        }
+      }
       return core::kContinue;
     }
     return core::kDrop;
   }
-  return core::kYield;
+
+  throw util::Exception("Manager::{}(): context {} not in visit loop", __func__, context.id);
 }
 
 template <core::concepts::Game Game>
@@ -419,9 +429,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
     context.eval_request.set_notification_task_info(search_request.notification_unit);
     NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
     context.nn_eval_seq_id = response.sequence_id;
-    if (response.yield_instruction == core::kYield) {
-      return core::kYield;
-    }
+    if (response.yield_instruction == core::kYield) return core::kYield;
   }
 
   return resume_node_initialization(context);
@@ -437,7 +445,7 @@ core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContex
   bool is_root = (node_index == root_info_.node_index);
 
   if (nn_eval_service_->wait_for(context.nn_eval_seq_id) == core::kYield) {
-    return core::kYield;
+    throw util::Exception("Should not get here!");
   }
   for (auto& item : context.eval_request.fresh_items()) {
     item.node()->load_eval(item.eval(),
@@ -563,7 +571,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       if (begin_expansion(context) == core::kYield) return core::kYield;
     } else if (edge->state == Node::kMidExpansion) {
       util::release_assert(multithreaded());
-      return core::kYield;
+      return core::kYield;  // TODO: notification task?
     } else if (edge->state == Node::kPreExpanded) {
       edge->state = Node::kMidExpansion;
       lock.unlock();
@@ -607,10 +615,9 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  if (edge->state != Node::kExpanded) {
-    LOG_DEBUG("{:>{}}{}()  yielding @{}", "", kThreadWhitespaceLength * context.id, __func__, __LINE__);
-    return core::kYield;
-  }
+  util::release_assert(edge->state == Node::kExpanded,
+                       "Expected edge state to be kExpanded, but got {}",
+                       (int)edge->state);
 
   Node* child = node->get_child(edge);
   if (child) {

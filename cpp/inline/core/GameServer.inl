@@ -163,9 +163,7 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
-      cv_.wait(lock, [&] {
-        return paused_ || pending_queue_count_ == 0 || !queue_.empty();
-      });
+      cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
     }
     if (queue_.empty()) {
       LOG_DEBUG("next(): queue empty, exiting");
@@ -187,10 +185,11 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
-  bool empty = queue_.empty();
+  bool was_queue_pending = queue_pending();
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
     queue_.push(item);
+    pending_queue_count_--;
   } else if (request.instruction == kEnqueueLater) {
     if (request.extra_enqueue_count > 0) {
       // Push back the item's siblings
@@ -212,18 +211,18 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
   } else if (request.instruction == kEnqueueNever) {
     pending_queue_count_--;
   } else {
-    throw util::Exception(
-      "GameServer::enqueue(): invalid enqueue instruction: {}", (int)request.instruction);
-  }
-
-  if (empty) {
-    lock.unlock();
-    cv_.notify_all();
+    throw util::Exception("GameServer::enqueue(): invalid enqueue instruction: {}",
+                          (int)request.instruction);
   }
 
   LOG_DEBUG("enqueue(item={}:{}, request={}:{}) pending={} queue={}", item.slot, item.context,
-            (int)request.instruction, request.extra_enqueue_count, pending_queue_count_,
-            queue_.size());
+    (int)request.instruction, request.extra_enqueue_count, pending_queue_count_,
+    queue_.size());
+  lock.unlock();
+
+  if (was_queue_pending && !queue_pending()) {
+    cv_.notify_all();
+  }
 }
 
 template <concepts::Game Game>
