@@ -434,6 +434,9 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
     }
     NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
     context.nn_eval_seq_id = response.sequence_id;
+
+    // TODO: unlock node mutex from begin_visit() here, finally, and record the nn_eval_seq_id to
+    // each item.node for cache-missing items, to facilitate yield-mechanics
     if (response.yield_instruction == core::kYield) return core::kYield;
   }
 
