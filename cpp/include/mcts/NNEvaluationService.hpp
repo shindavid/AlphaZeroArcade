@@ -231,8 +231,7 @@ class NNEvaluationService
     // was newly frozen.
     bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
 
-    // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
-    BatchData* get_frozen_pending_batch_data() const;
+    BatchData* get_first_pending_batch_data() const;
 
    private:
     BatchData* add_batch_data();

@@ -215,6 +215,9 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batc
   pending_batch_datas_.erase(pending_batch_datas_.begin());
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
+  if (pending_batch_datas_.empty()) {
+    add_batch_data();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -241,12 +244,9 @@ bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_up_to(
 
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::get_frozen_pending_batch_data() const {
+NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
   if (!pending_batch_datas_.empty()) {
-    BatchData* batch_data = pending_batch_datas_.front();
-    if (batch_data->frozen()) {
-      return batch_data;
-    }
+    return pending_batch_datas_.front();
   }
   return nullptr;
 }
@@ -734,27 +734,43 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
     LOG_INFO("<---------------------- {}::{}() ---------------------->", cls, func);
   }
 
+  bool freeze = false;
   auto predicate = [&] {
     if (!active() || paused_) return true;
-    BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-    if (batch_data) {
+    BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+    if (!batch_data) {
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->", cls, func,
-                 (int)batch_data->allocate_count);
+        LOG_INFO("<---------------------- {}::{}() still waiting ---------------------->", cls,
+                 func);
       }
-      return true;
+      return false;
+    }
+    if (freeze) batch_data->accepting_allocations = false;
+    if (!batch_data->frozen()) {
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO(
+          "<---------------------- {}::{}() still waiting (write:{} allocate:{}) "
+          "---------------------->",
+          cls, func, batch_data->write_count, batch_data->allocate_count);
+      }
+      return false;
     }
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO("<---------------------- {}::{}() still waiting ---------------------->", cls, func);
+      LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->", cls, func,
+               batch_data->allocate_count);
     }
-    return false;
+    return true;
   };
 
   cv_main_.wait_until(lock, deadline_, predicate);
 
   if (!active() || paused_) return;
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-  if (!batch_data) {
+  freeze = true;
+  BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+  if (batch_data) {
+    batch_data->accepting_allocations = false;
+  }
+  if (!batch_data || !batch_data->frozen()) {
     // This means that we timed out, but the current batch is not yet frozen. We need to wait
     // further until it is frozen.
     cv_main_.wait(lock, predicate);
@@ -766,7 +782,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   if (!active() || paused_) return;
 
   std::unique_lock lock(main_mutex_);
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
+  BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
   if (!batch_data) return;
   lock.unlock();
 
@@ -816,6 +832,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
     group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
                      group.active_seat, group.action_mode);
   }
+  yield_manager_->notify(batch_data->notification_tasks);
   gpu_copy_clocker2.stop();
 
   lock.lock();

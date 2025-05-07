@@ -63,7 +63,7 @@ auto GameServer<Game>::Params::make_options_description() {
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::SharedData(
-    const Params& params, const TrainingDataWriterParams& training_data_writer_params)
+  const Params& params, const TrainingDataWriterParams& training_data_writer_params)
     : params_(params) {
   if (training_data_writer_params.enabled) {
     training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
@@ -167,10 +167,16 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
         return paused_ || pending_queue_count_ == 0 || !queue_.empty();
       });
     }
-    if (queue_.empty()) return false;
+    if (queue_.empty()) {
+      LOG_DEBUG("next(): queue empty, exiting");
+      return false;
+    }
   }
 
-  if (paused_) return false;
+  if (paused_) {
+    LOG_DEBUG("next(): paused");
+    return false;
+  }
 
   item = queue_.front();
   queue_.pop();
@@ -179,35 +185,45 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::enqueue(SlotContext item, bool re_enqueue,
-                                           int extra_enqueue_count) {
+void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
   bool empty = queue_.empty();
-  if (re_enqueue) {
-    util::release_assert(extra_enqueue_count == 0);
+  if (request.instruction == kEnqueueNow) {
+    util::release_assert(request.extra_enqueue_count == 0);
     queue_.push(item);
-  } else if (extra_enqueue_count > 0) {
-    // Push back the item's siblings
-    //
-    // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
-    // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
-    // if the player uses 4 threads, this current thread might be context=2. The siblings then are
-    // contexts 3, 0, and 1.
-    //
-    // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
-    // this code will need to change.
-    util::release_assert(item.context >= 0 && item.context <= extra_enqueue_count);
-    for (int i = 0; i < extra_enqueue_count; ++i) {
-      item.context++;
-      if (item.context == extra_enqueue_count + 1) item.context = 0;
-      queue_.push(item);
+  } else if (request.instruction == kEnqueueLater) {
+    if (request.extra_enqueue_count > 0) {
+      // Push back the item's siblings
+      //
+      // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
+      // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
+      // if the player uses 4 threads, this current thread might be context=2. The siblings then are
+      // contexts 3, 0, and 1.
+      //
+      // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
+      // this code will need to change.
+      util::release_assert(item.context >= 0 && item.context <= request.extra_enqueue_count);
+      for (int i = 0; i < request.extra_enqueue_count; ++i) {
+        item.context++;
+        if (item.context == request.extra_enqueue_count + 1) item.context = 0;
+        queue_.push(item);
+      }
     }
+  } else if (request.instruction == kEnqueueNever) {
+    pending_queue_count_--;
+  } else {
+    throw util::Exception(
+      "GameServer::enqueue(): invalid enqueue instruction: {}", (int)request.instruction);
   }
-  pending_queue_count_--;
+
   if (empty) {
     lock.unlock();
     cv_.notify_all();
   }
+
+  LOG_DEBUG("enqueue(item={}:{}, request={}:{}) pending={} queue={}", item.slot, item.context,
+            (int)request.instruction, request.extra_enqueue_count, pending_queue_count_,
+            queue_.size());
 }
 
 template <concepts::Game Game>
@@ -451,13 +467,13 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step(context_id_t context, bool& re_enqueue,
-                                      int& extra_enqueue_count) {
+typename GameServer<Game>::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t context) {
+  EnqueueRequest request;
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(context, re_enqueue, extra_enqueue_count)) {
+    if (step_non_chance(context, request)) {
       pre_step();
     } else {
-      return;
+      return request;
     }
   }
 
@@ -466,6 +482,7 @@ void GameServer<Game>::GameSlot::step(context_id_t context, bool& re_enqueue,
       pre_step();
     }
   }
+  return request;
 }
 
 template <concepts::Game Game>
@@ -527,8 +544,8 @@ bool GameServer<Game>::GameSlot::step_chance() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, bool& re_enqueue,
-                                                 int& extra_enqueue_count) {
+bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
+                                                 EnqueueRequest& enqueue_request) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
@@ -541,24 +558,21 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, bool& re_
 
   switch (response.yield_instruction) {
     case kContinue: {
-      if (pending_drop_count_ > 0) {
-        // TODO: mark that we already got the response, and don't bother calling
-        // get_action_response() again on the rebound?
-        return false;
-      }
+      util::release_assert(pending_drop_count_ == 0,
+                           "Unexpected response: pending_drop_count_={}", (int)pending_drop_count_);
       mid_yield_ = false;
       break;
     }
     case kYield: {
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
-      re_enqueue = false;
-      extra_enqueue_count = response.extra_enqueue_count;
+      enqueue_request.instruction = kEnqueueLater;
+      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
       return false;
     }
     case kDrop: {
       pending_drop_count_--;
-      re_enqueue = false;
+      enqueue_request.instruction = kEnqueueNever;
       return false;
     }
     default: {
@@ -725,20 +739,21 @@ void GameServer<Game>::GameThread::run() {
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    bool re_enqueue = true;
-    int extra_enqueue_count = 0;
-    slot->step(item.context, re_enqueue, extra_enqueue_count);
+    EnqueueRequest request = slot->step(item.context);
 
     bool dropped = false;
     if (slot->game_ended()) {
-      util::release_assert(re_enqueue && extra_enqueue_count == 0);
+      util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
       if (!slot->start_game()) {
         shared_data_.drop_slot();
         dropped = true;
       }
     }
 
-    if (!dropped) shared_data_.enqueue(item, re_enqueue, extra_enqueue_count);
+    LOG_DEBUG("step(item={}:{}) enqueue_request={}:{} dropped={}", slot->id(),
+              item.context, (int)request.instruction, request.extra_enqueue_count, dropped);
+
+    if (!dropped) shared_data_.enqueue(item, request);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);

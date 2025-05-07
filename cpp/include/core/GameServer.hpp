@@ -125,6 +125,17 @@ class GameServer
     bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
   };
 
+  enum enqueue_instruction_t : int8_t {
+    kEnqueueNow,
+    kEnqueueLater,
+    kEnqueueNever
+  };
+
+  struct EnqueueRequest {
+    enqueue_instruction_t instruction = kEnqueueNow;
+    int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
+  };
+
  protected:
   static std::string get_results_str(const results_map_t& map);
 
@@ -136,7 +147,7 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    void step(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
+    EnqueueRequest step(context_id_t context);
 
     bool start_game();
     bool game_started() const { return game_started_; }
@@ -150,10 +161,9 @@ class GameServer
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance();
 
-    // Sets re_enqueue to true if the game slot should be re-enqueued.
-    // Sets extra_enqueue_count to the number of times this slot should be enqueued.
-    // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_non_chance(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
+    // Returns true if it successfully processed a non-terminal game state transition. Also sets
+    // request to the appropriate value.
+    bool step_non_chance(context_id_t context, EnqueueRequest& request);
 
     void handle_terminal(const ValueTensor& outcome);
 
@@ -208,7 +218,7 @@ class GameServer
     // - item: with the next queue item
     // - wait_for_game_slot_time_ns: with the time spent waiting
     bool next(int64_t& wait_for_game_slot_time_ns, SlotContext& item);
-    void enqueue(SlotContext, bool re_enqueue, int extra_enqueue_count);
+    void enqueue(SlotContext, const EnqueueRequest& request);
     GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
     void drop_slot();
 
