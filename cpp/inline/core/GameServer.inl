@@ -63,8 +63,9 @@ auto GameServer<Game>::Params::make_options_description() {
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::SharedData(
-  const Params& params, const TrainingDataWriterParams& training_data_writer_params)
-    : params_(params) {
+  GameServer* server, const Params& params,
+  const TrainingDataWriterParams& training_data_writer_params)
+    : server_(server), params_(params) {
   if (training_data_writer_params.enabled) {
     training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
   }
@@ -164,27 +165,27 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
-      LOG_DEBUG("<-- GameServer::next(): waiting (queue:{} pending:{})", queue_.size(),
+      LOG_DEBUG("<-- GameServer::{}(): waiting (queue:{} pending:{})", __func__, queue_.size(),
                 pending_queue_count_);
-
+      server_->force_progress();
       cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
     }
     if (queue_.empty()) {
-      LOG_DEBUG("<-- GameServer::next(): queue empty, exiting");
+      LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
       return false;
     }
   }
 
   if (paused_) {
-    LOG_DEBUG("<-- GameServer::next(): paused");
+    LOG_DEBUG("<-- GameServer::{}(): paused", __func__);
     return false;
   }
 
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
-  LOG_DEBUG("<-- GameServer::next(): item={}:{} (queue:{} pending:{})", item.slot, item.context,
-            queue_.size(), pending_queue_count_);
+  LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
+            item.context, queue_.size(), pending_queue_count_);
   return true;
 }
 
@@ -771,7 +772,7 @@ void GameServer<Game>::GameThread::run() {
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : PerfStatsClient(), shared_data_(params, training_data_writer_params) {
+    : PerfStatsClient(), GameServerBase(), shared_data_(this, params, training_data_writer_params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);

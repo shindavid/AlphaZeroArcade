@@ -27,9 +27,6 @@ inline auto NNEvaluationServiceParams::make_options_description() {
           "--player string to register the device to the loop controller")
       .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit), "batch size limit")
-      .template add_hidden_option<"nn-eval-timeout-ns">(
-          po::value<int64_t>(&nn_eval_timeout_ns)->default_value(nn_eval_timeout_ns),
-          "nn eval thread timeout in ns")
       .template add_hidden_option<"cache-size">(
           po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size")
 #ifdef PROFILE_MCTS

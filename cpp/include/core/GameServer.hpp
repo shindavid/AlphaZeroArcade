@@ -3,6 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <core/TrainingDataWriter.hpp>
@@ -47,6 +48,7 @@ namespace core {
 template <concepts::Game Game>
 class GameServer
     : public core::PerfStatsClient,
+      public core::GameServerBase,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
@@ -200,7 +202,7 @@ class GameServer
    */
   class SharedData {
    public:
-    SharedData(const Params&, const TrainingDataWriterParams&);
+    SharedData(GameServer* server, const Params&, const TrainingDataWriterParams&);
     ~SharedData();
 
     const Params& params() const { return params_; }
@@ -258,6 +260,7 @@ class GameServer
     bool queue_pending() const { return pending_queue_count_ > 0 && queue_.empty(); }
     void issue_pause_receipt_if_necessary();  // assumes mutex_ is locked
 
+    GameServer* const server_;
     const Params params_;
 
     TrainingDataWriter* training_data_writer_ = nullptr;

@@ -1,17 +1,12 @@
 #include <mcts/NNEvaluationService.hpp>
 
-#include <core/BasicTypes.hpp>
 #include <core/Globals.hpp>
-#include <core/PerfStats.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
-#include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
 
 #include <boost/json/src.hpp>
 
 #include <cstdint>
-#include <mutex>
 #include <spanstream>
 
 namespace mcts {
@@ -79,11 +74,11 @@ void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eva
 template <core::concepts::Game Game>
 inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params)
     : core::PerfStatsClient(),
+      core::GameServerClient(),
       instance_id_(instance_count_++),
       params_(params),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      timeout_duration_(params.nn_eval_timeout_ns),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
@@ -105,7 +100,6 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
   torch_action_value_ = torch::empty(action_value_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
-  deadline_ = std::chrono::steady_clock::now();
 
   for (int i = 0; i < kNumHashShards; i++) {
     shard_datas_[i].init(params_.cache_size / kNumHashShards);
@@ -215,9 +209,9 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batc
   pending_batch_datas_.erase(pending_batch_datas_.begin());
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
-  if (pending_batch_datas_.empty()) {
-    add_batch_data();
-  }
+  // if (pending_batch_datas_.empty()) {
+  //   add_batch_data();
+  // }
 }
 
 template <core::concepts::Game Game>
@@ -240,6 +234,13 @@ bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_up_to(
   }
 
   return newly_frozen;
+}
+
+template <core::concepts::Game Game>
+bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
+  if (pending_batch_datas_.empty()) return false;
+  BatchData* batch_data = pending_batch_datas_.front();
+  return freeze_up_to(batch_data->sequence_id);
 }
 
 template <core::concepts::Game Game>
@@ -435,6 +436,19 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::handle_force_progress() {
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("<-- NNEvaluationService::{}()", __func__);
+  }
+
+  std::unique_lock lock(main_mutex_);
+  if (batch_data_slice_allocator_.freeze_first()) {
+    lock.unlock();
+    cv_main_.notify_all();
+  }
+}
+
+template <core::concepts::Game Game>
 std::string NNEvaluationService<Game>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }
@@ -623,9 +637,6 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
     return out;
   });
 
-  LOG_DEBUG("<-- NNEvaluationService::{}() - row={} seq={} accepting={}", __func__, row,
-            batch_data->sequence_id, batch_data->accepting_allocations);
-
   TensorGroup& group = batch_data->tensor_groups[row];
   group.input = input;
   group.eval = item.eval();
@@ -666,17 +677,11 @@ void NNEvaluationService<Game>::loop() {
   while (active()) {
     core::NNEvalLoopPerfStats loop_stats;
 
-    set_deadline();
     load_initial_weights_if_necessary();
     wait_for_unpause();
     wait_until_batch_ready(loop_stats);
     batch_evaluate(loop_stats);
   }
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::set_deadline() {
-  deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
 }
 
 template <core::concepts::Game Game>
@@ -750,15 +755,7 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
     return false;
   };
 
-  cv_main_.wait_until(lock, deadline_, predicate);
-
-  if (!active() || paused_) return;
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-  if (!batch_data) {
-    // This means that we timed out, but the current batch is not yet frozen. We need to wait
-    // further until it is frozen.
-    cv_main_.wait(lock, predicate);
-  }
+  cv_main_.wait(lock, predicate);
 }
 
 template <core::concepts::Game Game>
