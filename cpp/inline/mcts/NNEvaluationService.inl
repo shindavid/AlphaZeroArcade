@@ -620,6 +620,9 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
     return out;
   });
 
+  LOG_DEBUG("<-- NNEvaluationService::{}() - row={} seq={} accepting={}", __func__, row,
+            batch_data->sequence_id, batch_data->accepting_allocations);
+
   TensorGroup& group = batch_data->tensor_groups[row];
   group.input = input;
   group.eval = item.eval();
@@ -726,7 +729,7 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() ---------------------->", cls, func);
+    LOG_INFO("<-- {}::{}()", cls, func);
   }
 
   bool freeze = false;
@@ -735,24 +738,20 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (!batch_data) {
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<---------------------- {}::{}() still waiting ---------------------->", cls,
-                 func);
+        LOG_INFO("<-- {}::{}() still waiting", cls, func);
       }
       return false;
     }
     if (freeze) batch_data->accepting_allocations = false;
     if (!batch_data->frozen()) {
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO(
-          "<---------------------- {}::{}() still waiting (write:{} allocate:{}) "
-          "---------------------->",
-          cls, func, batch_data->write_count, batch_data->allocate_count);
+        LOG_INFO("<-- {}::{}() still waiting (write:{} allocate:{}) ", cls, func,
+                 batch_data->write_count, batch_data->allocate_count);
       }
       return false;
     }
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->", cls, func,
-               batch_data->allocate_count);
+      LOG_INFO("<-- {}::{}() (count:{})", cls, func, batch_data->allocate_count);
     }
     return true;
   };
@@ -786,8 +785,8 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() (seq:{}, count:{}) ---------------------->",
-             cls, func, batch_data->sequence_id, batch_data->allocate_count);
+    LOG_INFO("<-- {}::{}() (seq:{}, count:{})", cls, func, batch_data->sequence_id,
+             batch_data->allocate_count);
   }
 
   // NOTE: we could slightly optimize this by moving some of these steps out of the main path.

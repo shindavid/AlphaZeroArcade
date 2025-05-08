@@ -1,5 +1,7 @@
 #include <core/YieldManager.hpp>
 
+#include <util/LoggingUtil.hpp>
+
 namespace core {
 
 inline YieldManager::~YieldManager() {
@@ -26,6 +28,7 @@ inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
 
   std::unique_lock lock(mutex_);
   for (const auto& item : vec) {
+    LOG_DEBUG("<-- YieldManager::notify(item={}:{})", item.slot, item.context);
     ready_items_.push_back(item);
   }
   lock.unlock();
@@ -33,6 +36,7 @@ inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
 }
 
 inline void YieldManager::notify(const SlotContext& item) {
+  LOG_DEBUG("<-- YieldManager::notify(item={}:{})", item.slot, item.context);
   std::unique_lock lock(mutex_);
   ready_items_.push_back(item);
   lock.unlock();

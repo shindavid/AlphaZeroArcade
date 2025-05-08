@@ -147,6 +147,7 @@ void GameServer<Game>::SharedData::run_yield_manager() {
     std::unique_lock lock(mutex_);
 
     for (SlotContext item : slot_contexts) {
+      LOG_DEBUG("<-- GameServer::run_yield_manager(): enqueueing item={}:{}", item.slot, item.context);
       queue_.push(item);
     }
     pending_queue_count_ -= slot_contexts.size();
@@ -163,22 +164,27 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
+      LOG_DEBUG("<-- GameServer::next(): waiting (queue:{} pending:{})", queue_.size(),
+                pending_queue_count_);
+
       cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
     }
     if (queue_.empty()) {
-      LOG_DEBUG("next(): queue empty, exiting");
+      LOG_DEBUG("<-- GameServer::next(): queue empty, exiting");
       return false;
     }
   }
 
   if (paused_) {
-    LOG_DEBUG("next(): paused");
+    LOG_DEBUG("<-- GameServer::next(): paused");
     return false;
   }
 
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
+  LOG_DEBUG("<-- GameServer::next(): item={}:{} (queue:{} pending:{})", item.slot, item.context,
+            queue_.size(), pending_queue_count_);
   return true;
 }
 
@@ -215,9 +221,10 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
                           (int)request.instruction);
   }
 
-  LOG_DEBUG("enqueue(item={}:{}, request={}:{}) pending={} queue={}", item.slot, item.context,
-    (int)request.instruction, request.extra_enqueue_count, pending_queue_count_,
-    queue_.size());
+  LOG_DEBUG("<-- GameServer::enqueue(item={}:{}, request={}:{}) pending={} queue={}", item.slot,
+            item.context, (int)request.instruction, request.extra_enqueue_count,
+            pending_queue_count_, queue_.size());
+
   lock.unlock();
 
   if (was_queue_pending && !queue_pending()) {
@@ -372,10 +379,10 @@ void GameServer<Game>::SharedData::unpause() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::wait_for_unpause() {
-  LOG_DEBUG("GameServer: waiting for unpause...");
+  LOG_DEBUG("<-- GameServer: waiting for unpause...");
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return !paused_; });
-  LOG_DEBUG("GameServer: unpause wait complete!");
+  LOG_DEBUG("<-- GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
@@ -396,7 +403,7 @@ void GameServer<Game>::SharedData::increment_paused_thread_count() {
   std::unique_lock lock(mutex_);
   util::release_assert(paused_);
   paused_thread_count_++;
-  LOG_DEBUG("GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
+  LOG_DEBUG("<-- GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
             active_thread_count_);
   issue_pause_receipt_if_necessary();
 }
@@ -421,7 +428,7 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   // assumes mutex_ is locked
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
     pause_receipt_pending_ = false;
-    LOG_DEBUG("GameServer: handling pause receipt");
+    LOG_DEBUG("<-- GameServer: handling pause receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
 }
@@ -749,7 +756,7 @@ void GameServer<Game>::GameThread::run() {
       }
     }
 
-    LOG_DEBUG("step(item={}:{}) enqueue_request={}:{} dropped={}", slot->id(),
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{} dropped={}", slot->id(),
               item.context, (int)request.instruction, request.extra_enqueue_count, dropped);
 
     if (!dropped) shared_data_.enqueue(item, request);

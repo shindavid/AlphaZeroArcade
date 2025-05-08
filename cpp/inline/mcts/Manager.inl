@@ -824,6 +824,7 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
 
 template <core::concepts::Game Game>
 void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
+  LOG_DEBUG("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, (int)state);
   if (state == Node::kPreExpanded) {
     // Makes no assumptions about mutexes
     edge->state = state;
@@ -1240,8 +1241,11 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     std::stringstream ss1;
     eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
 
+    std::string line_break =
+      std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+
     for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << std::format("\n{:>{}}", "", context.log_prefix_n());
+      ss << line << line_break;
     }
 
     const LocalPolicyArray& P = selector.P;
@@ -1286,7 +1290,7 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
 
     for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << std::format("\n{:>{}}", "", context.log_prefix_n());
+      ss << line << line_break;
     }
 
     LOG_INFO(ss.str());
