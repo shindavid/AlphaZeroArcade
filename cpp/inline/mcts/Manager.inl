@@ -17,16 +17,18 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
+Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
+                       mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                        NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
       manager_id_(next_instance_id_++),
-      lookup_table_(mutex_pool),
+      lookup_table_(node_mutex_pool),
       root_softmax_temperature_(params.starting_root_softmax_temperature,
-        params.ending_root_softmax_temperature,
-        params.root_softmax_temperature_half_life) {
+                                params.ending_root_softmax_temperature,
+                                params.root_softmax_temperature_half_life),
+      context_mutex_pool_(context_mutex_pool) {
   if (params_.enable_pondering) {
     throw util::CleanException("Pondering mode temporarily unsupported");
   }
@@ -52,12 +54,13 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerPar
 
 template <core::concepts::Game Game>
 Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
-    : Manager(true, std::make_shared<mutex_vec_t>(1), params, service) {}
+    : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
+              service) {}
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(mutex_vec_sptr_t& mutex_pool, const ManagerParams& params,
-                       NNEvaluationServiceBase* service)
-    : Manager(true, mutex_pool, params, service) {}
+Manager<Game>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+                       const ManagerParams& params, NNEvaluationServiceBase* service)
+    : Manager(true, node_mutex_pool, context_mutex_pool, params, service) {}
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {
@@ -332,6 +335,8 @@ void Manager<Game>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.id = i;
+  context.pending_notifications_mutex_id =
+    util::Random::uniform_sample(0, (int)context_mutex_pool_->size());
 }
 
 template <core::concepts::Game Game>
@@ -548,7 +553,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
     std::unique_lock lock(node->mutex());
 
     if (edge->state == Node::kNotExpanded) {
-      edge->state = Node::kMidExpansion;
+      set_edge_state(context, edge, Node::kMidExpansion);
       lock.unlock();
 
       // reorient edge->action into raw-orientation
@@ -578,10 +583,10 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
     } else if (edge->state == Node::kMidExpansion) {
-      util::release_assert(multithreaded());
-      return core::kYield;  // TODO: notification task?
+      add_pending_notification(context, edge);
+      return core::kYield;
     } else if (edge->state == Node::kPreExpanded) {
-      edge->state = Node::kMidExpansion;
+      set_edge_state(context, edge, Node::kMidExpansion);
       lock.unlock();
 
       util::debug_assert(edge->child_index >= 0);
@@ -595,7 +600,8 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
         standard_backprop(context, false);
       }
 
-      edge->state = Node::kExpanded;
+      lock.lock();
+      set_edge_state(context, edge, Node::kExpanded);
       context.visit_node = nullptr;
       context.mid_visit = false;
       return core::kContinue;
@@ -794,11 +800,46 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
 
   std::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
-  edge->state = Node::kExpanded;
+  set_edge_state(context, edge, Node::kExpanded);
   lock.unlock();
 
   context.mid_expansion = false;
   return core::kContinue;
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge) {
+  // Assumes edge's parent node's mutex is held
+  util::debug_assert(multithreaded());
+  util::debug_assert(edge->expanding_context_id >= 0);
+  util::debug_assert(edge->expanding_context_id != context.id);
+
+  core::SlotContext slot_context(context.search_request->game_slot_index(), context.id);
+
+  SearchContext& notifying_context = contexts_[edge->expanding_context_id];
+  std::mutex& mutex = (*context_mutex_pool_)[notifying_context.pending_notifications_mutex_id];
+  std::unique_lock lock(mutex);
+  notifying_context.pending_notifications.push_back(slot_context);
+}
+
+template <core::concepts::Game Game>
+void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
+  if (state == Node::kPreExpanded) {
+    // Makes no assumptions about mutexes
+    edge->state = state;
+  } else if (state == Node::kMidExpansion) {
+    // Assumes edge's parent node's mutex is held
+    edge->state = state;
+    edge->expanding_context_id = context.id;
+  } else if (state == Node::kExpanded) {
+    // Assumes edge's parent node's mutex is held
+    std::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
+    std::unique_lock lock(mutex);
+    edge->state = state;
+    edge->expanding_context_id = -1;
+    context.search_request->yield_manager()->notify(context.pending_notifications);
+    context.pending_notifications.clear();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -862,7 +903,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     Rules::apply(canonical_history, reoriented_action);
 
     expand_count++;
-    edge->state = Node::kPreExpanded;
+    set_edge_state(context, edge, Node::kPreExpanded);
 
     MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
     node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);

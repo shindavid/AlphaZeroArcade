@@ -139,6 +139,7 @@ class Node {
     float adjusted_base_prob = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
     group::element_t sym = -1;
+    core::context_id_t expanding_context_id = -1;
     expansion_state_t state = kNotExpanded;
   };
 
