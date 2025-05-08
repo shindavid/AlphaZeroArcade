@@ -53,6 +53,9 @@ class GameServer
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
+  using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
+  using EnqueueRequest = core::GameServerBase::EnqueueRequest;
+
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
@@ -125,17 +128,6 @@ class GameServer
     bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
-  };
-
-  enum enqueue_instruction_t : int8_t {
-    kEnqueueNow,
-    kEnqueueLater,
-    kEnqueueNever
-  };
-
-  struct EnqueueRequest {
-    enqueue_instruction_t instruction = kEnqueueNow;
-    int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
   };
 
  protected:

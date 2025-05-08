@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 namespace core {
@@ -8,6 +9,13 @@ class GameServerClient;
 
 class GameServerBase {
  public:
+  enum enqueue_instruction_t : int8_t { kEnqueueNow, kEnqueueLater, kEnqueueNever };
+
+  struct EnqueueRequest {
+    enqueue_instruction_t instruction = kEnqueueNow;
+    int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
+  };
+
   GameServerBase() { game_servers_.push_back(this); }
   static void add_client(GameServerClient* client);
 

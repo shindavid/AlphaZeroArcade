@@ -10,7 +10,7 @@ SimpleNNEvaluationService<Game>::SimpleNNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-NNEvaluationResponse SimpleNNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
+core::yield_instruction_t SimpleNNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
   std::unique_lock lock(mutex_);
 
   for (auto& item : request.stale_items()) {
@@ -24,7 +24,7 @@ NNEvaluationResponse SimpleNNEvaluationService<Game>::evaluate(NNEvaluationReque
     item.set_eval(eval);
   }
 
-  return NNEvaluationResponse(0, core::kContinue);
+  return core::kContinue;
 }
 
 }  // namespace mcts

@@ -148,7 +148,7 @@ void GameServer<Game>::SharedData::run_yield_manager() {
     std::unique_lock lock(mutex_);
 
     for (SlotContext item : slot_contexts) {
-      LOG_DEBUG("<-- GameServer::run_yield_manager(): enqueueing item={}:{}", item.slot, item.context);
+      LOG_DEBUG("<-- GameServer::{}(): enqueueing item={}:{}", __func__, item.slot, item.context);
       queue_.push(item);
     }
     pending_queue_count_ -= slot_contexts.size();
@@ -218,12 +218,12 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
   } else if (request.instruction == kEnqueueNever) {
     pending_queue_count_--;
   } else {
-    throw util::Exception("GameServer::enqueue(): invalid enqueue instruction: {}",
+    throw util::Exception("GameServer::{}(): invalid enqueue instruction: {}", __func__,
                           (int)request.instruction);
   }
 
-  LOG_DEBUG("<-- GameServer::enqueue(item={}:{}, request={}:{}) pending={} queue={}", item.slot,
-            item.context, (int)request.instruction, request.extra_enqueue_count,
+  LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} queue={}", __func__,
+            item.slot, item.context, (int)request.instruction, request.extra_enqueue_count,
             pending_queue_count_, queue_.size());
 
   lock.unlock();
@@ -474,7 +474,7 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-typename GameServer<Game>::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t context) {
+GameServerBase::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t context) {
   EnqueueRequest request;
   if (!Rules::is_chance_mode(action_mode_)) {
     if (step_non_chance(context, request)) {
@@ -604,9 +604,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
-      printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id_,
-            player->get_name().c_str(), int(active_seat_));
-      std::cout << std::endl;
+      LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory",
+              game_id_, player->get_name(), active_seat_);
     }
     handle_terminal(outcome);
     return false;
@@ -647,7 +646,7 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
     for (player_id_t p = 0; p < kNumPlayers; ++p) {
       ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), array[p]);
     }
-    printf("%s", ss.str().c_str());
+    LOG_INFO("{}", ss.str());
   }
 
   // reindex outcome according to player_id

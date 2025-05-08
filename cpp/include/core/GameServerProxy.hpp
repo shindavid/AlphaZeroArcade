@@ -2,9 +2,10 @@
 
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/Packet.hpp>
 #include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 
@@ -16,10 +17,13 @@
 namespace core {
 
 template <concepts::Game Game>
-class GameServerProxy {
+class GameServerProxy : public core::GameServerBase {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
+
+  using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
+  using EnqueueRequest = core::GameServerBase::EnqueueRequest;
 
   using State = Game::State;
   using StateHistory = Game::StateHistory;
@@ -60,9 +64,7 @@ class GameServerProxy {
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    // Sets re_enqueue to true if the game slot should be re-enqueued.
-    // Sets extra_enqueue_count to the number of times this slot should be enqueued.
-    void step(context_id_t context, bool& re_enqueue, int& extra_enqueue_count);
+    EnqueueRequest step(context_id_t context);
 
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
@@ -70,8 +72,14 @@ class GameServerProxy {
 
    private:
     const Params& params() const { return shared_data_.params(); }
-    bool step_chance();      // return true if terminal
-    bool step_non_chance();  // return true if terminal
+
+    // Returns true if it successfully processed a non-terminal game state transition.
+    bool step_chance();
+
+    // Returns true if it successfully processed a non-terminal game state transition. Also sets
+    // request to the appropriate value.
+    bool step_non_chance(context_id_t context, EnqueueRequest& request);
+
     void handle_terminal(const ValueTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
@@ -97,7 +105,7 @@ class GameServerProxy {
 
   class SharedData {
    public:
-    SharedData(const Params& params, int num_game_threads);
+    SharedData(GameServerProxy* server, const Params& params, int num_game_threads);
     ~SharedData();
     void register_player(seat_index_t seat, PlayerGenerator* gen);
     void init_socket();
@@ -113,10 +121,11 @@ class GameServerProxy {
     int num_game_threads() const { return num_game_threads_; }
     bool running() const { return running_; }
 
-    // If the server is shutting down, returns false. Else, returns true, and sets item to the next
-    // queue item.
+    // If the server is paused or shutting down, returns false. Else, returns true, and sets:
+    //
+    // - item: with the next queue item
     bool next(SlotContext& item);
-    void enqueue(SlotContext item, bool re_enqueue, int extra_enqueue_count);
+    void enqueue(SlotContext, const EnqueueRequest& request);
     GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
 
     void handle_start_game(const GeneralPacket& packet);
@@ -125,9 +134,12 @@ class GameServerProxy {
     void handle_end_game(const GeneralPacket& packet);
 
    private:
+    bool queue_pending() const { return queue_.empty(); }
+
     seat_generator_vec_t seat_generators_;   // temp storage
     player_generator_array_t players_ = {};  // indexed by player_id_t
-    Params params_;
+    GameServerProxy* const server_;
+    const Params params_;
     int num_game_threads_;
     io::Socket* socket_ = nullptr;
 
@@ -160,7 +172,7 @@ class GameServerProxy {
   };
 
   GameServerProxy(const Params& params, int num_game_threads)
-      : shared_data_(params, num_game_threads) {}
+      : GameServerBase(), shared_data_(this, params, num_game_threads) {}
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the

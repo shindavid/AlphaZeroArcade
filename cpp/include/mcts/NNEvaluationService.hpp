@@ -104,8 +104,7 @@ class NNEvaluationService
 
   void disconnect() override;
 
-  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
-  core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
+  core::yield_instruction_t evaluate(NNEvaluationRequest& request) override;
 
   void end_session() override;
 
@@ -204,15 +203,15 @@ class NNEvaluationService
 
     void recycle(BatchData* batch_data);
 
-    // Freezes all BatchData's that are pending on a sequence_id <= seq. Returns true if a BatchData
-    // was newly frozen.
-    bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
-
-    // Invokes freeze_up_to() on the first BatchData in the pending list.
+    // Freezes the first BatchData in the pending list.
     bool freeze_first();
 
     // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
     BatchData* get_frozen_pending_batch_data() const;
+
+    BatchData* get_first_pending_batch_data() const;
+
+    int pending_batch_datas_size() const { return pending_batch_datas_.size(); }
 
    private:
     BatchData* add_batch_data();
@@ -239,11 +238,13 @@ class NNEvaluationService
     // first n entries of this array, where n is the number of cache-misses.
     CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
 
+    void update_notifying_batch_data(BatchData* batch_data);
+
     CacheMissInfo* miss_infos;
 
     core::SearchThreadPerfStats stats;
     bool can_continue = true;
-    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
+    BatchData* notifying_batch_data = nullptr;
   };
 
   // We empirically found that having a single LRUCache for the entire service leads to a

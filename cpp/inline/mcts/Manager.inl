@@ -333,7 +333,6 @@ core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchCont
 template <core::concepts::Game Game>
 void Manager<Game>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
-  LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.id = i;
   context.pending_notifications_mutex_id =
     util::Random::uniform_sample(0, (int)context_mutex_pool_->size());
@@ -437,12 +436,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
       LOG_INFO("{:>{}}{}() - size: {}", "", context.log_prefix_n(), __func__,
                context.eval_request.num_fresh_items());
     }
-    NNEvaluationResponse response = nn_eval_service_->evaluate(context.eval_request);
-    context.nn_eval_seq_id = response.sequence_id;
-
-    // TODO: unlock node mutex from begin_visit() here, finally, and record the nn_eval_seq_id to
-    // each item.node for cache-missing items, to facilitate yield-mechanics
-    if (response.yield_instruction == core::kYield) return core::kYield;
+    if (nn_eval_service_->evaluate(context.eval_request) == core::kYield) return core::kYield;
   }
 
   return resume_node_initialization(context);
@@ -457,9 +451,6 @@ core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContex
   Node* node = lookup_table_.get_node(node_index);
   bool is_root = (node_index == root_info_.node_index);
 
-  if (nn_eval_service_->wait_for(context.nn_eval_seq_id) == core::kYield) {
-    throw util::Exception("Should not get here!");
-  }
   for (auto& item : context.eval_request.fresh_items()) {
     item.node()->load_eval(item.eval(),
                            [&](LocalPolicyArray& P) { transform_policy(node_index, P); });

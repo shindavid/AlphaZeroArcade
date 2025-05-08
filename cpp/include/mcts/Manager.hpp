@@ -121,7 +121,6 @@ class Manager {
 
     // node-initialization yield info
     StateHistory* initialization_history;
-    core::nn_evaluation_sequence_id_t nn_eval_seq_id;
     node_pool_index_t initialization_index = -1;
     node_pool_index_t inserted_node_index = -1;
     bool expanded_new_node = false;

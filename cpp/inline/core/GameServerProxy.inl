@@ -100,9 +100,8 @@ void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& p
             payload.player_id);
 
   SlotContext slot_context(id_, context_id);
-  bool re_enqueue = true;
-  int extra_enqueue_count = 0;
-  shared_data_.enqueue(slot_context, re_enqueue, extra_enqueue_count);
+  EnqueueRequest request;
+  shared_data_.enqueue(slot_context, request);
 }
 
 template <concepts::Game Game>
@@ -118,8 +117,8 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::GameSlot::step(context_id_t context, bool& re_enqueue,
-                                           int& extra_enqueue_count) {
+GameServerBase::EnqueueRequest GameServerProxy<Game>::GameSlot::step(context_id_t context) {
+  EnqueueRequest enqueue_request;
   Player* player = players_[prompted_player_id_];
 
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
@@ -136,30 +135,29 @@ void GameServerProxy<Game>::GameSlot::step(context_id_t context, bool& re_enqueu
 
   switch (response.yield_instruction) {
     case kContinue: {
-      if (pending_drop_count_ > 0) {
-        return;
-      }
+      util::release_assert(pending_drop_count_ == 0,
+                           "Unexpected response: pending_drop_count_={}", (int)pending_drop_count_);
       mid_yield_ = false;
       break;
     }
     case kYield: {
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
-      re_enqueue = false;
-      extra_enqueue_count = response.extra_enqueue_count;
-      return;
+      enqueue_request.instruction = kEnqueueLater;
+      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
+      return enqueue_request;
     }
     case kDrop: {
       pending_drop_count_--;
-      re_enqueue = false;
-      return;
+      enqueue_request.instruction = kEnqueueNever;
+      return enqueue_request;
     }
     default: {
       throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
     }
   }
   send_action_packet(response);
-  re_enqueue = false;
+  return enqueue_request;
 }
 
 template <concepts::Game Game>
@@ -178,8 +176,9 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
 }
 
 template <concepts::Game Game>
-GameServerProxy<Game>::SharedData::SharedData(const Params& params, int num_game_threads)
-    : params_(params), num_game_threads_(num_game_threads) {
+GameServerProxy<Game>::SharedData::SharedData(GameServerProxy* server, const Params& params,
+                                              int num_game_threads)
+    : server_(server), params_(params), num_game_threads_(num_game_threads) {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   LOG_INFO("Connected to the server!");
@@ -290,6 +289,8 @@ void GameServerProxy<Game>::SharedData::run_yield_manager() {
     std::unique_lock lock(mutex_);
 
     for (SlotContext item : slot_contexts) {
+      LOG_DEBUG("<-- GameServerProxy::{}(): enqueueing item={}:{}", __func__, item.slot,
+                item.context);
       queue_.push(item);
     }
     lock.unlock();
@@ -303,45 +304,61 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
-    cv_.wait(lock, [&] { return !running_ || !queue_.empty(); });
+    LOG_DEBUG("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
+    server_->force_progress();
+    cv_.wait(lock, [&] { return !running_ || !queue_pending(); });
   }
 
   if (!running_) {
+    LOG_DEBUG("<-- GameServerProxy::{}(): queue empty, exiting", __func__);
     return false;
   }
 
   item = queue_.front();
   queue_.pop();
+  LOG_DEBUG("<-- GameServerProxy::{}(): item={}:{} (queue:{})", __func__, item.slot, item.context,
+            queue_.size());
   return true;
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, bool re_enqueue,
-                                                int extra_enqueue_count) {
+void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
-  bool empty = queue_.empty();
-  if (re_enqueue) {
-    util::release_assert(extra_enqueue_count == 0);
+  bool was_queue_pending = queue_pending();
+  if (request.instruction == kEnqueueNow) {
+    util::release_assert(request.extra_enqueue_count == 0);
     queue_.push(item);
-  } else if (extra_enqueue_count > 0) {
-    // Push back the item's siblings
-    //
-    // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
-    // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
-    // if the player uses 4 threads, this current thread might be context=2. The siblings then are
-    // contexts 3, 0, and 1.
-    //
-    // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
-    // this code will need to change.
-    util::release_assert(item.context >= 0 && item.context <= extra_enqueue_count);
-    for (int i = 0; i < extra_enqueue_count; ++i) {
-      item.context++;
-      if (item.context == extra_enqueue_count + 1) item.context = 0;
-      queue_.push(item);
+  } else if (request.instruction == kEnqueueLater) {
+    if (request.extra_enqueue_count > 0) {
+      // Push back the item's siblings
+      //
+      // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
+      // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
+      // if the player uses 4 threads, this current thread might be context=2. The siblings then are
+      // contexts 3, 0, and 1.
+      //
+      // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
+      // this code will need to change.
+      util::release_assert(item.context >= 0 && item.context <= request.extra_enqueue_count);
+      for (int i = 0; i < request.extra_enqueue_count; ++i) {
+        item.context++;
+        if (item.context == request.extra_enqueue_count + 1) item.context = 0;
+        queue_.push(item);
+      }
     }
+  } else if (request.instruction == kEnqueueNever) {
+    // pass
+  } else {
+    throw util::Exception("GameServer::{}(): invalid enqueue instruction: {}", __func__,
+                          (int)request.instruction);
   }
-  if (empty) {
-    lock.unlock();
+
+  LOG_DEBUG("<-- GameServerProxy::{}(item={}:{}, request={}:{}) queue={}", __func__, item.slot,
+            item.context, (int)request.instruction, request.extra_enqueue_count, queue_.size());
+
+  lock.unlock();
+
+  if (was_queue_pending && !queue_pending()) {
     cv_.notify_all();
   }
 }
@@ -399,12 +416,10 @@ void GameServerProxy<Game>::GameThread::run() {
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
     util::release_assert(slot->game_started());
-    bool re_enqueue = true;
-    int extra_enqueue_count = 0;
-    slot->step(item.context, re_enqueue, extra_enqueue_count);
+    EnqueueRequest request = slot->step(item.context);
 
     if (!slot->game_ended()) {
-      shared_data_.enqueue(item, re_enqueue, extra_enqueue_count);
+      shared_data_.enqueue(item, request);
     }
   }
 }
