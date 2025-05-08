@@ -156,13 +156,13 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
                      context_id, num_search_threads());
 
   LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "",
-            context.log_prefix_n(), (uint64_t)this, (int)state_machine_.state,
+            context.log_prefix_n(), manager_id_, (int)state_machine_.state,
             context_id, state_machine_.primary_context_id);
 
   SearchResponse response = search_helper(request);
 
   LOG_DEBUG("{:>{}}{}() exit: manager={} state={} instr={} extra={}", "",
-            context.log_prefix_n(), __func__, (uint64_t)this,
+            context.log_prefix_n(), __func__, manager_id_,
             (int)state_machine_.state, (int)response.yield_instruction,
             response.extra_enqueue_count);
 
@@ -288,8 +288,7 @@ void Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return;
 
-  LOG_DEBUG("{:>{}}{}(): manager={}", "", context.log_prefix_n(), __func__,
-            (uint64_t)this);
+  LOG_DEBUG("{:>{}}{}(): manager={}", "", context.log_prefix_n(), __func__, manager_id_);
 
   state_machine_.state = kInVisitLoop;
   state_machine_.in_visit_loop_count = num_search_threads();
