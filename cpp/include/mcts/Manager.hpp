@@ -98,8 +98,6 @@ class Manager {
   };
 
   struct SearchContext {
-    // SearchContext(const SearchContext&) = delete;
-    // SearchContext& operator=(const SearchContext&) = delete;
     int log_prefix_n() const { return kThreadWhitespaceLength * id; }
 
     core::context_id_t id;
