@@ -896,7 +896,7 @@ void GameServer<Game>::run() {
 
 template <concepts::Game Game>
 void GameServer<Game>::create_threads() {
-  int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
+  int num_threads = params().num_game_threads;
   for (int t = 0; t < num_threads; ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
