@@ -333,7 +333,8 @@ class BenchmarkManager(GamingManagerBase):
             self._benchmarker.db.commit_ratings(self._benchmarker.indexed_agents,
                                                     self._benchmarker._arena.ratings,
                                                     committee=committee)
-        logger.info(f"Benchmark committee updated.\n committee gens: {[self._benchmarker.indexed_agents[i].agent.gen for i in committee]}")
+        committee_gens = [self._benchmarker.indexed_agents[i].agent.gen for i in committee]
+        logger.info(f"Benchmark committee: {committee_gens}")
 
     def _task_finished(self):
         has_new_gen = self.num_evaluated_gens() < self._controller._organizer.get_latest_model_generation(default=0)

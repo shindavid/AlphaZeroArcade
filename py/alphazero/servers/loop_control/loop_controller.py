@@ -408,7 +408,7 @@ class LoopController:
                 self._shutdown_manager.request_shutdown(1)
 
     def _handle_disconnect(self, conn: ClientConnection):
-        log_level = logging.DEBUG if conn.client_role == ClientRole.RATINGS_WORKER else logging.INFO
+        log_level = ClientRole.connection_log_level(conn.client_role)
         logger.log(log_level, 'Handling disconnect: %s...', conn)
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())

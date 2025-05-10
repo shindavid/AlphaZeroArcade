@@ -158,15 +158,19 @@ def get_benchmark_tags(tag: str) -> List[str]:
     """
     returns a list of benchmark tags used for evaluating the given run tag
     """
+    rp = RunParams(run_params.game, tag)
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+
     benchmark_tags = []
-    filename = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'benchmark.db')
+    filename = directory_organizer.benchmark_db_filename
     if os.path.isfile(filename):
         benchmark_tags.append(tag)
 
-    eval_dir = os.path.join('/workspace/repo/output', run_params.game, tag, 'databases', 'evaluation')
-    for f in os.listdir(eval_dir):
-        if f.endswith('.db'):
-            benchmark_tags.append(os.path.splitext(f)[0])
+    eval_dir = directory_organizer.eval_db_dir
+    if os.path.exists(eval_dir):
+        for f in os.listdir(eval_dir):
+            if f.endswith('.db'):
+                benchmark_tags.append(os.path.splitext(f)[0])
     return benchmark_tags
 
 def get_benchmark_eval_mapping(tags: List[str]) -> Dict[str, List[str]]:

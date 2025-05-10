@@ -121,6 +121,6 @@ class ClientConnectionManager:
         with self._lock:
             self._connections.append(conn)
 
-        level = logging.DEBUG if client_role == ClientRole.RATINGS_WORKER else logging.INFO
-        logger.log(level, 'Added connection: %s', conn)
+        log_level = ClientRole.connection_log_level(client_role)
+        logger.log(log_level, 'Added connection: %s', conn)
         return conn

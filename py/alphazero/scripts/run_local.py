@@ -245,7 +245,7 @@ def launch_eval_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_loop_controller(params_dict, cuda_device: int):
+def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str]):
     params = params_dict['Params']
     run_params = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
@@ -273,7 +273,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
     if params.task_mode:
         cmd.extend(['--task-mode'])
 
-    benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
     if benchmark_tag:
         cmd.extend(['--benchmark-tag', benchmark_tag])
 
@@ -313,7 +312,8 @@ def load_benchmark_info(game: str):
 def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]) -> Optional[str]:
     if benchmark_tag is None:
         benchmark_tag = load_benchmark_info(run_params.game)
-    print(f"Using benchmark tag: {benchmark_tag}")
+    if benchmark_tag is not None:
+        logger.info(f"Using benchmark tag: {benchmark_tag}")
     return benchmark_tag
 
 
@@ -372,7 +372,7 @@ def main():
         organizer.assert_unlocked()
 
         descs.append('Loop-controller')
-        procs.append(launch_loop_controller(params_dict, loop_controller_gpu))
+        procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
 

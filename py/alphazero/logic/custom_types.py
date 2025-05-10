@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, List, Optional, Literal
-
 from alphazero.logic import constants
 from util.py_util import sha256sum
 from util.socket_util import JsonDict, Socket
+
+from dataclasses import dataclass
+from enum import Enum
+import logging
+from typing import Any, Callable, List, Optional, Literal
 
 
 Generation = int
@@ -27,6 +28,16 @@ class ClientRole(Enum):
     @staticmethod
     def worker_roles():
         return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
+
+    @staticmethod
+    def connection_log_level(role: 'ClientRole') -> int:
+        """
+        Returns the logging level for connect/disconnect info for a given client role.
+        """
+        if role in (ClientRole.RATINGS_WORKER, ClientRole.BENCHMARK_WORKER, ClientRole.EVAL_WORKER):
+            return logging.DEBUG
+        else:
+            return logging.INFO
 
 
 class ServerStatus(Enum):
