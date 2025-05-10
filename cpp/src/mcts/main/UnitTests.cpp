@@ -233,8 +233,9 @@ TEST_F(NimManagerTest, 40_searches_from_5_stones) {
 
 using StochasticNimManagerTest = ManagerTest<Stochastic_nim>;
 TEST_F(StochasticNimManagerTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                                 stochastic_nim::kTake3, stochastic_nim::kTake2};
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
+
   test_search("stochastic_nim_uniform_10", 10, initial_actions, nullptr);
 }
 
@@ -243,20 +244,26 @@ TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-                                                 stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+
   test_search("stochastic_nim_4_stones", 100, initial_actions, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-                                                 stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+
   test_search("stochastic_nim_5_stones", 100, initial_actions, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_6_stones) {
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-                                                 stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
+
   test_search("stochastic_nim_6_stones", 100, initial_actions, nullptr);
 }
 

@@ -20,8 +20,7 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <array>
-#include <cstdint>
+#include <format>
 #include <functional>
 #include <sstream>
 #include <string>
@@ -72,9 +71,15 @@ struct Game {
 
   struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t) {
-      return std::to_string(action + 1);
+
+    static std::string action_to_str(core::action_t action, core::action_mode_t mode) {
+      if (mode == stochastic_nim::kChanceMode) {
+        return std::format("r{}", action);
+      } else {
+        return std::format("{}", action + 1);
+      }
     }
+
     static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr) {
       ss << compact_state_repr(state) << std::endl;
