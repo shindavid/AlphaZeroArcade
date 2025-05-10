@@ -87,7 +87,7 @@ class Manager {
 
   struct SearchResponse {
     static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
-    static SearchResponse make_yield(int e) { return SearchResponse(nullptr, core::kYield, e); }
+    static SearchResponse make_yield(int e=0) { return SearchResponse(nullptr, core::kYield, e); }
 
     SearchResponse(const SearchResults* r, core::yield_instruction_t y=core::kContinue, int e=0)
         : results(r), yield_instruction(y), extra_enqueue_count(e) {}
@@ -160,45 +160,29 @@ class Manager {
   // (in training, C=1, while in competition, C>1). It also maintains an execution_state_t enum
   // that tracks the execution state.
   //
-  // Each incoming thread is assigned a SearchContext from a round-robin list of SearchContext's
-  // and checks the execution state to determine what to do. Here is a summary:
+  // Each incoming search() comes with an assigned context id, which is used to select a
+  // SearchContext to work with. Here is a summary of the state machine:
   //
   // ** kIdle
   //
-  // This is the entry point. At program start, SearchContext 0 is marked as the primary context.
-  // The first thread to call search() when the state is kIdle should use SearchContext 0, and so
-  // recognize that it is the primary context. After transitioning to kInitializingRoot and
-  // releasing the mutex, it does the work of intializing the root. This could require a nn-eval
-  // (when AV-targets are needed at the root), which can cause a yield. If it does not yield, it
-  // completes root initialization and then, after re-acquiring the mutex, transitions to
-  // kInVisitLoop.
-  //
-  // If a thread using a SearchContext besides the primary context calls search() while in this
-  // state, it blocks until the state is no longer kIdle. See kInVisitLoop details to understand
-  // how this can happen.
+  // This is the entry point. This state should only get hit with context 0. After transitioning to
+  // kInitializingRoot and releasing the mutex, it does the work of intializing the root. This could
+  // require a nn-eval (when AV-targets are needed at the root), which can cause a yield. If it does
+  // not yield, it completes root initialization and then, after re-acquiring the mutex, transitions
+  // to kInVisitLoop.
   //
   // ** kInitializingRoot
   //
-  // If a thread calls search() while in this state, it checks to see if it is the primary context.
-  // If so, that means that this context previously started the root initialization work and decided
-  // to yield. In this case, we block until the nn-eval is done (during self-play, assuming the
-  // GameServer is appropriately configured, this should typically already be done). Then, it
-  // transitions to kInVisitLoop. All of this is done without releasing the mutex.
-  //
-  // If a thread calls search() while in this state and it is *not* the primary context, that means
-  // that another thread is currently working on root initialization. In this case, it immediately
-  // yields. Note that this same context should not hit this same state twice in a row, since the
-  // round-robin assignment of SearchContext's should ensure that the primary context will get
-  // there first, and since in that case the primary context will transition the state to
-  // kInvisitLoop without releasing the mutex.
+  // This state should also only get hit with context 0. This state indicates that the context
+  // previously started the root initialization work and decided to yield. The fact that we enter
+  // again here indicates that the nn eval is done. We complete the root initialization and then
+  // transition to kInVisitLoop. All of this is done without releasing the mutex.
   //
   // ** kInVisitLoop
   //
-  // This is the main work of the search. The thread that first updates the state to kInVisitLoop
-  // will also set visit_loop_count to C.
-  //
-  // When a thread calls search() while in this state, it immediately releases the mutex, and starts
-  // the main work.
+  // This is the main work of the search. Context 0 is the first to enter this state, and when doing
+  // so, it requests the GameServer to enqueue (C-1) extra slots to its queue, thus activating the
+  // multithreaded search.
   //
   // On the first call, it starts an MCTS iteration. If it reaches a leaf node where it requires an
   // nn-eval, it yields. Otherwise, it completes the MCTS iteration and repeats. Eventually, it
@@ -206,24 +190,14 @@ class Manager {
   //
   // If it hits a yield point, we record this in the SearchContext, so that on the subsequent visit,
   // it can resume from the yield point. This should be the case for all visits in the kInVisitLoop
-  // state except for the first. When resuming, we need to block on the nn-eval to complete: again,
-  // this should typically already be done during self-play assuming appropriate GameServer
-  // configuration.
+  // state except for the first.
   //
-  // If it hits the termination condition, it acquires the mutex and decrements visit_loop_count.
-  // If visit_loop_count is 0, then this thread knows that none of the SearchContext's are
-  // mid-visit, and so it assumes the responsibility of returning results back to the caller (as
-  // opposed to yielding, as every other call to search() has done so far). It meets this
-  // responsibility by transitioning the state to kIdle, marking its SearchContext as
-  // the primary context, and then returning the results, all while holding the mutex.
-  //
-  // When cycling back to kIdle, note that our assignment of primary context ensures that the
-  // thread that returned results is the one that will handle the next kIdle state. This details
-  // ensures that we don't have a situation where thread-2 re-enters the visit loop while thread-1
-  // is still processing the search results.
+  // If the termination condition is met, either because the current search iteration triggers it
+  // or because it was already met in a previous search iteration, we decrement in_visit_loop_count.
+  // If it reaches 0, we transition to kIdle and return results. Otherwise, we issue a kDrop to the
+  // caller, which will cause the GameServer to drop the context.
   struct StateMachine {
     mutable std::mutex mutex;
-    core::context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
   };

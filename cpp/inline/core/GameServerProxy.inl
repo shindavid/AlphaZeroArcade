@@ -92,14 +92,12 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
   const char* buf = payload.dynamic_size_section.buf;
   valid_actions_ = *reinterpret_cast<const ActionMask*>(buf);
-  context_id_t context_id = payload.context_id;
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
 
-  LOG_DEBUG("{}() id={} game_id={} context_id={} player_id={}", __func__, id_, game_id_, context_id,
-            payload.player_id);
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
 
-  SlotContext slot_context(id_, context_id);
+  SlotContext slot_context(id_, 0);
   EnqueueRequest request;
   shared_data_.enqueue(slot_context, request);
 }
@@ -328,24 +326,16 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
   bool was_queue_pending = queue_pending();
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
+    item.context = 0;  // when continuing, we always want to reset the context to 0
     queue_.push(item);
   } else if (request.instruction == kEnqueueLater) {
     if (request.extra_enqueue_count > 0) {
       // Push back the item's siblings
-      //
-      // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
-      // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
-      // if the player uses 4 threads, this current thread might be context=2. The siblings then are
-      // contexts 3, 0, and 1.
-      //
-      // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
-      // this code will need to change.
-      util::release_assert(item.context >= 0 && item.context <= request.extra_enqueue_count);
       for (int i = 0; i < request.extra_enqueue_count; ++i) {
-        item.context++;
-        if (item.context == request.extra_enqueue_count + 1) item.context = 0;
+        item.context = i + 1;
         queue_.push(item);
       }
+      item.context = 0;  // just for the LOG_DEBUG() statement below
     }
   } else if (request.instruction == kEnqueueNever) {
     // pass

@@ -195,25 +195,17 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
   bool was_queue_pending = queue_pending();
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
+    item.context = 0;  // when continuing, we always want to reset the context to 0
     queue_.push(item);
     pending_queue_count_--;
   } else if (request.instruction == kEnqueueLater) {
     if (request.extra_enqueue_count > 0) {
       // Push back the item's siblings
-      //
-      // Note: this assumes that extra_enqueue_count is the number of threads used by the player,
-      // minus 1 (the minus-1 due to the fact that we are yielding on this item). So for example,
-      // if the player uses 4 threads, this current thread might be context=2. The siblings then are
-      // contexts 3, 0, and 1.
-      //
-      // This feels a bit fragile - if we change the MCTS player/manager multithreading mechanics,
-      // this code will need to change.
-      util::release_assert(item.context >= 0 && item.context <= request.extra_enqueue_count);
       for (int i = 0; i < request.extra_enqueue_count; ++i) {
-        item.context++;
-        if (item.context == request.extra_enqueue_count + 1) item.context = 0;
+        item.context = i + 1;
         queue_.push(item);
       }
+      item.context = 0;  // just for the LOG_DEBUG() statement below
     }
   } else if (request.instruction == kEnqueueNever) {
     pending_queue_count_--;

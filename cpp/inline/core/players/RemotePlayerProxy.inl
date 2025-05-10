@@ -157,9 +157,11 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
 
   action_response_.action = -1;
 
+  util::release_assert(request.notification_unit.context_id == 0,
+                       "Unexpected context_id: {}", request.notification_unit.context_id);
+
   Packet<ActionPrompt> packet;
   packet.payload().game_slot_index = game_slot_index_;
-  packet.payload().context_id = request.notification_unit.context_id;
   packet.payload().player_id = player_id_;
   packet.payload().play_noisily = request.play_noisily;
   auto& section = packet.payload().dynamic_size_section;

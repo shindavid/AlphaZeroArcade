@@ -155,9 +155,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
   util::debug_assert(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
                      context_id, num_search_threads());
 
-  LOG_DEBUG("{:>{}}search(): manager={} state={} c={} pc={}", "",
-            context.log_prefix_n(), manager_id_, (int)state_machine_.state,
-            context_id, state_machine_.primary_context_id);
+  LOG_DEBUG("{:>{}}search(): manager={} state={} c={}", "", context.log_prefix_n(), manager_id_,
+            (int)state_machine_.state, context_id);
 
   SearchResponse response = search_helper(request);
 
@@ -230,36 +229,33 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   context.search_request = &request;
 
   if (state_machine_.state == kIdle) {
-    if (context_id == state_machine_.primary_context_id) {
-      state_machine_.state = kInitializingRoot;
-      lock.unlock();
-      if (begin_root_initialization(context) == core::kContinue) {
-        lock.lock();
-        update_state_machine_to_in_visit_loop(context);
-      } else {
-        return SearchResponse::make_yield(context.extra_enqueue_count);
-      }
+    util::release_assert(context_id == 0);
+    state_machine_.state = kInitializingRoot;
+    lock.unlock();
+    if (begin_root_initialization(context) == core::kContinue) {
+      lock.lock();
+      update_state_machine_to_in_visit_loop(context);
     } else {
-      return SearchResponse::make_yield(context.extra_enqueue_count);
+      util::release_assert(context.extra_enqueue_count == 0);
+      return SearchResponse::make_yield();
     }
   }
 
   if (state_machine_.state == kInitializingRoot) {
-    if (context_id == state_machine_.primary_context_id) {
-      if (resume_root_initialization(context) == core::kYield) {
-        return SearchResponse::make_yield(context.extra_enqueue_count);
-      }
-      update_state_machine_to_in_visit_loop(context);
-    } else {
-      return SearchResponse::make_yield(context.extra_enqueue_count);
+    util::release_assert(context_id == 0);
+    if (resume_root_initialization(context) == core::kYield) {
+      util::release_assert(context.extra_enqueue_count == 0);
+      return SearchResponse::make_yield();
     }
+    update_state_machine_to_in_visit_loop(context);
   }
 
   util::release_assert(state_machine_.state == kInVisitLoop);
   lock.unlock();
   if (context.mid_search_iteration) {
     if (resume_search_iteration(context) == core::kYield) {
-      return SearchResponse::make_yield(context.extra_enqueue_count);
+      util::release_assert(context.extra_enqueue_count == 0);
+      return SearchResponse::make_yield();
     }
   }
 
@@ -272,10 +268,7 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
 
   lock.lock();
   core::yield_instruction_t yield_instruction = mark_as_done_with_visit_loop(context);
-  if (yield_instruction == core::kYield) {
-    throw util::Exception("Manager::{}(): unexpected yield instruction (context:{})", __func__,
-                          context.id);
-  } else if (yield_instruction == core::kDrop) {
+  if (yield_instruction == core::kDrop) {
     return SearchResponse::make_drop();
   }
   util::release_assert(yield_instruction == core::kContinue);
@@ -305,28 +298,24 @@ void Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context
 template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context) {
   // Assumes state_machine_.mutex is held
-  if (context.in_visit_loop) {
-    context.in_visit_loop = false;
-    state_machine_.in_visit_loop_count--;
-    if (state_machine_.in_visit_loop_count == context.extra_enqueue_count) {
-      state_machine_.state = kIdle;
-      state_machine_.primary_context_id = context.id;
+  util::release_assert(context.in_visit_loop);
+  context.in_visit_loop = false;
+  state_machine_.in_visit_loop_count--;
+  if (state_machine_.in_visit_loop_count == context.extra_enqueue_count) {
+    state_machine_.state = kIdle;
 
-      if (context.extra_enqueue_count > 0) {
-        // This means that we did update_state_machine_to_in_visit_loop() in the current search()
-        // call. The significance of this is that the other context never got a chance to actually
-        // do any work. We can't count the other contexts to get to this function and set their
-        // own in_visit_loop to false, so we need to do it here.
-        for (auto& context2 : contexts_) {
-          context2.in_visit_loop = false;
-        }
+    if (context.extra_enqueue_count > 0) {
+      // This means that we did update_state_machine_to_in_visit_loop() in the current search()
+      // call. The significance of this is that the other context never got a chance to actually
+      // do any work. We can't count the other contexts to get to this function and set their
+      // own in_visit_loop to false, so we need to do it here.
+      for (auto& context2 : contexts_) {
+        context2.in_visit_loop = false;
       }
-      return core::kContinue;
     }
-    return core::kDrop;
+    return core::kContinue;
   }
-
-  throw util::Exception("Manager::{}(): context {} not in visit loop", __func__, context.id);
+  return core::kDrop;
 }
 
 template <core::concepts::Game Game>
