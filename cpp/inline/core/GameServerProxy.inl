@@ -133,8 +133,6 @@ GameServerBase::EnqueueRequest GameServerProxy<Game>::GameSlot::step(context_id_
 
   switch (response.yield_instruction) {
     case kContinue: {
-      util::release_assert(pending_drop_count_ == 0,
-                           "Unexpected response: pending_drop_count_={}", (int)pending_drop_count_);
       mid_yield_ = false;
       enqueue_request.instruction = kEnqueueLater;
       break;
