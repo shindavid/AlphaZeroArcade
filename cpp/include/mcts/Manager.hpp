@@ -133,7 +133,7 @@ class Manager {
     // For kYield responses
     int extra_enqueue_count = 0;
     core::slot_context_vec_t pending_notifications;
-    int pending_notifications_mutex_id = -1;
+    int pending_notifications_mutex_id = 0;
 
     // For convenience
     const SearchRequest* search_request = nullptr;

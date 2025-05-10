@@ -322,8 +322,11 @@ template <core::concepts::Game Game>
 void Manager<Game>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
-  context.pending_notifications_mutex_id =
-    util::Random::uniform_sample(0, (int)context_mutex_pool_->size());
+
+  int n = context_mutex_pool_->size();
+  if (n > 1) {
+    context.pending_notifications_mutex_id = util::Random::uniform_sample(0, n);
+  }
 }
 
 template <core::concepts::Game Game>
