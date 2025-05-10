@@ -30,11 +30,11 @@ def main():
     configure_logger(params=logging_params, prefix='[benchmark_tag_local]')
 
     cmd = ['./py/alphazero/scripts/run_local.py',
-           '--game', run_params.game,
-           '--tag', run_params.tag,
            '--task-mode',
            '--run-benchmark-server',
            '--target-elo-gap', str(args.target_elo_gap)]
+    logging_params.add_to_cmd(cmd)
+    run_params.add_to_cmd(cmd)
 
     logger.info(f"Running command: {' '.join(cmd)}")
 
