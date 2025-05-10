@@ -52,7 +52,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   static shared_data_map_t shared_data_cache_;
 
   MctsManagerParams manager_params_;
-  mcts::mutex_vec_sptr_t common_mutex_pool_;  // only used in multi-threaded mode
+  mcts::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
+  mcts::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
 template <core::concepts::Game Game>

@@ -52,6 +52,12 @@ typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::ma
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationRequest<Game>::set_notification_task_info(
+  const core::YieldNotificationUnit& unit) {
+  notification_unit_ = unit;
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationRequest<Game>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
@@ -65,11 +71,6 @@ void NNEvaluationRequest<Game>::mark_all_as_stale() {
   throw util::Exception(
       "NNEvaluationRequest::mark_all_as_stale() - both fresh and stale items exist. "
       "This should not happen with the current MCTS logic.");
-}
-
-template <core::concepts::Game Game>
-std::string NNEvaluationRequest<Game>::thread_id_whitespace() const {
-  return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
 }
 
 }  // namespace mcts

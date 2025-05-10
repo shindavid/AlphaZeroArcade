@@ -1,11 +1,13 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <core/GameServerClient.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
-#include <core/concepts/Game.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
+#include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
@@ -30,10 +32,11 @@ namespace mcts {
  * The NNEvaluationService services multiple search threads, which may belong to multiple
  * mcts::Manager instances (if two mcts agents are playing against each other for instance).
  *
- * The main API is the evaluate() method. It tensorizes a game state, passes the tensor to a neural
- * network, and returns the output. Under its hood, it batches multiple evaluate() requests in order
- * to maximize GPU throughput. This batching is transparent to the caller, as the evaluate() method
- * blocks internally until the batch is full (or until a timeout is hit).
+ * The main API is the evaluate() method. It accepts an NNEvaluationRequest, which contains one or
+ * more game states to evaluate, along with instructions on how to asynchronously notify a handler
+ * when the evaluation is complete. The evaluation involves tensorizing the game states, adding the
+ * tensors to an input batch, passing that batch to a neural network, and then writing the output
+ * back to locations specified in the NNEvaluationRequest.
  *
  * Batching of N evaluations is accomplished by maintaining a length-N array of evaluation objects,
  * and various tensors (for nnet input and output) of shape (N, ...). Each evaluate() call gets
@@ -43,41 +46,14 @@ namespace mcts {
  *
  * The service has an LRU cache, which helps to avoid the costly GPU operations when possible.
  *
- * Here is a detailed description of how this implementation handles the various thread safety
- * considerations.
- *
- * There are three mutexes:
- *
- * - cache_mutex_: prevents race-conditions on cache reads/writes - especially important because
- * without locking, cache eviction can lead to a key-value pair disappearing after checking for the
- * key
- * - batch_data_.mutex: prevents race-conditions on reads/writes of batch_data_
- * - batch_metadata_.mutex: prevents race-conditions on reads/writes of batch_metadata_
- *
- * The batch_data_ member consists of:
- *
- * - input: the batch input tensor
- * - value/policy: the batch output tensors
- * - eval_ptr_data: mainly an array of N smart-pointers to a struct that has copied a slice of the
- * value/policy tensors.
- *
- * The batch_metadata_ member consists of three ints:
- *
- * - reserve_index: the next slot of batch_data_.input to write to
- * - commit_count: the number of slots of batch_data_.input that have been written to
- * - unread_count: the number of entries of batch_data_.eval_ptr_data that have not yet been read by
- * their corresponding search threads
- *
- * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure
- * that the reads and writes of these data structures are thread-safe.
- *
- * Compiling with -DMCTS_DEBUG will enable a bunch of prints that allow you to watch the sequence of
- * operations in the interleaving threads.
+ * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
+ * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
 template <core::concepts::Game Game>
 class NNEvaluationService
     : public NNEvaluationServiceBase<Game>,
       public core::PerfStatsClient,
+      public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
@@ -128,12 +104,13 @@ class NNEvaluationService
 
   void disconnect() override;
 
-  NNEvaluationResponse evaluate(NNEvaluationRequest& request) override;
-  core::yield_instruction_t wait_for(core::nn_evaluation_sequence_id_t sequence_id) override;
+  core::yield_instruction_t evaluate(NNEvaluationRequest& request) override;
 
   void end_session() override;
 
   void update_perf_stats(core::PerfStats&) override;
+
+  void handle_force_progress() override;
 
  private:
   struct TensorGroup {
@@ -171,6 +148,11 @@ class NNEvaluationService
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;
 
+    core::slot_context_vec_t notification_tasks;
+
+    // TODO: I'm skeptical that sequence-id's are needed anymore, now that we are passing
+    // notification task info to the evaluate() method. If so, we can remove
+    // core::nn_evaluation_sequence_id_t completely, along with all the code that uses it.
     core::nn_evaluation_sequence_id_t sequence_id = 0;  // unique to each BatchData
 
     // Below fields are protected by the main_mutex_ member of NNEvaluationService.
@@ -221,12 +203,15 @@ class NNEvaluationService
 
     void recycle(BatchData* batch_data);
 
-    // Freezes all BatchData's that are pending on a sequence_id <= seq. Returns true if a BatchData
-    // was newly frozen.
-    bool freeze_up_to(core::nn_evaluation_sequence_id_t seq);
+    // Freezes the first BatchData in the pending list.
+    bool freeze_first();
 
     // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
     BatchData* get_frozen_pending_batch_data() const;
+
+    BatchData* get_first_pending_batch_data() const;
+
+    int pending_batch_datas_size() const { return pending_batch_datas_.size(); }
 
    private:
     BatchData* add_batch_data();
@@ -253,11 +238,13 @@ class NNEvaluationService
     // first n entries of this array, where n is the number of cache-misses.
     CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
 
+    void update_notifying_batch_data(BatchData* batch_data);
+
     CacheMissInfo* miss_infos;
 
     core::SearchThreadPerfStats stats;
     bool can_continue = true;
-    core::nn_evaluation_sequence_id_t max_sequence_id = 0;
+    BatchData* notifying_batch_data = nullptr;
   };
 
   // We empirically found that having a single LRUCache for the entire service leads to a
@@ -305,9 +292,9 @@ class NNEvaluationService
                         int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
+  void register_notification_task(const NNEvaluationRequest& request, BatchData* batch_data);
 
   void loop();
-  void set_deadline();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
   void wait_until_batch_ready(core::NNEvalLoopPerfStats&);
@@ -345,10 +332,6 @@ class NNEvaluationService
 
   ShardData shard_datas_[kNumHashShards];
 
-  const std::chrono::nanoseconds timeout_duration_;
-
-  time_point_t deadline_;
-
   bool session_ended_ = false;
   int num_connections_ = 0;
 
@@ -361,6 +344,7 @@ class NNEvaluationService
 
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;
+  core::YieldManager* yield_manager_ = nullptr;
 };
 
 }  // namespace mcts

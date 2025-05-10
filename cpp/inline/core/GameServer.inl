@@ -63,8 +63,9 @@ auto GameServer<Game>::Params::make_options_description() {
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::SharedData(
-    const Params& params, const TrainingDataWriterParams& training_data_writer_params)
-    : params_(params) {
+  GameServer* server, const Params& params,
+  const TrainingDataWriterParams& training_data_writer_params)
+    : server_(server), params_(params) {
   if (training_data_writer_params.enabled) {
     training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
   }
@@ -72,7 +73,7 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
-  hibernation_manager_.shut_down();
+  yield_manager_.shut_down();
 
   if (bar_) delete bar_;
 
@@ -111,7 +112,7 @@ void GameServer<Game>::SharedData::start_games() {
     if (!slot->start_game()) {
       throw util::Exception("ERROR: failed to start game slot");
     }
-    queue_.push(slot);
+    queue_.emplace(slot->id());
   }
 }
 
@@ -142,12 +143,15 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::run_hibernation_manager() {
-  hibernation_manager_.run([this](game_slot_index_t slot_id) {
+void GameServer<Game>::SharedData::run_yield_manager() {
+  yield_manager_.run([this](const slot_context_vec_t& slot_contexts) {
     std::unique_lock lock(mutex_);
-    GameSlot* slot = game_slots_[slot_id];
-    pending_queue_count_--;
-    queue_.push(slot);
+
+    for (SlotContext item : slot_contexts) {
+      LOG_DEBUG("<-- GameServer::{}(): enqueueing item={}:{}", __func__, item.slot, item.context);
+      queue_.push(item);
+    }
+    pending_queue_count_ -= slot_contexts.size();
     lock.unlock();
 
     cv_.notify_all();
@@ -155,42 +159,68 @@ void GameServer<Game>::SharedData::run_hibernation_manager() {
 }
 
 template <concepts::Game Game>
-typename GameServer<Game>::GameSlot*
-GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns) {
+bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, SlotContext& item) {
   core::PerfClocker clocker(wait_for_game_slot_time_ns);
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
-      cv_.wait(lock, [&] {
-        return paused_ || pending_queue_count_ == 0 || !queue_.empty();
-      });
+      LOG_DEBUG("<-- GameServer::{}(): waiting (queue:{} pending:{})", __func__, queue_.size(),
+                pending_queue_count_);
+      server_->force_progress();
+      cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
     }
     if (queue_.empty()) {
-      return nullptr;
+      LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
+      return false;
     }
   }
 
   if (paused_) {
-    return nullptr;
+    LOG_DEBUG("<-- GameServer::{}(): paused", __func__);
+    return false;
   }
 
-  GameSlot* slot = queue_.front();
+  item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
-  return slot;
+  LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
+            item.context, queue_.size(), pending_queue_count_);
+  return true;
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::enqueue(GameSlot* slot, int count) {
+void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
-  bool empty = queue_.empty();
-  for (int i = 0; i < count; ++i) {
-    queue_.push(slot);
+  bool was_queue_pending = queue_pending();
+  if (request.instruction == kEnqueueNow) {
+    util::release_assert(request.extra_enqueue_count == 0);
+    item.context = 0;  // when continuing, we always want to reset the context to 0
+    queue_.push(item);
+    pending_queue_count_--;
+  } else if (request.instruction == kEnqueueLater) {
+    if (request.extra_enqueue_count > 0) {
+      // Push back the item's siblings
+      for (int i = 0; i < request.extra_enqueue_count; ++i) {
+        item.context = i + 1;
+        queue_.push(item);
+      }
+      item.context = 0;  // just for the LOG_DEBUG() statement below
+    }
+  } else if (request.instruction == kEnqueueNever) {
+    pending_queue_count_--;
+  } else {
+    throw util::Exception("GameServer::{}(): invalid enqueue instruction: {}", __func__,
+                          (int)request.instruction);
   }
-  pending_queue_count_--;
-  if (empty) {
-    lock.unlock();
+
+  LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} queue={}", __func__,
+            item.slot, item.context, (int)request.instruction, request.extra_enqueue_count,
+            pending_queue_count_, queue_.size());
+
+  lock.unlock();
+
+  if (was_queue_pending && !queue_pending()) {
     cv_.notify_all();
   }
 }
@@ -342,10 +372,10 @@ void GameServer<Game>::SharedData::unpause() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::wait_for_unpause() {
-  LOG_DEBUG("GameServer: waiting for unpause...");
+  LOG_DEBUG("<-- GameServer: waiting for unpause...");
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return !paused_; });
-  LOG_DEBUG("GameServer: unpause wait complete!");
+  LOG_DEBUG("<-- GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
@@ -366,7 +396,7 @@ void GameServer<Game>::SharedData::increment_paused_thread_count() {
   std::unique_lock lock(mutex_);
   util::release_assert(paused_);
   paused_thread_count_++;
-  LOG_DEBUG("GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
+  LOG_DEBUG("<-- GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
             active_thread_count_);
   issue_pause_receipt_if_necessary();
 }
@@ -391,7 +421,7 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   // assumes mutex_ is locked
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
     pause_receipt_pending_ = false;
-    LOG_DEBUG("GameServer: handling pause receipt");
+    LOG_DEBUG("<-- GameServer: handling pause receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
 }
@@ -408,8 +438,7 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data),
-      id_(id),
-      hibernation_notifier_(shared_data.hibernation_manager(), id) {
+      id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -437,12 +466,13 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
+GameServerBase::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t context) {
+  EnqueueRequest request;
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(enqueue_count, hibernate)) {
+    if (step_non_chance(context, request)) {
       pre_step();
     } else {
-      return;
+      return request;
     }
   }
 
@@ -451,6 +481,7 @@ void GameServer<Game>::GameSlot::step(int& enqueue_count, bool& hibernate) {
       pre_step();
     }
   }
+  return request;
 }
 
 template <concepts::Game Game>
@@ -470,7 +501,9 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance() {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
-    ChanceEventPreHandleResponse response = player->prehandle_chance_event();
+    YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
+    ChangeEventPreHandleRequest request(notification_unit);
+    ChanceEventPreHandleResponse response = player->prehandle_chance_event(request);
     mid_yield_ = response.yield_instruction != kContinue;
     if (mid_yield_) {
       return false;
@@ -510,11 +543,13 @@ bool GameServer<Game>::GameSlot::step_chance() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hibernate) {
+bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
+                                                 EnqueueRequest& enqueue_request) {
   Player* player = players_[active_seat_];
-  ActionRequest request(state_history_.current(), valid_actions_);
+  YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
+  ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
-  request.hibernation_notifier = &hibernation_notifier_;
+
   ActionResponse response = player->get_action_response(request);
   util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
@@ -522,30 +557,19 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
 
   switch (response.yield_instruction) {
     case kContinue: {
-      if (pending_drop_count_ > 0) {
-        // TODO: mark that we already got the response, and don't bother calling
-        // get_action_response() again on the rebound?
-        enqueue_count = 1;
-        return false;
-      }
       mid_yield_ = false;
       break;
     }
     case kYield: {
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
-      enqueue_count = 1 + response.extra_enqueue_count;
-      return false;
-    }
-    case kHibernate: {
-      mid_yield_ = true;
-      enqueue_count = 0;
-      hibernate = true;
+      enqueue_request.instruction = kEnqueueLater;
+      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
       return false;
     }
     case kDrop: {
       pending_drop_count_--;
-      enqueue_count = 0;
+      enqueue_request.instruction = kEnqueueNever;
       return false;
     }
     default: {
@@ -555,7 +579,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
 
   util::debug_assert(!mid_yield_);
 
-  enqueue_count = 1;
   move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
@@ -571,9 +594,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(int& enqueue_count, bool& hiber
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
-      printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id_,
-            player->get_name().c_str(), int(active_seat_));
-      std::cout << std::endl;
+      LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory",
+              game_id_, player->get_name(), active_seat_);
     }
     handle_terminal(outcome);
     return false;
@@ -614,7 +636,7 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
     for (player_id_t p = 0; p < kNumPlayers; ++p) {
       ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), array[p]);
     }
-    printf("%s", ss.str().c_str());
+    LOG_INFO("{}", ss.str());
   }
 
   // reindex outcome according to player_id
@@ -693,8 +715,8 @@ void GameServer<Game>::GameThread::run() {
   shared_data_.increment_active_thread_count();
   while (true) {
     int64_t wait_for_game_slot_time_ns = 0;
-    GameSlot* slot = shared_data_.next(wait_for_game_slot_time_ns);
-    if (!slot) {
+    SlotContext item;
+    if (!shared_data_.next(wait_for_game_slot_time_ns, item)) {
       if (shared_data_.paused()) {
         shared_data_.increment_paused_thread_count();
         shared_data_.wait_for_unpause();
@@ -706,25 +728,28 @@ void GameServer<Game>::GameThread::run() {
       }
     }
 
+    GameSlot* slot = shared_data_.get_game_slot(item.slot);
+
     // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
     // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    int enqueue_count = 1;
-    bool hibernate = false;
-    slot->step(enqueue_count, hibernate);
+    EnqueueRequest request = slot->step(item.context);
 
     bool dropped = false;
     if (slot->game_ended()) {
-      util::release_assert(enqueue_count == 1);
+      util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
       if (!slot->start_game()) {
         shared_data_.drop_slot();
         dropped = true;
       }
     }
 
-    if (!dropped && !hibernate) shared_data_.enqueue(slot, enqueue_count);
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{} dropped={}", slot->id(),
+              item.context, (int)request.instruction, request.extra_enqueue_count, dropped);
+
+    if (!dropped) shared_data_.enqueue(item, request);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
@@ -736,7 +761,7 @@ void GameServer<Game>::GameThread::run() {
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : PerfStatsClient(), shared_data_(params, training_data_writer_params) {
+    : PerfStatsClient(), GameServerBase(), shared_data_(this, params, training_data_writer_params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
@@ -819,7 +844,7 @@ void GameServer<Game>::run() {
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   shared_data_.init_slots();
-  shared_data_.run_hibernation_manager();
+  shared_data_.run_yield_manager();
   create_threads();
   shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
@@ -861,7 +886,7 @@ void GameServer<Game>::run() {
 
 template <concepts::Game Game>
 void GameServer<Game>::create_threads() {
-  int num_threads = std::min(shared_data_.num_slots(), params().num_game_threads);
+  int num_threads = params().num_game_threads;
   for (int t = 0; t < num_threads; ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);

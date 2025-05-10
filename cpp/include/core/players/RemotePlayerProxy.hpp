@@ -2,9 +2,9 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/HibernationNotifier.hpp>
 #include <core/Packet.hpp>
+#include <core/YieldManager.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/SocketUtil.hpp>
 
 #include <map>
@@ -64,7 +64,8 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
  private:
   ActionResponse action_response_;
-  core::HibernationNotifier* hibernation_notifier_ = nullptr;
+  YieldNotificationUnit yield_notification_unit_;
+  bool yielding_ = false;
 
   io::Socket* socket_;
   const player_id_t player_id_;

@@ -3,11 +3,11 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/HibernationManager.hpp>
-#include <core/HibernationNotifier.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <core/TrainingDataWriter.hpp>
+#include <core/YieldManager.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
@@ -48,9 +48,13 @@ namespace core {
 template <concepts::Game Game>
 class GameServer
     : public core::PerfStatsClient,
+      public core::GameServerBase,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+
+  using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
+  using EnqueueRequest = core::GameServerBase::EnqueueRequest;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
@@ -60,6 +64,7 @@ class GameServer
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
+  using ChangeEventPreHandleRequest = Game::Types::ChangeEventPreHandleRequest;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
@@ -136,13 +141,12 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
-    // true if hibernating.
-    void step(int& enqueue_count, bool& hibernate);
+    EnqueueRequest step(context_id_t context);
 
     bool start_game();
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
+    game_slot_index_t id() const { return id_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -151,17 +155,15 @@ class GameServer
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance();
 
-    // Sets enqueue_count to the number of times this slot should be enqueued. Sets hibernate to
-    // true if hibernating.
-    // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_non_chance(int& enqueue_count, bool& hibernate);
+    // Returns true if it successfully processed a non-terminal game state transition. Also sets
+    // request to the appropriate value.
+    bool step_non_chance(context_id_t context, EnqueueRequest& request);
 
     void handle_terminal(const ValueTensor& outcome);
 
     SharedData& shared_data_;
     const game_slot_index_t id_;
     player_instantiation_array_t instantiations_;
-    HibernationNotifier hibernation_notifier_;
 
     // Initialized at the start of the game
     game_id_t game_id_;
@@ -192,7 +194,7 @@ class GameServer
    */
   class SharedData {
    public:
-    SharedData(const Params&, const TrainingDataWriterParams&);
+    SharedData(GameServer* server, const Params&, const TrainingDataWriterParams&);
     ~SharedData();
 
     const Params& params() const { return params_; }
@@ -201,14 +203,17 @@ class GameServer
     void start_games();
     void init_progress_bar();
     void init_random_seat_indices();
-    void run_hibernation_manager();
+    void run_yield_manager();
 
     int num_slots() const { return game_slots_.size(); }
 
-    // Returns the next game slot to run. If the server is paused or shutting down, returns nullptr.
-    // The wait_for_game_slot_time_ns is updated with the time spent waiting for a game slot.
-    GameSlot* next(int64_t& wait_for_game_slot_time_ns);
-    void enqueue(GameSlot*, int count);
+    // If the server is paused or shutting down, returns false. Else, returns true, and sets:
+    //
+    // - item: with the next queue item
+    // - wait_for_game_slot_time_ns: with the time spent waiting
+    bool next(int64_t& wait_for_game_slot_time_ns, SlotContext& item);
+    void enqueue(SlotContext, const EnqueueRequest& request);
+    GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
     void drop_slot();
 
     bool request_game();  // returns false iff hit params_.num_games limit
@@ -228,7 +233,7 @@ class GameServer
     int num_registrations() const { return registrations_.size(); }
     registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
-    HibernationManager* hibernation_manager() { return &hibernation_manager_; }
+    YieldManager* yield_manager() { return &yield_manager_; }
     bool paused() const { return paused_; }
 
     void pause();
@@ -244,8 +249,10 @@ class GameServer
     void update_perf_stats(PerfStats&);
 
    private:
+    bool queue_pending() const { return pending_queue_count_ > 0 && queue_.empty(); }
     void issue_pause_receipt_if_necessary();  // assumes mutex_ is locked
 
+    GameServer* const server_;
     const Params params_;
 
     TrainingDataWriter* training_data_writer_ = nullptr;
@@ -270,10 +277,10 @@ class GameServer
     //
     // During the normal course of operations, (queue_.size() + pending_queue_count_) should equal
     // game_slots_.size(). When a shutdown commences, queue_ will whittle down to zero.
-    std::queue<GameSlot*> queue_;
+    std::queue<SlotContext> queue_;
     int pending_queue_count_ = 0;
 
-    HibernationManager hibernation_manager_;
+    YieldManager yield_manager_;
 
     results_array_t results_array_;  // indexed by player_id
 

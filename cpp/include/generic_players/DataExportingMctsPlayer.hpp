@@ -29,6 +29,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
+  using ChangeEventPreHandleRequest = Game::Types::ChangeEventPreHandleRequest;
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
@@ -36,12 +37,13 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
   using SearchResults = base_t::SearchResults;
+  using SearchRequest = base_t::SearchRequest;
   using SearchResponse = base_t::SearchResponse;
 
   using base_t::base_t;
 
   ActionResponse get_action_response(const ActionRequest& request) override;
-  ChanceEventPreHandleResponse prehandle_chance_event() override;
+  ChanceEventPreHandleResponse prehandle_chance_event(const ChangeEventPreHandleRequest&) override;
 
  protected:
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <core/YieldManager.hpp>
 #include <core/concepts/Game.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
@@ -12,8 +13,6 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Math.hpp>
-
-#include <boost/circular_buffer.hpp>
 
 #include <array>
 #include <mutex>
@@ -39,6 +38,7 @@ class Manager {
   using LocalPolicyArray = Node::LocalPolicyArray;
   using node_pool_index_t = Node::node_pool_index_t;
   using Edge = Node::Edge;
+  using expansion_state_t = Node::expansion_state_t;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
@@ -47,6 +47,7 @@ class Manager {
 
   using ActionSelector = mcts::ActionSelector<Game>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
+  using ActionRequest = Game::Types::ActionRequest;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
   using Symmetries = Game::Symmetries;
@@ -71,9 +72,22 @@ class Manager {
   };
   using search_path_t = std::vector<Visitation>;
 
+  struct SearchRequest {
+    SearchRequest(const core::YieldNotificationUnit& u) : notification_unit(u) {}
+    SearchRequest() = default;
+
+    core::YieldManager* yield_manager() const {
+      return notification_unit.yield_manager;
+    }
+    core::context_id_t context_id() const { return notification_unit.context_id; }
+    core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
+
+    core::YieldNotificationUnit notification_unit;
+  };
+
   struct SearchResponse {
     static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
-    static SearchResponse make_yield(int e) { return SearchResponse(nullptr, core::kYield, e); }
+    static SearchResponse make_yield(int e=0) { return SearchResponse(nullptr, core::kYield, e); }
 
     SearchResponse(const SearchResults* r, core::yield_instruction_t y=core::kContinue, int e=0)
         : results(r), yield_instruction(y), extra_enqueue_count(e) {}
@@ -84,7 +98,9 @@ class Manager {
   };
 
   struct SearchContext {
-    core::search_context_id_t id;
+    int log_prefix_n() const { return kThreadWhitespaceLength * id; }
+
+    core::context_id_t id;
 
     search_path_t search_path;
 
@@ -103,7 +119,6 @@ class Manager {
 
     // node-initialization yield info
     StateHistory* initialization_history;
-    core::nn_evaluation_sequence_id_t nn_eval_seq_id;
     node_pool_index_t initialization_index = -1;
     node_pool_index_t inserted_node_index = -1;
     bool expanded_new_node = false;
@@ -117,6 +132,11 @@ class Manager {
 
     // For kYield responses
     int extra_enqueue_count = 0;
+    core::slot_context_vec_t pending_notifications;
+    int pending_notifications_mutex_id = 0;
+
+    // For convenience
+    const SearchRequest* search_request = nullptr;
   };
 
   enum execution_state_t : int8_t {
@@ -140,45 +160,29 @@ class Manager {
   // (in training, C=1, while in competition, C>1). It also maintains an execution_state_t enum
   // that tracks the execution state.
   //
-  // Each incoming thread is assigned a SearchContext from a round-robin list of SearchContext's
-  // and checks the execution state to determine what to do. Here is a summary:
+  // Each incoming search() comes with an assigned context id, which is used to select a
+  // SearchContext to work with. Here is a summary of the state machine:
   //
   // ** kIdle
   //
-  // This is the entry point. At program start, SearchContext 0 is marked as the primary context.
-  // The first thread to call search() when the state is kIdle should use SearchContext 0, and so
-  // recognize that it is the primary context. After transitioning to kInitializingRoot and
-  // releasing the mutex, it does the work of intializing the root. This could require a nn-eval
-  // (when AV-targets are needed at the root), which can cause a yield. If it does not yield, it
-  // completes root initialization and then, after re-acquiring the mutex, transitions to
-  // kInVisitLoop.
-  //
-  // If a thread using a SearchContext besides the primary context calls search() while in this
-  // state, it blocks until the state is no longer kIdle. See kInVisitLoop details to understand
-  // how this can happen.
+  // This is the entry point. This state should only get hit with context 0. After transitioning to
+  // kInitializingRoot and releasing the mutex, it does the work of intializing the root. This could
+  // require a nn-eval (when AV-targets are needed at the root), which can cause a yield. If it does
+  // not yield, it completes root initialization and then, after re-acquiring the mutex, transitions
+  // to kInVisitLoop.
   //
   // ** kInitializingRoot
   //
-  // If a thread calls search() while in this state, it checks to see if it is the primary context.
-  // If so, that means that this context previously started the root initialization work and decided
-  // to yield. In this case, we block until the nn-eval is done (during self-play, assuming the
-  // GameServer is appropriately configured, this should typically already be done). Then, it
-  // transitions to kInVisitLoop. All of this is done without releasing the mutex.
-  //
-  // If a thread calls search() while in this state and it is *not* the primary context, that means
-  // that another thread is currently working on root initialization. In this case, it immediately
-  // yields. Note that this same context should not hit this same state twice in a row, since the
-  // round-robin assignment of SearchContext's should ensure that the primary context will get
-  // there first, and since in that case the primary context will transition the state to
-  // kInvisitLoop without releasing the mutex.
+  // This state should also only get hit with context 0. This state indicates that the context
+  // previously started the root initialization work and decided to yield. The fact that we enter
+  // again here indicates that the nn eval is done. We complete the root initialization and then
+  // transition to kInVisitLoop. All of this is done without releasing the mutex.
   //
   // ** kInVisitLoop
   //
-  // This is the main work of the search. The thread that first updates the state to kInVisitLoop
-  // will also set visit_loop_count to C.
-  //
-  // When a thread calls search() while in this state, it immediately releases the mutex, and starts
-  // the main work.
+  // This is the main work of the search. Context 0 is the first to enter this state, and when doing
+  // so, it requests the GameServer to enqueue (C-1) extra slots to its queue, thus activating the
+  // multithreaded search.
   //
   // On the first call, it starts an MCTS iteration. If it reaches a leaf node where it requires an
   // nn-eval, it yields. Otherwise, it completes the MCTS iteration and repeats. Eventually, it
@@ -186,25 +190,14 @@ class Manager {
   //
   // If it hits a yield point, we record this in the SearchContext, so that on the subsequent visit,
   // it can resume from the yield point. This should be the case for all visits in the kInVisitLoop
-  // state except for the first. When resuming, we need to block on the nn-eval to complete: again,
-  // this should typically already be done during self-play assuming appropriate GameServer
-  // configuration.
+  // state except for the first.
   //
-  // If it hits the termination condition, it acquires the mutex and decrements visit_loop_count.
-  // If visit_loop_count is 0, then this thread knows that none of the SearchContext's are
-  // mid-visit, and so it assumes the responsibility of returning results back to the caller (as
-  // opposed to yielding, as every other call to search() has done so far). It meets this
-  // responsibility by transitioning the state to kIdle, marking its SearchContext as
-  // the primary context, and then returning the results, all while holding the mutex.
-  //
-  // When cycling back to kIdle, note that our assignment of primary context ensures that the
-  // thread that returned results is the one that will handle the next kIdle state. This details
-  // ensures that we don't have a situation where thread-2 re-enters the visit loop while thread-1
-  // is still processing the search results.
+  // If the termination condition is met, either because the current search iteration triggers it
+  // or because it was already met in a previous search iteration, we decrement in_visit_loop_count.
+  // If it reaches 0, we transition to kIdle and return results. Otherwise, we issue a kDrop to the
+  // caller, which will cause the GameServer to drop the context.
   struct StateMachine {
     mutable std::mutex mutex;
-    boost::circular_buffer<core::search_context_id_t> available_context_ids;
-    core::search_context_id_t primary_context_id = 0;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
   };
@@ -228,8 +221,8 @@ class Manager {
    * create a separate single-element mutex-pool.
    */
   Manager(const ManagerParams& params, NNEvaluationServiceBase* service = nullptr);
-  Manager(mutex_vec_sptr_t& mutex_pool, const ManagerParams& params,
-          NNEvaluationServiceBase* service = nullptr);
+  Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+          const ManagerParams& params, NNEvaluationServiceBase* service = nullptr);
 
   ~Manager();
 
@@ -243,8 +236,9 @@ class Manager {
   void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
-  SearchResponse search();
-  core::yield_instruction_t load_root_action_values(ActionValueTensor& action_values);
+  SearchResponse search(const SearchRequest& request);
+  core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
+                                                    ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
   const RootInfo* root_info() const { return &root_info_; }
 
@@ -253,19 +247,13 @@ class Manager {
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 
  private:
-  using search_context_vec_t = std::vector<SearchContext>;
-  using search_context_id_queue_t = std::queue<core::search_context_id_t>;
+  using context_vec_t = std::vector<SearchContext>;
+  using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, mutex_vec_sptr_t mutex_pool, const ManagerParams& params,
-          NNEvaluationServiceBase* service);
+  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
+          const ManagerParams& params, NNEvaluationServiceBase* service);
 
-  // Assumes state_matchine_.mutex is held
-  core::search_context_id_t get_next_context_id();
-
-  // Does NOT assume state_machine_.mutex is held
-  void recycle_context(core::search_context_id_t context_id);
-
-  SearchResponse search_helper(core::search_context_id_t& context_id);
+  SearchResponse search_helper(const SearchRequest& request);
 
   // Assumes state_matchine_.mutex is held
   //
@@ -278,7 +266,7 @@ class Manager {
   // Assumes state_matchine_.mutex is held
   core::yield_instruction_t mark_as_done_with_visit_loop(SearchContext& context);
 
-  void init_context(core::search_context_id_t);
+  void init_context(core::context_id_t);
   void init_root_info(bool add_noise);
   bool more_search_iterations_needed(Node* root);
   core::yield_instruction_t begin_root_initialization(SearchContext&);
@@ -292,6 +280,8 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
+  void add_pending_notification(SearchContext&, Edge*);
+  void set_edge_state(SearchContext&, Edge*, expansion_state_t);
   void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
@@ -302,8 +292,6 @@ class Manager {
   void short_circuit_backprop(SearchContext& context);
   void calc_canonical_state_data(SearchContext& context);
   void print_visit_info(const SearchContext& context);
-  std::string thread_id_whitespace(const SearchContext& context) const;
-  std::string break_plus_thread_id_whitespace(const SearchContext& context) const;
   void validate_search_path(const SearchContext& context) const;
   int get_best_child_index(const SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
@@ -329,8 +317,9 @@ class Manager {
   RootInfo root_info_;
   post_visit_func_t post_visit_func_ = []() {};
 
-  search_context_vec_t search_contexts_;
+  context_vec_t contexts_;
   StateMachine state_machine_;
+  mutex_vec_sptr_t context_mutex_pool_;
   NNEvaluationServiceBase* nn_eval_service_ = nullptr;
 
   SearchParams search_params_;

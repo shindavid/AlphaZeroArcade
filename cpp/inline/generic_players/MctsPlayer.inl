@@ -143,7 +143,9 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   init_search_mode(request);
   lock.unlock();
 
-  SearchResponse response = get_manager()->search();
+  SearchRequest search_request(request.notification_unit);
+  SearchResponse response = get_manager()->search(search_request);
+
   if (response.yield_instruction == core::kYield) {
     return ActionResponse::yield(response.extra_enqueue_count);
   } else if (response.yield_instruction == core::kDrop) {

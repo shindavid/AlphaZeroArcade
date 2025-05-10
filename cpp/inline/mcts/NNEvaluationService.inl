@@ -1,17 +1,12 @@
 #include <mcts/NNEvaluationService.hpp>
 
-#include <core/BasicTypes.hpp>
 #include <core/Globals.hpp>
-#include <core/PerfStats.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
-#include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
 
 #include <boost/json/src.hpp>
 
 #include <cstdint>
-#include <mutex>
 #include <spanstream>
 
 namespace mcts {
@@ -64,6 +59,14 @@ void NNEvaluationService<Game>::disconnect() {
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::CacheLookupResult::update_notifying_batch_data(
+  BatchData* batch_data) {
+  if (!notifying_batch_data || batch_data->sequence_id > notifying_batch_data->sequence_id) {
+    notifying_batch_data = batch_data;
+  }
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::ShardData::init(int cache_size) {
   eval_cache.set_capacity(cache_size);
   eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
@@ -79,11 +82,11 @@ void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eva
 template <core::concepts::Game Game>
 inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params)
     : core::PerfStatsClient(),
+      core::GameServerClient(),
       instance_id_(instance_count_++),
       params_(params),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      timeout_duration_(params.nn_eval_timeout_ns),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
@@ -105,7 +108,6 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
   torch_action_value_ = torch::empty(action_value_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
-  deadline_ = std::chrono::steady_clock::now();
 
   for (int i = 0; i < kNumHashShards; i++) {
     shard_datas_[i].init(params_.cache_size / kNumHashShards);
@@ -161,6 +163,7 @@ void NNEvaluationService<Game>::BatchData::clear() {
   allocate_count = 0;
   write_count = 0;
   accepting_allocations = true;
+  notification_tasks.clear();
 }
 
 template <core::concepts::Game Game>
@@ -210,6 +213,7 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
+  LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
   util::debug_assert(!pending_batch_datas_.empty() && batch_data == pending_batch_datas_.front());
   pending_batch_datas_.erase(pending_batch_datas_.begin());
   batch_data->clear();
@@ -217,21 +221,19 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batc
 }
 
 template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_up_to(
-  core::nn_evaluation_sequence_id_t seq) {
-  bool new_batch_needed = true;
-  bool newly_frozen = false;
-  for (BatchData* batch_data : pending_batch_datas_) {
-    if (batch_data->sequence_id <= seq) {
-      bool was_frozen = batch_data->frozen();
-      batch_data->accepting_allocations = false;
-      newly_frozen |= batch_data->frozen() && !was_frozen;
-    } else {
-      new_batch_needed = false;
-    }
-  }
+bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
+  if (pending_batch_datas_.empty()) return false;
+  BatchData* batch_data = pending_batch_datas_.front();
+  if (batch_data->allocate_count == 0) return false;
 
-  if (new_batch_needed) {
+  LOG_DEBUG("<-- NNEvaluationService: Freezing batch data {} (alloc:{} write:{})",
+            batch_data->sequence_id, batch_data->allocate_count, batch_data->write_count);
+
+  bool was_frozen = batch_data->frozen();
+  batch_data->accepting_allocations = false;
+  bool newly_frozen = batch_data->frozen() && !was_frozen;
+
+  if (pending_batch_datas_.size() == 1) {
     add_batch_data();
   }
 
@@ -246,6 +248,15 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::get_frozen_pending_batch_dat
     if (batch_data->frozen()) {
       return batch_data;
     }
+  }
+  return nullptr;
+}
+
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::BatchData*
+NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+  if (!pending_batch_datas_.empty()) {
+    return pending_batch_datas_.front();
   }
   return nullptr;
 }
@@ -273,14 +284,9 @@ NNEvaluationService<Game>::~NNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
+core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
   if (request.num_fresh_items() == 0) {
-    return NNEvaluationResponse(0, core::kContinue);
-  }
-
-  if (mcts::kEnableServiceDebug) {
-    LOG_INFO("{}{}() - size: {}", request.thread_id_whitespace(), __func__,
-             request.num_fresh_items());
+    return core::kContinue;
   }
 
   int n = request.num_fresh_items();
@@ -288,10 +294,21 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
   CacheLookupResult result(miss_infos);
   check_cache(request, result);
 
-  NNEvaluationResponse response(0, core::kContinue);
+  core::yield_instruction_t yield_instruction = core::kContinue;
   if (!result.can_continue) {
     // Write to batches
     core::PerfClocker clocker(result.stats.batch_write_time_ns);
+    if (result.stats.cache_misses) {
+      CacheMissInfo& last_miss_info = miss_infos[result.stats.cache_misses - 1];
+      result.update_notifying_batch_data(last_miss_info.batch_data);
+    }
+
+    // notifying_batch_data is either set above because cache_misses > 0, or it is set inside
+    // handle_fresh_item() in the hit_cache && eval->pending() case. There is no other way that
+    // can_continue can be set to false.
+    util::debug_assert(result.notifying_batch_data != nullptr);
+    register_notification_task(request, result.notifying_batch_data);
+
     for (int i = 0; i < result.stats.cache_misses; ++i) {
       CacheMissInfo& miss_info = miss_infos[i];
       RequestItem& item = request.get_fresh_item(miss_info.item_index);
@@ -300,47 +317,14 @@ NNEvaluationResponse NNEvaluationService<Game>::evaluate(NNEvaluationRequest& re
       write_to_batch(item, batch_data, row);
     }
 
-    response = NNEvaluationResponse(result.max_sequence_id, core::kYield);
+    yield_instruction = core::kYield;
   }
 
   std::unique_lock perf_stats_lock(perf_stats_mutex_);
   perf_stats_.update(result.stats);
   perf_stats_lock.unlock();
 
-  return response;
-}
-
-template <core::concepts::Game Game>
-core::yield_instruction_t NNEvaluationService<Game>::wait_for(
-  core::nn_evaluation_sequence_id_t seq) {
-  if (mcts::kEnableServiceDebug) {
-    LOG_INFO("{}({}) - last={}", __func__, seq, last_evaluated_sequence_id_);
-  }
-
-  if (last_evaluated_sequence_id_ >= seq) return core::kContinue;
-
-  int64_t wait_for_nn_eval_time_ns = 0;
-  core::PerfClocker clocker(wait_for_nn_eval_time_ns);
-  std::unique_lock lock(main_mutex_);
-  if (batch_data_slice_allocator_.freeze_up_to(seq)) {
-    cv_main_.notify_all();
-  }
-
-  cv_main_.wait(lock, [&] { return paused_ || !active() || last_evaluated_sequence_id_ >= seq; });
-  if (mcts::kEnableServiceDebug) {
-    LOG_INFO("{}({}) - done waiting, last={}", __func__, seq, last_evaluated_sequence_id_);
-  }
-  lock.unlock();
-  clocker.stop();
-
-  std::unique_lock perf_stats_lock(perf_stats_mutex_);
-  perf_stats_.search_thread_stats.wait_for_nn_eval_time_ns += wait_for_nn_eval_time_ns;
-  perf_stats_lock.unlock();
-
-  if (last_evaluated_sequence_id_ >= seq) return core::kContinue;
-
-  // Can get here if paused or inactive
-  return core::kYield;
+  return yield_instruction;
 }
 
 template <core::concepts::Game Game>
@@ -429,6 +413,18 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
   lock.unlock();
 
   perf_stats += perf_stats_copy;
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::handle_force_progress() {
+  std::unique_lock lock(main_mutex_);
+  LOG_DEBUG("<-- NNEvaluationService::{}() size={}", __func__,
+            batch_data_slice_allocator_.pending_batch_datas_size());
+
+  if (batch_data_slice_allocator_.freeze_first()) {
+    lock.unlock();
+    cv_main_.notify_all();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -540,13 +536,12 @@ bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
   item.set_eval(eval);
   if (hit_cache) {
     result.stats.cache_hits++;
-    util::release_assert(eval->sequence_id() > 0);
     if (eval->pending()) {
-      result.max_sequence_id = std::max(result.max_sequence_id, eval->sequence_id());
+      BatchData* eval_data = eval->template get_aux<BatchData>();
+      result.update_notifying_batch_data(eval_data);
       result.can_continue = false;
     }
   } else {
-    util::release_assert(eval->sequence_id() == 0);
     eval->increment_ref_count();  // ref_count++ because cache is now holding it
     result.miss_infos[result.stats.cache_misses].item_index = item_index;
     result.stats.cache_misses++;
@@ -586,9 +581,8 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
     miss_info.batch_data = batch_data;
     miss_info.row = slice.start_row + slice_offset;
 
-    item.eval()->set_sequence_id(slice.batch_data->sequence_id);
-
-    result.max_sequence_id = std::max(result.max_sequence_id, slice.batch_data->sequence_id);
+    item.eval()->set_aux(slice.batch_data);
+    result.update_notifying_batch_data(slice.batch_data);
     slice_offset++;
     if (slice_offset == slices[slice_index].num_rows) {
       slice_index++;
@@ -639,21 +633,33 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
+                                                           BatchData* batch_data) {
+  // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
+  // There should only ever be one yield_manager_ for the entire process. We do it here to
+  // avoid having to pass it around all over the place during initialization.
+  const core::YieldNotificationUnit& unit = request.notification_unit();
+  if (this->yield_manager_ == nullptr) {
+    yield_manager_ = unit.yield_manager;
+  } else {
+    // Verify that there is only one
+    util::debug_assert(yield_manager_ == unit.yield_manager);
+  }
+
+  std::unique_lock lock(main_mutex_);
+  batch_data->notification_tasks.push_back(unit.slot_context());
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::loop() {
   while (active()) {
     core::NNEvalLoopPerfStats loop_stats;
 
-    set_deadline();
     load_initial_weights_if_necessary();
     wait_for_unpause();
     wait_until_batch_ready(loop_stats);
     batch_evaluate(loop_stats);
   }
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::set_deadline() {
-  deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
 }
 
 template <core::concepts::Game Game>
@@ -709,7 +715,7 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() ---------------------->", cls, func);
+    LOG_INFO("<-- {}::{}()", cls, func);
   }
 
   auto predicate = [&] {
@@ -717,26 +723,24 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
     BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
     if (batch_data) {
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<---------------------- {}::{}() (count:{}) ---------------------->", cls, func,
-                 (int)batch_data->allocate_count);
+        LOG_INFO("<-- {}::{}() (count:{})", cls, func, batch_data->allocate_count);
       }
       return true;
     }
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO("<---------------------- {}::{}() still waiting ---------------------->", cls, func);
+      BatchData* first_batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+      if (first_batch_data) {
+        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", cls, func,
+                 first_batch_data->sequence_id, first_batch_data->accepting_allocations,
+                 first_batch_data->allocate_count, first_batch_data->write_count);
+      } else {
+        LOG_INFO("<-- {}::{}() still waiting (no batch data)", cls, func);
+      }
     }
     return false;
   };
 
-  cv_main_.wait_until(lock, deadline_, predicate);
-
-  if (!active() || paused_) return;
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
-  if (!batch_data) {
-    // This means that we timed out, but the current batch is not yet frozen. We need to wait
-    // further until it is frozen.
-    cv_main_.wait(lock, predicate);
-  }
+  cv_main_.wait(lock, predicate);
 }
 
 template <core::concepts::Game Game>
@@ -753,8 +757,8 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<---------------------- {}::{}() (seq:{}, count:{}) ---------------------->",
-             cls, func, batch_data->sequence_id, batch_data->allocate_count);
+    LOG_INFO("<-- {}::{}() (seq:{}, count:{})", cls, func, batch_data->sequence_id,
+             batch_data->allocate_count);
   }
 
   // NOTE: we could slightly optimize this by moving some of these steps out of the main path.
@@ -794,6 +798,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
     group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
                      group.active_seat, group.action_mode);
   }
+  yield_manager_->notify(batch_data->notification_tasks);
   gpu_copy_clocker2.stop();
 
   lock.lock();
@@ -809,6 +814,10 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
 
   std::unique_lock perf_lock(perf_stats_mutex_);
   perf_stats_.update(loop_stats);
+
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("<-- {}::{}() - (seq:{}) complete!", cls, func, batch_data->sequence_id);
+  }
 }
 
 template <core::concepts::Game Game>

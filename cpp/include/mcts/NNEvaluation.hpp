@@ -42,15 +42,16 @@ class NNEvaluation {
   int ref_count() const { return ref_count_; }
   bool pending() const { return !initialized_; }
   void clear();
-  void set_sequence_id(core::nn_evaluation_sequence_id_t id) { sequence_id_ = id; }
-  core::nn_evaluation_sequence_id_t sequence_id() const { return sequence_id_; }
+
+  void set_aux(void* aux) { aux_ = aux; }
+  template <typename T> T* get_aux() { return static_cast<T*>(aux_); }
 
   void load(ValueTensor&, LocalPolicyArray&, LocalActionValueArray&);
 
  protected:
   ValueTensor value_;
   DynamicArray dynamic_array_;
-  core::nn_evaluation_sequence_id_t sequence_id_ = 0;
+  void* aux_ = nullptr;  // set to a NNEvaluationService-specific object
   int ref_count_ = 0;  // access only permitted under NNEvaluationService cache_mutex_!
   bool initialized_ = false;
 };

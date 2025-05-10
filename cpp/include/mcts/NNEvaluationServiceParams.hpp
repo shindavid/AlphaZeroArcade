@@ -21,7 +21,6 @@ struct NNEvaluationServiceParams {
   bool no_model = false;
   std::string cuda_device = "cuda:0";
   int batch_size_limit = 512;
-  int64_t nn_eval_timeout_ns = util::ms_to_ns(1);
   size_t cache_size = 1048576;
 
 #ifdef PROFILE_MCTS

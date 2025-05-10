@@ -108,7 +108,8 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
   const char* buf = payload.dynamic_size_section.buf;
   player->action_response_ = *reinterpret_cast<const ActionResponse*>(buf);
-  player->hibernation_notifier_->notify();
+  const YieldNotificationUnit& unit = player->yield_notification_unit_;
+  unit.yield_manager->notify(unit.slot_context());
 }
 
 template <concepts::Game Game>
@@ -148,13 +149,16 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
     const ActionRequest& request) {
-  if (hibernation_notifier_) {
-    hibernation_notifier_ = nullptr;
+  if (yielding_) {
+    yielding_ = false;
     return action_response_;
   }
   const ActionMask& valid_actions = request.valid_actions;
 
   action_response_.action = -1;
+
+  util::release_assert(request.notification_unit.context_id == 0,
+                       "Unexpected context_id: {}", request.notification_unit.context_id);
 
   Packet<ActionPrompt> packet;
   packet.payload().game_slot_index = game_slot_index_;
@@ -165,8 +169,9 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
   packet.set_dynamic_section_size(sizeof(valid_actions));
   packet.send_to(socket_);
 
-  hibernation_notifier_ = request.hibernation_notifier;
-  return ActionResponse::hibernate();
+  yield_notification_unit_ = request.notification_unit;
+  yielding_ = true;
+  return ActionResponse::yield();
 }
 
 template <concepts::Game Game>

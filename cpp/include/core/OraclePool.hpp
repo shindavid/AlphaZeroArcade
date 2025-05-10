@@ -1,10 +1,9 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/HibernationNotifier.hpp>
+#include <core/YieldManager.hpp>
 
 #include <mutex>
-#include <type_traits>
 
 namespace core {
 
@@ -23,23 +22,23 @@ class OraclePool {
   void set_capacity(size_t capacity);
 
   // If there are fewer than capacity_ busy oracles, then returns a free oracle (creating a new one
-  // if necessary). Otherwise, returns nullptr, and schedules the passed-in notifier to be
-  // notified when an oracle becomes available.
+  // if necessary). Otherwise, returns nullptr, and schedules unit to be notified when an oracle
+  // becomes free.
   //
   // If a new oracle needs to be created, then the constructor of OracleT is called with the
   // passed-in arguments.
   template<typename... Ts>
-  OracleT* get_oracle(core::HibernationNotifier* notifier, Ts&&... constructor_args);
+  OracleT* get_oracle(const YieldNotificationUnit& unit, Ts&&... constructor_args);
 
   void release_oracle(OracleT* oracle);
 
  private:
   using oracle_vec_t = std::vector<OracleT*>;
-  using notifier_vec_t = std::vector<core::HibernationNotifier*>;
+  using notification_unit_vec_t = std::vector<YieldNotificationUnit>;
 
   oracle_vec_t free_oracles_;
   oracle_vec_t all_oracles_;
-  notifier_vec_t pending_notifiers_;
+  notification_unit_vec_t pending_notification_units_;
   mutable std::mutex mutex_;
   size_t capacity_;
 };
