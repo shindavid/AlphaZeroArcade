@@ -1,13 +1,14 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/SocketUtil.hpp>
+
+#include <string>
+#include <vector>
 
 namespace core {
 
@@ -15,6 +16,8 @@ template <concepts::Game Game>
 class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<Game> {
  public:
   using base_t = AbstractPlayerGenerator<Game>;
+
+  RemotePlayerProxyGenerator(GameServerBase*) {}
 
   void initialize(io::Socket* socket, int max_simultaneous_games, player_id_t player_id);
   bool initialized() const { return socket_; }

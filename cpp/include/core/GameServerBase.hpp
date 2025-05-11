@@ -16,8 +16,15 @@ class GameServerBase {
     int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
   };
 
-  GameServerBase() { game_servers_.push_back(this); }
+  GameServerBase(int num_game_threads) : num_game_threads_(num_game_threads) {
+    game_servers_.push_back(this);
+  }
+
   static void add_client(GameServerClient* client);
+
+  int num_game_threads() const {
+    return num_game_threads_;
+  }
 
  protected:
   void force_progress();
@@ -28,6 +35,7 @@ class GameServerBase {
 
   static server_vec_t game_servers_;
   client_vec_t clients_;
+  const int num_game_threads_;
 };
 
 }  // namespace core

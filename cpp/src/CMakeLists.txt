@@ -1,6 +1,5 @@
 add_library(util_lib
         core/GameServerBase.cpp
-        core/Globals.cpp
         core/LoopControllerClient.cpp
         util/BoostUtil.cpp
         util/CudaUtil.cpp

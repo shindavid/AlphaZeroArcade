@@ -1,9 +1,9 @@
 #include <core/AbstractPlayerGenerator.hpp>
 
-#include <cctype>
-
 #include <core/Constants.hpp>
 #include <util/Exception.hpp>
+
+#include <cctype>
 
 namespace core {
 

@@ -1,7 +1,6 @@
 #include <core/GameServer.hpp>
 
 #include <core/BasicTypes.hpp>
-#include <core/Globals.hpp>
 #include <core/Packet.hpp>
 #include <core/PerfStats.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
@@ -67,7 +66,7 @@ GameServer<Game>::SharedData::SharedData(
   const TrainingDataWriterParams& training_data_writer_params)
     : server_(server), params_(params) {
   if (training_data_writer_params.enabled) {
-    training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
+    training_data_writer_ = new TrainingDataWriter(server, training_data_writer_params);
   }
 }
 
@@ -761,7 +760,9 @@ void GameServer<Game>::GameThread::run() {
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
                              const TrainingDataWriterParams& training_data_writer_params)
-    : PerfStatsClient(), GameServerBase(), shared_data_(this, params, training_data_writer_params) {
+    : PerfStatsClient(),
+      GameServerBase(params.num_game_threads),
+      shared_data_(this, params, training_data_writer_params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
@@ -776,7 +777,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
   // fill in missing slots with remote players
   int shortage = kNumPlayers - num_registered_players();
   for (int i = 0; i < shortage; ++i) {
-    RemotePlayerProxyGenerator* gen = new RemotePlayerProxyGenerator();
+    RemotePlayerProxyGenerator* gen = new RemotePlayerProxyGenerator(this);
     shared_data_.register_player(-1, gen, true);
   }
 
@@ -886,12 +887,10 @@ void GameServer<Game>::run() {
 
 template <concepts::Game Game>
 void GameServer<Game>::create_threads() {
-  int num_threads = params().num_game_threads;
-  for (int t = 0; t < num_threads; ++t) {
+  for (int t = 0; t < this->num_game_threads(); ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
   }
-  core::Globals::num_game_threads = num_threads;
 }
 
 template <concepts::Game Game>

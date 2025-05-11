@@ -6,8 +6,7 @@
 
 namespace c4 {
 
-inline core::AbstractPlayer<c4::Game>* HumanTuiPlayerGenerator::generate(
-    core::game_slot_index_t) {
+inline core::AbstractPlayer<c4::Game>* HumanTuiPlayerGenerator::generate(core::game_slot_index_t) {
   return new c4::HumanTuiPlayer(params_.cheat_mode);
 }
 

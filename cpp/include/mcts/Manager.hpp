@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/YieldManager.hpp>
 #include <core/concepts/Game.hpp>
 #include <mcts/ActionSelector.hpp>
@@ -217,12 +218,15 @@ class Manager {
    * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
    * for testing.
    *
-   * Can optionally pass a mutex_pool to be used by the nodes. If not provided, the Manager will
-   * create a separate single-element mutex-pool.
+   * Can optionally pass mutex_pool's to be used for Node's and SearchContext's. If not provided,
+   * the Manager will create a separate single-element mutex-pool for each.
    */
-  Manager(const ManagerParams& params, NNEvaluationServiceBase* service = nullptr);
+  Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
+          NNEvaluationServiceBase* service = nullptr);
+
   Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
-          const ManagerParams& params, NNEvaluationServiceBase* service = nullptr);
+          const ManagerParams& params, core::GameServerBase* server=nullptr,
+          NNEvaluationServiceBase* service = nullptr);
 
   ~Manager();
 
@@ -251,7 +255,7 @@ class Manager {
   using context_id_queue_t = std::queue<core::context_id_t>;
 
   Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
-          const ManagerParams& params, NNEvaluationServiceBase* service);
+          const ManagerParams& params, core::GameServerBase*, NNEvaluationServiceBase* service);
 
   SearchResponse search_helper(const SearchRequest& request);
 

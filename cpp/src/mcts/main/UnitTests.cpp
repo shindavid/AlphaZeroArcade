@@ -1,3 +1,4 @@
+#include <core/GameServerBase.hpp>
 #include <core/tests/Common.hpp>
 #include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
@@ -6,9 +7,9 @@
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
-#include <mcts/SimpleNNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchLog.hpp>
+#include <mcts/SimpleNNEvaluationService.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -120,7 +121,8 @@ class ManagerTest : public testing::Test {
   void SetUp() override { util::Random::set_seed(0); }
 
   void init_manager(Service* service = nullptr) {
-    manager_ = new Manager(manager_params_, service);
+    core::GameServerBase* server = nullptr;
+    manager_ = new Manager(manager_params_, server, service);
     search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }

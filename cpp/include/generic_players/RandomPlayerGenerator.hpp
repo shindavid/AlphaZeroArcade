@@ -1,18 +1,21 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include <generic_players/RandomPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/concepts/Game.hpp>
+#include <generic_players/RandomPlayer.hpp>
+
+#include <string>
+#include <vector>
 
 namespace generic {
 
 template <core::concepts::Game Game>
 class RandomPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
  public:
+  RandomPlayerGenerator(core::GameServerBase*) {}
+
   std::string get_default_name() const override { return "Random"; }
   std::vector<std::string> get_types() const override { return {"Random"}; }
   std::string get_description() const override { return "Random player"; }

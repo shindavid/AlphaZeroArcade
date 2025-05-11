@@ -1,13 +1,13 @@
 #pragma once
 
-#include <ostream>
-#include <string>
-#include <vector>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
+
+#include <ostream>
+#include <string>
+#include <vector>
 
 namespace core {
 

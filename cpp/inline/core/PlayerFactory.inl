@@ -1,7 +1,6 @@
 #include <core/PlayerFactory.hpp>
 
-#include <algorithm>
-
+#include <util/Asserts.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/StringUtil.hpp>
@@ -35,7 +34,7 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
   // validate that the generator types don't overlap
   std::set<std::string> types;
   for (auto* subfactory : subfactories_) {
-    auto* generator = subfactory->create();
+    auto* generator = subfactory->create(nullptr);
     for (const auto& type : generator->get_types()) {
       if (types.count(type)) {
         throw util::Exception("PlayerFactory: duplicate type: {}", type);
@@ -49,6 +48,8 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
 template <concepts::Game Game>
 typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::parse(
     const std::vector<std::string>& player_strs) {
+  util::release_assert(server_ != nullptr,
+                       "PlayerFactory::parse() called without a server");
   player_generator_seat_vec_t vec;
 
   for (const auto& player_str : player_strs) {
@@ -91,7 +92,7 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
 
   player_generator_vec_t generators;
   for (auto* subfactory : subfactories_) {
-    generators.push_back(subfactory->create());
+    generators.push_back(subfactory->create(nullptr));
   }
   for (auto* generator : generators) {
     std::cout << "  " << type_str(generator) << ": " << generator->get_description() << std::endl;
@@ -186,17 +187,22 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
     util::clean_assert(!name_map_.count(name), "Duplicate --name \"{}\"", name);
     name_map_[name] = orig_tokens;
   }
+  PlayerGenerator* matched_generator = nullptr;
   for (auto* subfactory : subfactories_) {
-    auto* generator = subfactory->create();
+    auto* generator = subfactory->create(server_);
     if (matches(generator, type)) {
-      generator->set_name(name);
-      generator->parse_args(tokens);
-      return generator;
+      util::clean_assert(matched_generator == nullptr, "Type {}: multiple matches", type);
+      matched_generator = generator;
+      continue;
     }
     delete generator;
   }
 
-  throw util::CleanException("Unknown type in --player \"{}\"", player_str);
+  util::clean_assert(matched_generator != nullptr, "Unknown type in --player \"{}\"", player_str);
+
+  matched_generator->set_name(name);
+  matched_generator->parse_args(tokens);
+  return matched_generator;
 }
 
 }  // namespace core

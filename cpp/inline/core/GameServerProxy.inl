@@ -1,7 +1,6 @@
 #include <core/GameServerProxy.hpp>
 
 #include <core/Constants.hpp>
-#include <core/Globals.hpp>
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
 #include <util/KeyValueDumper.hpp>
@@ -175,7 +174,7 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
 template <concepts::Game Game>
 GameServerProxy<Game>::SharedData::SharedData(GameServerProxy* server, const Params& params,
                                               int num_game_threads)
-    : server_(server), params_(params), num_game_threads_(num_game_threads) {
+    : server_(server), params_(params) {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   LOG_INFO("Connected to the server!");
@@ -273,8 +272,6 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
   for (int i = 0; i < num_game_slots; ++i) {
     game_slots_.push_back(new GameSlot(*this, i));
   }
-  num_game_threads_ = std::min(num_game_threads_, num_game_slots);
-  core::Globals::num_game_threads = num_game_threads_;
 
   Packet<GameThreadInitializationResponse> send_packet;
   send_packet.send_to(socket_);
@@ -431,12 +428,10 @@ void GameServerProxy<Game>::run() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::create_threads() {
-  int num_threads = std::min(shared_data_.num_slots(), shared_data_.num_game_threads());
-  for (int t = 0; t < num_threads; ++t) {
+  for (int t = 0; t < this->num_game_threads(); ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
   }
-  core::Globals::num_game_threads = num_threads;
 }
 
 template <concepts::Game Game>

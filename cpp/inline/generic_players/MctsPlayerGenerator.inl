@@ -4,14 +4,11 @@
 #include <mcts/Constants.hpp>
 
 #include <format>
+#include "core/GameServerBase.hpp"
 
 namespace generic {
 
 // MctsPlayerGeneratorBase
-
-template <core::concepts::Game Game>
-typename MctsPlayerGeneratorBase<Game>::shared_data_map_t
-    MctsPlayerGeneratorBase<Game>::shared_data_cache_;
 
 template <core::concepts::Game Game>
 core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
@@ -41,7 +38,7 @@ template <core::concepts::Game Game>
 typename MctsPlayerGeneratorBase<Game>::SharedData_sptr
 MctsPlayerGeneratorBase<Game>::generate_shared_data() {
   if (manager_params_.num_search_threads == 1) {
-    return std::make_shared<SharedData>(manager_params_);
+    return std::make_shared<SharedData>(manager_params_, server_);
   } else {
     if (!common_node_mutex_pool_.get()) {
       common_node_mutex_pool_ = std::make_shared<mcts::mutex_vec_t>(kDefaultMutexPoolSize);
@@ -50,7 +47,7 @@ MctsPlayerGeneratorBase<Game>::generate_shared_data() {
       common_context_mutex_pool_ = std::make_shared<mcts::mutex_vec_t>(kDefaultMutexPoolSize);
     }
     return std::make_shared<SharedData>(common_node_mutex_pool_, common_context_mutex_pool_,
-                                        manager_params_);
+                                        manager_params_, server_);
   }
 }
 
@@ -58,8 +55,10 @@ MctsPlayerGeneratorBase<Game>::generate_shared_data() {
 // CompetitiveMctsPlayerGenerator
 
 template <core::concepts::Game Game>
-CompetitiveMctsPlayerGenerator<Game>::CompetitiveMctsPlayerGenerator()
-    : base_t(mcts::kCompetitive), mcts_player_params_(mcts::kCompetitive) {}
+CompetitiveMctsPlayerGenerator<Game>::CompetitiveMctsPlayerGenerator(
+  core::GameServerBase* server, shared_data_map_t& shared_data_cache)
+    : base_t(server, shared_data_cache, mcts::kCompetitive),
+      mcts_player_params_(mcts::kCompetitive) {}
 
 template <core::concepts::Game Game>
 std::string CompetitiveMctsPlayerGenerator<Game>::get_default_name() const {
@@ -82,8 +81,9 @@ void CompetitiveMctsPlayerGenerator<Game>::parse_args(
 // TrainingMctsPlayerGenerator
 
 template <core::concepts::Game Game>
-TrainingMctsPlayerGenerator<Game>::TrainingMctsPlayerGenerator()
-    : base_t(mcts::kTraining), mcts_player_params_(mcts::kTraining) {}
+TrainingMctsPlayerGenerator<Game>::TrainingMctsPlayerGenerator(core::GameServerBase* server,
+                                                               shared_data_map_t& shared_data_cache)
+    : base_t(server, shared_data_cache, mcts::kTraining), mcts_player_params_(mcts::kTraining) {}
 
 template <core::concepts::Game Game>
 std::string TrainingMctsPlayerGenerator<Game>::get_default_name() const {

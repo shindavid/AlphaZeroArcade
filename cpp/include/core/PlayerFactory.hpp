@@ -1,16 +1,16 @@
 #pragma once
 
-#include <map>
-#include <string>
-#include <utility>
-
-#include <boost/program_options.hpp>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <boost/program_options.hpp>
+
+#include <map>
+#include <string>
 
 namespace core {
 
@@ -18,7 +18,7 @@ template <concepts::Game Game>
 class PlayerSubfactoryBase {
  public:
   virtual ~PlayerSubfactoryBase() = default;
-  virtual AbstractPlayerGenerator<Game>* create() const = 0;
+  virtual AbstractPlayerGenerator<Game>* create(GameServerBase*) = 0;
 };
 
 /*
@@ -31,7 +31,7 @@ class PlayerSubfactoryBase {
 template <typename GeneratorT>
 class PlayerSubfactory : public PlayerSubfactoryBase<typename GeneratorT::Game> {
  public:
-  GeneratorT* create() const override { return new GeneratorT(); }
+  GeneratorT* create(GameServerBase* server) override { return new GeneratorT(server); }
 };
 
 /*
@@ -75,6 +75,7 @@ class PlayerFactory {
    */
   PlayerFactory(const player_subfactory_vec_t& subfactories);
 
+  void set_server(GameServerBase* server) { server_ = server; }
   player_generator_seat_vec_t parse(const std::vector<std::string>& player_strs);
   void print_help(const std::vector<std::string>& player_strs);
 
@@ -86,6 +87,7 @@ class PlayerFactory {
 
   player_subfactory_vec_t subfactories_;
   std::map<std::string, std::vector<std::string>> name_map_;
+  GameServerBase* server_ = nullptr;
 };
 
 }  // namespace core

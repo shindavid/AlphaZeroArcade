@@ -3,8 +3,6 @@
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
 
-#include <unistd.h>
-
 namespace core {
 
 template <concepts::Game Game>

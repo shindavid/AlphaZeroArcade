@@ -10,6 +10,9 @@ namespace stochastic_nim {
 
 class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<stochastic_nim::Game> {
  public:
+  using base_t = generic::HumanTuiPlayerGenerator<stochastic_nim::Game>;
+  using base_t::base_t;
+
   core::AbstractPlayer<stochastic_nim::Game>* generate(core::game_slot_index_t) override {
     return new stochastic_nim::HumanTuiPlayer();
   }

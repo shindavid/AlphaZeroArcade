@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/GameServerClient.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
@@ -93,7 +94,7 @@ class NNEvaluationService
    * If another service with the same model_filename has already been create()'d, then returns that.
    * In this case, validates that the parameters match the existing service.
    */
-  static NNEvaluationService* create(const NNEvaluationServiceParams& params);
+  static NNEvaluationService* create(const NNEvaluationServiceParams&, core::GameServerBase*);
 
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -269,7 +270,7 @@ class NNEvaluationService
   };
   static_assert(sizeof(SortItem) == 4);
 
-  NNEvaluationService(const NNEvaluationServiceParams& params);
+  NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*);
   ~NNEvaluationService();
 
   std::string dump_key(const char* descr);
@@ -310,6 +311,7 @@ class NNEvaluationService
 
   const int instance_id_;
   const NNEvaluationServiceParams params_;
+  const int num_game_threads_ = 0;
 
   std::thread* thread_ = nullptr;
 

@@ -1,6 +1,7 @@
-#include <core/concepts/Game.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/GameTypes.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/tests/Common.hpp>
 #include <games/GameTransforms.hpp>
 #include <games/tictactoe/Game.hpp>
@@ -54,7 +55,9 @@ class MctsPlayerTest : public ::testing::Test {
   }
 
   void init(Service* service) {
-    auto shared_player_data = std::make_shared<MctsPlayerSharedData>(manager_params_, service);
+    core::GameServerBase* server = nullptr;
+    auto shared_player_data =
+      std::make_shared<MctsPlayerSharedData>(manager_params_, server, service);
     auto manager = &shared_player_data->manager;
     search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
     manager->set_post_visit_func([&] { search_log_->update(); });

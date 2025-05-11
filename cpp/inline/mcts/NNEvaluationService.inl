@@ -1,6 +1,5 @@
 #include <mcts/NNEvaluationService.hpp>
 
-#include <core/Globals.hpp>
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
 
@@ -20,10 +19,10 @@ int NNEvaluationService<Game>::instance_count_ = 0;
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>* NNEvaluationService<Game>::create(
-    const NNEvaluationServiceParams& params) {
+    const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   auto it = instance_map_.find(params.model_filename);
   if (it == instance_map_.end()) {
-    auto instance = new NNEvaluationService(params);
+    auto instance = new NNEvaluationService(params, server);
 
     instance_map_[params.model_filename] = instance;
     return instance;
@@ -80,11 +79,13 @@ void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eva
 }
 
 template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params)
+inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
+                                                      core::GameServerBase* server)
     : core::PerfStatsClient(),
       core::GameServerClient(),
       instance_id_(instance_count_++),
       params_(params),
+      num_game_threads_(server->num_game_threads()),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
@@ -332,7 +333,7 @@ void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
 
   core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
-  stats.calibrate(core::Globals::num_game_threads);
+  stats.calibrate(this->num_game_threads_);
 
   int64_t cache_hits = stats.search_thread_stats.cache_hits;
   int64_t cache_misses = stats.search_thread_stats.cache_misses;

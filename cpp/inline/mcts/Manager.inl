@@ -19,7 +19,7 @@ int Manager<Game>::next_instance_id_ = 0;
 template <core::concepts::Game Game>
 Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
                        mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-                       NNEvaluationServiceBase* service)
+                       core::GameServerBase* server, NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
@@ -36,7 +36,7 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
   if (service) {
     nn_eval_service_ = service;
   } else if (!params.no_model) {
-    nn_eval_service_ = NNEvaluationService::create(params);
+    nn_eval_service_ = NNEvaluationService::create(params, server);
   } else if (params.model_filename.empty()) {
     nn_eval_service_ = new UniformNNEvaluationService<Game>();
   } else {
@@ -53,14 +53,16 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
 }
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
+Manager<Game>::Manager(const ManagerParams& params, core::GameServerBase* server,
+                       NNEvaluationServiceBase* service)
     : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
-              service) {}
+              server, service) {}
 
 template <core::concepts::Game Game>
 Manager<Game>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
-                       const ManagerParams& params, NNEvaluationServiceBase* service)
-    : Manager(true, node_mutex_pool, context_mutex_pool, params, service) {}
+                       const ManagerParams& params, core::GameServerBase* server,
+                       NNEvaluationServiceBase* service)
+    : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {

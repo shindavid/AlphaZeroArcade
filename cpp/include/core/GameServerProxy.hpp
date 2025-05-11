@@ -118,7 +118,6 @@ class GameServerProxy : public core::GameServerBase {
     void run_yield_manager();
     YieldManager* yield_manager() { return &yield_manager_; }
     int num_slots() const { return game_slots_.size(); }
-    int num_game_threads() const { return num_game_threads_; }
     bool running() const { return running_; }
 
     // If the server is paused or shutting down, returns false. Else, returns true, and sets:
@@ -140,7 +139,6 @@ class GameServerProxy : public core::GameServerBase {
     player_generator_array_t players_ = {};  // indexed by player_id_t
     GameServerProxy* const server_;
     const Params params_;
-    int num_game_threads_;
     io::Socket* socket_ = nullptr;
 
     std::condition_variable cv_;
@@ -172,7 +170,7 @@ class GameServerProxy : public core::GameServerBase {
   };
 
   GameServerProxy(const Params& params, int num_game_threads)
-      : GameServerBase(), shared_data_(this, params, num_game_threads) {}
+      : GameServerBase(num_game_threads), shared_data_(this, params, num_game_threads) {}
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the

@@ -1,17 +1,16 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include <boost/program_options.hpp>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
+#include <games/connect4/Game.hpp>
+#include <games/connect4/players/HumanTuiPlayer.hpp>
 #include <generic_players/HumanTuiPlayerGenerator.hpp>
 #include <util/BoostUtil.hpp>
 
-#include <games/connect4/Game.hpp>
-#include <games/connect4/players/HumanTuiPlayer.hpp>
+#include <boost/program_options.hpp>
+
+#include <string>
+#include <vector>
 
 namespace c4 {
 
@@ -29,6 +28,9 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
           po::bool_switch(&cheat_mode)->default_value(false), "show winning moves");
     }
   };
+
+  using base_t = generic::HumanTuiPlayerGenerator<c4::Game>;
+  using base_t::base_t;
 
   core::AbstractPlayer<c4::Game>* generate(core::game_slot_index_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }

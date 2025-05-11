@@ -3,7 +3,6 @@
 #include <format>
 #include <string>
 
-#include <core/Globals.hpp>
 #include <core/PerfStats.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -32,7 +31,7 @@ auto TrainingDataWriter<Game>::Params::make_options_description() {
 }
 
 template <concepts::Game Game>
-TrainingDataWriter<Game>::TrainingDataWriter(const Params& params) {
+TrainingDataWriter<Game>::TrainingDataWriter(GameServerBase* server, const Params& params) {
   misc_data_.params = params;
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
@@ -51,6 +50,7 @@ TrainingDataWriter<Game>::TrainingDataWriter(const Params& params) {
   misc_data_.heartbeat_interval =
       std::chrono::milliseconds(int64_t(1e3 * params.heartbeat_frequency_seconds));
   misc_data_.thread = new std::thread([&] { loop(); });
+  misc_data_.num_game_threads = server->num_game_threads();
 }
 
 template <concepts::Game Game>
@@ -236,7 +236,7 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   msg["n_rows"] = row_count;
   if (client->report_metrics()) {
     PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
-    stats.calibrate(core::Globals::num_game_threads);
+    stats.calibrate(misc_data_.num_game_threads);
     msg["metrics"] = stats.to_json();
   }
 

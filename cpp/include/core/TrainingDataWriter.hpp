@@ -1,9 +1,10 @@
 #pragma once
 
 #include <core/GameLog.hpp>
-#include <core/concepts/Game.hpp>
+#include <core/GameServerBase.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 
@@ -94,7 +95,7 @@ class TrainingDataWriter
   using GameWriteLog = core::GameWriteLog<Game>;
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
-  TrainingDataWriter(const Params& params);
+  TrainingDataWriter(GameServerBase*, const Params& params);
   ~TrainingDataWriter();
 
   void add(GameWriteLog_sptr log);
@@ -157,6 +158,7 @@ class TrainingDataWriter
     bool closed = false;
     bool direct_game_log_write_optimization_enabled = false;
     int last_created_dir_generation = -1;  // for direct-game-log-write optimization
+    int num_game_threads;
   };
 
   MiscData misc_data_;
