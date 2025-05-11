@@ -127,7 +127,7 @@ class GameServer
     bool display_progress_bar = false;
     bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
-    bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
+    bool respect_victory_hints = true;  // quit game early if a player claims imminent victory
   };
 
  protected:
