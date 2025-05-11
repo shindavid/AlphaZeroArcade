@@ -64,7 +64,7 @@ template <concepts::Game Game>
 GameServer<Game>::SharedData::SharedData(
   GameServer* server, const Params& params,
   const TrainingDataWriterParams& training_data_writer_params)
-    : server_(server), params_(params) {
+    : server_(server), params_(params), yield_manager_(cv_, mutex_, queue_, pending_queue_count_) {
   if (training_data_writer_params.enabled) {
     training_data_writer_ = new TrainingDataWriter(server, training_data_writer_params);
   }
@@ -72,8 +72,6 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
-  yield_manager_.shut_down();
-
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
@@ -139,22 +137,6 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
   util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
-}
-
-template <concepts::Game Game>
-void GameServer<Game>::SharedData::run_yield_manager() {
-  yield_manager_.run([this](const slot_context_vec_t& slot_contexts) {
-    std::unique_lock lock(mutex_);
-
-    for (SlotContext item : slot_contexts) {
-      LOG_DEBUG("<-- GameServer::{}(): enqueueing item={}:{}", __func__, item.slot, item.context);
-      queue_.push(item);
-    }
-    pending_queue_count_ -= slot_contexts.size();
-    lock.unlock();
-
-    cv_.notify_all();
-  });
 }
 
 template <concepts::Game Game>
@@ -845,7 +827,6 @@ void GameServer<Game>::run() {
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   shared_data_.init_slots();
-  shared_data_.run_yield_manager();
   create_threads();
   shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());

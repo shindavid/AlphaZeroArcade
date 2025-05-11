@@ -203,7 +203,6 @@ class GameServer
     void start_games();
     void init_progress_bar();
     void init_random_seat_indices();
-    void run_yield_manager();
 
     int num_slots() const { return game_slots_.size(); }
 

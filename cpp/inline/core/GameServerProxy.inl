@@ -174,7 +174,9 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
 template <concepts::Game Game>
 GameServerProxy<Game>::SharedData::SharedData(GameServerProxy* server, const Params& params,
                                               int num_game_threads)
-    : server_(server), params_(params) {
+    : server_(server),
+      params_(params),
+      yield_manager_(cv_, mutex_, queue_, dummy_pending_queue_count_) {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   LOG_INFO("Connected to the server!");
@@ -275,22 +277,6 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 
   Packet<GameThreadInitializationResponse> send_packet;
   send_packet.send_to(socket_);
-}
-
-template <concepts::Game Game>
-void GameServerProxy<Game>::SharedData::run_yield_manager() {
-  yield_manager_.run([this](const slot_context_vec_t& slot_contexts) {
-    std::unique_lock lock(mutex_);
-
-    for (SlotContext item : slot_contexts) {
-      LOG_DEBUG("<-- GameServerProxy::{}(): enqueueing item={}:{}", __func__, item.slot,
-                item.context);
-      queue_.push(item);
-    }
-    lock.unlock();
-
-    cv_.notify_all();
-  });
 }
 
 template <concepts::Game Game>
@@ -416,7 +402,6 @@ void GameServerProxy<Game>::run() {
   shared_data_.init_socket();
   shared_data_.init_game_slots();
   shared_data_.start_session();
-  shared_data_.run_yield_manager();
   create_threads();
   launch_threads();
   run_event_loop();

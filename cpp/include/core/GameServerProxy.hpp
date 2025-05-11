@@ -115,7 +115,6 @@ class GameServerProxy : public core::GameServerBase {
     void end_session();
     void shutdown();
     void init_game_slots();
-    void run_yield_manager();
     YieldManager* yield_manager() { return &yield_manager_; }
     int num_slots() const { return game_slots_.size(); }
     bool running() const { return running_; }
@@ -149,6 +148,7 @@ class GameServerProxy : public core::GameServerBase {
     // details.
     std::vector<GameSlot*> game_slots_;
     std::queue<SlotContext> queue_;
+    int dummy_pending_queue_count_ = 0;  // only needed to pass to YieldManager constructor
 
     YieldManager yield_manager_;
   };
