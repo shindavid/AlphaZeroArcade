@@ -19,6 +19,7 @@ class OraclePool {
   OraclePool(size_t capacity = 16) { set_capacity(capacity); }
   ~OraclePool();
 
+  size_t capacity() const { return capacity_; }
   void set_capacity(size_t capacity);
 
   // If there are fewer than capacity_ busy oracles, then returns a free oracle (creating a new one
