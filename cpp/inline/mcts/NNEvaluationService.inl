@@ -256,6 +256,9 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data
   if (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop();
+    if (pending_batch_datas_.empty()) {
+      add_batch_data();
+    }
     return batch_data;
   }
   return nullptr;
