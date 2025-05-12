@@ -176,7 +176,9 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::BatchDataSliceAllocator(
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
-  for (BatchData* batch_data : pending_batch_datas_) {
+  while (!pending_batch_datas_.empty()) {
+    BatchData* batch_data = pending_batch_datas_.front();
+    pending_batch_datas_.pop();
     delete batch_data;
   }
 
@@ -215,8 +217,6 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
   LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
-  util::debug_assert(!pending_batch_datas_.empty() && batch_data == pending_batch_datas_.front());
-  pending_batch_datas_.erase(pending_batch_datas_.begin());
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
@@ -243,21 +243,20 @@ bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
 
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::get_frozen_pending_batch_data() const {
+NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
   if (!pending_batch_datas_.empty()) {
-    BatchData* batch_data = pending_batch_datas_.front();
-    if (batch_data->frozen()) {
-      return batch_data;
-    }
+    return pending_batch_datas_.front();
   }
   return nullptr;
 }
 
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
   if (!pending_batch_datas_.empty()) {
-    return pending_batch_datas_.front();
+    BatchData* batch_data = pending_batch_datas_.front();
+    pending_batch_datas_.pop();
+    return batch_data;
   }
   return nullptr;
 }
@@ -275,7 +274,7 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
     batch_data_reserve_.pop_back();
   }
   batch_data->sequence_id = next_batch_data_sequence_id_++;
-  pending_batch_datas_.push_back(batch_data);
+  pending_batch_datas_.push(batch_data);
   return batch_data;
 }
 
@@ -658,8 +657,8 @@ void NNEvaluationService<Game>::loop() {
 
     load_initial_weights_if_necessary();
     wait_for_unpause();
-    wait_until_batch_ready(loop_stats);
-    batch_evaluate(loop_stats);
+    BatchData* batch_data = get_next_batch_data(loop_stats);
+    batch_evaluate(batch_data, loop_stats);
   }
 }
 
@@ -709,7 +708,8 @@ void NNEvaluationService<Game>::wait_for_unpause() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats& loop_stats) {
+typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_next_batch_data(
+  core::NNEvalLoopPerfStats& loop_stats) {
   std::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(loop_stats.wait_for_search_threads_time_ns);
 
@@ -721,38 +721,35 @@ void NNEvaluationService<Game>::wait_until_batch_ready(core::NNEvalLoopPerfStats
 
   auto predicate = [&] {
     if (!active() || paused_) return true;
-    BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
+    BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (batch_data) {
-      if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<-- {}::{}() (count:{})", cls, func, batch_data->allocate_count);
+      if (batch_data->frozen()) {
+        if (mcts::kEnableServiceDebug) {
+          LOG_INFO("<-- {}::{}() (count:{})", cls, func, batch_data->allocate_count);
+        }
+        return true;
       }
-      return true;
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", cls, func,
+                 batch_data->sequence_id, batch_data->accepting_allocations,
+                 batch_data->allocate_count, batch_data->write_count);
+      }
     }
     if (mcts::kEnableServiceDebug) {
-      BatchData* first_batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
-      if (first_batch_data) {
-        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", cls, func,
-                 first_batch_data->sequence_id, first_batch_data->accepting_allocations,
-                 first_batch_data->allocate_count, first_batch_data->write_count);
-      } else {
-        LOG_INFO("<-- {}::{}() still waiting (no batch data)", cls, func);
-      }
+      LOG_INFO("<-- {}::{}() still waiting (no batch data)", cls, func);
     }
     return false;
   };
 
   cv_main_.wait(lock, predicate);
+  if (!active() || paused_) return nullptr;
+  return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_stats) {
-  if (!active() || paused_) return;
-
-  std::unique_lock lock(main_mutex_);
-  BatchData* batch_data = batch_data_slice_allocator_.get_frozen_pending_batch_data();
+void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
+                                               core::NNEvalLoopPerfStats& loop_stats) {
   if (!batch_data) return;
-  lock.unlock();
-
   util::release_assert(batch_data->frozen());
 
   const char* cls = "NNEvaluationService";
@@ -802,7 +799,7 @@ void NNEvaluationService<Game>::batch_evaluate(core::NNEvalLoopPerfStats& loop_s
   yield_manager_->notify(batch_data->notification_tasks);
   gpu_copy_clocker2.stop();
 
-  lock.lock();
+  std::unique_lock lock(main_mutex_);
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);

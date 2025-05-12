@@ -25,6 +25,7 @@
 #include <condition_variable>
 #include <map>
 #include <mutex>
+#include <queue>
 #include <vector>
 
 namespace mcts {
@@ -162,6 +163,7 @@ class NNEvaluationService
     bool accepting_allocations = true;
   };
   using batch_data_vec_t = std::vector<BatchData*>;
+  using batch_data_queue_t = std::queue<BatchData*>;
 
   struct BatchDataSlice {
     BatchData* batch_data;
@@ -207,10 +209,8 @@ class NNEvaluationService
     // Freezes the first BatchData in the pending list.
     bool freeze_first();
 
-    // If the first BatchData in the pending list is frozen, returns it. Else, returns nullptr.
-    BatchData* get_frozen_pending_batch_data() const;
-
     BatchData* get_first_pending_batch_data() const;
+    BatchData* pop_first_pending_batch_data();
 
     int pending_batch_datas_size() const { return pending_batch_datas_.size(); }
 
@@ -220,7 +220,7 @@ class NNEvaluationService
     const int batch_size_limit_;
     core::PerfStats& perf_stats_;
 
-    batch_data_vec_t pending_batch_datas_;
+    batch_data_queue_t pending_batch_datas_;
     batch_data_vec_t batch_data_reserve_;
     core::nn_evaluation_sequence_id_t next_batch_data_sequence_id_ = 1;
   };
@@ -298,8 +298,8 @@ class NNEvaluationService
   void loop();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
-  void wait_until_batch_ready(core::NNEvalLoopPerfStats&);
-  void batch_evaluate(core::NNEvalLoopPerfStats&);
+  BatchData* get_next_batch_data(core::NNEvalLoopPerfStats&);
+  void batch_evaluate(BatchData* batch_data, core::NNEvalLoopPerfStats&);
 
   void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
   void pause() override;
