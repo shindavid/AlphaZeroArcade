@@ -8,21 +8,39 @@ class DefaultTargetEloGap:
     first_run: float = 500.0
     benchmark: float = 100.0
 
+    def __post_init__(self):
+        assert self.first_run > 0, "ELO gap must be positive"
+        assert self.benchmark > 0, "ELO gap must be positive"
+        assert self.first_run >= self.benchmark, "First run ELO gap must be >= benchmark ELO gap"
+
 
 @dataclass
 class RatingPlayerOptions:
     num_search_threads: int = 4
     num_iterations: int = 100
 
+    def __post_init__(self):
+        assert self.num_search_threads > 0, "Must have >0 search threads"
+        assert self.num_iterations > 0, "Must have >0 iterations"
+
 
 @dataclass
 class RatingParams:
+    """
+    Holds parameters for rating processes such as benchmarking and evaluation.
+    """
     rating_player_options: RatingPlayerOptions = field(default_factory=RatingPlayerOptions)
     default_target_elo_gap: DefaultTargetEloGap = field(default_factory=DefaultTargetEloGap)
-    target_elo_gap: float = DefaultTargetEloGap().first_run
+    target_elo_gap: Optional[float] = None
     eval_error_threshold: float = 50.0
     n_games_per_benchmark: int = 100
     n_games_per_evaluation: int = 1000
+
+    def __post_init__(self):
+        assert self.n_games_per_benchmark > 0, "Must have >0 games per benchmark"
+        assert self.n_games_per_evaluation > 0, "Must have >0 games per evaluation"
+        if self.target_elo_gap is not None:
+            assert self.target_elo_gap > 0, "ELO gap must be positive"
 
     @staticmethod
     def create(args) -> 'RatingParams':
