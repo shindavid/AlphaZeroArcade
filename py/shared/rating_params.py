@@ -40,8 +40,11 @@ class RatingParams:
         )
 
     @staticmethod
-    def add_args(parser: argparse.ArgumentParser, defaults: 'RatingParams'):
+    def add_args(parser: argparse.ArgumentParser, defaults: Optional['RatingParams']=None):
+        if defaults is None:
+            defaults = RatingParams()
         group = parser.add_argument_group('Rating options')
+
         group.add_argument('-n', '--num-search-threads', type=int, default=defaults.rating_player_options.num_search_threads,
                            help='number of search threads for the rating player (default: %(default)s)')
         group.add_argument('-i', '--num-iterations', type=int, default=defaults.rating_player_options.num_iterations,
