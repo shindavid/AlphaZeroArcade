@@ -89,7 +89,6 @@ default_build_params = BuildParams()
 default_loop_controller_params = LoopControllerParams()
 default_self_play_server_params = SelfPlayServerParams()
 default_ratings_server_params = RatingsServerParams()
-default_rating_params = RatingParams()
 
 
 @dataclass
@@ -197,11 +196,13 @@ def launch_ratings_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_benchmark_server(params_dict, cuda_device: int):
-    params = params_dict['Params']
+def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
+    params:Params = params_dict['Params']
     docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
+    rating_params: RatingParams = params_dict['RatingParams']
+    default_rating_params = game_spec.rating_params
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -212,7 +213,8 @@ def launch_benchmark_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-
+    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
+        cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
@@ -222,11 +224,13 @@ def launch_benchmark_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_eval_server(params_dict, cuda_device: int):
-    params = params_dict['Params']
+def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
+    params: Params = params_dict['Params']
     docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
+    rating_params: RatingParams = params_dict['RatingParams']
+    default_rating_params = game_spec.rating_params
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -237,6 +241,8 @@ def launch_eval_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
+    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
+        cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -247,7 +253,7 @@ def launch_eval_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str]):
+def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str], game_spec: GameSpec):
     params: Params = params_dict['Params']
     run_params = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
@@ -257,6 +263,7 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
     rating_params: RatingParams = params_dict['RatingParams']
+    default_rating_params = game_spec.rating_params
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
@@ -269,8 +276,12 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
-    if default_rating_params.target_elo_gap != rating_params.target_elo_gap:
+
+    if rating_params.target_elo_gap:
         cmd.extend(['--target-elo-gap', str(rating_params.target_elo_gap)])
+    else:
+        cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.first_run)])
+
     if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
         cmd.extend(['--num-iterations', str(rating_params.rating_player_options.num_iterations)])
     if params.task_mode:
@@ -312,11 +323,9 @@ def load_benchmark_info(game: str):
     return benchmark_info.get("benchmark_tag")
 
 
-def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]) -> Optional[str]:
+def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]=None) -> Optional[str]:
     if benchmark_tag is None:
         benchmark_tag = load_benchmark_info(run_params.game)
-    if benchmark_tag is not None:
-        logger.info(f"Using benchmark tag: {benchmark_tag}")
     return benchmark_tag
 
 
@@ -377,20 +386,20 @@ def main():
         organizer.assert_unlocked()
 
         descs.append('Loop-controller')
-        procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag))
+        procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
 
             for self_play_gpu in self_play_gpus:
                 descs.append('Self-play')
-                procs.append( launch_self_play_server(params_dict, self_play_gpu))
+                procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
         if params.run_benchmark_server or benchmark_tag is None:
             descs.append('Benchmark')
-            procs.append(launch_benchmark_server(params_dict, ratings_gpu))
+            procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
         else:
             descs.append('Eval')
-            procs.append(launch_eval_server(params_dict, ratings_gpu))
+            procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')

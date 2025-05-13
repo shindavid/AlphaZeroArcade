@@ -47,16 +47,16 @@ class RatingParams:
             defaults = RatingParams()
         group = parser.add_argument_group('Rating options')
 
-        group.add_argument('-n', '--num-search-threads', type=int, default=defaults.rating_player_options.num_search_threads,
+        group.add_argument('--num-search-threads', type=int, default=defaults.rating_player_options.num_search_threads,
                            help='number of search threads for the rating player (default: %(default)s)')
-        group.add_argument('-i', '--num-iterations', type=int, default=defaults.rating_player_options.num_iterations,
+        group.add_argument('--num-iterations', type=int, default=defaults.rating_player_options.num_iterations,
                            help='number of MCTS iterations for the rating player (default: %(default)s)')
         group.add_argument('--first-run-target-elo-gap', type=float, default=defaults.default_target_elo_gap.first_run,
                            help='target elo gap for first run (default: %(default).1f)')
         group.add_argument('--benchmark-target-elo-gap', type=float, default=defaults.default_target_elo_gap.benchmark,
                            help='target elo gap for benchmark (default: %(default).1f)')
-        group.add_argument('--target-elo-gap', type=float, default=defaults.target_elo_gap,
-                           help='target elo gap for rating (default: %(default).1f)')
+        group.add_argument('--target-elo-gap', type=float, default=None,
+                           help='target elo gap for rating (default: None)')
         group.add_argument('--eval-error-threshold', type=float, default=defaults.eval_error_threshold,
                            help='error threshold for Elo estimation (default: %(default).1f)')
         group.add_argument('--n-games-per-benchmark', type=int, default=defaults.n_games_per_benchmark,

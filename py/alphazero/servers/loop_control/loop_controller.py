@@ -387,6 +387,8 @@ class LoopController:
                 if msg_handler(conn, msg):
                     break
         except SocketRecvException:
+            if self._shutdown_manager.shutdown_requested():
+                pass
             logger.warning(
                 'Encountered SocketRecvException in %s (conn=%s):', thread_name, conn)
         except SocketSendException:

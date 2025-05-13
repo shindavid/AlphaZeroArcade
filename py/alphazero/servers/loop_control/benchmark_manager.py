@@ -361,6 +361,8 @@ class BenchmarkManager(GamingManagerBase):
 
     @property
     def target_elo_gap(self):
+        if self._controller.rating_params.target_elo_gap is None:
+            return self._controller.rating_params.default_target_elo_gap.first_run
         return self._controller.rating_params.target_elo_gap
 
     @property
