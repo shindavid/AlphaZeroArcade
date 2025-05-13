@@ -86,11 +86,9 @@ RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy ma
     google-api-python-client torch torchvision torchaudio \
     notebook sortedcontainers runpod
 
-################################################################################################
-# FOR FASTER DOCKER IMAGE REBUILDS: put new dependencies below this line. This avoids          #
-# re-installing all the above when rebuilding the image. We can periodically move these back   #
-# up for cleanliness.                                                                          #
-################################################################################################
+#####################
+# Misc dependencies #
+#####################
 
 # Install spdlog (compiled version)
 RUN git clone --branch v1.15.2 --depth 1 https://github.com/gabime/spdlog.git && \
@@ -100,10 +98,69 @@ RUN git clone --branch v1.15.2 --depth 1 https://github.com/gabime/spdlog.git &&
     cmake --build . --target install && \
     cd ../.. && rm -rf spdlog
 
+################################################################################################
+# FOR FASTER DOCKER IMAGE REBUILDS: put new dependencies below this line. This avoids          #
+# re-installing all the above when rebuilding the image. We can periodically move these back   #
+# up for cleanliness.                                                                          #
+################################################################################################
+
+# optional, for onnx.checker or shape inference
+RUN pip3 install onnx
+
+ARG TRT_VER=10.10.0
+ARG CUDA_VER=12.9
+ARG DOWNLOADS_URL=https://developer.nvidia.com/downloads
+ARG URL_HEAD=${DOWNLOADS_URL}/compute/machine-learning/tensorrt/${TRT_VER}/local_repo
+ARG URL_TAIL=nv-tensorrt-local-repo-ubuntu2204-${TRT_VER}-cuda-${CUDA_VER}_1.0-1_amd64.deb
+ARG FULL_URL=${URL_HEAD}/${URL_TAIL}
+ARG VAR_DIR=/var/nv-tensorrt-local-repo-ubuntu2204-${TRT_VER}-cuda-${CUDA_VER}
+ARG TMP_DEB=/tmp/nv-tensorrt-local-repo.deb
+
+# 1) Remove any stale NVIDIA ML repo entry
+RUN rm -f /etc/apt/sources.list.d/nvidia-ml.list
+
+# 2) Download and install the TensorRT “local‐repo” .deb
+RUN wget -qO ${TMP_DEB} "${FULL_URL}" && dpkg -i ${TMP_DEB}
+
+# 3) Install every package from that local repo
+RUN dpkg -i ${VAR_DIR}/*.deb
+
+# 4) Pull in any missing dependencies
+RUN apt-get install -y --no-install-recommends -f
+
+# ARG TRT_VER=10.10.0
+# ARG CUDA_VER=12.9
+# ARG DOWNLOADS_URL=https://developer.nvidia.com/downloads
+# ARG URL_HEAD=${DOWNLOADS_URL}/compute/machine-learning/tensorrt/${TRT_VER}/local_repo
+# ARG URL_TAIL=nv-tensorrt-local-repo-ubuntu2204-${TRT_VER}-cuda-${CUDA_VER}_1.0-1_amd64.deb
+# ARG FULL_URL=${URL_HEAD}/${URL_TAIL}
+# ARG VAR_DIR=/var/nv-tensorrt-local-repo-ubuntu2204-${TRT_VER}-cuda-${CUDA_VER}
+# ARG TMP_DEB=/tmp/nv-tensorrt-local-repo.deb
+
+# # 1) Remove any stale remote ML repo
+# RUN rm -f /etc/apt/sources.list.d/nvidia-ml.list
+
+# # 2) Download & install the local-repo .deb
+# RUN wget -qO ${TMP_DEB} ${FULL_URL} && dpkg -i ${TMP_DEB}
+
+# # 2b) Remove the auto-generated, unsigned source list so apt only sees the trusted one
+# RUN rm -f /etc/apt/sources.list.d/nv-tensorrt-local-repo-*
+
+# # 3) Register the local-repo as a trusted apt source
+# RUN echo "deb [trusted=yes] file:${VAR_DIR} ./" > /etc/apt/sources.list.d/tensorrt-local.list
+
+# # 3b) Allow unsigned file:// repositories
+# RUN printf 'Acquire::AllowInsecureRepositories \"true\";\nAPT::Get::AllowUnauthenticated \"true\";\n' \
+#     > /etc/apt/apt.conf.d/99allow-insecure
+
+# # 4) Update & install all TensorRT packages, then fix deps
+# RUN apt-get update && dpkg -i ${VAR_DIR}/*.deb && apt-get install -y --no-install-recommends -f
+
 ###################
 # Clean up + Misc #
 ###################
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/*.deb
 
 ENV PYTHONPATH=/workspace/repo/py
 
@@ -114,7 +171,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="4.0.2"
+ARG VERSION="4.0.3"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
