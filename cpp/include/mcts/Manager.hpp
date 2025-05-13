@@ -288,7 +288,7 @@ class Manager {
   void set_edge_state(SearchContext&, Edge*, expansion_state_t);
   void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
-  void expand_all_children(SearchContext& context, Node* node);
+  void expand_all_children(SearchContext& context, Node* node, int64_t eval_generation);
   void virtual_backprop(SearchContext& context);
   void undo_virtual_backprop(SearchContext& context);
   void pure_backprop(SearchContext& context, const ValueArray& value);

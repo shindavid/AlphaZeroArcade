@@ -5,6 +5,7 @@
 
 namespace core {
 
+using generation_t = int32_t;
 using seat_index_t = int8_t;
 using player_id_t = int8_t;
 using action_mode_t = int8_t;

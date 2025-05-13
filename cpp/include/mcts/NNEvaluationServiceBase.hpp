@@ -39,6 +39,8 @@ class NNEvaluationServiceBase {
    */
   virtual core::yield_instruction_t evaluate(NNEvaluationRequest& request) = 0;
 
+  virtual core::generation_t generation() const { return 0; }
+
   virtual void end_session() {}
 };
 

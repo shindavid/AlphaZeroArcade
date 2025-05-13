@@ -5,6 +5,12 @@
 namespace core {
 
 template <typename Value>
+NeuralNet::NeuralNet(Value&& value, const std::string& cuda_device)
+  : module_(torch::jit::load(value)), device_(at::Device(cuda_device)) {
+  loaded_ = true;
+}
+
+template <typename Value>
 inline void NeuralNet::load_weights(Value&& value, const std::string& cuda_device) {
   util::release_assert(!activated_, "NeuralNet::load_weights() called while activated");
 
