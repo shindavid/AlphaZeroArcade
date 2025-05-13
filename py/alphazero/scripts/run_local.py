@@ -381,7 +381,6 @@ def main():
     benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
     descs = []
     procs = []
-    atexit.register(subprocess_util.terminate_processes, procs)
     try:
         organizer.assert_unlocked()
 
@@ -404,6 +403,8 @@ def main():
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')
             procs.append(launch_ratings_server(params_dict, ratings_gpu))
+
+        atexit.register(subprocess_util.terminate_processes, [procs[descs.index('Loop-controller')]])
 
         loop = True
         while loop:
