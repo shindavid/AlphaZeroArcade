@@ -3,6 +3,7 @@ import math
 
 from games.game_spec import GameSpec
 from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
+from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
 
@@ -113,6 +114,20 @@ class BlokusSpec(GameSpec):
     training_options = {
         '--mean-noisy-moves': 8,
     }
+
+    rating_params = RatingParams(
+        rating_player_options=RatingPlayerOptions(
+            num_search_threads=4,
+            num_iterations=100,
+            ),
+        default_target_elo_gap=DefaultTargetEloGap(
+            first_run=500.0,
+            benchmark=100.0,
+            ),
+        eval_error_threshold=50.0,
+        n_games_per_benchmark=100,
+        n_games_per_evaluation=1000,
+    )
 
 
 Blokus = BlokusSpec()

@@ -82,7 +82,7 @@ class StochasticNimSpec(GameSpec):
         ),
         default_target_elo_gap=DefaultTargetEloGap(
             first_run=25.0,
-            benchmark=10.0,
+            benchmark=5.0,
         ),
         eval_error_threshold=5.0,
         n_games_per_benchmark=100,
