@@ -3,7 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
-from shared.rating_params import RatingParams, RatingPlayerOptions, DefaultTargetEloGap
+from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
 

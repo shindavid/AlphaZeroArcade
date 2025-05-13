@@ -3,6 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
+from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
 
@@ -74,11 +75,19 @@ class StochasticNimSpec(GameSpec):
         minibatches_per_epoch=64,
     )
 
-    rating_player_options = {
-        '-i': 100,
-        '--starting-move-temp': 0,  # zero-move-temp so we don't do silly misplays
-        '--ending-move-temp': 0,    # zero-move-temp so we don't do silly misplays
-    }
+    rating_params = RatingParams(
+        rating_player_options=RatingPlayerOptions(
+            num_search_threads=4,
+            num_iterations=25,
+        ),
+        default_target_elo_gap=DefaultTargetEloGap(
+            first_run=25.0,
+            benchmark=10.0,
+        ),
+        eval_error_threshold=5.0,
+        n_games_per_benchmark=100,
+        n_games_per_evaluation=1000,
+    )
 
 
 StochasticNim = StochasticNimSpec()
