@@ -23,6 +23,7 @@
 #include <util/TorchUtil.hpp>
 
 #include <condition_variable>
+#include <cstdint>
 #include <map>
 #include <mutex>
 #include <queue>
@@ -108,6 +109,8 @@ class NNEvaluationService
   void disconnect() override;
 
   core::yield_instruction_t evaluate(NNEvaluationRequest& request) override;
+
+  core::generation_t generation() const override { return generation_; }
 
   void end_session() override;
 
@@ -302,15 +305,23 @@ class NNEvaluationService
   bool register_notification_task(const NNEvaluationRequest&, const CacheLookupResult&);
 
   void loop();
+  void reload_weights_loop();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
   BatchData* get_next_batch_data(core::NNEvalLoopPerfStats&);
   void batch_evaluate(BatchData* batch_data, core::NNEvalLoopPerfStats&);
 
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device,
+    core::generation_t generation) override;
+
   void pause() override;
   void unpause() override;
   bool active() const { return num_connections_; }
+
+  void set_net(core::NeuralNet* net);
+  void activate_net();
+  void deactivate_net();
+  void delete_stale_nets();
 
   static instance_map_t instance_map_;
   static int instance_count_;
@@ -320,16 +331,47 @@ class NNEvaluationService
   const int num_game_threads_ = 0;
 
   std::thread* thread_ = nullptr;
+  std::thread* reload_weights_thread_ = nullptr;
 
   mutable std::mutex connection_mutex_;
-  mutable std::mutex net_weights_mutex_;
+  mutable std::mutex reload_weights_mutex_;
+  mutable std::mutex nets_mutex_;
   mutable std::mutex main_mutex_;
   mutable std::mutex perf_stats_mutex_;
 
-  std::condition_variable cv_net_weights_;
+  std::condition_variable cv_reload_weights_;
+  std::condition_variable cv_nets_;
   std::condition_variable cv_main_;
 
-  core::NeuralNet net_;
+  struct ReloadWeightsData {
+    bool empty() const { return buf.empty(); }
+
+    void swap(ReloadWeightsData& other) {
+      buf.swap(other.buf);
+      cuda_device.swap(other.cuda_device);
+      std::swap(generation, other.generation);
+    }
+
+    void clear() {
+      buf.clear();
+      cuda_device.clear();
+    }
+
+    std::vector<char> buf;
+    std::string cuda_device;
+    int64_t generation;
+  };
+
+  // We have two ReloadWeightsData members here to avoid a potentional race condition if
+  // reload_weights() is called while reload_weights_loop() is processing the weights received from
+  // previous reload_weights() call.
+  //
+  // reload_weights() copies the data into pending_weights_[0], while reload_weights_loop()
+  // copies the data into pending_weights_[1].
+  ReloadWeightsData reload_weights_data_[2];  // protected by reload_weights_mutex_
+
+  core::NeuralNet* net_ = nullptr;  // protected by nets_mutex_
+  std::vector<core::NeuralNet*> nets_to_delete_;  // protected by nets_mutex_
 
   core::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;
@@ -343,9 +385,9 @@ class NNEvaluationService
   bool session_ended_ = false;
   int num_connections_ = 0;
 
+  core::generation_t generation_ = 0;
   core::nn_evaluation_sequence_id_t last_evaluated_sequence_id_ = 0;
 
-  bool initial_weights_loaded_ = false;
   bool ready_ = false;
   bool skip_next_pause_receipt_ = false;
   bool paused_ = false;

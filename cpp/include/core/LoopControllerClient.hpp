@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
@@ -94,7 +95,8 @@ class LoopControllerClient : public PerfStatsClient {
   void send_unpause_ack();
   void pause();
   void unpause();
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device);
+  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device,
+    core::generation_t generation);
   void handle_data_request(int n_rows);
   void handle_data_pre_request(int n_rows_limit);
   void wait_for_pause_receipts();
@@ -112,7 +114,7 @@ class LoopControllerClient : public PerfStatsClient {
   std::vector<DataRequestListener*> data_request_listeners_;
   std::vector<WorkerReadyListener*> worker_ready_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
-  int cur_generation_ = 0;
+  core::generation_t cur_generation_ = 0;
 
   std::condition_variable receipt_cv_;
   mutable std::mutex receipt_mutex_;

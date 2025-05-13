@@ -1,7 +1,8 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
+#include <core/BasicTypes.hpp>
 #include <core/GameLog.hpp>
+#include <core/concepts/Game.hpp>
 
 #include <condition_variable>
 #include <cstdint>
@@ -54,7 +55,6 @@ class DataLoader {
  public:
   using GameReadLog = core::GameReadLog<Game>;
   using thread_id_t = int32_t;
-  using generation_t = int32_t;
   using target_index_t = int32_t;
   using global_index_t = int64_t;      // index within master list M
   using rev_global_index_t = int64_t;  // index within master list M, from the end

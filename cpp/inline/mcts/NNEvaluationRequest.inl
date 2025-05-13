@@ -5,23 +5,25 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const State& state,
+NNEvaluationRequest<Game>::Item::Item(core::generation_t generation, Node* node,
+                                      StateHistory& history, const State& state,
                                       group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
       history_(&history),
       split_history_(true),
-      cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
+      cache_key_(make_cache_key(generation, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
+NNEvaluationRequest<Game>::Item::Item(core::generation_t generation, Node* node,
+                                      StateHistory& history, group::element_t sym,
                                       bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
       history_(&history),
       split_history_(false),
-      cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
+      cache_key_(make_cache_key(generation, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <core::concepts::Game Game>
@@ -44,11 +46,11 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
 
 template <core::concepts::Game Game>
 typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::make_cache_key(
-    group::element_t sym, bool incorporate_sym_into_cache_key) const {
+  core::generation_t generation, group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key = compute_over_history(
       [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
-  return CacheKey(eval_key, cache_sym);
+  return CacheKey(eval_key, generation, cache_sym);
 }
 
 template <core::concepts::Game Game>
