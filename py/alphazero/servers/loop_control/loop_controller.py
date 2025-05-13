@@ -22,6 +22,7 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from games.game_spec import GameSpec
 from games.index import get_game_spec
+from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.py_util import atomic_cp, sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
@@ -53,12 +54,13 @@ class LoopController:
     the system would be a tangled mess of interdependencies between the various managers.
     """
     def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
-                 run_params: RunParams, build_params: BuildParams):
+                 run_params: RunParams, build_params: BuildParams, rating_params: RatingParams):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
         self._run_params = run_params
         self._build_params = build_params
+        self.rating_params = rating_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
 

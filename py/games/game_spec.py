@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from shared.net_modules import ModelConfigGenerator
+from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 
 
@@ -98,11 +99,11 @@ class GameSpec(abc.ABC):
         return {}
 
     @property
-    def rating_options(self) -> Dict[str, str]:
+    def rating_params(self) -> Optional[RatingParams]:
         """
-        Options to pass to the game binary when running ratings games.
+        Params related to rating, benchmarking and evaluation.
         """
-        return {}
+        return None
 
     @property
     def rating_player_options(self) -> Dict[str, str]:

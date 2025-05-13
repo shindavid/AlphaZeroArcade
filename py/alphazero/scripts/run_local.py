@@ -60,6 +60,7 @@ from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
+from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
@@ -88,6 +89,7 @@ default_build_params = BuildParams()
 default_loop_controller_params = LoopControllerParams()
 default_self_play_server_params = SelfPlayServerParams()
 default_ratings_server_params = RatingsServerParams()
+default_rating_params = RatingParams()
 
 
 @dataclass
@@ -99,9 +101,7 @@ class Params:
     num_cuda_devices_to_use: Optional[int] = None
 
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
-    target_elo_gap: float = default_loop_controller_params.target_elo_gap
     simulate_cloud: bool = default_loop_controller_params.simulate_cloud
-    agent_n_iters: Optional[int] = default_loop_controller_params.agent_n_iters
     task_mode: bool = default_loop_controller_params.task_mode
 
     run_ratings_server: bool = False
@@ -134,11 +134,13 @@ def load_args():
 
     game_spec: Optional[GameSpec] = RunParams.add_args(parser)
     default_training_params = None if game_spec is None else game_spec.training_params
+    default_rating_params = None if game_spec is None else game_spec.rating_params
     TrainingParams.add_args(parser, defaults=default_training_params)
     Params.add_args(parser)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser, loop_controller=True)
+    RatingParams.add_args(parser, defaults=default_rating_params)
 
     return parser.parse_args(), game_spec
 
@@ -246,7 +248,7 @@ def launch_eval_server(params_dict, cuda_device: int):
 
 
 def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str]):
-    params = params_dict['Params']
+    params: Params = params_dict['Params']
     run_params = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
     default_training_params = game_spec.training_params
@@ -254,6 +256,7 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
+    rating_params: RatingParams = params_dict['RatingParams']
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
@@ -266,10 +269,10 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
-    if default_loop_controller_params.target_elo_gap != params.target_elo_gap:
-        cmd.extend(['--target-elo-gap', str(params.target_elo_gap)])
-    if default_loop_controller_params.agent_n_iters != params.agent_n_iters:
-        cmd.extend(['--agent-n-iters', str(params.agent_n_iters)])
+    if default_rating_params.target_elo_gap != rating_params.target_elo_gap:
+        cmd.extend(['--target-elo-gap', str(rating_params.target_elo_gap)])
+    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
+        cmd.extend(['--num-iterations', str(rating_params.rating_player_options.num_iterations)])
     if params.task_mode:
         cmd.extend(['--task-mode'])
 
@@ -326,6 +329,7 @@ def main():
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+    rating_params = RatingParams.create(args)
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()
@@ -337,6 +341,7 @@ def main():
         'DockerParams': docker_params,
         'LoggingParams': logging_params,
         'BuildParams': build_params,
+        'RatingParams': rating_params,
         }
 
     configure_logger(params=logging_params, prefix='[run_local]')

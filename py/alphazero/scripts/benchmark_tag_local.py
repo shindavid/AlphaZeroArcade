@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from games.game_spec import GameSpec
+from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
 import logging
 import subprocess
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
 DEFAULT_TARGET_ELO_GAP = 100
 
 
-def main():
+def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
-    RunParams.add_args(parser)
+    game_spec: Optional[GameSpec] = RunParams.add_args(parser)
+    default_rating_params = None if game_spec is None else game_spec.rating_params
+    RatingParams.add_args(parser, defaults=default_rating_params)
     LoggingParams.add_args(parser)
-    parser.add_argument('--target-elo-gap', type=int, default=DEFAULT_TARGET_ELO_GAP,
-                        help=f'Target ELO gap for benchmarking (default: %(default)s).')
     parser.add_argument('--skip-set-as-default', action='store_true',
                         help='Skip setting the benchmark as default.')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def main():
+    args = load_args()
     run_params = RunParams.create(args)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
     organizer.assert_unlocked()
@@ -32,7 +38,7 @@ def main():
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--task-mode',
            '--run-benchmark-server',
-           '--target-elo-gap', str(args.target_elo_gap)]
+           '--target-elo-gap', str(args.benchmark_target_elo_gap),]
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
 

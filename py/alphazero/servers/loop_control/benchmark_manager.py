@@ -353,15 +353,15 @@ class BenchmarkManager(GamingManagerBase):
 
     @property
     def n_games(self):
-        return self._controller.params.n_games_per_benchmark
+        return self._controller.rating_params.n_games_per_benchmark
 
     @property
     def n_iters(self):
-        return self._controller.params.agent_n_iters
+        return self._controller.rating_params.rating_player_options.num_iterations
 
     @property
     def target_elo_gap(self):
-        return self._controller.params.target_elo_gap
+        return self._controller.rating_params.target_elo_gap
 
     @property
     def benchmark_until_gen_gap(self):

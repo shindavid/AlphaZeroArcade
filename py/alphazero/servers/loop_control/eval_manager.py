@@ -357,12 +357,12 @@ class EvalManager(GamingManagerBase):
 
     @property
     def n_games(self):
-        return self._controller.params.n_games_per_evaluation
+        return self._controller.rating_params.n_games_per_evaluation
 
     @property
     def n_iters(self):
-        return self._controller.params.agent_n_iters
+        return self._controller.rating_params.rating_player_options.num_iterations
 
     @property
     def error_threshold(self):
-        return self._controller.params.eval_error_threshold
+        return self._controller.rating_params.eval_error_threshold
