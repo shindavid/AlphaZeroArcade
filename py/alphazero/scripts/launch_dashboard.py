@@ -223,6 +223,8 @@ def evaluation(doc):
 
     benchmark_dict = get_benchmark_eval_mapping(tags)
     benchmark_tags = list(benchmark_dict.keys())
+    if not benchmark_tags:
+        return
     current_benchmark_tag = benchmark_tags[0]
 
     select = Select(title="Select Benchmark Tag", value=current_benchmark_tag, options=benchmark_tags)
