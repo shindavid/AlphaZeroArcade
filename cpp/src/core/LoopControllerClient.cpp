@@ -173,11 +173,12 @@ void LoopControllerClient::unpause() {
 }
 
 void LoopControllerClient::reload_weights(const std::vector<char>& buf,
-                                          const std::string& cuda_device) {
+                                          const std::string& cuda_device,
+                                          core::generation_t generation) {
   LOG_INFO("LoopControllerClient: reloading weights...");
 
   for (auto listener : reload_weights_listeners_) {
-    listener->reload_weights(buf, cuda_device);
+    listener->reload_weights(buf, cuda_device, generation);
   }
 }
 
@@ -249,7 +250,7 @@ void LoopControllerClient::loop() {
       if (msg.as_object().contains("cuda_device")) {
         cuda_device = msg.at("cuda_device").as_string().c_str();
       }
-      int64_t generation = msg.at("generation").as_int64();
+      core::generation_t generation = msg.at("generation").as_int64();
 
       // reload-weights msg will be immediately followed by a file transfer
       std::vector<char> buf;
@@ -261,7 +262,7 @@ void LoopControllerClient::loop() {
       }
 
       cur_generation_ = generation;
-      reload_weights(buf, cuda_device);
+      reload_weights(buf, cuda_device, generation);
     } else if (type == "quit") {
       deactivated_ = true;
       break;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <core/PerfStats.hpp>
 #include <util/Exception.hpp>
 
@@ -44,7 +45,8 @@ template <>
 class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
   virtual ~LoopControllerListener() = default;
-  virtual void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) = 0;
+  virtual void reload_weights(const std::vector<char>& buf, const std::string& cuda_device,
+    core::generation_t generation) = 0;
 };
 
 template <>

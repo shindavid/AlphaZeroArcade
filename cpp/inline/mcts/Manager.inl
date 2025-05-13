@@ -410,16 +410,17 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
     bool eval_all_children =
       params_.force_evaluate_all_root_children && is_root && search_params_.full_search;
 
+    int64_t generation = nn_eval_service_->generation();
     if (!node->stable_data().VT_valid) {
       group::element_t sym = group::kIdentity;
       if (params_.apply_random_symmetries) {
         sym = bitset_util::choose_random_on_index(Symmetries::get_mask(history->current()));
       }
       bool incorporate = params_.incorporate_sym_into_cache_key;
-      context.eval_request.emplace_back(node, *history, sym, incorporate);
+      context.eval_request.emplace_back(generation, node, *history, sym, incorporate);
     }
     if (eval_all_children) {
-      expand_all_children(context, node);
+      expand_all_children(context, node, generation);
     }
 
     const SearchRequest& search_request = *context.search_request;
@@ -849,7 +850,8 @@ inline void Manager<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
+void Manager<Game>::expand_all_children(SearchContext& context, Node* node,
+                                        int64_t eval_generation) {
   LOG_DEBUG("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
 
@@ -927,8 +929,8 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
       sym = bitset_util::choose_random_on_index(Symmetries::get_mask(canonical_child_state));
     }
     bool incorporate = params_.incorporate_sym_into_cache_key;
-    context.eval_request.emplace_back(child, canonical_history, canonical_child_state, sym,
-                                      incorporate);
+    context.eval_request.emplace_back(eval_generation, child, canonical_history,
+                                      canonical_child_state, sym, incorporate);
   }
 
   node->update_child_expand_count(expand_count);

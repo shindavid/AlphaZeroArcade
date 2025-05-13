@@ -35,22 +35,26 @@ class NNEvaluationRequest {
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
 
+  // Note: incorporating generation into the cache key causes old evaluations to be evicted from the
+  // nn eval cache naturally whenever a new model is loaded. Without this, we need to periodically
+  // do a mass-clear of all caches on each model load, which leads to uneven GPU utilization around
+  // model loads.
+  using CacheKeyTuple = std::tuple<EvalKey, core::generation_t, group::element_t>;
+
   struct CacheKey {
-    CacheKey(const EvalKey& e, group::element_t s)
-        : hash(math::splitmix64(util::hash(std::make_tuple(e, s)))),
-          eval_key(e),
-          sym(s),
+    CacheKey(const EvalKey& e, core::generation_t g, group::element_t s)
+        : tuple(std::make_tuple(e, g, s)),
+          hash(math::splitmix64(util::hash(tuple))),
           hash_shard(hash >> (64 - kNumHashShardsLog2)) {}
 
     CacheKey() = default;
 
     bool operator==(const CacheKey& other) const {
-      return eval_key == other.eval_key && sym == other.sym;
+      return this->tuple == other.tuple;
     }
 
-    uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
-    EvalKey eval_key;
-    group::element_t sym;
+    CacheKeyTuple tuple;
+    uint64_t hash;  // hash of tuple - precomputed for efficiency
     hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
   };
 
@@ -81,9 +85,9 @@ class NNEvaluationRequest {
      * rating games, we incorporate sym into the cache key, to ensure the games are truly
      * independent, in order to get more accurate ratings.
      */
-    Item(Node* node, StateHistory& history, const State& state, group::element_t sym,
-         bool incorporate_sym_into_cache_key);
-    Item(Node* node, StateHistory& history, group::element_t sym,
+    Item(core::generation_t, Node* node, StateHistory& history, const State& state,
+         group::element_t sym, bool incorporate_sym_into_cache_key);
+    Item(core::generation_t, Node* node, StateHistory& history, group::element_t sym,
          bool incorporate_sym_into_cache_key);
 
     /*
@@ -105,7 +109,8 @@ class NNEvaluationRequest {
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
    private:
-    CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
+    CacheKey make_cache_key(core::generation_t, group::element_t sym,
+                            bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
     const State state_;

@@ -42,6 +42,7 @@ void NNEvaluationService<Game>::connect() {
   if (thread_) return;
 
   thread_ = new std::thread([&] { this->loop(); });
+  reload_weights_thread_ = new std::thread([&] { this->reload_weights_loop(); });
 }
 
 template <core::concepts::Game Game>
@@ -50,11 +51,21 @@ void NNEvaluationService<Game>::disconnect() {
   if (thread_) {
     num_connections_--;
     if (num_connections_ > 0) return;
-    cv_net_weights_.notify_all();
+
+    // num_connections is now 0, which newly causes active() to be false
+
+    // notify all cv's since they all care about active()
+    cv_reload_weights_.notify_all();
+    cv_nets_.notify_all();
     cv_main_.notify_all();
+
     if (thread_->joinable()) thread_->join();
     delete thread_;
     thread_ = nullptr;
+
+    if (reload_weights_thread_->joinable()) reload_weights_thread_->join();
+    delete reload_weights_thread_;
+    reload_weights_thread_ = nullptr;
   }
 }
 
@@ -91,8 +102,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
                                               eigen_util::to_int64_std_array_v<InputShape>)),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
   if (!params.model_filename.empty()) {
-    net_.load_weights(params.model_filename.c_str(), params.cuda_device);
-    net_.activate();
+    set_net(new core::NeuralNet(params.model_filename.c_str(), params.cuda_device));
   }
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<InputShape>);
@@ -115,11 +125,10 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
     shard_datas_[i].init(params_.cache_size / kNumHashShards);
   }
 
-  initial_weights_loaded_ = net_.loaded();
   if (core::LoopControllerClient::initialized()) {
     core::LoopControllerClient::get()->add_listener(this);
   } else {
-    if (!net_.loaded()) {
+    if (!net_) {
       throw util::CleanException(
           "MCTS player configured without --model-filename/-m and without "
           "--no-model, but --loop-controller-* options not specified");
@@ -663,13 +672,34 @@ void NNEvaluationService<Game>::loop() {
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::reload_weights_loop() {
+  while (active()) {
+    std::unique_lock lock(reload_weights_mutex_);
+    cv_reload_weights_.wait(lock, [&] { return !active() || !reload_weights_data_[0].empty(); });
+    if (!active()) return;
+
+    reload_weights_data_[0].swap(reload_weights_data_[1]);
+    reload_weights_data_[0].clear();
+
+    lock.unlock();
+
+    LOG_INFO("NNEvaluationService: loading new network...");
+    std::ispanstream stream{std::span<const char>(reload_weights_data_[1].buf)};
+    set_net(new core::NeuralNet(stream, reload_weights_data_[1].cuda_device));
+    generation_ = reload_weights_data_[1].generation;
+    reload_weights_data_[1].clear();
+    LOG_INFO("NNEvaluationService: Network newly loaded!");
+  }
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   if (ready_) return;
   ready_ = true;
 
   auto client = core::LoopControllerClient::get();
   if (!client) {
-    if (initial_weights_loaded_) {
+    if (net_) {
       return;
     } else {
       throw util::CleanException(
@@ -681,8 +711,8 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   LOG_INFO("NNEvaluationService: sending worker-ready...");
 
   client->send_worker_ready();
-  std::unique_lock<std::mutex> net_weights_lock(net_weights_mutex_);
-  cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_ || !active(); });
+  std::unique_lock<std::mutex> net_weights_lock(nets_mutex_);
+  cv_nets_.wait(net_weights_lock, [&] { return net_ || !active(); });
   LOG_INFO("NNEvaluationService: weights loaded!");
 }
 
@@ -696,11 +726,11 @@ void NNEvaluationService<Game>::wait_for_unpause() {
     LOG_INFO("NNEvaluationService: skipping handle_pause_receipt");
     skip_next_pause_receipt_ = false;
   } else {
-    net_.deactivate();
+    deactivate_net();
     LOG_INFO("NNEvaluationService: handle_pause_receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
-  cv_main_.wait(lock, [&] { return !paused_; });
+  cv_main_.wait(lock, [&] { return !active() || !paused_; });
   lock.unlock();
 
   LOG_INFO("NNEvaluationService: handle_unpause_receipt");
@@ -803,7 +833,7 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   torch_input_gpu_.copy_(full_input_torch);
 
   core::PerfClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
-  net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
+  net_->predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   core::PerfClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
@@ -826,6 +856,8 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   loop_stats.batches_evaluated = 1;
   loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
 
+  delete_stale_nets();
+
   std::unique_lock perf_lock(perf_stats_mutex_);
   perf_stats_.update(loop_stats);
 
@@ -836,25 +868,16 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
-                                               const std::string& cuda_device) {
+                                               const std::string& cuda_device,
+                                               core::generation_t generation) {
   LOG_INFO("NNEvaluationService: reloading network weights...");
-  util::release_assert(paused_, "{}() called while not paused", __func__);
 
-  std::ispanstream stream{std::span<const char>(buf)};
-  std::unique_lock net_weights_lock(net_weights_mutex_);
-  net_.load_weights(stream, cuda_device);
-  initial_weights_loaded_ = true;
-  net_weights_lock.unlock();
-  cv_net_weights_.notify_all();
-
-  LOG_INFO("NNEvaluationService: clearing network cache...");
-
-  // TODO: we can clear each shard's cache in parallel for a slight performance boost
-  for (int i = 0; i < kNumHashShards; ++i) {
-    ShardData& shard_data = shard_datas_[i];
-    std::unique_lock shard_lock(shard_data.mutex);
-    shard_data.eval_cache.clear();
-  }
+  std::unique_lock lock(reload_weights_mutex_);
+  reload_weights_data_[0].buf = buf;
+  reload_weights_data_[0].cuda_device = cuda_device;
+  reload_weights_data_[0].generation = generation;
+  lock.unlock();
+  cv_reload_weights_.notify_all();
 }
 
 template <core::concepts::Game Game>
@@ -862,15 +885,14 @@ void NNEvaluationService<Game>::pause() {
   LOG_INFO("NNEvaluationService: pausing");
   std::unique_lock lock(main_mutex_);
   if (paused_) {
-    net_.deactivate();
+    deactivate_net();
     LOG_INFO("NNEvaluationService: handle_pause_receipt (already paused)");
     core::LoopControllerClient::get()->handle_pause_receipt();
     return;
   }
   paused_ = true;
 
-  if (!initial_weights_loaded_) {
-    net_.deactivate();
+  if (!net_) {
     skip_next_pause_receipt_ = true;
     LOG_INFO("NNEvaluationService: handle_pause_receipt (skip next)");
     core::LoopControllerClient::get()->handle_pause_receipt();
@@ -885,7 +907,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::unpause() {
   LOG_INFO("NNEvaluationService: unpausing");
   std::unique_lock lock(main_mutex_);
-  net_.activate();
+  activate_net();
   if (!paused_) {
     LOG_INFO("NNEvaluationService: handle_unpause_receipt (already unpaused)");
     core::LoopControllerClient::get()->handle_unpause_receipt();
@@ -895,6 +917,46 @@ void NNEvaluationService<Game>::unpause() {
   lock.unlock();
   cv_main_.notify_all();
   LOG_INFO("NNEvaluationService: unpause complete!");
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::set_net(core::NeuralNet* net) {
+  std::unique_lock net_weights_lock(nets_mutex_);
+  bool first_net = net_ == nullptr;
+  if (!first_net) {
+    nets_to_delete_.push_back(net_);
+  }
+  net->activate();
+  net_ = net;
+  net_weights_lock.unlock();
+
+  if (first_net) {
+    cv_nets_.notify_all();
+  }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::activate_net() {
+  std::unique_lock net_weights_lock(nets_mutex_);
+  if (!net_) return;
+  net_->activate();
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::deactivate_net() {
+  std::unique_lock net_weights_lock(nets_mutex_);
+  if (!net_) return;
+  net_->deactivate();
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::delete_stale_nets() {
+  std::unique_lock net_weights_lock(nets_mutex_);
+
+  for (core::NeuralNet* net : nets_to_delete_) {
+    delete net;
+  }
+  nets_to_delete_.clear();
 }
 
 }  // namespace mcts
