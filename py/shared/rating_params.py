@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import argparse
 from typing import Optional
@@ -17,8 +17,8 @@ class RatingPlayerOptions:
 
 @dataclass
 class RatingParams:
-    rating_player_options: RatingPlayerOptions = RatingPlayerOptions()
-    default_target_elo_gap: DefaultTargetEloGap = DefaultTargetEloGap()
+    rating_player_options: RatingPlayerOptions = field(default_factory=RatingPlayerOptions)
+    default_target_elo_gap: DefaultTargetEloGap = field(default_factory=DefaultTargetEloGap)
     target_elo_gap: float = DefaultTargetEloGap().first_run
     eval_error_threshold: float = 50.0
     n_games_per_benchmark: int = 100

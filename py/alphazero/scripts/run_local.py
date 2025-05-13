@@ -277,7 +277,7 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
 
-    if rating_params.target_elo_gap:
+    if rating_params.target_elo_gap is not None:
         cmd.extend(['--target-elo-gap', str(rating_params.target_elo_gap)])
     else:
         cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.first_run)])

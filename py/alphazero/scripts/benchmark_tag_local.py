@@ -36,7 +36,7 @@ def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_p
            '--task-mode',
            '--run-benchmark-server']
 
-    if rating_params.target_elo_gap:
+    if rating_params.target_elo_gap is not None:
         cmd.extend(['--target-elo-gap', str(rating_params.target_elo_gap)])
     else:
         cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.benchmark)])
