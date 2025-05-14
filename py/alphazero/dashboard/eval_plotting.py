@@ -23,7 +23,7 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from util import bokeh_util
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, Span
 from bokeh.layouts import column
 import numpy as np
 import pandas as pd
@@ -109,13 +109,14 @@ class BenchmarkData:
 
 
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData = None):
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
         if not data_list:
             data_list = [benchmark_data]
             self.benchmark_tag = benchmark_data.tag
         else:
             self.benchmark_tag = data_list[0].benchmark_tag
 
+        self.benchmark_data = benchmark_data
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
@@ -159,6 +160,10 @@ class Plotter:
 
         self.add_lines(plot)
 
+        highest_benchmark_elo = self.benchmark_data.df['rating'].max()
+        hline = Span(location=highest_benchmark_elo, dimension='width', line_color='green',
+                     line_width=2, line_dash='dashed')
+        plot.add_layout(hline)
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 

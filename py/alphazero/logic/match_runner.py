@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class MatchRunner:
     @staticmethod
-    def run_match_helper(match: Match, game: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
+    def run_match_helper(match: Match, binary: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -41,35 +41,23 @@ class MatchRunner:
         args['-G'] = n_games
         platform_overrides.update_cpp_bin_args(args)
 
-        args1 = dict(args)
-        args2 = dict(args)
 
-        port = DEFAULT_REMOTE_PLAY_PORT
-
-        cmd1 = [
-            agent1.binary,
-            '--port', str(port),
+        cmd = [
+            binary,
             '--player', f'"{ps1}"',
-        ]
-        cmd1.append(make_args_str(args1))
-        cmd1 = ' '.join(map(str, cmd1))
-
-        cmd2 = [
-            agent2.binary,
-            '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]
-        cmd2.append(make_args_str(args2))
-        cmd2 = ' '.join(map(str, cmd2))
+        cmd.append(make_args_str(args))
+        cmd = ' '.join(map(str, cmd))
 
-        logger.debug('Running match between:\n%s\n%s', cmd1, cmd2)
 
-        proc1 = subprocess_util.Popen(cmd1)
-        proc2 = subprocess_util.Popen(cmd2)
+        logger.info('Running match:\n%s', cmd)
+
+        proc = subprocess_util.Popen(cmd)
 
         expected_rc = None
         print_fn = logger.error
-        stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+        stdout = subprocess_util.wait_for(proc, expected_return_code=expected_rc, print_fn=print_fn)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the

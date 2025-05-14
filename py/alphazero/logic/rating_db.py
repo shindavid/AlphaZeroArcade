@@ -8,14 +8,14 @@ from util.sqlite3_util import DatabaseConnectionPool
 import numpy as np
 
 from dataclasses import dataclass
-from typing import List, Iterable, Optional
+from typing import List, Iterable, Optional, Set
 
 
 @dataclass
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
-    roles: List[AgentRole]
+    roles: Set[AgentRole]
 
 
 @dataclass
@@ -74,7 +74,7 @@ class RatingDB:
         for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
             agent_roles = {AgentRole(role) for role in roles.split(',')}
-            yield DBAgent(agent, agent_id, AgentRole(agent_roles))
+            yield DBAgent(agent, agent_id, agent_roles)
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
         """
