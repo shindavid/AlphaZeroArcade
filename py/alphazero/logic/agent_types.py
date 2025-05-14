@@ -14,7 +14,7 @@ class Agent(ABC):
     command-line arguments for the player.
     """
     @abstractmethod
-    def make_player_str(self, organizer: DirectoryOrganizer) -> str:
+    def make_player_str(self, run_dir: str) -> str:
         pass
 
 
@@ -63,9 +63,7 @@ class ReferenceAgent(Agent):
     strength: int
     tag: str = None
 
-    def make_player_str(self, organizer: DirectoryOrganizer) -> str:
-        assert organizer.tag == self.tag
-
+    def make_player_str(self, run_dir: str) -> str:
         player_args = {
             '--type': self.type_str,
             '--name': f'{self.type_str}-{self.strength}',
