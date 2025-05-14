@@ -2,6 +2,7 @@
 
 #include <util/Asserts.hpp>
 #include <util/KeyValueDumper.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <boost/json/src.hpp>
 
@@ -744,7 +745,21 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
     return false;
   };
 
-  cv_main_.wait(lock, predicate);
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  cv_main_.wait_until(lock, deadline, predicate);
+  bool deadline_reached = std::chrono::steady_clock::now() >= deadline;
+  if (deadline_reached) {
+    // If this happens, there is some sort of bug. Retrying here potentially covers up for the bug.
+    LOG_WARN("<-- {}::{}() Timed out waiting for batch data. Indicates a bug!", cls, func);
+    BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
+    if (!batch_data) {
+      return nullptr;
+    } else {
+      LOG_WARN("<-- {}::{}() Retrying...", cls, func);
+      batch_data->accepting_allocations = false;
+      cv_main_.wait(lock, predicate);
+    }
+  }
   if (!active() || paused_) return nullptr;
   return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
