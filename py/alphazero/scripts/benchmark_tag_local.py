@@ -16,7 +16,6 @@ from typing import Optional
 
 
 logger = logging.getLogger(__name__)
-DEFAULT_TARGET_ELO_GAP = 100
 
 
 def load_args():

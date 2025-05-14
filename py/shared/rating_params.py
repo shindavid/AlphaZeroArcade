@@ -31,10 +31,15 @@ class RatingParams:
     """
     rating_player_options: RatingPlayerOptions = field(default_factory=RatingPlayerOptions)
     default_target_elo_gap: DefaultTargetEloGap = field(default_factory=DefaultTargetEloGap)
-    target_elo_gap: Optional[float] = None
+
+    # params specified in game specs
     eval_error_threshold: float = 50.0
     n_games_per_benchmark: int = 100
     n_games_per_evaluation: int = 1000
+
+    # params specified in command line if any
+    target_elo_gap: Optional[float] = None
+    benchmark_until_gen_gap: int = 25
 
     def __post_init__(self):
         assert self.n_games_per_benchmark > 0, "Must have >0 games per benchmark"
@@ -81,3 +86,7 @@ class RatingParams:
                            help='number of games per benchmark (default: %(default)d)')
         group.add_argument('--n-games-per-evaluation', type=int, default=defaults.n_games_per_evaluation,
                            help='number of games per evaluation (default: %(default)d)')
+        group.add_argument('--benchmark-until-gen-gap', type=int,
+                            default=defaults.benchmark_until_gen_gap,
+                            help='number of generations to wait for benchmark evaluation '
+                            '(default: %(default)s)')
