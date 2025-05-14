@@ -755,7 +755,9 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
     if (!batch_data) {
       return nullptr;
     } else {
-      LOG_WARN("<-- {}::{}() Retrying...", cls, func);
+      LOG_WARN("<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{})", cls, func,
+               batch_data->sequence_id, batch_data->accepting_allocations,
+               batch_data->allocate_count, batch_data->write_count);
       batch_data->accepting_allocations = false;
       cv_main_.wait(lock, predicate);
     }
