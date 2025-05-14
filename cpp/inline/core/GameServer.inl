@@ -458,7 +458,7 @@ GameServerBase::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t con
   }
 
   if (Rules::is_chance_mode(action_mode_)) {
-    if (step_chance()) {
+    if (step_chance(request)) {
       pre_step();
     }
   }
@@ -479,16 +479,28 @@ void GameServer<Game>::GameSlot::pre_step() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_chance() {
+bool GameServer<Game>::GameSlot::step_chance(EnqueueRequest& enqueue_request) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
     ChangeEventPreHandleRequest request(notification_unit);
     ChanceEventPreHandleResponse response = player->prehandle_chance_event(request);
-    mid_yield_ = response.yield_instruction != kContinue;
-    if (mid_yield_) {
-      return false;
+
+    switch (response.yield_instruction) {
+      case kContinue: {
+        mid_yield_ = false;
+        break;
+      }
+      case kYield: {
+        mid_yield_ = true;
+        enqueue_request.instruction = kEnqueueLater;
+        return false;
+      }
+      default: {
+        throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
+      }
     }
+
     if (!noisy_mode_ && response.action_values) {
       util::release_assert(!chance_action_values_,
                            "Clashing chance-event training info from different players");

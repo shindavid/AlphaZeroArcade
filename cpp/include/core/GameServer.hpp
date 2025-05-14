@@ -153,7 +153,7 @@ class GameServer
     void pre_step();
 
     // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_chance();
+    bool step_chance(EnqueueRequest& request);
 
     // Returns true if it successfully processed a non-terminal game state transition. Also sets
     // request to the appropriate value.

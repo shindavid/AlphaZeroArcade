@@ -121,6 +121,16 @@ GameServerBase::EnqueueRequest GameServerProxy<Game>::GameSlot::step(context_id_
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
+
+  core::action_mode_t mode = Rules::get_action_mode(history_.current());
+
+  // If below assert gets hit, that means we need to add chance-mode support to GameServerProxy.
+  // Should be similar to how it works in GameServer.
+  //
+  // As of yet, we don't even forward chance-event handling prompts from GameServer to
+  // GameServerProxy, so it shouldn't be possible to hit this assert.
+  util::release_assert(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
+
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(history_.current(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
