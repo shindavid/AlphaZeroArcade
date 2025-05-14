@@ -198,7 +198,17 @@ def training_head(head: str):
 def training(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
     tags = [t for t in tag_str.split(',') if t]
-    doc.add_root(create_combined_training_figure(run_params.game, tags))
+
+    select = Select(title="Select Tag", value=tags[0], options=tags)
+    plot_container = create_combined_training_figure(run_params.game, tags, tags[0])
+
+    def update_plot(attr, old, new):
+        new_plot = create_combined_training_figure(run_params.game, tags, select.value)
+        layout.children[1] = new_plot
+
+    select.on_change('value', update_plot)
+    layout = column(select, plot_container)
+    doc.add_root(layout)
     doc.theme = theme
 
 

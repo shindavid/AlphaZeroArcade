@@ -81,10 +81,10 @@ class TicTacToeSpec(GameSpec):
             num_iterations=100,
         ),
         default_target_elo_gap=DefaultTargetEloGap(
-            first_run=500.0,
-            benchmark=100.0,
+            first_run=100.0,
+            benchmark=20.0,
         ),
-        eval_error_threshold=50.0,
+        eval_error_threshold=5.0,
         n_games_per_benchmark=100,
         n_games_per_evaluation=1000,
     )

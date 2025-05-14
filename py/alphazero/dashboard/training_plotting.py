@@ -49,7 +49,7 @@ def create_training_figure(game: str, tags: List[str], head: str):
     return plotter.figure
 
 
-def create_combined_training_figure(game: str, tags: List[str]):
+def create_combined_training_figure(game: str, tags: List[str], selected_tag: str):
     head_data_list: List[HeadData] = []
     for tag in tags:
         run_params = RunParams(game, tag)
@@ -69,7 +69,7 @@ def create_combined_training_figure(game: str, tags: List[str]):
     if not head_data_list:
         return figure(title='No data available')
 
-    plotter = CombinedTrainingPlotter(head_data_list)
+    plotter = CombinedTrainingPlotter(head_data_list, selected_tag)
     return plotter.figure
 
 
@@ -177,7 +177,7 @@ class TrainingPlotter:
 
 
 class CombinedTrainingPlotter:
-    def __init__(self, head_data_list: List[HeadData]):
+    def __init__(self, head_data_list: List[HeadData], selected_tag: str):
         self.head_data_list = head_data_list
 
         self.x_var_selector = XVarSelector([hd.df for hd in head_data_list])
@@ -185,7 +185,7 @@ class CombinedTrainingPlotter:
 
         self.load()
         self.combined_plot = self.make_combined_loss_plot()
-        self.plots = [self.make_stacked_loss_plot(h) for h in head_data_list]
+        self.plots = [self.make_stacked_loss_plot(h) for h in head_data_list if h.tag == selected_tag]
         self.figure = self.make_figure()
 
     def load(self):
