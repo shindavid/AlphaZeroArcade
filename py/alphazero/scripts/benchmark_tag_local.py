@@ -10,6 +10,7 @@ from util.py_util import CustomHelpFormatter
 
 import argparse
 import logging
+import os
 import subprocess
 from typing import Optional
 
@@ -64,6 +65,9 @@ def main():
     args = load_args()
     run_params = RunParams.create(args)
     organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    if not os.path.exists(organizer.base_dir):
+        raise Exception(f"Run {organizer.base_dir} does not exist.")
+
     organizer.assert_unlocked()
 
     logging_params = LoggingParams.create(args)
