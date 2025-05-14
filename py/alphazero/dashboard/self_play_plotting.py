@@ -8,7 +8,7 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from util import bokeh_util
 
 from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Span
+from bokeh.models import ColumnDataSource, Span, Select
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -18,8 +18,11 @@ import sqlite3
 from typing import Callable, Dict, List, Optional
 
 
-def create_self_play_figure(game: str, tags: List[str]):
-    data_list: List[SelfPlayData] = []
+Tag = str
+
+
+def create_self_play_figure(game: str, tags: List[Tag]):
+    data_dict: Dict[Tag, SelfPlayData] = {}
     for tag in tags:
         run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
@@ -32,13 +35,27 @@ def create_self_play_figure(game: str, tags: List[str]):
 
         x_df = make_x_df(organizer)
         data.join(x_df)
-        data_list.append(data)
+        data_dict[tag] = data
 
-    if not data_list:
+    if not data_dict:
         return figure(title='No data available')
 
-    plotter = SelfPlayPlotter(data_list)
-    return plotter.figure
+    initial_tag = tags[0]
+    plotter = SelfPlayPlotter([data_dict[initial_tag]])
+    plot_container = plotter.figure
+
+    select = Select(title="Select Tag", value=initial_tag, options=list(data_dict.keys()))
+
+    def update_plot(attr, old, new):
+        new_data = data_dict[select.value]
+        new_plotter = SelfPlayPlotter([new_data])
+        new_figure = new_plotter.figure
+        layout.children[1] = new_figure  # Replace the plot
+
+    select.on_change('value', update_plot)
+
+    layout = column(select, plot_container)
+    return layout
 
 
 @dataclass
