@@ -1,7 +1,7 @@
 from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole
 from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
-from alphazero.logic.rating_db import RatingDB, DBAgentRating
+from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from util.index_set import IndexSet
 
 import numpy as np
