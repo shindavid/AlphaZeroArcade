@@ -817,7 +817,7 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   perf_stats_.update(loop_stats);
 
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - (seq:{}) complete!", cls, func, batch_data->sequence_id);
+    LOG_INFO("<-- {}::{}() - (seq:{}) complete!", cls, func, last_evaluated_sequence_id_);
   }
 }
 
