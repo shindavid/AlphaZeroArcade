@@ -102,11 +102,34 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         if role == AgentRole.BENCHMARK:
-            query = '''SELECT agent_id, rating, is_committee, tag FROM benchmark_ratings JOIN mcts_agents
-                      ON benchmark_ratings.agent_id = mcts_agents.id'''
+            query = '''
+                SELECT
+                benchmark_ratings.agent_id,
+                benchmark_ratings.rating,
+                benchmark_ratings.is_committee,
+                CASE
+                    WHEN agents.subtype = 'mcts' THEN mcts_agents.tag
+                    ELSE ref_agents.tag
+                END AS tag
+                FROM benchmark_ratings
+                JOIN agents ON benchmark_ratings.agent_id = agents.id
+                LEFT JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
+                LEFT JOIN ref_agents ON agents.subtype != 'mcts' AND agents.sub_id = ref_agents.id;
+                '''
         elif role == AgentRole.TEST:
-            query = '''SELECT agent_id, rating, tag FROM evaluator_ratings JOIN mcts_agents
-                      ON evaluator_ratings.agent_id = mcts_agents.id'''
+            query = '''
+                SELECT
+                evaluator_ratings.agent_id,
+                evaluator_ratings.rating,
+                CASE
+                    WHEN agents.subtype = 'mcts' THEN mcts_agents.tag
+                    ELSE ref_agents.tag
+                END AS tag
+                FROM evaluator_ratings
+                JOIN agents ON evaluator_ratings.agent_id = agents.id
+                LEFT JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
+                LEFT JOIN ref_agents ON agents.subtype != 'mcts' AND agents.sub_id = ref_agents.id;
+                '''
         c.execute(query)
         rows = c.fetchall()
 

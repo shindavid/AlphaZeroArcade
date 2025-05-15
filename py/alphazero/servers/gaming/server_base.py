@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import MCTSAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
@@ -174,9 +174,9 @@ class ServerBase:
         files_required = [FileToTransfer(**f) for f in msg['files_required']]
         self._session_data.request_files(files_required)
 
-        mcts_agent1 = MCTSAgent(**msg['agent1'])
-        mcts_agent2 = MCTSAgent(**msg['agent2'])
-        match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
+        agent1 = self._build_agent(msg['agent1'])
+        agent2 = self._build_agent(msg['agent2'])
+        match = Match(agent1, agent2, msg['n_games'], MatchType.EVALUATE)
 
         log_filename = self._session_data.get_log_filename(self._config.worker_name)
         args = {
@@ -237,14 +237,14 @@ class ServerBase:
         cmd1 = ' '.join(map(str, cmd1))
 
         cmd2 = [
-            os.path.join(self._session_data.run_dir, agent2.binary),
+            os.path.join(self._session_data.run_dir, agent2.binary) if isinstance(agent2, MCTSAgent) else os.path.join(self._session_data.run_dir, agent1.binary),
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
         ]
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
-        logger.debug('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+        logger.debug('Running match between: %s vs %s', agent1, agent2)
         logger.debug('cmds:\ncmd1:\n%s\ncmd2:\n%s', cmd1, cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
@@ -262,3 +262,11 @@ class ServerBase:
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
         return record.get(0)
+
+    def _build_agent(self, agent_msg: JsonDict) -> Agent:
+        if agent_msg['type'] == 'MCTS':
+            return MCTSAgent(**agent_msg['data'])
+        elif agent_msg['type'] == 'Reference':
+            return ReferenceAgent(**agent_msg['data'])
+        else:
+            raise ValueError(f'Unknown agent type: {agent_msg["type"]}')
