@@ -254,8 +254,9 @@ class ServerBase:
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
-        logger.debug('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
-        logger.debug('cmds:\ncmd1:\n%s\ncmd2:\n%s', cmd1, cmd2)
+        logger.info('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+        logger.info('cmd1: %s', cmd1)
+        logger.info('cmd2: %s', cmd2)
 
         proc1 = subprocess_util.Popen(cmd1)
         proc2 = subprocess_util.Popen(cmd2)
