@@ -9,6 +9,7 @@ from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
+from shared.rating_params import RatingParams
 from util import subprocess_util
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
@@ -58,9 +59,10 @@ class ServerParams(BaseParams):
 
 class ServerBase:
     def __init__(self, params: BaseParams, logging_params: LoggingParams,
-                 build_params: BuildParams, server_config: ServerConfig):
+                 build_params: BuildParams, rating_params: RatingParams, server_config: ServerConfig):
         self._params = params
         self._build_params = build_params
+        self._rating_params = rating_params
         self._config = server_config
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
@@ -221,8 +223,10 @@ class ServerBase:
         if n_games < 1:
             return WinLossDrawCounts()
 
-        ps1 = agent1.make_player_str(self._session_data.run_dir)
-        ps2 = agent2.make_player_str(self._session_data.run_dir)
+        num_thread_option = {'-n': self.num_threads}
+
+        ps1 = agent1.make_player_str(self._session_data.run_dir, args=num_thread_option)
+        ps2 = agent2.make_player_str(self._session_data.run_dir, args=num_thread_option)
 
         if args is None:
             args = {}
@@ -273,3 +277,7 @@ class ServerBase:
         # loop-controller. Doing so would better match how the self-play server works.
         record = extract_match_record(stdout)
         return record.get(0)
+
+    @property
+    def num_threads(self) -> int:
+        return self._rating_params.rating_player_options.num_search_threads

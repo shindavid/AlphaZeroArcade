@@ -17,8 +17,8 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Legend, LegendItem, Span
+from bokeh.layouts import column, gridplot
+from bokeh.models import ColumnDataSource, Legend, LegendItem, Select, Span
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -26,7 +26,10 @@ import sqlite3
 from typing import Dict, List, Optional
 
 
-def create_training_figure(game: str, tags: List[str], head: str):
+Tag = str
+
+
+def create_training_figure(game: str, tags: List[Tag], head: str):
     head_data_list: List[HeadData] = []
     for tag in tags:
         run_params = RunParams(game, tag)
@@ -49,8 +52,8 @@ def create_training_figure(game: str, tags: List[str], head: str):
     return plotter.figure
 
 
-def create_combined_training_figure(game: str, tags: List[str]):
-    head_data_list: List[HeadData] = []
+def create_combined_training_figure(game: str, tags: List[Tag]):
+    head_data_dict: Dict[Tag, HeadData] = {}
     for tag in tags:
         run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
@@ -64,17 +67,17 @@ def create_combined_training_figure(game: str, tags: List[str]):
 
         x_df = make_x_df(organizer)
         head_data.join(x_df)
-        head_data_list.append(head_data)
+        head_data_dict[head_data.tag] = head_data
 
-    if not head_data_list:
+    if not head_data_dict:
         return figure(title='No data available')
 
-    plotter = CombinedTrainingPlotter(head_data_list)
+    plotter = CombinedTrainingPlotter(head_data_dict)
     return plotter.figure
 
 
 class HeadData:
-    def __init__(self, conn: sqlite3.Connection, tag: str, head: Optional[str]):
+    def __init__(self, conn: sqlite3.Connection, tag: Tag, head: Optional[str]):
         self.tag = tag
         columns = ['head_name', 'gen', 'loss', 'loss_weight']
         self.head = head
@@ -177,19 +180,18 @@ class TrainingPlotter:
 
 
 class CombinedTrainingPlotter:
-    def __init__(self, head_data_list: List[HeadData]):
-        self.head_data_list = head_data_list
+    def __init__(self, head_data_dict: Dict[Tag, HeadData]):
+        self.head_data_dict = head_data_dict
 
-        self.x_var_selector = XVarSelector([hd.df for hd in head_data_list])
+        self.x_var_selector = XVarSelector([hd.df for hd in head_data_dict.values()])
         self.sources: Dict[str, ColumnDataSource] = {}
 
         self.load()
         self.combined_plot = self.make_combined_loss_plot()
-        self.plots = [self.make_stacked_loss_plot(h) for h in head_data_list]
         self.figure = self.make_figure()
 
     def load(self):
-        for head_data in self.head_data_list:
+        for head_data in self.head_data_dict.values():
             source = ColumnDataSource(head_data.df)
             data = source.data
 
@@ -209,13 +211,37 @@ class CombinedTrainingPlotter:
             self.sources[head_data.tag] = source
 
     def make_figure(self):
-        plots = [self.combined_plot] + self.plots
+        tags = list(self.head_data_dict.keys())
+        select = Select(title="Select Tag", value=tags[0], options=tags)
+        select_wrapper = column(select, sizing_mode="fixed")
+
+        initial_plot = self.make_stacked_loss_plot(self.head_data_dict[select.value])
+
+        def update_plot(attr, old, new):
+            new_plot = self.make_stacked_loss_plot(self.head_data_dict[select.value])
+            new_layout = gridplot([
+                [None, select_wrapper],
+                [self.combined_plot, new_plot],
+                [radio_group, None]
+            ], sizing_mode='scale_height')
+            layout.children[:] = new_layout.children
+
+        select.on_change('value', update_plot)
+
+        plots = [self.combined_plot] + [initial_plot]
         sources = list(self.sources.values())
         radio_group = self.x_var_selector.create_radio_group(plots, sources)
-        return column(self.combined_plot, radio_group, *self.plots)
+
+        layout = gridplot([
+            [None, select_wrapper],
+            [self.combined_plot, initial_plot],
+            [radio_group, None]
+            ], sizing_mode='scale_height')
+
+        return layout
 
     def make_combined_loss_plot(self):
-        colors = bokeh_util.get_colors(len(self.head_data_list))
+        colors = bokeh_util.get_colors(len(self.head_data_dict))
         y = 'combined_loss'
 
         plot = figure(
@@ -223,7 +249,7 @@ class CombinedTrainingPlotter:
             active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
         self.x_var_selector.init_plot(plot)
 
-        for head_data, color in zip(self.head_data_list, colors):
+        for head_data, color in zip(self.head_data_dict.values(), colors):
             label = head_data.tag
             source = self.sources[label]
             plot.line('x', y, source=source, line_color=color, legend_label=label)
@@ -233,7 +259,7 @@ class CombinedTrainingPlotter:
         plot.add_layout(hline)
         plot.y_range.start = 0
 
-        plot.legend.location = 'bottom_right'
+        plot.legend.location = 'top_right'
         plot.legend.click_policy = 'hide'
         return plot
 
@@ -279,6 +305,7 @@ class CombinedTrainingPlotter:
 
         legend_items.reverse()
         legend = Legend(items=legend_items)
-        plot.add_layout(legend, 'right')
+        plot.add_layout(legend)
+        plot.legend.location = 'top_right'
 
         return plot

@@ -3,6 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
+from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
 
@@ -142,14 +143,19 @@ class Connect4Spec(GameSpec):
         '--mean-noisy-moves': 2,
     }
 
-    # NOTE: we set -n for the rating player because:
-    #
-    # 1. It improves performance when running a small number of games (as we do for rating)
-    # 2. It causes us to regularly stress-test the multithreaded-search C++ code.
-    rating_player_options = {
-        '-i': 100,
-        '-n': 4,
-    }
+    rating_params = RatingParams(
+        rating_player_options=RatingPlayerOptions(
+            num_search_threads=4,
+            num_iterations=100,
+            ),
+        default_target_elo_gap=DefaultTargetEloGap(
+            first_run=500.0,
+            benchmark=100.0,
+            ),
+        eval_error_threshold=50.0,
+        n_games_per_benchmark=100,
+        n_games_per_evaluation=1000,
+    )
 
 
 Connect4 = Connect4Spec()

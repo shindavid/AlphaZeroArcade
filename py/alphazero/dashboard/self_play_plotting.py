@@ -7,8 +7,8 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Span
+from bokeh.layouts import column, gridplot
+from bokeh.models import ColumnDataSource, Span, Select
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -18,8 +18,11 @@ import sqlite3
 from typing import Callable, Dict, List, Optional
 
 
-def create_self_play_figure(game: str, tags: List[str]):
-    data_list: List[SelfPlayData] = []
+Tag = str
+
+
+def create_self_play_figure(game: str, tags: List[Tag]):
+    data_dict: Dict[Tag, SelfPlayData] = {}
     for tag in tags:
         run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
@@ -32,13 +35,12 @@ def create_self_play_figure(game: str, tags: List[str]):
 
         x_df = make_x_df(organizer)
         data.join(x_df)
-        data_list.append(data)
+        data_dict[tag] = data
 
-    if not data_list:
+    if not data_dict:
         return figure(title='No data available')
 
-    plotter = SelfPlayPlotter(data_list)
-    return plotter.figure
+    return SelfPlayPlotter(data_dict).figure
 
 
 @dataclass
@@ -187,49 +189,76 @@ class SelfPlayData:
 
 
 class SelfPlayPlotter:
-    def __init__(self, data_list: List[SelfPlayData]):
-        self.data_list = data_list
-
-        self.x_var_selector = XVarSelector([hd.df for hd in data_list], 'mcts_gen')
+    def __init__(self, data_dict: Dict[Tag, SelfPlayData]):
+        self.data_dict = data_dict
+        self.x_var_selector = XVarSelector([hd.df for hd in data_dict.values()], 'mcts_gen')
         self.sources: Dict[str, ColumnDataSource] = {}
 
         self.load()
-        self.plots = []
-        self.plots.extend(self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, 'Total Runtime',
-                                                  'Seconds'))
-        self.plots.extend(self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT,
-                                                  'NN Eval Profiling - Per Batch', 'Milliseconds'))
-        self.plots.extend(self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT,
-                                                  'Search Thread Profiling', 'Seconds'))
-        self.plots.extend([self.make_single_plot(BATCH_SIZE_PLOT),
-            self.make_single_plot(CACHE_HIT_RATE_PLOT),
-            self.make_single_plot(BATCHES_ALLOCATED_PLOT),
-        ])
-
         self.figure = self.make_figure()
 
     def load(self):
-        for data in self.data_list:
+        for data in self.data_dict.values():
             source = ColumnDataSource(data.df)
             self.x_var_selector.init_source(source)
             self.sources[data.tag] = source
 
     def make_figure(self):
-        return column(*self.plots)
+        batch_size_plot = self.make_single_plot(BATCH_SIZE_PLOT)
+        cache_hit_rate_plot = self.make_single_plot(CACHE_HIT_RATE_PLOT)
+        batches_allocated_plot = self.make_single_plot(BATCHES_ALLOCATED_PLOT)
+
+        initial_tag = list(self.data_dict.keys())[0]
+        tags = list(self.data_dict.keys())
+        select = Select(title='tag', value=initial_tag, options=tags)
+        select_wrapper = column(select, sizing_mode="fixed")
+
+
+        total_run_time_plot = self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, initial_tag,
+                                                      'Total Runtime', 'Seconds')
+        nn_eval_plot = self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT, initial_tag,
+                                               'NN Eval Profiling - Per Batch', 'Milliseconds')
+        search_thread_plot = self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT, initial_tag,
+                                                     'Search Thread Profiling', 'Seconds')
+
+        layout = gridplot([
+            [None, select_wrapper],
+            [batch_size_plot, total_run_time_plot],
+            [cache_hit_rate_plot, nn_eval_plot],
+            [batches_allocated_plot, search_thread_plot]
+            ], sizing_mode='scale_height')
+
+        def update(attr, old, new):
+            total_run_time_plot = self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, select.value,
+                                                        'Total Runtime', 'Seconds')
+            nn_eval_plot = self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT, select.value,
+                                                'NN Eval Profiling - Per Batch', 'Milliseconds')
+            search_thread_plot = self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT, select.value,
+                                                        'Search Thread Profiling', 'Seconds')
+            new_layout = gridplot([
+                [None, select_wrapper],
+                [batch_size_plot, total_run_time_plot],
+                [cache_hit_rate_plot, nn_eval_plot],
+                [batches_allocated_plot, search_thread_plot]
+                ], sizing_mode='scale_height')
+            layout.children[:] = new_layout.children
+
+        select.on_change('value', update)
+        return layout
 
     def make_single_plot(self, y_var_list: List[YVar]):
         assert len(y_var_list) == 1
         y_var = y_var_list[0]
         y = y_var.column
         descr = y_var.descr
-        colors = bokeh_util.get_colors(len(self.data_list))
+        colors = bokeh_util.get_colors(len(self.data_dict))
 
         plot = figure(
             title=descr, x_range=[0, 1],
             active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
         self.x_var_selector.init_plot(plot)
 
-        for data, color in zip(self.data_list, colors):
+        for data, color in zip(self.data_dict.values(), colors):
             label = data.tag
             source = self.sources[label]
             plot.line('x', y, source=source, line_color=color, legend_label=label)
@@ -250,29 +279,29 @@ class SelfPlayPlotter:
         plot.legend.click_policy = 'hide'
         return plot
 
-    def make_stacked_plots(self, y_var_list: List[YVar], descr: str, y_axis_label: str = None):
-        for data in self.data_list:
-            label = data.tag
-            title = f'{descr} ({label})'
-            plot = figure(
-                title=title, x_range=[0, 1],
-                active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
-            self.x_var_selector.init_plot(plot)
+    def make_stacked_plots(self, y_var_list: List[YVar], selected_tag: str, descr: str, y_axis_label: str = None):
+        data = self.data_dict[selected_tag]
+        label = data.tag
+        title = f'{descr} ({label})'
+        plot = figure(
+            title=title, x_range=[0, 1],
+            active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
+        self.x_var_selector.init_plot(plot)
 
-            colors = bokeh_util.get_colors(len(y_var_list))
-            source = self.sources[label]
+        colors = bokeh_util.get_colors(len(y_var_list))
+        source = self.sources[label]
 
-            y_cols = [y_var.column for y_var in y_var_list]
-            legend_labels = [y_var.descr for y_var in y_var_list]
-            bokeh_util.add_stacked_area(plot, source, y_cols, 'x', colors, legend_labels)
+        y_cols = [y_var.column for y_var in y_var_list]
+        legend_labels = [y_var.descr for y_var in y_var_list]
+        bokeh_util.add_stacked_area(plot, source, y_cols, 'x', colors, legend_labels)
 
-            hline = Span(location=0, dimension='width', line_color='gray',
-                        line_dash='dashed', line_width=1)
-            plot.add_layout(hline)
+        hline = Span(location=0, dimension='width', line_color='gray',
+                    line_dash='dashed', line_width=1)
+        plot.add_layout(hline)
 
-            if y_axis_label is not None:
-                plot.yaxis.axis_label = y_axis_label
+        if y_axis_label is not None:
+            plot.yaxis.axis_label = y_axis_label
 
-            plot.legend.items = list(reversed(plot.legend.items))
-            plot.legend.location = 'bottom_left'
-            yield plot
+        plot.legend.items = list(reversed(plot.legend.items))
+        plot.legend.location = 'bottom_left'
+        return plot

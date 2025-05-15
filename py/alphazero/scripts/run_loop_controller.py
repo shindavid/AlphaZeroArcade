@@ -5,6 +5,7 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
 from games.game_spec import GameSpec
+from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
@@ -24,11 +25,13 @@ def load_args():
 
     game_spec: Optional[GameSpec] = RunParams.add_args(parser)
     default_training_params = None if game_spec is None else game_spec.training_params
+    default_rating_params = None if game_spec is None else game_spec.rating_params
     LoopControllerParams.add_args(parser)
     TrainingParams.add_args(parser, defaults=default_training_params)
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser, loop_controller=True)
+    RatingParams.add_args(parser, defaults=default_rating_params)
 
     return parser.parse_args()
 
@@ -41,6 +44,7 @@ def main():
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+    rating_params = RatingParams.create(args)
 
     os.chdir(Repo.root())
 
@@ -55,7 +59,7 @@ def main():
         print('Please try again with a new tag.')
         return
 
-    server = LoopController(params, training_params, run_params, build_params)
+    server = LoopController(params, training_params, run_params, build_params, rating_params)
     log_filename = os.path.join(server.organizer.logs_dir, 'loop-controller.log')
 
     if server.on_ephemeral_local_disk_env:

@@ -11,13 +11,10 @@ class LoopControllerParams:
     port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     model_cfg: str = 'default'
     target_rating_rate: float = 0.1
-    n_games_per_evaluation: int = 1000
-    eval_error_threshold: float = 50.0
-    agent_n_iters: Optional[int] = 100 # if set to None, it will run the default n_iters set in binary
+
     benchmark_tag: Optional[str] = None
     benchmark_until_gen_gap: int = 25
-    n_games_per_benchmark: int = 100
-    target_elo_gap: float = 500
+
     ignore_sigint: bool = False
     simulate_cloud: bool = False
     task_mode: bool = False
@@ -48,26 +45,10 @@ class LoopControllerParams:
                            'self-play/training. (default: %(default).1f)')
         group.add_argument('-b', '--benchmark-tag', default=defaults.benchmark_tag,
                            help='the run tag whose benchmark.db will be used for evaluation.')
-        group.add_argument('--n-games-per-evaluation', type=int,
-                            default=defaults.n_games_per_evaluation,
-                            help='number of games per evaluation (default: %(default)s)')
-        group.add_argument('--eval-error-threshold', type=float,
-                           default=defaults.eval_error_threshold,
-                           help='evaluation error threshold (default: %(default)s)')
-        group.add_argument('-i', '--agent-n-iters', type=int,
-                           default=defaults.agent_n_iters,
-                           help='number of iterations to run eval agent for (default: %(default)s)')
-        group.add_argument('--target-elo-gap', type=float,
-                           default=defaults.target_elo_gap,
-                           help='target ELO gap for evaluation (default: %(default).1f)')
         group.add_argument('--benchmark-until-gen-gap', type=int,
                             default=defaults.benchmark_until_gen_gap,
                             help='number of generations to wait for benchmark evaluation '
                             '(default: %(default)s)')
-        group.add_argument('--n-games-per-benchmark', type=int,
-                           default=defaults.n_games_per_benchmark,
-                           help='number of games to run for benchmark evaluation '
-                           '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
         group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,

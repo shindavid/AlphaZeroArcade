@@ -25,6 +25,7 @@ new agents, and reports match results back to the controller.
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.servers.gaming.benchmark_server import BenchmarkServer, BenchmarkServerParams
+from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 from util.repo_util import Repo
@@ -40,6 +41,7 @@ def load_args():
     DockerParams.add_args(parser)
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
+    RatingParams.add_args(parser)
 
     return parser.parse_args()
 
@@ -50,6 +52,7 @@ def main():
     docker_params = DockerParams.create(args)
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
+    rating_params = RatingParams.create(args)
 
     os.chdir(Repo.root())
 
@@ -62,10 +65,9 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    server = BenchmarkServer(params, logging_params, build_params)
+    server = BenchmarkServer(params, logging_params, build_params, rating_params)
     server.run()
 
 
 if __name__ == '__main__':
     main()
-
