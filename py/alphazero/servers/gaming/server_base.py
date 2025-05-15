@@ -65,6 +65,7 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
+        self._log_append_mode = False
         self._shutdown_manager.register(self._shutdown)
         self._procs: Set[subprocess.Popen] = set()
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
@@ -178,7 +179,6 @@ class ServerBase:
         mcts_agent2 = MCTSAgent(**msg['agent2'])
         match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
 
-        log_filename = self._session_data.get_log_filename(self._config.worker_name)
         args = {
             '--loop-controller-hostname': self._params.loop_controller_host,
             '--loop-controller-port': self._params.loop_controller_port,
@@ -186,8 +186,13 @@ class ServerBase:
             '--manager-id': self._session_data.client_id,
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,
-            '--log-filename': log_filename,
         }
+        if self._log_append_mode:
+            # First time = do not append, in case the file already exists
+            # After that, append
+            args['--log-append-mode'] = None
+        self._log_append_mode = True
+
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
 
@@ -226,12 +231,16 @@ class ServerBase:
         args1 = dict(args)
         args2 = dict(args)
 
+        log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
+        log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
+
         port = DEFAULT_REMOTE_PLAY_PORT
 
         cmd1 = [
             os.path.join(self._session_data.run_dir, agent1.binary),
             '--port', str(port),
             '--player', f'"{ps1}"',
+            '--log-filename', log_filename1,
         ]
         cmd1.append(make_args_str(args1))
         cmd1 = ' '.join(map(str, cmd1))
@@ -240,6 +249,7 @@ class ServerBase:
             os.path.join(self._session_data.run_dir, agent2.binary),
             '--remote-port', str(port),
             '--player', f'"{ps2}"',
+            '--log-filename', log_filename2,
         ]
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
