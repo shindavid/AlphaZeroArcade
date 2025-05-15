@@ -77,6 +77,9 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       for (const auto& pgs : player_factory.parse(args.player_strs)) {
         proxy.register_player(pgs.seat, pgs.generator);
       }
+      if (client) {
+        client->start();
+      }
       proxy.run();
     } else {
       GameServer server(game_server_params, training_data_writer_params);
