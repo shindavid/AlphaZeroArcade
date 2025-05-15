@@ -81,6 +81,7 @@ def safe_killpg(pid, signal: signal.Signals):
 
 
 def terminate_processes(procs: Iterable[subprocess.Popen], timeout: float = 5.0):
+    procs = list(procs)
     for proc in procs:
         if proc.poll() is None:
             logger.debug(f'Terminating process {proc.pid}')
