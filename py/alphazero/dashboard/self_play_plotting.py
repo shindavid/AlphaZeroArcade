@@ -40,22 +40,7 @@ def create_self_play_figure(game: str, tags: List[Tag]):
     if not data_dict:
         return figure(title='No data available')
 
-    initial_tag = tags[0]
-    plotter = SelfPlayPlotter([data_dict[initial_tag]])
-    plot_container = plotter.figure
-
-    select = Select(title="Select Tag", value=initial_tag, options=list(data_dict.keys()))
-
-    def update_plot(attr, old, new):
-        new_data = data_dict[select.value]
-        new_plotter = SelfPlayPlotter([new_data])
-        new_figure = new_plotter.figure
-        layout.children[1] = new_figure  # Replace the plot
-
-    select.on_change('value', update_plot)
-
-    layout = column(select, plot_container)
-    return layout
+    return SelfPlayPlotter(data_dict).figure
 
 
 @dataclass
@@ -204,13 +189,21 @@ class SelfPlayData:
 
 
 class SelfPlayPlotter:
-    def __init__(self, data_list: List[SelfPlayData]):
-        self.data_list = data_list
-
-        self.x_var_selector = XVarSelector([hd.df for hd in data_list], 'mcts_gen')
+    def __init__(self, data_dict: Dict[Tag, SelfPlayData]):
+        self.data_dict = data_dict
+        self.x_var_selector = XVarSelector([hd.df for hd in data_dict.values()], 'mcts_gen')
         self.sources: Dict[str, ColumnDataSource] = {}
 
         self.load()
+        self.figure = self.make_figure()
+
+    def load(self):
+        for data in self.data_dict.values():
+            source = ColumnDataSource(data.df)
+            self.x_var_selector.init_source(source)
+            self.sources[data.tag] = source
+
+    def make_figure(self):
         self.plots = []
         self.plots.extend(self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, 'Total Runtime',
                                                   'Seconds'))
@@ -223,15 +216,7 @@ class SelfPlayPlotter:
             self.make_single_plot(BATCHES_ALLOCATED_PLOT),
         ])
 
-        self.figure = self.make_figure()
 
-    def load(self):
-        for data in self.data_list:
-            source = ColumnDataSource(data.df)
-            self.x_var_selector.init_source(source)
-            self.sources[data.tag] = source
-
-    def make_figure(self):
         return column(*self.plots)
 
     def make_single_plot(self, y_var_list: List[YVar]):
@@ -239,14 +224,14 @@ class SelfPlayPlotter:
         y_var = y_var_list[0]
         y = y_var.column
         descr = y_var.descr
-        colors = bokeh_util.get_colors(len(self.data_list))
+        colors = bokeh_util.get_colors(len(self.data_dict))
 
         plot = figure(
             title=descr, x_range=[0, 1],
             active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
         self.x_var_selector.init_plot(plot)
 
-        for data, color in zip(self.data_list, colors):
+        for data, color in zip(self.data_dict.values(), colors):
             label = data.tag
             source = self.sources[label]
             plot.line('x', y, source=source, line_color=color, legend_label=label)
@@ -268,7 +253,7 @@ class SelfPlayPlotter:
         return plot
 
     def make_stacked_plots(self, y_var_list: List[YVar], descr: str, y_axis_label: str = None):
-        for data in self.data_list:
+        for data in self.data_dict.values():
             label = data.tag
             title = f'{descr} ({label})'
             plot = figure(
