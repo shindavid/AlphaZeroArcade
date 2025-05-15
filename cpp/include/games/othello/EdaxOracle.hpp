@@ -16,10 +16,10 @@ class EdaxOracle {
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
 
-  EdaxOracle(int depth, bool verbose);
+  EdaxOracle(bool verbose);
   ~EdaxOracle();
 
-  core::action_t query(const State& state, const ActionMask& valid_actions);
+  core::action_t query(int depth, const State& state, const ActionMask& valid_actions);
 
  private:
   std::vector<std::string> line_buffer_;

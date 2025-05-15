@@ -4,7 +4,7 @@
 
 namespace othello {
 
-EdaxOracle::EdaxOracle(int depth, bool verbose) : verbose_(verbose) {
+EdaxOracle::EdaxOracle(bool verbose) : verbose_(verbose) {
   line_buffer_.resize(1);
 
   auto edax_dir = boost::filesystem::path("extra_deps/edax-reversi");
@@ -18,10 +18,6 @@ EdaxOracle::EdaxOracle(int depth, bool verbose) : verbose_(verbose) {
   namespace bp = boost::process;
   child_ = new bp::child(edax_relative_bin.c_str(), bp::start_dir(edax_dir), bp::std_out > out_,
                          bp::std_err > bp::null, bp::std_in < in_);
-
-  std::string level_str = std::format("level {}\n", depth);
-  in_.write(level_str.c_str(), level_str.size());
-  in_.flush();
 }
 
 EdaxOracle::~EdaxOracle() {
@@ -32,7 +28,7 @@ EdaxOracle::~EdaxOracle() {
   child_ = nullptr;
 }
 
-core::action_t EdaxOracle::query(const State& state, const ActionMask& valid_actions) {
+core::action_t EdaxOracle::query(int depth, const State& state, const ActionMask& valid_actions) {
   // Input:
   // setboard <board_str> <cur_player>\n
   //
@@ -66,8 +62,12 @@ Edax plays D3
   constexpr int input_len = 76;
   char input[input_len];
   Game::IO::write_edax_board_str(input, state);
-
   in_.write(input, input_len);
+
+  // write "level {}" to input:
+  int len = sprintf(input, "level %d\n", depth);
+  in_.write(input, len);
+
   in_.write("go\n", 3);
   in_.flush();
 

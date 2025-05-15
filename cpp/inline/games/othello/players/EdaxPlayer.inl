@@ -35,12 +35,12 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
   }
 
   EdaxOracle* oracle =
-    oracle_pool_->get_oracle(request.notification_unit, params_.depth, params_.verbose);
+    oracle_pool_->get_oracle(request.notification_unit, params_.verbose);
   if (!oracle) {
     return ActionResponse::yield();
   }
 
-  core::action_t action = oracle->query(state, request.valid_actions);
+  core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
   return action;
 }
