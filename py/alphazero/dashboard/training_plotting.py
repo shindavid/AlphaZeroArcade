@@ -223,7 +223,7 @@ class CombinedTrainingPlotter:
                 [None, select_wrapper],
                 [self.combined_plot, new_plot],
                 [radio_group, None]
-            ], sizing_mode='scale_width')
+            ], sizing_mode='scale_height')
             layout.children[:] = new_layout.children
 
         select.on_change('value', update_plot)
@@ -236,7 +236,7 @@ class CombinedTrainingPlotter:
             [None, select_wrapper],
             [self.combined_plot, initial_plot],
             [radio_group, None]
-        ], sizing_mode='scale_height')
+            ], sizing_mode='scale_height')
 
         return layout
 
