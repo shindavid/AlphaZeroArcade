@@ -196,8 +196,8 @@ class LoopController:
     def db_conn_pools(self) -> List[DatabaseConnectionPool]:
         return self._database_connection_manager.pools()
 
-    def latest_gen(self) -> Generation:
-        return self._training_manager.latest_gen()
+    def latest_model_gen(self) -> Generation:
+        return self._training_manager.latest_model_gen()
 
     def get_gpu_lock_table_for_training(self) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table_for_training()
@@ -527,7 +527,7 @@ class LoopController:
                 self._training_manager.retrain_models()
 
             self._self_play_manager.run_gen0_if_necessary()
-            self._training_manager.train_gen1_model_if_necessary()
+            self._training_manager.train_initial_models()
 
             if self._shutdown_manager.shutdown_requested():
                 return

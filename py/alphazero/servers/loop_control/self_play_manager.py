@@ -106,7 +106,6 @@ class SelfPlayManager:
         self._collect_and_process_game_data()
 
     def run_until_checkpoint(self):
-        self._controller._training_manager._set_checkpoint()
         checkpoint = self._controller.get_next_checkpoint()
 
         num_rows = self._n_committed_rows
@@ -356,7 +355,7 @@ class SelfPlayManager:
             aux.cond.notify_all()
 
     def _refresh_weights_if_needed(self, conn: ClientConnection):
-        gen = self._controller.latest_gen()
+        gen = self._controller.latest_model_gen()
         aux: SelfPlayManager.WorkerAux = conn.aux
         if aux.gen != gen:
             self._controller.broadcast_weights(conn, gen)
@@ -469,7 +468,7 @@ class SelfPlayManager:
         for game_filename in game_filenames:
             assert os.path.isfile(game_filename), game_filename
 
-        gen = self._controller.latest_gen()
+        gen = self._controller.latest_model_gen()
         output_filename = self._controller.organizer.get_self_play_data_filename(gen)
 
         if len(game_filenames) == 1:
@@ -483,7 +482,7 @@ class SelfPlayManager:
 
     def _update_self_play_db(self):
         logger.debug('Updating self play db...')
-        gen = self._controller.latest_gen()
+        gen = self._controller.latest_model_gen()
         output_filename = self._controller.organizer.get_self_play_data_filename(gen)
 
         file_size = os.path.getsize(output_filename)

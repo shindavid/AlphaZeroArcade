@@ -47,7 +47,7 @@ class TrainingManager:
 
         self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
         self._last_sample_window: Optional[Window] = None  # initialized lazily
-        self._latest_gen: Generation = 0
+        self._latest_model_gen: Generation = 0
 
     @property
     def last_sample_window(self) -> Window:
@@ -82,15 +82,15 @@ class TrainingManager:
             return 0
         return row[0]
 
-    def latest_gen(self) -> Generation:
-        return self._latest_gen
+    def latest_model_gen(self) -> Generation:
+        return self._latest_model_gen
 
     def setup(self):
         """
         Performs some lazy initialization that can't be done in __init__.
         """
         self._last_sample_window = self._load_last_sample_window()
-        self._latest_gen = self._controller.organizer.get_latest_model_generation(default=0)
+        self._latest_model_gen = self._controller.organizer.get_latest_model_generation(default=0)
         start = self._last_sample_window.start
         self._game_log_reader.init_data_loader(self._controller.organizer.self_play_data_dir)
 
@@ -118,11 +118,11 @@ class TrainingManager:
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
             n_retrain_gens = len(self._controller.organizer.fork_info.train_windows)
-            while self._latest_gen < n_retrain_gens:
+            while self._latest_model_gen < n_retrain_gens:
                 self.train_step()
 
-    def train_gen1_model_if_necessary(self):
-        if self._latest_gen == 0:
+    def train_initial_models(self):
+        while self._checkpoint <= self._controller.get_num_committed_rows():
             self.train_step()
 
     def train_step(self):
@@ -362,6 +362,6 @@ class TrainingManager:
         net.save_model(tmp_model_filename)
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
-        self._latest_gen = gen
+        self._latest_model_gen = gen
         logger.info('Checkpoint saved: %s', checkpoint_filename)
         logger.info('Model saved: %s', model_filename)
