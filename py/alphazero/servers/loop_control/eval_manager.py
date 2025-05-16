@@ -242,7 +242,7 @@ class EvalManager(GamingManagerBase):
                                      binary=benchmark_binary.scratch_path,
                                      model=benchmark_model.scratch_path if benchmark_model else None)
         else:
-            opponent_agent = next_opponent_agent
+            opponent_agent = replace(next_opponent_agent, binary=eval_binary.scratch_path)
 
         data = {
             'type': 'match-request',

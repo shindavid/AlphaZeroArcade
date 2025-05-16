@@ -84,6 +84,8 @@ class BenchmarkData:
         self.df = self.make_df(organizer)
 
         x_df = make_x_df(organizer)
+        if len(x_df) > 0:
+            self.highest_benchmark_elo = self.df['rating'].max()
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
         self.valid = len(self.df) > 0
 
@@ -140,6 +142,7 @@ class Plotter:
             self.min_y = min(self.min_y, min(df['rating']))
 
         self.highest_benchmark_elo = self.data_list[0].highest_benchmark_elo
+        self.max_y = max(self.max_y, self.highest_benchmark_elo)
 
     def add_lines(self, plot):
         data_list = self.data_list

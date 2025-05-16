@@ -90,7 +90,8 @@ class ReferenceAgent(Agent):
     type_str: str
     strength_param: str
     strength: int
-    tag: str = None
+    tag: Optional[str] = None
+    binary: Optional[str] = None
 
     def make_player_str(self, run_dir: str, args=None) -> str:
         player_args = {
@@ -105,7 +106,8 @@ class ReferenceAgent(Agent):
             'type_str': self.type_str,
             'strength_param': self.strength_param,
             'strength': self.strength,
-            'tag': self.tag
+            'tag': self.tag,
+            'binary': self.binary
         }
 
     def __str__(self) -> str:
