@@ -425,10 +425,9 @@ void NNEvaluationService<Game>::handle_force_progress() {
   LOG_DEBUG("<-- NNEvaluationService::{}() size={}", __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
 
-  if (batch_data_slice_allocator_.freeze_first()) {
-    lock.unlock();
-    cv_main_.notify_all();
-  }
+  batch_data_slice_allocator_.freeze_first();
+  lock.unlock();
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
@@ -629,11 +628,8 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
 
   std::unique_lock lock(main_mutex_);
   batch_data->write_count++;
-  bool notify = batch_data->frozen();
   lock.unlock();
-  if (notify) {
-    cv_main_.notify_all();
-  }
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>

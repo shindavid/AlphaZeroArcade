@@ -173,7 +173,6 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
-  bool was_queue_pending = queue_pending();
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
@@ -200,20 +199,15 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
             pending_queue_count_, queue_.size());
 
   lock.unlock();
-
-  if (was_queue_pending && !queue_pending()) {
-    cv_.notify_all();
-  }
+  cv_.notify_all();
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::drop_slot() {
   std::unique_lock lock(mutex_);
   pending_queue_count_--;
-  if (pending_queue_count_ == 0 && queue_.empty()) {
-    lock.unlock();
-    cv_.notify_all();
-  }
+  lock.unlock();
+  cv_.notify_all();
 }
 
 template <concepts::Game Game>
