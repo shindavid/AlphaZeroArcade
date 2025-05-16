@@ -105,6 +105,13 @@ class SelfPlayManager:
         self._launch_gen0_self_play(conn, checkpoint)
         self._collect_and_process_game_data()
 
+    def run_worker_launch_loop(self):
+        threading.Thread(
+            target=self._worker_launch_loop,
+            daemon=True,
+            name='self-play-worker-launch-loop'
+        ).start()
+
     def run_until_checkpoint(self):
         checkpoint = self._controller.get_next_checkpoint()
 
@@ -115,7 +122,6 @@ class SelfPlayManager:
         logger.info('Waiting for more training data... (current=%s, needed=%s)',
                     num_rows, checkpoint)
 
-        self._launch_unlaunched_workers()
         self._controller.unhijack_all_self_play_tables()
         self._collect_and_process_game_data()
 
@@ -370,12 +376,14 @@ class SelfPlayManager:
             if self._get_num_potential_rows() >= self._controller.get_next_checkpoint():
                 self._commit_cond.notify_all()
 
-    def _launch_unlaunched_workers(self):
+    def _worker_launch_loop(self):
         with self._conns_lock:
-            for conn in self._ready_server_conns:
-                aux: SelfPlayManager.ServerAux = conn.aux
-                if not aux.launched:
-                    self._launch_self_play(conn)
+            while True:
+                for conn in self._ready_server_conns:
+                    aux: SelfPlayManager.ServerAux = conn.aux
+                    if not aux.launched:
+                        self._launch_self_play(conn)
+                self._conns_cond.wait()
 
     def _wait_until_checkpoint_reached(self):
         checkpoint = self._controller.get_next_checkpoint()
