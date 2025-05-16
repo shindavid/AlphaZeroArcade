@@ -57,9 +57,8 @@ SELECT_VARS = [
 ]
 
 for col in constants.PERF_STATS_COLUMNS:
-    func = 'MAX' if col == 'batch_datas_allocated' else 'SUM'
     SELECT_VARS.append(
-        SelectVar('metrics', col, f'{func}({col})', group_by='gen'))
+        SelectVar('metrics', col, f'SUM({col})', group_by='gen'))
 
 
 def div(a, b):
@@ -83,11 +82,6 @@ BATCH_SIZE_PLOT = [
 CACHE_HIT_RATE_PLOT = [
     YVar('Cache Hit Rate', 'cache_hit_rate', range_start=0, range_end=1, func=lambda df: div(
         df['cache_hits'], df['cache_hits'] + df['cache_misses'])),
-]
-
-BATCHES_ALLOCATED_PLOT = [
-    YVar('Batches Allocated', 'batch_datas_allocated_cs', range_start=0,
-         func=lambda df: df['batch_datas_allocated'].cumsum()),
 ]
 
 STACKED_TOTAL_RUNTIME_PLOT = [
@@ -171,8 +165,7 @@ class SelfPlayData:
         self.valid = True
 
         for plot in [STACKED_TOTAL_RUNTIME_PLOT, STACKED_NN_EVAL_PER_BATCH_PLOT,
-                     STACKED_SEARCH_THREAD_PLOT, BATCH_SIZE_PLOT, CACHE_HIT_RATE_PLOT,
-                     BATCHES_ALLOCATED_PLOT]:
+                     STACKED_SEARCH_THREAD_PLOT, BATCH_SIZE_PLOT, CACHE_HIT_RATE_PLOT]:
             for y_var in plot:
                 assert y_var.column not in full_df.columns, y_var
                 full_df[y_var.column] = y_var.func(full_df)
@@ -206,7 +199,6 @@ class SelfPlayPlotter:
     def make_figure(self):
         batch_size_plot = self.make_single_plot(BATCH_SIZE_PLOT)
         cache_hit_rate_plot = self.make_single_plot(CACHE_HIT_RATE_PLOT)
-        batches_allocated_plot = self.make_single_plot(BATCHES_ALLOCATED_PLOT)
 
         initial_tag = list(self.data_dict.keys())[0]
         tags = list(self.data_dict.keys())
@@ -225,7 +217,7 @@ class SelfPlayPlotter:
             [None, select_wrapper],
             [batch_size_plot, total_run_time_plot],
             [cache_hit_rate_plot, nn_eval_plot],
-            [batches_allocated_plot, search_thread_plot]
+            [None, search_thread_plot]
             ], sizing_mode='scale_height')
 
         def update(attr, old, new):
@@ -239,7 +231,7 @@ class SelfPlayPlotter:
                 [None, select_wrapper],
                 [batch_size_plot, total_run_time_plot],
                 [cache_hit_rate_plot, nn_eval_plot],
-                [batches_allocated_plot, search_thread_plot]
+                [None, search_thread_plot]
                 ], sizing_mode='scale_height')
             layout.children[:] = new_layout.children
 
