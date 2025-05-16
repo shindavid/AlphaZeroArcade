@@ -314,7 +314,6 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
-  bool was_queue_pending = queue_pending();
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
@@ -339,10 +338,7 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
             item.context, (int)request.instruction, request.extra_enqueue_count, queue_.size());
 
   lock.unlock();
-
-  if (was_queue_pending && !queue_pending()) {
-    cv_.notify_all();
-  }
+  cv_.notify_all();
 }
 
 template <concepts::Game Game>
