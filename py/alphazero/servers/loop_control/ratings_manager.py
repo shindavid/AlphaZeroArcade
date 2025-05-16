@@ -254,7 +254,7 @@ class RatingsManager(GamingManagerBase):
         Finally, we find the largest gap in G, and return the midpoint of that gap. If G is fully
         saturated, we return M, which cannot be in G due to the above assumption.
         """
-        latest_gen = self._controller.latest_gen()
+        latest_gen = self._controller.latest_model_gen()
         assert latest_gen > 0, latest_gen
 
         logger.debug('Getting next gen to rate, latest_gen=%s...', latest_gen)

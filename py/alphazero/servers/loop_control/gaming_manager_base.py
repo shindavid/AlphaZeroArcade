@@ -146,7 +146,7 @@ class GamingManagerBase:
             self._new_work_cond.wait_for(self._has_work)
 
     def _has_work(self) -> bool:
-        logger.debug(f'num_evaluated_gens={self.num_evaluated_gens()}, latest_gen={self._controller.latest_gen()}')
+        logger.debug(f'num_evaluated_gens={self.num_evaluated_gens()}, latest_gen={self._controller.latest_model_gen()}')
         return self.num_evaluated_gens() < self._controller._organizer.get_latest_model_generation(default=0)
 
     def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
