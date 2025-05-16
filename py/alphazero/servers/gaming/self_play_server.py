@@ -61,8 +61,9 @@ class SelfPlayServer:
         except:
             pass
 
-        subprocess_util.terminate_processes([self._proc])
-        self._proc = None
+        if self._proc is not None:
+            subprocess_util.terminate_processes([self._proc])
+            self._proc = None
 
         logger.info('Self-play server shutdown complete!')
 
