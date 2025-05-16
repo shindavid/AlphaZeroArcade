@@ -515,6 +515,7 @@ class LoopController:
             if self._shutdown_manager.shutdown_requested():
                 return
 
+            self._self_play_manager.run_worker_launch_loop()
             while True:
                 self._self_play_manager.run_until_checkpoint()
                 self._training_manager.train_step()
