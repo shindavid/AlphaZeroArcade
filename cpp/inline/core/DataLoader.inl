@@ -279,22 +279,40 @@ DataLoader<Game>::FileManager::~FileManager() {
 }
 
 template <concepts::Game Game>
-void DataLoader<Game>::FileManager::prepare_files(const work_unit_deque_t& work_units,
-                                                  generation_t* gen_range) {
+void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
+  std::unique_lock lock(mutex_);
+  unload_queue_.push_back(file);
+  util::release_assert(active_file_count_ > 0, "FileManager::{}() bug", __func__);
+  active_file_count_--;
+  lock.unlock();
+  cv_.notify_all();
+}
+
+template <concepts::Game Game>
+void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_deque_t& work_units,
+                                                                      generation_t* gen_range) {
   std::unique_lock lock(mutex_);
   load_queue_.clear();
   unload_queue_.clear();
   active_file_count_ = 0;
 
-  int64_t expected_memory_usage = 0;
   generation_t start_gen = -1;
   generation_t end_gen = -1;
+  if (!work_units.empty()) {
+    start_gen = work_units.back().file->gen();
+    end_gen = work_units.front().file->gen();
+    util::release_assert(start_gen <= end_gen, "DataFileSet::{}() bug [start:{} end:{}]", __func__,
+                         start_gen, end_gen);
+  }
+
+  // put work units with loaded files at the front
+  std::sort(work_units.begin(), work_units.end(), [](const WorkUnit& a, const WorkUnit& b) {
+    return a.file->is_loaded() > b.file->is_loaded();
+  });
+
+  int64_t expected_memory_usage = 0;
   for (const WorkUnit& unit : work_units) {
     DataFile* file = unit.file;
-    util::release_assert(start_gen == -1 || file->gen() < start_gen,
-                         "DataFileSet::prepare_files() bug at {}", __LINE__);
-    start_gen = file->gen();
-    if (end_gen == -1) end_gen = file->gen();
     if (file->is_loaded()) {
       active_file_count_++;
       expected_memory_usage += file->file_size();
@@ -337,13 +355,6 @@ void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t fi
   std::unique_lock lock(mutex_);
   n_total_rows_ += num_rows;
   all_files_.push_front(data_file);
-}
-
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::decrement_active_file_count() {
-  std::unique_lock lock(mutex_);
-  util::release_assert(active_file_count_ > 0, "DataFileSet::decrement_active_file_count() bug");
-  active_file_count_--;
 }
 
 template <concepts::Game Game>
@@ -487,7 +498,7 @@ void DataLoader<Game>::WorkerThread::loop() {
     table_->mark_as_available(id_);
     lock.unlock();
 
-    file_manager_->decrement_active_file_count();
+    file_manager_->add_to_unload_queue(unit_.file);
   }
 }
 
@@ -589,7 +600,7 @@ void DataLoader<Game>::load(int64_t window_start, int64_t window_end, int n_samp
   load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
   sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_start,
                            window_end, file_manager_.n_total_rows(), n_samples);
-  file_manager_.prepare_files(work_units_, gen_range);
+  file_manager_.sort_work_units_and_prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
   shuffle_output(n_samples);
 }

@@ -215,9 +215,12 @@ class DataLoader {
                 int num_prefetch_threads);
     ~FileManager();
 
+    void add_to_unload_queue(DataFile* file);
+
     // Launches background prefetching of files. Writes the first and last gen of the sampled rows
-    // into gen_range.
-    void prepare_files(const work_unit_deque_t& work_units, generation_t* gen_range);
+    // into gen_range. Also sorts work_units so that the prefetch loop will load files in an order
+    // consistent with the order of the work units.
+    void sort_work_units_and_prepare_files(work_unit_deque_t& work_units, generation_t* gen_range);
 
     // Called at startup to restore an existing run
     //
@@ -231,8 +234,6 @@ class DataLoader {
 
     // Returns the list of files in reverse order by generation
     const file_deque_t& files_in_reverse_order() const { return all_files_; }
-
-    void decrement_active_file_count();
 
     int64_t n_total_rows() const { return n_total_rows_; }
 
