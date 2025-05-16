@@ -383,7 +383,11 @@ def main():
     register_signal_exception(signal.SIGINT, KeyboardInterrupt,
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
-    benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+    benchmark_tag = params.benchmark_tag
+    if benchmark_tag is None:
+        if game_spec.reference_player_family is None:
+            benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+
     descs = []
     procs = []
     try:
