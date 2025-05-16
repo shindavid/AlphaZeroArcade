@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, FileToTransfer
+from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation
 from alphazero.servers.loop_control.gpu_contention_table import Domain
 from util.socket_util import JsonDict, SocketSendException
 
@@ -83,8 +83,12 @@ class SelfPlayManager:
         self._commit_lock = threading.Lock()
         self._commit_cond = threading.Condition(self._commit_lock)
 
+        self._latest_self_play_gen: Generation = -1
+
     def setup(self):
         os.makedirs(self._scratch_dir, exist_ok=True)
+        organizer = self._controller.organizer
+        self._latest_self_play_gen = organizer.get_latest_self_play_generation(default=-1)
 
         with self._commit_lock:
             self._n_committed_rows = self._fetch_num_rows_in_db()
