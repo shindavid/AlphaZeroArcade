@@ -227,7 +227,7 @@ class EvalManager(GamingManagerBase):
                 scratch_path=f'benchmark-bin/{game}',
                 asset_path_mode='hash'
             )
-            files_required = [eval_binary, benchmark_binary]
+            files_required.append(benchmark_binary)
 
             benchmark_model = None
             if next_opponent_agent.gen > 0:

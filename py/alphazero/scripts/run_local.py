@@ -106,7 +106,10 @@ class Params:
 
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
+    run_eval_server: bool = False
+
     benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
+
 
     @staticmethod
     def create(args) -> 'Params':
@@ -127,6 +130,8 @@ class Params:
         group.add_argument('--run-ratings-server', action='store_true',
                             help='Run the ratings server')
         group.add_argument('--run-benchmark-server', action='store_true',
+                            help=argparse.SUPPRESS)
+        group.add_argument('--run-eval-server', action='store_true',
                             help=argparse.SUPPRESS)
 
 
@@ -395,17 +400,20 @@ def main():
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')
-                procs.append(launch_benchmark_server(params_dict, ratings_gpu))
-            if params.run_ratings_server:
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+            if params.run_eval_server:
                 descs.append('Eval')
-                procs.append(launch_eval_server(params_dict, ratings_gpu))
+                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+            if params.run_ratings_server:
+                descs.append('Ratings')
+                procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
             if game_spec.reference_player_family is not None or benchmark_tag is not None:
                 descs.append('Eval')
-                procs.append(launch_eval_server(params_dict, ratings_gpu))
+                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
             else:
                 descs.append('Benchmark')
-                procs.append(launch_benchmark_server(params_dict, ratings_gpu))
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')

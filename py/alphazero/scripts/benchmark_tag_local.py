@@ -54,6 +54,7 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
            '--task-mode']
     assert benchmark_tag is not None, "Benchmark tag should not be None after running benchmark server."
     cmd.extend(['--benchmark-tag', benchmark_tag])
+    cmd.extend(['--run-eval-server'])
 
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
