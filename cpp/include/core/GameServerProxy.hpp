@@ -115,6 +115,7 @@ class GameServerProxy : public core::GameServerBase {
     void end_session();
     void shutdown();
     void init_game_slots();
+    void debug_dump() const;
     YieldManager* yield_manager() { return &yield_manager_; }
     int num_slots() const { return game_slots_.size(); }
     bool running() const { return running_; }
@@ -143,6 +144,7 @@ class GameServerProxy : public core::GameServerBase {
     std::condition_variable cv_;
     mutable std::mutex mutex_;
     bool running_ = true;
+    bool waiting_in_next_ = false;
 
     // Below fields mirror their usage in GameServer. See GameServer::SharedData comments for
     // details.
@@ -187,6 +189,8 @@ class GameServerProxy : public core::GameServerBase {
   }
 
   void run();
+
+  virtual void debug_dump() const override { shared_data_.debug_dump(); }
 
  private:
   const Params& params() const { return shared_data_.params(); }

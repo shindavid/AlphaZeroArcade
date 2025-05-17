@@ -235,6 +235,7 @@ class GameServer
     YieldManager* yield_manager() { return &yield_manager_; }
     bool paused() const { return paused_; }
 
+    void debug_dump() const;
     void pause();
     void unpause();
     void wait_for_unpause();
@@ -287,6 +288,7 @@ class GameServer
     int paused_thread_count_ = 0;
     bool paused_ = false;
     bool pause_receipt_pending_ = false;
+    bool waiting_in_next_ = false;
 
     std::atomic<int64_t> mcts_time_ns_ = 0;
     std::atomic<int64_t> wait_for_game_slot_time_ns_ = 0;
@@ -307,6 +309,8 @@ class GameServer
     std::thread thread_;
     game_thread_id_t id_;
   };
+
+  virtual void debug_dump() const override { shared_data_.debug_dump(); }
 
  public:
   GameServer(const Params&, const TrainingDataWriterParams&);

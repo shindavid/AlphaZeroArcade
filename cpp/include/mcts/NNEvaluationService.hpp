@@ -347,6 +347,7 @@ class NNEvaluationService
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;
   core::YieldManager* yield_manager_ = nullptr;
+  core::GameServerBase* server_ = nullptr;
 };
 
 }  // namespace mcts

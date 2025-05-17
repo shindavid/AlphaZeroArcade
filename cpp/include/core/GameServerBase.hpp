@@ -11,6 +11,8 @@ class GameServerBase {
  public:
   enum enqueue_instruction_t : int8_t { kEnqueueNow, kEnqueueLater, kEnqueueNever };
 
+  virtual ~GameServerBase() = default;
+
   struct EnqueueRequest {
     enqueue_instruction_t instruction = kEnqueueNow;
     int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
@@ -25,6 +27,8 @@ class GameServerBase {
   int num_game_threads() const {
     return num_game_threads_;
   }
+
+  virtual void debug_dump() const = 0;
 
  protected:
   void force_progress();

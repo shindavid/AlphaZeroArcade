@@ -290,13 +290,22 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 }
 
 template <concepts::Game Game>
+void GameServerProxy<Game>::SharedData::debug_dump() const {
+  std::unique_lock lock(mutex_);
+  LOG_WARN("GameServerProxy {} paused:{} queue.size():{} waiting_in_next:{}",
+           __func__, running_, queue_.size(), waiting_in_next_);
+}
+
+template <concepts::Game Game>
 bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
     LOG_DEBUG("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
     server_->force_progress();
+    waiting_in_next_ = true;
     cv_.wait(lock, [&] { return !running_ || !queue_pending(); });
+    waiting_in_next_ = false;
   }
 
   if (!running_) {

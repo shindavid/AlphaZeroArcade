@@ -89,7 +89,8 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       num_game_threads_(server->num_game_threads()),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      batch_data_slice_allocator_(params.batch_size_limit, perf_stats_) {
+      batch_data_slice_allocator_(params.batch_size_limit, perf_stats_),
+      server_(server) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
     net_.activate();
@@ -747,6 +748,7 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
   if (deadline_reached) {
     // If this happens, there is some sort of bug. Retrying here potentially covers up for the bug.
     LOG_WARN("<-- {}::{}() Timed out waiting for batch data. Indicates a bug!", cls, func);
+    if (server_) server_->debug_dump();
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (!batch_data) {
       return nullptr;

@@ -1,3 +1,4 @@
+#include <chrono>
 #include <core/GameServer.hpp>
 
 #include <core/BasicTypes.hpp>
@@ -146,10 +147,10 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
-      LOG_DEBUG("<-- GameServer::{}(): waiting (queue:{} pending:{})", __func__, queue_.size(),
-                pending_queue_count_);
       server_->force_progress();
+      waiting_in_next_ = true;
       cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
+      waiting_in_next_ = false;
     }
     if (queue_.empty()) {
       LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
@@ -322,6 +323,17 @@ GameServer<Game>::SharedData::generate_player_order(
   }
 
   return player_order;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::debug_dump() const {
+  std::unique_lock lock(mutex_);
+  LOG_WARN(
+    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} "
+    "active_thread_count:{} paused_thread_count:{} pause_receipt_pending:{} "
+    "waiting_in_next:{}",
+    __func__, paused_, queue_.size(), pending_queue_count_, active_thread_count_,
+    paused_thread_count_, pause_receipt_pending_, waiting_in_next_);
 }
 
 template <concepts::Game Game>
