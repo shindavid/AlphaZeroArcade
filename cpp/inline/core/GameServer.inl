@@ -413,7 +413,6 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
   stats.update(search_thread_stats);
 }
 
-
 template <concepts::Game Game>
 GameServer<Game>::CriticalSectionCheck::CriticalSectionCheck(std::atomic<bool>& in_critical_section)
     : in_critical_section_(in_critical_section) {
@@ -462,6 +461,7 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
   StepResult result;
   if (!Rules::is_chance_mode(action_mode_)) {
     if (step_non_chance(context, result)) {
+      CriticalSectionCheck check(in_critical_section_);
       pre_step();
     } else {
       return result;
@@ -470,6 +470,7 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
 
   if (Rules::is_chance_mode(action_mode_)) {
     if (step_chance(result)) {
+      CriticalSectionCheck check(in_critical_section_);
       pre_step();
     }
   }
@@ -479,8 +480,10 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
   util::debug_assert(!mid_yield_);
+
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
+
   action_mode_ = Rules::get_action_mode(state_history_.current());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
   if (!Rules::is_chance_mode(action_mode_)) {
@@ -566,10 +569,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
 
   switch (response.yield_instruction) {
     case kContinue: {
+      CriticalSectionCheck check(in_critical_section_);
       mid_yield_ = false;
+      continue_hit_ = true;
       break;
     }
     case kYield: {
+      util::release_assert(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
       enqueue_request.instruction = kEnqueueLater;
@@ -577,6 +583,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
       return false;
     }
     case kDrop: {
+      util::release_assert(!continue_hit_, "kDrop after continue hit!");
       pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return false;
@@ -586,11 +593,12 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
     }
   }
 
-  CriticalSectionCheck check(in_critical_section_);
+  CriticalSectionCheck check2(in_critical_section_);
 
   util::release_assert(pending_drop_count_ == 0);
   util::release_assert(!mid_yield_);
 
+  continue_hit_ = false;
   move_number_++;
   action_t action = response.action;
   const TrainingInfo& training_info = response.training_info;
