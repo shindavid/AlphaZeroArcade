@@ -18,6 +18,12 @@ class GameServerBase {
     int extra_enqueue_count = 0;  // used when instruction == kEnqueueLater
   };
 
+  struct StepResult {
+    EnqueueRequest enqueue_request;
+    bool game_ended = false;
+    bool drop_slot = false;
+  };
+
   GameServerBase(int num_game_threads) : num_game_threads_(num_game_threads) {
     game_servers_.push_back(this);
   }

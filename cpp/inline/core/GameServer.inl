@@ -452,22 +452,22 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-GameServerBase::EnqueueRequest GameServer<Game>::GameSlot::step(context_id_t context) {
-  EnqueueRequest request;
+GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context) {
+  StepResult result;
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(context, request)) {
+    if (step_non_chance(context, result)) {
       pre_step();
     } else {
-      return request;
+      return result;
     }
   }
 
   if (Rules::is_chance_mode(action_mode_)) {
-    if (step_chance(request)) {
+    if (step_chance(result)) {
       pre_step();
     }
   }
-  return request;
+  return result;
 }
 
 template <concepts::Game Game>
@@ -484,7 +484,8 @@ void GameServer<Game>::GameSlot::pre_step() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_chance(EnqueueRequest& enqueue_request) {
+bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
+  EnqueueRequest& enqueue_request = result.enqueue_request;
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
@@ -534,7 +535,7 @@ bool GameServer<Game>::GameSlot::step_chance(EnqueueRequest& enqueue_request) {
 
   ValueTensor outcome;
   if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
-    handle_terminal(outcome);
+    handle_terminal(outcome, result);
     return false;
   }
   return true;
@@ -542,7 +543,7 @@ bool GameServer<Game>::GameSlot::step_chance(EnqueueRequest& enqueue_request) {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
-                                                 EnqueueRequest& enqueue_request) {
+                                                 StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
@@ -552,6 +553,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                      int(response.yield_instruction));
+
+  EnqueueRequest& enqueue_request = result.enqueue_request;
 
   switch (response.yield_instruction) {
     case kContinue: {
@@ -595,7 +598,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory",
               game_id_, player->get_name(), active_seat_);
     }
-    handle_terminal(outcome);
+    handle_terminal(outcome, result);
     return false;
   } else {
     Rules::apply(state_history_, action);
@@ -608,7 +611,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
 
     ValueTensor outcome;
     if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
-      handle_terminal(outcome);
+      handle_terminal(outcome, result);
       return false;
     }
   }
@@ -616,7 +619,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
+void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome, StepResult& result) {
   ValueArray array = GameResults::to_value_array(outcome);
   for (auto player2 : players_) {
     player2->end_game(state_history_.current(), outcome);
@@ -645,6 +648,14 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome) {
   shared_data_.update(reindexed_outcome);
 
   game_started_ = false;
+
+  if (!start_game()) {
+    result.drop_slot = true;
+  }
+
+  result.game_ended = true;
+  EnqueueRequest& request = result.enqueue_request;
+  util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
 }
 
 template <concepts::Game Game>
@@ -733,21 +744,18 @@ void GameServer<Game>::GameThread::run() {
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     util::release_assert(slot->game_started());
-    EnqueueRequest request = slot->step(item.context);
+    StepResult step_result = slot->step(item.context);
+    EnqueueRequest& request = step_result.enqueue_request;
 
-    bool dropped = false;
-    if (slot->game_ended()) {
-      util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
-      if (!slot->start_game()) {
-        shared_data_.drop_slot();
-        dropped = true;
-      }
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{} drop_slot={}", slot->id(),
+              item.context, (int)request.instruction, request.extra_enqueue_count,
+              step_result.drop_slot);
+
+    if (step_result.drop_slot) {
+      shared_data_.drop_slot();
+    } else {
+      shared_data_.enqueue(item, request);
     }
-
-    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{} dropped={}", slot->id(),
-              item.context, (int)request.instruction, request.extra_enqueue_count, dropped);
-
-    if (!dropped) shared_data_.enqueue(item, request);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);

@@ -24,6 +24,7 @@ class GameServerProxy : public core::GameServerBase {
 
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using EnqueueRequest = core::GameServerBase::EnqueueRequest;
+  using StepResult = core::GameServerBase::StepResult;
 
   using State = Game::State;
   using StateHistory = Game::StateHistory;
@@ -64,7 +65,7 @@ class GameServerProxy : public core::GameServerBase {
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    EnqueueRequest step(context_id_t context);
+    StepResult step(context_id_t context);
 
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
@@ -72,13 +73,6 @@ class GameServerProxy : public core::GameServerBase {
 
    private:
     const Params& params() const { return shared_data_.params(); }
-
-    // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_chance();
-
-    // Returns true if it successfully processed a non-terminal game state transition. Also sets
-    // request to the appropriate value.
-    bool step_non_chance(context_id_t context, EnqueueRequest& request);
 
     void handle_terminal(const ValueTensor& outcome);
     void send_action_packet(const ActionResponse&);

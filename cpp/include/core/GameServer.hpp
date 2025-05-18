@@ -55,6 +55,7 @@ class GameServer
 
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using EnqueueRequest = core::GameServerBase::EnqueueRequest;
+  using StepResult = core::GameServerBase::StepResult;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
@@ -141,7 +142,7 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    EnqueueRequest step(context_id_t context);
+    StepResult step(context_id_t context);
 
     bool start_game();
     bool game_started() const { return game_started_; }
@@ -153,13 +154,13 @@ class GameServer
     void pre_step();
 
     // Returns true if it successfully processed a non-terminal game state transition.
-    bool step_chance(EnqueueRequest& request);
+    bool step_chance(StepResult& result);
 
     // Returns true if it successfully processed a non-terminal game state transition. Also sets
     // request to the appropriate value.
-    bool step_non_chance(context_id_t context, EnqueueRequest& request);
+    bool step_non_chance(context_id_t context, StepResult& result);
 
-    void handle_terminal(const ValueTensor& outcome);
+    void handle_terminal(const ValueTensor& outcome, StepResult& result);
 
     SharedData& shared_data_;
     const game_slot_index_t id_;

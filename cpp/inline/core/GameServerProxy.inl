@@ -114,8 +114,9 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 }
 
 template <concepts::Game Game>
-GameServerBase::EnqueueRequest GameServerProxy<Game>::GameSlot::step(context_id_t context) {
-  EnqueueRequest enqueue_request;
+GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t context) {
+  StepResult result;
+  EnqueueRequest& enqueue_request = result.enqueue_request;
   Player* player = players_[prompted_player_id_];
 
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
@@ -151,19 +152,19 @@ GameServerBase::EnqueueRequest GameServerProxy<Game>::GameSlot::step(context_id_
       pending_drop_count_ += response.extra_enqueue_count;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
-      return enqueue_request;
+      return result;
     }
     case kDrop: {
       pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
-      return enqueue_request;
+      return result;
     }
     default: {
       throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
     }
   }
   send_action_packet(response);
-  return enqueue_request;
+  return result;
 }
 
 template <concepts::Game Game>
@@ -403,11 +404,8 @@ void GameServerProxy<Game>::GameThread::run() {
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
     util::release_assert(slot->game_started());
-    EnqueueRequest request = slot->step(item.context);
-
-    if (!slot->game_ended()) {
-      shared_data_.enqueue(item, request);
-    }
+    StepResult result = slot->step(item.context);
+    shared_data_.enqueue(item, result.enqueue_request);
   }
 }
 
