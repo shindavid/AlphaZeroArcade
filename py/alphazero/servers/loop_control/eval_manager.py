@@ -193,9 +193,10 @@ class EvalManager(GamingManagerBase):
 
         eval_binary_src = None
         benchmark_binary_src = None
+        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+
         if self._controller.params.use_stored_binary:
             eval_binary_src = self._controller.organizer_binary_path
-            benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
             benchmark_binary_src = benchmark_organizer.binary_filename
         else:
             binary_path = self._controller._build_params.get_binary_path(game)
