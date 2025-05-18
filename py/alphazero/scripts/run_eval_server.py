@@ -66,6 +66,7 @@ def main():
     logging_params = LoggingParams.create(args)
     build_params = BuildParams.create(args)
     rating_params = RatingParams.create(args)
+    print(params)
 
     os.chdir(Repo.root())
 

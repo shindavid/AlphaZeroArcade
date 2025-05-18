@@ -57,6 +57,7 @@ from alphazero.logic.run_params import RunParams
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
+from alphazero.servers.gaming.server_base import ServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
@@ -106,6 +107,8 @@ class Params:
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
     benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
+    use_stored_binary: bool = False
+    use_remote_play: bool = False
 
     @staticmethod
     def create(args) -> 'Params':
@@ -216,6 +219,9 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
         cmd.extend(['--loop_controller_port', str(params.port)])
     if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
         cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
+    if params.use_remote_play:
+        cmd.extend(['--use-remote-play'])
+
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
@@ -244,6 +250,8 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
         cmd.extend(['--loop_controller_port', str(params.port)])
     if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
         cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
+    if params.use_remote_play:
+        cmd.extend(['--use-remote-play'])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -297,6 +305,9 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
 
     if params.simulate_cloud:
         cmd.extend(['--simulate-cloud'])
+
+    if params.use_stored_binary:
+        cmd.extend(['--use-stored-binary'])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
