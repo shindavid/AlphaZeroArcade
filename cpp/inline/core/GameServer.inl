@@ -414,19 +414,6 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 }
 
 template <concepts::Game Game>
-GameServer<Game>::CriticalSectionCheck::CriticalSectionCheck(std::atomic<bool>& in_critical_section)
-    : in_critical_section_(in_critical_section) {
-  bool x = in_critical_section_.exchange(true, std::memory_order_acquire);
-  util::release_assert(!x, "Critical section double-entry detected!");
-}
-
-template <concepts::Game Game>
-GameServer<Game>::CriticalSectionCheck::~CriticalSectionCheck() {
-  bool x = in_critical_section_.exchange(false, std::memory_order_acquire);
-  util::release_assert(x, "Critical section double-exit detected!");
-}
-
-template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data),
       id_(id) {

@@ -56,6 +56,7 @@ class GameServer
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using EnqueueRequest = core::GameServerBase::EnqueueRequest;
   using StepResult = core::GameServerBase::StepResult;
+  using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
@@ -136,17 +137,6 @@ class GameServer
 
  private:
   class SharedData;  // forward declaration
-
-  // Helper class used to debug-check that only one thread is ever in a critical section at a time.
-  // We could use a mutex, but that would mask the problem, rather than fix it.
-  class CriticalSectionCheck {
-   public:
-    CriticalSectionCheck(std::atomic<bool>& in_critical_section);
-    ~CriticalSectionCheck();
-
-   private:
-    std::atomic<bool>& in_critical_section_;
-  };
 
   class GameSlot {
    public:

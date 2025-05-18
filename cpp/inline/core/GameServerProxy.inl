@@ -142,11 +142,14 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
 
   switch (response.yield_instruction) {
     case kContinue: {
+      CriticalSectionCheck check(in_critical_section_);
       mid_yield_ = false;
+      continue_hit_ = true;
       enqueue_request.instruction = kEnqueueLater;
       break;
     }
     case kYield: {
+      util::release_assert(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       pending_drop_count_ += response.extra_enqueue_count;
       enqueue_request.instruction = kEnqueueLater;
@@ -154,6 +157,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       return result;
     }
     case kDrop: {
+      util::release_assert(!continue_hit_, "kDrop after continue hit!");
       pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return result;
@@ -162,6 +166,9 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
     }
   }
+
+  CriticalSectionCheck check2(in_critical_section_);
+  continue_hit_ = false;
   send_action_packet(response);
   return result;
 }

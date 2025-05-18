@@ -25,6 +25,7 @@ class GameServerProxy : public core::GameServerBase {
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using EnqueueRequest = core::GameServerBase::EnqueueRequest;
   using StepResult = core::GameServerBase::StepResult;
+  using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using State = Game::State;
   using StateHistory = Game::StateHistory;
@@ -94,7 +95,9 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield_;
 
     // Used for synchronization in multithreaded case
+    bool continue_hit_ = false;  // for defensive programming
     std::atomic<int> pending_drop_count_ = 0;
+    std::atomic<bool> in_critical_section_ = false;  // for defensive programming
   };
 
   class SharedData {
