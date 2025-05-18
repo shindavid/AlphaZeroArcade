@@ -137,6 +137,17 @@ class GameServer
  private:
   class SharedData;  // forward declaration
 
+  // Helper class used to debug-check that only one thread is ever in a critical section at a time.
+  // We could use a mutex, but that would mask the problem, rather than fix it.
+  class CriticalSectionCheck {
+   public:
+    CriticalSectionCheck(std::atomic<bool>& in_critical_section);
+    ~CriticalSectionCheck();
+
+   private:
+    std::atomic<bool>& in_critical_section_;
+  };
+
   class GameSlot {
    public:
     GameSlot(SharedData&, game_slot_index_t);
@@ -188,6 +199,7 @@ class GameServer
 
     // Used for synchronization in multithreaded case
     std::atomic<int> pending_drop_count_ = 0;
+    std::atomic<bool> in_critical_section_ = false;  // for defensive programming
   };
 
   /*

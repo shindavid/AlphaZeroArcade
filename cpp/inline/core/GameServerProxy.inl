@@ -122,7 +122,6 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
-
   core::action_mode_t mode = Rules::get_action_mode(history_.current());
 
   // If below assert gets hit, that means we need to add chance-mode support to GameServerProxy.
@@ -173,7 +172,8 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   ActionDecision& decision = packet.payload();
   auto& section = decision.dynamic_size_section;
 
-  LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_, prompted_player_id_, response.action);
+  LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
+            prompted_player_id_, response.action);
 
   decision.game_slot_index = id_;
   decision.player_id = prompted_player_id_;

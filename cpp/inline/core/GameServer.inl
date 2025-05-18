@@ -203,14 +203,6 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::drop_slot() {
-  std::unique_lock lock(mutex_);
-  pending_queue_count_--;
-  lock.unlock();
-  cv_.notify_all();
-}
-
-template <concepts::Game Game>
 bool GameServer<Game>::SharedData::request_game() {
   if (LoopControllerClient::deactivated()) return false;
   if (training_data_writer_ && training_data_writer_->closed()) return false;
@@ -421,6 +413,20 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
   stats.update(search_thread_stats);
 }
 
+
+template <concepts::Game Game>
+GameServer<Game>::CriticalSectionCheck::CriticalSectionCheck(std::atomic<bool>& in_critical_section)
+    : in_critical_section_(in_critical_section) {
+  bool x = in_critical_section_.exchange(true, std::memory_order_acquire);
+  util::release_assert(!x, "Critical section double-entry detected!");
+}
+
+template <concepts::Game Game>
+GameServer<Game>::CriticalSectionCheck::~CriticalSectionCheck() {
+  bool x = in_critical_section_.exchange(false, std::memory_order_acquire);
+  util::release_assert(x, "Critical section double-exit detected!");
+}
+
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data),
@@ -514,6 +520,8 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     chance_action_values_ = response.action_values;
   }
 
+  CriticalSectionCheck check(in_critical_section_);
+
   ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
   action_t action = eigen_util::sample(chance_dist);
   if (game_log_) {
@@ -578,7 +586,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
     }
   }
 
-  util::debug_assert(!mid_yield_);
+  CriticalSectionCheck check(in_critical_section_);
+
+  util::release_assert(pending_drop_count_ == 0);
+  util::release_assert(!mid_yield_);
 
   move_number_++;
   action_t action = response.action;
@@ -649,13 +660,14 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome, Ste
 
   game_started_ = false;
 
+  EnqueueRequest& request = result.enqueue_request;
+  util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
+
   if (!start_game()) {
-    result.drop_slot = true;
+    request.instruction = kEnqueueNever;
   }
 
   result.game_ended = true;
-  EnqueueRequest& request = result.enqueue_request;
-  util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
 }
 
 template <concepts::Game Game>
@@ -747,15 +759,10 @@ void GameServer<Game>::GameThread::run() {
     StepResult step_result = slot->step(item.context);
     EnqueueRequest& request = step_result.enqueue_request;
 
-    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{} drop_slot={}", slot->id(),
-              item.context, (int)request.instruction, request.extra_enqueue_count,
-              step_result.drop_slot);
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{}", slot->id(),
+              item.context, (int)request.instruction, request.extra_enqueue_count);
 
-    if (step_result.drop_slot) {
-      shared_data_.drop_slot();
-    } else {
-      shared_data_.enqueue(item, request);
-    }
+    shared_data_.enqueue(item, request);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
