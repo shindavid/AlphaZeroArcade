@@ -85,6 +85,7 @@ def benchmark_reference_players(game_specs: List[GameSpec]):
         benchmarker.add_ref_agents()
         benchmarker.play_matches()
         benchmarker.commit_benchmark_ratings()
+        logger.info(f'Finished. Saved db to {benchmarker.db_filename}')
 
 if __name__ == "__main__":
     benchmark_reference_players(ALL_GAME_SPECS)
