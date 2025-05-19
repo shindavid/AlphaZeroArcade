@@ -503,7 +503,7 @@ class LoopController:
 
     def _get_binary_path(self, use_stored_binary: bool, stored_binary_path=None) -> str:
         if not use_stored_binary:
-            return self.organizer_binary_path
+            return self.build_params.get_binary_path(self.game_spec.name)
         else:
             if stored_binary_path is None:
                 raise Exception('Stored binary path is not set when use_stored_binary is True')
