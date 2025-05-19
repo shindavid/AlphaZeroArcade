@@ -501,6 +501,17 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
+    def _get_binary_path(self, use_stored_binary: bool, stored_binary_path=None) -> str:
+        if not use_stored_binary:
+            return self.organizer_binary_path
+        else:
+            if stored_binary_path is None:
+                raise Exception('Stored binary path is not set when use_stored_binary is True')
+            if os.path.exists(stored_binary_path):
+                return stored_binary_path
+            else:
+                raise Exception(f'Stored binary path does not exiWWst: {stored_binary_path}')
+
     def _training_loop(self):
         try:
             self._self_play_manager.setup()
