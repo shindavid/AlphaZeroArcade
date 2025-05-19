@@ -570,7 +570,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
       return false;
     }
     case kDrop: {
-      util::release_assert(!continue_hit_, "kDrop after continue hit!");
       pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return false;

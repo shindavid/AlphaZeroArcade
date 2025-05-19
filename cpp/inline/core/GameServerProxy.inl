@@ -157,7 +157,6 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       return result;
     }
     case kDrop: {
-      util::release_assert(!continue_hit_, "kDrop after continue hit!");
       pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return result;
