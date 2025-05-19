@@ -14,6 +14,24 @@ class BuildParams:
     override_binary: bool = False
     use_stored_binary: bool = False
 
+    def __post_init__(self):
+        if self.binary_path is not None:
+            if self.debug_build is not None:
+                raise ValueError(
+                     f'--binary-path {self.binary_path} is provided; using --debug-build is not allowed.')
+
+            if self.override_binary:
+                raise ValueError(
+                    f'--binary-path {self.binary_path} is provided; cannot override binaries.')
+
+        if self.use_stored_binary:
+            if self.binary_path is not None:
+                raise ValueError(
+                    f'--binary-path {self.binary_path} is provided; cannot use stored binary.')
+
+            if self.debug_build:
+                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.')
+
     @property
     def build_type(self):
         return 'Debug' if self.debug_build else 'Release'
@@ -90,4 +108,3 @@ class BuildParams:
                 cmd.append('--override-binary')
             if self.use_stored_binary:
                 cmd.append('--use-stored-binary')
-

@@ -479,7 +479,7 @@ class LoopController:
         else:
             organizer = self._organizer
 
-        binary_path = self.build_params.get_binary_path(self._run_params.game)
+        binary_path = self.build_params.get_binary_path(self.game_spec.name)
         target_file = organizer.binary_filename
         if os.path.exists(target_file):
             hash = sha256sum(target_file)
@@ -548,7 +548,8 @@ class LoopController:
         logger.info('Performing LoopController setup...')
         self._setup_output_dir()
         self._organizer.acquire_lock(self._shutdown_manager.register)
-        self._copy_binary_file()
+        if self.build_params.binary_path is None and not self.build_params.debug_build:
+            self._copy_binary_file()
         self._init_socket()
 
     def _start_threads(self):
