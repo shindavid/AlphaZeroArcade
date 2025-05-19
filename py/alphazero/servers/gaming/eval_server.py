@@ -5,10 +5,6 @@ from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams
 
 
-class EvalServerParams(ServerParams):
-    SERVER_NAME = 'eval-server'
-
-
 class EvalServer(ServerBase):
     def __init__(self, params: ServerParams, logging_params: LoggingParams,
                  build_params: BuildParams, rating_params: RatingParams):

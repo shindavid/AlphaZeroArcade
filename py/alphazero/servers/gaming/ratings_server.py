@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RatingsServerParams(ServerParams):
-    SERVER_NAME = 'ratings-server'
     rating_tag: str = ''
 
     @staticmethod

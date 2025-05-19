@@ -97,4 +97,5 @@ class RatingParams:
         else:
             if self.rating_player_options.num_search_threads != defaults.rating_player_options.num_search_threads:
                 cmd.extend(['--num-search-threads', str(self.rating_player_options.num_search_threads)])
-
+            if self.use_remote_play:
+                cmd.append('--use-remote-play')
