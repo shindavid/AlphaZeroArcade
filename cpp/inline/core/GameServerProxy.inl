@@ -299,8 +299,10 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::debug_dump() const {
   std::unique_lock lock(mutex_);
-  LOG_WARN("GameServerProxy {} running:{} queue.size():{} waiting_in_next:{}",
-           __func__, running_, queue_.size(), waiting_in_next_);
+  LOG_WARN(
+    "GameServerProxy {} running:{} queue.size():{} waiting_in_next:{} num_games_started:{} "
+    "num_games_ended:{}",
+    __func__, running_, queue_.size(), waiting_in_next_, num_games_started_, num_games_ended_);
 }
 
 template <concepts::Game Game>
@@ -359,6 +361,7 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::handle_start_game(const GeneralPacket& packet) {
+  num_games_started_++;
   const StartGame& payload = packet.payload_as<StartGame>();
   game_slots_[payload.game_slot_index]->handle_start_game(payload);
 }
@@ -377,6 +380,7 @@ void GameServerProxy<Game>::SharedData::handle_action_prompt(const GeneralPacket
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::handle_end_game(const GeneralPacket& packet) {
+  num_games_ended_++;
   const EndGame& payload = packet.payload_as<EndGame>();
   game_slots_[payload.game_slot_index]->handle_end_game(payload);
 }

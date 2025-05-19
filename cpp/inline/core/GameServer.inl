@@ -216,6 +216,7 @@ bool GameServer<Game>::SharedData::request_game() {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
   std::lock_guard<std::mutex> guard(mutex_);
+  num_games_ended_++;
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
     results_array_[s][outcome[s]]++;
   }
@@ -322,9 +323,10 @@ void GameServer<Game>::SharedData::debug_dump() const {
   LOG_WARN(
     "GameServer {} paused:{} queue.size():{} pending_queue_count:{} "
     "active_thread_count:{} paused_thread_count:{} pause_receipt_pending:{} "
-    "waiting_in_next:{}",
+    "waiting_in_next:{} num_games_started:{} num_games_ended:{}",
     __func__, paused_, queue_.size(), pending_queue_count_, active_thread_count_,
-    paused_thread_count_, pause_receipt_pending_, waiting_in_next_);
+    paused_thread_count_, pause_receipt_pending_, waiting_in_next_, num_games_started_,
+    num_games_ended_);
 }
 
 template <concepts::Game Game>

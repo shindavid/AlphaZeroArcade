@@ -233,6 +233,7 @@ class GameServer
       return registrations_[p].gen->get_name();
     }
     int num_games_started() const { return num_games_started_; }
+    int num_games_ended() const { return num_games_ended_; }
     int num_registrations() const { return registrations_.size(); }
     registration_vec_t& registration_templates() { return registrations_; }
     TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
@@ -270,6 +271,7 @@ class GameServer
     mutable std::mutex perf_stats_mutex_;
     progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
+    int num_games_ended_ = 0;
 
     // game_slots_ is in a fixed order, and doesn't change after initialization. This data
     // structure is used to look up the GameSlot for a given game_slot_index_t, which is needed for

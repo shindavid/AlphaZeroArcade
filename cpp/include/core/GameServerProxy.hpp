@@ -140,6 +140,8 @@ class GameServerProxy : public core::GameServerBase {
 
     std::condition_variable cv_;
     mutable std::mutex mutex_;
+    int num_games_started_ = 0;
+    int num_games_ended_ = 0;
     bool running_ = true;
     bool waiting_in_next_ = false;
 
