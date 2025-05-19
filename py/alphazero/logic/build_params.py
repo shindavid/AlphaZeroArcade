@@ -12,6 +12,7 @@ class BuildParams:
     binary_path: Optional[str] = None
     ffi_lib_path: Optional[str] = None
     override_binary: bool = False
+    use_stored_binary: bool = False
 
     @property
     def build_type(self):
@@ -44,7 +45,8 @@ class BuildParams:
             debug_build=getattr(args, 'debug_build', defaults.debug_build),
             binary_path=getattr(args, 'binary_path', defaults.binary_path),
             ffi_lib_path=getattr(args, 'ffi_lib_path', defaults.ffi_lib_path),
-            override_binary=getattr(args, 'override_binary', False),
+            override_binary=getattr(args, 'override_binary', defaults.override_binary),
+            use_stored_binary=getattr(args, 'use_stored_binary', defaults.use_stored_binary),
         )
         return params
 
@@ -65,6 +67,9 @@ class BuildParams:
             group.add_argument(
                 '--override-binary', action='store_true',
                 help='override the binary file in output/{game}/{tag}/target/{Debug, Release}')
+            group.add_argument(
+                '--use-stored-binary', action='store_true',
+                help='Use the stored binary instead of the one in target/Release')
         else:
             group.add_argument(
                 '--binary-path',
@@ -83,3 +88,6 @@ class BuildParams:
                 cmd.extend(['--ffi-lib-path', self.ffi_lib_path])
             if self.override_binary:
                 cmd.append('--override-binary')
+            if self.use_stored_binary:
+                cmd.append('--use-stored-binary')
+

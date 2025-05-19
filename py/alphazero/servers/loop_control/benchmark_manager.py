@@ -268,13 +268,14 @@ class BenchmarkManager(GamingManagerBase):
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
 
-        if self._controller.params.use_stored_binary:
+        binary_path = None
+        if self._controller.build_params.use_stored_binary:
             binary_path = self._controller.organizer_binary_path
         else:
             binary_path = self._controller.build_params.get_binary_path(game)
 
         binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller.organizer_binary_path,
+            source_path=binary_path,
             scratch_path=f'bin/{game}',
             asset_path_mode='hash')
 

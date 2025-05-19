@@ -38,7 +38,6 @@ class ServerConfig:
 @dataclass
 class ServerParams(BaseParams):
     SERVER_NAME = 'server' # class variable, overridden in subclasses
-    use_remote_play: bool = False
 
     @classmethod
     def create(cls, args) -> 'ServerParams':
@@ -50,8 +49,6 @@ class ServerParams(BaseParams):
         defaults = ServerParams()
         group_title = f'{cls.SERVER_NAME} options'
         group = parser.add_argument_group(group_title)
-        group.add_argument('--use-remote-play', action='store_true', default=defaults.use_remote_play,
-                           help='use remote play (multiple binaries).')
 
         if not omit_base:
             BaseParams.add_base_args(group)
@@ -234,11 +231,10 @@ class ServerBase:
         if args is None:
             args = {}
 
-        log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
-        log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
-
-        if self._params.use_remote_play:
+        if self._rating_params.use_remote_play:
             port = DEFAULT_REMOTE_PLAY_PORT
+            log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
+            log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
 
             cmd1 = [
                 binary1,
@@ -268,10 +264,11 @@ class ServerBase:
         else:
             assert sha256sum(binary1) == sha256sum(binary2), \
                 'Binaries need to be the same if one binary is used for both players (use-remote-play=False)'
+            log_filename = self._session_data.get_log_filename(self._config.worker_name)
             cmd = [binary1,
                    '--player', f'"{ps1}"',
                    '--player', f'"{ps2}"',
-                   '--log-filename', log_filename1,
+                   '--log-filename', log_filename,
                    ]
             cmd.append(make_args_str(args))
             cmd = ' '.join(map(str, cmd))
