@@ -13,7 +13,7 @@ class LoopControllerParams:
     target_rating_rate: float = 0.1
 
     benchmark_tag: Optional[str] = None
-    benchmark_until_gen_gap: int = 25
+    benchmark_until_gen_gap: int = 1
 
     ignore_sigint: bool = False
     simulate_cloud: bool = False
