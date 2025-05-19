@@ -299,7 +299,7 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::debug_dump() const {
   std::unique_lock lock(mutex_);
-  LOG_WARN("GameServerProxy {} paused:{} queue.size():{} waiting_in_next:{}",
+  LOG_WARN("GameServerProxy {} running:{} queue.size():{} waiting_in_next:{}",
            __func__, running_, queue_.size(), waiting_in_next_);
 }
 
