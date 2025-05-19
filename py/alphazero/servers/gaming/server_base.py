@@ -262,13 +262,13 @@ class ServerBase:
         logger.info('cmd1: %s', cmd1)
         logger.info('cmd2: %s', cmd2)
 
-        proc1 = subprocess_util.Popen(cmd1)
-        proc2 = subprocess_util.Popen(cmd2)
+        cwd = self._session_data.run_dir
+        proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
+        proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
         self._procs.update({proc1, proc2})
 
-        expected_rc = None
         print_fn = logger.error
-        stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+        stdout = subprocess_util.wait_for(proc1, print_fn=print_fn)
 
         self._procs.difference_update({proc1, proc2})
 
