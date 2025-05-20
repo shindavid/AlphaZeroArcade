@@ -41,20 +41,41 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
 
 
-def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code: Optional[int] = 0,
-             print_fn=print):
+def wait_for(proc: Union[subprocess.Popen, List[subprocess.Popen]], timeout=None,
+             expected_return_code: Optional[int] = 0, print_fn=print):
     """
     Waits until proc is complete, validates returncode, and returns stdout.
+
+    If proc is a list, waits for all of them, validates all their return codes, and returns a list
+    of their stdouts.
     """
-    stdout, stderr = proc.communicate(timeout=timeout)
-    if expected_return_code not in (proc.returncode, None):
-        print_fn(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
-        print_fn('----------------------------')
-        print_fn('STDERR:')
-        print_fn(stderr)
-        print_fn('----------------------------')
-        raise subprocess.CalledProcessError(proc.returncode, proc.args)
-    return stdout
+    if not isinstance(proc, list):
+        procs = [proc]
+    else:
+        procs = proc
+
+    stdouts = []
+    error_info = []
+    for p in procs:
+        assert isinstance(p, subprocess.Popen), f'Unexpected type p={type(p)} (proc={type(proc)})'
+
+        stdout, stderr = p.communicate(timeout=timeout)
+        stdouts.append(stdout)
+        if expected_return_code not in (p.returncode, None):
+            print_fn(f'Expected rc={expected_return_code}, got rc={p.returncode}')
+            print_fn('----------------------------')
+            print_fn('STDERR:')
+            print_fn(stderr)
+            print_fn('----------------------------')
+            error_info.append((p.args, p.returncode))
+
+    if error_info:
+        # raise an exception for the first process that failed
+        raise subprocess.CalledProcessError(*error_info[0])
+
+    if len(stdouts) == 1:
+        return stdouts[0]
+    return stdouts
 
 
 def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.CompletedProcess:

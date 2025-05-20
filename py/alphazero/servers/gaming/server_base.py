@@ -268,7 +268,7 @@ class ServerBase:
         self._procs.update({proc1, proc2})
 
         print_fn = logger.error
-        stdout = subprocess_util.wait_for(proc1, print_fn=print_fn)
+        stdout = subprocess_util.wait_for([proc1, proc2], print_fn=print_fn)[0]
 
         self._procs.difference_update({proc1, proc2})
 
