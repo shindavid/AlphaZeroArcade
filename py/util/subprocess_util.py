@@ -67,7 +67,7 @@ def wait_for(proc: Union[subprocess.Popen, List[subprocess.Popen]], timeout=None
             print_fn('STDERR:')
             print_fn(stderr)
             print_fn('----------------------------')
-            error_info.append((p.args, p.returncode))
+            error_info.append((p.returncode, p.args))
 
     if error_info:
         # raise an exception for the first process that failed
