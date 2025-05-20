@@ -321,12 +321,31 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::debug_dump() const {
   std::unique_lock lock(mutex_);
   LOG_WARN(
-    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} "
-    "active_thread_count:{} paused_thread_count:{} pause_receipt_pending:{} "
-    "waiting_in_next:{} num_games_started:{} num_games_ended:{}",
+    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} active_thread_count:{} "
+    "paused_thread_count:{} pause_receipt_pending:{} waiting_in_next:{} num_games_started:{} "
+    "num_games_ended:{}",
     __func__, paused_, queue_.size(), pending_queue_count_, active_thread_count_,
     paused_thread_count_, pause_receipt_pending_, waiting_in_next_, num_games_started_,
     num_games_ended_);
+
+  for (int i = 0; i < (int)game_slots_.size(); ++i) {
+    GameSlot* slot = game_slots_[i];
+    bool mid_yield = slot->mid_yield();
+    bool continue_hit = slot->continue_hit();
+    bool in_critical_section = slot->in_critical_section();
+
+    if (mid_yield || continue_hit || in_critical_section) {
+      std::ostringstream ss;
+      Game::IO::print_state(ss, slot->current_state());
+
+      Player* player = slot->active_player();
+      LOG_WARN(
+        "GameServer {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "active_seat:{} active_player:{} state:\n{}",
+        __func__, i, mid_yield, continue_hit, in_critical_section, slot->active_seat(),
+        player ? player->get_name() : "-", ss.str());
+    }
+  }
 }
 
 template <concepts::Game Game>
@@ -401,7 +420,7 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   // assumes mutex_ is locked
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
     pause_receipt_pending_ = false;
-    LOG_DEBUG("<-- GameServer: handling pause receipt");
+    LOG_INFO("<-- GameServer: handling pause receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
 }
@@ -857,11 +876,13 @@ void GameServer<Game>::run() {
   shared_data_.start_games();
 
   time_point_t start_time = std::chrono::steady_clock::now();
+  LOG_INFO("GameServer> Launching threads...");
   launch_threads();
   join_threads();
   time_point_t end_time = std::chrono::steady_clock::now();
 
   if (shared_data_.training_data_writer()) {
+    LOG_INFO("GameServer> Waiting until batch empty...");
     shared_data_.training_data_writer()->wait_until_batch_empty();
   }
 

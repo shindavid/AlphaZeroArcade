@@ -71,6 +71,13 @@ class GameServerProxy : public core::GameServerBase {
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
     game_slot_index_t id() const { return id_; }
+    seat_index_t prompted_player_id() const { return prompted_player_id_; }
+    Player* prompted_player() const { return prompted_player_id_ < 0 ? nullptr : players_[prompted_player_id_]; }
+
+    bool mid_yield() const { return mid_yield_; }
+    bool continue_hit() const { return continue_hit_; }
+    bool in_critical_section() const { return in_critical_section_; }
+    State current_state() const { return history_.current(); }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -91,7 +98,7 @@ class GameServerProxy : public core::GameServerBase {
     StateHistory history_;
     ActionMask valid_actions_;
     bool play_noisily_;
-    player_id_t prompted_player_id_;
+    player_id_t prompted_player_id_ = -1;
     bool mid_yield_;
 
     // Defensive programming

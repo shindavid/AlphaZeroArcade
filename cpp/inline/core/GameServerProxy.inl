@@ -57,8 +57,7 @@ GameServerProxy<Game>::GameSlot::~GameSlot() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload) {
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, payload.game_id,
-            payload.player_id);
+  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
   game_id_ = payload.game_id;
   payload.parse_player_names(player_names_);
@@ -74,6 +73,8 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& payload) {
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat = Rules::get_current_player(history_.current());
@@ -82,20 +83,18 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   action_t action = action_response.action;
   Rules::apply(history_, action);
 
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
-
   Player* player = players_[payload.player_id];
   player->receive_state_change(seat, history_.current(), action);
 }
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
+  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
+
   const char* buf = payload.dynamic_size_section.buf;
   std::memcpy(&valid_actions_, buf, sizeof(ActionMask));
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
-
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
 
   SlotContext slot_context(id_, 0);
   EnqueueRequest request;
@@ -262,6 +261,7 @@ void GameServerProxy<Game>::SharedData::init_socket() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::start_session() {
+  LOG_INFO("Starting game session");
   for (auto& sg : seat_generators_) {
     sg.gen->start_session();
   }
@@ -305,6 +305,26 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
     "GameServerProxy {} running:{} queue.size():{} waiting_in_next:{} num_games_started:{} "
     "num_games_ended:{}",
     __func__, running_, queue_.size(), waiting_in_next_, num_games_started_, num_games_ended_);
+
+  for (int i = 0; i < (int)game_slots_.size(); ++i) {
+    GameSlot* slot = game_slots_[i];
+    bool mid_yield = slot->mid_yield();
+    bool continue_hit = slot->continue_hit();
+    bool in_critical_section = slot->in_critical_section();
+
+    if (mid_yield || continue_hit || in_critical_section) {
+      std::ostringstream ss;
+      Game::IO::print_state(ss, slot->current_state());
+
+      Player* player = slot->prompted_player();
+      LOG_WARN(
+        "GameServerProxy {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "prompted_player_id:{} prompted_player:{} state:\n{}",
+        __func__, i, mid_yield, continue_hit, in_critical_section, slot->prompted_player_id(),
+        player ? player->get_name() : "-", ss.str());
+
+    }
+  }
 }
 
 template <concepts::Game Game>
@@ -438,6 +458,7 @@ void GameServerProxy<Game>::run() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::create_threads() {
+  LOG_INFO("Creating {} game threads", this->num_game_threads());
   for (int t = 0; t < this->num_game_threads(); ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
@@ -446,6 +467,7 @@ void GameServerProxy<Game>::create_threads() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::launch_threads() {
+  LOG_INFO("Launching {} game threads", this->num_game_threads());
   for (auto thread : threads_) {
     thread->launch();
   }
@@ -453,6 +475,7 @@ void GameServerProxy<Game>::launch_threads() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::run_event_loop() {
+  LOG_INFO("Entering {}", __func__);
   while (true) {
     GeneralPacket response_packet;
     if (!response_packet.read_from(shared_data_.socket())) {
@@ -477,6 +500,7 @@ void GameServerProxy<Game>::run_event_loop() {
         throw util::Exception("Unexpected packet type: {}", (int)type);
     }
   }
+  LOG_INFO("Exiting {}", __func__);
 }
 
 template <concepts::Game Game>
