@@ -7,6 +7,29 @@ from typing import List, Optional
 class BuildParams:
     """
     Parameters used to specify built files for a particular AlphaZero run.
+
+    Main use cases:
+    1. Running with the latest Release binary
+       no flags are needed
+
+    2. Running with a custom binary
+        --binary-path <path> to specify the path to the binary
+        --override-binary, --debug-build and --use-stored-binary cannot be provided
+        Note that the custom binary will not be copied/stored in the run output directory.
+        Custom binary will be transferred to the scratch directory to be run.
+
+    3. Running with a debug build
+        --debug-build to specify that a debug build should be used
+        --binary-path, --override-binary and --use-stored-binary cannot be provided
+        Note that Debug binaries will not be copied/stored in the run output directory.
+        Debug binary will be transferred to the scratch directory to be run.
+
+    4. Running with stored binaries
+        --use-stored-binary to specify that the stored binary should be used
+        --binary-path, --debug-build cannot be provided
+        It is recommended to leave --override-binary unset first. If the binary that is used to generate
+        a run is not the same as the one stored, an error will be raised. You can set --override-binary to
+        update the stored binary to proceed.
     """
     debug_build: Optional[bool] = None
     binary_path: Optional[str] = None
@@ -16,7 +39,7 @@ class BuildParams:
 
     def __post_init__(self):
         if self.binary_path is not None:
-            if self.debug_build is not None:
+            if self.debug_build:
                 raise ValueError(
                      f'--binary-path {self.binary_path} is provided; using --debug-build is not allowed.')
 
@@ -24,12 +47,15 @@ class BuildParams:
                 raise ValueError(
                     f'--binary-path {self.binary_path} is provided; cannot override binaries.')
 
-        if self.use_stored_binary:
-            if self.binary_path is not None:
+            if self.use_stored_binary:
                 raise ValueError(
                     f'--binary-path {self.binary_path} is provided; cannot use stored binary.')
 
-            if self.debug_build:
+        if self.debug_build:
+            if self.override_binary:
+                raise ValueError('--debug-build and --override-binary are mutually exclusive.')
+
+            if self.use_stored_binary:
                 raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.')
 
     @property
