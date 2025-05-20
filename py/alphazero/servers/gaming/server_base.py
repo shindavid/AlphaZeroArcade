@@ -68,7 +68,7 @@ class ServerBase:
         self._shutdown_manager = ShutdownManager()
         self._running = False
         self._log_append_mode = False
-        self._shutdown_manager.register(self._shutdown)
+        self._shutdown_manager.register(self._shutdown, 'server-base-shutdown')
         self._procs: Set[subprocess.Popen] = set()
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 

@@ -325,13 +325,13 @@ class DirectoryOrganizer:
 
         self.fork_info.save(self.fork_info_filename)
 
-    def acquire_lock(self, register_func: Callable[[Callable[[], None]], Any]) -> str:
+    def acquire_lock(self, register_func: Callable) -> str:
         self.assert_unlocked()
 
         with open(self.lock_filename, 'w') as f:
             f.write('The existence of this file indicates that this run is currently active.')
         logger.debug(f"Lock acquired: {self.lock_filename}")
-        register_func(self.release_lock)
+        register_func(self.release_lock, 'lock-release')
 
     def release_lock(self):
         if os.path.exists(self.lock_filename):

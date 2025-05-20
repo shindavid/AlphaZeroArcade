@@ -26,7 +26,7 @@ class LogSyncer:
         self._lock = threading.Lock()
         self._sync_thread = None
 
-        controller.register_shutdown_action(self.shutdown)
+        controller.register_shutdown_action(self.shutdown, 'log-sync')
 
     def register(self, conn: ClientConnection, remote_log_filename: str):
         """

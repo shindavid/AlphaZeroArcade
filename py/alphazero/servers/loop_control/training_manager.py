@@ -32,7 +32,7 @@ class TrainingManager:
         Some members are initialized lazily in setup(). This is because those values require
         database access, and we don't want to do that in __init__.
         """
-        controller.register_shutdown_action(self._shutdown)
+        controller.register_shutdown_action(self._shutdown, 'train-shutdown')
 
         self._controller = controller
         self._lock = threading.Lock()

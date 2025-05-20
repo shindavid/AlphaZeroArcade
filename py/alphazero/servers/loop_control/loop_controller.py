@@ -205,8 +205,8 @@ class LoopController:
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
-    def register_shutdown_action(self, action: ShutdownAction):
-        self._shutdown_manager.register(action)
+    def register_shutdown_action(self, action: ShutdownAction, descr: str):
+        self._shutdown_manager.register(action, descr)
 
     def request_shutdown(self, return_code: int):
         self._shutdown_manager.request_shutdown(return_code)
@@ -426,7 +426,7 @@ class LoopController:
         self._socket.bind(('0.0.0.0', self.params.port))
         self._socket.listen()
 
-        self.register_shutdown_action(lambda: self._socket.close())
+        self.register_shutdown_action(lambda: self._socket.close(), 'socket-close')
 
     def _setup_output_dir(self):
         self._organizer.dir_setup()

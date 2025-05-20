@@ -1,11 +1,9 @@
 from alphazero.logic.custom_types import ShutdownAction
 
 import logging
-import os
-import signal
 import sys
 import threading
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 logger = logging.getLogger(__name__)
@@ -15,7 +13,7 @@ class ShutdownManager:
     def __init__(self):
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
-        self._shutdown_actions: List[ShutdownAction] = []
+        self._shutdown_actions: List[Tuple[ShutdownAction, str]] = []
         self._shutdown_code: Optional[int] = None
         self._shutdown_in_progress = False
 
@@ -42,17 +40,19 @@ class ShutdownManager:
             self._shutdown_in_progress = True
             actions = list(self._shutdown_actions)
 
-        for action in actions:
+        for action, descr in actions:
             try:
+                logger.info(f'Running shutdown action: {descr}')
                 action()
+                logger.info(f'Shutdown action {descr} completed successfully')
             except:
                 logger.error('Error while shutting down', exc_info=True)
 
         sys.exit(code)
 
-    def register(self, action: ShutdownAction):
+    def register(self, action: ShutdownAction, descr: str):
         with self._lock:
-            self._shutdown_actions.append(action)
+            self._shutdown_actions.append((action, descr))
 
     def wait_for_shutdown_request(self):
         with self._lock:
