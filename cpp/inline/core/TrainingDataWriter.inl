@@ -155,6 +155,7 @@ void TrainingDataWriter<Game>::loop() {
       }
       record(data.get());
     }
+    misc_data_.closed |= batch_data_.full() && misc_data_.params.max_rows > 0;
     queue.clear();
 
     if (batch_data_.size == batch_data_.last_heartbeat_size) continue;
