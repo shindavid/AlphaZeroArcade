@@ -487,13 +487,13 @@ class LoopController:
                 logger.debug('Binary file already exists, skipping copy')
                 return
             elif not self.build_params.override_binary:
-                message = f"""Hash mismatch for binary file {binary_path}.
+                message = f"""Hash mismatch for binary file {target_file} and {binary_path}.
                 Include --override-binary to override or have the matching binary: {binary_path}"""
                 raise Exception(message)
             else:
-                message = f"""Hash mismatch for binary file {binary_path}.
+                message = f"""Hash mismatch for binary file {target_file} and {binary_path}.
                 Overriding binary file with the one in {binary_path}"""
-                logger.debug(message)
+                logger.warning(message)
         else:
             logger.info('Copying binary file to persistent run dir...')
 

@@ -40,23 +40,17 @@ class BuildParams:
     def __post_init__(self):
         if self.binary_path is not None:
             if self.debug_build:
-                raise ValueError(
-                     f'--binary-path {self.binary_path} is provided; using --debug-build is not allowed.')
-
+                raise ValueError(f'--binary-path {self.binary_path} is provided; using --debug-build is not allowed.')
             if self.override_binary:
-                raise ValueError(
-                    f'--binary-path {self.binary_path} is provided; cannot override binaries.')
-
+                raise ValueError(f'--binary-path {self.binary_path} is provided; cannot override binaries.')
             if self.use_stored_binary:
-                raise ValueError(
-                    f'--binary-path {self.binary_path} is provided; cannot use stored binary.')
+                raise ValueError(f'--binary-path {self.binary_path} is provided; cannot use stored binary.')
 
         if self.debug_build:
             if self.override_binary:
                 raise ValueError('--debug-build and --override-binary are mutually exclusive.')
-
             if self.use_stored_binary:
-                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.')
+                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.'))
 
     @property
     def build_type(self):
