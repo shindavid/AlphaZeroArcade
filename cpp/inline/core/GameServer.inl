@@ -566,13 +566,11 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
     case kYield: {
       util::release_assert(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
-      pending_drop_count_ += response.extra_enqueue_count;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
       return false;
     }
     case kDrop: {
-      pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return false;
     }
@@ -582,8 +580,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   }
 
   CriticalSectionCheck check2(in_critical_section_);
-
-  util::release_assert(pending_drop_count_ == 0);
   util::release_assert(!mid_yield_);
 
   continue_hit_ = false;

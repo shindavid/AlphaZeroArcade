@@ -187,10 +187,9 @@ class GameServer
     bool noisy_mode_;
     bool mid_yield_;
 
-    // Used for synchronization in multithreaded case
-    bool continue_hit_ = false;  // for defensive programming
-    std::atomic<int> pending_drop_count_ = 0;
-    std::atomic<bool> in_critical_section_ = false;  // for defensive programming
+    // Defensive programming
+    bool continue_hit_ = false;
+    std::atomic<bool> in_critical_section_ = false;
   };
 
   /*
