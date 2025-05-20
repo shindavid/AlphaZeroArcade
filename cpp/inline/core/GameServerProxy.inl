@@ -77,7 +77,8 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat = Rules::get_current_player(history_.current());
-  ActionResponse action_response = *reinterpret_cast<const ActionResponse*>(buf);
+  ActionResponse action_response;
+  std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.action;
   Rules::apply(history_, action);
 
@@ -90,7 +91,7 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
   const char* buf = payload.dynamic_size_section.buf;
-  valid_actions_ = *reinterpret_cast<const ActionMask*>(buf);
+  std::memcpy(&valid_actions_, buf, sizeof(ActionMask));
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
 
@@ -108,9 +109,12 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 
   game_started_ = false;
 
-  ValueTensor outcome = *reinterpret_cast<const ValueTensor*>(buf);
+  alignas(ValueTensor) char buffer[sizeof(ValueTensor)];
+  std::memcpy(buffer, buf, sizeof(ValueTensor));
+  ValueTensor* outcome = new (buffer) ValueTensor();  // Placement new
+
   Player* player = players_[payload.player_id];
-  player->end_game(history_.current(), outcome);
+  player->end_game(history_.current(), *outcome);
 }
 
 template <concepts::Game Game>
