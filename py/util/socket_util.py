@@ -8,6 +8,9 @@ import threading
 from typing import Any, Dict, Optional, Union
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
 class EncodedJson:
     header: bytes  # 4-byte big-endian integer specifying the length of the payload
@@ -127,6 +130,7 @@ def send_json(sock: socket.socket, data: JsonData):
     Raises:
     - SocketSendException if the socket was closed by peer.
     """
+    logger.debug('sending json: %s', data)
     if not isinstance(data, EncodedJson):
         data = encode_json(data)
 
