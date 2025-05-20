@@ -50,7 +50,7 @@ class BuildParams:
             if self.override_binary:
                 raise ValueError('--debug-build and --override-binary are mutually exclusive.')
             if self.use_stored_binary:
-                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.'))
+                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.')
 
     @property
     def build_type(self):
