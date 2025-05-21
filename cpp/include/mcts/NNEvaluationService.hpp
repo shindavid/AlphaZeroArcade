@@ -214,6 +214,11 @@ class NNEvaluationService
 
     int pending_batch_datas_size() const { return pending_batch_datas_.size(); }
 
+    // Debugging
+    std::atomic<int64_t> global_allocate_count_ = 0;
+    std::atomic<int64_t> global_write_count_ = 0;
+    std::atomic<int64_t> global_eval_count_ = 0;
+
    private:
     BatchData* add_batch_data();
 
@@ -348,6 +353,9 @@ class NNEvaluationService
   BatchDataSliceAllocator batch_data_slice_allocator_;
   core::YieldManager* yield_manager_ = nullptr;
   core::GameServerBase* server_ = nullptr;
+
+  // Debugging
+  std::atomic<int64_t> retry_count_ = 0;
 };
 
 }  // namespace mcts

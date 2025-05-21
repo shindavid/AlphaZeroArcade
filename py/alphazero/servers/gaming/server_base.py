@@ -242,7 +242,9 @@ class ServerBase:
             '--log-filename', log_filename1,
         ]
         if not self._session_data.start_log_sync(log_filename1):
-            args1['--log-append-mode'] = None
+            # temporarily disable log-append-mode to avoid gigantic log files
+            # args1['--log-append-mode'] = None
+            pass
         cmd1.append(make_args_str(args1))
         cmd1 = ' '.join(map(str, cmd1))
 
@@ -253,7 +255,9 @@ class ServerBase:
             '--log-filename', log_filename2,
         ]
         if not self._session_data.start_log_sync(log_filename2):
-            args2['--log-append-mode'] = None
+            # temporarily disable log-append-mode to avoid gigantic log files
+            # args2['--log-append-mode'] = None
+            pass
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 

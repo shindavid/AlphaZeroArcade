@@ -208,10 +208,13 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
     slice.start_row = batch_data->allocate_count;
     slice.num_rows = m;
     batch_data->allocate_count += m;
+    global_allocate_count_ += m;
+    util::release_assert(batch_data->accepting_allocations);
 
     if (batch_data->allocate_count == batch_data->capacity()) {
       batch_data->accepting_allocations = false;
       batch_data = add_batch_data();
+      util::release_assert(batch_data->accepting_allocations);
     }
   }
 }
@@ -324,6 +327,8 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
 
     yield_instruction = core::kYield;
   }
+
+  cv_main_.notify_all();
 
   std::unique_lock perf_stats_lock(perf_stats_mutex_);
   perf_stats_.update(result.stats);
@@ -629,6 +634,7 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
 
   std::unique_lock lock(main_mutex_);
   batch_data->write_count++;
+  batch_data_slice_allocator_.global_write_count_++;
   lock.unlock();
   cv_main_.notify_all();
 }
@@ -753,9 +759,18 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
     if (!batch_data) {
       return nullptr;
     } else {
-      LOG_WARN("<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{})", cls, func,
-               batch_data->sequence_id, batch_data->accepting_allocations,
-               batch_data->allocate_count, batch_data->write_count);
+      LOG_WARN(
+        "<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{}) global=(alloc:{} write:{} "
+        "eval:{})",
+        cls, func, batch_data->sequence_id, batch_data->accepting_allocations,
+        batch_data->allocate_count, batch_data->write_count,
+        (int64_t)batch_data_slice_allocator_.global_allocate_count_,
+        (int64_t)batch_data_slice_allocator_.global_write_count_,
+        (int64_t)batch_data_slice_allocator_.global_eval_count_);
+      retry_count_++;
+      if (retry_count_ > 5) {
+        throw util::Exception("Intentionally crashing to debug a bug");
+      }
       batch_data->accepting_allocations = false;
       cv_main_.wait(lock, predicate);
     }
@@ -828,12 +843,17 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   loop_stats.batches_evaluated = 1;
   loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
 
+  batch_data_slice_allocator_.global_eval_count_ += num_rows;
+
   std::unique_lock perf_lock(perf_stats_mutex_);
   perf_stats_.update(loop_stats);
 
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - (seq:{}) complete!", cls, func, last_evaluated_sequence_id_);
   }
+
+  LOG_INFO("<-- {}::{}() - (seq:{} num_rows:{}) complete", cls, func, last_evaluated_sequence_id_,
+           num_rows);
 }
 
 template <core::concepts::Game Game>
