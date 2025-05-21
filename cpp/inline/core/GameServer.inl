@@ -856,7 +856,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
       response_packet.set_player_name(name);
       response_packet.send_to(socket);
 
-      LOG_INFO("Registered player: \"{}\" (seat: {}, remaining: {})\n", name.c_str(), seat,
+      LOG_INFO("Registered player: \"{}\" (seat: {}, remaining: {})", name.c_str(), seat,
                remaining_requests);
     } while (remaining_requests);
   }
