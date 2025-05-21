@@ -41,7 +41,7 @@ class SelfPlayServer:
         self._build_params = build_params
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
-        self._shutdown_manager.register(lambda: self._shutdown())
+        self._shutdown_manager.register(lambda: self._shutdown(), 'self-play-shutdown')
         self._proc: Optional[subprocess.Popen] = None
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 

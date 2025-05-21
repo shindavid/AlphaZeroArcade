@@ -58,7 +58,7 @@ class OutputDirSyncer:
 
         self._thread = None
 
-        controller.register_shutdown_action(self.shutdown)
+        controller.register_shutdown_action(self.shutdown, 'output-dir-sync')
 
     def shutdown(self):
         if self._thread is None:

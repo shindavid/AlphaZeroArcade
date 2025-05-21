@@ -105,6 +105,7 @@ class Params:
 
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
+    benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
 
     @staticmethod
     def create(args) -> 'Params':
@@ -284,6 +285,10 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
 
     if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
         cmd.extend(['--num-iterations', str(rating_params.rating_player_options.num_iterations)])
+
+    if default_loop_controller_params.benchmark_until_gen_gap != params.benchmark_until_gen_gap:
+        cmd.extend(['--benchmark-until-gen-gap', str(params.benchmark_until_gen_gap)])
+
     if params.task_mode:
         cmd.extend(['--task-mode'])
 

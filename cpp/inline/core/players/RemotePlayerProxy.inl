@@ -1,9 +1,9 @@
 #include <core/players/RemotePlayerProxy.hpp>
 
-#include <sys/socket.h>
-
 #include <core/BasicTypes.hpp>
 #include <core/Packet.hpp>
+
+#include <sys/socket.h>
 
 namespace core {
 
@@ -107,7 +107,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
 
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
   const char* buf = payload.dynamic_size_section.buf;
-  player->action_response_ = *reinterpret_cast<const ActionResponse*>(buf);
+  std::memcpy(&player->action_response_, buf, sizeof(player->action_response_));
   const YieldNotificationUnit& unit = player->yield_notification_unit_;
   unit.yield_manager->notify(unit.slot_context());
 }

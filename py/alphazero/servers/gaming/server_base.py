@@ -67,8 +67,7 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
-        self._log_append_mode = False
-        self._shutdown_manager.register(self._shutdown)
+        self._shutdown_manager.register(self._shutdown, 'server-base-shutdown')
         self._procs: Set[subprocess.Popen] = set()
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
 
@@ -189,11 +188,6 @@ class ServerBase:
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,
         }
-        if self._log_append_mode:
-            # First time = do not append, in case the file already exists
-            # After that, append
-            args['--log-append-mode'] = None
-        self._log_append_mode = True
 
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
@@ -230,10 +224,11 @@ class ServerBase:
 
         if args is None:
             args = {}
-        args['-G'] = n_games
 
         args1 = dict(args)
         args2 = dict(args)
+
+        args1['-G'] = n_games
 
         log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
         log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
@@ -246,6 +241,8 @@ class ServerBase:
             '--player', f'"{ps1}"',
             '--log-filename', log_filename1,
         ]
+        if not self._session_data.start_log_sync(log_filename1):
+            args1['--log-append-mode'] = None
         cmd1.append(make_args_str(args1))
         cmd1 = ' '.join(map(str, cmd1))
 
@@ -255,6 +252,8 @@ class ServerBase:
             '--player', f'"{ps2}"',
             '--log-filename', log_filename2,
         ]
+        if not self._session_data.start_log_sync(log_filename2):
+            args2['--log-append-mode'] = None
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
@@ -262,13 +261,13 @@ class ServerBase:
         logger.info('cmd1: %s', cmd1)
         logger.info('cmd2: %s', cmd2)
 
-        proc1 = subprocess_util.Popen(cmd1)
-        proc2 = subprocess_util.Popen(cmd2)
+        cwd = self._session_data.run_dir
+        proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
+        proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
         self._procs.update({proc1, proc2})
 
-        expected_rc = None
         print_fn = logger.error
-        stdout = subprocess_util.wait_for(proc1, expected_return_code=expected_rc, print_fn=print_fn)
+        stdout = subprocess_util.wait_for([proc1, proc2], print_fn=print_fn)[0]
 
         self._procs.difference_update({proc1, proc2})
 

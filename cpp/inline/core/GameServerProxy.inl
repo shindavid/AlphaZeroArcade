@@ -57,8 +57,7 @@ GameServerProxy<Game>::GameSlot::~GameSlot() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload) {
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, payload.game_id,
-            payload.player_id);
+  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
   game_id_ = payload.game_id;
   payload.parse_player_names(player_names_);
@@ -74,14 +73,15 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& payload) {
+  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat = Rules::get_current_player(history_.current());
-  ActionResponse action_response = *reinterpret_cast<const ActionResponse*>(buf);
+  ActionResponse action_response;
+  std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.action;
   Rules::apply(history_, action);
-
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
 
   Player* player = players_[payload.player_id];
   player->receive_state_change(seat, history_.current(), action);
@@ -89,12 +89,12 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
+  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
+
   const char* buf = payload.dynamic_size_section.buf;
-  valid_actions_ = *reinterpret_cast<const ActionMask*>(buf);
+  std::memcpy(&valid_actions_, buf, sizeof(ActionMask));
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
-
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
 
   SlotContext slot_context(id_, 0);
   EnqueueRequest request;
@@ -108,9 +108,12 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 
   game_started_ = false;
 
-  ValueTensor outcome = *reinterpret_cast<const ValueTensor*>(buf);
+  alignas(ValueTensor) char buffer[sizeof(ValueTensor)];
+  std::memcpy(buffer, buf, sizeof(ValueTensor));
+  ValueTensor* outcome = new (buffer) ValueTensor();  // Placement new
+
   Player* player = players_[payload.player_id];
-  player->end_game(history_.current(), outcome);
+  player->end_game(history_.current(), *outcome);
 }
 
 template <concepts::Game Game>
@@ -151,13 +154,11 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
     case kYield: {
       util::release_assert(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
-      pending_drop_count_ += response.extra_enqueue_count;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
       return result;
     }
     case kDrop: {
-      pending_drop_count_--;
       enqueue_request.instruction = kEnqueueNever;
       return result;
     }
@@ -260,6 +261,7 @@ void GameServerProxy<Game>::SharedData::init_socket() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::start_session() {
+  LOG_INFO("Starting game session");
   for (auto& sg : seat_generators_) {
     sg.gen->start_session();
   }
@@ -303,6 +305,26 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
     "GameServerProxy {} running:{} queue.size():{} waiting_in_next:{} num_games_started:{} "
     "num_games_ended:{}",
     __func__, running_, queue_.size(), waiting_in_next_, num_games_started_, num_games_ended_);
+
+  for (int i = 0; i < (int)game_slots_.size(); ++i) {
+    GameSlot* slot = game_slots_[i];
+    bool mid_yield = slot->mid_yield();
+    bool continue_hit = slot->continue_hit();
+    bool in_critical_section = slot->in_critical_section();
+
+    if (mid_yield || continue_hit || in_critical_section) {
+      std::ostringstream ss;
+      Game::IO::print_state(ss, slot->current_state());
+
+      Player* player = slot->prompted_player();
+      LOG_WARN(
+        "GameServerProxy {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "prompted_player_id:{} prompted_player:{} state:\n{}",
+        __func__, i, mid_yield, continue_hit, in_critical_section, slot->prompted_player_id(),
+        player ? player->get_name() : "-", ss.str());
+
+    }
+  }
 }
 
 template <concepts::Game Game>
@@ -436,6 +458,7 @@ void GameServerProxy<Game>::run() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::create_threads() {
+  LOG_INFO("Creating {} game threads", this->num_game_threads());
   for (int t = 0; t < this->num_game_threads(); ++t) {
     GameThread* thread = new GameThread(shared_data_, t);
     threads_.push_back(thread);
@@ -444,6 +467,7 @@ void GameServerProxy<Game>::create_threads() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::launch_threads() {
+  LOG_INFO("Launching {} game threads", this->num_game_threads());
   for (auto thread : threads_) {
     thread->launch();
   }
@@ -451,6 +475,7 @@ void GameServerProxy<Game>::launch_threads() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::run_event_loop() {
+  LOG_INFO("Entering {}", __func__);
   while (true) {
     GeneralPacket response_packet;
     if (!response_packet.read_from(shared_data_.socket())) {
@@ -475,6 +500,7 @@ void GameServerProxy<Game>::run_event_loop() {
         throw util::Exception("Unexpected packet type: {}", (int)type);
     }
   }
+  LOG_INFO("Exiting {}", __func__);
 }
 
 template <concepts::Game Game>

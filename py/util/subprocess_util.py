@@ -2,6 +2,7 @@ import logging
 import os
 import signal
 import subprocess
+import threading
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 
@@ -41,20 +42,80 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
 
 
-def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code: Optional[int] = 0,
-             print_fn=print):
+def wait_for(proc: Union[subprocess.Popen, List[subprocess.Popen]], timeout=None,
+             expected_return_code: Optional[int] = 0, print_fn=print):
     """
     Waits until proc is complete, validates returncode, and returns stdout.
+
+    If proc is a list, waits until for all of them, validates all their return codes, and returns a
+    list of their stdouts. If any of the processes exit with an unexpected return code, raises an
+    exception before waiting for the others to finish.
     """
-    stdout, stderr = proc.communicate(timeout=timeout)
-    if expected_return_code not in (proc.returncode, None):
-        print_fn(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
+    if isinstance(proc, subprocess.Popen):
+        stdout, stderr = proc.communicate(timeout=timeout)
+        if expected_return_code not in (p.returncode, None):
+            print_fn(f'Expected rc={expected_return_code}, got rc={p.returncode}')
+            print_fn('----------------------------')
+            print_fn(f'args: {p.args}')
+            print_fn('----------------------------')
+            print_fn(f'STDOUT:\n{stdout}')
+            print_fn('----------------------------')
+            print_fn(f'STDERR:\n{stderr}')
+            print_fn('----------------------------')
+            raise subprocess.CalledProcessError(p.returncode, p.args)
+        return stdout
+
+    procs = list(proc)
+    cond = threading.Condition()
+    timed_out_pids = []
+    completed_procs = []
+    failed_procs = []
+    stdouts = {}
+    stderrs = {}
+
+    def run_proc(p: subprocess.Popen):
+        try:
+            stdout, sterr = p.communicate(timeout=timeout)
+            stdouts[p.pid] = stdout
+            stderrs[p.pid] = sterr
+            if expected_return_code not in (p.returncode, None):
+                failed_procs.append(p)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            timed_out_pids.append(p.pid)
+            failed_procs.append(p)
+
+        completed_procs.append(p)
+        with cond:
+            cond.notify_all()
+
+    [threading.Thread(target=run_proc, args=(p,)).start() for p in proc]
+    with cond:
+        cond.wait_for(lambda: len(completed_procs) == len(procs) or failed_procs)
+
+    timed_out_pids = list(timed_out_pids)
+    failed_procs = list(failed_procs)
+
+    for pid in timed_out_pids:
+        logger.warning(f'Process {pid} timed out and was killed')
+
+    for p in failed_procs:
+        stdout = stdouts.get(p.pid, None)
+        stderr = stderrs.get(p.pid, None)
+        print_fn(f'Process {p.pid} failed with return code {p.returncode}')
         print_fn('----------------------------')
-        print_fn('STDERR:')
-        print_fn(stderr)
+        print_fn(f'args: {p.args}')
         print_fn('----------------------------')
-        raise subprocess.CalledProcessError(proc.returncode, proc.args)
-    return stdout
+        print_fn(f'STDOUT:\n{stdout}')
+        print_fn('----------------------------')
+        print_fn(f'STDERR:\n{stderr}')
+        print_fn('----------------------------')
+
+    if failed_procs:
+        raise Exception('One or more processes failed. See above.')
+
+    assert len(stdouts) == len(procs)
+    return [stdouts[p.pid] for p in procs]
 
 
 def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.CompletedProcess:
