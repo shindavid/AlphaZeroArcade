@@ -224,10 +224,11 @@ class ServerBase:
 
         if args is None:
             args = {}
-        args['-G'] = n_games
 
         args1 = dict(args)
         args2 = dict(args)
+
+        args1['-G'] = n_games
 
         log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
         log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
