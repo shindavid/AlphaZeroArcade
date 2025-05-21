@@ -152,20 +152,20 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
       waiting_in_next_ = false;
     }
     if (queue_.empty()) {
-      LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
+      LOG_INFO("<-- GameServer::{}(): queue empty, exiting", __func__);
       return false;
     }
   }
 
   if (paused_) {
-    LOG_DEBUG("<-- GameServer::{}(): paused", __func__);
+    LOG_INFO("<-- GameServer::{}(): paused", __func__);
     return false;
   }
 
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
-  LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
+  LOG_INFO("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
             item.context, queue_.size(), pending_queue_count_);
   return true;
 }
@@ -185,7 +185,7 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
         item.context = i + 1;
         queue_.push(item);
       }
-      item.context = 0;  // just for the LOG_DEBUG() statement below
+      item.context = 0;  // just for the LOG_INFO() statement below
     }
   } else if (request.instruction == kEnqueueNever) {
     pending_queue_count_--;
@@ -194,7 +194,7 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
                           (int)request.instruction);
   }
 
-  LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} queue={}", __func__,
+  LOG_INFO("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} queue={}", __func__,
             item.slot, item.context, (int)request.instruction, request.extra_enqueue_count,
             pending_queue_count_, queue_.size());
 
@@ -371,10 +371,10 @@ void GameServer<Game>::SharedData::unpause() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::wait_for_unpause() {
-  LOG_DEBUG("<-- GameServer: waiting for unpause...");
+  LOG_INFO("<-- GameServer: waiting for unpause...");
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return !paused_; });
-  LOG_DEBUG("<-- GameServer: unpause wait complete!");
+  LOG_INFO("<-- GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
@@ -395,7 +395,7 @@ void GameServer<Game>::SharedData::increment_paused_thread_count() {
   std::unique_lock lock(mutex_);
   util::release_assert(paused_);
   paused_thread_count_++;
-  LOG_DEBUG("<-- GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
+  LOG_INFO("<-- GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
             active_thread_count_);
   issue_pause_receipt_if_necessary();
 }
@@ -770,7 +770,7 @@ void GameServer<Game>::GameThread::run() {
     StepResult step_result = slot->step(item.context);
     EnqueueRequest& request = step_result.enqueue_request;
 
-    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{}", slot->id(),
+    LOG_INFO("<-- GameServer::step(item={}:{}) enqueue_request={}:{}", slot->id(),
               item.context, (int)request.instruction, request.extra_enqueue_count);
 
     shared_data_.enqueue(item, request);

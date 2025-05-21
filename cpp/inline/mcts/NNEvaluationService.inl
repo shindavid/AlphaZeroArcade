@@ -221,7 +221,7 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
-  LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
+  LOG_INFO("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
@@ -232,7 +232,7 @@ bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
   BatchData* batch_data = pending_batch_datas_.front();
   if (batch_data->allocate_count == 0) return false;
 
-  LOG_DEBUG("<-- NNEvaluationService: Freezing batch data {} (alloc:{} write:{})",
+  LOG_INFO("<-- NNEvaluationService: Freezing batch data {} (alloc:{} write:{})",
             batch_data->sequence_id, batch_data->allocate_count, batch_data->write_count);
 
   bool was_frozen = batch_data->frozen();
@@ -428,7 +428,7 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::handle_force_progress() {
   std::unique_lock lock(main_mutex_);
-  LOG_DEBUG("<-- NNEvaluationService::{}() size={}", __func__,
+  LOG_INFO("<-- NNEvaluationService::{}() size={}", __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
 
   batch_data_slice_allocator_.freeze_first();

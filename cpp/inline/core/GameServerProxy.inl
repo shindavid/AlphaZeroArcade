@@ -57,7 +57,7 @@ GameServerProxy<Game>::GameSlot::~GameSlot() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload) {
-  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
+  LOG_INFO("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
   game_id_ = payload.game_id;
   payload.parse_player_names(player_names_);
@@ -73,7 +73,7 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& payload) {
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+  LOG_INFO("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
 
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -89,7 +89,7 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
-  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
+  LOG_INFO("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
   const char* buf = payload.dynamic_size_section.buf;
   std::memcpy(&valid_actions_, buf, sizeof(ActionMask));
@@ -103,7 +103,7 @@ void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& p
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
+  LOG_INFO("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
   const char* buf = payload.dynamic_size_section.buf;
 
   game_started_ = false;
@@ -122,7 +122,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   EnqueueRequest& enqueue_request = result.enqueue_request;
   Player* player = players_[prompted_player_id_];
 
-  LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
+  LOG_INFO("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
   core::action_mode_t mode = Rules::get_action_mode(history_.current());
@@ -179,7 +179,7 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   ActionDecision& decision = packet.payload();
   auto& section = decision.dynamic_size_section;
 
-  LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
+  LOG_INFO("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
             prompted_player_id_, response.action);
 
   decision.game_slot_index = id_;
@@ -332,7 +332,7 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
-    LOG_DEBUG("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
+    LOG_INFO("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
     server_->force_progress();
     waiting_in_next_ = true;
     cv_.wait(lock, [&] { return !running_ || !queue_pending(); });
@@ -340,13 +340,13 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   }
 
   if (!running_) {
-    LOG_DEBUG("<-- GameServerProxy::{}(): queue empty, exiting", __func__);
+    LOG_INFO("<-- GameServerProxy::{}(): queue empty, exiting", __func__);
     return false;
   }
 
   item = queue_.front();
   queue_.pop();
-  LOG_DEBUG("<-- GameServerProxy::{}(): item={}:{} (queue:{})", __func__, item.slot, item.context,
+  LOG_INFO("<-- GameServerProxy::{}(): item={}:{} (queue:{})", __func__, item.slot, item.context,
             queue_.size());
   return true;
 }
@@ -365,7 +365,7 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
         item.context = i + 1;
         queue_.push(item);
       }
-      item.context = 0;  // just for the LOG_DEBUG() statement below
+      item.context = 0;  // just for the LOG_INFO() statement below
     }
   } else if (request.instruction == kEnqueueNever) {
     // pass
@@ -374,7 +374,7 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
                           (int)request.instruction);
   }
 
-  LOG_DEBUG("<-- GameServerProxy::{}(item={}:{}, request={}:{}) queue={}", __func__, item.slot,
+  LOG_INFO("<-- GameServerProxy::{}(item={}:{}, request={}:{}) queue={}", __func__, item.slot,
             item.context, (int)request.instruction, request.extra_enqueue_count, queue_.size());
 
   lock.unlock();
