@@ -67,7 +67,6 @@ class ServerBase:
         self._session_data = SessionData(params, logging_params, build_params)
         self._shutdown_manager = ShutdownManager()
         self._running = False
-        self._log_append_mode = False
         self._shutdown_manager.register(self._shutdown, 'server-base-shutdown')
         self._procs: Set[subprocess.Popen] = set()
         register_standard_server_signals(ignore_sigint=params.ignore_sigint)
@@ -189,11 +188,6 @@ class ServerBase:
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,
         }
-        if self._log_append_mode:
-            # First time = do not append, in case the file already exists
-            # After that, append
-            args['--log-append-mode'] = None
-        self._log_append_mode = True
 
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
@@ -246,6 +240,8 @@ class ServerBase:
             '--player', f'"{ps1}"',
             '--log-filename', log_filename1,
         ]
+        if not self._session_data.start_log_sync(log_filename1):
+            args1['--log-append-mode'] = None
         cmd1.append(make_args_str(args1))
         cmd1 = ' '.join(map(str, cmd1))
 
@@ -255,6 +251,8 @@ class ServerBase:
             '--player', f'"{ps2}"',
             '--log-filename', log_filename2,
         ]
+        if not self._session_data.start_log_sync(log_filename2):
+            args2['--log-append-mode'] = None
         cmd2.append(make_args_str(args2))
         cmd2 = ' '.join(map(str, cmd2))
 
