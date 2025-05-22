@@ -207,7 +207,7 @@ class NNEvaluationService
     void recycle(BatchData* batch_data);
 
     // Freezes the first BatchData in the pending list.
-    bool freeze_first();
+    void freeze_first();
 
     BatchData* get_first_pending_batch_data() const;
     BatchData* pop_first_pending_batch_data();
@@ -239,13 +239,14 @@ class NNEvaluationService
     // first n entries of this array, where n is the number of cache-misses.
     CacheLookupResult(CacheMissInfo* m) : miss_infos(m) {}
 
-    void update_notifying_batch_data(BatchData* batch_data);
+    void update_notification_info(BatchData*, core::nn_evaluation_sequence_id_t id);
 
     CacheMissInfo* miss_infos;
 
     core::SearchThreadPerfStats stats;
     bool can_continue = true;
     BatchData* notifying_batch_data = nullptr;
+    core::nn_evaluation_sequence_id_t notifying_sequence_id = 0;
   };
 
   // We empirically found that having a single LRUCache for the entire service leads to a
@@ -293,7 +294,11 @@ class NNEvaluationService
                         int misses_for_this_shard);
 
   void write_to_batch(const RequestItem& item, BatchData* batch_data, int row);
-  void register_notification_task(const NNEvaluationRequest& request, BatchData* batch_data);
+
+  // Returns true if the notification task was registered successfully. If false, it means that
+  // the batch_data was already processed by batch_evaluate() before we could register the
+  // notification task.
+  bool register_notification_task(const NNEvaluationRequest&, const CacheLookupResult&);
 
   void loop();
   void load_initial_weights_if_necessary();

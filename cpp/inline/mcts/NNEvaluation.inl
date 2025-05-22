@@ -67,6 +67,7 @@ bool NNEvaluation<Game>::decrement_ref_count() {
 template <core::concepts::Game Game>
 void NNEvaluation<Game>::clear() {
   aux_ = nullptr;
+  eval_sequence_id_ = 0;
   ref_count_ = 0;
   initialized_ = false;
 }

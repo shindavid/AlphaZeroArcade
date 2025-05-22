@@ -59,10 +59,11 @@ void NNEvaluationService<Game>::disconnect() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::CacheLookupResult::update_notifying_batch_data(
-  BatchData* batch_data) {
-  if (!notifying_batch_data || batch_data->sequence_id > notifying_batch_data->sequence_id) {
+void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
+  BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
+  if (id > notifying_sequence_id) {
     notifying_batch_data = batch_data;
+    notifying_sequence_id = id;
   }
 }
 
@@ -224,23 +225,19 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batc
 }
 
 template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
-  if (pending_batch_datas_.empty()) return false;
+void NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
+  if (pending_batch_datas_.empty()) return;
   BatchData* batch_data = pending_batch_datas_.front();
-  if (batch_data->allocate_count == 0) return false;
+  if (batch_data->allocate_count == 0) return;
+  if (!batch_data->accepting_allocations) return;
 
   LOG_DEBUG("<-- NNEvaluationService: Freezing batch data {} (alloc:{} write:{})",
             batch_data->sequence_id, batch_data->allocate_count, batch_data->write_count);
 
-  bool was_frozen = batch_data->frozen();
   batch_data->accepting_allocations = false;
-  bool newly_frozen = batch_data->frozen() && !was_frozen;
-
   if (pending_batch_datas_.size() == 1) {
     add_batch_data();
   }
-
-  return newly_frozen;
 }
 
 template <core::concepts::Game Game>
@@ -305,24 +302,49 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
     core::PerfClocker clocker(result.stats.batch_write_time_ns);
     if (result.stats.cache_misses) {
       CacheMissInfo& last_miss_info = miss_infos[result.stats.cache_misses - 1];
-      result.update_notifying_batch_data(last_miss_info.batch_data);
+      BatchData* batch_data = last_miss_info.batch_data;
+      result.update_notification_info(batch_data, batch_data->sequence_id);
     }
 
-    // notifying_batch_data is either set above because cache_misses > 0, or it is set inside
+    // notifying_sequence_id is either set above because cache_misses > 0, or it is set inside
     // handle_fresh_item() in the hit_cache && eval->pending() case. There is no other way that
     // can_continue can be set to false.
-    util::debug_assert(result.notifying_batch_data != nullptr);
-    register_notification_task(request, result.notifying_batch_data);
+    //
+    // TODO: downgrade some of these release_assert's to debug_assert's.
+    util::release_assert(result.notifying_sequence_id > 0);
+    if (!register_notification_task(request, result)) {
+      // This means that we hit a race condition where the corresponding batch data was processed
+      // by batch_evaluate() before we could register the notification task. If we blindly added
+      // to the notification task without checking for this, the GameServer would end up waiting
+      // for a notification that would never arrive.
 
-    for (int i = 0; i < result.stats.cache_misses; ++i) {
-      CacheMissInfo& miss_info = miss_infos[i];
-      RequestItem& item = request.get_fresh_item(miss_info.item_index);
-      BatchData* batch_data = miss_info.batch_data;
-      int row = miss_info.row;
-      write_to_batch(item, batch_data, row);
+      util::release_assert(result.stats.cache_misses == 0, "Unexpected cache_misses={}",
+                           result.stats.cache_misses);
+      for (auto& item : request.fresh_items()) {
+        util::release_assert(!item.eval()->pending(), "Unexpected pending item");
+      }
+
+      yield_instruction = core::kContinue;  // not needed but just here for clarity
+    } else {
+      for (int i = 0; i < result.stats.cache_misses; ++i) {
+        CacheMissInfo& miss_info = miss_infos[i];
+        RequestItem& item = request.get_fresh_item(miss_info.item_index);
+        BatchData* batch_data = miss_info.batch_data;
+        int row = miss_info.row;
+        write_to_batch(item, batch_data, row);
+      }
+
+      std::unique_lock lock(main_mutex_);
+      for (int i = 0; i < result.stats.cache_misses; ++i) {
+        CacheMissInfo& miss_info = miss_infos[i];
+        BatchData* batch_data = miss_info.batch_data;
+        batch_data->write_count++;
+      }
+      lock.unlock();
+
+      cv_main_.notify_all();
+      yield_instruction = core::kYield;
     }
-
-    yield_instruction = core::kYield;
   }
 
   std::unique_lock perf_stats_lock(perf_stats_mutex_);
@@ -542,7 +564,7 @@ bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
     result.stats.cache_hits++;
     if (eval->pending()) {
       BatchData* eval_data = eval->template get_aux<BatchData>();
-      result.update_notifying_batch_data(eval_data);
+      result.update_notification_info(eval_data, eval->eval_sequence_id());
       result.can_continue = false;
     }
   } else {
@@ -585,8 +607,8 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
     miss_info.batch_data = batch_data;
     miss_info.row = slice.start_row + slice_offset;
 
-    item.eval()->set_aux(slice.batch_data);
-    result.update_notifying_batch_data(slice.batch_data);
+    item.eval()->set_aux(batch_data);
+    item.eval()->set_eval_sequence_id(batch_data->sequence_id);
     slice_offset++;
     if (slice_offset == slices[slice_index].num_rows) {
       slice_index++;
@@ -626,16 +648,11 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
   group.sym = sym;
   group.action_mode = action_mode;
   group.active_seat = active_seat;
-
-  std::unique_lock lock(main_mutex_);
-  batch_data->write_count++;
-  lock.unlock();
-  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
-                                                           BatchData* batch_data) {
+bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
+                                                           const CacheLookupResult& result) {
   // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
   // There should only ever be one yield_manager_ for the entire process. We do it here to
   // avoid having to pass it around all over the place during initialization.
@@ -647,8 +664,27 @@ void NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
     util::debug_assert(yield_manager_ == unit.yield_manager);
   }
 
+  BatchData* batch_data = result.notifying_batch_data;
+  core::nn_evaluation_sequence_id_t seq = result.notifying_sequence_id;
+
+  LOG_DEBUG("<-- NNEvaluationService::{}() acquiring mutex...", __func__);
   std::unique_lock lock(main_mutex_);
-  batch_data->notification_tasks.push_back(unit.slot_context());
+  if (last_evaluated_sequence_id_ < seq) {
+    LOG_DEBUG("<!-- NNEvaluationService::{} REJECT last={} seq={} slot={}:{}", __func__,
+              last_evaluated_sequence_id_, seq, unit.slot_context().slot,
+              unit.slot_context().context);
+
+    util::release_assert(batch_data, "null batch_data");
+    util::release_assert(batch_data->sequence_id == seq,
+                         "batch_data->sequence_id:{} != seq:{}", batch_data->sequence_id, seq);
+    batch_data->notification_tasks.push_back(unit.slot_context());
+    return true;
+  } else {
+    LOG_DEBUG("<!-- NNEvaluationService::{} ACCEPT seq={} slot={}:{}", __func__, seq,
+              unit.slot_context().slot, unit.slot_context().context);
+
+    return false;
+  }
 }
 
 template <core::concepts::Game Game>
@@ -814,10 +850,10 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
     group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
                      group.active_seat, group.action_mode);
   }
-  yield_manager_->notify(batch_data->notification_tasks);
   gpu_copy_clocker2.stop();
 
   std::unique_lock lock(main_mutex_);
+  yield_manager_->notify(batch_data->notification_tasks);
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);

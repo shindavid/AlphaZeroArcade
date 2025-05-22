@@ -146,7 +146,11 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
+      // NOTE: we need to unlock the mutex before calling force_progress() to avoid a deadlock
+      // within NNEvaluationService
+      lock.unlock();
       server_->force_progress();
+      lock.lock();
       waiting_in_next_ = true;
       cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
       waiting_in_next_ = false;

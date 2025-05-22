@@ -333,7 +333,11 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
 
   if (queue_.empty()) {
     LOG_DEBUG("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
+    // NOTE: we need to unlock the mutex before calling force_progress() to avoid a deadlock
+    // within NNEvaluationService
+    lock.unlock();
     server_->force_progress();
+    lock.lock();
     waiting_in_next_ = true;
     cv_.wait(lock, [&] { return !running_ || !queue_pending(); });
     waiting_in_next_ = false;
