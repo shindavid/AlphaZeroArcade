@@ -218,7 +218,7 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
-    rating_params.add_to_cmd(cmd)
+    rating_params.add_to_cmd(cmd, server=True)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching benchmark server: %s', cmd)
@@ -245,7 +245,7 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
-    rating_params.add_to_cmd(cmd)
+    rating_params.add_to_cmd(cmd, server=True)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching eval server: %s', cmd)

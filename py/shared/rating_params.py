@@ -89,12 +89,12 @@ class RatingParams:
                            help='use remote play (multiple binaries).')
 
 
-    def add_to_cmd(self, cmd: List[str], loop_controller=False):
+    def add_to_cmd(self, cmd: List[str], loop_controller=False, server=False):
         defaults = RatingParams()
         if loop_controller:
             if self.rating_player_options.num_iterations != defaults.rating_player_options.num_iterations:
                 cmd.extend(['--num-iterations', str(self.rating_player_options.num_iterations)])
-        else:
+        if server:
             if self.rating_player_options.num_search_threads != defaults.rating_player_options.num_search_threads:
                 cmd.extend(['--num-search-threads', str(self.rating_player_options.num_search_threads)])
             if self.use_remote_play:

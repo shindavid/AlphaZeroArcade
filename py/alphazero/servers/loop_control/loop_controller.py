@@ -501,16 +501,22 @@ class LoopController:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    def _get_binary_path(self, use_stored_binary: bool, stored_binary_path=None) -> str:
+    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer]=None) -> str:
+        use_stored_binary = self.build_params.use_stored_binary
         if not use_stored_binary:
+            assert benchmark_organizer is None, \
+                'benchmark_organizer should not be specified when use_stored_binary is False'
             return self.build_params.get_binary_path(self.game_spec.name)
         else:
-            if stored_binary_path is None:
-                raise Exception('Stored binary path is not set when use_stored_binary is True')
+            if benchmark_organizer is None:
+                stored_binary_path = self.organizer_binary_path
+            else:
+                stored_binary_path = benchmark_organizer.binary_filename
+
             if os.path.exists(stored_binary_path):
                 return stored_binary_path
             else:
-                raise Exception(f'Stored binary path does not exiWWst: {stored_binary_path}')
+                raise Exception(f'Stored binary path does not exist: {stored_binary_path}')
 
     def _training_loop(self):
         try:
