@@ -39,17 +39,17 @@ class Evaluator:
         self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)
         self._arena.load_matches_from_db(self.db, type=MatchType.EVALUATE)
 
-    def gen_matches(self, eval_ix: int, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
+    def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
         """
         The opponent selection algorithm is adapted from KataGo:
         "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).
 
         The match generating process follows these steps:
 
-        1. Compute the test agent's probability of winning against each committee member and peer test agent
-           in the same run based on the difference in their estimated Elo ratings. By default, the initial
-           estimated rating of the test agent is set to be the mean of the committee members' ratings
-           if it has not played any matches yet. The initial estimate can be provided by the caller.
+        1. Compute the test agent's probability of winning against each committee member on the
+           difference in their estimated Elo ratings. By default, the initial estimated rating of
+           the test agent is set to be the mean of the committee members' ratings if it has not
+           played any matches yet. The initial estimate can be provided by the caller.
         2. Calculate the variance of the win probability for each committee member and peer test agents using
            p * (1 - p), where p is the win probability.
         3. Select opponents in proportion to their win probability variance.
@@ -66,10 +66,7 @@ class Evaluator:
            before any games were played against the test agent.
         """
 
-        committee_ixs = np.where(self.benchmark_committee)[0]
-        test_ixs = self.test_agent_ixs()
-        test_peer_ixs = test_ixs[test_ixs != eval_ix]
-        potential_opponent_ixs = np.union1d(committee_ixs, test_peer_ixs)
+        potential_opponent_ixs = np.where(self.benchmark_committee)[0]
 
         p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in potential_opponent_ixs]
         var = np.array([q * (1 - q) for q in p])
