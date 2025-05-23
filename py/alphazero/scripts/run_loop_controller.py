@@ -69,7 +69,7 @@ def main():
         if os.path.isfile(backup):
             os.system(f'cp {backup} {log_filename}')
 
-    configure_logger(filename=log_filename, params=logging_params, mode='a')
+    configure_logger(filename=log_filename, params=logging_params, mode='a', prefix='[loop-controller]')
     logger.info('**** Starting loop-controller ****')
 
     server.run()

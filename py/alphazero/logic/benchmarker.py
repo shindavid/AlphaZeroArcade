@@ -45,7 +45,6 @@ class Benchmarker:
         else:
             self.db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
-        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)

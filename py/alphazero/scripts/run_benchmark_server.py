@@ -61,7 +61,7 @@ def main():
     # any logging that happens before that point. Also, configure_logger() contains a key piece of
     # logic to prevent logging race-condition deadlocks, which needs to be set up before any threads
     # are spawned, making it important to call this here.
-    configure_logger(params=logging_params)
+    configure_logger(params=logging_params, prefix='[benchmark_server]')
 
     if not docker_params.skip_image_version_check:
         validate_docker_image()

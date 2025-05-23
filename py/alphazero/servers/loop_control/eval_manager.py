@@ -130,6 +130,7 @@ class EvalManager(GamingManagerBase):
             status_cond.notify_all()
 
     def send_match_request(self, conn: ClientConnection):
+        self._evaluator.refresh_ratings()
         assert conn.is_on_localhost()
         eval_ix = conn.aux.ix
         if eval_ix is None:
