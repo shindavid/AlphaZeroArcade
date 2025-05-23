@@ -883,13 +883,13 @@ void GameServer<Game>::run() {
   shared_data_.start_games();
 
   time_point_t start_time = std::chrono::steady_clock::now();
-  LOG_INFO("GameServer> Launching threads...");
+  LOG_DEBUG("GameServer> Launching threads...");
   launch_threads();
   join_threads();
   time_point_t end_time = std::chrono::steady_clock::now();
 
   if (shared_data_.training_data_writer()) {
-    LOG_INFO("GameServer> Waiting until batch empty...");
+    LOG_DEBUG("GameServer> Waiting until batch empty...");
     shared_data_.training_data_writer()->wait_until_batch_empty();
   }
 
