@@ -57,7 +57,8 @@ class NNEvaluationService
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
-      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kWorkerReady> {
  public:
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;

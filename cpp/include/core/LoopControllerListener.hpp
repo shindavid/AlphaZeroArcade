@@ -12,7 +12,8 @@ namespace core {
 enum class LoopControllerInteractionType {
   kPause,
   kReloadWeights,
-  kDataRequest
+  kDataRequest,
+  kWorkerReady
 };
 
 class LoopControllerClient;
@@ -62,5 +63,8 @@ class LoopControllerListener<LoopControllerInteractionType::kDataRequest> {
   // avoid doing unnecessary work.
   virtual void handle_data_pre_request(int n_rows_limit) = 0;
 };
+
+template <>
+class LoopControllerListener<LoopControllerInteractionType::kWorkerReady> {};
 
 }  // namespace core

@@ -22,6 +22,15 @@ void LoopControllerClient::init(const Params& params) {
   instance_ = new LoopControllerClient(params);
 }
 
+void LoopControllerClient::handle_worker_ready() {
+  std::unique_lock lock(receipt_mutex_);
+  worker_ready_count_++;
+  if (worker_ready_count_ == (int)worker_ready_listeners_.size()) {
+    lock.unlock();
+    send_worker_ready();
+  }
+}
+
 void LoopControllerClient::send_worker_ready() {
   boost::json::object msg;
   msg["type"] = "worker-ready";

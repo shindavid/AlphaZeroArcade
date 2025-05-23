@@ -53,6 +53,7 @@ class LoopControllerClient : public PerfStatsClient {
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
   using ReloadWeightsListener = LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
   using DataRequestListener = LoopControllerListener<LoopControllerInteractionType::kDataRequest>;
+  using WorkerReadyListener = LoopControllerListener<LoopControllerInteractionType::kWorkerReady>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
@@ -76,7 +77,7 @@ class LoopControllerClient : public PerfStatsClient {
   void send_with_file(const boost::json::value& msg, const std::vector<char>& buf);
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
-  void send_worker_ready();
+  void handle_worker_ready();
   void handle_pause_receipt();
   void handle_unpause_receipt();
 
@@ -86,6 +87,7 @@ class LoopControllerClient : public PerfStatsClient {
   LoopControllerClient(const Params&);
   ~LoopControllerClient();
 
+  void send_worker_ready();
   void send_handshake();
   void recv_handshake();
   void send_pause_ack();
@@ -108,11 +110,13 @@ class LoopControllerClient : public PerfStatsClient {
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<DataRequestListener*> data_request_listeners_;
+  std::vector<WorkerReadyListener*> worker_ready_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
   int cur_generation_ = 0;
 
   std::condition_variable receipt_cv_;
   mutable std::mutex receipt_mutex_;
+  int worker_ready_count_ = 0;
   size_t pause_receipt_count_ = 0;
   size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
