@@ -262,7 +262,6 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     logging_params: LoggingParams = params_dict['LoggingParams']
     build_params: BuildParams = params_dict['BuildParams']
     rating_params: RatingParams = params_dict['RatingParams']
-    default_rating_params = game_spec.rating_params
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
