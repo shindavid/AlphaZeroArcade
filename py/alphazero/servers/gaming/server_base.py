@@ -257,7 +257,8 @@ class ServerBase:
 
             proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
             proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
-            procs = {proc1, proc2}
+
+            procs_list = [proc1, proc2]
         else:
             if sha256sum(binary1) != sha256sum(binary2):
                 raise Exception(
@@ -274,14 +275,14 @@ class ServerBase:
             cmd = ' '.join(map(str, cmd))
             logger.info('cmd:\n %s', cmd)
             proc1 = subprocess_util.Popen(cmd, cwd=cwd)
-            procs = {proc1}
+            procs_list = [proc1]
 
-        self._procs.update(procs)
-
+        procs_set = set(procs_list)
+        self._procs.update(procs_set)
         print_fn = logger.error
-        stdout = subprocess_util.wait_for([proc1, proc2], print_fn=print_fn)[0]
+        stdout = subprocess_util.wait_for(procs_list, print_fn=print_fn)[0]
 
-        self._procs.difference_update(procs)
+        self._procs.difference_update(procs_set)
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
