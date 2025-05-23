@@ -256,7 +256,7 @@ class ServerBase:
             cmd2.append(make_args_str(args))
             cmd2 = ' '.join(map(str, cmd2))
 
-            logger.info('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+            logger.info('Running match between:%s vs %s', agent1, agent2)
             logger.info('cmd1: %s', cmd1)
             logger.info('cmd2: %s', cmd2)
 

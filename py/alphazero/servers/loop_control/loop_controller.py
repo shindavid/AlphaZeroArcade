@@ -358,6 +358,7 @@ class LoopController:
         if tag not in self._eval_managers:
             if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
                 benchmark_tag = 'reference_players'
+
                 db_file = self.organizer.eval_db_filename(benchmark_tag)
                 if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
                     ref_db_file = os.path.join(REF_DIR, f'{self.game_spec.name}.db')
