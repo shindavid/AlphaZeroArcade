@@ -715,8 +715,7 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
     }
   }
 
-  LOG_INFO("NNEvaluationService: sending worker-ready...");
-
+  LOG_INFO("NNEvaluationService: handling worker-ready...");
   client->handle_worker_ready();
   std::unique_lock<std::mutex> net_weights_lock(net_weights_mutex_);
   cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_ || !active(); });

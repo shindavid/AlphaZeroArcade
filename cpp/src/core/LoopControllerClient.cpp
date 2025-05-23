@@ -23,6 +23,7 @@ void LoopControllerClient::init(const Params& params) {
 }
 
 void LoopControllerClient::handle_worker_ready() {
+  LOG_INFO("LoopControllerClient::{}()", __func__);
   std::unique_lock lock(receipt_mutex_);
   worker_ready_count_++;
   if (worker_ready_count_ == (int)worker_ready_listeners_.size()) {
@@ -32,6 +33,7 @@ void LoopControllerClient::handle_worker_ready() {
 }
 
 void LoopControllerClient::send_worker_ready() {
+  LOG_INFO("LoopControllerClient::{}()", __func__);
   boost::json::object msg;
   msg["type"] = "worker-ready";
   if (params_.weights_request_generation >= 0) {
