@@ -140,7 +140,8 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, SlotContext& item) {
+GameServerBase::next_result_t GameServer<Game>::SharedData::next(
+  int64_t& wait_for_game_slot_time_ns, SlotContext& item) {
   core::PerfClocker clocker(wait_for_game_slot_time_ns);
   std::unique_lock lock(mutex_);
 
@@ -157,13 +158,13 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
     }
     if (queue_.empty()) {
       LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
-      return false;
+      return kExit;
     }
   }
 
   if (paused_) {
     LOG_DEBUG("<-- GameServer::{}(): paused", __func__);
-    return false;
+    return kHandlePause;
   }
 
   item = queue_.front();
@@ -171,7 +172,7 @@ bool GameServer<Game>::SharedData::next(int64_t& wait_for_game_slot_time_ns, Slo
   pending_queue_count_++;
   LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
             item.context, queue_.size(), pending_queue_count_);
-  return true;
+  return kProceed;
 }
 
 template <concepts::Game Game>
@@ -752,16 +753,18 @@ void GameServer<Game>::GameThread::run() {
   while (true) {
     int64_t wait_for_game_slot_time_ns = 0;
     SlotContext item;
-    if (!shared_data_.next(wait_for_game_slot_time_ns, item)) {
-      if (shared_data_.paused()) {
-        shared_data_.increment_paused_thread_count();
-        shared_data_.wait_for_unpause();
-        shared_data_.decrement_paused_thread_count();
-        continue;
-      } else {
-        // no more slots to run, time to exit
-        break;
-      }
+    next_result_t next_result = shared_data_.next(wait_for_game_slot_time_ns, item);
+    if (next_result == kExit) {
+      break;
+    } else if (next_result == kHandlePause) {
+      shared_data_.increment_paused_thread_count();
+      shared_data_.wait_for_unpause();
+      shared_data_.decrement_paused_thread_count();
+      continue;
+    } else if (next_result == kProceed) {
+      // do nothing
+    } else {
+      throw util::Exception("Invalid next_result: {}", (int)next_result);
     }
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);

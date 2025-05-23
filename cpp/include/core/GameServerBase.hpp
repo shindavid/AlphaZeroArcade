@@ -14,6 +14,8 @@ class GameServerBase {
  public:
   enum enqueue_instruction_t : int8_t { kEnqueueNow, kEnqueueLater, kEnqueueNever };
 
+  enum next_result_t : int8_t { kProceed, kHandlePause, kExit };
+
   virtual ~GameServerBase() = default;
 
   struct EnqueueRequest {

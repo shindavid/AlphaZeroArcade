@@ -23,6 +23,7 @@ class GameServerProxy : public core::GameServerBase {
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
+  using next_result_t = core::GameServerBase::next_result_t;
   using EnqueueRequest = core::GameServerBase::EnqueueRequest;
   using StepResult = core::GameServerBase::StepResult;
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
@@ -123,10 +124,11 @@ class GameServerProxy : public core::GameServerBase {
     int num_slots() const { return game_slots_.size(); }
     bool running() const { return running_; }
 
-    // If the server is paused or shutting down, returns false. Else, returns true, and sets:
+    // Gets the next item from the queue. Sets:
     //
     // - item: with the next queue item
-    bool next(SlotContext& item);
+    // - wait_for_game_slot_time_ns: with the time spent waiting
+    next_result_t next(SlotContext& item);
     void enqueue(SlotContext, const EnqueueRequest& request);
     GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
 

@@ -328,7 +328,7 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
 }
 
 template <concepts::Game Game>
-bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
+GameServerBase::next_result_t GameServerProxy<Game>::SharedData::next(SlotContext& item) {
   std::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
@@ -345,14 +345,14 @@ bool GameServerProxy<Game>::SharedData::next(SlotContext& item) {
 
   if (!running_) {
     LOG_DEBUG("<-- GameServerProxy::{}(): queue empty, exiting", __func__);
-    return false;
+    return kExit;
   }
 
   item = queue_.front();
   queue_.pop();
   LOG_DEBUG("<-- GameServerProxy::{}(): item={}:{} (queue:{})", __func__, item.slot, item.context,
             queue_.size());
-  return true;
+  return kProceed;
 }
 
 template <concepts::Game Game>
@@ -435,7 +435,14 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::GameThread::run() {
   while (shared_data_.running()) {
     SlotContext item;
-    if (!shared_data_.next(item)) return;
+    next_result_t next_result = shared_data_.next(item);
+    if (next_result == kExit) {
+      break;
+    } else if (next_result == kProceed) {
+      // do nothing
+    } else {
+      throw util::Exception("Invalid next_result: {}", (int)next_result);
+    }
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
