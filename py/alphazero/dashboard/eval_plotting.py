@@ -27,7 +27,7 @@ from bokeh.models import ColumnDataSource, Span
 from bokeh.layouts import column
 import numpy as np
 import pandas as pd
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class EvaluationData:
@@ -46,6 +46,9 @@ class EvaluationData:
         try:
             evaluator = Evaluator(organizer, benchmark_tag)
             eval_rating_data = evaluator.read_ratings_from_db()
+            benchmark_rating = evaluator._benchmark_rating_data.ratings
+            if len(benchmark_rating) > 0:
+                self.highest_benchmark_elo = benchmark_rating.max()
         except Exception as e:
             print(f"Error loading evaluation for {self.tag}: {e}")
             self.valid = False
@@ -136,6 +139,8 @@ class Plotter:
             self.max_y = max(self.max_y, max(df['rating']))
             self.min_y = min(self.min_y, min(df['rating']))
 
+        self.highest_benchmark_elo = self.data_list[0].highest_benchmark_elo
+
     def add_lines(self, plot):
         data_list = self.data_list
         n = len(data_list)
@@ -160,8 +165,7 @@ class Plotter:
 
         self.add_lines(plot)
 
-        highest_benchmark_elo = self.benchmark_data.df['rating'].max()
-        hline = Span(location=highest_benchmark_elo, dimension='width', line_color='green',
+        hline = Span(location=self.highest_benchmark_elo, dimension='width', line_color='green',
                      line_width=2, line_dash='dashed')
         plot.add_layout(hline)
         plot.legend.location = 'bottom_right'
@@ -174,6 +178,8 @@ class Plotter:
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    benchmark_data = None
+    if benchmark_tag != 'reference_players':
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure

@@ -1,4 +1,5 @@
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
@@ -15,6 +16,18 @@ class Agent(ABC):
     """
     @abstractmethod
     def make_player_str(self, run_dir: str) -> str:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> JsonDict:
+        pass
+
+    @property
+    @abstractmethod
+    def level(self) -> int:
+        """
+        Gen for MCTS agents, strength for reference agents.
+        """
         pass
 
 
@@ -55,6 +68,22 @@ class MCTSAgent(Agent):
 
         return make_args_str(player_args)
 
+    def to_dict(self) -> JsonDict:
+        return {
+            'gen': self.gen,
+            'n_iters': self.n_iters,
+            'set_temp_zero': self.set_temp_zero,
+            'tag': self.tag,
+            'binary': self.binary,
+            'model': self.model
+        }
+
+    def __str__(self) -> str:
+        return f'MCTSAgent-gen-{self.gen}'
+
+    @property
+    def level(self) -> int:
+        return self.gen
 
 @dataclass(frozen=True)
 class ReferenceAgent(Agent):
@@ -71,6 +100,20 @@ class ReferenceAgent(Agent):
         }
         return make_args_str(player_args)
 
+    def to_dict(self) -> JsonDict:
+        return {
+            'type_str': self.type_str,
+            'strength_param': self.strength_param,
+            'strength': self.strength,
+            'tag': self.tag
+        }
+
+    def __str__(self) -> str:
+        return f'ReferenceAgent{self.strength_param}-{self.strength}'
+
+    @property
+    def level(self) -> int:
+        return self.strength
 
 ArenaIndex = int  # index of an agent in an Arena
 AgentDBId = int  # id in agents table of the database

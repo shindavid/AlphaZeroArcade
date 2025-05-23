@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import MCTSAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
@@ -176,9 +176,9 @@ class ServerBase:
         files_required = [FileToTransfer(**f) for f in msg['files_required']]
         self._session_data.request_files(files_required)
 
-        mcts_agent1 = MCTSAgent(**msg['agent1'])
-        mcts_agent2 = MCTSAgent(**msg['agent2'])
-        match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
+        agent1 = self._build_agent(msg['agent1'])
+        agent2 = self._build_agent(msg['agent2'])
+        match = Match(agent1, agent2, msg['n_games'], MatchType.EVALUATE)
 
         args = {
             '--loop-controller-hostname': self._params.loop_controller_host,
@@ -299,3 +299,11 @@ class ServerBase:
     @property
     def num_threads(self) -> int:
         return self._rating_params.rating_player_options.num_search_threads
+
+    def _build_agent(self, agent_msg: JsonDict) -> Agent:
+        if agent_msg['type'] == 'MCTS':
+            return MCTSAgent(**agent_msg['data'])
+        elif agent_msg['type'] == 'Reference':
+            return ReferenceAgent(**agent_msg['data'])
+        else:
+            raise ValueError(f'Unknown agent type: {agent_msg["type"]}')
