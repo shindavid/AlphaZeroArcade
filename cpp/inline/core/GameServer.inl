@@ -156,8 +156,8 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
       cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
       waiting_in_next_ = false;
     }
-    if (queue_.empty()) {
-      LOG_DEBUG("<-- GameServer::{}(): queue empty, exiting", __func__);
+    if (queue_.empty() && pending_queue_count_ == 0) {
+      LOG_DEBUG("<-- GameServer::{}(): exiting", __func__);
       return kExit;
     }
   }
