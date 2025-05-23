@@ -239,6 +239,9 @@ class ServerBase:
                 '--player', f'"{ps1}"',
                 '--log-filename', log_filename1,
                 ]
+
+            if not self._session_data.start_log_sync(log_filename1):
+                cmd1.append('--log-append-mode')
             cmd1.append(make_args_str(args))
             cmd1 = ' '.join(map(str, cmd1))
 
@@ -248,6 +251,8 @@ class ServerBase:
                 '--player', f'"{ps2}"',
                 '--log-filename', log_filename2,
             ]
+            if not self._session_data.start_log_sync(log_filename2):
+                cmd2.append('--log-append-mode')
             cmd2.append(make_args_str(args))
             cmd2 = ' '.join(map(str, cmd2))
 
@@ -271,6 +276,8 @@ class ServerBase:
                    '--player', f'"{ps2}"',
                    '--log-filename', log_filename,
                    ]
+            if not self._session_data.start_log_sync(log_filename):
+                cmd.append('--log-append-mode')
             cmd.append(make_args_str(args))
             cmd = ' '.join(map(str, cmd))
             logger.info('cmd:\n %s', cmd)
