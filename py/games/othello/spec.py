@@ -107,8 +107,8 @@ class OthelloSpec(GameSpec):
 
     rating_params = RatingParams(
         rating_player_options=RatingPlayerOptions(
-            num_search_threads=8,
-            num_iterations=400,
+            num_search_threads=4,
+            num_iterations=100,
         ),
         default_target_elo_gap=DefaultTargetEloGap(
             first_run=500.0,
