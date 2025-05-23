@@ -26,6 +26,7 @@ class BuildParams:
 
     4. Running with stored binaries
         --use-stored-binary to specify that the stored binary should be used
+        --use-remote-play should be set to True if the binaries between the current run and benchmark are different
         --binary-path, --debug-build cannot be provided
         It is recommended to leave --override-binary unset first. If the binary that is used to generate
         a run is not the same as the one stored, an error will be raised. You can set --override-binary to

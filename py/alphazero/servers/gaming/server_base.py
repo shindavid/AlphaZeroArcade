@@ -259,8 +259,11 @@ class ServerBase:
             proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
             procs = {proc1, proc2}
         else:
-            assert sha256sum(binary1) == sha256sum(binary2), \
-                'Binaries need to be the same if one binary is used for both players (use-remote-play=False)'
+            if sha256sum(binary1) != sha256sum(binary2):
+                raise Exception(
+                    f'Binary mismatch: {binary1} and {binary2} are not the same when use-remote-play is False.'
+                    'Please use the same binary for both players or set use-remote-play to True.'                )
+
             log_filename = self._session_data.get_log_filename(self._config.worker_name)
             cmd = [binary1,
                    '--player', f'"{ps1}"',
