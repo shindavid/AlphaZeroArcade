@@ -7,11 +7,51 @@ from typing import List, Optional
 class BuildParams:
     """
     Parameters used to specify built files for a particular AlphaZero run.
+
+    Main use cases:
+    1. Running with the latest Release binary
+       no flags are needed
+
+    2. Running with a custom binary
+        --binary-path <path> to specify the path to the binary
+        --override-binary, --debug-build and --use-stored-binary cannot be provided
+        Note that the custom binary will not be copied/stored in the run output directory.
+        Custom binary will be transferred to the scratch directory to be run.
+
+    3. Running with a debug build
+        --debug-build to specify that a debug build should be used
+        --binary-path, --override-binary and --use-stored-binary cannot be provided
+        Note that Debug binaries will not be copied/stored in the run output directory.
+        Debug binary will be transferred to the scratch directory to be run.
+
+    4. Running with stored binaries
+        --use-stored-binary to specify that the stored binary should be used
+        --use-remote-play should be set to True if the binaries between the current run and benchmark are different
+        --binary-path, --debug-build cannot be provided
+        It is recommended to leave --override-binary unset first. If the binary that is used to generate
+        a run is not the same as the one stored, an error will be raised. You can set --override-binary to
+        update the stored binary to proceed.
     """
     debug_build: Optional[bool] = None
     binary_path: Optional[str] = None
     ffi_lib_path: Optional[str] = None
     override_binary: bool = False
+    use_stored_binary: bool = False
+
+    def __post_init__(self):
+        if self.binary_path is not None:
+            if self.debug_build:
+                raise ValueError(f'--binary-path {self.binary_path} is provided; using --debug-build is not allowed.')
+            if self.override_binary:
+                raise ValueError(f'--binary-path {self.binary_path} is provided; cannot override binaries.')
+            if self.use_stored_binary:
+                raise ValueError(f'--binary-path {self.binary_path} is provided; cannot use stored binary.')
+
+        if self.debug_build:
+            if self.override_binary:
+                raise ValueError('--debug-build and --override-binary are mutually exclusive.')
+            if self.use_stored_binary:
+                raise ValueError('--debug-build and --use-stored-binary are mutually exclusive.')
 
     @property
     def build_type(self):
@@ -44,7 +84,8 @@ class BuildParams:
             debug_build=getattr(args, 'debug_build', defaults.debug_build),
             binary_path=getattr(args, 'binary_path', defaults.binary_path),
             ffi_lib_path=getattr(args, 'ffi_lib_path', defaults.ffi_lib_path),
-            override_binary=getattr(args, 'override_binary', False),
+            override_binary=getattr(args, 'override_binary', defaults.override_binary),
+            use_stored_binary=getattr(args, 'use_stored_binary', defaults.use_stored_binary),
         )
         return params
 
@@ -65,6 +106,9 @@ class BuildParams:
             group.add_argument(
                 '--override-binary', action='store_true',
                 help='override the binary file in output/{game}/{tag}/target/{Debug, Release}')
+            group.add_argument(
+                '--use-stored-binary', action='store_true',
+                help='Use the stored binary instead of the one in target/Release')
         else:
             group.add_argument(
                 '--binary-path',
@@ -83,3 +127,5 @@ class BuildParams:
                 cmd.extend(['--ffi-lib-path', self.ffi_lib_path])
             if self.override_binary:
                 cmd.append('--override-binary')
+            if self.use_stored_binary:
+                cmd.append('--use-stored-binary')

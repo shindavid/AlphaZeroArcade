@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 import argparse
-from typing import Optional
+from typing import List, Optional
 
 @dataclass
 class DefaultTargetEloGap:
@@ -37,6 +37,7 @@ class RatingParams:
     n_games_per_evaluation: int = 1000
 
     target_elo_gap: Optional[float] = None
+    use_remote_play: bool = False
 
     def __post_init__(self):
         assert self.n_games_per_benchmark > 0, "Must have >0 games per benchmark"
@@ -58,8 +59,9 @@ class RatingParams:
             target_elo_gap=args.target_elo_gap,
             eval_error_threshold=args.eval_error_threshold,
             n_games_per_benchmark=args.n_games_per_benchmark,
-            n_games_per_evaluation=args.n_games_per_evaluation
-        )
+            n_games_per_evaluation=args.n_games_per_evaluation,
+            use_remote_play=args.use_remote_play,
+            )
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser, defaults: Optional['RatingParams']=None):
@@ -83,3 +85,17 @@ class RatingParams:
                            help='number of games per benchmark (default: %(default)d)')
         group.add_argument('--n-games-per-evaluation', type=int, default=defaults.n_games_per_evaluation,
                            help='number of games per evaluation (default: %(default)d)')
+        group.add_argument('--use-remote-play', action='store_true', default=defaults.use_remote_play,
+                           help='use remote play (multiple binaries).')
+
+
+    def add_to_cmd(self, cmd: List[str], loop_controller=False, server=False):
+        defaults = RatingParams()
+        if loop_controller:
+            if self.rating_player_options.num_iterations != defaults.rating_player_options.num_iterations:
+                cmd.extend(['--num-iterations', str(self.rating_player_options.num_iterations)])
+        if server:
+            if self.rating_player_options.num_search_threads != defaults.rating_player_options.num_search_threads:
+                cmd.extend(['--num-search-threads', str(self.rating_player_options.num_search_threads)])
+            if self.use_remote_play:
+                cmd.append('--use-remote-play')

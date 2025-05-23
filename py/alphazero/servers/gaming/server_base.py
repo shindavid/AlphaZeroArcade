@@ -12,6 +12,7 @@ from alphazero.servers.gaming.session_data import SessionData
 from shared.rating_params import RatingParams
 from util import subprocess_util
 from util.logging_util import LoggingParams
+from util.py_util import sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
 
@@ -34,9 +35,8 @@ class ServerConfig:
     worker_role: ClientRole
 
 
+@dataclass
 class ServerParams(BaseParams):
-    SERVER_NAME: str = 'server'
-
     @classmethod
     def create(cls, args) -> 'ServerParams':
         kwargs = {f.name: getattr(args, f.name) for f in fields(cls)}
@@ -44,7 +44,7 @@ class ServerParams(BaseParams):
 
     @classmethod
     def add_args(cls, parser, omit_base=False, server_name: Optional[str]=None):
-        group_title = f'{cls.SERVER_NAME} options'
+        group_title = f'{cls.__name__} options'
         group = parser.add_argument_group(group_title)
 
         if not omit_base:
@@ -58,7 +58,7 @@ class ServerParams(BaseParams):
 
 
 class ServerBase:
-    def __init__(self, params: BaseParams, logging_params: LoggingParams,
+    def __init__(self, params: ServerParams, logging_params: LoggingParams,
                  build_params: BuildParams, rating_params: RatingParams, server_config: ServerConfig):
         self._params = params
         self._build_params = build_params
@@ -221,56 +221,67 @@ class ServerBase:
 
         ps1 = agent1.make_player_str(self._session_data.run_dir, args=num_thread_option)
         ps2 = agent2.make_player_str(self._session_data.run_dir, args=num_thread_option)
+        binary1 = os.path.join(self._session_data.run_dir, agent1.binary)
+        binary2 = os.path.join(self._session_data.run_dir, agent2.binary)
+        cwd = self._session_data.run_dir
 
         if args is None:
             args = {}
 
-        args1 = dict(args)
-        args2 = dict(args)
+        if self._rating_params.use_remote_play:
+            port = DEFAULT_REMOTE_PLAY_PORT
+            log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
+            log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
 
-        args1['-G'] = n_games
+            cmd1 = [
+                binary1,
+                '--port', str(port),
+                '--player', f'"{ps1}"',
+                '--log-filename', log_filename1,
+                ]
+            cmd1.append(make_args_str(args))
+            cmd1 = ' '.join(map(str, cmd1))
 
-        log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
-        log_filename2 = self._session_data.get_log_filename(self._config.worker_name + '-B')
+            cmd2 = [
+                binary2,
+                '--remote-port', str(port),
+                '--player', f'"{ps2}"',
+                '--log-filename', log_filename2,
+            ]
+            cmd2.append(make_args_str(args))
+            cmd2 = ' '.join(map(str, cmd2))
 
-        port = DEFAULT_REMOTE_PLAY_PORT
+            logger.info('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+            logger.info('cmd1: %s', cmd1)
+            logger.info('cmd2: %s', cmd2)
 
-        cmd1 = [
-            os.path.join(self._session_data.run_dir, agent1.binary),
-            '--port', str(port),
-            '--player', f'"{ps1}"',
-            '--log-filename', log_filename1,
-        ]
-        if not self._session_data.start_log_sync(log_filename1):
-            args1['--log-append-mode'] = None
-        cmd1.append(make_args_str(args1))
-        cmd1 = ' '.join(map(str, cmd1))
+            proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
+            proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
+            procs = {proc1, proc2}
+        else:
+            if sha256sum(binary1) != sha256sum(binary2):
+                raise Exception(
+                    f'Binary mismatch: {binary1} and {binary2} are not the same when use-remote-play is False.'
+                    'Please use the same binary for both players or set use-remote-play to True.'                )
 
-        cmd2 = [
-            os.path.join(self._session_data.run_dir, agent2.binary),
-            '--remote-port', str(port),
-            '--player', f'"{ps2}"',
-            '--log-filename', log_filename2,
-        ]
-        if not self._session_data.start_log_sync(log_filename2):
-            args2['--log-append-mode'] = None
-        cmd2.append(make_args_str(args2))
-        cmd2 = ' '.join(map(str, cmd2))
+            log_filename = self._session_data.get_log_filename(self._config.worker_name)
+            cmd = [binary1,
+                   '--player', f'"{ps1}"',
+                   '--player', f'"{ps2}"',
+                   '--log-filename', log_filename,
+                   ]
+            cmd.append(make_args_str(args))
+            cmd = ' '.join(map(str, cmd))
+            logger.info('cmd:\n %s', cmd)
+            proc1 = subprocess_util.Popen(cmd, cwd=cwd)
+            procs = {proc1}
 
-        logger.info('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
-        logger.info('cmd1: %s', cmd1)
-        logger.info('cmd2: %s', cmd2)
-
-        cwd = self._session_data.run_dir
-        proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
-        proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
-        self._procs.update({proc1, proc2})
+        self._procs.update(procs)
 
         print_fn = logger.error
         stdout = subprocess_util.wait_for([proc1, proc2], print_fn=print_fn)[0]
 
-        self._procs.difference_update({proc1, proc2})
-
+        self._procs.difference_update(procs)
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.

@@ -267,8 +267,10 @@ class BenchmarkManager(GamingManagerBase):
     def _compose_match_request(self, gen, opponent_gen, ix, opponent_ix):
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
+
+        binary_path = self._controller._get_binary_path()
         binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller.organizer_binary_path,
+            source_path=binary_path,
             scratch_path=f'bin/{game}',
             asset_path_mode='hash')
 

@@ -191,14 +191,20 @@ class EvalManager(GamingManagerBase):
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
 
+
+        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+
+        eval_binary_src = self._controller._get_binary_path()
+        benchmark_binary_src = self._controller._get_binary_path(benchmark_organizer=benchmark_organizer)
+
         eval_binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller.organizer_binary_path,
+            source_path=eval_binary_src,
             scratch_path=f'bin/{game}',
             asset_path_mode='hash'
         )
-        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+
         benchmark_binary = FileToTransfer.from_src_scratch_path(
-            source_path=benchmark_organizer.binary_filename,
+            source_path=benchmark_binary_src,
             scratch_path=f'benchmark-bin/{game}',
             asset_path_mode='hash'
         )

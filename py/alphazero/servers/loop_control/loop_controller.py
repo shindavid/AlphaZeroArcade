@@ -479,7 +479,7 @@ class LoopController:
         else:
             organizer = self._organizer
 
-        binary_path = self.build_params.get_binary_path(self._run_params.game)
+        binary_path = self.build_params.get_binary_path(self.game_spec.name)
         target_file = organizer.binary_filename
         if os.path.exists(target_file):
             hash = sha256sum(target_file)
@@ -487,19 +487,36 @@ class LoopController:
                 logger.debug('Binary file already exists, skipping copy')
                 return
             elif not self.build_params.override_binary:
-                message = f"""Hash mismatch for binary file {binary_path}.
+                message = f"""Hash mismatch for binary file {target_file} and {binary_path}.
                 Include --override-binary to override or have the matching binary: {binary_path}"""
                 raise Exception(message)
             else:
-                message = f"""Hash mismatch for binary file {binary_path}.
+                message = f"""Hash mismatch for binary file {target_file} and {binary_path}.
                 Overriding binary file with the one in {binary_path}"""
-                logger.debug(message)
+                logger.warning(message)
         else:
             logger.info('Copying binary file to persistent run dir...')
 
 
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
+
+    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer]=None) -> str:
+        use_stored_binary = self.build_params.use_stored_binary
+        if not use_stored_binary:
+            assert benchmark_organizer is None, \
+                'benchmark_organizer should not be specified when use_stored_binary is False'
+            return self.build_params.get_binary_path(self.game_spec.name)
+        else:
+            if benchmark_organizer is None:
+                stored_binary_path = self.organizer_binary_path
+            else:
+                stored_binary_path = benchmark_organizer.binary_filename
+
+            if os.path.exists(stored_binary_path):
+                return stored_binary_path
+            else:
+                raise Exception(f'Stored binary path does not exist: {stored_binary_path}')
 
     def _training_loop(self):
         try:
@@ -537,7 +554,8 @@ class LoopController:
         logger.info('Performing LoopController setup...')
         self._setup_output_dir()
         self._organizer.acquire_lock(self._shutdown_manager.register)
-        self._copy_binary_file()
+        if self.build_params.binary_path is None and not self.build_params.debug_build:
+            self._copy_binary_file()
         self._init_socket()
 
     def _start_threads(self):

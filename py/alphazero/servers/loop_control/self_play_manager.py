@@ -236,8 +236,10 @@ class SelfPlayManager:
 
     def _construct_binary(self) -> FileToTransfer:
         game = self._controller.run_params.game
+
+        binary_path = self._controller._get_binary_path()
         binary = FileToTransfer.from_src_scratch_path(
-            source_path=self._controller.organizer_binary_path,
+            source_path=binary_path,
             scratch_path=f'target/bin/{game}',
             asset_path_mode='hash'
         )

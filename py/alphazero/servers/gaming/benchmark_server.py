@@ -5,10 +5,6 @@ from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams
 
 
-class BenchmarkServerParams(ServerParams):
-    SERVER_NAME = 'benchmark-server'
-
-
 class BenchmarkServer(ServerBase):
     def __init__(self, params: ServerParams, logging_params: LoggingParams,
                  build_params: BuildParams, rating_params: RatingParams):

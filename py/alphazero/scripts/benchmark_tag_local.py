@@ -44,6 +44,7 @@ def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_p
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, loop_controller=True)
+    rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
 def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params: RatingParams,
@@ -57,6 +58,7 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd, loop_controller=True)
+    rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
 

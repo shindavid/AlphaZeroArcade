@@ -57,6 +57,7 @@ from alphazero.logic.run_params import RunParams
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
+from alphazero.servers.gaming.server_base import ServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
@@ -199,11 +200,10 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
 def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     params:Params = params_dict['Params']
-    docker_params = params_dict['DockerParams']
-    logging_params = params_dict['LoggingParams']
-    build_params = params_dict['BuildParams']
+    docker_params: DockerParams = params_dict['DockerParams']
+    logging_params: LoggingParams = params_dict['LoggingParams']
+    build_params: BuildParams = params_dict['BuildParams']
     rating_params: RatingParams = params_dict['RatingParams']
-    default_rating_params = game_spec.rating_params
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -214,11 +214,11 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
-        cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
+
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
+    rating_params.add_to_cmd(cmd, server=True)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching benchmark server: %s', cmd)
@@ -227,11 +227,10 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
 
 def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     params: Params = params_dict['Params']
-    docker_params = params_dict['DockerParams']
-    logging_params = params_dict['LoggingParams']
-    build_params = params_dict['BuildParams']
+    docker_params: DockerParams = params_dict['DockerParams']
+    logging_params: LoggingParams = params_dict['LoggingParams']
+    build_params: BuildParams = params_dict['BuildParams']
     rating_params: RatingParams = params_dict['RatingParams']
-    default_rating_params = game_spec.rating_params
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -242,12 +241,11 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
-        cmd.extend(['--num-search-threads', str(rating_params.rating_player_options.num_search_threads)])
 
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
+    rating_params.add_to_cmd(cmd, server=True)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching eval server: %s', cmd)
@@ -256,15 +254,14 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
 
 def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str], game_spec: GameSpec):
     params: Params = params_dict['Params']
-    run_params = params_dict['RunParams']
+    run_params: RunParams = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
     default_training_params = game_spec.training_params
-    training_params = params_dict['TrainingParams']
-    docker_params = params_dict['DockerParams']
-    logging_params = params_dict['LoggingParams']
-    build_params = params_dict['BuildParams']
+    training_params: TrainingParams = params_dict['TrainingParams']
+    docker_params: DockerParams = params_dict['DockerParams']
+    logging_params: LoggingParams = params_dict['LoggingParams']
+    build_params: BuildParams = params_dict['BuildParams']
     rating_params: RatingParams = params_dict['RatingParams']
-    default_rating_params = game_spec.rating_params
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
@@ -283,9 +280,6 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     else:
         cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.first_run)])
 
-    if default_rating_params.rating_player_options.num_iterations != rating_params.rating_player_options.num_iterations:
-        cmd.extend(['--num-iterations', str(rating_params.rating_player_options.num_iterations)])
-
     if default_loop_controller_params.benchmark_until_gen_gap != params.benchmark_until_gen_gap:
         cmd.extend(['--benchmark-until-gen-gap', str(params.benchmark_until_gen_gap)])
 
@@ -303,6 +297,7 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     build_params.add_to_cmd(cmd, loop_controller=True)
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
+    rating_params.add_to_cmd(cmd, loop_controller=True)
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
