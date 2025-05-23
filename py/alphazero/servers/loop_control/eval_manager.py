@@ -19,6 +19,7 @@ import numpy as np
 from dataclasses import dataclass, field, replace
 from enum import Enum
 import logging
+import os
 import threading
 from typing import Dict, Optional, TYPE_CHECKING, Union
 
@@ -192,8 +193,9 @@ class EvalManager(GamingManagerBase):
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
 
-
-        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+        benchmark_organizer = None
+        if next_opponent_agent.tag:
+            benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
 
         eval_binary_src = self._controller._get_binary_path()
         benchmark_binary_src = self._controller._get_binary_path(benchmark_organizer=benchmark_organizer)
@@ -243,6 +245,13 @@ class EvalManager(GamingManagerBase):
                                      model=benchmark_model.scratch_path if benchmark_model else None)
         else:
             opponent_agent = replace(next_opponent_agent, binary=eval_binary.scratch_path)
+            for dep in self._controller.game_spec.extra_runtime_deps:
+                dep_file = FileToTransfer.from_src_scratch_path(
+                    source_path=os.path.join('/workspace/repo/', dep),
+                    scratch_path=dep,
+                    asset_path_mode='hash'
+                )
+                files_required.append(dep_file)
 
         data = {
             'type': 'match-request',
