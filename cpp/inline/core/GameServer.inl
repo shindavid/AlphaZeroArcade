@@ -357,7 +357,7 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::pause() {
   LOG_INFO("GameServer: pausing");
   std::unique_lock lock(mutex_);
-  util::release_assert(!paused_);
+  util::release_assert(!paused_, "double pause");
   paused_ = true;
   pause_receipt_pending_ = true;
   lock.unlock();
@@ -368,7 +368,7 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::unpause() {
   LOG_INFO("GameServer: unpausing");
   std::unique_lock lock(mutex_);
-  util::release_assert(paused_);
+  util::release_assert(paused_, "double unpause");
   paused_ = false;
   lock.unlock();
   cv_.notify_all();
