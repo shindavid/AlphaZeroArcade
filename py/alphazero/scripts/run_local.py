@@ -388,17 +388,24 @@ def main():
         procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
-
             for self_play_gpu in self_play_gpus:
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
-        if params.run_benchmark_server or benchmark_tag is None:
-            descs.append('Benchmark')
-            procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+        if params.task_mode:
+            if params.run_benchmark_server:
+                descs.append('Benchmark')
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu))
+            if params.run_ratings_server:
+                descs.append('Eval')
+                procs.append(launch_eval_server(params_dict, ratings_gpu))
         else:
-            descs.append('Eval')
-            procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+            if game_spec.reference_player_family is not None or benchmark_tag is not None:
+                descs.append('Eval')
+                procs.append(launch_eval_server(params_dict, ratings_gpu))
+            else:
+                descs.append('Benchmark')
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')

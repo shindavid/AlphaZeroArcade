@@ -20,6 +20,7 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
+from alphazero.scripts.gen_ref_benchmarks import REF_DIR
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
@@ -355,20 +356,29 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            db_file = self.organizer.eval_db_filename(self.params.benchmark_tag)
-            if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
-                if self.params.benchmark_tag is None:
-                    raise Exception(
-                        f"Benchmark tag is not set and default benchmark info file not found.\n"
-                        f"Please specify a benchmark tag by using the --benchmark-tag argument\n"
-                        f"Or run the benchmark server with the --set-default-benchmark argument first."
-                    )
+            if self.game_spec.reference_player_family is not None:
+                benchmark_tag = 'reference_players'
+                db_file = self.organizer.eval_db_filename(benchmark_tag)
+                if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
+                    ref_db_file = os.path.join(REF_DIR, f'{self.game_spec.name}.db')
+                    if not os.path.exists(ref_db_file):
+                        raise Exception(f"Reference database file not found: {ref_db_file}")
+                    shutil.copy2(ref_db_file, db_file)
+            else:
+                benchmark_tag = self.params.benchmark_tag
+                db_file = self.organizer.eval_db_filename(benchmark_tag)
+                if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
+                    if self.params.benchmark_tag is None:
+                        raise Exception(
+                            f"Benchmark tag is not set and default benchmark info file not found.\n"
+                            f"Please specify a benchmark tag by using the --benchmark-tag argument\n"
+                            f"Or run the benchmark server with the --set-default-benchmark argument first."
+                        )
+                    benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
+                    benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
+                    shutil.copy2(benchmark_organizer.benchmark_db_filename, db_file)
 
-                benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
-                benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
-                shutil.copy2(benchmark_organizer.benchmark_db_filename, self.organizer.eval_db_filename(self.params.benchmark_tag))
-
-            self._eval_managers[tag] = EvalManager(self, self.params.benchmark_tag)
+            self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
