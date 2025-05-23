@@ -29,11 +29,9 @@ class Evaluator:
         self._organizer = organizer
         self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename(benchmark_tag))
         self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
-
         self._arena = self._benchmark.clone_arena()
         self.db = RatingDB(self._organizer.eval_db_filename(benchmark_tag))
         self.load_from_db()
-        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)

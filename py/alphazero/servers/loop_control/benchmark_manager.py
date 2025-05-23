@@ -157,6 +157,7 @@ class BenchmarkManager(GamingManagerBase):
             status_cond.notify_all()
 
     def send_match_request(self, conn):
+        self._benchmarker.refresh_ratings()
         self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
         if ix is None:
