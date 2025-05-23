@@ -174,7 +174,7 @@ class EvalManager(GamingManagerBase):
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
             opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
                 if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
-            chosen_ixs, num_matches = self._evaluator.gen_matches(test_iagent.index, estimated_rating, opponent_ixs_played, n_games_needed)
+            chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
             conn.aux.needs_new_opponents = False
