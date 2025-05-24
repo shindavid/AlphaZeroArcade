@@ -227,6 +227,7 @@ class ServerBase:
 
         if args is None:
             args = {}
+        args['-G'] = n_games
 
         if self._rating_params.use_remote_play:
             port = DEFAULT_REMOTE_PLAY_PORT
