@@ -27,7 +27,7 @@ class ReferenceBenchmarker:
             f'Game {game_spec.name} does not have a reference player family'
 
         self.game_spec = game_spec
-        self.db_filename = os.path.join(REF_DIR, f'{game_spec.name}.db')
+        self.db_filename = os.path.join(REF_DIR, 'tmp', f'{game_spec.name}.db')
         self.db = RatingDB(self.db_filename)
         self.arena = Arena()
 
@@ -65,6 +65,14 @@ class ReferenceBenchmarker:
         self.db.commit_ratings(self.arena.indexed_agents,
                                self.arena.ratings,
                                committee=committee)
+        self.db.save_ratings_to_json(self.arena.indexed_agents, self.arena.ratings,
+                                     os.path.join(REF_DIR, f'{self.game}.json'))
+
+    def run(self):
+        self.load_from_db()
+        self.add_ref_agents()
+        self.play_matches()
+        self.commit_benchmark_ratings()
 
     @property
     def reference_players(self):
@@ -78,14 +86,12 @@ class ReferenceBenchmarker:
 def benchmark_reference_players(game_specs: List[GameSpec]):
     for game_spec in game_specs:
         if game_spec.reference_player_family is None:
+            logger.info(f'Skipped for game: {game_spec.name}, no reference_player_family')
             continue
         logger.info(f'Benchmarking reference players for game {game_spec.name}')
         benchmarker = ReferenceBenchmarker(game_spec)
-        benchmarker.load_from_db()
-        benchmarker.add_ref_agents()
-        benchmarker.play_matches()
-        benchmarker.commit_benchmark_ratings()
-        logger.info(f'Finished. Saved db to {benchmarker.db_filename}')
+        benchmarker.run()
+        logger.info(f'Finished for game: {game_spec.name}')
 
 if __name__ == "__main__":
     benchmark_reference_players(ALL_GAME_SPECS)
