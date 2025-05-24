@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, AgentRoles, IndexedAgent, MCTSAgent
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -69,8 +69,8 @@ class Benchmarker:
             if last_gen is None or last_gen <2:
                 return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
-            self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
-            self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
+            self._arena.add_agent(gen0_agent, AgentRoles([AgentRole.BENCHMARK]), expand_matrix=True, db=self.db)
+            self._arena.add_agent(last_gen_agent, AgentRoles([AgentRole.BENCHMARK]), expand_matrix=True, db=self.db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
         incomplete_gen = self.incomplete_gen(excluded_indices=excluded_indices)
@@ -85,7 +85,7 @@ class Benchmarker:
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
-        next_iagent = self._arena.add_agent(next_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
+        next_iagent = self._arena.add_agent(next_agent, AgentRoles([AgentRole.BENCHMARK]), expand_matrix=True,
                                              db=self.db)
         matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices=excluded_indices)
         return matches

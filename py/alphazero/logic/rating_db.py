@@ -1,5 +1,6 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, MCTSAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, AgentRoles, IndexedAgent, \
+    MCTSAgent, ReferenceAgent
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
@@ -16,7 +17,7 @@ from typing import Dict, List, Iterable, Optional, Set
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
-    roles: Set[AgentRole]
+    roles: AgentRoles
 
 
 @dataclass
@@ -61,7 +62,7 @@ class RatingDB:
         c.execute(query)
         for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
             agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
-            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            agent_roles = AgentRoles.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
@@ -74,7 +75,7 @@ class RatingDB:
         c.execute(query)
         for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
-            agent_roles = {AgentRole(role) for role in roles.split(',')}
+            agent_roles = AgentRoles.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
@@ -198,7 +199,7 @@ class RatingDB:
             raise ValueError(f'Unknown agent type: {type(agent)}')
 
         insert = '''INSERT INTO agents (sub_id, subtype, role) VALUES (?, ?, ?)'''
-        agent_roles = ','.join([role.value for role in iagent.roles])
+        agent_roles = iagent.roles.to_str()
         c.execute(insert, (sub_id, subtype, agent_roles))
         conn.commit()
         iagent.db_id = c.lastrowid
@@ -207,7 +208,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        agent_roles = ','.join([role.value for role in iagent.roles])
+        agent_roles = iagent.roles.to_str()
         c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
         conn.commit()
 
@@ -246,7 +247,7 @@ class RatingDB:
 
             ia = IndexedAgent(agent=agent,
                               index=iagent_dict['index'],
-                              roles={AgentRole(role) for role in iagent_dict['roles'].split(',')},
+                              roles=AgentRoles.from_str(iagent_dict['roles']),
                               db_id=iagent_dict['db_id'])
 
             self.commit_agent(ia)
