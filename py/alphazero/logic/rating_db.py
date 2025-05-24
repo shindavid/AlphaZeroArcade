@@ -5,10 +5,11 @@ from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
+import json
 import numpy as np
 
 from dataclasses import dataclass
-from typing import List, Iterable, Optional, Set
+from typing import Dict, List, Iterable, Optional, Set
 
 
 @dataclass
@@ -215,6 +216,45 @@ class RatingDB:
         c = conn.cursor()
         c.execute('SELECT 1 FROM agents LIMIT 1')
         return c.fetchone() is None
+
+    def save_ratings_to_json(self, iagents: List[IndexedAgent], ratings: np.ndarray, file: str):
+        data = {}
+        for ia, elo in zip(iagents, ratings):
+            data[str(ia.agent)] = {
+                'iagent': ia.to_dict(),
+                'rating': elo
+            }
+
+        with open(file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def load_ratings_from_json(self, json_file: str):
+        with open(json_file, 'r') as f:
+            data: Dict = json.load(f)
+
+        iagents = []
+        ratings = []
+        for entry in data.values():
+            agent: Agent = None
+            iagent_dict = entry['iagent']
+            if iagent_dict['type'] == 'MCTS':
+                agent = MCTSAgent(**iagent_dict['agent'])
+            elif iagent_dict['type'] == 'Reference':
+                agent = ReferenceAgent(**iagent_dict['agent'])
+            else:
+                raise ValueError(f"unknown agent type {iagent_dict['type']}")
+
+            ia = IndexedAgent(agent=agent,
+                              index=iagent_dict['index'],
+                              roles={AgentRole(role) for role in iagent_dict['roles'].split(',')},
+                              db_id=iagent_dict['db_id'])
+
+            self.commit_agent(ia)
+            iagents.append(ia)
+            ratings.append(entry['rating'])
+
+        self.commit_ratings(iagents, ratings,
+                            committee=IndexSet.from_bits(np.ones(len(iagents), dtype=bool)))
 
     @property
     def db_lock(self):

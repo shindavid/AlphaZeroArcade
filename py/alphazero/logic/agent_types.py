@@ -141,6 +141,14 @@ class IndexedAgent:
     roles: Set[AgentRole]
     db_id: Optional[AgentDBId] = None
 
+    def to_dict(self):
+        agent_type = 'MCTS' if isinstance(self.agent, MCTSAgent) else 'Reference'
+        return {'agent': self.agent.to_dict(),
+                'index': self.index,
+                'roles': ','.join(x.value for x in self.roles),
+                'db_id': self.db_id,
+                'type': agent_type}
+
 
 class MatchType(Enum):
     BENCHMARK = 'benchmark'

@@ -361,10 +361,11 @@ class LoopController:
 
                 db_file = self.organizer.eval_db_filename(benchmark_tag)
                 if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
-                    ref_db_file = os.path.join(REF_DIR, f'{self.game_spec.name}.db')
-                    if not os.path.exists(ref_db_file):
-                        raise Exception(f"Reference database file not found: {ref_db_file}")
-                    shutil.copy2(ref_db_file, db_file)
+                    db = RatingDB(db_file)
+                    ref_json_file = os.path.join(REF_DIR, f'{self.game_spec.name}.json')
+                    if not os.path.exists(ref_json_file):
+                        raise Exception(f"Reference database file not found: {ref_json_file}")
+                    db.load_ratings_from_json(ref_json_file)
             else:
                 benchmark_tag = self.params.benchmark_tag
                 db_file = self.organizer.eval_db_filename(benchmark_tag)
