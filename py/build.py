@@ -23,6 +23,9 @@ def run(cmd: str, print_cmd=True):
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
+    parser.add_argument("-g", '--add-debug-symbols', action='store_true',
+                        help='add debug symbols to the build. This is useful for debugging with '
+                        'gdb. Enabled by default for --debug/-d builds.')
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
     parser.add_argument('--enable-debug-logging', action='store_true', help='debug logging')
     parser.add_argument('--clean', action='store_true', help='clean out target/.../{bin,lib}/ directory')
@@ -115,6 +118,9 @@ def main():
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
     else:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Release')
+
+    if args.add_debug_symbols:
+        cmake_cmd_tokens.append('-DADD_DEBUG_SYMBOLS=1')
 
     cmake_cmd = ' '.join(cmake_cmd_tokens)
     run(cmake_cmd)
