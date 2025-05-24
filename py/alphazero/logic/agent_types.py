@@ -126,6 +126,15 @@ class AgentRole(Enum):
     TEST = 'test'
 
 
+class AgentRoles(set[AgentRole]):
+    def to_str(self) -> str:
+        return ','.join(x.value for x in sorted(self, key=lambda r: r.value))
+
+    @classmethod
+    def from_str(cls, str_roles: str) -> 'AgentRoles':
+        return cls(AgentRole(role) for role in str_roles.split(',') if role)
+
+
 @dataclass
 class IndexedAgent:
     """
@@ -138,14 +147,14 @@ class IndexedAgent:
     """
     agent: Agent
     index: ArenaIndex
-    roles: Set[AgentRole]
+    roles: AgentRoles
     db_id: Optional[AgentDBId] = None
 
     def to_dict(self):
         agent_type = 'MCTS' if isinstance(self.agent, MCTSAgent) else 'Reference'
         return {'agent': self.agent.to_dict(),
                 'index': self.index,
-                'roles': ','.join(x.value for x in self.roles),
+                'roles': self.roles.to_str(),
                 'db_id': self.db_id,
                 'type': agent_type}
 

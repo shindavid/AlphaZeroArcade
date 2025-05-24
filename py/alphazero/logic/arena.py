@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole
+from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole, AgentRoles
 from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
@@ -127,7 +127,7 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def add_agent(self, agent: Agent, roles: Set[AgentRole], db_id: Optional[AgentDBId]=None,
+    def add_agent(self, agent: Agent, roles: AgentRoles, db_id: Optional[AgentDBId]=None,
                    expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.
