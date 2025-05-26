@@ -275,7 +275,9 @@ DataLoader<Game>::FileManager::~FileManager() {
   for (PrefetchThread* thread : prefetch_threads_) {
     delete thread;
   }
-  prefetch_loop_thread_.join();
+  if (prefetch_loop_thread_.joinable()) {
+    prefetch_loop_thread_.join();
+  }
 }
 
 template <concepts::Game Game>
@@ -355,6 +357,25 @@ void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t fi
   std::unique_lock lock(mutex_);
   n_total_rows_ += num_rows;
   all_files_.push_front(data_file);
+}
+
+template <concepts::Game Game>
+void DataLoader<Game>::FileManager::reset_prefetch_loop() {
+  // Resets the prefetch loop.
+  //
+  // We do this to ensure that when we call DataLoader::load(), we'll know for sure that we aren't
+  // in the middle of prefetching any files. I haven't seen this happening, but I can't rule out
+  // the possibility, so doing this seems like a good idea.
+  std::unique_lock lock(mutex_);
+  quitting_ = true;
+  lock.unlock();
+  cv_.notify_all();
+
+  if (prefetch_loop_thread_.joinable()) {
+    prefetch_loop_thread_.join();
+  }
+  quitting_ = false;
+  prefetch_loop_thread_ = std::thread(&FileManager::prefetch_loop, this);
 }
 
 template <concepts::Game Game>
@@ -600,6 +621,7 @@ void DataLoader<Game>::load(int64_t window_start, int64_t window_end, int n_samp
                            window_end, file_manager_.n_total_rows(), n_samples);
   file_manager_.sort_work_units_and_prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
+  file_manager_.reset_prefetch_loop();
   shuffle_output(n_samples);
 }
 

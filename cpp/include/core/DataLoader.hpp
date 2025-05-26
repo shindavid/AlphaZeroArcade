@@ -237,6 +237,8 @@ class DataLoader {
 
     int64_t n_total_rows() const { return n_total_rows_; }
 
+    void reset_prefetch_loop();
+
    private:
     enum Instruction : int8_t { kUnload, kLoad, kWait, kQuit };
 
