@@ -496,8 +496,6 @@ void DataLoader<Game>::WorkerThread::loop() {
     do_work();
     has_work_ = false;
     table_->mark_as_available(id_);
-    lock.unlock();
-
     file_manager_->add_to_unload_queue(unit_.file);
   }
 }
