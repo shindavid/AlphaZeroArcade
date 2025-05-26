@@ -162,7 +162,11 @@ class EvalManager(GamingManagerBase):
         n_games_completed = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
             if data.status == MatchRequestStatus.COMPLETE])
         n_games_to_do = self.n_games - n_games_completed
-        if n_games_to_do <= 0:
+
+        opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
+                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
+
+        if n_games_to_do <= 0 or len(opponent_ixs_played) >= len(self._evaluator.benchmark_committee):
             self._interpolate_ratings(conn, conn.aux.ix)
             self._set_ready(conn)
             return
@@ -175,8 +179,6 @@ class EvalManager(GamingManagerBase):
         need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
-            opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
-                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
