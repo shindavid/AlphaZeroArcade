@@ -536,9 +536,7 @@ GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std:
   GameLogCommon::write_section(buf, &log->outcome_);
   GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
   GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
-
-  // copy data_buf to buf:
-  buf.insert(buf.end(), data_buf_.begin(), data_buf_.end());
+  GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());
 
   // clear vectors
   sampled_indices_.clear();
