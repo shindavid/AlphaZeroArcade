@@ -1,81 +1,127 @@
 // test_trt.cpp
+
+/*
+Compilation cmd:
+
+g++ test_trt.cpp -o test_trt \
+  -I/usr/include/x86_64-linux-gnu \
+  -I/usr/local/cuda/include \
+  -L/usr/lib/x86_64-linux-gnu \
+  -L/usr/local/cuda/lib64 \
+  -lnvinfer -lcudart \
+  -std=c++17 -O2
+*/
 #include <NvInfer.h>
-#include <NvOnnxParser.h>
+#include <NvInferRuntime.h>
 #include <cuda_runtime_api.h>
+
+#include <fstream>
 #include <iostream>
 #include <vector>
 
 using namespace nvinfer1;
 
-// Simple logger for TRT
+// simple logger
 class Logger : public ILogger {
-  void log(Severity s, const char* msg) noexcept override {
-    if (s <= Severity::kWARNING) std::cout << msg << "\n";
+ public:
+  void log(Severity severity, AsciiChar const* msg) noexcept override {
+    if (severity <= Severity::kWARNING) std::cerr << "[TRT] " << msg << "\n";
   }
-} gLogger;
+};
 
 int main(int argc, char** argv) {
   if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " model.onnx\n";
-    return 1;
-  }
-  const char* onnx = argv[1];
-
-  // 1) Builder + network + parser
-  auto builder = createInferBuilder(gLogger);
-
-  // implicit-batch mode: no flags needed
-  auto network = builder->createNetworkV2(0);
-  auto parser  = nvonnxparser::createParser(*network, gLogger);
-
-  if (!parser->parseFromFile(onnx, (int)ILogger::Severity::kWARNING)) {
-    std::cerr << "Failed to parse ONNX\n";
+    std::cerr << "Usage: " << argv[0] << " engine.plan\n";
     return 1;
   }
 
-  // 2) Build engine
-  auto config = builder->createBuilderConfig();
-  // set workspace limit (1 MiB here; TRT will round as needed)
-  config->setMemoryPoolLimit(
-    nvinfer1::MemoryPoolType::kWORKSPACE,
-    1 << 20
-  );
-  auto engine = builder->buildEngineWithConfig(*network, *config);
+  // 1) read plan file
+  std::ifstream file(argv[1], std::ios::binary | std::ios::ate);
+  if (!file) {
+    std::cerr << "Error opening engine file\n";
+    return 1;
+  }
+  size_t size = file.tellg();
+  file.seekg(0, std::ios::beg);
+  std::vector<char> engineData(size);
+  file.read(engineData.data(), size);
+  file.close();
 
-  // 3) Create context
-  auto ctx = engine->createExecutionContext();
+  // 2) deserialize
+  Logger logger;
+  IRuntime* runtime = createInferRuntime(logger);
+  if (!runtime) {
+    std::cerr << "createInferRuntime failed\n";
+    return 1;
+  }
+  ICudaEngine* engine = runtime->deserializeCudaEngine(engineData.data(), engineData.size());
+  if (!engine) {
+    std::cerr << "deserialize failed\n";
+    delete runtime;
+    return 1;
+  }
 
-  // 4) Hard-coded dims for our tiny test (batch=1, in=3, out=2)
-  const int B = 1, IN = 3, OUT = 2;
-  const size_t inSize  = B * IN;
-  const size_t outSize = B * OUT;
+  // 3) execution context
+  IExecutionContext* ctx = engine->createExecutionContext();
+  if (!ctx) {
+    std::cerr << "createExecutionContext failed\n";
+    delete engine;
+    delete runtime;
+    return 1;
+  }
 
-  // 5) Allocate host & device buffers
-  std::vector<float> hostIn(inSize, 1.0f), hostOut(outSize);
-  void* buffers[2] = {};
-  cudaMalloc(&buffers[0], inSize  * sizeof(float));
-  cudaMalloc(&buffers[1], outSize * sizeof(float));
+  // 4) get I/O names & shapes
+  int nbIO = engine->getNbIOTensors();
+  if (nbIO < 2) {
+    std::cerr << "Expected at least 2 I/O tensors, got " << nbIO << "\n";
+    delete ctx;
+    delete engine;
+    delete runtime;
+    return 1;
+  }
 
-  // 6) Copy input → GPU
-  cudaMemcpy(buffers[0], hostIn.data(),
-             inSize * sizeof(float),
-             cudaMemcpyHostToDevice);
+  const char* inputName = engine->getIOTensorName(0);
+  const char* outputName = engine->getIOTensorName(1);
+  // Dims inDims = engine->getTensorShape(inputName);
+  // Dims outDims = engine->getTensorShape(outputName);
 
-  // 7) Inference (binding 0=input, 1=output)
-  ctx->executeV2(buffers);
+  // 4a) pick profile and set input shape
+  ctx->setOptimizationProfileAsync(0, 0);
+  Dims inOpt  = engine->getProfileShape(inputName,  0, OptProfileSelector::kOPT);
+  Dims outOpt = engine->getProfileShape(outputName, 0, OptProfileSelector::kOPT);
 
-  // 8) Copy GPU → host
-  cudaMemcpy(hostOut.data(), buffers[1],
-             outSize * sizeof(float),
-             cudaMemcpyDeviceToHost);
+  if (!ctx->setInputShape(inputName, inOpt)) {
+    std::cerr << "Bad input shape\n";
+    return 1;
+  }
 
-  // 9) Print results
-  std::cout << "Output:";
-  for (float v : hostOut) std::cout << " " << v;
-  std::cout << "\n";
+  // now inOpt/outOpt are fully concrete (no -1’s) so we can size our buffers:
+  int64_t inCount = 1;
+  for (int i = 0; i < inOpt.nbDims; ++i) inCount  *= inOpt.d[i];
+  int64_t outCount = 1;
+  for (int i = 0; i < outOpt.nbDims; ++i) outCount *= outOpt.d[i];
 
-  // 10) Cleanup
-  cudaFree(buffers[0]);
-  cudaFree(buffers[1]);
+  // 5) host/device buffers
+  std::vector<float> hostIn(inCount, 0.0f), hostOut(outCount);
+  std::vector<void*> deviceBuffers(nbIO, nullptr);
+  cudaMalloc(&deviceBuffers[0], inCount  * sizeof(float));
+  cudaMalloc(&deviceBuffers[1], outCount * sizeof(float));
+  cudaMemcpy(deviceBuffers[0], hostIn.data(), inCount * sizeof(float), cudaMemcpyHostToDevice);
+
+  // 6) inference
+  if (!ctx->executeV2(deviceBuffers.data())) {
+    std::cerr << "Inference failed\n";
+  } else {
+    cudaMemcpy(hostOut.data(), deviceBuffers[1], outCount * sizeof(float), cudaMemcpyDeviceToHost);
+    std::cout << "Output: " << hostOut[0] << " " << hostOut[1] << "\n";
+  }
+
+  // 7) cleanup
+  cudaFree(deviceBuffers[0]);
+  cudaFree(deviceBuffers[1]);
+  delete ctx;
+  delete engine;
+  delete runtime;
+
   return 0;
 }
