@@ -242,6 +242,16 @@ class ServerBase:
 
             if not self._session_data.start_log_sync(log_filename1):
                 cmd1.append('--log-append-mode')
+
+            # If two or more MCTS agents are involved, enable alternating mode
+            mcts_count = 0
+            for agent in (agent1, agent2):
+                if isinstance(agent, MCTSAgent):
+                    mcts_count += 1
+
+            if mcts_count > 1:
+                cmd1.append('--alternating-mode=2')
+
             cmd1.append(make_args_str(args))
             cmd1 = ' '.join(map(str, cmd1))
 
