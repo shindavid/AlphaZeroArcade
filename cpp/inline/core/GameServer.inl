@@ -57,7 +57,10 @@ auto GameServer<Game>::Params::make_options_description() {
       "do not announce result after each individual game")
     .template add_hidden_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
       &respect_victory_hints, "immediately exit game if a player claims imminent victory",
-      "ignore imminent victory claims from players");
+      "ignore imminent victory claims from players")
+    .template add_option<"alternating-mode">(
+      po::value<int>(&alternating_mode)->default_value(alternating_mode),
+      "alternating mode (0: disable, 1: auto-enable, 2: enable)");
 }
 
 template <concepts::Game Game>
@@ -67,6 +70,18 @@ GameServer<Game>::SharedData::SharedData(
     : server_(server), params_(params), yield_manager_(cv_, mutex_, queue_, pending_queue_count_) {
   if (training_data_writer_params.enabled) {
     training_data_writer_ = new TrainingDataWriter(server, training_data_writer_params);
+  }
+
+  if (params_.alternating_mode == 0) {
+    global_active_player_id_ = -1;
+  } else if (params_.alternating_mode == 1) {
+    // auto-enable - can change later
+    global_active_player_id_ = -1;
+  } else if (params_.alternating_mode == 2) {
+    global_active_player_id_ = 0;
+  } else {
+    throw util::CleanException("GameServer::{}(): invalid alternating mode: {}",
+                               __func__, params_.alternating_mode);
   }
 }
 
@@ -109,7 +124,19 @@ void GameServer<Game>::SharedData::start_games() {
     if (!slot->start_game()) {
       throw util::Exception("ERROR: failed to start game slot");
     }
-    queue_.emplace(slot->id());
+
+    if (global_active_player_id_ >= 0) {
+      // In alternating mode, we only add the slot to the queue if it's the active player's turn
+      if (slot->active_player_id() == global_active_player_id_) {
+        queue_.emplace(slot->id());
+      } else {
+        deferred_queues_[slot->active_player_id()].emplace(slot->id());
+        deferred_count_++;
+        pending_queue_count_++;
+      }
+    } else {  // not in alternating mode
+      queue_.emplace(slot->id());
+    }
   }
 }
 
@@ -153,12 +180,45 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
       server_->force_progress();
       lock.lock();
       waiting_in_next_ = true;
-      cv_.wait(lock, [&] { return paused_ || !queue_pending(); });
+      cv_.wait(lock, [&] {
+        if (paused_) return true;
+        if (!queue_.empty()) return true;
+        if (pending_queue_count_ == 0) return true;
+        if (deferred_count_ == pending_queue_count_) return true;
+        return false;
+      });
       waiting_in_next_ = false;
     }
-    if (queue_.empty() && pending_queue_count_ == 0) {
-      LOG_DEBUG("<-- GameServer::{}(): exiting", __func__);
-      return kExit;
+    if (queue_.empty()) {
+      if (pending_queue_count_ == 0) {
+        LOG_DEBUG("<-- GameServer::{}(): exiting", __func__);
+        return kExit;
+      }
+
+      if (deferred_count_ == pending_queue_count_) {
+        util::debug_assert(
+          global_active_player_id_ >= 0,
+          "GameServer::{}(): deferred_count_ == pending_queue_count_ ({} == {}) but "
+          "global_active_player_id_ is not set",
+          __func__, deferred_count_, pending_queue_count_);
+
+        util::debug_assert(deferred_queues_[global_active_player_id_].empty(),
+                           "GameServer::{}(): deferred queue for active player {} is not empty",
+                           __func__, global_active_player_id_);
+
+        increment_global_active_player_id();
+        queue_.swap(deferred_queues_[global_active_player_id_]);
+        deferred_count_ -= queue_.size();
+        pending_queue_count_ -= queue_.size();
+        validate_deferred_count();
+        LOG_DEBUG(
+          "<-- GameServer::{}(): handle deferral (global_active_player_id_:{} deferred_count_:{} "
+          "pending_queue_count_:{} queue_.size():{})",
+          __func__, global_active_player_id_, deferred_count_, pending_queue_count_, queue_.size());
+
+        lock.unlock();
+        return next(wait_for_game_slot_time_ns, item);
+      }
     }
   }
 
@@ -167,28 +227,45 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
     return kHandlePause;
   }
 
+  util::debug_assert(!queue_.empty(), "GameServer::{}(): queue should not be empty here", __func__);
+
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
   LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
             item.context, queue_.size(), pending_queue_count_);
+
+  util::debug_assert(global_active_player_id_ < 0 ||
+                       game_slots_[item.slot]->active_player_id() == global_active_player_id_,
+                     "GameServer::{}(): item's active player id ({}) does not match "
+                     "global_active_player_id_ ({})",
+                     __func__, game_slots_[item.slot]->active_player_id(),
+                     global_active_player_id_);
+
   return kProceed;
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   std::unique_lock lock(mutex_);
+  auto& queue = get_queue_to_use(item.slot);
+  bool deferred = &queue != &queue_;
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
-    queue_.push(item);
-    pending_queue_count_--;
+    queue.push(item);
+    pending_queue_count_ -= !deferred;
+    deferred_count_ += deferred;
   } else if (request.instruction == kEnqueueLater) {
     if (request.extra_enqueue_count > 0) {
       // Push back the item's siblings
       for (int i = 0; i < request.extra_enqueue_count; ++i) {
         item.context = i + 1;
-        queue_.push(item);
+        queue.push(item);
+      }
+      if (deferred) {
+        pending_queue_count_ += request.extra_enqueue_count;
+        deferred_count_ += request.extra_enqueue_count;
       }
       item.context = 0;  // just for the LOG_DEBUG() statement below
     }
@@ -199,9 +276,10 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
                           (int)request.instruction);
   }
 
-  LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} queue={}", __func__,
+  LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} deferred={}", __func__,
             item.slot, item.context, (int)request.instruction, request.extra_enqueue_count,
-            pending_queue_count_, queue_.size());
+            pending_queue_count_, deferred_count_);
+  validate_deferred_count();
 
   lock.unlock();
   cv_.notify_all();
@@ -323,13 +401,21 @@ GameServer<Game>::SharedData::generate_player_order(
 }
 
 template <concepts::Game Game>
+void GameServer<Game>::SharedData::handle_alternating_mode_recommendation() {
+  if (params_.alternating_mode == 1) {  // auto-enable
+    global_active_player_id_ = 0;
+  }
+}
+
+template <concepts::Game Game>
 void GameServer<Game>::SharedData::debug_dump() const {
   std::unique_lock lock(mutex_);
   LOG_WARN(
-    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} active_thread_count:{} "
+    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} deferred_count_:{} "
+    "active_thread_count:{} "
     "paused_thread_count:{} pause_receipt_pending:{} waiting_in_next:{} num_games_started:{} "
     "num_games_ended:{}",
-    __func__, paused_, queue_.size(), pending_queue_count_, active_thread_count_,
+    __func__, paused_, queue_.size(), pending_queue_count_, deferred_count_, active_thread_count_,
     paused_thread_count_, pause_receipt_pending_, waiting_in_next_, num_games_started_,
     num_games_ended_);
 
@@ -421,6 +507,23 @@ void GameServer<Game>::SharedData::decrement_paused_thread_count() {
 }
 
 template <concepts::Game Game>
+slot_context_queue_t& GameServer<Game>::SharedData::get_queue_to_use(game_slot_index_t g) {
+  if (global_active_player_id_ < 0) {
+    // Not in alternating mode, use the main queue
+    return queue_;
+  }
+
+  GameSlot* slot = game_slots_[g];
+  player_id_t p = slot->active_player_id();
+  if (p == global_active_player_id_) {
+    // This slot is for the active player, use the main queue
+    return queue_;
+  }
+  // This slot is for a deferred player, use the deferred queue for that player
+  return deferred_queues_[p];
+}
+
+template <concepts::Game Game>
 void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   // assumes mutex_ is locked
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
@@ -428,6 +531,20 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
     LOG_INFO("<-- GameServer: handling pause receipt");
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::validate_deferred_count() const {
+  // assumes mutex_ is locked
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  int deferred_count = 0;
+  for (const auto& queue : deferred_queues_) {
+    deferred_count += queue.size();
+  }
+  util::debug_assert(deferred_count == deferred_count_,
+                     "GameServer::{}(): deferred_count_ mismatch: {} != {}", __func__,
+                     deferred_count_, deferred_count);
 }
 
 template <concepts::Game Game>
@@ -787,6 +904,11 @@ void GameServer<Game>::GameThread::run() {
     shared_data_.increment_game_slot_time_ns(wait_for_game_slot_time_ns);
   }
   shared_data_.decrement_active_thread_count();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::handle_alternating_mode_recommendation() {
+  shared_data_.handle_alternating_mode_recommendation();
 }
 
 template <concepts::Game Game>

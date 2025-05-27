@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <queue>
 #include <vector>
 
 namespace core {
@@ -34,6 +35,7 @@ struct SlotContext {
   context_id_t context;
 };
 using slot_context_vec_t = std::vector<SlotContext>;
+using slot_context_queue_t = std::queue<SlotContext>;
 
 // yield_instruction_t is used in various components of the MCTS machinery
 //

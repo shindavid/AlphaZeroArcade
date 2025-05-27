@@ -26,6 +26,9 @@ NNEvaluationService<Game>* NNEvaluationService<Game>::create(
     auto instance = new NNEvaluationService(params, server);
 
     instance_map_[params.model_filename] = instance;
+    if (instance_map_.size() > 1) {
+      server->handle_alternating_mode_recommendation();
+    }
     return instance;
   }
   NNEvaluationService* instance = it->second;
@@ -808,8 +811,8 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() (seq:{}, count:{})", cls, func, batch_data->sequence_id,
-             batch_data->allocate_count);
+    LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", cls, func, this->instance_id_,
+             batch_data->sequence_id, batch_data->allocate_count);
   }
 
   // NOTE: we could slightly optimize this by moving some of these steps out of the main path.
@@ -867,7 +870,8 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   perf_stats_.update(loop_stats);
 
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - (seq:{}) complete!", cls, func, last_evaluated_sequence_id_);
+    LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", cls, func, this->instance_id_,
+             last_evaluated_sequence_id_);
   }
 }
 

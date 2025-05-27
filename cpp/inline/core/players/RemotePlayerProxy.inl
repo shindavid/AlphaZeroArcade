@@ -109,7 +109,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
   const char* buf = payload.dynamic_size_section.buf;
   std::memcpy(&player->action_response_, buf, sizeof(player->action_response_));
   const YieldNotificationUnit& unit = player->yield_notification_unit_;
-  unit.yield_manager->notify(unit.slot_context());
+  unit.yield_manager->notify(unit);
 }
 
 template <concepts::Game Game>

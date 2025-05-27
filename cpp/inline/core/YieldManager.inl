@@ -4,7 +4,7 @@
 
 namespace core {
 
-inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
+inline void YieldManager::notify(const slot_context_vec_t& vec) {
   if (vec.empty()) return;
 
   std::unique_lock lock(mutex_);
@@ -17,7 +17,8 @@ inline void YieldManager::notify(const core::slot_context_vec_t& vec) {
   cv_.notify_all();
 }
 
-inline void YieldManager::notify(const SlotContext& item) {
+inline void YieldManager::notify(const YieldNotificationUnit& unit) {
+  SlotContext item = unit.slot_context();
   LOG_DEBUG("<-- YieldManager::notify(item={}:{})", item.slot, item.context);
   std::unique_lock lock(mutex_);
   queue_.push(item);

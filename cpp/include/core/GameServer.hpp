@@ -17,7 +17,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <map>
-#include <queue>
 #include <vector>
 
 namespace core {
@@ -130,7 +129,33 @@ class GameServer
     bool display_progress_bar = false;
     bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
-    bool respect_victory_hints = true;  // quit game early if a player claims imminent victory
+    bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
+
+    // The game server can choose to alternate between players, like so:
+    //
+    // 1. All instances of player 0 make their moves
+    // 2. All instances of player 1 make their moves
+    // 3. All instances of player 0 make their moves
+    // 4. All instances of player 1 make their moves
+    // ...
+    //
+    // This can improve performance in settings where we have multiple players using different
+    // neural network models, but sharing the same physical GPU. Alternation ensures that the
+    // multiple NNEvaluationService's don't clash with each other.
+    //
+    // There are 3 valid settings to control this behavior:
+    //
+    // 0: Explicitly disable alternation.
+    // 1: Auto-enable alternation, based on the registered players (default).
+    // 2. Explicitly enable alternation.
+    //
+    // Auto-enable alternation means that alternation is enabled if there are multiple
+    // NNEvaluationService's registered, and disabled otherwise. This is the default.
+    //
+    // Note that in settings where remote players are used, sharing the same physical GPU, we will
+    // want to enable alternation, but GameServer cannot detect this automatically. It is for this
+    // reason that we provide the option to explicitly enable alternation.
+    int alternating_mode = 1;
   };
 
  protected:
@@ -150,6 +175,7 @@ class GameServer
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
     game_slot_index_t id() const { return id_; }
+    player_id_t active_player_id() const { return player_order_[active_seat_].player_id; }
     seat_index_t active_seat() const { return active_seat_; }
     Player* active_player() const { return active_seat_ < 0 ? nullptr : players_[active_seat_]; }
 
@@ -247,6 +273,7 @@ class GameServer
     YieldManager* yield_manager() { return &yield_manager_; }
     bool paused() const { return paused_; }
 
+    void handle_alternating_mode_recommendation();
     void debug_dump() const;
     void pause();
     void unpause();
@@ -261,8 +288,12 @@ class GameServer
     void update_perf_stats(PerfStats&);
 
    private:
-    bool queue_pending() const { return pending_queue_count_ > 0 && queue_.empty(); }
+    slot_context_queue_t& get_queue_to_use(game_slot_index_t);
     void issue_pause_receipt_if_necessary();  // assumes mutex_ is locked
+    void increment_global_active_player_id() {
+      global_active_player_id_ = (global_active_player_id_ + 1) % kNumPlayers;
+    }
+    void validate_deferred_count() const;  // for debugging
 
     GameServer* const server_;
     const Params params_;
@@ -282,7 +313,7 @@ class GameServer
 
     // game_slots_ is in a fixed order, and doesn't change after initialization. This data
     // structure is used to look up the GameSlot for a given game_slot_index_t, which is needed for
-    // efficient remote proxy mechanics.
+    // efficient yield/notify mechanics.
     std::vector<GameSlot*> game_slots_;
 
     // We constantly pop from the front of the queue via next(), and push back to the end of the
@@ -290,8 +321,18 @@ class GameServer
     //
     // During the normal course of operations, (queue_.size() + pending_queue_count_) should equal
     // game_slots_.size(). When a shutdown commences, queue_ will whittle down to zero.
-    std::queue<SlotContext> queue_;
+    slot_context_queue_t queue_;
+
+    // Used in alternating mode to house queue items that are deferred until it's the right
+    // player's turn. Items in these queues are part of pending_queue_count_.
+    slot_context_queue_t deferred_queues_[kNumPlayers];
+
+    // The number of items that are awaiting notification. These items will be added to queue_ upon
+    // notification. In alternating mode, this count includes deferred_count_.
     int pending_queue_count_ = 0;
+
+    // The sum of the sizes of all deferred_queues_. Can only be non-zero in alternating mode.
+    int deferred_count_ = 0;
 
     YieldManager yield_manager_;
 
@@ -299,6 +340,7 @@ class GameServer
 
     int active_thread_count_ = 0;
     int paused_thread_count_ = 0;
+    player_id_t global_active_player_id_ = -1;  // used in alternating mode
     bool paused_ = false;
     bool pause_receipt_pending_ = false;
     bool waiting_in_next_ = false;
@@ -322,6 +364,8 @@ class GameServer
     std::thread thread_;
     game_thread_id_t id_;
   };
+
+  virtual void handle_alternating_mode_recommendation() override;
 
   virtual void debug_dump() const override { shared_data_.debug_dump(); }
 

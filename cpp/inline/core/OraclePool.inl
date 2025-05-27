@@ -47,8 +47,7 @@ void OraclePool<OracleT>::release_oracle(OracleT* oracle) {
   if (!pending_notification_units_.empty()) {
     YieldNotificationUnit unit = pending_notification_units_.back();
     pending_notification_units_.pop_back();
-    SlotContext slot_context(unit.game_slot_index, unit.context_id);
-    unit.yield_manager->notify(slot_context);
+    unit.yield_manager->notify(unit);
   }
 }
 
