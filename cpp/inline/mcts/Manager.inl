@@ -425,7 +425,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
     const SearchRequest& search_request = *context.search_request;
     context.eval_request.set_notification_task_info(search_request.notification_unit);
 
-    if (mcts::kEnableServiceDebug) {
+    if (mcts::kEnableSearchDebug) {
       LOG_INFO("{:>{}}{}() - size: {}", "", context.log_prefix_n(), __func__,
                context.eval_request.num_fresh_items());
     }
