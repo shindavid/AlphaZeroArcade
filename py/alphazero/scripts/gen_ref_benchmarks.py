@@ -68,7 +68,7 @@ class ReferenceBenchmarker:
                                self.arena.ratings,
                                committee=committee)
         self.db.save_ratings_to_json(self.arena.indexed_agents, self.arena.ratings,
-                                     os.path.join(REF_DIR, f'{self.game}.json'))
+                                     os.path.join(REF_DIR, f'{self.game}.json'), 'gen_ref_benchmarks.py')
 
     def run(self):
         self.load_from_db()
