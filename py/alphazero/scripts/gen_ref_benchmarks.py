@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from alphazero.logic.agent_types import AgentRole, AgentRoles, ReferenceAgent
+from alphazero.logic.agent_types import AgentRole, ReferenceAgent
 from alphazero.logic.arena import Arena
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.rating_db import RatingDB
@@ -42,7 +42,7 @@ class ReferenceBenchmarker:
             agent = ReferenceAgent(type_str=self.reference_players.type_str,
                                    strength_param=self.reference_players.strength_param,
                                    strength=strength)
-            roles = AgentRoles([AgentRole.BENCHMARK])
+            roles = {AgentRole.BENCHMARK}
             self.arena.add_agent(agent, roles=roles, expand_matrix=True, db=self.db)
 
     def get_matches(self, n_games) -> list[Match]:

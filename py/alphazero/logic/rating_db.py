@@ -1,5 +1,5 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, AgentRoles, IndexedAgent, \
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
     MCTSAgent, ReferenceAgent
 from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import WinLossDrawCounts
@@ -17,7 +17,7 @@ from typing import Dict, List, Iterable, Optional, Set
 class DBAgent:
     agent: Agent
     db_id: AgentDBId
-    roles: AgentRoles
+    roles: Set[AgentRole]
 
 
 @dataclass
@@ -62,7 +62,7 @@ class RatingDB:
         c.execute(query)
         for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
             agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
-            agent_roles = AgentRoles.from_str(roles)
+            agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
@@ -75,7 +75,7 @@ class RatingDB:
         c.execute(query)
         for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
-            agent_roles = AgentRoles.from_str(roles)
+            agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
     def fetch_match_results(self) -> Iterable[MatchResult]:
@@ -247,7 +247,7 @@ class RatingDB:
 
             ia = IndexedAgent(agent=agent,
                               index=iagent_dict['index'],
-                              roles=AgentRoles.from_str(iagent_dict['roles']),
+                              roles=AgentRole.from_str(iagent_dict['roles']),
                               db_id=iagent_dict['db_id'])
 
             self.commit_agent(ia)

@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, AgentRole, AgentRoles, IndexedAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -128,7 +128,7 @@ class Evaluator:
     def refresh_ratings(self):
         self._arena.refresh_ratings()
 
-    def add_agent(self, agent: Agent, roles: AgentRoles, expand_matrix: bool=True, db: Optional[RatingDB]=None):
+    def add_agent(self, agent: Agent, roles: Set[AgentRole], expand_matrix: bool=True, db: Optional[RatingDB]=None):
         return self._arena.add_agent(agent, roles, expand_matrix=expand_matrix, db=db)
 
     @property

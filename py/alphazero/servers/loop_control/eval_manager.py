@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, AgentRoles, IndexedAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import Evaluator, EvalUtils
@@ -137,7 +137,7 @@ class EvalManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
-            test_iagent = self._evaluator.add_agent(test_agent, AgentRoles([AgentRole.TEST]), expand_matrix=True, db=self._evaluator.db)
+            test_iagent = self._evaluator.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self._evaluator.db)
             conn.aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
