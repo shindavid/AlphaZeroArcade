@@ -254,7 +254,6 @@ class ServerBase:
             ]
             if not self._session_data.start_log_sync(log_filename2):
                 cmd2.append('--log-append-mode')
-            cmd2.append(make_args_str(args))
             cmd2 = ' '.join(map(str, cmd2))
 
             logger.info('Running match between:%s vs %s', agent1, agent2)
