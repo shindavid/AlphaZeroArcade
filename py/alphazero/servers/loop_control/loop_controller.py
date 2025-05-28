@@ -357,6 +357,8 @@ class LoopController:
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
             if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
+                #TODO: generate a benchmark-dir folder from the json file if it does not exist
+                # then we can remove the logic of creating a new RatingDB here
                 benchmark_tag = 'reference_players'
 
                 db_file = self.organizer.eval_db_filename(benchmark_tag)

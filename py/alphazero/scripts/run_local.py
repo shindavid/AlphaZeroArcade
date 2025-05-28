@@ -384,6 +384,9 @@ def main():
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     benchmark_tag = params.benchmark_tag
+    # NOTE: reference_player_family is treated as a special case from a regular MCTS agent run.
+    # This is not desirable long-term and will be refactored to follow the same format as other
+    # agents, which might eventually include agents of external types such as KataGo.
     if benchmark_tag is None:
         if game_spec.reference_player_family is None:
             benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
