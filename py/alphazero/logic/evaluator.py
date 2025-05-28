@@ -151,6 +151,10 @@ class Evaluator:
     def agent_lookup(self) -> dict:
         return self._arena._agent_lookup
 
+    @property
+    def agent_lookup_db_id(self) -> dict:
+        return self._arena._agent_lookup_db_id
+
 
 class EvalUtils:
     @staticmethod

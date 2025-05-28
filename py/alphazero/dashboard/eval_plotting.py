@@ -23,7 +23,7 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from util import bokeh_util
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Span
+from bokeh.models import ColumnDataSource, Slider, Span
 from bokeh.layouts import column
 import numpy as np
 import pandas as pd
@@ -36,6 +36,7 @@ class EvaluationData:
         self.benchmark_tag = benchmark_tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.benchmark_elos = {}
         self.df = self.make_df(organizer, benchmark_tag)
 
         x_df = make_x_df(organizer)
@@ -47,8 +48,10 @@ class EvaluationData:
             evaluator = Evaluator(organizer, benchmark_tag)
             eval_rating_data = evaluator.read_ratings_from_db()
             benchmark_rating = evaluator._benchmark_rating_data.ratings
+            benchmark_iagents =evaluator._benchmark_rating_data.iagents
             if len(benchmark_rating) > 0:
-                self.highest_benchmark_elo = benchmark_rating.max()
+                for ia, rating in zip(benchmark_iagents, benchmark_rating):
+                    self.benchmark_elos[ia.agent.level] = rating
         except Exception as e:
             print(f"Error loading evaluation for {self.tag}: {e}")
             self.valid = False
@@ -140,8 +143,9 @@ class Plotter:
             self.max_y = max(self.max_y, max(df['rating']))
             self.min_y = min(self.min_y, min(df['rating']))
 
-        self.highest_benchmark_elo = self.data_list[0].highest_benchmark_elo
-        self.max_y = max(self.max_y, self.highest_benchmark_elo)
+        self.benchmark_elos = self.data_list[0].benchmark_elos
+        max_benchmark_elo = max(self.benchmark_elos.values(), default=0)
+        self.max_y = max(self.max_y, max_benchmark_elo)
 
     def add_lines(self, plot):
         data_list = self.data_list
@@ -166,16 +170,38 @@ class Plotter:
             return None
 
         self.add_lines(plot)
+        level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
+        initial_level = level_keys[-1] if self.benchmark_elos else None
 
-        hline = Span(location=self.highest_benchmark_elo, dimension='width', line_color='green',
-                     line_width=2, line_dash='dashed')
+        hline = Span(
+            location=self.benchmark_elos[initial_level],
+            dimension='width',
+            line_color='green',
+            line_width=2,
+            line_dash='dashed'
+            )
+
         plot.add_layout(hline)
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 
+        slider = Slider(
+            start=int(level_keys[0]),
+            end=int(level_keys[-1]),
+            value=int(initial_level),
+            step=1,
+            title="level"
+        )
+
+        def update_hline(attr, old, new):
+            new_elo = self.benchmark_elos[new]
+            hline.location = new_elo
+
+        slider.on_change("value", update_hline)
+
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        return column(plot, radio_group)
+        return column(slider, plot, radio_group)
 
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
