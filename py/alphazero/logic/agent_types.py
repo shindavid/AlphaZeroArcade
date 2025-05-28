@@ -126,8 +126,8 @@ class AgentRole(Enum):
     TEST = 'test'
 
     @staticmethod
-    def to_str(self) -> str:
-        return ','.join(x.value for x in sorted(self, key=lambda r: r.value))
+    def to_str(role_set: Set['AgentRole']) -> str:
+        return ','.join(x.value for x in sorted(role_set, key=lambda r: r.value))
 
     @staticmethod
     def from_str(str_roles: str) -> Set['AgentRole']:
