@@ -64,7 +64,7 @@ def main():
 
     if server.on_ephemeral_local_disk_env:
         # first copy over the loop-controller.log from persistent to scratch. This makes it so
-        # rsyncing back from scratch to persistent effectively acts as an append operation.
+        # rsyncing back from scraptch to persistent effectively acts as an append operation.
         backup = os.path.join(server.persistent_organizer.logs_dir, 'loop-controller.log')
         if os.path.isfile(backup):
             os.system(f'cp {backup} {log_filename}')

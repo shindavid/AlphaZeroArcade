@@ -32,10 +32,7 @@ Tag = str
 def create_training_figure(game: str, tags: List[Tag], head: str):
     head_data_list: List[HeadData] = []
     for tag in tags:
-        try:
-            run_params = RunParams(game, tag, validate=True)
-        except:
-            continue
+        run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
         conn = sqlite3.connect(organizer.training_db_filename)
@@ -58,10 +55,7 @@ def create_training_figure(game: str, tags: List[Tag], head: str):
 def create_combined_training_figure(game: str, tags: List[Tag]):
     head_data_dict: Dict[Tag, HeadData] = {}
     for tag in tags:
-        try:
-            run_params = RunParams(game, tag, validate=True)
-        except:
-            continue
+        run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
 
         conn = sqlite3.connect(organizer.training_db_filename)
