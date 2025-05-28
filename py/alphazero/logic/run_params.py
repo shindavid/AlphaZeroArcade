@@ -21,6 +21,12 @@ class RunParams:
     game: str
     tag: str
 
+    def __init__(self, game: str, tag: str, validate: bool=False):
+        self.game = game
+        self.tag = tag
+        if validate:
+            self.validate(require_tag=True)
+
     @staticmethod
     def create(args, require_tag=True) -> 'RunParams':
         params = RunParams(
@@ -38,6 +44,7 @@ class RunParams:
         assert game_index.is_valid_game_name(self.game), f'Invalid game name: {self.game}'
         if self.tag:
             assert self.tag.find('@') == -1, 'Tag cannot contain @'
+            assert self.tag.find('.') == -1, 'Tag cannot contain .'
             assert is_valid_path_component(self.tag), f'Illegal tag name: {self.tag}'
 
     @staticmethod

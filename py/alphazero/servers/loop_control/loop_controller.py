@@ -359,7 +359,7 @@ class LoopController:
             if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
                 #TODO: generate a benchmark-dir folder from the json file if it does not exist
                 # then we can remove the logic of creating a new RatingDB here
-                benchmark_tag = 'reference_players'
+                benchmark_tag = 'reference.players'
 
                 db_file = self.organizer.eval_db_filename(benchmark_tag)
                 if not os.path.exists(db_file) or RatingDB(db_file).is_empty():

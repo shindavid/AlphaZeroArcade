@@ -33,8 +33,5 @@ Untitled*.ipynb
 # libtorch
 libtorch/
 
-# tmp db files
-reference_benchmarks/tmp
-
 logs
 core.*

@@ -27,7 +27,8 @@ class ReferenceBenchmarker:
             f'Game {game_spec.name} does not have a reference player family'
 
         self.game_spec = game_spec
-        self.db_filename = os.path.join(REF_DIR, 'tmp', f'{game_spec.name}.db')
+        self.db_filename = os.path.join('/workspace/output', self.game_spec.name, 'reference.players/databases', 'benchmark.db')
+        os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
         self.db = RatingDB(self.db_filename)
         self.arena = Arena()
 

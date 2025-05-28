@@ -29,7 +29,7 @@
       "db_id": 2,
       "type": "Reference"
     },
-    "rating": 494.2002807225552
+    "rating": 551.412376804945
   },
   "ReferenceAgent--strength-2": {
     "iagent": {
@@ -45,7 +45,7 @@
       "db_id": 3,
       "type": "Reference"
     },
-    "rating": 696.4132991416232
+    "rating": 797.4038945280985
   },
   "ReferenceAgent--strength-3": {
     "iagent": {
@@ -61,7 +61,7 @@
       "db_id": 4,
       "type": "Reference"
     },
-    "rating": 821.818263276005
+    "rating": 974.2145691950749
   },
   "ReferenceAgent--strength-4": {
     "iagent": {
@@ -77,7 +77,7 @@
       "db_id": 5,
       "type": "Reference"
     },
-    "rating": 951.5740584385862
+    "rating": 1033.3925500036444
   },
   "ReferenceAgent--strength-5": {
     "iagent": {
@@ -93,7 +93,7 @@
       "db_id": 6,
       "type": "Reference"
     },
-    "rating": 1069.8995896428157
+    "rating": 1179.9771641266273
   },
   "ReferenceAgent--strength-6": {
     "iagent": {
@@ -109,7 +109,7 @@
       "db_id": 7,
       "type": "Reference"
     },
-    "rating": 1196.8562796187011
+    "rating": 1298.4237887937861
   },
   "ReferenceAgent--strength-7": {
     "iagent": {
@@ -125,7 +125,7 @@
       "db_id": 8,
       "type": "Reference"
     },
-    "rating": 1310.8994039257686
+    "rating": 1412.9218437518216
   },
   "ReferenceAgent--strength-8": {
     "iagent": {
@@ -141,7 +141,7 @@
       "db_id": 9,
       "type": "Reference"
     },
-    "rating": 1437.4474328472268
+    "rating": 1493.5345984062174
   },
   "ReferenceAgent--strength-9": {
     "iagent": {
@@ -157,7 +157,7 @@
       "db_id": 10,
       "type": "Reference"
     },
-    "rating": 1570.364442698365
+    "rating": 1619.6673438142375
   },
   "ReferenceAgent--strength-10": {
     "iagent": {
@@ -173,7 +173,7 @@
       "db_id": 11,
       "type": "Reference"
     },
-    "rating": 1706.901280490132
+    "rating": 1664.2887127981855
   },
   "ReferenceAgent--strength-11": {
     "iagent": {
@@ -189,7 +189,7 @@
       "db_id": 12,
       "type": "Reference"
     },
-    "rating": 1847.4953773244774
+    "rating": 1898.5814477737629
   },
   "ReferenceAgent--strength-12": {
     "iagent": {
@@ -205,7 +205,7 @@
       "db_id": 13,
       "type": "Reference"
     },
-    "rating": 2022.4696862681044
+    "rating": 2093.0799729644086
   },
   "ReferenceAgent--strength-13": {
     "iagent": {
@@ -221,7 +221,7 @@
       "db_id": 14,
       "type": "Reference"
     },
-    "rating": 2218.4391162658103
+    "rating": 2173.642641177735
   },
   "ReferenceAgent--strength-14": {
     "iagent": {
@@ -237,7 +237,7 @@
       "db_id": 15,
       "type": "Reference"
     },
-    "rating": 2427.3587597033143
+    "rating": 2345.5377517275583
   },
   "ReferenceAgent--strength-15": {
     "iagent": {
@@ -253,7 +253,7 @@
       "db_id": 16,
       "type": "Reference"
     },
-    "rating": 2643.706247300542
+    "rating": 2596.3804894675327
   },
   "ReferenceAgent--strength-16": {
     "iagent": {
@@ -269,7 +269,7 @@
       "db_id": 17,
       "type": "Reference"
     },
-    "rating": 2849.2360006981885
+    "rating": 2836.2907055911496
   },
   "ReferenceAgent--strength-17": {
     "iagent": {
@@ -285,7 +285,7 @@
       "db_id": 18,
       "type": "Reference"
     },
-    "rating": 3066.606402403271
+    "rating": 3031.1115827686604
   },
   "ReferenceAgent--strength-18": {
     "iagent": {
@@ -301,7 +301,7 @@
       "db_id": 19,
       "type": "Reference"
     },
-    "rating": 3261.678824527742
+    "rating": 3212.2666645223694
   },
   "ReferenceAgent--strength-19": {
     "iagent": {
@@ -317,7 +317,7 @@
       "db_id": 20,
       "type": "Reference"
     },
-    "rating": 3422.775760891693
+    "rating": 3371.6577312279455
   },
   "ReferenceAgent--strength-20": {
     "iagent": {
@@ -333,7 +333,7 @@
       "db_id": 21,
       "type": "Reference"
     },
-    "rating": 3484.9295909805187
+    "rating": 3449.122304973153
   },
   "ReferenceAgent--strength-21": {
     "iagent": {
@@ -349,6 +349,6 @@
       "db_id": 22,
       "type": "Reference"
     },
-    "rating": 3723.14697606695
+    "rating": 3757.226788903767
   }
 }

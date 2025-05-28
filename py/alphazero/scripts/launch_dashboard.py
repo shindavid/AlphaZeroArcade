@@ -109,7 +109,11 @@ usable_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
 
 all_training_heads = []
 for tag in usable_tags:
-    rp = RunParams(run_params.game, tag)
+    try:
+        rp = RunParams(run_params.game, tag, validate=True)
+    except:
+        print(f'Invalid tag for training: {tag}')
+        continue
     directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
     training_db_filename = directory_organizer.training_db_filename
     if not os.path.isfile(training_db_filename):
@@ -177,7 +181,15 @@ def get_benchmark_eval_mapping(tags: List[str]) -> Dict[str, List[str]]:
     """
     returns a dict mapping a benchmark tag to a list of run tags that are evaluated against it.
     """
-    tag_dict = {tag: get_benchmark_tags(tag) for tag in tags}
+    tag_dict = {}
+
+    for tag in tags:
+        try:
+            rp = RunParams(run_params.game, tag, validate=True)
+            tag_dict[tag] = get_benchmark_tags(tag)
+        except:
+            continue
+
     benchmark_dict = defaultdict(list)
     for tag, benchmark_tags in tag_dict.items():
         for benchmark_tag in benchmark_tags:

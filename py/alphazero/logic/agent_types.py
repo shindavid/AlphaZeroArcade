@@ -153,7 +153,7 @@ class IndexedAgent:
         agent_type = 'MCTS' if isinstance(self.agent, MCTSAgent) else 'Reference'
         return {'agent': self.agent.to_dict(),
                 'index': self.index,
-                'roles': self.roles.to_str(),
+                'roles': AgentRole.to_str(self.roles),
                 'db_id': self.db_id,
                 'type': agent_type}
 

@@ -121,7 +121,6 @@ class Plotter:
         else:
             self.benchmark_tag = data_list[0].benchmark_tag
 
-        self.benchmark_data = benchmark_data
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
@@ -181,8 +180,9 @@ class Plotter:
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    benchmark_data = None
-    if benchmark_tag != 'reference_players':
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    try:
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag, validate=True))
+    except:
+        benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure
