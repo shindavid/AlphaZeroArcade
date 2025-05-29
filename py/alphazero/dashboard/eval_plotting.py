@@ -84,11 +84,10 @@ class BenchmarkData:
         self.tag = run_params.tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.benchmark_elos = {}
         self.df = self.make_df(organizer)
 
         x_df = make_x_df(organizer)
-        if len(x_df) > 0:
-            self.highest_benchmark_elo = self.df['rating'].max()
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
         self.valid = len(self.df) > 0
 
@@ -96,6 +95,11 @@ class BenchmarkData:
         try:
             benchmarker = Benchmarker(organizer)
             benchmark_rating_data = benchmarker.read_ratings_from_db()
+            ratings = benchmark_rating_data.ratings
+            iagents = benchmark_rating_data.iagents
+            for ia, rating in zip(iagents, ratings):
+                self.benchmark_elos[ia.agent.level] = rating
+
         except Exception as e:
             print(f"Error loading benchmark for {self.tag}: {e}")
             self.valid = False
@@ -170,39 +174,41 @@ class Plotter:
             return None
 
         self.add_lines(plot)
-        level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
-        initial_level = level_keys[-1] if self.benchmark_elos else None
-
-        hline = Span(
-            location=self.benchmark_elos[initial_level],
-            dimension='width',
-            line_color='green',
-            line_width=2,
-            line_dash='dashed'
-            )
-
-        plot.add_layout(hline)
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 
-        slider = Slider(
-            start=int(level_keys[0]),
-            end=int(level_keys[-1]),
-            value=int(initial_level),
-            step=1,
-            title="level"
-        )
-
-        def update_hline(attr, old, new):
-            new_elo = self.benchmark_elos[new]
-            hline.location = new_elo
-
-        slider.on_change("value", update_hline)
-
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        return column(plot, row(radio_group, slider))
+        if self.benchmark_tag == 'reference.players':
+            level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
+            initial_level = level_keys[-1] if self.benchmark_elos else None
 
+            hline = Span(
+                location=self.benchmark_elos[initial_level],
+                dimension='width',
+                line_color='green',
+                line_width=2,
+                line_dash='dashed'
+                )
+
+            plot.add_layout(hline)
+
+            slider = Slider(
+                start=int(level_keys[0]),
+                end=int(level_keys[-1]),
+                value=int(initial_level),
+                step=1,
+                title="level"
+            )
+
+            def update_hline(attr, old, new):
+                new_elo = self.benchmark_elos[new]
+                hline.location = new_elo
+
+            slider.on_change("value", update_hline)
+            return column(plot, row(radio_group, slider))
+
+        return column(plot, radio_group)
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
