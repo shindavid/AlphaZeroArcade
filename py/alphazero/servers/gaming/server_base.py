@@ -225,6 +225,9 @@ class ServerBase:
         binary2 = os.path.join(self._session_data.run_dir, agent2.binary)
         cwd = self._session_data.run_dir
 
+        if args is None:
+            args = {}
+
         if self._rating_params.use_remote_play:
             port = DEFAULT_REMOTE_PLAY_PORT
             log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
@@ -273,6 +276,7 @@ class ServerBase:
                    '--player', f'"{ps1}"',
                    '--player', f'"{ps2}"',
                    '--log-filename', log_filename,
+                   '-G', str(n_games),
                    ]
             if not self._session_data.start_log_sync(log_filename):
                 cmd.append('--log-append-mode')
