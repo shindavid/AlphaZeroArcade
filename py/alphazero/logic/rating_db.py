@@ -241,7 +241,7 @@ class RatingDB:
 
     def save_ratings_to_json(self, iagents: List[IndexedAgent], ratings: np.ndarray, file: str, cmd_used: str):
         data = {}
-        data['cmd_used'] = cmd_used
+        data['cmd_used'] = json.dumps(cmd_used)[1:-1] # Remove quotes around the command string
         for ia, elo in zip(iagents, ratings):
             data[str(ia.agent)] = {
                 'iagent': ia.to_dict(),

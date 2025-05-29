@@ -1,5 +1,5 @@
 {
-  "cmd_used": "gen_ref_benchmarks.py",
+  "cmd_used": "/usr/bin/python3 ./py/alphazero/scripts/gen_ref_benchmarks.py",
   "ReferenceAgent--strength-0": {
     "iagent": {
       "agent": {

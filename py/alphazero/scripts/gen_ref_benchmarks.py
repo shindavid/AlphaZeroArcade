@@ -12,6 +12,8 @@ import numpy as np
 
 import logging
 import os
+import shlex
+import sys
 from typing import List
 
 
@@ -67,8 +69,9 @@ class ReferenceBenchmarker:
         self.db.commit_ratings(self.arena.indexed_agents,
                                self.arena.ratings,
                                committee=committee)
+        cmd = shlex.join([sys.executable] + sys.argv)
         self.db.save_ratings_to_json(self.arena.indexed_agents, self.arena.ratings,
-                                     os.path.join(REF_DIR, f'{self.game}.json'), 'gen_ref_benchmarks.py')
+                                     os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):
         self.load_from_db()
