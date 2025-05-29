@@ -225,10 +225,6 @@ class ServerBase:
         binary2 = os.path.join(self._session_data.run_dir, agent2.binary)
         cwd = self._session_data.run_dir
 
-        if args is None:
-            args = {}
-        args['-G'] = n_games
-
         if self._rating_params.use_remote_play:
             port = DEFAULT_REMOTE_PLAY_PORT
             log_filename1 = self._session_data.get_log_filename(self._config.worker_name + '-A')
@@ -239,6 +235,7 @@ class ServerBase:
                 '--port', str(port),
                 '--player', f'"{ps1}"',
                 '--log-filename', log_filename1,
+                '-G', str(n_games),
                 ]
 
             if not self._session_data.start_log_sync(log_filename1):
@@ -254,6 +251,7 @@ class ServerBase:
             ]
             if not self._session_data.start_log_sync(log_filename2):
                 cmd2.append('--log-append-mode')
+            cmd2.append(make_args_str(args))
             cmd2 = ' '.join(map(str, cmd2))
 
             logger.info('Running match between:%s vs %s', agent1, agent2)

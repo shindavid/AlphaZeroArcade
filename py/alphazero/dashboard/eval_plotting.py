@@ -206,9 +206,9 @@ class Plotter:
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    try:
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag, validate=True))
-    except:
+    if RunParams.is_valid_tag(benchmark_tag):
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    else:
         benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure
