@@ -24,7 +24,7 @@ from util import bokeh_util
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Slider, Span
-from bokeh.layouts import column
+from bokeh.layouts import column, row
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional
@@ -48,7 +48,7 @@ class EvaluationData:
             evaluator = Evaluator(organizer, benchmark_tag)
             eval_rating_data = evaluator.read_ratings_from_db()
             benchmark_rating = evaluator._benchmark_rating_data.ratings
-            benchmark_iagents =evaluator._benchmark_rating_data.iagents
+            benchmark_iagents = evaluator._benchmark_rating_data.iagents
             if len(benchmark_rating) > 0:
                 for ia, rating in zip(benchmark_iagents, benchmark_rating):
                     self.benchmark_elos[ia.agent.level] = rating
@@ -201,7 +201,7 @@ class Plotter:
 
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        return column(slider, plot, radio_group)
+        return column(plot, row(radio_group, slider))
 
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
