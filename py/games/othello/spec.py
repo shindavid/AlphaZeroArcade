@@ -116,7 +116,7 @@ class OthelloSpec(GameSpec):
         ),
         eval_error_threshold=50.0,
         n_games_per_benchmark=100,
-        n_games_per_evaluation=1000,
+        n_games_per_evaluation=300,
     )
 
 

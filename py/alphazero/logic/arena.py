@@ -1,7 +1,7 @@
 from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole
 from alphazero.logic.match_runner import Match, MatchRunner, MatchType
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
-from alphazero.logic.rating_db import RatingDB, DBAgentRating
+from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from util.index_set import IndexSet
 
 import numpy as np
@@ -49,7 +49,7 @@ class Arena:
             self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
-    def play_matches(self, matches: List[Match], game: str, db: Optional[RatingDB]=None) \
+    def play_matches(self, matches: List[Match], binary: str, db: Optional[RatingDB]=None) \
         -> WinLossDrawCounts:
         """
         Play matches between agents and update the W_matrix with the results. If db is provided,
@@ -70,7 +70,7 @@ class Arena:
                 if n_games < 1:
                     continue
 
-            counts: WinLossDrawCounts = MatchRunner.run_match_helper(match, game)
+            counts: WinLossDrawCounts = MatchRunner.run_match_helper(match, binary)
             self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
             counts_list.append(counts)

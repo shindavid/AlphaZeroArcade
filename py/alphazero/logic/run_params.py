@@ -37,8 +37,15 @@ class RunParams:
 
         assert game_index.is_valid_game_name(self.game), f'Invalid game name: {self.game}'
         if self.tag:
-            assert self.tag.find('@') == -1, 'Tag cannot contain @'
-            assert is_valid_path_component(self.tag), f'Illegal tag name: {self.tag}'
+            assert RunParams.is_valid_tag(self.tag), f'Invalid tag: {self.tag}'
+
+    @staticmethod
+    def is_valid_tag(tag: str) -> bool:
+        if not tag:
+            return False
+        if '@' in tag or '.' in tag:
+            return False
+        return is_valid_path_component(tag)
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser, multiple_tags=False) -> Optional[GameSpec]:

@@ -45,7 +45,6 @@ class Benchmarker:
         else:
             self.db = RatingDB(self._organizer.benchmark_db_filename)
         self.load_from_db()
-        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)
@@ -209,7 +208,7 @@ class Benchmarker:
     def clone_arena(self) -> Arena:
         return copy.deepcopy(self._arena)
 
-    def read_ratings_from_db(self) -> RatingData:
+    def read_ratings_from_db(self) -> BenchmarkRatingData:
         rating_data: RatingData = self._arena.load_ratings_from_db(self.db, AgentRole.BENCHMARK)
         ratings = rating_data.ratings
         iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]

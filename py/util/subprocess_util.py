@@ -53,16 +53,16 @@ def wait_for(proc: Union[subprocess.Popen, List[subprocess.Popen]], timeout=None
     """
     if isinstance(proc, subprocess.Popen):
         stdout, stderr = proc.communicate(timeout=timeout)
-        if expected_return_code not in (p.returncode, None):
-            print_fn(f'Expected rc={expected_return_code}, got rc={p.returncode}')
+        if expected_return_code not in (proc.returncode, None):
+            print_fn(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
             print_fn('----------------------------')
-            print_fn(f'args: {p.args}')
+            print_fn(f'args: {proc.args}')
             print_fn('----------------------------')
             print_fn(f'STDOUT:\n{stdout}')
             print_fn('----------------------------')
             print_fn(f'STDERR:\n{stderr}')
             print_fn('----------------------------')
-            raise subprocess.CalledProcessError(p.returncode, p.args)
+            raise subprocess.CalledProcessError(proc.returncode, proc.args)
         return stdout
 
     procs = list(proc)

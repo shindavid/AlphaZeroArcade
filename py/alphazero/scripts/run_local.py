@@ -106,7 +106,10 @@ class Params:
 
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
+    run_eval_server: bool = False
+
     benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
+
 
     @staticmethod
     def create(args) -> 'Params':
@@ -127,6 +130,8 @@ class Params:
         group.add_argument('--run-ratings-server', action='store_true',
                             help='Run the ratings server')
         group.add_argument('--run-benchmark-server', action='store_true',
+                            help=argparse.SUPPRESS)
+        group.add_argument('--run-eval-server', action='store_true',
                             help=argparse.SUPPRESS)
 
 
@@ -378,7 +383,14 @@ def main():
     register_signal_exception(signal.SIGINT, KeyboardInterrupt,
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
-    benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+    benchmark_tag = params.benchmark_tag
+    # NOTE: reference_player_family is treated as a special case from regular MCTS agent runs.
+    # This is not desirable long-term and will need to be refactored to follow the same format as other
+    # agents, which might eventually include agents of external types such as KataGo.
+    if benchmark_tag is None:
+        if game_spec.reference_player_family is None:
+            benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+
     descs = []
     procs = []
     try:
@@ -388,17 +400,27 @@ def main():
         procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
-
             for self_play_gpu in self_play_gpus:
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
-        if params.run_benchmark_server or benchmark_tag is None:
-            descs.append('Benchmark')
-            procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+        if params.task_mode:
+            if params.run_benchmark_server:
+                descs.append('Benchmark')
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+            if params.run_eval_server:
+                descs.append('Eval')
+                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+            if params.run_ratings_server:
+                descs.append('Ratings')
+                procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
-            descs.append('Eval')
-            procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+            if game_spec.reference_player_family is not None or benchmark_tag is not None:
+                descs.append('Eval')
+                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+            else:
+                descs.append('Benchmark')
+                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')

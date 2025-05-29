@@ -85,7 +85,10 @@ if not all_tags:
 usable_tags = []
 skipped_tags = []
 for tag in all_tags:
-    rp = RunParams(run_params.game, tag)
+    if RunParams.is_valid_tag(tag):
+        rp = RunParams(run_params.game, tag)
+    else:
+        continue
     directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
     if directory_organizer.version_check():
         usable_tags.append(tag)

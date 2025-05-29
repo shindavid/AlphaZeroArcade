@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import MCTSAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
@@ -176,9 +176,9 @@ class ServerBase:
         files_required = [FileToTransfer(**f) for f in msg['files_required']]
         self._session_data.request_files(files_required)
 
-        mcts_agent1 = MCTSAgent(**msg['agent1'])
-        mcts_agent2 = MCTSAgent(**msg['agent2'])
-        match = Match(mcts_agent1, mcts_agent2, msg['n_games'], MatchType.EVALUATE)
+        agent1 = self._build_agent(msg['agent1'])
+        agent2 = self._build_agent(msg['agent2'])
+        match = Match(agent1, agent2, msg['n_games'], MatchType.EVALUATE)
 
         args = {
             '--loop-controller-hostname': self._params.loop_controller_host,
@@ -238,6 +238,7 @@ class ServerBase:
                 '--port', str(port),
                 '--player', f'"{ps1}"',
                 '--log-filename', log_filename1,
+                '-G', str(n_games),
                 ]
 
             if not self._session_data.start_log_sync(log_filename1):
@@ -266,7 +267,7 @@ class ServerBase:
             cmd2.append(make_args_str(args))
             cmd2 = ' '.join(map(str, cmd2))
 
-            logger.info('Running match between:gen-%s vs gen-%s', agent1.gen, agent2.gen)
+            logger.info('Running match between:%s vs %s', agent1, agent2)
             logger.info('cmd1: %s', cmd1)
             logger.info('cmd2: %s', cmd2)
 
@@ -285,6 +286,7 @@ class ServerBase:
                    '--player', f'"{ps1}"',
                    '--player', f'"{ps2}"',
                    '--log-filename', log_filename,
+                   '-G', str(n_games),
                    ]
             if not self._session_data.start_log_sync(log_filename):
                 cmd.append('--log-append-mode')
@@ -309,3 +311,11 @@ class ServerBase:
     @property
     def num_threads(self) -> int:
         return self._rating_params.rating_player_options.num_search_threads
+
+    def _build_agent(self, agent_msg: JsonDict) -> Agent:
+        if agent_msg['type'] == 'MCTS':
+            return MCTSAgent(**agent_msg['data'])
+        elif agent_msg['type'] == 'Reference':
+            return ReferenceAgent(**agent_msg['data'])
+        else:
+            raise ValueError(f'Unknown agent type: {agent_msg["type"]}')

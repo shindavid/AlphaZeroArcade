@@ -23,11 +23,11 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from util import bokeh_util
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
-from bokeh.layouts import column
+from bokeh.models import ColumnDataSource, Slider, Span
+from bokeh.layouts import column, row
 import numpy as np
 import pandas as pd
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class EvaluationData:
@@ -36,6 +36,7 @@ class EvaluationData:
         self.benchmark_tag = benchmark_tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.benchmark_elos = {}
         self.df = self.make_df(organizer, benchmark_tag)
 
         x_df = make_x_df(organizer)
@@ -46,6 +47,11 @@ class EvaluationData:
         try:
             evaluator = Evaluator(organizer, benchmark_tag)
             eval_rating_data = evaluator.read_ratings_from_db()
+            benchmark_rating = evaluator._benchmark_rating_data.ratings
+            benchmark_iagents = evaluator._benchmark_rating_data.iagents
+            if len(benchmark_rating) > 0:
+                for ia, rating in zip(benchmark_iagents, benchmark_rating):
+                    self.benchmark_elos[ia.agent.level] = rating
         except Exception as e:
             print(f"Error loading evaluation for {self.tag}: {e}")
             self.valid = False
@@ -78,6 +84,7 @@ class BenchmarkData:
         self.tag = run_params.tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        self.benchmark_elos = {}
         self.df = self.make_df(organizer)
 
         x_df = make_x_df(organizer)
@@ -88,6 +95,11 @@ class BenchmarkData:
         try:
             benchmarker = Benchmarker(organizer)
             benchmark_rating_data = benchmarker.read_ratings_from_db()
+            ratings = benchmark_rating_data.ratings
+            iagents = benchmark_rating_data.iagents
+            for ia, rating in zip(iagents, ratings):
+                self.benchmark_elos[ia.agent.level] = rating
+
         except Exception as e:
             print(f"Error loading benchmark for {self.tag}: {e}")
             self.valid = False
@@ -109,7 +121,7 @@ class BenchmarkData:
 
 
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData = None):
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
         if not data_list:
             data_list = [benchmark_data]
             self.benchmark_tag = benchmark_data.tag
@@ -135,6 +147,10 @@ class Plotter:
             self.max_y = max(self.max_y, max(df['rating']))
             self.min_y = min(self.min_y, min(df['rating']))
 
+        self.benchmark_elos = self.data_list[0].benchmark_elos
+        max_benchmark_elo = max(self.benchmark_elos.values(), default=0)
+        self.max_y = max(self.max_y, max_benchmark_elo)
+
     def add_lines(self, plot):
         data_list = self.data_list
         n = len(data_list)
@@ -158,17 +174,47 @@ class Plotter:
             return None
 
         self.add_lines(plot)
-
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
 
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        return column(plot, radio_group)
+        if self.benchmark_tag == 'reference.players':
+            level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
+            initial_level = level_keys[-1] if self.benchmark_elos else None
 
+            hline = Span(
+                location=self.benchmark_elos[initial_level],
+                dimension='width',
+                line_color='green',
+                line_width=2,
+                line_dash='dashed'
+                )
+
+            plot.add_layout(hline)
+
+            slider = Slider(
+                start=int(level_keys[0]),
+                end=int(level_keys[-1]),
+                value=int(initial_level),
+                step=1,
+                title="level"
+            )
+
+            def update_hline(attr, old, new):
+                new_elo = self.benchmark_elos[new]
+                hline.location = new_elo
+
+            slider.on_change("value", update_hline)
+            return column(plot, row(radio_group, slider))
+
+        return column(plot, radio_group)
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
-    benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    if RunParams.is_valid_tag(benchmark_tag):
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+    else:
+        benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import MCTSAgent, AgentRole, IndexedAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import Evaluator, EvalUtils
@@ -16,11 +16,12 @@ from util.socket_util import JsonDict
 
 import numpy as np
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 import logging
+import os
 import threading
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+Strength = int
 
 
 class MatchRequestStatus(Enum):
@@ -45,7 +47,7 @@ class EvalRequestStatus(Enum):
 
 @dataclass
 class MatchStatus:
-    opponent_gen: Generation
+    opponent_level: Union[Strength, Generation]
     n_games: int
     status: MatchRequestStatus
 
@@ -128,6 +130,7 @@ class EvalManager(GamingManagerBase):
             status_cond.notify_all()
 
     def send_match_request(self, conn: ClientConnection):
+        self._evaluator.refresh_ratings()
         assert conn.is_on_localhost()
         eval_ix = conn.aux.ix
         if eval_ix is None:
@@ -159,7 +162,11 @@ class EvalManager(GamingManagerBase):
         n_games_completed = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
             if data.status == MatchRequestStatus.COMPLETE])
         n_games_to_do = self.n_games - n_games_completed
-        if n_games_to_do <= 0:
+
+        opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
+                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
+
+        if n_games_to_do <= 0 or len(opponent_ixs_played) >= len(self._evaluator.benchmark_committee):
             self._interpolate_ratings(conn, conn.aux.ix)
             self._set_ready(conn)
             return
@@ -172,8 +179,6 @@ class EvalManager(GamingManagerBase):
         need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
-            opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
-                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
@@ -191,8 +196,9 @@ class EvalManager(GamingManagerBase):
         game = self._controller._run_params.game
         next_opponent_agent = next_opponent_iagent.agent
 
-
-        benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+        benchmark_organizer = None
+        if next_opponent_agent.tag:
+            benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
 
         eval_binary_src = self._controller._get_binary_path()
         benchmark_binary_src = self._controller._get_binary_path(benchmark_organizer=benchmark_organizer)
@@ -219,39 +225,60 @@ class EvalManager(GamingManagerBase):
             )
             files_required.append(eval_model)
 
-        benchmark_model = None
-        if next_opponent_agent.gen > 0:
-            benchmark_model = FileToTransfer.from_src_scratch_path(
-                source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen),
-                scratch_path=f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt',
-                asset_path_mode='scratch'
+        if isinstance(next_opponent_agent, MCTSAgent):
+            benchmark_organizer = DirectoryOrganizer(RunParams(game, next_opponent_agent.tag), base_dir_root='/workspace')
+            benchmark_binary = FileToTransfer.from_src_scratch_path(
+                source_path=benchmark_organizer.binary_filename,
+                scratch_path=f'benchmark-bin/{game}',
+                asset_path_mode='hash'
             )
-            files_required.append(benchmark_model)
+            files_required.append(benchmark_binary)
+
+            benchmark_model = None
+            if next_opponent_agent.gen > 0:
+                benchmark_model = FileToTransfer.from_src_scratch_path(
+                    source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen),
+                    scratch_path=f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt',
+                    asset_path_mode='scratch'
+                )
+                files_required.append(benchmark_model)
+
+            opponent_agent = replace(next_opponent_agent,
+                                     binary=benchmark_binary.scratch_path,
+                                     model=benchmark_model.scratch_path if benchmark_model else None)
+        else:
+            opponent_agent = replace(next_opponent_agent, binary=eval_binary.scratch_path)
+            for dep in self._controller.game_spec.extra_runtime_deps:
+                dep_file = FileToTransfer.from_src_scratch_path(
+                    source_path=os.path.join('/workspace/repo/', dep),
+                    scratch_path=dep,
+                    asset_path_mode='hash'
+                )
+                files_required.append(dep_file)
 
         data = {
             'type': 'match-request',
             'agent1': {
-                'gen': test_iagent.agent.gen,
-                'n_iters': self.n_iters,
-                'set_temp_zero': True,
-                'tag': self._controller._organizer.tag,
-                'binary': eval_binary.scratch_path,
-                'model': eval_model.scratch_path if eval_model else None
+                'type': 'MCTS',
+                'data': {
+                    'gen': test_iagent.agent.gen,
+                    'n_iters': self.n_iters,
+                    'set_temp_zero': True,
+                    'tag': self._controller._organizer.tag,
+                    'binary': eval_binary.scratch_path,
+                    'model': eval_model.scratch_path if eval_model else None,
+                    }
                 },
             'agent2': {
-                'gen': next_opponent_agent.gen,
-                'n_iters': next_opponent_agent.n_iters,
-                'set_temp_zero': next_opponent_agent.set_temp_zero,
-                'tag': next_opponent_agent.tag,
-                'binary': benchmark_binary.scratch_path,
-                'model': benchmark_model.scratch_path if benchmark_model else None
+                'type':'MCTS' if isinstance(next_opponent_agent, MCTSAgent) else 'Reference',
+                'data': opponent_agent.to_dict()
                 },
             'ix1': test_iagent.index,
             'ix2': int(next_opponent_iagent.index),
             'n_games': int(next_n_games),
             'files_required': [f.to_dict() for f in files_required],
         }
-        logger.info(f"Evaluating ix {data['ix1']} vs {data['ix2']}, gen {data['agent1']['gen']} vs {data['agent2']['gen']}, n_games {data['n_games']}")
+        logger.info(f"Evaluating ix {data['ix1']} vs {data['ix2']}, agent {test_iagent.agent} vs {next_opponent_agent}, n_games {data['n_games']}")
         return data
 
     def _get_next_gen_to_eval(self):
@@ -285,13 +312,14 @@ class EvalManager(GamingManagerBase):
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
             if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                 match_status.status = MatchRequestStatus.OBSOLETE
-                logger.debug('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_gen)
+                logger.debug('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_level)
 
         for ix, n_games in zip(chosen_ixs, num_matches):
             if ix not in self._eval_status_dict[test_ix].ix_match_status:
-                new_opponent_gen = self._evaluator.indexed_agents[ix].agent.gen
+                agent: Agent = self._evaluator.indexed_agents[ix].agent
+                new_opponent_level = agent.level
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
-                    MatchStatus(new_opponent_gen, n_games, MatchRequestStatus.PENDING)
+                    MatchStatus(new_opponent_level, n_games, MatchRequestStatus.PENDING)
                 logger.debug('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
             else:
                 self._eval_status_dict[test_ix].ix_match_status[ix].n_games = n_games
@@ -307,8 +335,8 @@ class EvalManager(GamingManagerBase):
             if ix == test_ix:
                 continue
             if n_games > 0:
-                gen = self._evaluator.indexed_agents[ix].agent.gen
-                match_status_dict[ix] = MatchStatus(gen, int(n_games), MatchRequestStatus.COMPLETE)
+                level = self._evaluator.indexed_agents[ix].agent.level
+                match_status_dict[ix] = MatchStatus(level, int(n_games), MatchRequestStatus.COMPLETE)
         return match_status_dict
 
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):

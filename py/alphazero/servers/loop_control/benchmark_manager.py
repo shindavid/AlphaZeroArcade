@@ -157,6 +157,7 @@ class BenchmarkManager(GamingManagerBase):
             status_cond.notify_all()
 
     def send_match_request(self, conn):
+        self._benchmarker.refresh_ratings()
         self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
         if ix is None:
@@ -296,27 +297,33 @@ class BenchmarkManager(GamingManagerBase):
         data = {
             'type': 'match-request',
             'agent1': {
-                'gen': gen,
-                'n_iters': self.n_iters,
-                'set_temp_zero': True if gen > 0 else False,
-                'tag': tag,
-                'binary': binary.scratch_path,
-                'model': model1.scratch_path if model1 else None
+                'type': 'MCTS',
+                'data': {
+                    'gen': gen,
+                    'n_iters': self.n_iters,
+                    'set_temp_zero': True if gen > 0 else False,
+                    'tag': tag,
+                    'binary': binary.scratch_path,
+                    'model': model1.scratch_path if model1 else None
+                    }
                 },
             'agent2': {
-                'gen': opponent_gen,
-                'n_iters': self.n_iters,
-                'set_temp_zero': True if opponent_gen > 0 else False,
-                'tag': tag,
-                'binary': binary.scratch_path,
-                'model': model2.scratch_path if model2 else None
+                'type': 'MCTS',
+                'data': {
+                    'gen': opponent_gen,
+                    'n_iters': self.n_iters,
+                    'set_temp_zero': True if opponent_gen > 0 else False,
+                    'tag': tag,
+                    'binary': binary.scratch_path,
+                    'model': model2.scratch_path if model2 else None
+                    }
                 },
             'ix1': ix,
             'ix2': opponent_ix,
             'n_games': self.n_games,
             'files_required': [f.to_dict() for f in files_required],
             }
-        logger.info(f"Benchmarking request ix: {data['ix1']} vs {data['ix2']}, gen: {data['agent1']['gen']} vs {data['agent2']['gen']}")
+        logger.info(f"Benchmarking request ix: {data['ix1']} vs {data['ix2']}, gen: {data['agent1']['data']['gen']} vs {data['agent2']['data']['gen']}")
         return data
 
     def _latest_evaluated_gen(self) -> Generation:

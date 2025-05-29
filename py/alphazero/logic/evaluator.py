@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.match_runner import Match, MatchType
@@ -29,11 +29,9 @@ class Evaluator:
         self._organizer = organizer
         self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename(benchmark_tag))
         self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
-
         self._arena = self._benchmark.clone_arena()
         self.db = RatingDB(self._organizer.eval_db_filename(benchmark_tag))
         self.load_from_db()
-        self.refresh_ratings()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)
@@ -152,6 +150,10 @@ class Evaluator:
     @property
     def agent_lookup(self) -> dict:
         return self._arena._agent_lookup
+
+    @property
+    def agent_lookup_db_id(self) -> dict:
+        return self._arena._agent_lookup_db_id
 
 
 class EvalUtils:
