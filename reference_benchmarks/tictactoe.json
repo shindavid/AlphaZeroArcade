@@ -1,4 +1,5 @@
 {
+  "cmd_used": "gen_ref_benchmarks.py",
   "ReferenceAgent--strength-0": {
     "iagent": {
       "agent": {
@@ -29,6 +30,6 @@
       "db_id": 2,
       "type": "Reference"
     },
-    "rating": 511.7193261873583
+    "rating": 436.6248979077985
   }
 }

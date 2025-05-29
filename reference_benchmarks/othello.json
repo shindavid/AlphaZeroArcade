@@ -1,4 +1,5 @@
 {
+  "cmd_used": "gen_ref_benchmarks.py",
   "ReferenceAgent--depth-0": {
     "iagent": {
       "agent": {
@@ -29,7 +30,7 @@
       "db_id": 2,
       "type": "Reference"
     },
-    "rating": 674.5607424135741
+    "rating": 602.9098056734896
   },
   "ReferenceAgent--depth-2": {
     "iagent": {
@@ -45,7 +46,7 @@
       "db_id": 3,
       "type": "Reference"
     },
-    "rating": 2034.122288829786
+    "rating": 1962.542508440738
   },
   "ReferenceAgent--depth-3": {
     "iagent": {
@@ -61,7 +62,7 @@
       "db_id": 4,
       "type": "Reference"
     },
-    "rating": 3332.0335244826665
+    "rating": 3260.546215041288
   },
   "ReferenceAgent--depth-4": {
     "iagent": {
@@ -77,7 +78,7 @@
       "db_id": 5,
       "type": "Reference"
     },
-    "rating": 4589.29831734363
+    "rating": 4517.91038584486
   },
   "ReferenceAgent--depth-5": {
     "iagent": {
@@ -93,7 +94,7 @@
       "db_id": 6,
       "type": "Reference"
     },
-    "rating": 4588.713272722796
+    "rating": 4517.325705740823
   },
   "ReferenceAgent--depth-6": {
     "iagent": {
@@ -109,7 +110,7 @@
       "db_id": 7,
       "type": "Reference"
     },
-    "rating": 5795.929448642392
+    "rating": 5724.643533156839
   },
   "ReferenceAgent--depth-7": {
     "iagent": {
@@ -125,7 +126,7 @@
       "db_id": 8,
       "type": "Reference"
     },
-    "rating": 6987.557714231935
+    "rating": 6916.37144040592
   },
   "ReferenceAgent--depth-8": {
     "iagent": {
@@ -141,7 +142,7 @@
       "db_id": 9,
       "type": "Reference"
     },
-    "rating": 8167.99526024805
+    "rating": 8096.900293424009
   },
   "ReferenceAgent--depth-9": {
     "iagent": {
@@ -157,7 +158,7 @@
       "db_id": 10,
       "type": "Reference"
     },
-    "rating": 7936.530706404853
+    "rating": 7885.777304782528
   },
   "ReferenceAgent--depth-10": {
     "iagent": {
@@ -173,7 +174,7 @@
       "db_id": 11,
       "type": "Reference"
     },
-    "rating": 8121.802084162684
+    "rating": 8085.00401461325
   },
   "ReferenceAgent--depth-11": {
     "iagent": {
@@ -189,7 +190,7 @@
       "db_id": 12,
       "type": "Reference"
     },
-    "rating": 8100.095149639472
+    "rating": 8063.296561046289
   },
   "ReferenceAgent--depth-12": {
     "iagent": {
@@ -205,7 +206,7 @@
       "db_id": 13,
       "type": "Reference"
     },
-    "rating": 9268.644661300254
+    "rating": 9231.927005958665
   },
   "ReferenceAgent--depth-13": {
     "iagent": {
@@ -221,7 +222,7 @@
       "db_id": 14,
       "type": "Reference"
     },
-    "rating": 9229.466569734184
+    "rating": 9175.035989099548
   },
   "ReferenceAgent--depth-14": {
     "iagent": {
@@ -237,7 +238,7 @@
       "db_id": 15,
       "type": "Reference"
     },
-    "rating": 9332.460483750363
+    "rating": 9255.685023821663
   },
   "ReferenceAgent--depth-15": {
     "iagent": {
@@ -253,7 +254,7 @@
       "db_id": 16,
       "type": "Reference"
     },
-    "rating": 9279.252596186037
+    "rating": 9202.482310828684
   },
   "ReferenceAgent--depth-16": {
     "iagent": {
@@ -269,7 +270,7 @@
       "db_id": 17,
       "type": "Reference"
     },
-    "rating": 9349.103826712724
+    "rating": 9301.840621960775
   },
   "ReferenceAgent--depth-17": {
     "iagent": {
@@ -285,7 +286,7 @@
       "db_id": 18,
       "type": "Reference"
     },
-    "rating": 9345.103235098379
+    "rating": 9248.773530876355
   },
   "ReferenceAgent--depth-18": {
     "iagent": {
@@ -301,7 +302,7 @@
       "db_id": 19,
       "type": "Reference"
     },
-    "rating": 9444.61066245182
+    "rating": 9348.283132741992
   },
   "ReferenceAgent--depth-19": {
     "iagent": {
@@ -317,7 +318,7 @@
       "db_id": 20,
       "type": "Reference"
     },
-    "rating": 9807.049006857249
+    "rating": 9729.13933785538
   },
   "ReferenceAgent--depth-20": {
     "iagent": {
@@ -333,7 +334,7 @@
       "db_id": 21,
       "type": "Reference"
     },
-    "rating": 9761.361045893684
+    "rating": 9711.502072334528
   },
   "ReferenceAgent--depth-21": {
     "iagent": {
@@ -349,6 +350,6 @@
       "db_id": 22,
       "type": "Reference"
     },
-    "rating": 9630.22494116546
+    "rating": 9588.28804557652
   }
 }
