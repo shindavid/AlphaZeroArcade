@@ -15,22 +15,27 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-import copy
-from dataclasses import dataclass, field
-import math
-import os
-import pickle
-import tempfile
-from typing import Any, Callable, Dict, List, Optional
-import torch
-from torch import nn as nn
-from torch.nn import functional as F
-
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinShareActionValueTarget, \
     WinShareValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
+
+import torch
+from torch import nn as nn
+from torch.nn import functional as F
+
+import copy
+from dataclasses import dataclass, field
+import logging
+import math
+import os
+import subprocess
+import tempfile
+from typing import Any, Callable, Dict, List, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -238,7 +243,7 @@ class TransformerBlock(nn.Module):
         # Absolute position embedding
         # self.positional_embedding = nn.Parameter(torch.zeros(1, board_size, embed_dim))
         self.positional_embedding = PositionalEncoding(embed_dim, board_size, dropout=0.)
-        
+
         # Transformer encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=n_heads)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
@@ -714,48 +719,58 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
-    def save_model(self, filename: str, verbose: bool = False):
+    def save_model(self, filename: str, max_batch_size: int):
         """
-        Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
-        torch.jit.trace() function to accomplish this.
-
-        Note that prior to saving, we "freeze" the model, by switching it to eval mode and disabling
-        gradient. The documentation seems to imply that this is an important step:
-
-        "...In the returned :class:`ScriptModule`, operations that have different behaviors in
-          ``training`` and ``eval`` modes will always behave as if it is in the mode it was in
-          during tracing, no matter which mode the `ScriptModule` is in..."
-
-        In order to avoid modifying self during the save() call, we actually deepcopy self and then
-        do the freeze and trace on the copy.
+        Saves this network to disk, from which it can be loaded either by c++ or by python. Does
+        this by first exporting the model to ONNX, and then shelling out to a custom binary that
+        converts the ONNX to a TensorRT engine.
         """
         output_dir = os.path.split(filename)[0]
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
+        # 1) clone, strip extra heads, freeze
         clone = copy.deepcopy(self)
+        clone.heads = clone.heads[:3]  # 0=policy, 1=value, 2=action_value
+        clone.cpu().eval()
 
-        # strip all aux heads to avoid unnecessary c++ computation
-        clone.heads = clone.heads[:3]
+        input_names = ["input"]
+        output_names = [head.name for head in clone.heads]
+        dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
 
-        clone.to('cpu')
-        clone.eval()
-        forward_shape = tuple([1] + list(self.shape_info_dict['input'].shape))
-        example_input = torch.zeros(forward_shape)
+        # 2) make an example‐input and ONNX‐export it
+        example_shape = (max_batch_size, *self.shape_info_dict['input'].shape)
+        example_input = torch.zeros(example_shape, dtype=torch.float32)
 
-        # Perform the actual trace/save in a separate process to avoid memory leak
-        # See: https://github.com/pytorch/pytorch/issues/35600
-        with tempfile.NamedTemporaryFile(mode='wb', delete=False) as pickle_file:
-            pickle.dump((clone, example_input), pickle_file)
-            pickle_file.close()
+        # export to a temp ONNX file
+        with tempfile.NamedTemporaryFile(suffix=".onnx") as onnx_f:
+            onnx_path = onnx_f.name
 
-            script = os.path.join(Repo.root(), 'py/alphazero/scripts/jit_tracer.py')
-            cmd = f'python {script} {pickle_file.name} {filename}'
-            rc = os.system(cmd)
-            assert rc == 0, f'Error saving model to {filename}'
+            torch.onnx.export(
+                clone, example_input, onnx_path,
+                export_params=True,
+                opset_version=16,
+                input_names=input_names,
+                output_names=output_names,
+                dynamic_axes=dynamic_axes,
+            )
 
-        if verbose:
-            print(f'Model saved to {filename}')
+            # 3) shell out to build_engine:
+            build_bin_paths = [
+                os.path.join(Repo.root(), "target/Release/bin/tools/onnx_engine_builder"),
+                os.path.join(Repo.root(), "target/Debug/bin/tools/onnx_engine_builder"),
+            ]
+            existent_build_bins = [p for p in build_bin_paths if os.path.isfile(p)]
+            if not existent_build_bins:
+                logger.error("Could not find onnx_engine_builder in any of the following paths:")
+                for p in build_bin_paths:
+                    logger.error(f"  {p}")
+                logger.error("Please build it first by running ./build.py [-t tools]")
+                raise Exception("onnx_engine_builder not found")
+
+            build_bin = existent_build_bins[0]  # use the first found one
+            cmd = [build_bin, onnx_path, filename, str(max_batch_size)]
+            subprocess.run(cmd, check=True)
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':

@@ -14,7 +14,6 @@
 #include <util/RepoUtil.hpp>
 #include <util/ScreenUtil.hpp>
 #include <util/StringUtil.hpp>
-#include <util/TorchUtil.hpp>
 
 namespace generic {
 

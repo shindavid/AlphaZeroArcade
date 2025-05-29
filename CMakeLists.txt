@@ -18,6 +18,21 @@ find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)
 
+find_package(CUDAToolkit REQUIRED)
+
+set(TENSORRT_INCLUDE_DIR /usr/include/x86_64-linux-gnu)
+set(TENSORRT_LIB_DIR     /usr/lib/x86_64-linux-gnu)
+
+find_library(NVINFER_LIB       NAMES nvinfer       HINTS ${TENSORRT_LIB_DIR})
+find_library(NVONNXPARSER_LIB  NAMES nvonnxparser  HINTS ${TENSORRT_LIB_DIR})
+find_library(NVINFERPLUGIN_LIB NAMES nvinfer_plugin HINTS ${TENSORRT_LIB_DIR})
+
+set(TENSORRT_LIBS
+  ${NVINFER_LIB}
+  ${NVONNXPARSER_LIB}
+  ${NVINFERPLUGIN_LIB}
+)
+
 set(CMAKE_CXX_STANDARD  23)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
@@ -80,7 +95,7 @@ endfunction()
 
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
 link_directories(/usr/local/cuda/lib64)
-set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} cupti spdlog::spdlog)
+set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 add_subdirectory("cpp/src")

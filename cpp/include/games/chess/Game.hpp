@@ -21,7 +21,6 @@
 #include <lc0/chess/position.h>
 
 #include <boost/functional/hash.hpp>
-#include <torch/torch.h>
 
 #include <array>
 #include <cstdint>

@@ -23,3 +23,6 @@ target_link_libraries(util_lib PRIVATE ${COMMON_EXTERNAL_LIBS})
 target_link_libraries(util_tests PRIVATE util_lib ${GTEST_LIBS} ${COMMON_EXTERNAL_LIBS})
 
 append_target_metadata("aux" ${TARGETS})
+
+# pull in tools/*
+add_subdirectory(tools)

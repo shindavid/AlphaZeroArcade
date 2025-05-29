@@ -359,7 +359,7 @@ class TrainingManager:
         checkpoint = {}
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
-        net.save_model(tmp_model_filename)
+        net.save_model(tmp_model_filename, 512)  # TODO: coordinate this to match c++ runtime -b
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
         self._latest_gen = gen

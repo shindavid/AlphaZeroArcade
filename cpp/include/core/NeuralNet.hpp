@@ -1,49 +1,80 @@
 #pragma once
 
-#include <sstream>
-#include <vector>
+#include <core/concepts/Game.hpp>
+#include <util/EigenUtil.hpp>
+#include <util/LoggingUtil.hpp>
 
-#include <boost/filesystem.hpp>
-#include <torch/script.h>
+#include <NvInfer.h>
+#include <cuda_runtime_api.h>
+
+#include <spanstream>
+#include <string>
+#include <vector>
 
 namespace core {
 
 /*
- * A thin wrapper around a PyTorch model.
+ * A thin wrapper around a TensorRT engine.
  */
+template <concepts::Game Game>
 class NeuralNet {
  public:
-  using input_vec_t = std::vector<torch::jit::IValue>;
+  using InputShape = Game::InputTensorizor::Tensor::Dimensions;
+  using PolicyShape = Game::Types::PolicyShape;
+  using ValueShape = Game::Types::ValueShape;
+  using ActionValueShape = Game::Types::ActionValueShape;
 
-  NeuralNet() : device_(at::Device("cpu")) {}
+  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
+  using DynamicPolicyTensor = Eigen::Tensor<float, PolicyShape::count + 1, Eigen::RowMajor>;
+  using DynamicValueTensor = Eigen::Tensor<float, ValueShape::count + 1, Eigen::RowMajor>;
+  using DynamicActionValueTensor =
+    Eigen::Tensor<float, ActionValueShape::count + 1, Eigen::RowMajor>;
 
-  /*
-   * value is passed to torch::jit::load(). See torch::jit::load() API for details.
-   *
-   * After this call, the model will be on the CPU. Use activate() to move it to the GPU.
-   */
-  template<typename Value>
-  void load_weights(Value&& value, const std::string& cuda_device);
+  NeuralNet(int batch_size);
+  ~NeuralNet();
 
-  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value,
-               torch::Tensor& action_values) const;
+  void load_weights(const char* filename, const std::string& cuda_device);
+  void load_weights(std::ispanstream& stream, const std::string& cuda_device);
 
-  /*
-   * Moves the model to the CPU. This frees up the GPU for other processes.
-   */
+  void predict(const DynamicInputTensor& input, DynamicPolicyTensor&, DynamicValueTensor&,
+               DynamicActionValueTensor&) const;
+
+  // Moves the model to the CPU. This frees up the GPU for other processes.
   void deactivate();
 
-  /*
-   * Moves the model back to the GPU.
-   */
+  // Moves the model back to the GPU.
   void activate();
 
   bool loaded() const { return loaded_; }
   bool activated() const { return activated_; }
 
  private:
-  mutable torch::jit::script::Module module_;
-  at::Device device_;
+  template <typename TensorT>
+  void copy_output_from_gpu(int index, TensorT& tensor) const;
+
+  template <eigen_util::concepts::Shape Shape>
+  void init_buffer(const std::string& expected_name, bool validate_dims=false);
+
+  // simple logger
+  class Logger : public nvinfer1::ILogger {
+  public:
+    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
+      if (severity <= Severity::kWARNING) {
+        LOG_WARN("[TRT] {}", msg);
+      }
+    }
+  };
+
+  Logger logger_;
+  nvinfer1::IRuntime* const runtime_;
+  nvinfer1::ICudaEngine* engine_ = nullptr;
+  nvinfer1::IExecutionContext* context_ = nullptr;
+
+  std::vector<char> plan_data_;
+  std::vector<void*> device_buffers_;
+
+  const int batch_size_;
+  int device_id_ = -1;
   bool loaded_ = false;
   bool activated_ = false;
 };

@@ -8,7 +8,6 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
-#include <util/TorchUtil.hpp>
 
 namespace core {
 

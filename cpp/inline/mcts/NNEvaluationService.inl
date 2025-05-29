@@ -91,30 +91,21 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),
+      net_(params.batch_size_limit),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
+      full_policy_(util::to_std_array<int64_t>(params.batch_size_limit,
+                                               eigen_util::to_int64_std_array_v<PolicyShape>)),
+      full_value_(util::to_std_array<int64_t>(params.batch_size_limit,
+                                              eigen_util::to_int64_std_array_v<ValueShape>)),
+      full_action_value_(util::to_std_array<int64_t>(
+        params.batch_size_limit, eigen_util::to_int64_std_array_v<ActionValueShape>)),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_),
       server_(server) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
     net_.activate();
   }
-  auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
-                                                 eigen_util::to_int64_std_array_v<InputShape>);
-  auto policy_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
-                                                  eigen_util::to_int64_std_array_v<PolicyShape>);
-  auto value_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
-                                                 eigen_util::to_int64_std_array_v<ValueShape>);
-  auto action_value_shape = util::to_std_array<int64_t>(
-      params_.batch_size_limit, eigen_util::to_int64_std_array_v<ActionValueShape>);
-
-  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<float>)
-                         .to(at::Device(params.cuda_device));
-  torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
-  torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
-  torch_action_value_ = torch::empty(action_value_shape, torch_util::to_dtype_v<float>);
-
-  input_vec_.push_back(torch_input_gpu_);
 
   for (int i = 0; i < kNumHashShards; i++) {
     shard_datas_[i].init(params_.cache_size / kNumHashShards);
@@ -133,18 +124,19 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::TensorGroup::load_output_from(int row, torch::Tensor& torch_policy,
-                                                              torch::Tensor& torch_value,
-                                                              torch::Tensor& torch_action_value) {
+void NNEvaluationService<Game>::TensorGroup::load_output_from(
+  int row, DynamicPolicyTensor& full_policy, DynamicValueTensor& full_value,
+  DynamicActionValueTensor& full_action_value) {
+
   constexpr size_t policy_size = PolicyShape::total_size;
   constexpr size_t value_size = ValueShape::total_size;
   constexpr size_t action_value_size = ActionValueShape::total_size;
 
-  memcpy(policy.data(), torch_policy.data_ptr<float>() + row * policy_size,
+  memcpy(policy.data(), full_policy.data() + row * policy_size,
          policy_size * sizeof(float));
-  memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
+  memcpy(value.data(), full_value.data() + row * value_size,
          value_size * sizeof(float));
-  memcpy(action_values.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
+  memcpy(action_values.data(), full_action_value.data() + row * action_value_size,
          action_value_size * sizeof(float));
 }
 
@@ -837,18 +829,14 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   core::PerfClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, full_input_);
-  auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
-                                                 eigen_util::to_int64_std_array_v<InputShape>);
-  torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
-  torch_input_gpu_.copy_(full_input_torch);
 
   core::PerfClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
-  net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
+  net_.predict(full_input_, full_policy_, full_value_, full_action_value_);
 
   core::PerfClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
   for (int i = 0; i < num_rows; ++i) {
     TensorGroup& group = batch_data->tensor_groups[i];
-    group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
+    group.load_output_from(i, full_policy_, full_value_, full_action_value_);
     group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
                      group.active_seat, group.action_mode);
   }

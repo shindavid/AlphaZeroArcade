@@ -20,7 +20,6 @@
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
 #include <util/RecyclingAllocPool.hpp>
-#include <util/TorchUtil.hpp>
 
 #include <condition_variable>
 #include <map>
@@ -60,6 +59,7 @@ class NNEvaluationService
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kWorkerReady> {
  public:
+  using NeuralNet = core::NeuralNet<Game>;
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
@@ -76,7 +76,10 @@ class NNEvaluationService
   using ValueShape = ValueTensor::Dimensions;
   using ActionValueShape = Game::Types::ActionValueShape;
 
-  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
+  using DynamicInputTensor = NeuralNet::DynamicInputTensor;
+  using DynamicPolicyTensor = NeuralNet::DynamicPolicyTensor;
+  using DynamicValueTensor = NeuralNet::DynamicValueTensor;
+  using DynamicActionValueTensor = NeuralNet::DynamicActionValueTensor;
 
   using State = Game::State;
   using InputTensorizor = Game::InputTensorizor;
@@ -117,8 +120,8 @@ class NNEvaluationService
 
  private:
   struct TensorGroup {
-    void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
-                          torch::Tensor& torch_action_value);
+    void load_output_from(int row, DynamicPolicyTensor& full_policy, DynamicValueTensor& full_value,
+                          DynamicActionValueTensor& full_action_value);
 
     InputTensor input;
     PolicyTensor policy;
@@ -329,14 +332,12 @@ class NNEvaluationService
   std::condition_variable cv_net_weights_;
   std::condition_variable cv_main_;
 
-  core::NeuralNet net_;
+  NeuralNet net_;
 
-  core::NeuralNet::input_vec_t input_vec_;
-  torch::Tensor torch_input_gpu_;
-  torch::Tensor torch_policy_;
-  torch::Tensor torch_value_;
-  torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
+  DynamicPolicyTensor full_policy_;
+  DynamicValueTensor full_value_;
+  DynamicActionValueTensor full_action_value_;
 
   ShardData shard_datas_[kNumHashShards];
 
