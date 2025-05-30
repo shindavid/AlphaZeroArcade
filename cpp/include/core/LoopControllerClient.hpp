@@ -94,7 +94,7 @@ class LoopControllerClient : public PerfStatsClient {
   void send_unpause_ack();
   void pause();
   void unpause();
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device);
+  void reload_weights(const std::vector<char>& buf);
   void handle_data_request(int n_rows);
   void handle_data_pre_request(int n_rows_limit);
   void wait_for_pause_receipts();

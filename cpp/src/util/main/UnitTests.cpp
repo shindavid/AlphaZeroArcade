@@ -599,11 +599,11 @@ TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
 }
 
-TEST(cuda_util, get_cuda_device_id) {
-  EXPECT_EQ(cuda_util::get_device_id("cuda:0"), 0);
-  EXPECT_EQ(cuda_util::get_device_id("0"), 0);
-  EXPECT_EQ(cuda_util::get_device_id("cuda:1"), 1);
-  EXPECT_EQ(cuda_util::get_device_id("1"), 1);
+TEST(cuda_util, cuda_device_to_ordinal) {
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:0"), 0);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("0"), 0);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:1"), 1);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
 TEST(math, splitmix64) {

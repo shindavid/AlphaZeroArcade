@@ -22,6 +22,8 @@ class NNEvaluation {
   using DynamicArray = Eigen::Array<float, 2, Eigen::Dynamic>;
 
   /*
+   * Warning: the passed-in tensors are modified in-place!
+   *
    * The tensors passed-in are raw tensors from the neural network. To convert them into usable
    * tensors, the constructor performs the following:
    *
@@ -31,8 +33,7 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  void init(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
-            const ActionValueTensor& raw_action_values, const ActionMask& valid_actions,
+  void init(PolicyTensor&, ValueTensor&, ActionValueTensor&, const ActionMask& valid_actions,
             group::element_t sym, core::seat_index_t active_seat, core::action_mode_t mode);
 
   void uniform_init(const ActionMask&);  // Used by UniformNNEvaluationService

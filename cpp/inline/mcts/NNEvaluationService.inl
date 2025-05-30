@@ -42,22 +42,30 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::connect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
-  if (thread_) return;
+  if (schedule_thread_) return;
 
-  thread_ = new std::thread([&] { this->loop(); });
+  schedule_thread_ = new std::thread([&] { this->schedule_loop(); });
+  drain_thread_ = new std::thread([&] { this->drain_loop(); });
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::disconnect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
-  if (thread_) {
+  if (schedule_thread_) {
     num_connections_--;
     if (num_connections_ > 0) return;
     cv_net_weights_.notify_all();
     cv_main_.notify_all();
-    if (thread_->joinable()) thread_->join();
-    delete thread_;
-    thread_ = nullptr;
+    cv_load_queue_.notify_all();
+
+    if (schedule_thread_->joinable()) schedule_thread_->join();
+    if (drain_thread_->joinable()) drain_thread_->join();
+
+    delete schedule_thread_;
+    schedule_thread_ = nullptr;
+
+    delete drain_thread_;
+    drain_thread_ = nullptr;
   }
 }
 
@@ -91,19 +99,11 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),
-      net_(params.batch_size_limit),
-      full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
-                                              eigen_util::to_int64_std_array_v<InputShape>)),
-      full_policy_(util::to_std_array<int64_t>(params.batch_size_limit,
-                                               eigen_util::to_int64_std_array_v<PolicyShape>)),
-      full_value_(util::to_std_array<int64_t>(params.batch_size_limit,
-                                              eigen_util::to_int64_std_array_v<ValueShape>)),
-      full_action_value_(util::to_std_array<int64_t>(
-        params.batch_size_limit, eigen_util::to_int64_std_array_v<ActionValueShape>)),
+      net_(params.batch_size_limit, cuda_util::cuda_device_to_ordinal(params_.cuda_device)),
       batch_data_slice_allocator_(params.batch_size_limit, perf_stats_),
       server_(server) {
   if (!params.model_filename.empty()) {
-    net_.load_weights(params.model_filename.c_str(), params.cuda_device);
+    net_.load_weights(params.model_filename.c_str());
     net_.activate();
   }
 
@@ -124,35 +124,48 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::TensorGroup::load_output_from(
-  int row, DynamicPolicyTensor& full_policy, DynamicValueTensor& full_value,
-  DynamicActionValueTensor& full_action_value) {
-
-  constexpr size_t policy_size = PolicyShape::total_size;
-  constexpr size_t value_size = ValueShape::total_size;
-  constexpr size_t action_value_size = ActionValueShape::total_size;
-
-  memcpy(policy.data(), full_policy.data() + row * policy_size,
-         policy_size * sizeof(float));
-  memcpy(value.data(), full_value.data() + row * value_size,
-         value_size * sizeof(float));
-  memcpy(action_values.data(), full_action_value.data() + row * action_value_size,
-         action_value_size * sizeof(float));
-}
-
-template <core::concepts::Game Game>
 NNEvaluationService<Game>::BatchData::BatchData(int capacity) : tensor_groups(capacity) {}
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows,
-                                                         DynamicInputTensor& full_input) {
-  float* full_input_data = full_input.data();
+void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows, NeuralNet& net,
+                                                         core::pipeline_index_t pipeline_index) {
+  float* input_ptr = net.get_input_ptr(pipeline_index);
   constexpr size_t input_size = InputShape::total_size;
   int r = 0;
   for (int row = 0; row < num_rows; row++) {
     const TensorGroup& group = tensor_groups[row];
-    memcpy(full_input_data + r, group.input.data(), input_size * sizeof(float));
+    memcpy(input_ptr + r, group.input.data(), input_size * sizeof(float));
     r += input_size;
+  }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::BatchData::load(const float* policy_batch_data,
+                                                const float* value_batch_data,
+                                                const float* action_values_batch_data) {
+  const float* policy_data = policy_batch_data;
+  const float* value_data = value_batch_data;
+  const float* action_values_data = action_values_batch_data;
+
+  for (int i = 0; i < (int)tensor_groups.size(); ++i) {
+    TensorGroup& group = tensor_groups[i];
+
+    PolicyTensor policy;
+    ValueTensor value;
+    ActionValueTensor action_values;
+
+    std::copy_n(policy_data, policy.size(), policy.data());
+    std::copy_n(value_data, value.size(), value.data());
+    std::copy_n(action_values_data, action_values.size(), action_values.data());
+
+    policy_data += PolicyShape::total_size;
+    value_data += ValueShape::total_size;
+    action_values_data += ActionValueShape::total_size;
+
+    // WARNING: this function all modifies policy/value/action_values in-place. So we should be
+    // careful not to read them after this call.
+    group.eval->init(policy, value, action_values, group.valid_actions, group.sym,
+                     group.active_seat, group.action_mode);
   }
 }
 
@@ -308,10 +321,10 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
     // TODO: downgrade some of these release_assert's to debug_assert's.
     util::release_assert(result.notifying_sequence_id > 0);
     if (!register_notification_task(request, result)) {
-      // This means that we hit a race condition where the corresponding batch data was processed
-      // by batch_evaluate() before we could register the notification task. If we blindly added
-      // to the notification task without checking for this, the GameServer would end up waiting
-      // for a notification that would never arrive.
+      // This means that we hit a race condition where the corresponding batch data was evaluated
+      // before we could register the notification task. If we blindly added to the notification
+      // task without checking for this, the GameServer would end up waiting for a notification that
+      // would never arrive.
 
       util::release_assert(result.stats.cache_misses == 0, "Unexpected cache_misses={}",
                            result.stats.cache_misses);
@@ -683,14 +696,25 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::loop() {
+void NNEvaluationService<Game>::schedule_loop() {
   while (active()) {
     core::NNEvalLoopPerfStats loop_stats;
 
     load_initial_weights_if_necessary();
     wait_for_unpause();
+    net_.activate();
     BatchData* batch_data = get_next_batch_data(loop_stats);
-    batch_evaluate(batch_data, loop_stats);
+    schedule_batch(batch_data, loop_stats);
+  }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::drain_loop() {
+  while (active()) {
+    LoadQueueItem item;
+    if (get_next_load_queue_item(item)) {
+      drain_batch(item);
+    }
   }
 }
 
@@ -795,7 +819,7 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
+void NNEvaluationService<Game>::schedule_batch(BatchData* batch_data,
                                                core::NNEvalLoopPerfStats& loop_stats) {
   if (!batch_data) return;
   util::release_assert(batch_data->frozen());
@@ -807,40 +831,67 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
              batch_data->sequence_id, batch_data->allocate_count);
   }
 
-  // NOTE: we could slightly optimize this by moving some of these steps out of the main path.
-  // If the batch is already filled up before we get to this point, we can start copying to
-  // full_input_ in a separate thread, so that it's ready when we get here.
-  //
-  // Furthermore, that thread could also start copying the input to the GPU. We would need to make
-  // sure that we have two separate tensors on the GPU, so that we can copy to one while
-  // evaluating the other. This would require some extra synchronization, and would also limit the
-  // potential batch size by half, and would also mean that the GPU data memory address would change
-  // every time we switch the input tensor. So it's unclear if this is worth it.
-  //
-  // Something similar could potentially be done when copying output back to the CPU.
-  //
-  // Currently, on dshin's laptop, for a 10,000-game benchmark run of c4, we see:
-  //
-  // NN-0 nn-eval per-batch cpu2gpu time:                 0.061ms
-  // NN-0 nn-eval per-batch gpu2cpu time:                 0.014ms
-  // NN-0 nn-eval per-batch model eval time:              3.243ms
-  //
-  // These numbers put a limit on the potential speedup we could get from this optimization.
+  // TODO: clock this
+  core::pipeline_index_t pipeline_index = net_.get_pipeline_assignment();
+
   core::PerfClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
   int num_rows = batch_data->write_count;
-  batch_data->copy_input_to(num_rows, full_input_);
+  batch_data->copy_input_to(num_rows, net_, pipeline_index);
 
-  core::PerfClocker model_eval_clocker(gpu_copy_clocker, loop_stats.model_eval_time_ns);
-  net_.predict(full_input_, full_policy_, full_value_, full_action_value_);
+  net_.schedule(pipeline_index);
 
-  core::PerfClocker gpu_copy_clocker2(model_eval_clocker, loop_stats.gpu2cpu_copy_time_ns);
-  for (int i = 0; i < num_rows; ++i) {
-    TensorGroup& group = batch_data->tensor_groups[i];
-    group.load_output_from(i, full_policy_, full_value_, full_action_value_);
-    group.eval->init(group.value, group.policy, group.action_values, group.valid_actions, group.sym,
-                     group.active_seat, group.action_mode);
+  std::unique_lock lock(load_queue_mutex_);
+  load_queue_.emplace(batch_data, pipeline_index);
+  lock.unlock();
+  cv_load_queue_.notify_all();
+}
+
+template <core::concepts::Game Game>
+bool NNEvaluationService<Game>::get_next_load_queue_item(LoadQueueItem& item) {
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", cls, func,
+             this->instance_id_);
   }
-  gpu_copy_clocker2.stop();
+  std::unique_lock lock(load_queue_mutex_);
+  cv_load_queue_.wait(lock, [&] { return !load_queue_.empty() || !active(); });
+  if (!active()) {
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("<-- {}::{}() - exiting (service:{})", cls, func, this->instance_id_);
+    }
+    return false;
+  }
+
+  item = load_queue_.front();
+  load_queue_.pop();
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", cls, func,
+             this->instance_id_, item.batch_data->sequence_id, item.pipeline_index);
+  }
+  return true;
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
+  BatchData* batch_data = item.batch_data;
+  core::pipeline_index_t pipeline_index = item.pipeline_index;
+
+  float* policy_data;
+  float* value_data;
+  float* action_values_data;
+
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", cls, func,
+             this->instance_id_, batch_data->sequence_id, pipeline_index);
+  }
+
+  int num_rows = batch_data->write_count;
+  net_.load(pipeline_index, &policy_data, &value_data, &action_values_data);
+  batch_data->load(policy_data, value_data, action_values_data);
 
   std::unique_lock lock(main_mutex_);
   yield_manager_->notify(batch_data->notification_tasks);
@@ -850,6 +901,7 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
   lock.unlock();
   cv_main_.notify_all();
 
+  core::NNEvalLoopPerfStats& loop_stats = perf_stats_.nn_eval_loop_stats;
   loop_stats.positions_evaluated = num_rows;
   loop_stats.batches_evaluated = 1;
   loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
@@ -864,14 +916,13 @@ void NNEvaluationService<Game>::batch_evaluate(BatchData* batch_data,
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf,
-                                               const std::string& cuda_device) {
+void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
   LOG_INFO("NNEvaluationService: reloading network weights...");
   util::release_assert(paused_, "{}() called while not paused", __func__);
 
   std::ispanstream stream{std::span<const char>(buf)};
   std::unique_lock net_weights_lock(net_weights_mutex_);
-  net_.load_weights(stream, cuda_device);
+  net_.load_weights(stream);
   initial_weights_loaded_ = true;
   net_weights_lock.unlock();
   cv_net_weights_.notify_all();
@@ -914,7 +965,6 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::unpause() {
   LOG_INFO("NNEvaluationService: unpausing");
   std::unique_lock lock(main_mutex_);
-  net_.activate();
   if (!paused_) {
     LOG_INFO("NNEvaluationService: handle_unpause_receipt (already unpaused)");
     core::LoopControllerClient::get()->handle_unpause_receipt();

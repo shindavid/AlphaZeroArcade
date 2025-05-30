@@ -14,10 +14,22 @@ void dump_memory_info();
 
 // "cuda:1" -> 1
 // "1" -> 1
-int get_device_id(const std::string& cuda_device);
+int cuda_device_to_ordinal(const std::string& cuda_device);
 
+cudaStream_t create_stream();
+void destroy_stream(cudaStream_t stream);
+void synchronize_stream(cudaStream_t stream);
+void set_device(int device_id);
+
+void cpu2gpu_memcpy(void* dst, const void* src, size_t n_bytes);
 void gpu2cpu_memcpy(void* dst, const void* src, size_t n_bytes);
+void cpu2gpu_memcpy_async(cudaStream_t stream, void* dst, const void* src, size_t n_bytes);
+void gpu2cpu_memcpy_async(cudaStream_t stream, void* dst, const void* src, size_t n_bytes);
+
 void* gpu_malloc(size_t n_bytes);
+void* cpu_malloc(size_t n_bytes);
+void gpu_free(void* ptr);
+void cpu_free(void* ptr);
 void assert_on_device(int device_id);
 
 // Validate that the batch size is within the dynamic range of the given tensor in the engine.

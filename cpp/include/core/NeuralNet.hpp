@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/LoggingUtil.hpp>
@@ -7,8 +8,10 @@
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 
+#include <condition_variable>
+#include <deque>
+#include <mutex>
 #include <spanstream>
-#include <string>
 #include <vector>
 
 namespace core {
@@ -24,37 +27,44 @@ class NeuralNet {
   using ValueShape = Game::Types::ValueShape;
   using ActionValueShape = Game::Types::ActionValueShape;
 
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
+
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
   using DynamicPolicyTensor = Eigen::Tensor<float, PolicyShape::count + 1, Eigen::RowMajor>;
   using DynamicValueTensor = Eigen::Tensor<float, ValueShape::count + 1, Eigen::RowMajor>;
   using DynamicActionValueTensor =
     Eigen::Tensor<float, ActionValueShape::count + 1, Eigen::RowMajor>;
 
-  NeuralNet(int batch_size);
+  using DynamicInputTensorMap = Eigen::TensorMap<DynamicInputTensor, Eigen::Aligned>;
+  using DynamicPolicyTensorMap = Eigen::TensorMap<DynamicPolicyTensor, Eigen::Aligned>;
+  using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
+  using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
+
+  NeuralNet(int batch_size, int cuda_device_id);
   ~NeuralNet();
 
-  void load_weights(const char* filename, const std::string& cuda_device);
-  void load_weights(std::ispanstream& stream, const std::string& cuda_device);
+  void load_weights(const char* filename);
+  void load_weights(std::ispanstream& stream);
 
-  void predict(const DynamicInputTensor& input, DynamicPolicyTensor&, DynamicValueTensor&,
-               DynamicActionValueTensor&) const;
+  pipeline_index_t get_pipeline_assignment();
+  float* get_input_ptr(pipeline_index_t);
+  void schedule(pipeline_index_t) const;
 
-  // Moves the model to the CPU. This frees up the GPU for other processes.
+  void load(pipeline_index_t, float** policy_data, float** value_data, float** action_values_data);
+
+  // Frees all GPU resources
   void deactivate();
 
-  // Moves the model back to the GPU.
-  void activate();
+  // Sets up GPU resources, including pipelines. Must be called by the thread doing the
+  // {get_pipeline_assignment(), schedule()} calls.
+  void activate(int num_pipelines=4);
 
-  bool loaded() const { return loaded_; }
-  bool activated() const { return activated_; }
+  bool loaded() const { return !plan_data_.empty(); }
+  bool activated() const { return engine_; }
 
  private:
-  template <typename TensorT>
-  void copy_output_from_gpu(int index, TensorT& tensor) const;
-
-  template <eigen_util::concepts::Shape Shape>
-  void init_buffer(const std::string& expected_name, bool validate_dims=false);
-
   // simple logger
   class Logger : public nvinfer1::ILogger {
   public:
@@ -65,18 +75,36 @@ class NeuralNet {
     }
   };
 
+  struct Pipeline {
+    Pipeline(nvinfer1::ICudaEngine* engine, int batch_size);
+    ~Pipeline();
+
+    void schedule();
+    void load(float** policy_data, float** value_data, float** action_values_data);
+
+    nvinfer1::IExecutionContext* context = nullptr;
+    cudaStream_t stream;
+    std::vector<void*> device_buffers;
+
+    DynamicInputTensorMap input;
+    DynamicPolicyTensorMap policy;
+    DynamicValueTensorMap value;
+    DynamicActionValueTensorMap action_values;
+  };
+
   Logger logger_;
   nvinfer1::IRuntime* const runtime_;
   nvinfer1::ICudaEngine* engine_ = nullptr;
-  nvinfer1::IExecutionContext* context_ = nullptr;
 
+  std::vector<Pipeline*> pipelines_;
+  std::deque<pipeline_index_t> available_pipeline_indices_;
   std::vector<char> plan_data_;
-  std::vector<void*> device_buffers_;
+
+  mutable std::mutex pipeline_mutex_;
+  std::condition_variable pipeline_cv_;
 
   const int batch_size_;
-  int device_id_ = -1;
-  bool loaded_ = false;
-  bool activated_ = false;
+  const int cuda_device_id_;
 };
 
 }  // namespace core

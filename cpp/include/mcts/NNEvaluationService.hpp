@@ -120,14 +120,7 @@ class NNEvaluationService
 
  private:
   struct TensorGroup {
-    void load_output_from(int row, DynamicPolicyTensor& full_policy, DynamicValueTensor& full_value,
-                          DynamicActionValueTensor& full_action_value);
-
     InputTensor input;
-    PolicyTensor policy;
-    ValueTensor value;
-    ActionValueTensor action_values;
-
     NNEvaluation* eval;
     CacheKey cache_key;
     ActionMask valid_actions;
@@ -146,7 +139,10 @@ class NNEvaluationService
   // allocated slots concurrently.
   struct BatchData {
     BatchData(int capacity);
-    void copy_input_to(int num_rows, DynamicInputTensor& full_input);
+    void copy_input_to(int num_rows, NeuralNet&, core::pipeline_index_t);
+    void load(const float* policy_batch_data, const float* value_batch_data,
+              const float* action_values_batch_data);
+
     int capacity() const { return tensor_groups.size(); }
     void clear();
     bool frozen() const { return !accepting_allocations && write_count == allocate_count; }
@@ -275,6 +271,15 @@ class NNEvaluationService
   };
   static_assert(sizeof(SortItem) == 4);
 
+  struct LoadQueueItem {
+    LoadQueueItem(BatchData* b = nullptr, core::pipeline_index_t p = -1)
+        : batch_data(b), pipeline_index(p) {}
+
+    BatchData* batch_data;
+    core::pipeline_index_t pipeline_index;
+  };
+  using load_queue_t = std::queue<LoadQueueItem>;
+
   NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*);
   ~NNEvaluationService();
 
@@ -304,13 +309,16 @@ class NNEvaluationService
   // notification task.
   bool register_notification_task(const NNEvaluationRequest&, const CacheLookupResult&);
 
-  void loop();
+  void schedule_loop();
+  void drain_loop();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
   BatchData* get_next_batch_data(core::NNEvalLoopPerfStats&);
-  void batch_evaluate(BatchData* batch_data, core::NNEvalLoopPerfStats&);
+  void schedule_batch(BatchData* batch_data, core::NNEvalLoopPerfStats&);
+  bool get_next_load_queue_item(LoadQueueItem&);  // return false if exiting
+  void drain_batch(const LoadQueueItem&);
 
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device) override;
+  void reload_weights(const std::vector<char>& buf) override;
   void pause() override;
   void unpause() override;
   bool active() const { return num_connections_; }
@@ -322,22 +330,20 @@ class NNEvaluationService
   const NNEvaluationServiceParams params_;
   const int num_game_threads_ = 0;
 
-  std::thread* thread_ = nullptr;
+  std::thread* schedule_thread_ = nullptr;
+  std::thread* drain_thread_ = nullptr;
 
   mutable std::mutex connection_mutex_;
   mutable std::mutex net_weights_mutex_;
   mutable std::mutex main_mutex_;
   mutable std::mutex perf_stats_mutex_;
+  mutable std::mutex load_queue_mutex_;
 
   std::condition_variable cv_net_weights_;
   std::condition_variable cv_main_;
+  std::condition_variable cv_load_queue_;
 
   NeuralNet net_;
-
-  DynamicInputTensor full_input_;
-  DynamicPolicyTensor full_policy_;
-  DynamicValueTensor full_value_;
-  DynamicActionValueTensor full_action_value_;
 
   ShardData shard_datas_[kNumHashShards];
 
@@ -353,6 +359,7 @@ class NNEvaluationService
 
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;
+  load_queue_t load_queue_;
   core::YieldManager* yield_manager_ = nullptr;
   core::GameServerBase* server_ = nullptr;
 };

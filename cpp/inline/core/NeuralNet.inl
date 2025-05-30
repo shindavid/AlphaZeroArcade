@@ -6,162 +6,187 @@
 
 namespace core {
 
+namespace detail {
+
+template <eigen_util::concepts::Shape Shape>
+float* make_ptr(int batch_size) {
+  size_t mult = batch_size * sizeof(float);
+  return (float*)cuda_util::cpu_malloc(mult * Shape::TotalSize());
+}
+
+template <eigen_util::concepts::Shape Shape>
+auto make_arr(int batch_size) {
+  return util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<Shape>);
+}
+
+}  // namespace detail
+
 template <concepts::Game Game>
-NeuralNet<Game>::NeuralNet(int batch_size)
-    : runtime_(nvinfer1::createInferRuntime(logger_)), batch_size_(batch_size) {}
+NeuralNet<Game>::NeuralNet(int batch_size, int cuda_device_id)
+    : runtime_(nvinfer1::createInferRuntime(logger_)),
+      batch_size_(batch_size),
+      cuda_device_id_(cuda_device_id) {}
 
 template <concepts::Game Game>
 NeuralNet<Game>::~NeuralNet() {
   deactivate();
+
+  for (Pipeline* pipeline : pipelines_) {
+    delete pipeline;
+  }
+  delete engine_;
   delete runtime_;
 }
 
 template <concepts::Game Game>
-void NeuralNet<Game>::load_weights(const char* filename, const std::string& cuda_device) {
+void NeuralNet<Game>::load_weights(const char* filename) {
   plan_data_.clear();
 
   std::ifstream f(filename, std::ios::binary|std::ios::ate);
   size_t sz = f.tellg(); f.seekg(0);
   plan_data_.resize(sz);
   f.read(plan_data_.data(), sz);
-
-  device_id_ = cuda_util::get_device_id(cuda_device);
-  loaded_ = true;
 }
 
 template <concepts::Game Game>
-void NeuralNet<Game>::load_weights(std::ispanstream& stream, const std::string& cuda_device) {
+void NeuralNet<Game>::load_weights(std::ispanstream& stream) {
+  plan_data_.clear();
   plan_data_.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-
-  device_id_ = cuda_util::get_device_id(cuda_device);
-  loaded_ = true;
 }
 
 template <concepts::Game Game>
-void NeuralNet<Game>::predict(const DynamicInputTensor& input, DynamicPolicyTensor& policy,
-                              DynamicValueTensor& value,
-                              DynamicActionValueTensor& action_values) const {
-  util::release_assert(activated_, "NeuralNet<Game>::predict() called while deactivated");
-  cuda_util::assert_on_device(device_id_);  // TODO: remove this check
+pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
+  std::unique_lock lock(pipeline_mutex_);
+  pipeline_cv_.wait(lock, [&] {
+    return !available_pipeline_indices_.empty();
+  });
+  pipeline_index_t index = available_pipeline_indices_.back();
+  available_pipeline_indices_.pop_back();
+  return index;
+}
 
-  size_t n_input_bytes = input.size() * sizeof(float);
-  cudaMemcpy(device_buffers_[0], input.data(), n_input_bytes, cudaMemcpyHostToDevice);
+template <concepts::Game Game>
+float* NeuralNet<Game>::get_input_ptr(pipeline_index_t index) {
+  return pipelines_[index]->input.data();
+}
 
-  bool ok = context_->executeV2(device_buffers_.data());
-  if (!ok) throw std::runtime_error("TensorRT inference failed");
+template <concepts::Game Game>
+void NeuralNet<Game>::schedule(pipeline_index_t index) const {
+  util::release_assert(activated(), "NeuralNet<Game>::predict() called while deactivated");
+  pipelines_[index]->schedule();
+}
 
-  copy_output_from_gpu(1, policy);
-  copy_output_from_gpu(2, value);
-  copy_output_from_gpu(3, action_values);
+
+template <concepts::Game Game>
+void NeuralNet<Game>::load(pipeline_index_t index, float** policy_data, float** value_data,
+                           float** action_values_data) {
+  pipelines_[index]->load(policy_data, value_data, action_values_data);
+
+  std::unique_lock lock(pipeline_mutex_);
+  available_pipeline_indices_.push_back(index);
+  lock.unlock();
+  pipeline_cv_.notify_all();
 }
 
 template <concepts::Game Game>
 void NeuralNet<Game>::deactivate() {
-  if (!activated_) return;
+  if (!activated()) return;
 
-  for (void* ptr : device_buffers_) {
-    if (ptr) cudaFree(ptr);
+  for (Pipeline* pipeline : pipelines_) {
+    delete pipeline;
   }
-  device_buffers_.clear();
+  pipelines_.clear();
+  available_pipeline_indices_.clear();
 
-  delete context_;
   delete engine_;
-  context_ = nullptr;
   engine_ = nullptr;
-
-  activated_ = false;
 }
 
 template <concepts::Game Game>
-void NeuralNet<Game>::activate() {
-  if (activated_) return;
+void NeuralNet<Game>::activate(int num_pipelines) {
+  if (activated()) return;
 
-  util::release_assert(context_ == nullptr, "NeuralNet: illegal {}() call", __func__);
+  util::release_assert(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
-  cudaSetDevice(device_id_);
-
+  cuda_util::set_device(cuda_device_id_);
   engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
-  context_ = engine_->createExecutionContext();
+
+  util::release_assert(pipelines_.empty());
+  util::release_assert(available_pipeline_indices_.empty());
+  for (int i = 0; i < num_pipelines; ++i) {
+    pipelines_.push_back(new Pipeline(engine_, batch_size_));
+    available_pipeline_indices_.push_back(i);
+  }
+}
+
+template <concepts::Game Game>
+NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, int batch_size)
+    : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
+      policy(detail::make_ptr<PolicyShape>(batch_size), detail::make_arr<PolicyShape>(batch_size)),
+      value(detail::make_ptr<ValueShape>(batch_size), detail::make_arr<ValueShape>(batch_size)),
+      action_values(detail::make_ptr<ActionValueShape>(batch_size),
+                    detail::make_arr<ActionValueShape>(batch_size)) {
+  constexpr size_t f = sizeof(float);
+  device_buffers.push_back(cuda_util::gpu_malloc(f * input.size()));
+  device_buffers.push_back(cuda_util::gpu_malloc(f * policy.size()));
+  device_buffers.push_back(cuda_util::gpu_malloc(f * value.size()));
+  device_buffers.push_back(cuda_util::gpu_malloc(f * action_values.size()));
+
+  context = engine->createExecutionContext();
+  for (int i = 0; i < (int)device_buffers.size(); ++i) {
+    context->setTensorAddress(engine->getIOTensorName(i), device_buffers[i]);
+  }
+  stream = cuda_util::create_stream();
 
   // Since we're using runtime-specified batch size:
-  context_->setOptimizationProfileAsync(0, 0);
+  context->setOptimizationProfileAsync(0, stream);
   nvinfer1::Dims input_shape =
-    engine_->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
+    engine->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
 
-  input_shape.d[0] = batch_size_;
-  if (!context_->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
+  util::release_assert(batch_size == input_shape.d[0],
+                       "NeuralNet::Pipeline: batch size mismatch (batch_size={} input_shape={})",
+                       batch_size, input_shape);
 
-  int n_tensors = engine_->getNbIOTensors();
-  util::release_assert(n_tensors == 4,
-                       "NeuralNet: model must have 4 I/O tensors ({} found)", n_tensors);
-
-  util::release_assert(device_buffers_.empty(),
-                       "NeuralNet: device buffers must be empty before {}() call", __func__);
-
-  init_buffer<InputShape>("input", true);
-  init_buffer<PolicyShape>("policy");
-  init_buffer<ValueShape>("value");
-  init_buffer<ActionValueShape>("action_value");
-
-  util::release_assert((int)device_buffers_.size() == n_tensors,
-                       "NeuralNet: expected {} device buffers, found {}", n_tensors,
-                       device_buffers_.size());
-
-  activated_ = true;
+  if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }
 
 template <concepts::Game Game>
-template <typename TensorT>
-void NeuralNet<Game>::copy_output_from_gpu(int index, TensorT& tensor) const {
-  cuda_util::gpu2cpu_memcpy(tensor.data(), device_buffers_[index], tensor.size() * sizeof(float));
-}
-
-template <concepts::Game Game>
-template <eigen_util::concepts::Shape Shape>
-void NeuralNet<Game>::init_buffer(const std::string& expected_name, bool validate_dims) {
-  int index = device_buffers_.size();
-
-  const char* name = engine_->getIOTensorName(index);
-  util::release_assert(expected_name == name,
-                       "NeuralNet: I/O tensor {} must be named '{}', found '{}'", index,
-                       expected_name, name);
-
-  auto min_dims = engine_->getProfileShape(name, 0, nvinfer1::OptProfileSelector::kMIN);
-  auto max_dims = engine_->getProfileShape(name, 0, nvinfer1::OptProfileSelector::kMAX);
-
-  constexpr int rank = eigen_util::extract_rank_v<Shape>;
-
-  LOG_INFO(
-    std::format("NeuralNet: initializing buffer '{}' at index {} with min_dims={} and max_dims={}",
-                name, index, min_dims, max_dims));
-
-  if (validate_dims) {
-    util::release_assert(min_dims.nbDims == rank + 1,
-                        "Unexpected min dims for '{}': {} ({} != {} + 1)", name, min_dims,
-                        min_dims.nbDims, rank);
-    util::release_assert(max_dims.nbDims == rank + 1,
-                        "Unexpected max dims for '{}': {} ({} != {} + 1)", name, max_dims,
-                        max_dims.nbDims, rank);
-
-    Shape shape;
-    for (int dim = 0; dim < rank; ++dim) {
-      int expected_dim = shape[dim];
-      int min_dim = min_dims.d[dim + 1];
-      int max_dim = max_dims.d[dim + 1];
-      util::release_assert(min_dim == expected_dim,
-                          "NeuralNet: min dim {} for '{}' must be {}, found {} ({})", dim + 1, name,
-                          expected_dim, min_dim, min_dims);
-      util::release_assert(max_dim == expected_dim,
-                            "NeuralNet: max dim {} for '{}' must be {}, found {} ({})", dim + 1, name,
-                            expected_dim, max_dim, max_dims);
-    }
+NeuralNet<Game>::Pipeline::~Pipeline() {
+  for (void* ptr : device_buffers) {
+    cuda_util::gpu_free(ptr);
   }
+  device_buffers.clear();
 
-  size_t count = batch_size_ * Shape::TotalSize();
-  void* buffer = cuda_util::gpu_malloc(count * sizeof(float));
-  device_buffers_.push_back(buffer);
+  delete context;
+  cuda_util::destroy_stream(stream);
 
-  LOG_INFO("NeuralNet: initialized buffer '{}' at index {}", name, index);
+  cuda_util::cpu_free(input.data());
+  cuda_util::cpu_free(policy.data());
+  cuda_util::cpu_free(value.data());
+  cuda_util::cpu_free(action_values.data());
+}
+
+template <concepts::Game Game>
+void NeuralNet<Game>::Pipeline::schedule() {
+  constexpr size_t f = sizeof(float);
+  auto& dbs = device_buffers;
+  cuda_util::cpu2gpu_memcpy_async(stream, dbs[0], input.data(), input.size() * f);
+
+  bool ok = context->enqueueV3(stream);
+  if (!ok) throw std::runtime_error("TensorRT inference failed");
+
+  cuda_util::gpu2cpu_memcpy_async(stream, policy.data(), dbs[1], policy.size() * f);
+  cuda_util::gpu2cpu_memcpy_async(stream, value.data(), dbs[2], value.size() * f);
+  cuda_util::gpu2cpu_memcpy_async(stream, action_values.data(), dbs[3], action_values.size() * f);
+}
+
+template <concepts::Game Game>
+void NeuralNet<Game>::Pipeline::load(float** policy_data, float** value_data,
+                                     float** action_values_data) {
+  cuda_util::synchronize_stream(stream);
+  *policy_data = policy.data();
+  *value_data = value.data();
+  *action_values_data = action_values.data();
 }
 
 }  // namespace core
