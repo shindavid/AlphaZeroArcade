@@ -6,10 +6,10 @@ from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
-import json
 import numpy as np
 
 from dataclasses import dataclass
+import json
 from typing import Dict, List, Iterable, Optional, Set
 
 
@@ -257,7 +257,9 @@ class RatingDB:
 
         iagents = []
         ratings = []
-        for entry in data.values():
+        for key, entry in data.items():
+            if key == 'cmd_used':
+                continue
             agent: Agent = None
             iagent_dict = entry['iagent']
             if iagent_dict['type'] == 'MCTS':
