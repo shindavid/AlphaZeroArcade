@@ -278,7 +278,7 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
     batch_data = new BatchData(batch_size_limit_);
-    perf_stats_.nn_eval_loop_stats.batch_datas_allocated++;
+    perf_stats_.nn_eval_schedule_loop_stats.batch_datas_allocated++;
   } else {
     batch_data = batch_data_reserve_.back();
     batch_data_reserve_.pop_back();
@@ -374,9 +374,9 @@ void NNEvaluationService<Game>::end_session() {
   int64_t cache_attempts = cache_hits + cache_misses;
   float cache_hit_pct = cache_attempts > 0 ? 100.0 * cache_hits / cache_attempts : 0.0f;
 
-  int64_t positions_evaluated = stats.nn_eval_loop_stats.positions_evaluated;
-  int64_t batches_evaluated = stats.nn_eval_loop_stats.batches_evaluated;
-  int64_t full_batches_evaluated = stats.nn_eval_loop_stats.full_batches_evaluated;
+  int64_t positions_evaluated = stats.nn_eval_schedule_loop_stats.positions_evaluated;
+  int64_t batches_evaluated = stats.nn_eval_schedule_loop_stats.batches_evaluated;
+  int64_t full_batches_evaluated = stats.nn_eval_schedule_loop_stats.full_batches_evaluated;
 
   int64_t wait_for_game_slot_time_ns = stats.search_thread_stats.wait_for_game_slot_time_ns;
   int64_t cache_mutex_acquire_time_ns = stats.search_thread_stats.cache_mutex_acquire_time_ns;
@@ -387,11 +387,11 @@ void NNEvaluationService<Game>::end_session() {
   int64_t mcts_time_ns = stats.search_thread_stats.mcts_time_ns;
 
   int64_t wait_for_search_threads_time_ns =
-    stats.nn_eval_loop_stats.wait_for_search_threads_time_ns;
-  int64_t pipeline_wait_time_ns = stats.nn_eval_loop_stats.pipeline_wait_time_ns;
-  int64_t pipeline_schedule_time_ns = stats.nn_eval_loop_stats.pipeline_schedule_time_ns;
+    stats.nn_eval_schedule_loop_stats.wait_for_search_threads_time_ns;
+  int64_t pipeline_wait_time_ns = stats.nn_eval_schedule_loop_stats.pipeline_wait_time_ns;
+  int64_t pipeline_schedule_time_ns = stats.nn_eval_schedule_loop_stats.pipeline_schedule_time_ns;
 
-  int batch_datas_allocated = stats.nn_eval_loop_stats.batch_datas_allocated;
+  int batch_datas_allocated = stats.nn_eval_schedule_loop_stats.batch_datas_allocated;
 
   float max_batch_pct = 100.0 * full_batches_evaluated / std::max(int64_t(1), batches_evaluated);
   float avg_batch_size = 1.0 * positions_evaluated / std::max(int64_t(1), batches_evaluated);
@@ -693,13 +693,13 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::schedule_loop() {
   while (active()) {
-    core::NNEvalLoopPerfStats loop_stats;
+    core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
 
     load_initial_weights_if_necessary();
     wait_for_unpause();
     net_.activate();
-    BatchData* batch_data = get_next_batch_data(loop_stats);
-    schedule_batch(batch_data, loop_stats);
+    BatchData* batch_data = get_next_batch_data(schedule_loop_stats);
+    schedule_batch(batch_data, schedule_loop_stats);
   }
 }
 
@@ -759,9 +759,9 @@ void NNEvaluationService<Game>::wait_for_unpause() {
 
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_next_batch_data(
-  core::NNEvalLoopPerfStats& loop_stats) {
+  core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   std::unique_lock lock(main_mutex_);
-  core::PerfClocker clocker(loop_stats.wait_for_search_threads_time_ns);
+  core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
 
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
@@ -814,8 +814,8 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::schedule_batch(BatchData* batch_data,
-                                               core::NNEvalLoopPerfStats& loop_stats) {
+void NNEvaluationService<Game>::schedule_batch(
+  BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
   util::release_assert(batch_data->frozen());
 
@@ -826,11 +826,11 @@ void NNEvaluationService<Game>::schedule_batch(BatchData* batch_data,
              batch_data->sequence_id, batch_data->allocate_count);
   }
 
-  core::PerfClocker pipeline_wait_clocker(loop_stats.pipeline_wait_time_ns);
+  core::PerfClocker pipeline_wait_clocker(schedule_loop_stats.pipeline_wait_time_ns);
   core::pipeline_index_t pipeline_index = net_.get_pipeline_assignment();
 
   core::PerfClocker pipeline_schedule_clocker(pipeline_wait_clocker,
-                                              loop_stats.pipeline_schedule_time_ns);
+                                              schedule_loop_stats.pipeline_schedule_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, net_, pipeline_index);
   net_.schedule(pipeline_index);
@@ -841,12 +841,12 @@ void NNEvaluationService<Game>::schedule_batch(BatchData* batch_data,
   lock.unlock();
   cv_load_queue_.notify_all();
 
-  loop_stats.positions_evaluated = num_rows;
-  loop_stats.batches_evaluated = 1;
-  loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
+  schedule_loop_stats.positions_evaluated = num_rows;
+  schedule_loop_stats.batches_evaluated = 1;
+  schedule_loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
 
   std::unique_lock perf_lock(perf_stats_mutex_);
-  perf_stats_.update(loop_stats);
+  perf_stats_.update(schedule_loop_stats);
 }
 
 template <core::concepts::Game Game>

@@ -29,7 +29,7 @@ PERF_STATS_COLUMNS = [
     'wait_for_nn_eval_time_ns',
     'mcts_time_ns',
 
-    # NNEvalLoopPerfStats
+    # NNEvalScheduleLoopPerfStats
     'positions_evaluated',
     'batches_evaluated',
     'full_batches_evaluated',

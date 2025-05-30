@@ -313,8 +313,8 @@ class NNEvaluationService
   void drain_loop();
   void load_initial_weights_if_necessary();
   void wait_for_unpause();
-  BatchData* get_next_batch_data(core::NNEvalLoopPerfStats&);
-  void schedule_batch(BatchData* batch_data, core::NNEvalLoopPerfStats&);
+  BatchData* get_next_batch_data(core::NNEvalScheduleLoopPerfStats&);
+  void schedule_batch(BatchData* batch_data, core::NNEvalScheduleLoopPerfStats&);
   bool get_next_load_queue_item(LoadQueueItem&);  // return false if exiting
   void drain_batch(const LoadQueueItem&);
 

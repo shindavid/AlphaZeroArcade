@@ -91,7 +91,7 @@ STACKED_TOTAL_RUNTIME_PLOT = [
         (df['total_time_ns'] - df['pause_time_ns'] - df['model_load_time_ns']) * 1e-9),
 ]
 
-STACKED_NN_EVAL_PER_BATCH_PLOT = [
+STACKED_NN_EVAL_SCHEDULE_PER_BATCH_PLOT = [
     YVar('pipeline wait', 'pipeline_wait_time_ns',
          func=lambda df: df['pipeline_wait_time_ns'] / (1e6 * df['batches_evaluated'])),
     YVar('pipeline schedule', 'pipeline_schedule_time_ns',
@@ -162,7 +162,7 @@ class SelfPlayData:
 
         self.valid = True
 
-        for plot in [STACKED_TOTAL_RUNTIME_PLOT, STACKED_NN_EVAL_PER_BATCH_PLOT,
+        for plot in [STACKED_TOTAL_RUNTIME_PLOT, STACKED_NN_EVAL_SCHEDULE_PER_BATCH_PLOT,
                      STACKED_SEARCH_THREAD_PLOT, BATCH_SIZE_PLOT, CACHE_HIT_RATE_PLOT]:
             for y_var in plot:
                 assert y_var.column not in full_df.columns, y_var
@@ -206,7 +206,7 @@ class SelfPlayPlotter:
 
         total_run_time_plot = self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, initial_tag,
                                                       'Total Runtime', 'Seconds')
-        nn_eval_plot = self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT, initial_tag,
+        nn_eval_plot = self.make_stacked_plots(STACKED_NN_EVAL_SCHEDULE_PER_BATCH_PLOT, initial_tag,
                                                'NN Eval Profiling - Per Batch', 'Milliseconds')
         search_thread_plot = self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT, initial_tag,
                                                      'Search Thread Profiling', 'Seconds')
@@ -221,14 +221,16 @@ class SelfPlayPlotter:
         def update(attr, old, new):
             total_run_time_plot = self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, select.value,
                                                         'Total Runtime', 'Seconds')
-            nn_eval_plot = self.make_stacked_plots(STACKED_NN_EVAL_PER_BATCH_PLOT, select.value,
-                                                'NN Eval Profiling - Per Batch', 'Milliseconds')
+            nn_eval_service_plot = self.make_stacked_plots(
+                STACKED_NN_EVAL_SCHEDULE_PER_BATCH_PLOT, select.value,
+                'NN Eval Schedule Loop Profiling - Per Batch', 'Milliseconds')
+
             search_thread_plot = self.make_stacked_plots(STACKED_SEARCH_THREAD_PLOT, select.value,
                                                         'Search Thread Profiling', 'Seconds')
             new_layout = gridplot([
                 [None, select_wrapper],
                 [batch_size_plot, total_run_time_plot],
-                [cache_hit_rate_plot, nn_eval_plot],
+                [cache_hit_rate_plot, nn_eval_service_plot],
                 [None, search_thread_plot]
                 ], sizing_mode='scale_height')
             layout.children[:] = new_layout.children
