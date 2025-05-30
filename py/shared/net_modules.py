@@ -770,7 +770,7 @@ class Model(nn.Module):
 
             build_bin = existent_build_bins[0]  # use the first found one
             cmd = [build_bin, onnx_path, filename, str(max_batch_size)]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, capture_output=True, check=True)
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
