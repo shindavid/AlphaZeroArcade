@@ -51,6 +51,7 @@ class NeuralNet {
   pipeline_index_t get_pipeline_assignment();
   float* get_input_ptr(pipeline_index_t);
   void schedule(pipeline_index_t) const;
+  void release(pipeline_index_t);
 
   void load(pipeline_index_t, float** policy_data, float** value_data, float** action_values_data);
 

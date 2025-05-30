@@ -51,9 +51,8 @@ inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
   full_batches_evaluated += other.full_batches_evaluated;
 
   wait_for_search_threads_time_ns += other.wait_for_search_threads_time_ns;
-  cpu2gpu_copy_time_ns += other.cpu2gpu_copy_time_ns;
-  gpu2cpu_copy_time_ns += other.gpu2cpu_copy_time_ns;
-  model_eval_time_ns += other.model_eval_time_ns;
+  pipeline_wait_time_ns += other.pipeline_wait_time_ns;
+  pipeline_schedule_time_ns += other.pipeline_schedule_time_ns;
 
   batch_datas_allocated += other.batch_datas_allocated;
   return *this;
@@ -65,9 +64,8 @@ inline void NNEvalLoopPerfStats::fill_json(boost::json::object& obj) const {
   obj["full_batches_evaluated"] = full_batches_evaluated;
 
   obj["wait_for_search_threads_time_ns"] = wait_for_search_threads_time_ns;
-  obj["cpu2gpu_copy_time_ns"] = cpu2gpu_copy_time_ns;
-  obj["gpu2cpu_copy_time_ns"] = gpu2cpu_copy_time_ns;
-  obj["model_eval_time_ns"] = model_eval_time_ns;
+  obj["pipeline_wait_time_ns"] = pipeline_wait_time_ns;
+  obj["pipeline_schedule_time_ns"] = pipeline_schedule_time_ns;
 
   obj["batch_datas_allocated"] = batch_datas_allocated;
 }

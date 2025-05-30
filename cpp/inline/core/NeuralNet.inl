@@ -76,16 +76,18 @@ void NeuralNet<Game>::schedule(pipeline_index_t index) const {
   pipelines_[index]->schedule();
 }
 
+template <concepts::Game Game>
+void NeuralNet<Game>::release(pipeline_index_t index) {
+  std::unique_lock lock(pipeline_mutex_);
+  available_pipeline_indices_.push_back(index);
+  lock.unlock();
+  pipeline_cv_.notify_all();
+}
 
 template <concepts::Game Game>
 void NeuralNet<Game>::load(pipeline_index_t index, float** policy_data, float** value_data,
                            float** action_values_data) {
   pipelines_[index]->load(policy_data, value_data, action_values_data);
-
-  std::unique_lock lock(pipeline_mutex_);
-  available_pipeline_indices_.push_back(index);
-  lock.unlock();
-  pipeline_cv_.notify_all();
 }
 
 template <concepts::Game Game>

@@ -388,9 +388,8 @@ void NNEvaluationService<Game>::end_session() {
 
   int64_t wait_for_search_threads_time_ns =
     stats.nn_eval_loop_stats.wait_for_search_threads_time_ns;
-  int64_t cpu2gpu_copy_time_ns = stats.nn_eval_loop_stats.cpu2gpu_copy_time_ns;
-  int64_t gpu2cpu_copy_time_ns = stats.nn_eval_loop_stats.gpu2cpu_copy_time_ns;
-  int64_t model_eval_time_ns = stats.nn_eval_loop_stats.model_eval_time_ns;
+  int64_t pipeline_wait_time_ns = stats.nn_eval_loop_stats.pipeline_wait_time_ns;
+  int64_t pipeline_schedule_time_ns = stats.nn_eval_loop_stats.pipeline_schedule_time_ns;
 
   int batch_datas_allocated = stats.nn_eval_loop_stats.batch_datas_allocated;
 
@@ -407,10 +406,8 @@ void NNEvaluationService<Game>::end_session() {
 
   float per_batch_wait_for_search_threads_time_ms =
     1e-6 * wait_for_search_threads_time_ns / batches_evaluated;
-  float per_batch_cpu2gpu_copy_time_ms = 1e-6 * cpu2gpu_copy_time_ns / batches_evaluated;
-  float per_batch_gpu2cpu_copy_time_ms = 1e-6 * gpu2cpu_copy_time_ns / batches_evaluated;
-  float per_batch_model_eval_time_ms = 1e-6 * model_eval_time_ns / batches_evaluated;
-  float per_pos_model_eval_time_us = 1e-3 * model_eval_time_ns / positions_evaluated;
+  float per_batch_pipeline_wait_time_ms = 1e-6 * pipeline_wait_time_ns / batches_evaluated;
+  float per_batch_pipeline_schedule_time_ms = 1e-6 * pipeline_schedule_time_ns / batches_evaluated;
 
   auto dump = [&](const char* key, const char* fmt, auto value) {
     util::KeyValueDumper::add(dump_key(key), fmt, value);
@@ -433,10 +430,8 @@ void NNEvaluationService<Game>::end_session() {
   dump("search-thread total mcts time", "%.3fs", mcts_time_s);
   dump("nn-eval per-batch wait for search threads time", "%.3fms",
        per_batch_wait_for_search_threads_time_ms);
-  dump("nn-eval per-batch cpu2gpu copy time", "%.3fms", per_batch_cpu2gpu_copy_time_ms);
-  dump("nn-eval per-batch gpu2cpu copy time", "%.3fms", per_batch_gpu2cpu_copy_time_ms);
-  dump("nn-eval per-batch model eval time", "%.3fms", per_batch_model_eval_time_ms);
-  dump("nn-eval per-pos model eval time", "%.3fus", per_pos_model_eval_time_us);
+  dump("nn-eval per-batch pipeline wait time", "%.3fms", per_batch_pipeline_wait_time_ms);
+  dump("nn-eval per-batch pipeline schedule time", "%.3fms", per_batch_pipeline_schedule_time_ms);
   session_ended_ = true;
 }
 
@@ -831,19 +826,27 @@ void NNEvaluationService<Game>::schedule_batch(BatchData* batch_data,
              batch_data->sequence_id, batch_data->allocate_count);
   }
 
-  // TODO: clock this
+  core::PerfClocker pipeline_wait_clocker(loop_stats.pipeline_wait_time_ns);
   core::pipeline_index_t pipeline_index = net_.get_pipeline_assignment();
 
-  core::PerfClocker gpu_copy_clocker(loop_stats.cpu2gpu_copy_time_ns);
+  core::PerfClocker pipeline_schedule_clocker(pipeline_wait_clocker,
+                                              loop_stats.pipeline_schedule_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, net_, pipeline_index);
-
   net_.schedule(pipeline_index);
+  pipeline_schedule_clocker.stop();
 
   std::unique_lock lock(load_queue_mutex_);
   load_queue_.emplace(batch_data, pipeline_index);
   lock.unlock();
   cv_load_queue_.notify_all();
+
+  loop_stats.positions_evaluated = num_rows;
+  loop_stats.batches_evaluated = 1;
+  loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
+
+  std::unique_lock perf_lock(perf_stats_mutex_);
+  perf_stats_.update(loop_stats);
 }
 
 template <core::concepts::Game Game>
@@ -889,9 +892,9 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
-  int num_rows = batch_data->write_count;
   net_.load(pipeline_index, &policy_data, &value_data, &action_values_data);
   batch_data->load(policy_data, value_data, action_values_data);
+  net_.release(pipeline_index);
 
   std::unique_lock lock(main_mutex_);
   yield_manager_->notify(batch_data->notification_tasks);
@@ -900,14 +903,6 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
   batch_data_slice_allocator_.recycle(batch_data);
   lock.unlock();
   cv_main_.notify_all();
-
-  core::NNEvalLoopPerfStats& loop_stats = perf_stats_.nn_eval_loop_stats;
-  loop_stats.positions_evaluated = num_rows;
-  loop_stats.batches_evaluated = 1;
-  loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
-
-  std::unique_lock perf_lock(perf_stats_mutex_);
-  perf_stats_.update(loop_stats);
 
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", cls, func, this->instance_id_,

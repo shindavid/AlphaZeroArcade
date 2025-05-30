@@ -92,12 +92,10 @@ STACKED_TOTAL_RUNTIME_PLOT = [
 ]
 
 STACKED_NN_EVAL_PER_BATCH_PLOT = [
-    YVar('cpu->gpu', 'cpu2gpu_copy_time_ms',
-         func=lambda df: df['cpu2gpu_copy_time_ns'] / (1e6 * df['batches_evaluated'])),
-    YVar('gpu->cpu', 'gpu2cpu_copy_time_ms',
-         func=lambda df: df['gpu2cpu_copy_time_ns'] / (1e6 * df['batches_evaluated'])),
-    YVar('eval', 'model_eval_time_ms',
-         func=lambda df: df['model_eval_time_ns'] / (1e6 * df['batches_evaluated'])),
+    YVar('pipeline wait', 'pipeline_wait_time_ns',
+         func=lambda df: df['pipeline_wait_time_ns'] / (1e6 * df['batches_evaluated'])),
+    YVar('pipeline schedule', 'pipeline_schedule_time_ns',
+         func=lambda df: df['pipeline_schedule_time_ns'] / (1e6 * df['batches_evaluated'])),
     YVar('wait', 'wait_for_search_threads_time_ms',
         func=lambda df: df['wait_for_search_threads_time_ns'] / (1e6 * df['batches_evaluated'])),
 ]

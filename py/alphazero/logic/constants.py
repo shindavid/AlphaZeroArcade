@@ -35,9 +35,8 @@ PERF_STATS_COLUMNS = [
     'full_batches_evaluated',
 
     'wait_for_search_threads_time_ns',
-    'cpu2gpu_copy_time_ns',
-    'gpu2cpu_copy_time_ns',
-    'model_eval_time_ns',
+    'pipeline_wait_time_ns',
+    'pipeline_schedule_time_ns',
 
     'batch_datas_allocated',
 
