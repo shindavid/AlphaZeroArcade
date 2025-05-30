@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
   dims.d[0] = 1;
   profile->setDimensions(network->getInput(0)->getName(),
                          OptProfileSelector::kMIN, dims);
-  // opt = 1
-  dims.d[0] = 1;
+  // opt = maxBatch
+  dims.d[0] = maxBatch;
   profile->setDimensions(network->getInput(0)->getName(),
                          OptProfileSelector::kOPT, dims);
   // max = maxBatch
