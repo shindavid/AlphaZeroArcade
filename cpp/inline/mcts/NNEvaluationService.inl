@@ -147,7 +147,7 @@ void NNEvaluationService<Game>::BatchData::load(const float* policy_batch_data,
   const float* value_data = value_batch_data;
   const float* action_values_data = action_values_batch_data;
 
-  for (int i = 0; i < (int)tensor_groups.size(); ++i) {
+  for (int i = 0; i < write_count; ++i) {
     TensorGroup& group = tensor_groups[i];
 
     PolicyTensor policy;
@@ -892,6 +892,7 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
+  // TODO: fix race-condition where a pause() deactivate the net before we get here!
   net_.load(pipeline_index, &policy_data, &value_data, &action_values_data);
   batch_data->load(policy_data, value_data, action_values_data);
   net_.release(pipeline_index);
