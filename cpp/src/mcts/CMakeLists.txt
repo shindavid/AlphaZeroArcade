@@ -1,7 +1,7 @@
 add_executable(mcts_tests main/ManagerUnitTests.cpp)
 add_executable(gameserver_tests main/GameServerUnitTests.cpp)
 
-set(LINK_LIBS tictactoe_common_objs util_lib ${COMMON_EXTERNAL_LIBS})
+set(LINK_LIBS tictactoe_common_objs othello_common_objs util_lib ${COMMON_EXTERNAL_LIBS})
 
 set(TARGETS mcts_tests gameserver_tests)
 foreach(target ${TARGETS})
