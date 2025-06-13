@@ -1132,7 +1132,6 @@ void NNEvaluationService<Game>::unpause() {
   system_state_ = kUnpausingScheduleLoop;
   lock.unlock();
   cv_main_.notify_all();
-  core::LoopControllerClient::get()->handle_unpause_receipt();
 }
 
 }  // namespace mcts
