@@ -92,9 +92,9 @@ STACKED_TOTAL_RUNTIME_PLOT = [
 ]
 
 STACKED_NN_EVAL_SCHEDULE_PER_BATCH_PLOT = [
-    YVar('pipeline wait', 'pipeline_wait_time_ns',
+    YVar('pipeline wait', 'pipeline_wait_time_ms',
          func=lambda df: df['pipeline_wait_time_ns'] / (1e6 * df['batches_evaluated'])),
-    YVar('pipeline schedule', 'pipeline_schedule_time_ns',
+    YVar('pipeline schedule', 'pipeline_schedule_time_ms',
          func=lambda df: df['pipeline_schedule_time_ns'] / (1e6 * df['batches_evaluated'])),
     YVar('wait', 'wait_for_search_threads_time_ms',
         func=lambda df: df['wait_for_search_threads_time_ns'] / (1e6 * df['batches_evaluated'])),
