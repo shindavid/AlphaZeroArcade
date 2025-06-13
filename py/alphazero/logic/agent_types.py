@@ -111,7 +111,8 @@ class ReferenceAgent(Agent):
         }
 
     def __str__(self) -> str:
-        return f'ReferenceAgent{self.strength_param}-{self.strength}'
+        param = self.strength_param.replace('-', '')
+        return f'ReferenceAgent-{param}-{self.strength}'
 
     @property
     def level(self) -> int:

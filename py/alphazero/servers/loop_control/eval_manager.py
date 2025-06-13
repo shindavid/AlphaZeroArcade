@@ -278,7 +278,9 @@ class EvalManager(GamingManagerBase):
             'n_games': int(next_n_games),
             'files_required': [f.to_dict() for f in files_required],
         }
-        logger.info(f"Evaluating ix {data['ix1']} vs {data['ix2']}, agent {test_iagent.agent} vs {next_opponent_agent}, n_games {data['n_games']}")
+
+        n_games = data['n_games']
+        logger.info(f"Evaluating {test_iagent.agent} vs {next_opponent_agent}, ({n_games} games)")
         return data
 
     def _get_next_gen_to_eval(self):
