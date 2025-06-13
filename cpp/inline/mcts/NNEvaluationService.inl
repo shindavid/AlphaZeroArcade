@@ -813,11 +813,11 @@ void NNEvaluationService<Game>::state_loop() {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   if (ready_) return;
-  ready_ = true;
 
   auto client = core::LoopControllerClient::get();
   if (!client) {
     if (initial_weights_loaded_) {
+      ready_ = true;
       return;
     } else {
       throw util::CleanException(
@@ -829,10 +829,17 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   LOG_INFO("{}: handling worker-ready...", kCls);
   client->handle_worker_ready();
   std::unique_lock lock(main_mutex_);
-  cv_main_.wait(
-    lock, [&] { return initial_weights_loaded_ || system_state_ == kShuttingDownScheduleLoop; });
+  cv_main_.wait(lock, [&] {
+    return initial_weights_loaded_ || system_state_ == kShuttingDownScheduleLoop ||
+           system_state_ == kPausingScheduleLoop;
+  });
+
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
-  LOG_INFO("{}: weights loaded!", kCls);
+
+  if (initial_weights_loaded_) {
+    ready_ = true;
+    LOG_INFO("{}: weights loaded!", kCls);
+  }
 }
 
 template <core::concepts::Game Game>
@@ -1056,7 +1063,6 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
-  // TODO: fix race-condition where a pause() deactivate the net before we get here!
   net_.load(pipeline_index, &policy_data, &value_data, &action_values_data);
   batch_data->load(policy_data, value_data, action_values_data);
   net_.release(pipeline_index);
