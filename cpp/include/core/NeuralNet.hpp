@@ -60,7 +60,7 @@ class NeuralNet {
 
   // Sets up GPU resources, including pipelines. Must be called by the thread doing the
   // {get_pipeline_assignment(), schedule()} calls.
-  void activate(int num_pipelines=4);
+  void activate(int num_pipelines);
 
   bool loaded() const { return !plan_data_.empty(); }
   bool activated() const { return engine_; }

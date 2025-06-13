@@ -21,6 +21,7 @@ struct NNEvaluationServiceParams {
   bool no_model = false;
   std::string cuda_device = "cuda:0";
   int batch_size_limit = 512;
+  int num_pipelines = 2;
   size_t cache_size = 1048576;
 
 #ifdef PROFILE_MCTS

@@ -94,7 +94,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       server_(server) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str());
-    net_.activate();
+    net_.activate(params.num_pipelines);
   }
 
   for (int i = 0; i < kNumHashShards; i++) {
@@ -692,7 +692,7 @@ void NNEvaluationService<Game>::schedule_loop() {
 
       load_initial_weights_if_necessary();
       schedule_loop_prelude();
-      net_.activate();
+      net_.activate(params_.num_pipelines);
       BatchData* batch_data = get_next_batch_data(schedule_loop_stats);
       schedule_batch(batch_data, schedule_loop_stats);
     }
