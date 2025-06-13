@@ -4,6 +4,7 @@ from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
 from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.server_base import ServerBase, ServerConfig, ServerParams
+from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
@@ -32,13 +33,14 @@ class RatingsServerParams(ServerParams):
 
 
 class RatingsServer(ServerBase):
-    def __init__(self, params: ServerParams, logging_params: LoggingParams, build_params: BuildParams):
-            server_config = ServerConfig(
-                server_name='ratings-server',
-                worker_name='ratings-worker',
-                server_role=ClientRole.RATINGS_SERVER,
-                worker_role=ClientRole.RATINGS_WORKER)
-            super().__init__(params, logging_params, build_params, server_config)
+    def __init__(self, params: ServerParams, logging_params: LoggingParams,
+                 build_params: BuildParams, rating_params: RatingParams):
+        server_config = ServerConfig(
+            server_name='ratings-server',
+            worker_name='ratings-worker',
+            server_role=ClientRole.RATINGS_SERVER,
+            worker_role=ClientRole.RATINGS_WORKER)
+        super().__init__(params, logging_params, build_params, rating_params, server_config)
 
 
     def _send_handshake(self):
@@ -79,7 +81,6 @@ class RatingsServer(ServerBase):
         }
         if append_mode:
             args['--log-append-mode'] = None
-        args.update(self._session_data.game_spec.rating_options)
 
         platform_overrides.update_cpp_bin_args(args)
         cmd = [

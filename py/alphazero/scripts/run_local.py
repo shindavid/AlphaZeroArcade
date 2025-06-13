@@ -181,6 +181,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     docker_params = params_dict['DockerParams']
     logging_params = params_dict['LoggingParams']
     build_params = params_dict['BuildParams']
+    rating_params: RatingParams = params_dict['RatingParams']
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -197,6 +198,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     docker_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
+    rating_params.add_to_cmd(cmd, server=True)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info('Launching ratings server: %s', cmd)
