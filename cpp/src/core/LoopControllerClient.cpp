@@ -50,8 +50,8 @@ void LoopControllerClient::handle_pause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
-  LOG_INFO("LoopControllerClient: handle_pause_receipt() - done (pause_receipt_count_ = {})",
-           pause_receipt_count_);
+  LOG_INFO("LoopControllerClient::{}() [{} of {}]", __func__,
+           pause_receipt_count_, pause_listeners_.size());
 }
 
 void LoopControllerClient::handle_unpause_receipt() {
@@ -62,6 +62,8 @@ void LoopControllerClient::handle_unpause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
+  LOG_INFO("LoopControllerClient: {}() [{} of {}]", __func__,
+           unpause_receipt_count_, pause_listeners_.size());
 }
 
 void LoopControllerClient::update_perf_stats(PerfStats& stats) {
