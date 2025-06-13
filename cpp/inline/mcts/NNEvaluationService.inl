@@ -442,7 +442,7 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::handle_force_progress() {
   std::unique_lock lock(main_mutex_);
-  LOG_DEBUG("<-- NNEvaluationService::{}() size={}", __func__,
+  LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
 
   batch_data_slice_allocator_.freeze_first();
@@ -664,10 +664,10 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
   BatchData* batch_data = result.notifying_batch_data;
   core::nn_evaluation_sequence_id_t seq = result.notifying_sequence_id;
 
-  LOG_DEBUG("<-- NNEvaluationService::{}() acquiring mutex...", __func__);
+  LOG_DEBUG("<-- {}::{}() acquiring mutex...", kCls, __func__);
   std::unique_lock lock(main_mutex_);
   if (last_evaluated_sequence_id_ < seq) {
-    LOG_DEBUG("<!-- NNEvaluationService::{} REJECT last={} seq={} slot={}:{}", __func__,
+    LOG_DEBUG("<!-- {}::{} REJECT last={} seq={} slot={}:{}", kCls, __func__,
               last_evaluated_sequence_id_, seq, unit.slot_context().slot,
               unit.slot_context().context);
 
@@ -677,7 +677,7 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
     batch_data->notification_tasks.push_back(unit.slot_context());
     return true;
   } else {
-    LOG_DEBUG("<!-- NNEvaluationService::{} ACCEPT seq={} slot={}:{}", __func__, seq,
+    LOG_DEBUG("<!-- {}::{} ACCEPT seq={} slot={}:{}", kCls, __func__, seq,
               unit.slot_context().slot, unit.slot_context().context);
 
     return false;

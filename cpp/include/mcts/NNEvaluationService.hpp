@@ -355,7 +355,6 @@ class NNEvaluationService
   std::thread drain_thread_;
   std::thread state_thread_;
 
-  // TODO: split main_mutex_ into separate mutexes for state-tracking and for batch data
   mutable std::mutex main_mutex_;
   mutable std::mutex perf_stats_mutex_;
   std::condition_variable cv_main_;
