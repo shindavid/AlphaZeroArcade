@@ -59,6 +59,8 @@ class NNEvaluationService
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kWorkerReady> {
  public:
+  static constexpr const char* kCls = "NNEvaluationService";
+
   using NeuralNet = core::NeuralNet<Game>;
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
@@ -92,6 +94,22 @@ class NNEvaluationService
 
   using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
+
+  class ShutDownException : public std::exception {};
+
+  enum system_state_t : int8_t {
+    kPausingScheduleLoop,
+    kPausingDrainLoop,
+    kPaused,
+
+    kUnpausingScheduleLoop,
+    kUnpausingDrainLoop,
+    kUnpaused,
+
+    kShuttingDownScheduleLoop,
+    kShuttingDownDrainLoop,
+    kShutDownComplete
+  };
 
   /*
    * Constructs an evaluation service and returns it.
@@ -311,17 +329,20 @@ class NNEvaluationService
 
   void schedule_loop();
   void drain_loop();
+  void state_loop();
+
   void load_initial_weights_if_necessary();
-  void wait_for_unpause();
+  void schedule_loop_prelude();
+  void drain_loop_prelude();
+
   BatchData* get_next_batch_data(core::NNEvalScheduleLoopPerfStats&);
   void schedule_batch(BatchData* batch_data, core::NNEvalScheduleLoopPerfStats&);
-  bool get_next_load_queue_item(LoadQueueItem&);  // return false if exiting
+  bool load_queue_item(LoadQueueItem&);  // return true if item was loaded
   void drain_batch(const LoadQueueItem&);
 
   void reload_weights(const std::vector<char>& buf) override;
   void pause() override;
   void unpause() override;
-  bool active() const { return num_connections_; }
 
   static instance_map_t instance_map_;
   static int instance_count_;
@@ -330,18 +351,14 @@ class NNEvaluationService
   const NNEvaluationServiceParams params_;
   const int num_game_threads_ = 0;
 
-  std::thread* schedule_thread_ = nullptr;
-  std::thread* drain_thread_ = nullptr;
+  std::thread schedule_thread_;
+  std::thread drain_thread_;
+  std::thread state_thread_;
 
-  mutable std::mutex connection_mutex_;
-  mutable std::mutex net_weights_mutex_;
+  // TODO: split main_mutex_ into separate mutexes for state-tracking and for batch data
   mutable std::mutex main_mutex_;
   mutable std::mutex perf_stats_mutex_;
-  mutable std::mutex load_queue_mutex_;
-
-  std::condition_variable cv_net_weights_;
   std::condition_variable cv_main_;
-  std::condition_variable cv_load_queue_;
 
   NeuralNet net_;
 
@@ -354,8 +371,7 @@ class NNEvaluationService
 
   bool initial_weights_loaded_ = false;
   bool ready_ = false;
-  bool skip_next_pause_receipt_ = false;
-  bool paused_ = false;
+  system_state_t system_state_ = kUnpaused;
 
   core::PerfStats perf_stats_;
   BatchDataSliceAllocator batch_data_slice_allocator_;

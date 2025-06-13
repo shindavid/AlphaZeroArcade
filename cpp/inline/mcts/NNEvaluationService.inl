@@ -40,33 +40,23 @@ NNEvaluationService<Game>* NNEvaluationService<Game>::create(
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::connect() {
-  std::lock_guard<std::mutex> guard(connection_mutex_);
+  std::unique_lock lock(main_mutex_);
+  bool first_connect = (num_connections_ == 0);
   num_connections_++;
-  if (schedule_thread_) return;
 
-  schedule_thread_ = new std::thread([&] { this->schedule_loop(); });
-  drain_thread_ = new std::thread([&] { this->drain_loop(); });
+  if (first_connect) {
+    schedule_thread_ = std::thread([&] { this->schedule_loop(); });
+    drain_thread_ = std::thread([&] { this->drain_loop(); });
+    state_thread_ = std::thread([&] { this->state_loop(); });
+  }
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::disconnect() {
-  std::lock_guard<std::mutex> guard(connection_mutex_);
-  if (schedule_thread_) {
-    num_connections_--;
-    if (num_connections_ > 0) return;
-    cv_net_weights_.notify_all();
-    cv_main_.notify_all();
-    cv_load_queue_.notify_all();
-
-    if (schedule_thread_->joinable()) schedule_thread_->join();
-    if (drain_thread_->joinable()) drain_thread_->join();
-
-    delete schedule_thread_;
-    schedule_thread_ = nullptr;
-
-    delete drain_thread_;
-    drain_thread_ = nullptr;
-  }
+  std::unique_lock lock(main_mutex_);
+  num_connections_--;
+  lock.unlock();
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
@@ -291,6 +281,10 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
 template <core::concepts::Game Game>
 NNEvaluationService<Game>::~NNEvaluationService() {
   disconnect();
+
+  if (state_thread_.joinable()) {
+    state_thread_.join();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -692,24 +686,127 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::schedule_loop() {
-  while (active()) {
-    core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
+  try {
+    while (system_state_ != kShuttingDownScheduleLoop) {
+      core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
 
-    load_initial_weights_if_necessary();
-    wait_for_unpause();
-    net_.activate();
-    BatchData* batch_data = get_next_batch_data(schedule_loop_stats);
-    schedule_batch(batch_data, schedule_loop_stats);
+      load_initial_weights_if_necessary();
+      schedule_loop_prelude();
+      net_.activate();
+      BatchData* batch_data = get_next_batch_data(schedule_loop_stats);
+      schedule_batch(batch_data, schedule_loop_stats);
+    }
+  } catch (const ShutDownException&) {
+    // This is expected when the state loop is shutting down.
+    LOG_INFO("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
+
+  system_state_ = kShuttingDownDrainLoop;
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::drain_loop() {
-  while (active()) {
-    LoadQueueItem item;
-    if (get_next_load_queue_item(item)) {
-      drain_batch(item);
+  try {
+    while (system_state_ != kShuttingDownScheduleLoop) {
+      drain_loop_prelude();
+      LoadQueueItem item;
+      if (load_queue_item(item)) {
+        drain_batch(item);
+      }
     }
+  } catch (const ShutDownException&) {
+    // This is expected when the state loop is shutting down.
+    LOG_INFO("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
+  }
+
+  system_state_ = kShutDownComplete;
+  cv_main_.notify_all();
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::state_loop() {
+  std::unique_lock lock(main_mutex_);
+  while (true) {
+    cv_main_.wait(lock, [&] {
+      if (system_state_ == kPaused || num_connections_ == 0) {
+        if (mcts::kEnableServiceDebug) {
+          LOG_INFO("{}::{}() done waiting @{}", kCls, __func__, __LINE__);
+        }
+        return true;
+      }
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+      }
+      return false;
+    });
+
+    if (num_connections_ == 0) {
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("{}::{}() exiting @{}", kCls, __func__, __LINE__);
+      }
+      break;
+    }
+
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("{}::{}() state={} @{}", kCls, __func__, (int)system_state_, __LINE__);
+    }
+    util::release_assert(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
+                         (int)system_state_, (int)kPaused);
+
+    core::LoopControllerClient::get()->handle_pause_receipt();
+
+    cv_main_.wait(lock, [&] {
+      if (system_state_ == kUnpaused || num_connections_ == 0) {
+        if (mcts::kEnableServiceDebug) {
+          LOG_INFO("{}::{}() done waiting @{}", kCls, __func__, __LINE__);
+        }
+        return true;
+      }
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+      }
+      return false;
+    });
+
+    if (num_connections_ == 0) {
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("{}::{}() exiting @{}", kCls, __func__, __LINE__);
+      }
+      break;
+    }
+
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("{}::{}() state={} @{}", kCls, __func__, (int)system_state_, __LINE__);
+    }
+    util::release_assert(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
+                         (int)system_state_, (int)kUnpaused);
+
+    core::LoopControllerClient::get()->handle_unpause_receipt();
+  }
+
+  system_state_ = kShuttingDownScheduleLoop;
+  lock.unlock();
+  cv_main_.notify_all();
+  lock.lock();
+
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("{}::{}() state={} @{}", kCls, __func__, (int)system_state_, __LINE__);
+  }
+  cv_main_.wait(lock, [&] {
+    if (system_state_ == kShutDownComplete) {
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("{}::{}() done waiting @{}", kCls, __func__, __LINE__);
+      }
+      return true;
+    }
+    if (mcts::kEnableServiceDebug) {
+      LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+    }
+    return false;
+  });
+  if (mcts::kEnableServiceDebug) {
+    LOG_INFO("{}::{}() done!", kCls, __func__);
   }
 }
 
@@ -729,32 +826,91 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
     }
   }
 
-  LOG_INFO("NNEvaluationService: handling worker-ready...");
+  LOG_INFO("{}: handling worker-ready...", kCls);
   client->handle_worker_ready();
-  std::unique_lock<std::mutex> net_weights_lock(net_weights_mutex_);
-  cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_ || !active(); });
-  LOG_INFO("NNEvaluationService: weights loaded!");
+  std::unique_lock lock(main_mutex_);
+  cv_main_.wait(
+    lock, [&] { return initial_weights_loaded_ || system_state_ == kShuttingDownScheduleLoop; });
+  if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
+  LOG_INFO("{}: weights loaded!", kCls);
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::wait_for_unpause() {
-  if (!skip_next_pause_receipt_ && !paused_) return;  // early exit for common case, bypassing lock
+void NNEvaluationService<Game>::schedule_loop_prelude() {
+  if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
-  LOG_INFO("NNEvaluationService: wait_for_unpause - acquiring main_mutex_");
   std::unique_lock lock(main_mutex_);
-  if (skip_next_pause_receipt_) {
-    LOG_INFO("NNEvaluationService: skipping handle_pause_receipt");
-    skip_next_pause_receipt_ = false;
-  } else {
-    net_.deactivate();
-    LOG_INFO("NNEvaluationService: handle_pause_receipt");
-    core::LoopControllerClient::get()->handle_pause_receipt();
-  }
-  cv_main_.wait(lock, [&] { return !paused_; });
-  lock.unlock();
 
-  LOG_INFO("NNEvaluationService: handle_unpause_receipt");
-  core::LoopControllerClient::get()->handle_unpause_receipt();
+  LOG_INFO("{}::{}() ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+  if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
+  util::release_assert(system_state_ == kPausingScheduleLoop,
+                       "Unexpected system_state: {} (expected {})",
+                       (int)system_state_, (int)kPausingScheduleLoop);
+  system_state_ = kPausingDrainLoop;
+  lock.unlock();
+  cv_main_.notify_all();
+
+  lock.lock();
+  cv_main_.wait(lock, [&] {
+    if (system_state_ == kShuttingDownScheduleLoop || system_state_ == kUnpausingScheduleLoop) {
+      return true;
+    }
+    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+    return false;
+  });
+
+  if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
+  system_state_ = kUnpausingDrainLoop;
+  LOG_INFO("{}::{}() ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+
+  lock.unlock();
+  cv_main_.notify_all();
+
+  lock.lock();
+  cv_main_.wait(lock, [&] {
+    if (system_state_ == kShuttingDownScheduleLoop || system_state_ == kUnpaused) {
+      return true;
+    }
+    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+    return false;
+  });
+
+  if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
+  LOG_INFO("{}::{}() ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::drain_loop_prelude() {
+  if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
+
+  std::unique_lock lock(main_mutex_);
+  cv_main_.wait(lock, [&] {
+    if (system_state_ == kShuttingDownDrainLoop || system_state_ == kPausingDrainLoop) {
+      return true;
+    }
+    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+    return false;
+  });
+
+  LOG_INFO("{}::{}() ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+  if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
+
+  system_state_ = kPaused;
+  lock.unlock();
+  cv_main_.notify_all();
+
+  lock.lock();
+  cv_main_.wait(lock, [&] {
+    if (system_state_ == kShuttingDownDrainLoop || system_state_ == kUnpausingDrainLoop) {
+      return true;
+    }
+    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
+    return false;
+  });
+
+  if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
+  system_state_ = kUnpaused;
+  LOG_INFO("{}::{}() ({}) @{}", kCls, __func__, (int)system_state_, __LINE__);
 }
 
 template <core::concepts::Game Game>
@@ -763,30 +919,31 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
   std::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
 
-  const char* cls = "NNEvaluationService";
-  const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}()", cls, func);
+    LOG_INFO("<-- {}::{}()", kCls, __func__);
   }
 
   auto predicate = [&] {
-    if (!active() || paused_) return true;
+    if (system_state_ == kPausingScheduleLoop || system_state_ == kShuttingDownScheduleLoop) {
+      return true;
+    }
+
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (batch_data) {
       if (batch_data->frozen()) {
         if (mcts::kEnableServiceDebug) {
-          LOG_INFO("<-- {}::{}() (count:{})", cls, func, batch_data->allocate_count);
+          LOG_INFO("<-- {}::{}() (count:{})", kCls, __func__, batch_data->allocate_count);
         }
         return true;
       }
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", cls, func,
-                 batch_data->sequence_id, batch_data->accepting_allocations,
+        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls,
+                 __func__, batch_data->sequence_id, batch_data->accepting_allocations,
                  batch_data->allocate_count, batch_data->write_count);
       }
     }
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO("<-- {}::{}() still waiting (no batch data)", cls, func);
+      LOG_INFO("<-- {}::{}() still waiting (no batch data)", kCls, __func__);
     }
     return false;
   };
@@ -796,20 +953,22 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
   bool deadline_reached = std::chrono::steady_clock::now() >= deadline;
   if (deadline_reached) {
     // If this happens, there is some sort of bug. Retrying here potentially covers up for the bug.
-    LOG_WARN("<-- {}::{}() Timed out waiting for batch data. Indicates a bug!", cls, func);
+    LOG_WARN("<-- {}::{}() Timed out waiting for batch data. Indicates a bug!", kCls, __func__);
     if (server_) server_->debug_dump();
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (!batch_data) {
       return nullptr;
     } else {
-      LOG_WARN("<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{})", cls, func,
+      LOG_WARN("<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{})", kCls, __func__,
                batch_data->sequence_id, batch_data->accepting_allocations,
                batch_data->allocate_count, batch_data->write_count);
       batch_data->accepting_allocations = false;
       cv_main_.wait(lock, predicate);
     }
   }
-  if (!active() || paused_) return nullptr;
+  if (system_state_ == kPausingScheduleLoop || system_state_ == kShuttingDownScheduleLoop) {
+    return nullptr;
+  }
   return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
 
@@ -819,10 +978,8 @@ void NNEvaluationService<Game>::schedule_batch(
   if (!batch_data) return;
   util::release_assert(batch_data->frozen());
 
-  const char* cls = "NNEvaluationService";
-  const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", cls, func, this->instance_id_,
+    LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", kCls, __func__, this->instance_id_,
              batch_data->sequence_id, batch_data->allocate_count);
   }
 
@@ -836,10 +993,10 @@ void NNEvaluationService<Game>::schedule_batch(
   net_.schedule(pipeline_index);
   pipeline_schedule_clocker.stop();
 
-  std::unique_lock lock(load_queue_mutex_);
+  std::unique_lock lock(main_mutex_);
   load_queue_.emplace(batch_data, pipeline_index);
   lock.unlock();
-  cv_load_queue_.notify_all();
+  cv_main_.notify_all();
 
   schedule_loop_stats.positions_evaluated = num_rows;
   schedule_loop_stats.batches_evaluated = 1;
@@ -850,26 +1007,36 @@ void NNEvaluationService<Game>::schedule_batch(
 }
 
 template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::get_next_load_queue_item(LoadQueueItem& item) {
-  const char* cls = "NNEvaluationService";
-  const char* func = __func__;
+bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", cls, func,
+    LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, __func__,
              this->instance_id_);
   }
-  std::unique_lock lock(load_queue_mutex_);
-  cv_load_queue_.wait(lock, [&] { return !load_queue_.empty() || !active(); });
-  if (!active()) {
+  std::unique_lock lock(main_mutex_);
+  cv_main_.wait(lock, [&] {
+    if (!load_queue_.empty() || system_state_ == kPausingDrainLoop ||
+        system_state_ == kShuttingDownDrainLoop) {
+      if (mcts::kEnableServiceDebug) {
+        LOG_INFO("<-- {}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, __func__,
+                this->instance_id_, (int)system_state_, load_queue_.size());
+      }
+      return true;
+    }
+
     if (mcts::kEnableServiceDebug) {
-      LOG_INFO("<-- {}::{}() - exiting (service:{})", cls, func, this->instance_id_);
+      LOG_INFO("<-- {}::{}() - still waiting... (service:{}, state:{}, queue:{})", kCls, __func__,
+               this->instance_id_, (int)system_state_, load_queue_.size());
     }
     return false;
-  }
+  });
+
+  if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
+  if (system_state_ == kPausingDrainLoop) return false;
 
   item = load_queue_.front();
   load_queue_.pop();
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", cls, func,
+    LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", kCls, __func__,
              this->instance_id_, item.batch_data->sequence_id, item.pipeline_index);
   }
   return true;
@@ -884,11 +1051,8 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
   float* value_data;
   float* action_values_data;
 
-  const char* cls = "NNEvaluationService";
-  const char* func = __func__;
-
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", cls, func,
+    LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, __func__,
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
@@ -902,28 +1066,29 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);
-  lock.unlock();
-  cv_main_.notify_all();
 
   if (mcts::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", cls, func, this->instance_id_,
+    LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", kCls, __func__, this->instance_id_,
              last_evaluated_sequence_id_);
   }
+
+  lock.unlock();
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
-  LOG_INFO("NNEvaluationService: reloading network weights...");
-  util::release_assert(paused_, "{}() called while not paused", __func__);
+  LOG_INFO("{}: reloading network weights...", kCls);
+  util::release_assert(system_state_ == kPaused, "{}() called while not paused", __func__);
 
   std::ispanstream stream{std::span<const char>(buf)};
-  std::unique_lock net_weights_lock(net_weights_mutex_);
+  std::unique_lock lock(main_mutex_);
   net_.load_weights(stream);
   initial_weights_loaded_ = true;
-  net_weights_lock.unlock();
-  cv_net_weights_.notify_all();
+  lock.unlock();
+  cv_main_.notify_all();
 
-  LOG_INFO("NNEvaluationService: clearing network cache...");
+  LOG_INFO("{}: clearing network cache...", kCls);
 
   // TODO: we can clear each shard's cache in parallel for a slight performance boost
   for (int i = 0; i < kNumHashShards; ++i) {
@@ -935,41 +1100,25 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::pause() {
-  LOG_INFO("NNEvaluationService: pausing");
+  LOG_INFO("{}::{}()", kCls, __func__);
   std::unique_lock lock(main_mutex_);
-  if (paused_) {
-    net_.deactivate();
-    LOG_INFO("NNEvaluationService: handle_pause_receipt (already paused)");
-    core::LoopControllerClient::get()->handle_pause_receipt();
-    return;
-  }
-  paused_ = true;
-
-  if (!initial_weights_loaded_) {
-    net_.deactivate();
-    skip_next_pause_receipt_ = true;
-    LOG_INFO("NNEvaluationService: handle_pause_receipt (skip next)");
-    core::LoopControllerClient::get()->handle_pause_receipt();
-  }
-  LOG_INFO("NNEvaluationService: pause complete!");
-
+  util::release_assert(system_state_ == kPaused || system_state_ == kUnpaused,
+                       "Unexpected pause_state: {}", (int)system_state_);
+  system_state_ = kPausingScheduleLoop;
   lock.unlock();
   cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::unpause() {
-  LOG_INFO("NNEvaluationService: unpausing");
+  LOG_INFO("{}::{}() [state:{}]", kCls, __func__, (int)system_state_);
   std::unique_lock lock(main_mutex_);
-  if (!paused_) {
-    LOG_INFO("NNEvaluationService: handle_unpause_receipt (already unpaused)");
-    core::LoopControllerClient::get()->handle_unpause_receipt();
-    return;
-  }
-  paused_ = false;
+  util::release_assert(system_state_ == kPaused || system_state_ == kUnpaused,
+                       "Unexpected pause_state: {}", (int)system_state_);
+  system_state_ = kUnpausingScheduleLoop;
   lock.unlock();
   cv_main_.notify_all();
-  LOG_INFO("NNEvaluationService: unpause complete!");
+  core::LoopControllerClient::get()->handle_unpause_receipt();
 }
 
 }  // namespace mcts

@@ -37,6 +37,10 @@ inline void synchronize_stream(cudaStream_t stream) {
 inline void set_device(int device_id) {
   cudaError_t err = cudaSetDevice(device_id);
   if (err != cudaSuccess) {
+    // TODO: throw a CleanException if GPU is unavailable
+    //
+    // terminate called after throwing an instance of 'util::Exception'
+    // what():  cudaSetDevice failed: no CUDA-capable device is detected
     throw util::Exception("cudaSetDevice failed: {}", cudaGetErrorString(err));
   }
 }
