@@ -44,8 +44,8 @@ int main(int argc, char** argv) {
   config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 1ULL << 30);
   auto profile = builder->createOptimizationProfile();
   Dims dims = network->getInput(0)->getDimensions();
-  // min = 1
-  dims.d[0] = 1;
+  // min = maxBatch
+  dims.d[0] = maxBatch;
   profile->setDimensions(network->getInput(0)->getName(),
                          OptProfileSelector::kMIN, dims);
   // opt = maxBatch
