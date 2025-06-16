@@ -900,8 +900,11 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
     return false;
   });
 
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
+  LOG_INFO("{}::{}() (state={} queue={}) @{}", kCls, func, (int)system_state_, load_queue_.size(),
+           __LINE__);
+
   if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
+  if (!load_queue_.empty()) return;
 
   system_state_ = kPaused;
   lock.unlock();
@@ -1042,7 +1045,7 @@ bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
   });
 
   if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
-  if (system_state_ == kPausingDrainLoop) return false;
+  if (load_queue_.empty()) return false;
 
   item = load_queue_.front();
   load_queue_.pop();
@@ -1095,6 +1098,7 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
 
   std::ispanstream stream{std::span<const char>(buf)};
   std::unique_lock lock(main_mutex_);
+  net_.deactivate();
   net_.load_weights(stream);
   initial_weights_loaded_ = true;
   lock.unlock();

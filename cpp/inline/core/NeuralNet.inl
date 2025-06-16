@@ -52,6 +52,8 @@ template <concepts::Game Game>
 void NeuralNet<Game>::load_weights(std::ispanstream& stream) {
   plan_data_.clear();
   plan_data_.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+
+  if (!activated()) return;
 }
 
 template <concepts::Game Game>
@@ -94,6 +96,8 @@ template <concepts::Game Game>
 void NeuralNet<Game>::deactivate() {
   if (!activated()) return;
 
+  LOG_DEBUG("Deactivating NeuralNet...");
+
   for (Pipeline* pipeline : pipelines_) {
     delete pipeline;
   }
@@ -108,6 +112,8 @@ template <concepts::Game Game>
 void NeuralNet<Game>::activate(int num_pipelines) {
   if (activated()) return;
 
+  LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
+
   util::release_assert(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(cuda_device_id_);
@@ -119,6 +125,8 @@ void NeuralNet<Game>::activate(int num_pipelines) {
     pipelines_.push_back(new Pipeline(engine_, batch_size_));
     available_pipeline_indices_.push_back(i);
   }
+
+  LOG_DEBUG("Done activating NeuralNet ({})!", num_pipelines);
 }
 
 template <concepts::Game Game>
@@ -154,13 +162,13 @@ NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, int batch_siz
 
 template <concepts::Game Game>
 NeuralNet<Game>::Pipeline::~Pipeline() {
+  cuda_util::destroy_stream(stream);
+  delete context;
+
   for (void* ptr : device_buffers) {
     cuda_util::gpu_free(ptr);
   }
   device_buffers.clear();
-
-  delete context;
-  cuda_util::destroy_stream(stream);
 
   cuda_util::cpu_free(input.data());
   cuda_util::cpu_free(policy.data());
