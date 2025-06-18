@@ -342,7 +342,13 @@ inline void Manager<Game>::init_root_info(bool add_noise) {
     util::release_assert(active_seat >= 0 && active_seat < Constants::kNumPlayers);
     root_info_.active_seat = active_seat;
     new (root) Node(&lookup_table_, canonical_history, active_seat);
-    root->stats().RN++;  // thread-safe since single-threaded here
+  }
+
+  Node* root2 = lookup_table_.get_node(root_info_.node_index);
+
+  // thread-safe since single-threaded here
+  if (root2->stats().RN == 0) {
+    root2->stats().RN = 1;
   }
 }
 
