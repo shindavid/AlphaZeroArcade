@@ -87,6 +87,7 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
+  using action_vec_t = std::vector<core::action_t>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -286,6 +287,7 @@ class GameServer
     void increment_mcts_time_ns(int64_t ns) { mcts_time_ns_ += ns; }
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
     void update_perf_stats(PerfStats&);
+    const action_vec_t& initial_actions() const { return server_->initial_actions(); }
 
    private:
     slot_context_queue_t& get_queue_to_use(game_slot_index_t);
@@ -370,7 +372,7 @@ class GameServer
   virtual void debug_dump() const override { shared_data_.debug_dump(); }
 
  public:
-  GameServer(const Params&, const TrainingDataWriterParams&);
+  GameServer(const Params&, const TrainingDataWriterParams&, const action_vec_t& initial_actions = {});
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -402,10 +404,12 @@ class GameServer
   void pause() override { shared_data_.pause(); }
   void unpause() override { shared_data_.unpause(); }
   void update_perf_stats(PerfStats&) override;
+  const action_vec_t& initial_actions() const { return initial_actions_; }
 
  private:
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
+  const action_vec_t initial_actions_;
 };
 
 }  // namespace core

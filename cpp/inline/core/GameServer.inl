@@ -832,6 +832,14 @@ bool GameServer<Game>::GameSlot::start_game() {
   game_started_ = true;
 
   state_history_.initialize(Rules{});
+  for (const core::action_t& action : shared_data_.initial_actions()) {
+    Rules::apply(state_history_, action);
+    pre_step();
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players_[p]->receive_state_change(active_seat_, state_history_.current(), action);
+    }
+  }
+
   move_number_ = 0;
   action_mode_ = -1;
   active_seat_ = -1;
@@ -917,10 +925,12 @@ void GameServer<Game>::handle_alternating_mode_recommendation() {
 
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
-                             const TrainingDataWriterParams& training_data_writer_params)
+                             const TrainingDataWriterParams& training_data_writer_params,
+                             const action_vec_t& initial_actions)
     : PerfStatsClient(),
       GameServerBase(params.num_game_threads),
-      shared_data_(this, params, training_data_writer_params) {
+      shared_data_(this, params, training_data_writer_params),
+      initial_actions_(initial_actions) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
