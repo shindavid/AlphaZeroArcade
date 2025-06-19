@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+PERFORM_HOURLY_RESTARTS = False
+
+
 class SelfPlayManager:
 
     @dataclass
@@ -255,15 +258,23 @@ class SelfPlayManager:
 
         aux: SelfPlayManager.ServerAux = conn.aux
         aux.launched = True
-        thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
-                                  daemon=True, name=f'self-play-restart-loop')
-        thread.start()
+
+        if PERFORM_HOURLY_RESTARTS:
+            # We used to restart the self-play process every hour to mitigate a memory leak in the
+            # c++ process. After migrating to TensorRT, this leak appears to be gone, so we no
+            # longer need to do this.
+            thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
+                                    daemon=True, name=f'self-play-restart-loop')
+            thread.start()
 
     def _launch_self_play_restart_loop(self, conn: ClientConnection):
         """
-        There is currently a memory-leak in the c++ process. I suspect it comes from torchlib,
-        although it's possible that the culprit lies in our code. The leak appears to contribute
-        about 1GB of memory per hour. To mitigate this, we restart the process every hour.
+        When we used libtorch, there was a memory leak in the c++ process. We restarted the process
+        every hour to mitigate this.
+
+        After the libtorch->TensorRT migration, the memory leak appears to be gone. As such, this
+        restart loop is no longer necessary. However, we keep it here for now, in case a leak
+        reappears in the future.
         """
         try:
             while conn.active:
