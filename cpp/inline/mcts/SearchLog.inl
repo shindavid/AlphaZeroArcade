@@ -44,7 +44,7 @@ inline std::string SearchLog<Game>::json_str() {
 template <core::concepts::Game Game>
 inline std::string SearchLog<Game>::last_graph_json_str() {
   std::stringstream ss;
-  boost_util::pretty_print(ss, graphs.back().graph_repr());
+  boost_util::pretty_print(ss, graphs_.back().graph_repr());
   return ss.str();
 };
 
@@ -86,7 +86,7 @@ inline void SearchLog<Game>::update() {
 template <core::concepts::Game Game>
 inline boost::json::object SearchLog<Game>::combine_json() {
   boost::json::array graphs_array;
-  for (const auto& graph : graphs) {
+  for (const auto& graph : graphs_) {
     graphs_array.push_back(graph.graph_repr());
   }
 
