@@ -719,7 +719,7 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
-    def save_model(self, filename: str, max_batch_size: int):
+    def save_model(self, filename: str, batch_size: int):
         """
         Saves this network to disk, from which it can be loaded either by c++ or by python. Does
         this by first exporting the model to ONNX, and then shelling out to a custom binary that
@@ -739,7 +739,7 @@ class Model(nn.Module):
         dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
 
         # 2) make an example‐input and ONNX‐export it
-        example_shape = (max_batch_size, *self.shape_info_dict['input'].shape)
+        example_shape = (batch_size, *self.shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
         # export to a temp ONNX file
@@ -769,7 +769,7 @@ class Model(nn.Module):
                 raise Exception("onnx_engine_builder not found")
 
             build_bin = existent_build_bins[0]  # use the first found one
-            cmd = [build_bin, onnx_path, filename, str(max_batch_size)]
+            cmd = [build_bin, onnx_path, filename, str(batch_size)]
             subprocess.run(cmd, capture_output=True, check=True)
 
     @staticmethod

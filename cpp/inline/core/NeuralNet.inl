@@ -22,9 +22,8 @@ auto make_arr(int batch_size) {
 }  // namespace detail
 
 template <concepts::Game Game>
-NeuralNet<Game>::NeuralNet(int batch_size, int cuda_device_id)
+NeuralNet<Game>::NeuralNet(int cuda_device_id)
     : runtime_(nvinfer1::createInferRuntime(logger_)),
-      batch_size_(batch_size),
       cuda_device_id_(cuda_device_id) {}
 
 template <concepts::Game Game>
@@ -106,11 +105,13 @@ void NeuralNet<Game>::deactivate() {
 
   delete engine_;
   engine_ = nullptr;
+
+  batch_size_ = 0;
 }
 
 template <concepts::Game Game>
-void NeuralNet<Game>::activate(int num_pipelines) {
-  if (activated()) return;
+bool NeuralNet<Game>::activate(int num_pipelines) {
+  if (activated()) return false;
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
@@ -119,18 +120,24 @@ void NeuralNet<Game>::activate(int num_pipelines) {
   cuda_util::set_device(cuda_device_id_);
   engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
 
+  nvinfer1::Dims input_shape =
+    engine_->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
+  batch_size_ = input_shape.d[0];
+
   util::release_assert(pipelines_.empty());
   util::release_assert(available_pipeline_indices_.empty());
   for (int i = 0; i < num_pipelines; ++i) {
-    pipelines_.push_back(new Pipeline(engine_, batch_size_));
+    pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));
     available_pipeline_indices_.push_back(i);
   }
 
   LOG_DEBUG("Done activating NeuralNet ({})!", num_pipelines);
+  return true;
 }
 
 template <concepts::Game Game>
-NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, int batch_size)
+NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
+                                    const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
       policy(detail::make_ptr<PolicyShape>(batch_size), detail::make_arr<PolicyShape>(batch_size)),
       value(detail::make_ptr<ValueShape>(batch_size), detail::make_arr<ValueShape>(batch_size)),
@@ -147,15 +154,7 @@ NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, int batch_siz
     context->setTensorAddress(engine->getIOTensorName(i), device_buffers[i]);
   }
   stream = cuda_util::create_stream();
-
-  // Since we're using runtime-specified batch size:
   context->setOptimizationProfileAsync(0, stream);
-  nvinfer1::Dims input_shape =
-    engine->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
-
-  util::release_assert(batch_size == input_shape.d[0],
-                       "NeuralNet::Pipeline: batch size mismatch (batch_size={} input_shape={})",
-                       batch_size, input_shape);
 
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }

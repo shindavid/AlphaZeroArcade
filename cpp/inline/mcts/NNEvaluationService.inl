@@ -89,12 +89,12 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),
-      net_(params.batch_size_limit, cuda_util::cuda_device_to_ordinal(params_.cuda_device)),
-      batch_data_slice_allocator_(params.batch_size_limit, perf_stats_),
+      net_(cuda_util::cuda_device_to_ordinal(params_.cuda_device)),
+      batch_data_slice_allocator_(perf_stats_),
       server_(server) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str());
-    net_.activate(params.num_pipelines);
+    activate_net();
   }
 
   for (int i = 0; i < kNumHashShards; i++) {
@@ -114,7 +114,9 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
 }
 
 template <core::concepts::Game Game>
-NNEvaluationService<Game>::BatchData::BatchData(int capacity) : tensor_groups(capacity) {}
+void NNEvaluationService<Game>::BatchData::set_capacity(int capacity) {
+  tensor_groups.resize(capacity);
+}
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows, NeuralNet& net,
@@ -170,8 +172,8 @@ void NNEvaluationService<Game>::BatchData::clear() {
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>::BatchDataSliceAllocator::BatchDataSliceAllocator(
-  int batch_size_limit, core::PerfStats& perf_stats)
-    : batch_size_limit_(batch_size_limit), perf_stats_(perf_stats) {
+  core::PerfStats& perf_stats)
+    : perf_stats_(perf_stats) {
   add_batch_data();
 }
 
@@ -179,7 +181,7 @@ template <core::concepts::Game Game>
 NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
   while (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
-    pending_batch_datas_.pop();
+    pending_batch_datas_.pop_front();
     delete batch_data;
   }
 
@@ -252,7 +254,7 @@ typename NNEvaluationService<Game>::BatchData*
 NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
   if (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
-    pending_batch_datas_.pop();
+    pending_batch_datas_.pop_front();
     if (pending_batch_datas_.empty()) {
       add_batch_data();
     }
@@ -262,19 +264,31 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
+  batch_size_limit_ = limit;
+  for (auto & batch_data : batch_data_reserve_) {
+    batch_data->set_capacity(limit);
+  }
+  for (auto batch_data : pending_batch_datas_) {
+    batch_data->set_capacity(limit);
+  }
+}
+
+template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData*
 NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
   // Assumes mutex_ is locked
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
-    batch_data = new BatchData(batch_size_limit_);
+    batch_data = new BatchData();
+    batch_data->set_capacity(batch_size_limit_);
     perf_stats_.nn_eval_schedule_loop_stats.batch_datas_allocated++;
   } else {
     batch_data = batch_data_reserve_.back();
     batch_data_reserve_.pop_back();
   }
   batch_data->sequence_id = next_batch_data_sequence_id_++;
-  pending_batch_datas_.push(batch_data);
+  pending_batch_datas_.push_back(batch_data);
   return batch_data;
 }
 
@@ -456,6 +470,17 @@ std::string NNEvaluationService<Game>::dump_key(const char* descr) {
 }
 
 template <core::concepts::Game Game>
+void NNEvaluationService<Game>::activate_net() {
+  if (net_.activated()) return;
+
+  net_.activate(params_.num_pipelines);
+  batch_data_slice_allocator_.set_batch_size_limit(net_.batch_size());
+
+  LOG_DEBUG("NNEvaluationService: activated NeuralNet with {} pipelines (batch-size: {})",
+            params_.num_pipelines, net_.batch_size());
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
                                             CacheLookupResult& result) {
   int m = request.num_stale_items();
@@ -586,7 +611,7 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
   // Don't actually write to the BatchData's yet, since we don't need to do that under the
   // shard's mutex lock.
 
-  int B = params_.batch_size_limit;
+  int B = batch_data_slice_allocator_.batch_size_limit();
   int M = misses_for_this_shard;
   int max_slices_needed = (B + M - 2) / B + 1;  // 1 + ceil((M-1)/B)
 
@@ -693,7 +718,7 @@ void NNEvaluationService<Game>::schedule_loop() {
 
       load_initial_weights_if_necessary();
       schedule_loop_prelude();
-      net_.activate(params_.num_pipelines);
+      activate_net();
       BatchData* batch_data = get_next_batch_data(schedule_loop_stats);
       schedule_batch(batch_data, schedule_loop_stats);
     }
@@ -1011,9 +1036,10 @@ void NNEvaluationService<Game>::schedule_batch(
   lock.unlock();
   cv_main_.notify_all();
 
+  int max_size = batch_data_slice_allocator_.batch_size_limit();
   schedule_loop_stats.positions_evaluated = num_rows;
   schedule_loop_stats.batches_evaluated = 1;
-  schedule_loop_stats.full_batches_evaluated = num_rows == params_.batch_size_limit ? 1 : 0;
+  schedule_loop_stats.full_batches_evaluated = num_rows == max_size ? 1 : 0;
 
   std::unique_lock perf_lock(perf_stats_mutex_);
   perf_stats_.update(schedule_loop_stats);

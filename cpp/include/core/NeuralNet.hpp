@@ -42,9 +42,10 @@ class NeuralNet {
   using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
   using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
 
-  NeuralNet(int batch_size, int cuda_device_id);
+  NeuralNet(int cuda_device_id);
   ~NeuralNet();
 
+  int batch_size() const { return batch_size_; }
   void load_weights(const char* filename);
   void load_weights(std::ispanstream& stream);
 
@@ -58,9 +59,12 @@ class NeuralNet {
   // Frees all GPU resources
   void deactivate();
 
-  // Sets up GPU resources, including pipelines. Must be called by the thread doing the
-  // {get_pipeline_assignment(), schedule()} calls.
-  void activate(int num_pipelines);
+  // If already activated, is a no-op and returns false.
+  //
+  // Else, sets up GPU resources, including pipelines, and returns true.
+  //
+  // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
+  bool activate(int num_pipelines);
 
   bool loaded() const { return !plan_data_.empty(); }
   bool activated() const { return engine_; }
@@ -77,7 +81,7 @@ class NeuralNet {
   };
 
   struct Pipeline {
-    Pipeline(nvinfer1::ICudaEngine* engine, int batch_size);
+    Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape, int batch_size);
     ~Pipeline();
 
     void schedule();
@@ -104,7 +108,7 @@ class NeuralNet {
   mutable std::mutex pipeline_mutex_;
   std::condition_variable pipeline_cv_;
 
-  const int batch_size_;
+  int batch_size_ = 0;
   const int cuda_device_id_;
 };
 

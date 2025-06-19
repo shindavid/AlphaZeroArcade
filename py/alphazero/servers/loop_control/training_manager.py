@@ -261,7 +261,7 @@ class TrainingManager:
         thread.join()
 
         if self._stats is not None:
-            self._save_model(table, gen, self._net)
+            self._save_model(table, gen, self._net, self._controller.game_spec.batch_size)
             self._record_stats(gen, self._stats)
             self._set_checkpoint()
 
@@ -364,7 +364,7 @@ class TrainingManager:
             conn.commit()
             cursor.close()
 
-    def _save_model(self, table: GpuContentionTable, gen: Generation, net: Model):
+    def _save_model(self, table: GpuContentionTable, gen: Generation, net: Model, batch_size: int):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
         model_filename = organizer.get_model_filename(gen)
@@ -381,7 +381,7 @@ class TrainingManager:
             table2.acquire_lock(Domain.TRAINING)
         logger.debug('Calling save_model()...')
         t1 = time.time()
-        net.save_model(tmp_model_filename, 256)  # TODO: coordinate this to match c++ runtime -b
+        net.save_model(tmp_model_filename, batch_size)
         t2 = time.time()
         logger.info('TensorRT build time: %10.3f seconds', t2 - t1)
         for table2 in self._controller.get_other_gpu_lock_tables(table):

@@ -22,6 +22,7 @@
 #include <util/RecyclingAllocPool.hpp>
 
 #include <condition_variable>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <queue>
@@ -156,7 +157,8 @@ class NNEvaluationService
   // After allocating, it releases the main_mutex_ and allows the threads to write to their
   // allocated slots concurrently.
   struct BatchData {
-    BatchData(int capacity);
+    BatchData() { set_capacity(1); }
+    void set_capacity(int capacity);
     void copy_input_to(int num_rows, NeuralNet&, core::pipeline_index_t);
     void load(const float* policy_batch_data, const float* value_batch_data,
               const float* action_values_batch_data);
@@ -181,7 +183,7 @@ class NNEvaluationService
     bool accepting_allocations = true;
   };
   using batch_data_vec_t = std::vector<BatchData*>;
-  using batch_data_queue_t = std::queue<BatchData*>;
+  using batch_data_queue_t = std::deque<BatchData*>;
 
   struct BatchDataSlice {
     BatchData* batch_data;
@@ -209,7 +211,7 @@ class NNEvaluationService
   // locking the mutex. This is done to avoid contention on the mutex.
   class BatchDataSliceAllocator {
    public:
-    BatchDataSliceAllocator(int batch_size_limit, core::PerfStats& perf_stats);
+    BatchDataSliceAllocator(core::PerfStats& perf_stats);
 
     ~BatchDataSliceAllocator();
 
@@ -230,12 +232,14 @@ class NNEvaluationService
     BatchData* get_first_pending_batch_data() const;
     BatchData* pop_first_pending_batch_data();
 
+    void set_batch_size_limit(int limit);
+    int batch_size_limit() const { return batch_size_limit_; }
     int pending_batch_datas_size() const { return pending_batch_datas_.size(); }
 
    private:
     BatchData* add_batch_data();
 
-    const int batch_size_limit_;
+    int batch_size_limit_ = 1;
     core::PerfStats& perf_stats_;
 
     batch_data_queue_t pending_batch_datas_;
@@ -302,6 +306,8 @@ class NNEvaluationService
   ~NNEvaluationService();
 
   std::string dump_key(const char* descr);
+
+  void activate_net();
 
   // For each item in the request, attempt a cache-lookup. If we get a cache-hit, set the item's
   // eval to the cached value. If we get a cache-miss, we do the following:
