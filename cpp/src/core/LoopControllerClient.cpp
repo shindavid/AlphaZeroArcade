@@ -193,11 +193,11 @@ void LoopControllerClient::reload_weights(const std::vector<char>& buf) {
   }
 }
 
-void LoopControllerClient::handle_data_request(int n_rows) {
-  LOG_INFO("LoopControllerClient: handling self-play data request({})...", n_rows);
+void LoopControllerClient::handle_data_request(int n_rows, int next_row_limit) {
+  LOG_INFO("LoopControllerClient::{}({}, {})...", __func__, n_rows, next_row_limit);
 
   for (auto listener : data_request_listeners_) {
-    listener->handle_data_request(n_rows);
+    listener->handle_data_request(n_rows, next_row_limit);
   }
 }
 
@@ -251,13 +251,13 @@ void LoopControllerClient::loop() {
       send_unpause_ack();
     } else if (type == "data-request") {
       int n_rows = msg.at("n_rows").as_int64();
-      handle_data_request(n_rows);
+      int next_row_limit = msg.at("next_row_limit").as_int64();
+      handle_data_request(n_rows, next_row_limit);
     } else if (type == "data-pre-request") {
       int n_rows_limit = msg.at("n_rows_limit").as_int64();
       handle_data_pre_request(n_rows_limit);
     } else if (type == "reload-weights") {
       core::PerfClocker clocker(perf_stats_.model_load_time_ns);
-      int64_t generation = msg.at("generation").as_int64();
 
       // reload-weights msg will be immediately followed by a file transfer
       std::vector<char> buf;
@@ -268,7 +268,6 @@ void LoopControllerClient::loop() {
         break;
       }
 
-      cur_generation_ = generation;
       reload_weights(buf);
     } else if (type == "quit") {
       deactivated_ = true;

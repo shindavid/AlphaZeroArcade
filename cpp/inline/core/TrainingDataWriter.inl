@@ -98,6 +98,7 @@ void TrainingDataWriter<Game>::pause() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::unpause() {
+  // TODO: consider sending a heartbeat here.
   LOG_INFO("TrainingDataWriter: unpausing");
   std::unique_lock lock(game_queue_mutex_);
   if (!game_queue_data_.paused) {
@@ -112,13 +113,13 @@ void TrainingDataWriter<Game>::unpause() {
 }
 
 template <concepts::Game Game>
-void TrainingDataWriter<Game>::handle_data_request(int n_rows) {
+void TrainingDataWriter<Game>::handle_data_request(int n_rows, int next_row_limit) {
   std::unique_lock lock(batch_mutex_);
 
   send_batch(n_rows);
   batch_data_.reset();
   batch_data_.next_heartbeat_time = std::chrono::steady_clock::now() + heartbeat_interval();
-  batch_data_.limit = 0;
+  batch_data_.limit = next_row_limit;
   batch_cv_.notify_one();
 }
 
@@ -224,14 +225,10 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
                               batch_data_.data.end());
 
   core::LoopControllerClient* client = core::LoopControllerClient::get();
-  util::release_assert(client, "TrainingDataWriter: no LoopControllerClient");
-
-  int model_generation = client ? client->cur_generation() : 0;
 
   boost::json::object msg;
   msg["type"] = "self-play-data";
   msg["timestamp"] = util::ns_since_epoch();
-  msg["gen"] = model_generation;
   msg["n_games"] = n_games;
   msg["n_rows"] = row_count;
   if (client->report_metrics()) {
