@@ -396,20 +396,26 @@ class GameServer
   const Params& params() const { return shared_data_.params(); }
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
+  void setup();
   void run();
   void create_threads();
   void launch_threads();
   void join_threads();
+  void set_post_setup_hook(std::function<void()> hook) {
+    post_setup_hook_ = std::move(hook);
+  }
 
   void pause() override { shared_data_.pause(); }
   void unpause() override { shared_data_.unpause(); }
   void update_perf_stats(PerfStats&) override;
   const action_vec_t& initial_actions() const { return initial_actions_; }
+  SharedData& shared_data() { return shared_data_; }
 
  private:
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
   const action_vec_t initial_actions_;
+  std::function<void()> post_setup_hook_;
 };
 
 }  // namespace core

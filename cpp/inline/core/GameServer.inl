@@ -833,8 +833,8 @@ bool GameServer<Game>::GameSlot::start_game() {
 
   state_history_.initialize(Rules{});
   for (const core::action_t& action : shared_data_.initial_actions()) {
-    Rules::apply(state_history_, action);
     pre_step();
+    Rules::apply(state_history_, action);
     for (int p = 0; p < kNumPlayers; ++p) {
       players_[p]->receive_state_change(active_seat_, state_history_.current(), action);
     }
@@ -1006,7 +1006,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::run() {
+void GameServer<Game>::setup() {
   Game::static_init();
   wait_for_remote_player_registrations();
   shared_data_.init_random_seat_indices();
@@ -1017,6 +1017,15 @@ void GameServer<Game>::run() {
   shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
   shared_data_.start_games();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::run() {
+  setup();
+
+  if (post_setup_hook_) {
+    post_setup_hook_();
+  }
 
   time_point_t start_time = std::chrono::steady_clock::now();
   LOG_DEBUG("GameServer> Launching threads...");
