@@ -132,7 +132,6 @@ class Manager {
     bool applied_action = false;
 
     // For kYield responses
-    int extra_enqueue_count = 0;
     core::slot_context_vec_t pending_notifications;
     int pending_notifications_mutex_id = 0;
 
@@ -264,11 +263,13 @@ class Manager {
   // If state_machine_.state is already kInVisitLoop, this function does nothing.
   //
   // Otherwise, sets state_machine_.state to kInVisitLoop and does various bookkeeping on
-  // context and the other SearchContext's.
-  void update_state_machine_to_in_visit_loop(SearchContext& context);
+  // context and the other SearchContext's. Returns the extra_enqueue_count value which should be
+  // written to the search response.
+  int update_state_machine_to_in_visit_loop(SearchContext& context);
 
   // Assumes state_matchine_.mutex is held
-  core::yield_instruction_t mark_as_done_with_visit_loop(SearchContext& context);
+  core::yield_instruction_t mark_as_done_with_visit_loop(SearchContext& context,
+                                                         int extra_enqueue_count);
 
   void init_context(core::context_id_t);
   void init_root_info(bool add_noise);
