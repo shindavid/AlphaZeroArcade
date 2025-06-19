@@ -13,7 +13,6 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 project(alphazero LANGUAGES CXX CUDA)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
-find_package(Torch REQUIRED PATHS "/usr/local/libtorch")
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)
@@ -43,7 +42,7 @@ if(ADD_DEBUG_SYMBOLS)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} ${EXTRA_DEFINITIONS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${EXTRA_DEFINITIONS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50")
 
 # We don't set this by default, because clangd doesn't recognize this option, and because we use
@@ -59,7 +58,6 @@ include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
-include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 # Clear the targets file at the start of the configuration
@@ -95,7 +93,7 @@ endfunction()
 
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
 link_directories(/usr/local/cuda/lib64)
-set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
+set(COMMON_EXTERNAL_LIBS ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 add_subdirectory("cpp/src")
