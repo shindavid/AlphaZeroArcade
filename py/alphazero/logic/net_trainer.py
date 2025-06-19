@@ -62,12 +62,6 @@ class TrainingSubStats:
 
         logger.log(log_level, ''.join(output))
 
-    def to_json(self):
-        return {
-            'loss': self.loss(),
-            'loss_weight': self.loss_weight,
-            }
-
     @staticmethod
     def dump_total_loss(total_loss, log_level):
         output = ['total'.rjust(TrainingSubStats.max_descr_len)]
@@ -81,7 +75,6 @@ class TrainingStats:
         self.gen = gen
         self.minibatch_size = minibatch_size
         self.start_ts = 0
-        self.end_ts = 0
         self.window_start = window_start
         self.window_end = window_end
         self.window_sample_rate = 0.0
@@ -108,21 +101,6 @@ class TrainingStats:
             substats.dump(total_loss, log_level)
 
         TrainingSubStats.dump_total_loss(total_loss, log_level)
-
-    def to_json(self):
-        substats = { s.name: s.to_json() for s in self.substats_list }
-        return {
-            'gen': self.gen,
-            'start_ts': self.start_ts,
-            'end_ts': self.end_ts,
-            'window_start': self.window_start,
-            'window_end': self.window_end,
-            'window_sample_rate': self.window_sample_rate,
-            'n_samples': self.n_samples,
-            'minibatch_size': self.minibatch_size,
-            'n_minibatches': self.n_minibatches_processed,
-            'substats': substats,
-        }
 
 
 class NetTrainer:
@@ -198,12 +176,9 @@ class NetTrainer:
             if self._shutdown_in_progress:
                 return None
 
-        end_ts = time.time_ns()
-
         window_sample_rate = n_samples / (window_end - window_start)
 
         stats.start_ts = start_ts
-        stats.end_ts = end_ts
         stats.window_sample_rate = window_sample_rate
         t3 = time.time()
 
@@ -212,7 +187,7 @@ class NetTrainer:
 
         stats.dump(logging.INFO)
         logger.info('Gen %s training complete', gen)
-        logger.info('Data loading time: %10.3f seconds', load_time)
-        logger.info('Training time:     %10.3f seconds', train_time)
+        logger.info('Data loading time:   %10.3f seconds', load_time)
+        logger.info('Training time:       %10.3f seconds', train_time)
 
         return stats

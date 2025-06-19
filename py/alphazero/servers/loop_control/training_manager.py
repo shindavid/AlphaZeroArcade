@@ -17,6 +17,7 @@ import os
 import shutil
 import tempfile
 import threading
+import time
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class TrainingManager:
         self._trainer = None
         self._net = None
         self._opt = None
+        self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
 
         self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
@@ -134,11 +136,27 @@ class TrainingManager:
         """
         table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
         table.acquire_lock(Domain.TRAINING)
-        self._train_step_helper()
+        self._train_step_helper(table)
         table.release_lock(Domain.TRAINING)
 
-    def get_next_checkpoint(self):
+    def get_checkpoint(self):
         return self._checkpoint
+
+    def estimate_upcoming_checkpoint(self):
+        training_params = self.training_params
+        minibatch_size = training_params.minibatch_size
+        n_minibatches = training_params.minibatches_per_epoch
+
+        f = training_params.window_size_function
+        n = self._controller.get_num_committed_rows()
+        w = int(f(n))
+        start = max(0, n - w)
+        end = n
+
+        n_samples = minibatch_size * n_minibatches
+        estimated_sample_window = construct_window(self._last_sample_window, start, end, n_samples)
+        size = get_required_dataset_size(self.training_params, estimated_sample_window)
+        return size
 
     def notify_of_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
         self._game_log_reader.add_gen(gen, n_rows, file_size)
@@ -226,7 +244,7 @@ class TrainingManager:
 
         return self._net, self._opt
 
-    def _train_step_helper(self):
+    def _train_step_helper(self, table: GpuContentionTable):
         self._controller.spawn_log_sync_thread()
 
         organizer = self._controller.organizer
@@ -241,6 +259,11 @@ class TrainingManager:
                                   args=(trainer, gen))
         thread.start()
         thread.join()
+
+        if self._stats is not None:
+            self._save_model(table, gen, self._net)
+            self._record_stats(gen, self._stats)
+            self._set_checkpoint()
 
         with self._lock:
             self._trainer = None
@@ -290,18 +313,9 @@ class TrainingManager:
             net, optimizer = self._get_net_and_optimizer()
             self._dump_model_counts()
 
-            stats = trainer.do_training_epoch(
+            self._stats = trainer.do_training_epoch(
                 self._game_log_reader, net, optimizer, minibatch_size, n_minibatches,
                 start, end, gen)
-
-            if stats is None:
-                # Happens in premature-shutdown case. No need to release training gpu lock since
-                # the whole process is shutting down.
-                return
-
-            self._save_model(gen, net)
-            self._record_stats(gen, stats)
-            self._set_checkpoint()
         except:
             if self._game_log_reader.closed():
                 # This is a shutdown race-condition, it's ok
@@ -322,7 +336,7 @@ class TrainingManager:
         window_end = stats.window_end
         n_samples = stats.n_samples
         start_ts = stats.start_ts
-        end_ts = stats.end_ts
+        end_ts = time.time_ns()
 
         window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
         self._last_sample_window = window
@@ -350,7 +364,7 @@ class TrainingManager:
             conn.commit()
             cursor.close()
 
-    def _save_model(self, gen: Generation, net: Model):
+    def _save_model(self, table: GpuContentionTable, gen: Generation, net: Model):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
         model_filename = organizer.get_model_filename(gen)
@@ -359,7 +373,20 @@ class TrainingManager:
         checkpoint = {}
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
+
+        # NOTE: this save_model() call is expensive, and does not use the GPU. However, it does
+        # use all available CPU cores, which is why we keep the TRAINING lock held, as long as
+        # locking all other tables on the same machine.
+        for table2 in self._controller.get_other_gpu_lock_tables(table):
+            table2.acquire_lock(Domain.TRAINING)
+        logger.debug('Calling save_model()...')
+        t1 = time.time()
         net.save_model(tmp_model_filename, 256)  # TODO: coordinate this to match c++ runtime -b
+        t2 = time.time()
+        logger.info('TensorRT build time: %10.3f seconds', t2 - t1)
+        for table2 in self._controller.get_other_gpu_lock_tables(table):
+            table2.release_lock(Domain.TRAINING)
+
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
         self._latest_gen = gen
