@@ -3,8 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, FileToTransfer
-from alphazero.servers.loop_control.gpu_contention_table import Domain
+from alphazero.logic.custom_types import ClientConnection, FileToTransfer, Generation
 from util.socket_util import JsonDict, SocketSendException
 
 from collections import defaultdict
@@ -21,6 +20,9 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+PERFORM_HOURLY_RESTARTS = False
 
 
 class SelfPlayManager:
@@ -101,13 +103,12 @@ class SelfPlayManager:
             self._conns_cond.wait_for(lambda: self._ready_server_conns)
             conn = self._ready_server_conns[0]
 
-        checkpoint = self._controller.get_next_checkpoint()
+        checkpoint = self._controller.get_checkpoint()
         self._launch_gen0_self_play(conn, checkpoint)
         self._collect_and_process_game_data()
 
     def run_until_checkpoint(self):
-        self._controller._training_manager._set_checkpoint()
-        checkpoint = self._controller.get_next_checkpoint()
+        checkpoint = self._controller.get_checkpoint()
 
         num_rows = self._n_committed_rows
         if checkpoint <= num_rows:
@@ -117,7 +118,6 @@ class SelfPlayManager:
                     num_rows, checkpoint)
 
         self._launch_unlaunched_workers()
-        self._controller.unhijack_all_self_play_tables()
         self._collect_and_process_game_data()
 
     def add_server(self, conn: ClientConnection):
@@ -257,15 +257,23 @@ class SelfPlayManager:
 
         aux: SelfPlayManager.ServerAux = conn.aux
         aux.launched = True
-        thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
-                                  daemon=True, name=f'self-play-restart-loop')
-        thread.start()
+
+        if PERFORM_HOURLY_RESTARTS:
+            # We used to restart the self-play process every hour to mitigate a memory leak in the
+            # c++ process. After migrating to TensorRT, this leak appears to be gone, so we no
+            # longer need to do this.
+            thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
+                                    daemon=True, name=f'self-play-restart-loop')
+            thread.start()
 
     def _launch_self_play_restart_loop(self, conn: ClientConnection):
         """
-        There is currently a memory-leak in the c++ process. I suspect it comes from torchlib,
-        although it's possible that the culprit lies in our code. The leak appears to contribute
-        about 1GB of memory per hour. To mitigate this, we restart the process every hour.
+        When we used libtorch, there was a memory leak in the c++ process. We restarted the process
+        every hour to mitigate this.
+
+        After the libtorch->TensorRT migration, the memory leak appears to be gone. As such, this
+        restart loop is no longer necessary. However, we keep it here for now, in case a leak
+        reappears in the future.
         """
         try:
             while conn.active:
@@ -368,7 +376,7 @@ class SelfPlayManager:
         with self._commit_lock:
             self._commit_info[conn.client_id].n_rows = rows
 
-            if self._get_num_potential_rows() >= self._controller.get_next_checkpoint():
+            if self._get_num_potential_rows() >= self._controller.get_checkpoint():
                 self._commit_cond.notify_all()
 
     def _launch_unlaunched_workers(self):
@@ -379,23 +387,28 @@ class SelfPlayManager:
                     self._launch_self_play(conn)
 
     def _wait_until_checkpoint_reached(self):
-        checkpoint = self._controller.get_next_checkpoint()
+        checkpoint = self._controller.get_checkpoint()
         with self._commit_lock:
             self._commit_cond.wait_for(lambda: self._get_num_potential_rows() >= checkpoint)
 
     def _collect_and_process_game_data(self):
         self._wait_until_checkpoint_reached()
-        table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
-        table.pre_acquire_lock(Domain.TRAINING)
-        self._controller.hijack_all_self_play_tables()
-
         self._request_all_game_data()
         self._receive_all_game_data()
         self._update_self_play_db()
 
     def _request_all_game_data(self):
-        n_rows_needed = self._controller.get_next_checkpoint() - self._n_committed_rows
-        logger.debug('Requesting %s rows of data from all self-play workers...', n_rows_needed)
+        gen = self._controller.latest_gen()
+        checkpoint = self._controller.get_checkpoint()
+        n_rows_needed = checkpoint - self._n_committed_rows
+
+        if gen == 0:
+            next_row_limit = 0
+        else:
+            checkpoint2 = self._controller.estimate_upcoming_checkpoint()
+            next_row_limit = checkpoint2 - checkpoint
+        logger.debug('Requesting self-play data (needed=%s, next=%s)...', n_rows_needed,
+                     next_row_limit)
 
         n_rows_requested = 0
 
@@ -405,14 +418,16 @@ class SelfPlayManager:
                     rows = self._commit_info[conn.client_id].n_rows
                 n_rows_to_request = min(n_rows_needed - n_rows_requested, rows)
                 if n_rows_to_request > 0:
-                    self._request_game_data(conn, n_rows_to_request)
+                    self._request_game_data(conn, n_rows_to_request, next_row_limit)
                 n_rows_requested += n_rows_to_request
 
-    def _request_game_data(self, conn: ClientConnection, n_rows: int):
-        logger.debug('Requesting %s to send %s rows of data...', conn, n_rows)
+    def _request_game_data(self, conn: ClientConnection, n_rows: int, next_row_limit: int):
+        logger.debug('Requesting %s to send %s rows of data (next: %s)...', conn, n_rows,
+                     next_row_limit)
         data = {
             'type': 'data-request',
             'n_rows': n_rows,
+            'next_row_limit': next_row_limit,
         }
         conn.socket.send_json(data)
 

@@ -26,7 +26,7 @@ class GpuContentionManager:
     Manages contention for GPUs.
     """
     def __init__(self, controller: LoopController):
-        self._self_play_hijacked = True
+        self._self_play_hijacked = False
         self._controller = controller
         self._table_lock = threading.Lock()
         self._table: GpuContentionTableDict = defaultdict(dict)
@@ -57,6 +57,16 @@ class GpuContentionManager:
                         logger.debug('Performing training switcheroo: %s -> %s', table, other_table)
                         return other_table
             return table
+
+    def get_other_gpu_lock_tables(self, table: GpuContentionTable) -> List[GpuContentionTable]:
+        """
+        Returns all GPU lock tables on the same machine as the given table, asides from the
+        table itself.
+        """
+        gpu_id = table.gpu_id
+        with self._table_lock:
+            subtable = self._table[gpu_id.ip_address]
+            return [table for table in subtable.values() if table.gpu_id != gpu_id]
 
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         with self._table_lock:

@@ -137,9 +137,6 @@ class GameLogReader:
         gen_range_tensor = torch.empty(2, dtype=torch.int32)
         gen_range_value_c = ffi.cast('int*', gen_range_tensor.data_ptr())
 
-        logger.info('******************************')
-        logger.info('Train gen:%s', gen)
-
         lib.DataLoader_load(self._data_loader, window_start, window_end, n_samples, apply_symmetry,
                             n_targets, output_values_c, target_indices_c, gen_range_value_c)
 

@@ -6,12 +6,11 @@
 #include <EigenRand/EigenRand>
 #include <boost/json.hpp>
 #include <boost/mp11.hpp>
-#include <torch/torch.h>
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include <array>
-#include <bitset>
 #include <cstdint>
+#include <map>
 #include <type_traits>
 
 /*
@@ -43,6 +42,21 @@ template <typename T>
 concept Shape = is_eigen_shape_v<T>;
 
 }  // namespace concepts
+
+
+/*
+ * 3 == extract_rank_v<Eigen::Sizes<10, 20, 30>>
+ * 1 == extract_rank_v<Eigen::Sizes<5>>
+ */
+template <typename T>
+struct extract_rank {};
+
+template <int64_t... Is>
+struct extract_rank<Eigen::Sizes<Is...>> {
+  static constexpr int64_t value = sizeof...(Is);
+};
+template <typename T>
+constexpr int64_t extract_rank_v = extract_rank<T>::value;
 
 /*
  * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
@@ -122,8 +136,9 @@ auto to_int64_std_array_v = to_int64_std_array<T>::value;
  * using S = Eigen::Sizes<1, 2, 3>;
  * using T = eigen_util::FTensor<S>;
  *
- * The reason we default to RowMajor is for smooth interoperability with pytorch, which is row-major
- * by default.
+ * The reason we default to RowMajor is for smooth interoperability with TensorRT, which is
+ * row-major by default.
+ *
  *
  * The "f" stands for "fixed-size".
  */

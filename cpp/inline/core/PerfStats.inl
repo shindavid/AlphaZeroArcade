@@ -44,30 +44,28 @@ inline void SearchThreadPerfStats::normalize(int num_game_threads) {
   mcts_time_ns /= num_game_threads;
 }
 
-inline NNEvalLoopPerfStats& NNEvalLoopPerfStats::operator+=(
-  const NNEvalLoopPerfStats& other) {
+inline NNEvalScheduleLoopPerfStats& NNEvalScheduleLoopPerfStats::operator+=(
+  const NNEvalScheduleLoopPerfStats& other) {
   positions_evaluated += other.positions_evaluated;
   batches_evaluated += other.batches_evaluated;
   full_batches_evaluated += other.full_batches_evaluated;
 
   wait_for_search_threads_time_ns += other.wait_for_search_threads_time_ns;
-  cpu2gpu_copy_time_ns += other.cpu2gpu_copy_time_ns;
-  gpu2cpu_copy_time_ns += other.gpu2cpu_copy_time_ns;
-  model_eval_time_ns += other.model_eval_time_ns;
+  pipeline_wait_time_ns += other.pipeline_wait_time_ns;
+  pipeline_schedule_time_ns += other.pipeline_schedule_time_ns;
 
   batch_datas_allocated += other.batch_datas_allocated;
   return *this;
 }
 
-inline void NNEvalLoopPerfStats::fill_json(boost::json::object& obj) const {
+inline void NNEvalScheduleLoopPerfStats::fill_json(boost::json::object& obj) const {
   obj["positions_evaluated"] = positions_evaluated;
   obj["batches_evaluated"] = batches_evaluated;
   obj["full_batches_evaluated"] = full_batches_evaluated;
 
   obj["wait_for_search_threads_time_ns"] = wait_for_search_threads_time_ns;
-  obj["cpu2gpu_copy_time_ns"] = cpu2gpu_copy_time_ns;
-  obj["gpu2cpu_copy_time_ns"] = gpu2cpu_copy_time_ns;
-  obj["model_eval_time_ns"] = model_eval_time_ns;
+  obj["pipeline_wait_time_ns"] = pipeline_wait_time_ns;
+  obj["pipeline_schedule_time_ns"] = pipeline_schedule_time_ns;
 
   obj["batch_datas_allocated"] = batch_datas_allocated;
 }
@@ -89,7 +87,7 @@ inline void LoopControllerPerfStats::fill_json(boost::json::object& obj) const {
 
 inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
   search_thread_stats += other.search_thread_stats;
-  nn_eval_loop_stats += other.nn_eval_loop_stats;
+  nn_eval_schedule_loop_stats += other.nn_eval_schedule_loop_stats;
   loop_controller_stats += other.loop_controller_stats;
   return *this;
 }
@@ -97,7 +95,7 @@ inline PerfStats& PerfStats::operator+=(const PerfStats& other) {
 inline boost::json::object PerfStats::to_json() const {
   boost::json::object obj;
   search_thread_stats.fill_json(obj);
-  nn_eval_loop_stats.fill_json(obj);
+  nn_eval_schedule_loop_stats.fill_json(obj);
   loop_controller_stats.fill_json(obj);
   return obj;
 }
@@ -106,8 +104,8 @@ inline void PerfStats::update(const SearchThreadPerfStats& stats) {
   search_thread_stats += stats;
 }
 
-inline void PerfStats::update(const NNEvalLoopPerfStats& stats) {
-  nn_eval_loop_stats += stats;
+inline void PerfStats::update(const NNEvalScheduleLoopPerfStats& stats) {
+  nn_eval_schedule_loop_stats += stats;
 }
 
 inline void PerfStats::update(const LoopControllerPerfStats& stats) {

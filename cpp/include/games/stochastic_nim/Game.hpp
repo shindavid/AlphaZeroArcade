@@ -18,7 +18,6 @@
 #include <util/MetaProgramming.hpp>
 
 #include <boost/functional/hash.hpp>
-#include <torch/torch.h>
 
 #include <format>
 #include <functional>

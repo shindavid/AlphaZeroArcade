@@ -60,7 +60,6 @@ class LoopControllerClient : public PerfStatsClient {
   static bool deactivated() { return instance_ && instance_->deactivated_; }
   static LoopControllerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
-  int cur_generation() const { return cur_generation_; }
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
   const std::string& ratings_tag() const { return params_.ratings_tag; }
@@ -94,8 +93,8 @@ class LoopControllerClient : public PerfStatsClient {
   void send_unpause_ack();
   void pause();
   void unpause();
-  void reload_weights(const std::vector<char>& buf, const std::string& cuda_device);
-  void handle_data_request(int n_rows);
+  void reload_weights(const std::vector<char>& buf);
+  void handle_data_request(int n_rows, int next_row_limit);
   void handle_data_pre_request(int n_rows_limit);
   void wait_for_pause_receipts();
   void wait_for_unpause_receipts();
@@ -112,7 +111,6 @@ class LoopControllerClient : public PerfStatsClient {
   std::vector<DataRequestListener*> data_request_listeners_;
   std::vector<WorkerReadyListener*> worker_ready_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
-  int cur_generation_ = 0;
 
   std::condition_variable receipt_cv_;
   mutable std::mutex receipt_mutex_;

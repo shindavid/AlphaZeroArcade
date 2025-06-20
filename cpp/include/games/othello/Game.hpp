@@ -17,7 +17,6 @@
 #include <util/MetaProgramming.hpp>
 
 #include <boost/functional/hash.hpp>
-#include <torch/torch.h>
 
 #include <cstdint>
 #include <functional>

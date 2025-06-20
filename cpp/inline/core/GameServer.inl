@@ -886,6 +886,8 @@ void GameServer<Game>::GameThread::run() {
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
+    LOG_DEBUG("<-- GameServer::step(item={}:{})", slot->id(), item.context);
+
     // mcts_time_ns will include all other timed components of SearchThreadPerfStats, except for
     // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
     int64_t mcts_time_ns = 0;
@@ -894,7 +896,7 @@ void GameServer<Game>::GameThread::run() {
     StepResult step_result = slot->step(item.context);
     EnqueueRequest& request = step_result.enqueue_request;
 
-    LOG_DEBUG("<-- GameServer::step(item={}:{}) enqueue_request={}:{}", slot->id(),
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) complete enqueue_request={}:{}", slot->id(),
               item.context, (int)request.instruction, request.extra_enqueue_count);
 
     shared_data_.enqueue(item, request);

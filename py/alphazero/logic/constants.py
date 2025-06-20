@@ -29,15 +29,14 @@ PERF_STATS_COLUMNS = [
     'wait_for_nn_eval_time_ns',
     'mcts_time_ns',
 
-    # NNEvalLoopPerfStats
+    # NNEvalScheduleLoopPerfStats
     'positions_evaluated',
     'batches_evaluated',
     'full_batches_evaluated',
 
     'wait_for_search_threads_time_ns',
-    'cpu2gpu_copy_time_ns',
-    'gpu2cpu_copy_time_ns',
-    'model_eval_time_ns',
+    'pipeline_wait_time_ns',
+    'pipeline_schedule_time_ns',
 
     'batch_datas_allocated',
 
@@ -91,7 +90,7 @@ TRAINING_TABLE_CREATE_CMDS = [
             loss_weight FLOAT
             )""",
 
-    """CREATE INDEX training_heads_idx ON training_heads (gen)""",
+    """CREATE INDEX training_heads_idx ON training_heads (gen, head_name)""",
 ]
 
 

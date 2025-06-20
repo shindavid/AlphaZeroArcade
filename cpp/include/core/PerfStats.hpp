@@ -29,9 +29,10 @@ struct SearchThreadPerfStats {
   int64_t mcts_time_ns = 0;
 };
 
-// Component of PerfStats that tracks performance from the perspective of the nn eval service loop.
-struct NNEvalLoopPerfStats {
-  NNEvalLoopPerfStats& operator+=(const NNEvalLoopPerfStats& other);
+// Component of PerfStats that tracks performance from the perspective of the NNEvaluationService
+// schedule loop.
+struct NNEvalScheduleLoopPerfStats {
+  NNEvalScheduleLoopPerfStats& operator+=(const NNEvalScheduleLoopPerfStats& other);
   void fill_json(boost::json::object& obj) const;
 
   int64_t positions_evaluated = 0;
@@ -39,9 +40,8 @@ struct NNEvalLoopPerfStats {
   int64_t full_batches_evaluated = 0;
 
   int64_t wait_for_search_threads_time_ns = 0;
-  int64_t cpu2gpu_copy_time_ns = 0;
-  int64_t gpu2cpu_copy_time_ns = 0;
-  int64_t model_eval_time_ns = 0;
+  int64_t pipeline_wait_time_ns = 0;
+  int64_t pipeline_schedule_time_ns = 0;
 
   int batch_datas_allocated = 0;
 };
@@ -59,12 +59,12 @@ struct PerfStats {
   PerfStats& operator+=(const PerfStats& other);
   boost::json::object to_json() const;
   void update(const SearchThreadPerfStats&);
-  void update(const NNEvalLoopPerfStats&);
+  void update(const NNEvalScheduleLoopPerfStats&);
   void update(const LoopControllerPerfStats&);
   void calibrate(int num_game_threads);
 
   SearchThreadPerfStats search_thread_stats;
-  NNEvalLoopPerfStats nn_eval_loop_stats;
+  NNEvalScheduleLoopPerfStats nn_eval_schedule_loop_stats;
   LoopControllerPerfStats loop_controller_stats;
 };
 

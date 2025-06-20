@@ -120,7 +120,7 @@ def construct_window(prev_window: Window, c: int, n: int, n_sampled_positions: i
     Constructs a new window from a previous window, by incorporating the fact that we just sampled
     n_sampled_positions from M[c:n].
     """
-    assert n > c
+    assert n > c, 'construct_wondow(%s, %s, %s, %s)' % (prev_window, c, n, n_sampled_positions)
     n_prev_window_samples = max(0, prev_window.end - c) * prev_window.sample_rate
     n_total_samples = n_prev_window_samples + n_sampled_positions
     sample_rate = n_total_samples / (n - c)

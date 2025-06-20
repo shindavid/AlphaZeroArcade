@@ -78,7 +78,7 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
       action_values.setZero();
     }
 
-    eval->init(value, policy, action_values, valid_actions, sym, seat, mode);
+    eval->init(policy, value, action_values, valid_actions, sym, seat, mode);
   }
 
  private:

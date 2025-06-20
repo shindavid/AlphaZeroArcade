@@ -1,4 +1,5 @@
 #include <util/AllocPool.hpp>
+#include <util/CudaUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>
 #include <util/Math.hpp>
@@ -571,11 +572,38 @@ TEST(eigen_util, concatenate_columns) {
   }
 }
 
+TEST(eigen_util, extract_rank) {
+  using Shape1 = Eigen::Sizes<3, 4, 5>;
+  using Shape2 = Eigen::Sizes<2, 3>;
+
+  EXPECT_EQ(eigen_util::extract_rank_v<Shape1>, 3);
+  EXPECT_EQ(eigen_util::extract_rank_v<Shape2>, 2);
+}
+
+TEST(eigen_util, extract_dim) {
+  using Shape1 = Eigen::Sizes<3, 4, 5>;
+  using Shape2 = Eigen::Sizes<2, 3>;
+
+  EXPECT_EQ((eigen_util::extract_dim_v<0, Shape1>), 3);
+  EXPECT_EQ((eigen_util::extract_dim_v<1, Shape1>), 4);
+  EXPECT_EQ((eigen_util::extract_dim_v<2, Shape1>), 5);
+
+  EXPECT_EQ((eigen_util::extract_dim_v<0, Shape2>), 2);
+  EXPECT_EQ((eigen_util::extract_dim_v<1, Shape2>), 3);
+}
+
 TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width(""), 0);
   EXPECT_EQ(util::terminal_width("hello"), 5);
   EXPECT_EQ(util::terminal_width("\033[31m\033[00m"), 0);  // red font
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
+}
+
+TEST(cuda_util, cuda_device_to_ordinal) {
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:0"), 0);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("0"), 0);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:1"), 1);
+  EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
 TEST(math, splitmix64) {

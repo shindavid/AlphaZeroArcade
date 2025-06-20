@@ -35,7 +35,6 @@ import logging
 import os
 import shutil
 import socket
-import sys
 import threading
 from typing import Callable, Dict, List, Optional
 
@@ -203,6 +202,13 @@ class LoopController:
     def get_gpu_lock_table_for_training(self) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table_for_training()
 
+    def get_other_gpu_lock_tables(self, table: GpuContentionTable) -> List[GpuContentionTable]:
+        """
+        Returns all GPU lock tables on the same machine as the given table, asides from the
+        table itself.
+        """
+        return self._gpu_contention_manager.get_other_gpu_lock_tables(table)
+
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
@@ -258,7 +264,11 @@ class LoopController:
                          daemon=True).start()
 
     def handle_new_model(self):
+        # this hijack + unhijack causes all self-play workers to pause and then unpause, which
+        # triggers a weights-refresh. See SelfPlayManager._manage_worker().
+        self._gpu_contention_manager.hijack_all_self_play_tables()
         self._gpu_contention_manager.unhijack_all_self_play_tables()
+
         for tag, manager in self._ratings_managers.items():
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
@@ -274,9 +284,9 @@ class LoopController:
         self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
 
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
-        logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
+        logger.debug('Broadcasting weights to %s', conn)
 
-        required_rows = self.get_next_checkpoint() - self.get_num_committed_rows()
+        required_rows = self.get_checkpoint() - self.get_num_committed_rows()
 
         data1 = {
             'type': 'data-pre-request',
@@ -285,7 +295,6 @@ class LoopController:
 
         data2 = {
             'type': 'reload-weights',
-            'generation': gen,
         }
 
         model_filename = self.organizer.get_model_filename(gen)
@@ -320,19 +329,14 @@ class LoopController:
     def set_domain_priority(self, domain: Domain, elevate: bool):
         self._gpu_contention_manager.set_domain_priority(domain, elevate)
 
-    def hijack_all_self_play_tables(self):
-        logger.debug('Hijacking all self-play tables...')
-        self._gpu_contention_manager.hijack_all_self_play_tables()
-
-    def unhijack_all_self_play_tables(self):
-        logger.debug('Unhijacking all self-play tables...')
-        self._gpu_contention_manager.unhijack_all_self_play_tables()
-
     def get_num_committed_rows(self):
         return self._self_play_manager.get_num_committed_rows()
 
-    def get_next_checkpoint(self):
-        return self._training_manager.get_next_checkpoint()
+    def get_checkpoint(self):
+        return self._training_manager.get_checkpoint()
+
+    def estimate_upcoming_checkpoint(self):
+        return self._training_manager.estimate_upcoming_checkpoint()
 
     def start_log_sync(self, conn: ClientConnection, remote_filename: str):
         self._log_syncer.register(conn, remote_filename)

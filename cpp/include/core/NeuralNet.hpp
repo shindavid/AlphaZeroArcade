@@ -1,51 +1,115 @@
 #pragma once
 
-#include <sstream>
-#include <vector>
+#include <core/BasicTypes.hpp>
+#include <core/concepts/Game.hpp>
+#include <util/EigenUtil.hpp>
+#include <util/LoggingUtil.hpp>
 
-#include <boost/filesystem.hpp>
-#include <torch/script.h>
+#include <NvInfer.h>
+#include <cuda_runtime_api.h>
+
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <spanstream>
+#include <vector>
 
 namespace core {
 
 /*
- * A thin wrapper around a PyTorch model.
+ * A thin wrapper around a TensorRT engine.
  */
+template <concepts::Game Game>
 class NeuralNet {
  public:
-  using input_vec_t = std::vector<torch::jit::IValue>;
+  using InputShape = Game::InputTensorizor::Tensor::Dimensions;
+  using PolicyShape = Game::Types::PolicyShape;
+  using ValueShape = Game::Types::ValueShape;
+  using ActionValueShape = Game::Types::ActionValueShape;
 
-  NeuralNet() : device_(at::Device("cpu")) {}
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
-  /*
-   * value is passed to torch::jit::load(). See torch::jit::load() API for details.
-   *
-   * After this call, the model will be on the CPU. Use activate() to move it to the GPU.
-   */
-  template<typename Value>
-  void load_weights(Value&& value, const std::string& cuda_device);
+  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
+  using DynamicPolicyTensor = Eigen::Tensor<float, PolicyShape::count + 1, Eigen::RowMajor>;
+  using DynamicValueTensor = Eigen::Tensor<float, ValueShape::count + 1, Eigen::RowMajor>;
+  using DynamicActionValueTensor =
+    Eigen::Tensor<float, ActionValueShape::count + 1, Eigen::RowMajor>;
 
-  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value,
-               torch::Tensor& action_values) const;
+  using DynamicInputTensorMap = Eigen::TensorMap<DynamicInputTensor, Eigen::Aligned>;
+  using DynamicPolicyTensorMap = Eigen::TensorMap<DynamicPolicyTensor, Eigen::Aligned>;
+  using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
+  using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
 
-  /*
-   * Moves the model to the CPU. This frees up the GPU for other processes.
-   */
+  NeuralNet(int cuda_device_id);
+  ~NeuralNet();
+
+  int batch_size() const { return batch_size_; }
+  void load_weights(const char* filename);
+  void load_weights(std::ispanstream& stream);
+
+  pipeline_index_t get_pipeline_assignment();
+  float* get_input_ptr(pipeline_index_t);
+  void schedule(pipeline_index_t) const;
+  void release(pipeline_index_t);
+
+  void load(pipeline_index_t, float** policy_data, float** value_data, float** action_values_data);
+
+  // Frees all GPU resources
   void deactivate();
 
-  /*
-   * Moves the model back to the GPU.
-   */
-  void activate();
+  // If already activated, is a no-op and returns false.
+  //
+  // Else, sets up GPU resources, including pipelines, and returns true.
+  //
+  // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
+  bool activate(int num_pipelines);
 
-  bool loaded() const { return loaded_; }
-  bool activated() const { return activated_; }
+  bool loaded() const { return !plan_data_.empty(); }
+  bool activated() const { return engine_; }
 
  private:
-  mutable torch::jit::script::Module module_;
-  at::Device device_;
-  bool loaded_ = false;
-  bool activated_ = false;
+  // simple logger
+  class Logger : public nvinfer1::ILogger {
+  public:
+    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
+      if (severity <= Severity::kWARNING) {
+        LOG_WARN("[TRT] {}", msg);
+      }
+    }
+  };
+
+  struct Pipeline {
+    Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape, int batch_size);
+    ~Pipeline();
+
+    void schedule();
+    void load(float** policy_data, float** value_data, float** action_values_data);
+
+    nvinfer1::IExecutionContext* context = nullptr;
+    cudaStream_t stream;
+    std::vector<void*> device_buffers;
+
+    DynamicInputTensorMap input;
+    DynamicPolicyTensorMap policy;
+    DynamicValueTensorMap value;
+    DynamicActionValueTensorMap action_values;
+  };
+
+  Logger logger_;
+  nvinfer1::IRuntime* const runtime_;
+  nvinfer1::ICudaEngine* engine_ = nullptr;
+
+  std::vector<Pipeline*> pipelines_;
+  std::deque<pipeline_index_t> available_pipeline_indices_;
+  std::vector<char> plan_data_;
+
+  mutable std::mutex pipeline_mutex_;
+  std::condition_variable pipeline_cv_;
+
+  int batch_size_ = 0;
+  const int cuda_device_id_;
 };
 
 }  // namespace core
