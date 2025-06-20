@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
   // 2) Create builder config & optimization profile
   auto config = builder->createBuilderConfig();
   config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 1ULL << 30);
+  config->setFlag(BuilderFlag::kFP16);
   auto profile = builder->createOptimizationProfile();
   Dims dims = network->getInput(0)->getDimensions();
   // min = maxBatch
