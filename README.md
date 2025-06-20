@@ -167,20 +167,30 @@ During-or-after a run of the loop-controller, you can launch a web dashboard to 
 
 This will print a URL that you can paste into a web browser on your local machine, which currently looks like this:
 
-![image](https://github.com/user-attachments/assets/e53086a0-467a-4a8f-82aa-7a754a783da5)
+![image](https://github.com/user-attachments/assets/125cf8a1-2358-46dc-a7f8-b043d0036342)
 
-The "Ratings" item in the sidebar shows a plot like this:
+The "Evaluation" link in the sidebar shows a plot like this:
 
-![image](https://github.com/user-attachments/assets/9a57cf0e-2cb1-4839-bcfc-f01729b17371)
+![image](https://github.com/user-attachments/assets/3518aca0-73e2-46ef-a3f8-2cd84b924338)
 
 This run was performed on my laptop, a Dell Mobile Precision Workstation 7680 equipped with an NVIDIA RTX 5000 Ada Generation GPU.
 
 This curve shows the evolution of an MCTS agent using i=100 iterations per search.
 
-In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
-against a 13-ply exhaustive tree-search agent over a 100 game sample. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
-exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
-plot thus indicates that the system attains optimal results against perfect play within about **13 minutes**.
+In the above, the y-axis is an Elo measure. The dashed-line corresponds to a level-21 benchmark agent, which plays according
+to a 21-ply exhaustive tree-search. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
+exhaustive tree-search represents perfect-play, meaning that the dashed line corresponds to perfect play. The above
+plot thus indicates that the system approximately matches perfect play within about **3 minutes of self-play runtime**.
+
+Note: although we only need 3 minutes of self-play runtime, the actual wall-clock time is quite a bit more, as that includes:
+
+- Neural network train-time
+- TensorRT build-time (to export the trained models)
+- Evaluation time (test matches against benchmark agents)
+
+However, on a more mature compute setup, all these components could be performed by separate servers, while on my laptop, these
+parts block the self-play component. Given that self-play is typically the bottleneck for bigger games, we feel justified in
+focusing on that timing measurement.
 
 You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above Connect4
 example, you can do this with a command like:
@@ -203,7 +213,7 @@ To summarize:
 
 |               | AlphaZeroArcade     | Oracle Devs         |
 | ------------- | ------------------- | ------------------- |
-| Training Time | 13 GPU-min          | 21 GPU-hours        |
+| Training Time | 3 GPU-min           | 21 GPU-hours        |
 | Test Budget   | 100 MCTS-iters/move | 800 MCTS-iters/move |
 | Test Accuracy | ~100%               | 99.76%              |
 
