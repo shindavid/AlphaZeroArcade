@@ -755,20 +755,7 @@ class Model(nn.Module):
                 dynamic_axes=dynamic_axes,
             )
 
-            # 3) shell out to build_engine:
-            build_bin_paths = [
-                os.path.join(Repo.root(), "target/Release/bin/tools/onnx_engine_builder"),
-                os.path.join(Repo.root(), "target/Debug/bin/tools/onnx_engine_builder"),
-            ]
-            existent_build_bins = [p for p in build_bin_paths if os.path.isfile(p)]
-            if not existent_build_bins:
-                logger.error("Could not find onnx_engine_builder in any of the following paths:")
-                for p in build_bin_paths:
-                    logger.error(f"  {p}")
-                logger.error("Please build it first by running ./build.py [-t tools]")
-                raise Exception("onnx_engine_builder not found")
-
-            build_bin = existent_build_bins[0]  # use the first found one
+            build_bin = Model._get_onnx_engine_builder_binary()
             cmd = [build_bin, onnx_path, filename, str(batch_size)]
             subprocess.run(cmd, capture_output=True, check=True)
 
@@ -792,3 +779,19 @@ class Model(nn.Module):
             'model.state_dict': self.state_dict(),
             'model.config': self.config,
         })
+
+    @staticmethod
+    def _get_onnx_engine_builder_binary() -> str:
+        build_bin_paths = [
+            os.path.join(Repo.root(), "target/Release/bin/tools/onnx_engine_builder"),
+            os.path.join(Repo.root(), "target/Debug/bin/tools/onnx_engine_builder"),
+        ]
+        existent_build_bins = [p for p in build_bin_paths if os.path.isfile(p)]
+        if not existent_build_bins:
+            logger.error("Could not find onnx_engine_builder in any of the following paths:")
+            for p in build_bin_paths:
+                logger.error(f"  {p}")
+            logger.error("Please build it first by running ./build.py [-t tools]")
+            raise Exception("onnx_engine_builder not found")
+
+        return existent_build_bins[0]  # use the first found one
