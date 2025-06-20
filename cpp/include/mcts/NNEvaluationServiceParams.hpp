@@ -21,17 +21,6 @@ struct NNEvaluationServiceParams {
   std::string cuda_device = "cuda:0";
   int num_pipelines = 2;
   size_t cache_size = 1048576;
-
-#ifdef PROFILE_MCTS
-  std::string profiling_dir_str;
-
-  boost::filesystem::path profiling_dir() const {
-    return boost::filesystem::path(profiling_dir_str);
-  }
-#else   // PROFILE_MCTS
-  boost::filesystem::path profiling_dir() const { return {}; }
-#endif  // PROFILE_MCTS
-
 };
 
 }  // namespace mcts

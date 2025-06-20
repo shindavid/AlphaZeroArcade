@@ -31,11 +31,6 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       "number of nn eval pipelines to use")
     .template add_hidden_option<"cache-size">(
       po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size")
-#ifdef PROFILE_MCTS
-    .template add_option<"profiling-dir">(
-      po::value<std::string>(&profiling_dir_str)->default_value("/workspace/repo/profiling"),
-      "directory in which to dump mcts profiling stats")
-#endif  // PROFILE_MCTS
       ;
 }
 
