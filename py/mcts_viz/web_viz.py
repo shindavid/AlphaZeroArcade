@@ -14,7 +14,7 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 base_dir = '/workspace/repo/sample_search_logs/mcts_tests'
 
 # List all files ending with '_log.json'
-log_files = [f for f in os.listdir(base_dir) if f.endswith('_log.json')]
+log_files = sorted([f for f in os.listdir(base_dir) if f.endswith('.json')])
 
 # App layout
 app.layout = html.Div([
