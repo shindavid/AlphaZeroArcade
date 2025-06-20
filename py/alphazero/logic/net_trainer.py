@@ -74,7 +74,6 @@ class TrainingStats:
                  window_end: int, net: Model):
         self.gen = gen
         self.minibatch_size = minibatch_size
-        self.start_ts = 0
         self.window_start = window_start
         self.window_end = window_end
         self.window_sample_rate = 0.0
@@ -132,7 +131,6 @@ class NetTrainer:
         If a separate thread calls self.shutdown(), then this exits prematurely and returns None
         """
         t0 = time.time()
-        start_ts = time.time_ns()
         train_time = 0.0
 
         data_batches = reader.create_data_batches(
@@ -178,7 +176,6 @@ class NetTrainer:
 
         window_sample_rate = n_samples / (window_end - window_start)
 
-        stats.start_ts = start_ts
         stats.window_sample_rate = window_sample_rate
         t3 = time.time()
 

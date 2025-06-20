@@ -108,7 +108,6 @@ class SelfPlayManager:
         self._collect_and_process_game_data()
 
     def run_until_checkpoint(self):
-        self._controller._training_manager._set_checkpoint()
         checkpoint = self._controller.get_checkpoint()
 
         num_rows = self._n_committed_rows

@@ -90,7 +90,7 @@ TRAINING_TABLE_CREATE_CMDS = [
             loss_weight FLOAT
             )""",
 
-    """CREATE INDEX training_heads_idx ON training_heads (gen)""",
+    """CREATE INDEX training_heads_idx ON training_heads (gen, head_name)""",
 ]
 
 

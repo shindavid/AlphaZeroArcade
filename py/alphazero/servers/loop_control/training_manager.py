@@ -50,6 +50,7 @@ class TrainingManager:
         self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
         self._last_sample_window: Optional[Window] = None  # initialized lazily
         self._latest_gen: Generation = 0
+        self._train_start_ts = None
 
     @property
     def last_sample_window(self) -> Window:
@@ -125,7 +126,15 @@ class TrainingManager:
 
     def train_gen1_model_if_necessary(self):
         if self._latest_gen == 0:
-            self.train_step()
+            table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
+            table.acquire_lock(Domain.TRAINING)
+            self._train_start_ts = time.time_ns()
+            subgen = 0
+            while True:
+                subgen += 1
+                if self._train_step_helper(table, subgen):
+                    break
+            table.release_lock(Domain.TRAINING)
 
     def train_step(self):
         """
@@ -136,6 +145,7 @@ class TrainingManager:
         """
         table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
         table.acquire_lock(Domain.TRAINING)
+        self._train_start_ts = time.time_ns()
         self._train_step_helper(table)
         table.release_lock(Domain.TRAINING)
 
@@ -244,32 +254,42 @@ class TrainingManager:
 
         return self._net, self._opt
 
-    def _train_step_helper(self, table: GpuContentionTable):
+    def _train_step_helper(self, table: GpuContentionTable, subgen=None):
         self._controller.spawn_log_sync_thread()
 
-        organizer = self._controller.organizer
-        gen = organizer.get_latest_model_generation(default=0) + 1
+        gen = self._latest_gen + 1
 
         n_minibatches = self.training_params.minibatches_per_epoch
         trainer = NetTrainer(gen, n_minibatches, self._controller.params.cuda_device)
         with self._lock:
             self._trainer = trainer
 
+        logger.info('******************************')
+        if subgen is None:
+            logger.info('Train gen:%s', gen)
+        else:
+            logger.info('Train gen:%s:%s', gen, subgen)
         thread = threading.Thread(target=self._do_training_epoch, name='train_step', daemon=False,
                                   args=(trainer, gen))
         thread.start()
         thread.join()
 
+        checkpoint_set = False
         if self._stats is not None:
-            self._save_model(table, gen, self._net, self._controller.game_spec.batch_size)
-            self._record_stats(gen, self._stats)
-            self._set_checkpoint()
+            self._update_window()
+            if self._set_checkpoint():
+                checkpoint_set = True
+                self._save_model(table, gen, self._net, self._controller.game_spec.batch_size)
+                self._record_stats(gen)
+            else:
+                assert subgen is not None, 'Unexpected bug'
 
         with self._lock:
             self._trainer = None
 
         self._controller.wait_for_log_sync_thread()
         self._controller.handle_new_model()
+        return checkpoint_set
 
     def _dump_model_counts(self):
         if self._model_counts_dumped:
@@ -319,27 +339,43 @@ class TrainingManager:
         except:
             if self._game_log_reader.closed():
                 # This is a shutdown race-condition, it's ok
+                self._stats = None
                 pass
             else:
                 logger.error('Unexpected error in train_step():', exc_info=True)
                 self._controller.request_shutdown(1)
 
-    def _set_checkpoint(self):
-        self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)
-
-    def _record_stats(self, gen: Generation, stats: TrainingStats):
-        training_params = self.training_params
-        n_minibatches = training_params.minibatches_per_epoch
-        minibatch_size = training_params.minibatch_size
+    def _update_window(self):
+        stats = self._stats
 
         window_start = stats.window_start
         window_end = stats.window_end
         n_samples = stats.n_samples
-        start_ts = stats.start_ts
-        end_ts = time.time_ns()
 
         window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
         self._last_sample_window = window
+
+    def _set_checkpoint(self):
+        """
+        Sets the next checkpoint based on the current training parameters and the last sample
+        window. Returns True if the checkpoint was updated, False otherwise.
+        """
+        num_committed_rows = self._controller.get_num_committed_rows()
+        self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)
+        return self._checkpoint > num_committed_rows
+
+    def _record_stats(self, gen: Generation):
+        stats = self._stats
+        training_params = self.training_params
+        n_minibatches = training_params.minibatches_per_epoch
+        minibatch_size = training_params.minibatch_size
+
+        assert self._train_start_ts is not None
+        start_ts = self._train_start_ts
+        end_ts = time.time_ns()
+        self._train_start_ts = None
+
+        window = self._last_sample_window
 
         head_data = []
         for head_stats in stats.substats_list:
