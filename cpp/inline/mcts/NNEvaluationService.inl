@@ -728,6 +728,7 @@ void NNEvaluationService<Game>::schedule_loop() {
   }
 
   system_state_ = kShuttingDownDrainLoop;
+  in_schedule_loop_prelude_ = false;
   cv_main_.notify_all();
 }
 
@@ -748,6 +749,7 @@ void NNEvaluationService<Game>::drain_loop() {
   }
 
   system_state_ = kShutDownComplete;
+  in_drain_loop_prelude_ = false;
   cv_main_.notify_all();
 }
 
@@ -805,6 +807,16 @@ void NNEvaluationService<Game>::state_loop() {
     LOG_INFO("{}::{}() state={} @{}", kCls, func, (int)system_state_, __LINE__);
     util::release_assert(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
                          (int)system_state_, (int)kUnpaused);
+
+    // wait for schedule-loop/drain-loop to exit their preludes
+    cv_main_.wait(lock, [&] {
+      if (in_schedule_loop_prelude_ || in_drain_loop_prelude_) {
+        LOG_INFO("{}::{}() still waiting... (in_schedule={}, in_drain={}) @{}", kCls, func,
+                 in_schedule_loop_prelude_, in_drain_loop_prelude_, __LINE__);
+        return false;
+      }
+      return true;
+    });
 
     core::LoopControllerClient::get()->handle_unpause_receipt();
   }
@@ -873,7 +885,9 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
   const char* func = __func__;
   std::unique_lock lock(main_mutex_);
 
+  in_schedule_loop_prelude_ = true;
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
+
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
   util::release_assert(system_state_ == kPausingScheduleLoop,
                        "Unexpected system_state: {} (expected {})",
@@ -909,6 +923,10 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
+
+  in_schedule_loop_prelude_ = false;
+  lock.unlock();
+  cv_main_.notify_all();
 }
 
 template <core::concepts::Game Game>
@@ -917,6 +935,7 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
 
   const char* func = __func__;
   std::unique_lock lock(main_mutex_);
+  in_drain_loop_prelude_ = true;
   cv_main_.wait(lock, [&] {
     if (system_state_ == kShuttingDownDrainLoop || system_state_ == kPausingDrainLoop) {
       return true;
@@ -929,24 +948,27 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
            __LINE__);
 
   if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
-  if (!load_queue_.empty()) return;
 
-  system_state_ = kPaused;
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
-  lock.unlock();
-  cv_main_.notify_all();
+  if (load_queue_.empty()) {
+    system_state_ = kPaused;
+    LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
+    lock.unlock();
+    cv_main_.notify_all();
 
-  lock.lock();
-  cv_main_.wait(lock, [&] {
-    if (system_state_ == kShuttingDownDrainLoop || system_state_ == kUnpausingDrainLoop) {
-      return true;
-    }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, (int)system_state_, __LINE__);
-    return false;
-  });
+    lock.lock();
+    cv_main_.wait(lock, [&] {
+      if (system_state_ == kShuttingDownDrainLoop || system_state_ == kUnpausingDrainLoop) {
+        return true;
+      }
+      LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, (int)system_state_, __LINE__);
+      return false;
+    });
 
-  if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
-  system_state_ = kUnpaused;
+    if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
+    system_state_ = kUnpaused;
+  }
+
+  in_drain_loop_prelude_ = false;
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, (int)system_state_, __LINE__);
   lock.unlock();
   cv_main_.notify_all();
@@ -1148,17 +1170,6 @@ void NNEvaluationService<Game>::pause() {
   const char* func = __func__;
   LOG_INFO("{}::{}()", kCls, func);
   std::unique_lock lock(main_mutex_);
-
-  // we wait in case we are already in the middle of a pause/unpause operation
-  cv_main_.wait(lock, [&] {
-    if (system_state_ == kPaused || system_state_ == kUnpaused ||
-        system_state_ == kShutDownComplete) {
-      LOG_INFO("{}::{}() done waiting ({}) @{}", kCls, func, (int)system_state_, __LINE__);
-      return true;
-    }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, (int)system_state_, __LINE__);
-    return false;
-  });
   system_state_ = kPausingScheduleLoop;
   lock.unlock();
   cv_main_.notify_all();

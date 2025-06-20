@@ -376,6 +376,8 @@ class NNEvaluationService
 
   bool initial_weights_loaded_ = false;
   bool ready_ = false;
+  bool in_schedule_loop_prelude_ = false;
+  bool in_drain_loop_prelude_ = false;
   system_state_t system_state_ = kUnpaused;
 
   core::PerfStats perf_stats_;
