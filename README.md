@@ -189,7 +189,7 @@ Note: although we only need 3 minutes of self-play runtime, the actual wall-cloc
 - Evaluation time (test matches against benchmark agents)
 
 However, on a more mature compute setup, all these components could be performed by separate servers, while on my laptop, these
-parts block the self-play component. Given that self-play is typically the bottleneck for bigger games, we feel justified in
+parts block the self-play component. The fact that self-play is typically the bottleneck for bigger games justifies
 focusing on that timing measurement.
 
 You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above Connect4
