@@ -159,10 +159,8 @@ class ManagerTest : public testing::Test {
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
 
-    boost::filesystem::path file_path_result =
-        base_dir / (testname + "_result.json");
-    boost::filesystem::path file_path_graph =
-        base_dir / (testname + "_graph.json");
+    boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
+    boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
 
     std::stringstream ss_result;
     boost_util::pretty_print(ss_result, result->to_json());
