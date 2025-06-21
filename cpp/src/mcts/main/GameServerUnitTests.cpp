@@ -19,6 +19,7 @@ class GameServerTest : public testing::Test {
   using TraingDataWriterParams = core::TrainingDataWriter<Game>::Params;
   using action_vec_t = std::vector<core::action_t>;
   using SearchResponse = mcts::Manager<Game>::SearchResponse;
+  using SearchResults = Game::Types::SearchResults;
 
  public:
   GameServerTest() {};
@@ -61,12 +62,12 @@ class GameServerTest : public testing::Test {
       search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
       manager->set_post_visit_func([this] { search_log_->update(); });
 
-      mcts_player->set_search_response_processor([&, this](SearchResponse r) {
-        if (is_response_recorded_) {
+      mcts_player->set_search_response_processor([this](SearchResponse r) {
+        if (is_recorded_) {
           return;
         } else {
-          response_ = r;
-          is_response_recorded_ = true;
+          boost_util::pretty_print(ss_result_, r.results->to_json());
+          is_recorded_ = true;
         }
       });
     });
@@ -89,12 +90,11 @@ class GameServerTest : public testing::Test {
                                      std::istreambuf_iterator<char>());
 
     std::stringstream ss_logs;
-    std::stringstream ss_result;
+
     boost_util::pretty_print(ss_logs, search_log_->graphs()[num_iters - 1].graph_repr());
-    boost_util::pretty_print(ss_result, response_.results->to_json());
 
     EXPECT_EQ(ss_logs.str(), expected_graph_json);
-    EXPECT_EQ(ss_result.str(), expected_result_json);
+    EXPECT_EQ(ss_result_.str(), expected_result_json);
 
     if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
@@ -106,8 +106,8 @@ class GameServerTest : public testing::Test {
  private:
   GameServer* server_;
   mcts::SearchLog<Game>* search_log_ = nullptr;
-  SearchResponse response_{nullptr};
-  bool is_response_recorded_ = false;
+  std::stringstream ss_result_;
+  bool is_recorded_ = false;
 };
 
 using TicTacToeTest = GameServerTest<tictactoe::Game, tictactoe::PlayerFactory>;
