@@ -89,11 +89,10 @@ class GameServerTest : public testing::Test {
     std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
                                      std::istreambuf_iterator<char>());
 
-    std::stringstream ss_logs;
+    std::stringstream search_log;
+    boost_util::pretty_print(search_log, search_log_->graphs()[num_iters - 1].graph_repr());
 
-    boost_util::pretty_print(ss_logs, search_log_->graphs()[num_iters - 1].graph_repr());
-
-    EXPECT_EQ(ss_logs.str(), expected_graph_json);
+    EXPECT_EQ(search_log.str(), expected_graph_json);
     EXPECT_EQ(ss_result_.str(), expected_result_json);
 
     if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
@@ -113,40 +112,40 @@ class GameServerTest : public testing::Test {
 using TicTacToeTest = GameServerTest<tictactoe::Game, tictactoe::PlayerFactory>;
 using StochasticNimTest = GameServerTest<stochastic_nim::Game, stochastic_nim::PlayerFactory>;
 
-// TEST_F(StochasticNimTest, uniform_search) {
-//   std::vector<core::action_t> initial_actions = {
-//     stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
+TEST_F(StochasticNimTest, uniform_search) {
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
 
-//   test_search("stochastic_nim_uniform_10", 10, initial_actions);
-// }
+  test_search("stochastic_nim_uniform_10", 10, initial_actions);
+}
 
-// TEST_F(StochasticNimTest, 20_searches_from_scratch) {
-//   test_search("stochastic_nim_uniform", 20, {});
-// }
+TEST_F(StochasticNimTest, 20_searches_from_scratch) {
+  test_search("stochastic_nim_uniform", 20, {});
+}
 
-// TEST_F(StochasticNimTest, 100_searches_from_4_stones) {
-//   std::vector<core::action_t> initial_actions = {
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+TEST_F(StochasticNimTest, 100_searches_from_4_stones) {
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
 
-//   test_search("stochastic_nim_4_stones", 100, initial_actions);
-// }
+  test_search("stochastic_nim_4_stones", 100, initial_actions);
+}
 
-// TEST_F(StochasticNimTest, 100_searches_from_5_stones) {
-//   std::vector<core::action_t> initial_actions = {
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+TEST_F(StochasticNimTest, 100_searches_from_5_stones) {
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
 
-//   test_search("stochastic_nim_5_stones", 100, initial_actions);
-// }
+  test_search("stochastic_nim_5_stones", 100, initial_actions);
+}
 
-// TEST_F(StochasticNimTest, 100_searches_from_6_stones) {
-//   std::vector<core::action_t> initial_actions = {
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-//     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
+TEST_F(StochasticNimTest, 100_searches_from_6_stones) {
+  std::vector<core::action_t> initial_actions = {
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
 
-//   test_search("stochastic_nim_6_stones", 100, initial_actions);
-// }
+  test_search("stochastic_nim_6_stones", 100, initial_actions);
+}
 
 TEST_F(TicTacToeTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};

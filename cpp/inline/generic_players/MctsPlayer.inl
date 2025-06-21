@@ -342,6 +342,9 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
 
 template <core::concepts::Game Game>
 core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
+  if (params_.full_pct >= 1.0) {
+    return core::kFull;
+  }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
