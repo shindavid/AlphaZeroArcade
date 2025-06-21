@@ -13,6 +13,7 @@
 
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace c4 {
 
@@ -74,6 +75,10 @@ class PerfectOracle {
   boost::process::ipstream out_;
   boost::process::opstream in_;
   boost::process::child child_;
+
+  // tmp vars to avoid dynamic allocation
+  std::string output_str_;
+  std::vector<std::string> tokens_;
 
   mutable std::mutex mutex_;
 };

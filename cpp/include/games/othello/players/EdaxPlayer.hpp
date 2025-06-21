@@ -31,6 +31,7 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
     // threads.
     int num_oracle_procs = 0;
 
+    bool deterministic = false;
     bool verbose = false;
 
     auto make_options_description();

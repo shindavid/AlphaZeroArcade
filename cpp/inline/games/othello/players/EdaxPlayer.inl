@@ -11,6 +11,9 @@ inline auto EdaxPlayer::Params::make_options_description() {
   po2::options_description desc("othello::EdaxPlayer options");
   return desc
     .template add_option<"depth", 'd'>(po::value<int>(&depth)->default_value(depth), "Search depth")
+    .template add_option<"deterministic", 'D'>(
+      po::bool_switch(&deterministic)->default_value(deterministic),
+      "edax player deterministic mode")
     .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
                                          "edax player verbose mode")
     .template add_option<"num-oracle-procs", 'n'>(
@@ -35,7 +38,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
   }
 
   EdaxOracle* oracle =
-    oracle_pool_->get_oracle(request.notification_unit, params_.verbose);
+    oracle_pool_->get_oracle(request.notification_unit, params_.verbose, params_.deterministic);
   if (!oracle) {
     return ActionResponse::yield();
   }

@@ -38,19 +38,21 @@ std::string PerfectOracle::QueryResult::get_overlay() const {
 }
 
 PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
-  std::string s;
   {
     std::unique_lock lock(mutex_);
     history.write(in_);
-    std::getline(out_, s);
+    std::getline(out_, output_str_);
   }
 
   // TODO: do a more specialized parse that avoid dynamic allocation
-  auto tokens = util::split(s);
+  int n_tokens = util::split(tokens_, output_str_);
+  util::release_assert(n_tokens == kNumColumns + 1,
+                      "PerfectOracle::query: expected {} tokens, got {}",
+                      kNumColumns + 1, n_tokens);
 
   QueryResult result;
   for (int j = 0; j < kNumColumns; ++j) {
-    int raw_score = std::stoi(tokens[tokens.size() - kNumColumns + j]);
+    int raw_score = std::stoi(tokens_[n_tokens - kNumColumns + j]);
     if (raw_score == QueryResult::kIllegalMoveScore) {
       result.scores[j] = QueryResult::kIllegalMoveScore;
     } else if (raw_score < 0) {
