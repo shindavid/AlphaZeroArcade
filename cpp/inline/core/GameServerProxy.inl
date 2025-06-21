@@ -6,6 +6,9 @@
 #include <util/KeyValueDumper.hpp>
 #include <util/LoggingUtil.hpp>
 
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
+
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
@@ -375,11 +378,11 @@ void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueR
     // pass
   } else {
     throw util::Exception("GameServer::{}(): invalid enqueue instruction: {}", __func__,
-                          (int)request.instruction);
+                          request.instruction);
   }
 
   LOG_DEBUG("<-- GameServerProxy::{}(item={}:{}, request={}:{}) queue={}", __func__, item.slot,
-            item.context, (int)request.instruction, request.extra_enqueue_count, queue_.size());
+            item.context, request.instruction, request.extra_enqueue_count, queue_.size());
 
   lock.unlock();
   cv_.notify_all();
@@ -441,7 +444,7 @@ void GameServerProxy<Game>::GameThread::run() {
     } else if (next_result == kProceed) {
       // do nothing
     } else {
-      throw util::Exception("Invalid next_result: {}", (int)next_result);
+      throw util::Exception("Invalid next_result: {}", next_result);
     }
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
@@ -508,7 +511,7 @@ void GameServerProxy<Game>::run_event_loop() {
         shared_data_.handle_end_game(response_packet);
         break;
       default:
-        throw util::Exception("Unexpected packet type: {}", (int)type);
+        throw util::Exception("Unexpected packet type: {}", type);
     }
   }
   LOG_INFO("Exiting {}", __func__);

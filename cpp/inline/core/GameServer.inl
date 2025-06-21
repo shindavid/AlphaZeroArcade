@@ -15,6 +15,8 @@
 #include <util/StringUtil.hpp>
 
 #include <boost/program_options.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
 
 #include <arpa/inet.h>
 #include <format>
@@ -273,11 +275,11 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
     pending_queue_count_--;
   } else {
     throw util::Exception("GameServer::{}(): invalid enqueue instruction: {}", __func__,
-                          (int)request.instruction);
+                          request.instruction);
   }
 
   LOG_DEBUG("<-- GameServer::{}(item={}:{}, request={}:{}) pending={} deferred={}", __func__,
-            item.slot, item.context, (int)request.instruction, request.extra_enqueue_count,
+            item.slot, item.context, request.instruction, request.extra_enqueue_count,
             pending_queue_count_, deferred_count_);
   validate_deferred_count();
 
@@ -881,7 +883,7 @@ void GameServer<Game>::GameThread::run() {
     } else if (next_result == kProceed) {
       // do nothing
     } else {
-      throw util::Exception("Invalid next_result: {}", (int)next_result);
+      throw util::Exception("Invalid next_result: {}", next_result);
     }
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
@@ -897,7 +899,7 @@ void GameServer<Game>::GameThread::run() {
     EnqueueRequest& request = step_result.enqueue_request;
 
     LOG_DEBUG("<-- GameServer::step(item={}:{}) complete enqueue_request={}:{}", slot->id(),
-              item.context, (int)request.instruction, request.extra_enqueue_count);
+              item.context, request.instruction, request.extra_enqueue_count);
 
     shared_data_.enqueue(item, request);
 

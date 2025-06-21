@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.17)
 
+include(FetchContent)
+FetchContent_Declare(
+  magic_enum
+  GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+  GIT_TAG        a733a2ea665ca5d72b7270f0334bf2e7b82bd0cc
+)
+FetchContent_MakeAvailable(magic_enum)
+include_directories(${magic_enum_SOURCE_DIR}/include)
+
 # We enabled NDEBUG even for debug builds because a gcc bug leads to a spurious assert() deep
 # in the eigen3 library
 add_definitions(-DNDEBUG)

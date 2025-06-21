@@ -3,6 +3,9 @@
 #include <core/BasicTypes.hpp>
 #include <core/Packet.hpp>
 
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
+
 #include <sys/socket.h>
 
 namespace core {
@@ -57,7 +60,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::add_player(
   player_id_t player_id = player->player_id_;
 
   util::clean_assert(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id ({})",
-                     (int)player_id);
+                     player_id);
   auto& vec = player_vec_array_[player_id];
 
   util::clean_assert((int)game_slot_index == (int)vec.size(),
@@ -87,7 +90,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::loop() {
         handle_action(packet);
         break;
       default:
-        throw util::Exception("Unexpected packet type: {}", (int)type);
+        throw util::Exception("Unexpected packet type: {}", type);
     }
   }
 }

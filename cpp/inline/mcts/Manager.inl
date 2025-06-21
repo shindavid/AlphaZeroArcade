@@ -10,6 +10,8 @@
 #include <util/LoggingUtil.hpp>
 
 #include <boost/filesystem.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
 
 namespace mcts {
 
@@ -158,13 +160,13 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
                      context_id, num_search_threads());
 
   LOG_TRACE("{:>{}}search(): manager={} state={} c={}", "", contexts_[context_id].log_prefix_n(),
-            manager_id_, (int)state_machine_.state, context_id);
+            manager_id_, state_machine_.state, context_id);
 
   SearchResponse response = search_helper(request);
 
   LOG_TRACE("{:>{}}{}() exit: manager={} state={} instr={}", "",
             contexts_[context_id].log_prefix_n(), __func__, manager_id_,
-            (int)state_machine_.state, (int)response.yield_instruction);
+            state_machine_.state, response.yield_instruction);
 
   return response;
 }
@@ -617,7 +619,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
   util::release_assert(edge->state == Node::kExpanded,
                        "Expected edge state to be kExpanded, but got {}",
-                       (int)edge->state);
+                       edge->state);
 
   Node* child = node->get_child(edge);
   if (child) {
@@ -810,7 +812,7 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
 
 template <core::concepts::Game Game>
 void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
-  LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, (int)state);
+  LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == Node::kPreExpanded) {
     // Makes no assumptions about mutexes
     edge->state = state;

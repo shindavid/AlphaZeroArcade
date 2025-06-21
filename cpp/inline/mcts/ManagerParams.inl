@@ -1,6 +1,8 @@
 #include <mcts/ManagerParams.hpp>
 
 #include <boost/filesystem.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
 
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
@@ -21,7 +23,7 @@ inline ManagerParams<Game>::ManagerParams(mcts::Mode mode) {
     force_evaluate_all_root_children = true;
     incorporate_sym_into_cache_key = false;
   } else {
-    throw util::Exception("Unknown mcts::Mode: {}", (int)mode);
+    throw util::Exception("Unknown mcts::Mode: {}", mode);
   }
 }
 

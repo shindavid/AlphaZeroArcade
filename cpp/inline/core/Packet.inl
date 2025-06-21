@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 
 #include <boost/lexical_cast.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
 
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
@@ -51,7 +53,7 @@ void Packet<PacketPayload>::set_player_name(const std::string& name) {
   constexpr int buf_size = sizeof(payload_.dynamic_size_section.player_name);
   if (name.size() + 1 > buf_size) {  // + 1 for null terminator
     throw util::Exception("Packet<{}>::set_player_name() name too long [\"{}\"] ({} + 1 > {})",
-                          (int)PacketPayload::kType, name, name.size(), buf_size);
+                          PacketPayload::kType, name, name.size(), buf_size);
   }
   memcpy(payload_.dynamic_size_section.player_name, name.c_str(), name.size() + 1);
   set_dynamic_section_size(name.size() + 1);  // + 1 for null terminator
@@ -63,7 +65,7 @@ void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   if (buf_size < 0 || buf_size > orig_size) {
     throw util::Exception(
         "Packet<{}>::set_dynamic_section_size() invalid buf_size ({}) orig_size={}",
-        (int)PacketPayload::kType, buf_size, orig_size);
+        PacketPayload::kType, buf_size, orig_size);
   }
   header_.payload_size = sizeof(PacketPayload) - orig_size + buf_size;
 }
@@ -85,11 +87,11 @@ bool Packet<PacketPayload>::read_from(io::Socket* socket) {
 
   if (PacketPayload::kType != header_.type) {
     throw util::Exception("Packet<{}>::read_from() invalid type (expected:{}, got:{})",
-                          (int)PacketPayload::kType, (int)PacketPayload::kType, (int)header_.type);
+                          PacketPayload::kType, PacketPayload::kType, header_.type);
   }
   if (header_.payload_size > (int)sizeof(payload_)) {
     throw util::Exception("Packet<{}>::read_from() invalid payload_size ({}>{})",
-                          (int)PacketPayload::kType, header_.payload_size, (int)sizeof(payload_));
+                          PacketPayload::kType, header_.payload_size, sizeof(payload_));
   }
 
   if (!reader.read(buf + header_size, header_.payload_size)) {
@@ -102,7 +104,7 @@ template <concepts::PacketPayload PacketPayload>
 const PacketPayload& GeneralPacket::payload_as() const {
   if (header_.type != PacketPayload::kType) {
     throw util::Exception("GeneralPacket::payload_as() invalid type (expected:{}, got:{})",
-                          (int)PacketPayload::kType, (int)header_.type);
+                          PacketPayload::kType, header_.type);
   }
   return *reinterpret_cast<const PacketPayload*>(payload_);
 }
