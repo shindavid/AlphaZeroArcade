@@ -83,6 +83,9 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
+  void set_search_response_processor(std::function<void(SearchResponse)> processor) {
+    search_response_processor_ = processor;
+  }
 
  protected:
   void clear_search_mode();
@@ -117,6 +120,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   mutable std::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
+  std::function<void(SearchResponse)> search_response_processor_;
 
   template<core::concepts::Game> friend class MctsPlayerTest;
 };
