@@ -36,37 +36,59 @@ inline float atof_safe(const std::string& s) {
   size_t read = 0;
   float f = std::stof(s, &read);
   if (read != s.size() || s.empty()) {
-    throw util::Exception("atof failure {}(\"{}\")", __func__, s);
+    throw std::invalid_argument(std::format("atof failure {}(\"{}\")", __func__, s));
   }
   return f;
 }
 
 inline std::vector<std::string> split(const std::string& s, const char* t) {
   std::vector<std::string> result;
+  split(result, s, t);
+  return result;
+}
 
-  std::string_view t_view(t);
-  if (t_view.empty()) {
-    // Split on any whitespace (like s.split() in Python)
-    std::istringstream stream(s);
-    std::string word;
-    while (stream >> word) {
-      result.push_back(word);
+inline int split(std::vector<std::string>& result, const std::string& s, const char* t) {
+  std::string_view sep(t);
+  std::size_t token_count = 0;
+
+  if (sep.empty()) {
+    std::string_view sv(s);
+    std::size_t pos = 0, n = sv.size();
+    while (pos < n) {
+      while (pos < n && std::isspace(static_cast<unsigned char>(sv[pos]))) ++pos;
+      if (pos >= n) break;
+      std::size_t start = pos;
+      while (pos < n && !std::isspace(static_cast<unsigned char>(sv[pos]))) ++pos;
+      std::string_view tok = sv.substr(start, pos - start);
+
+      if (token_count < result.size())
+        result[token_count] = tok;
+      else
+        result.emplace_back(tok);
+
+      ++token_count;
     }
   } else {
-    // Split on the specified separator (like s.split(t) in Python)
-    std::string::size_type start = 0;
-    std::string::size_type end;
-
-    while ((end = s.find(t_view, start)) != std::string::npos) {
-      result.push_back(s.substr(start, end - start));
-      start = end + t_view.length();
+    std::size_t start = 0, end;
+    while ((end = s.find(sep, start)) != std::string::npos) {
+      std::string_view tok(s.data() + start, end - start);
+      if (token_count < result.size())
+        result[token_count] = tok;
+      else
+        result.emplace_back(tok);
+      ++token_count;
+      start = end + sep.size();
     }
-
-    // Add the last part
-    result.push_back(s.substr(start));
+    // last segment
+    std::string_view tok(s.data() + start, s.size() - start);
+    if (token_count < result.size())
+      result[token_count] = tok;
+    else
+      result.emplace_back(tok);
+    ++token_count;
   }
 
-  return result;
+  return int(token_count);
 }
 
 inline std::vector<std::string> splitlines(const std::string &s) {

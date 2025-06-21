@@ -30,7 +30,7 @@ inline void Random::set_seed(int seed) {
   instance()->prng_.seed(seed);
 }
 
-template <typename T, typename U>
+template <std::integral T, std::integral U>
 inline auto Random::uniform_sample(T lower, U upper) {
   if (lower >= upper) {
     throw std::runtime_error("Random::uniform_sample() - invalid range");

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <iterator>
 #include <random>
 
@@ -40,8 +41,10 @@ class Random {
 
   /*
    * Uniformly randomly picks a value in the half-open range [lower, upper).
+   *
+   * T and U should be integral types, and lower must be less than upper.
    */
-  template <typename T, typename U>
+  template <std::integral T, std::integral U>
   static auto uniform_sample(T lower, U upper);
 
   /*

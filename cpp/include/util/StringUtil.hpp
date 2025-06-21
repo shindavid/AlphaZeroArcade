@@ -25,7 +25,20 @@ float atof_safe(const std::string& s);
 /*
  * split(s) and split(s, t) behave just like s.split() and s.split(t), respectively, in python.
  */
-std::vector<std::string> split(const std::string& s, const char* t="");
+std::vector<std::string> split(const std::string& s, const char* t = "");
+
+// Similar to split(s, t), with some notable differences:
+//
+// - Writes the tokens to result instead of returning a new vector.
+// - If the passed-in result is longer than the number of tokens, the excess entries in result are
+//   left unchanged.
+// - Returns the number of tokens found, which may be less than the size of result.
+//
+// The benefit of this function over split(s, t) is that it is more efficient when called
+// repeatedly with the same result vector. If the s/t arguments are assumed to be drawn iid from
+// some distribution, then the expected number of dynamic memory allocations will asymptotically
+// approach zero.
+int split(std::vector<std::string>& result, const std::string& s, const char* t="");
 
 /*
  * splitlines(s) behaves just like s.splitlines() in python.

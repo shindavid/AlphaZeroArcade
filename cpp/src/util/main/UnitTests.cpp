@@ -592,6 +592,101 @@ TEST(eigen_util, extract_dim) {
   EXPECT_EQ((eigen_util::extract_dim_v<1, Shape2>), 3);
 }
 
+TEST(StringUtil, atof_safe) {
+  EXPECT_EQ(util::atof_safe("0.0"), 0.0f);
+  EXPECT_EQ(util::atof_safe("5"), 5.0f);
+  EXPECT_EQ(util::atof_safe("-5"), -5.0f);
+  EXPECT_EQ(util::atof_safe("1.0"), 1.0f);
+  EXPECT_EQ(util::atof_safe("3.14"), 3.14f);
+  EXPECT_EQ(util::atof_safe("1e-3"), 0.001f);
+  EXPECT_EQ(util::atof_safe("1e3"), 1000.0f);
+  EXPECT_EQ(util::atof_safe("1.0e3"), 1000.0f);
+  EXPECT_EQ(util::atof_safe("1.0e-3"), 0.001f);
+  EXPECT_EQ(util::atof_safe("1.0e+3"), 1000.0f);
+  EXPECT_EQ(util::atof_safe("-1.0e+3"), -1000.0f);
+
+  // verify that passing non-numeric strings raises an exception
+  EXPECT_THROW(util::atof_safe(""), std::invalid_argument);
+  EXPECT_THROW(util::atof_safe("abc"), std::invalid_argument);
+  EXPECT_THROW(util::atof_safe("1.0abc"), std::invalid_argument);
+  EXPECT_THROW(util::atof_safe("1.0eabc"), std::invalid_argument);
+}
+
+TEST(StringUtil, split) {
+  std::vector<std::string> result1 = util::split("a,b,c", ",");
+  std::vector<std::string> result2 = util::split(" a \tb   c ");
+
+  EXPECT_EQ(result1.size(), 3);
+  EXPECT_EQ(result1[0], "a");
+  EXPECT_EQ(result1[1], "b");
+  EXPECT_EQ(result1[2], "c");
+
+  EXPECT_EQ(result2.size(), 3);
+  EXPECT_EQ(result2[0], "a");
+  EXPECT_EQ(result2[1], "b");
+  EXPECT_EQ(result2[2], "c");
+
+  std::vector<std::string> result3;
+  int n3;
+  n3 = util::split(result3, "a,bb,ccc", ",");
+
+  EXPECT_EQ(n3, 3);
+  EXPECT_EQ(result3.size(), 3);
+  EXPECT_EQ(result3[0], "a");
+  EXPECT_EQ(result3[1], "bb");
+  EXPECT_EQ(result3[2], "ccc");
+
+  n3 = util::split(result3, "\t\taa  b\n");
+
+  // vector reuse - leave 3rd element unchanged!
+  EXPECT_EQ(n3, 2);
+  EXPECT_EQ(result3.size(), 3);
+  EXPECT_EQ(result3[0], "aa");
+  EXPECT_EQ(result3[1], "b");
+  EXPECT_EQ(result3[2], "ccc");
+
+  n3 = util::split(result3, "\t\taa  b c    d  e\n");
+
+  EXPECT_EQ(n3, 5);
+  EXPECT_EQ(result3.size(), 5);
+  EXPECT_EQ(result3[0], "aa");
+  EXPECT_EQ(result3[1], "b");
+  EXPECT_EQ(result3[2], "c");
+  EXPECT_EQ(result3[3], "d");
+  EXPECT_EQ(result3[4], "e");
+}
+
+TEST(StringUtil, splitlines) {
+  std::vector<std::string> result1 = util::splitlines("a\nb\nc");
+  std::vector<std::string> result2 = util::splitlines("\n ac\n");
+  std::vector<std::string> result3 = util::splitlines("");
+  std::vector<std::string> result4 = util::splitlines("\n");
+
+  EXPECT_EQ(result1.size(), 3);
+  EXPECT_EQ(result1[0], "a");
+  EXPECT_EQ(result1[1], "b");
+  EXPECT_EQ(result1[2], "c");
+
+  EXPECT_EQ(result2.size(), 2);
+  EXPECT_EQ(result2[0], "");
+  EXPECT_EQ(result2[1], " ac");
+
+  EXPECT_EQ(result3.size(), 0);
+
+  EXPECT_EQ(result4.size(), 1);
+  EXPECT_EQ(result4[0], "");
+}
+
+TEST(StringUtil, ends_with) {
+  EXPECT_TRUE(util::ends_with("hello", "lo"));
+  EXPECT_TRUE(util::ends_with("hello", "hello"));
+  EXPECT_FALSE(util::ends_with("hello", "hello world"));
+  EXPECT_FALSE(util::ends_with("hello", "hello hello"));
+  EXPECT_TRUE(util::ends_with("hello", ""));
+  EXPECT_TRUE(util::ends_with("", ""));
+  EXPECT_FALSE(util::ends_with("", "a"));
+}
+
 TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width(""), 0);
   EXPECT_EQ(util::terminal_width("hello"), 5);
