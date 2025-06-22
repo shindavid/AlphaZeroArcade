@@ -89,7 +89,7 @@ class EvalManager(GamingManagerBase):
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
 
     def set_priority(self):
-        dict_len = len(self._eval_status_dict)
+        dict_len = len([ix for ix, data in self._eval_status_dict.items() if data.status == EvalRequestStatus.COMPLETE])
         rating_in_progress = any(data.status == EvalRequestStatus.REQUESTED for data in self._eval_status_dict.values())
         self._set_domain_priority(dict_len, rating_in_progress)
 
