@@ -30,6 +30,9 @@ def is_valid_game_name(game_name) -> bool:
     return game_name in GAME_SPECS_BY_NAME
 
 
-def add_parser_argument(parser: argparse.ArgumentParser, *args):
-    choices = [t.name for t in ALL_GAME_SPECS]
-    parser.add_argument(*args, choices=choices, help='game to play')
+def add_parser_argument(parser: argparse.ArgumentParser, *args, **kwargs):
+    if 'choices' not in kwargs:
+        kwargs['choices'] = [t.name for t in ALL_GAME_SPECS]
+    if 'help' not in kwargs:
+        kwargs['help'] = 'game to play'
+    parser.add_argument(*args, **kwargs)

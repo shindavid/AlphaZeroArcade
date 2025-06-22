@@ -4,12 +4,15 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.rating_db import RatingDB
 from games.game_spec import GameSpec
+import games.index as game_index
 from games.index import ALL_GAME_SPECS
 from util.index_set import IndexSet
-from util.logging_util import configure_logger
+from util.logging_util import LoggingParams, configure_logger
+from util.py_util import CustomHelpFormatter
 
 import numpy as np
 
+import argparse
 import logging
 import os
 import shlex
@@ -18,9 +21,7 @@ from typing import List
 
 
 REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
-os.makedirs(REF_DIR, exist_ok=True)
 logger = logging.getLogger(__name__)
-configure_logger()
 
 
 class ReferenceBenchmarker:
@@ -69,7 +70,7 @@ class ReferenceBenchmarker:
         self.db.commit_ratings(self.arena.indexed_agents,
                                self.arena.ratings,
                                committee=committee)
-        cmd = shlex.join([sys.executable] + sys.argv)
+        cmd = shlex.join(sys.argv)
         self.db.save_ratings_to_json(self.arena.indexed_agents, self.arena.ratings,
                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
@@ -89,6 +90,7 @@ class ReferenceBenchmarker:
 
 
 def benchmark_reference_players(game_specs: List[GameSpec]):
+    os.makedirs(REF_DIR, exist_ok=True)
     for game_spec in game_specs:
         if game_spec.reference_player_family is None:
             logger.info(f'Skipped for game: {game_spec.name}, no reference_player_family')
@@ -98,5 +100,28 @@ def benchmark_reference_players(game_specs: List[GameSpec]):
         benchmarker.run()
         logger.info(f'Finished for game: {game_spec.name}')
 
+
+def load_args():
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
+
+    game_index.add_parser_argument(parser, '-g', '--game',
+                                   help='Comma-separate games. If not specified, all games will be benchmarked.')
+    LoggingParams.add_args(parser)
+
+    return parser.parse_args()
+
+
+def main():
+    args = load_args()
+    logging_params = LoggingParams.create(args)
+    configure_logger(params=logging_params)
+
+    if args.game is None:
+        specs = ALL_GAME_SPECS
+    else:
+        specs = [game_index.get_game_spec(g) for g in args.game.split(',')]
+    benchmark_reference_players(specs)
+
+
 if __name__ == "__main__":
-    benchmark_reference_players(ALL_GAME_SPECS)
+    main()
