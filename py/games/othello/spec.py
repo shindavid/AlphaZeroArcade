@@ -93,7 +93,7 @@ class OthelloSpec(GameSpec):
         'default': b9_c128,
         'b19_c128': b9_c128,
     }
-    reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
+    reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 15)
 
     training_params = TrainingParams(
         target_sample_rate=32,
