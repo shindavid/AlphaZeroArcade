@@ -171,6 +171,8 @@ class EvalUtils:
                 right_rating = ratings[sorted_ixs[i + 1]]
                 return np.interp(gen, [left_gen, right_gen], [left_rating, right_rating])
 
+        if gen > evaluated_gens_arr[sorted_ixs[-1]]:
+            return ratings[sorted_ixs[-1]]
         return None
 
     @staticmethod
