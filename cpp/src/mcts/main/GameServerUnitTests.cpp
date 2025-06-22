@@ -1,6 +1,5 @@
 #include <core/GameServer.hpp>
 #include <core/PlayerFactory.hpp>
-#include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <games/tictactoe/PlayerFactory.hpp>
@@ -39,6 +38,7 @@ class GameServerTest : public testing::Test {
     GameServerParams server_params = create_server_params();
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
+    server_params.shuffle_player_seats = false; // Preserve random seed sequence for tree search by skipping seat shuffling
     TraingDataWriterParams training_data_writer_params;
     server_ = new GameServer(server_params, training_data_writer_params, initial_actions);
 
