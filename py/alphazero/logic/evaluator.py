@@ -66,13 +66,20 @@ class Evaluator:
 
         potential_opponent_ixs = np.where(self.benchmark_committee)[0]
 
-        p = [win_prob(estimated_rating, self._arena.ratings[ix]) for ix in potential_opponent_ixs]
+        logger.debug(f"estimated_rating: {estimated_rating}")
+        logger.debug(f"potential_opponent_ixs: {potential_opponent_ixs}")
+        logger.debug(f"arena ratings: {self.benchmark_ratings}")
+
+        p = [win_prob(estimated_rating, self.benchmark_ratings[ix]) for ix in potential_opponent_ixs]
         var = np.array([q * (1 - q) for q in p])
         mask = np.zeros(len(var), dtype=bool)
         potential_opponents_played = np.where(np.isin(potential_opponent_ixs, opponent_ix_played))[0]
         mask[potential_opponents_played] = True
         var[mask] = 0
         var = var / np.sum(var)
+
+        logger.debug(f"winning probs: {list(zip(potential_opponent_ixs, p))}")
+        logger.debug(f"vars: {list(zip(potential_opponent_ixs, var))}")
 
         sample_ixs = potential_opponent_ixs[np.random.choice(len(potential_opponent_ixs), p=var, size=n_games)]
         chosen_ixs, num_matches = np.unique(sample_ixs, return_counts=True)
