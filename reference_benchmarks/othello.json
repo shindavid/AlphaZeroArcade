@@ -1,6 +1,6 @@
 {
-  "cmd_used": "/usr/bin/python3 ./py/alphazero/scripts/gen_ref_benchmarks.py",
-  "ReferenceAgent--depth-0": {
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g othello",
+  "ReferenceAgent-depth-0": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -16,7 +16,7 @@
     },
     "rating": 0.0
   },
-  "ReferenceAgent--depth-1": {
+  "ReferenceAgent-depth-1": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -30,9 +30,9 @@
       "db_id": 2,
       "type": "Reference"
     },
-    "rating": 602.9098056734896
+    "rating": 795.0003526490416
   },
-  "ReferenceAgent--depth-2": {
+  "ReferenceAgent-depth-2": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -46,9 +46,9 @@
       "db_id": 3,
       "type": "Reference"
     },
-    "rating": 1962.542508440738
+    "rating": 1196.272639562586
   },
-  "ReferenceAgent--depth-3": {
+  "ReferenceAgent-depth-3": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -62,9 +62,9 @@
       "db_id": 4,
       "type": "Reference"
     },
-    "rating": 3260.546215041288
+    "rating": 1510.9582195660494
   },
-  "ReferenceAgent--depth-4": {
+  "ReferenceAgent-depth-4": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -78,9 +78,9 @@
       "db_id": 5,
       "type": "Reference"
     },
-    "rating": 4517.91038584486
+    "rating": 1701.2396448230618
   },
-  "ReferenceAgent--depth-5": {
+  "ReferenceAgent-depth-5": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -94,9 +94,9 @@
       "db_id": 6,
       "type": "Reference"
     },
-    "rating": 4517.325705740823
+    "rating": 1941.2673420625708
   },
-  "ReferenceAgent--depth-6": {
+  "ReferenceAgent-depth-6": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -110,9 +110,9 @@
       "db_id": 7,
       "type": "Reference"
     },
-    "rating": 5724.643533156839
+    "rating": 2079.5596307313654
   },
-  "ReferenceAgent--depth-7": {
+  "ReferenceAgent-depth-7": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -126,9 +126,9 @@
       "db_id": 8,
       "type": "Reference"
     },
-    "rating": 6916.37144040592
+    "rating": 2260.4127056505263
   },
-  "ReferenceAgent--depth-8": {
+  "ReferenceAgent-depth-8": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -142,9 +142,9 @@
       "db_id": 9,
       "type": "Reference"
     },
-    "rating": 8096.900293424009
+    "rating": 2528.5736659740787
   },
-  "ReferenceAgent--depth-9": {
+  "ReferenceAgent-depth-9": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -158,9 +158,9 @@
       "db_id": 10,
       "type": "Reference"
     },
-    "rating": 7885.777304782528
+    "rating": 2687.451285173571
   },
-  "ReferenceAgent--depth-10": {
+  "ReferenceAgent-depth-10": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -174,9 +174,9 @@
       "db_id": 11,
       "type": "Reference"
     },
-    "rating": 8085.00401461325
+    "rating": 2872.713132788986
   },
-  "ReferenceAgent--depth-11": {
+  "ReferenceAgent-depth-11": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -190,9 +190,9 @@
       "db_id": 12,
       "type": "Reference"
     },
-    "rating": 8063.296561046289
+    "rating": 2871.901023542568
   },
-  "ReferenceAgent--depth-12": {
+  "ReferenceAgent-depth-12": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -206,9 +206,9 @@
       "db_id": 13,
       "type": "Reference"
     },
-    "rating": 9231.927005958665
+    "rating": 3095.7930736798776
   },
-  "ReferenceAgent--depth-13": {
+  "ReferenceAgent-depth-13": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -222,9 +222,9 @@
       "db_id": 14,
       "type": "Reference"
     },
-    "rating": 9175.035989099548
+    "rating": 3206.371110492148
   },
-  "ReferenceAgent--depth-14": {
+  "ReferenceAgent-depth-14": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -238,9 +238,9 @@
       "db_id": 15,
       "type": "Reference"
     },
-    "rating": 9255.685023821663
+    "rating": 3244.0505749973636
   },
-  "ReferenceAgent--depth-15": {
+  "ReferenceAgent-depth-15": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -254,9 +254,9 @@
       "db_id": 16,
       "type": "Reference"
     },
-    "rating": 9202.482310828684
+    "rating": 3246.8904567735335
   },
-  "ReferenceAgent--depth-16": {
+  "ReferenceAgent-depth-16": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -270,9 +270,9 @@
       "db_id": 17,
       "type": "Reference"
     },
-    "rating": 9301.840621960775
+    "rating": 3313.159061773128
   },
-  "ReferenceAgent--depth-17": {
+  "ReferenceAgent-depth-17": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -286,9 +286,9 @@
       "db_id": 18,
       "type": "Reference"
     },
-    "rating": 9248.773530876355
+    "rating": 3185.5735258393825
   },
-  "ReferenceAgent--depth-18": {
+  "ReferenceAgent-depth-18": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -302,9 +302,9 @@
       "db_id": 19,
       "type": "Reference"
     },
-    "rating": 9348.283132741992
+    "rating": 3362.3255072047664
   },
-  "ReferenceAgent--depth-19": {
+  "ReferenceAgent-depth-19": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -318,9 +318,9 @@
       "db_id": 20,
       "type": "Reference"
     },
-    "rating": 9729.13933785538
+    "rating": 3473.373050594629
   },
-  "ReferenceAgent--depth-20": {
+  "ReferenceAgent-depth-20": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -334,9 +334,9 @@
       "db_id": 21,
       "type": "Reference"
     },
-    "rating": 9711.502072334528
+    "rating": 3459.2299457437866
   },
-  "ReferenceAgent--depth-21": {
+  "ReferenceAgent-depth-21": {
     "iagent": {
       "agent": {
         "type_str": "edax",
@@ -350,6 +350,6 @@
       "db_id": 22,
       "type": "Reference"
     },
-    "rating": 9588.28804557652
+    "rating": 3590.094596617679
   }
 }
