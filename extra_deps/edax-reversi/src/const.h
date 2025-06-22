@@ -12,7 +12,7 @@
 #define EDAX_CONST_H
 
 /** maximal number of threads */
-#define MAX_THREADS 64
+#define MAX_THREADS 1
 
 /** maximal number of moves */
 #define MAX_MOVE 32
