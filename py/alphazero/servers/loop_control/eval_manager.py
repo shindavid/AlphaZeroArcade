@@ -164,7 +164,7 @@ class EvalManager(GamingManagerBase):
         n_games_to_do = self.n_games - n_games_completed
 
         opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
-                if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
+            if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
 
         if n_games_to_do <= 0 or len(opponent_ixs_played) >= len(self._evaluator.benchmark_committee):
             self._interpolate_ratings(conn, conn.aux.ix)
@@ -180,6 +180,7 @@ class EvalManager(GamingManagerBase):
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
+            logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
             with self._lock:
                 self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
             conn.aux.needs_new_opponents = False
@@ -284,6 +285,11 @@ class EvalManager(GamingManagerBase):
         return data
 
     def _get_next_gen_to_eval(self):
+        failed_gen = [data.mcts_gen for data in self._eval_status_dict.values() \
+            if data.status == EvalRequestStatus.FAILED]
+        if failed_gen:
+            return failed_gen[0]
+
         latest_gen = self._controller._organizer.get_latest_model_generation()
         evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values() \
             if data.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)]
