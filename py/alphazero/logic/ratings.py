@@ -156,4 +156,45 @@ def compute_ratings(w: np.ndarray, eps: float=0.0) -> np.ndarray:
     return beta
 
 def win_prob(elo1: float, elo2: float) -> float:
-    return float(1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR)))
+    return 1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR))
+
+def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: float = 0.0,
+                        tol: float = 1e-8, max_iter: int = 100) -> float:
+    """
+    Maximum–likelihood estimate of player T's Elo via Newton's method.
+
+
+
+    Parameters
+    ----------
+    n     : array of total games versus each opponent
+    k     : array of T's wins versus each opponent
+    elos  : array of opponent Elo ratings (same length as n, k)
+    init  : initial guess for R_T
+    beta  : scaling constant in the logistic formula
+    tol   : convergence threshold on the gradient
+    max_iter : cap on Newton iterations
+
+    Returns
+    -------
+    float : MLE estimate of R_T
+    """
+    R_T = float(init)
+
+    for _ in range(max_iter):
+        g = win_prob(R_T, elos)
+        grad = (1.0 / BETA_SCALE_FACTOR) * np.sum(k - n * g)
+        if abs(grad) < tol:
+            break
+        hess = -(1.0 / BETA_SCALE_FACTOR**2) * np.sum(n * g * (1.0 - g))
+        R_T -= grad / hess
+
+    return R_T
+
+if __name__ == "__main__":
+    elos = np.array([200, 300, 400], dtype=float)
+    n    = np.array([100, 100, 100])
+    k    = np.array([ 60,  50,  40])
+
+    R_hat = estimate_elo_newton(n, k, elos, init=300.0)
+    print(f"MLE Elo for T ≈ {R_hat:.2f}")
