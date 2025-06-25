@@ -32,7 +32,7 @@ class RatingParams:
     rating_player_options: RatingPlayerOptions = field(default_factory=RatingPlayerOptions)
     default_target_elo_gap: DefaultTargetEloGap = field(default_factory=DefaultTargetEloGap)
 
-    eval_error_threshold: float = 50.0
+    eval_error_threshold: float = 100.0
     n_games_per_benchmark: int = 100
     n_games_per_evaluation: int = 1000
 

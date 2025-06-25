@@ -159,11 +159,10 @@ def win_prob(elo1: float, elo2: float) -> float:
     return 1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR))
 
 def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: float = 0.0,
-                        tol: float = 1e-8, max_iter: int = 100) -> float:
+                        lower: float = -np.inf, upper: float = np.inf, max_step: float = 1000,
+                        tol: float = 1e-8, max_iter: int = 100, eps: float = 1e-8) -> float:
     """
     Maximum–likelihood estimate of player T's Elo via Newton's method.
-
-
 
     Parameters
     ----------
@@ -187,14 +186,17 @@ def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: fl
         if abs(grad) < tol:
             break
         hess = -(1.0 / BETA_SCALE_FACTOR**2) * np.sum(n * g * (1.0 - g))
-        R_T -= grad / hess
+        hess = np.sign(hess) * max(abs(hess), eps)
+        step = grad / hess
+        step = np.clip(step, -max_step, max_step)
+        R_T -= step
 
-    return R_T
+    return np.clip(R_T, lower, upper)
 
 if __name__ == "__main__":
-    elos = np.array([200, 300, 400], dtype=float)
-    n    = np.array([100, 100, 100])
-    k    = np.array([ 60,  50,  40])
+    elos = np.array([795, 1196, 1701], dtype=float)
+    n    = np.array([7, 2, 2])
+    k    = np.array([2, 0, 0])
 
-    R_hat = estimate_elo_newton(n, k, elos, init=300.0)
+    R_hat = estimate_elo_newton(n, k, elos, init=0.0)
     print(f"MLE Elo for T ≈ {R_hat:.2f}")
