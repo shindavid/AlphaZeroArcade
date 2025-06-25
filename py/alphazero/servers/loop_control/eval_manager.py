@@ -298,7 +298,7 @@ class EvalManager(GamingManagerBase):
 
     def _estimate_rating(self, test_iagent):
         if self._evaluator._arena.n_games_played(test_iagent.agent) > 0:
-            estimated_rating = self._evaluator.arena_ratings[test_iagent.index]
+            estimated_rating = self._get_interpolated_elo(test_iagent.index)
         else:
             estimated_rating = self._estimate_rating_nearby_gens(test_iagent.agent.gen)
             if estimated_rating is None:
@@ -311,8 +311,12 @@ class EvalManager(GamingManagerBase):
             self._eval_status_dict.items() if data.status == EvalRequestStatus.COMPLETE]
         if not evaluated_data:
             return None
-        evaluated_ixs, evaluated_gens = zip(*evaluated_data)
-        ratings = self._evaluator.arena_ratings[np.array(evaluated_ixs)]
+
+        evaluated_ixs, _ = zip(*evaluated_data)
+        test_ixs, interpolated_ratings = self._evaluator.interpolate_ratings()
+        ixs_raitngs = [(ix, rating) for ix, rating in zip(test_ixs, interpolated_ratings) if ix in evaluated_ixs]
+        ixs, ratings = zip(*ixs_raitngs)
+        evaluated_gens = [self._evaluator.indexed_agents[ix].agent.gen for ix in ixs]
         estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
         return estimated_rating
 
@@ -355,7 +359,7 @@ class EvalManager(GamingManagerBase):
         with self._evaluator.db.db_lock:
             self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator.db)
         self._evaluator.refresh_ratings()
-        new_rating = self._evaluator.arena_ratings[ix1]
+        new_rating = self._get_interpolated_elo(ix1)
         old_rating = conn.aux.estimated_rating
         logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
@@ -373,6 +377,12 @@ class EvalManager(GamingManagerBase):
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
         self.set_priority()
+
+    def _get_interpolated_elo(self, ix: int) -> float:
+        test_ixs, interpolated_ratings = self._evaluator.interpolate_ratings()
+        i = np.where(test_ixs == ix)[0]
+        if i:
+            return interpolated_ratings[i]
 
     def _interpolate_ratings(self, conn: ClientConnection, eval_ix: int):
         # assert self._evaluator._arena.n_games_played(self._evaluator.indexed_agents[eval_ix].agent) == self.n_games
