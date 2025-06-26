@@ -3,6 +3,7 @@
 #include <games/hex/Constants.hpp>
 #include <games/hex/MaskReverser.hpp>
 #include <util/CppUtil.hpp>
+#include <util/Exception.hpp>
 
 #include <cstring>
 
@@ -29,6 +30,16 @@ inline void GameState::rotate() {
 
 inline void GameState::Core::init() {
   std::memset(this, 0, sizeof(Core));
+}
+
+inline vertex_t GameState::Core::find_occupied(core::seat_index_t seat) const {
+  for (int row = 0; row < Constants::kBoardDim; ++row) {
+    mask_t mask = rows[seat][row];
+    if (mask) {
+      return row * Constants::kBoardDim + std::countr_zero(mask);
+    }
+  }
+  throw util::Exception("Illegal call to {}()", __func__);
 }
 
 inline void GameState::Aux::init() {

@@ -217,6 +217,7 @@ TEST(Rules, swap_start) {
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares);
 
   core::action_t move = hex::kC1;
+  core::action_t mirrored_move = hex::kA3;
 
   Rules::apply(history, move);
   state = history.current();
@@ -225,12 +226,48 @@ TEST(Rules, swap_start) {
   EXPECT_FALSE(valid_actions[move]);
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares);
 
+  std::string repr = get_repr(state);
+  std::string expected_repr =
+    "               A B C D E F G H I J K\n"
+    "          11 / / / / / / / / / / / / 11\n"
+    "         10 / / / / / / / / / / / / 10\n"
+    "         9 / / / / / / / / / / / /  9\n"
+    "        8 / / / / / / / / / / / /  8\n"
+    "       7 / / / / / / / / / / / /  7\n"
+    "      6 / / / / / / / / / / / /  6\n"
+    "     5 / / / / / / / / / / / /  5\n"
+    "    4 / / / / / / / / / / / /  4\n"
+    "   3 / / / / / / / / / / / /  3\n"
+    "  2 / / / / / / / / / / / /  2\n"
+    " 1 / / /B/ / / / / / / / /  1\n"
+    "   A B C D E F G H I J K\n\n";
+
+  EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
+
   Rules::apply(history, hex::kSwap);
   state = history.current();
   valid_actions = Rules::get_legal_moves(state);
   EXPECT_FALSE(valid_actions[hex::kSwap]);
-  EXPECT_FALSE(valid_actions[move]);
+  EXPECT_FALSE(valid_actions[mirrored_move]);
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares - 1);
+
+  repr = get_repr(state);
+  expected_repr =
+    "               A B C D E F G H I J K\n"
+    "          11 / / / / / / / / / / / / 11\n"
+    "         10 / / / / / / / / / / / / 10\n"
+    "         9 / / / / / / / / / / / /  9\n"
+    "        8 / / / / / / / / / / / /  8\n"
+    "       7 / / / / / / / / / / / /  7\n"
+    "      6 / / / / / / / / / / / /  6\n"
+    "     5 / / / / / / / / / / / /  5\n"
+    "    4 / / / / / / / / / / / /  4\n"
+    "   3 /W/ / / / / / / / / / /  3\n"
+    "  2 / / / / / / / / / / / /  2\n"
+    " 1 / / / / / / / / / / / /  1\n"
+    "   A B C D E F G H I J K\n\n";
+
+  EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
 }
 
 TEST(Rules, non_swap_start) {

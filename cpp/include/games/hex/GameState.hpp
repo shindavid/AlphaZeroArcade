@@ -30,6 +30,9 @@ struct GameState {
     auto operator<=>(const Core& other) const = default;
     void init();
 
+    // Assumes that at least one vertex is occupied by the given player, and returns any such vertex
+    vertex_t find_occupied(core::seat_index_t seat) const;
+
     mask_t rows[Constants::kNumPlayers][Constants::kBoardDim];
 
     // Without the swap-rule, cur_player can be derived from the board. But with the swap-rule,

@@ -54,6 +54,7 @@ struct Game {
     static Types::ActionMask get_legal_moves(const State&);
 
    private:
+    static core::action_t compute_mirror_action(core::action_t action);
     static vertex_t to_vertex(int row, int col) { return row * Constants::kBoardDim + col; }
     static GameResults::Tensor compute_outcome(const State& state);
   };

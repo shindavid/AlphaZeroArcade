@@ -3,20 +3,25 @@
 namespace hex {
 
 void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State& state = history.extend();
-  State::Core& core = state.core;
-  State::Aux& aux = state.aux;
+  State* state = &history.extend();
   static constexpr auto B = Constants::kBoardDim;
-  auto cp = core.cur_player;
+  auto cp = state->core.cur_player;
 
   if (action == kSwap) {
-    util::debug_assert(cp == Constants::kWhite && !core.post_swap_phase,
+    util::debug_assert(cp == Constants::kWhite && !state->core.post_swap_phase,
                        "Swap action can only be applied by White before the swap phase");
-    std::swap(core.rows[Constants::kWhite], core.rows[Constants::kBlack]);
-    std::swap(aux.union_find[Constants::kWhite], aux.union_find[Constants::kBlack]);
+
+    core::action_t prev_action = state->core.find_occupied(Constants::kBlack);
+    history.initialize(Rules{});
+    state = &history.extend();
+    state->core.cur_player = Constants::kSecondPlayer;
+    apply(history, compute_mirror_action(prev_action));
+    state = &history.current();
   } else {
     int8_t row = action / B;
     int8_t col = action % B;
+    State::Core& core = state->core;
+    State::Aux& aux = state->aux;
 
     util::debug_assert(!(core.rows[cp][row] & (mask_t(1) << col)),
                        "Cannot place a piece on an already occupied cell");
@@ -77,8 +82,8 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     }
   }
 
-  core.post_swap_phase |= (cp == Constants::kWhite);
-  core.cur_player = 1 - cp;
+  state->core.post_swap_phase |= (cp == Constants::kWhite);
+  state->core.cur_player = 1 - cp;
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
@@ -90,10 +95,10 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
          9 / / / / / / / / / / / /  9
         8 / / / / / / / / / / / /  8
        7 / / / / / / / / / / / /  7
-      6 / / / / /R/ / / / / / /  6
+      6 / / / / /W/ / / / / / /  6
      5 / / / / /B/ / / / / / /  5
     4 / / / / / / / / / / / /  4
-   3 / / / /R/ / / / / / / /  3
+   3 / / / /B/ / / / / / / /  3
   2 / / / / / / / / / / / /  2
  1 / / / / / / / / / / / /  1
    A B C D E F G H I J K

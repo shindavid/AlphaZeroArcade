@@ -88,6 +88,13 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
+inline core::action_t Game::Rules::compute_mirror_action(core::action_t action) {
+  static constexpr auto B = Constants::kBoardDim;
+  int8_t row = action / B;
+  int8_t col = action % B;
+  return B * col + row;
+}
+
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   if (action == kSwap) {
     return "swap";

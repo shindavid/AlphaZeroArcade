@@ -9,8 +9,8 @@ namespace hex {
 inline void UnionFind::init() {
   for (vertex_t i = 0; i < kNumVertices; ++i) {
     parent_[i] = i;
-    rank_[i]   = 0;
   }
+  std::fill(rank_.begin(), rank_.end(), 0);
 }
 
 inline vertex_t UnionFind::find(vertex_t x) const {
