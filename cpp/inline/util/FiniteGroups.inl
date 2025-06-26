@@ -7,7 +7,7 @@ namespace groups {
 
 template <int N>
 constexpr group::element_t CyclicGroup<N>::inverse(group::element_t x) {
-  return N - x;
+  return (N - x) * (x > 0);
 }
 
 template <int N>
