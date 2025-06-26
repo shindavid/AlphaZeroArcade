@@ -159,7 +159,7 @@ def win_prob(elo1: float, elo2: float) -> float:
     return 1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR))
 
 def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: float = 0.0,
-                        lower: float = -np.inf, upper: float = np.inf, max_step: float = 1000,
+                        lower: float = -np.inf, upper: float = np.inf, max_step: float = 200,
                         tol: float = 1e-8, max_iter: int = 100, eps: float = 1e-8) -> float:
     """
     Maximum–likelihood estimate of player T's Elo via Newton's method.
@@ -186,10 +186,12 @@ def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: fl
         if abs(grad) < tol:
             break
         hess = -(1.0 / BETA_SCALE_FACTOR**2) * np.sum(n * g * (1.0 - g))
-        hess = np.sign(hess) * max(abs(hess), eps)
+        hess = -max(abs(hess), eps)
         step = grad / hess
         step = np.clip(step, -max_step, max_step)
         R_T -= step
+
+    print(f"Converged after {_+1} iterations with R_T = {R_T}, grad = {grad}, hess = {hess}")
 
     return np.clip(R_T, lower, upper)
 
