@@ -94,7 +94,7 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
   }
   int row = action / Constants::kBoardDim;
   int col = action % Constants::kBoardDim;
-  return std::format("{}{}", 'A' + row, col + 1);
+  return std::format("{:c}{}", 'A' + col, row + 1);
 }
 
 inline std::string Game::IO::player_to_str(core::seat_index_t player) {
