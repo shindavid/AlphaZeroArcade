@@ -1,12 +1,56 @@
 #include <games/hex/Game.hpp>
 
+#include <core/DefaultCanonicalizer.hpp>
+#include <games/hex/Constants.hpp>
 #include <util/AnsiCodes.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
+#include <util/EigenUtil.hpp>
 
 #include <bit>
 
 namespace hex {
+
+inline void Game::Symmetries::apply(State& state, group::element_t sym) {
+  switch (sym) {
+    case groups::C2::kIdentity: return;
+    case groups::C2::kRot180: return state.rotate();
+    default: throw util::Exception("Unknown group element: {}", sym);
+  }
+}
+
+inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
+  for (auto& it : history) {
+    apply(it, sym);
+  }
+}
+
+inline void Game::Symmetries::apply(Types::PolicyTensor& policy, group::element_t sym,
+                                    core::action_mode_t) {
+  constexpr int N = Constants::kBoardDim;
+  switch (sym) {
+    case groups::C2::kIdentity: return;
+    case groups::C2::kRot180: return eigen_util::rot180<N>(policy);
+    default: throw util::Exception("Unknown group element: {}", sym);
+  }
+}
+
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
+                                    core::action_mode_t) {
+  switch (sym) {
+    case groups::C2::kIdentity: return;
+    case groups::C2::kRot180: {
+      action = action == kSwap ? kSwap : (Constants::kNumSquares - 1 - action);
+      return;
+    }
+    default: throw util::Exception("Unknown group element: {}", sym);
+  }
+}
+
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
+  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
+  return DefaultCanonicalizer::get(state);
+}
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   return get_legal_moves(history.current());

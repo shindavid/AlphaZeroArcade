@@ -31,11 +31,17 @@ struct Game {
   using State = hex::GameState;
   using GameResults = core::WinLossResults;
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
-
-  // TODO: replace with group D2
-  using SymmetryGroup = groups::TrivialGroup;
+  using SymmetryGroup = groups::C2;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-  using Symmetries = core::TrivialSymmetries;
+
+  struct Symmetries {
+    static Types::SymmetryMask get_mask(const State&) { return Types::SymmetryMask().set(); }
+    static void apply(State& state, group::element_t sym);
+    static void apply(StateHistory& history, group::element_t sym);  // optional
+    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t);
+    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t);
+    static group::element_t get_canonical_symmetry(const State& state);
+  };
 
   struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }

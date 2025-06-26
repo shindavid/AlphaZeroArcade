@@ -25,8 +25,11 @@ struct UnionFind {
   vertex_t find(vertex_t x) const;
   void unite(vertex_t a, vertex_t b);
   bool connected(vertex_t a, vertex_t b) const;
+  void rotate();
 
  private:
+  static vertex_t rotate_vertex(vertex_t v);
+
   mutable std::array<vertex_t, kNumVertices> parent;
   mutable std::array<uint8_t, kNumVertices> rank;
 };

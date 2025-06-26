@@ -23,6 +23,7 @@ struct GameState {
   bool operator!=(const GameState& other) const { return core != other.core; }
   size_t hash() const { return util::PODHash<Core>{}(core); }
   void init();
+  void rotate();
 
   // Core unambiguously represents the game state.
   struct Core {
