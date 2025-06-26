@@ -119,13 +119,13 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   int cx = 0;
 
   cx += snprintf(buffer + cx, buf_size - cx, "               %sA B C D E F G H I J K%s\n",
-                 ansi::kWhite(""), ansi::kReset(""));
+                 ansi::kBlue(""), ansi::kReset(""));
   for (int row = B - 1; row >= 0; --row) {
     cx += print_row(buffer + cx, buf_size - cx, state, row,
                     row == blink_row ? blink_col : -1);
   }
   cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n",
-                 ansi::kWhite(""), ansi::kReset(""));
+                 ansi::kBlue(""), ansi::kReset(""));
 
   if (player_names) {
     cx += snprintf(buffer + cx, buf_size - cx, "\n");
@@ -147,7 +147,7 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
     buf[cx] = ' ';
     cx += cx < n;
   }
-  cx += snprintf(buf + cx, n - cx, "%s%2d%s /", ansi::kBlue(""), row + 1, ansi::kReset(""));
+  cx += snprintf(buf + cx, n - cx, "%s%2d%s /", ansi::kWhite(""), row + 1, ansi::kReset(""));
 
   mask_t row_masks[Constants::kNumPlayers];
   row_masks[Constants::kBlack] = state.core.rows[Constants::kBlack][row];
@@ -174,7 +174,7 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
     cx += snprintf(buf + cx, n - cx, "%s%s%s%s/", a, b, c, d);
   }
 
-  cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kBlue(""), row + 1, ansi::kReset(""));
+  cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kWhite(""), row + 1, ansi::kReset(""));
   return cx;
 }
 
