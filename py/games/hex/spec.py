@@ -15,7 +15,7 @@ def b11_c32(shape_info_dict: ShapeInfoDict):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
 
-    assert value_shape == (3,), value_shape
+    assert value_shape == (2,), value_shape
 
     c_trunk = 32
     c_mid = 32
@@ -51,7 +51,7 @@ def b11_c32(shape_info_dict: ShapeInfoDict):
         heads=[
             ModuleSpec(type='PolicyHead',
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-            ModuleSpec(type='WinLossDrawValueHead',
+            ModuleSpec(type='WinLossValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
             ModuleSpec(type='WinShareActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,

@@ -16,8 +16,8 @@ KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinShareActionValueTarget, \
-    WinShareValueTarget
+    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
+    WinShareActionValueTarget, WinShareValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -389,11 +389,38 @@ class WinLossDrawValueHead(Head):
         return out
 
 
+class WinLossValueHead(Head):
+    """
+    A head that produces a length-2 logit vector, usable for 2-player games that do NOT permit
+    draws.
+
+    This is based off WinLossDrawValueHead.
+    """
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super(WinLossValueHead, self).__init__(name, WinLossValueTarget())
+
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, 2)
+
+    def forward(self, x):
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear1(out)
+        out = self.act(out)
+        out = self.linear2(out)
+        return out
+
+
 class WinShareActionValueHead(Head):
     """
     WinShareActionValueHead is appropriate for games where the action-value head outputs win-share
     values. This is the case any times the game's ValueHead returns a tensor that gets transformed
-    into a win-share array. This is the case both for WinShareValueHead and WinLossDrawValueHead.
+    into a win-share array. This is the case for WinShareValueHead, WinLossDrawValueHead, and
+    WinLossValueHead
     """
     def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
         super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
@@ -574,6 +601,7 @@ MODULE_MAP = {
     'ScoreHead': ScoreHead,
     'TransformerBlock': TransformerBlock,
     'WinLossDrawValueHead': WinLossDrawValueHead,
+    'WinLossValueHead': WinLossValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
     }
