@@ -2,6 +2,7 @@
 #include <games/hex/Constants.hpp>
 #include <games/hex/Game.hpp>
 #include <games/hex/Types.hpp>
+#include <iostream>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>
@@ -20,6 +21,45 @@ using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
+
+State make_init_state() {
+  StateHistory history;
+  history.initialize(Rules{});
+
+  Rules::apply(history, 11);
+  Rules::apply(history, 101);
+  Rules::apply(history, 22);
+  return history.current();
+}
+
+PolicyTensor make_policy(int move1, int move2) {
+  PolicyTensor tensor;
+  tensor.setZero();
+  tensor(move1) = 1;
+  tensor(move2) = 1;
+  return tensor;
+}
+
+const std::string init_state_repr =
+  "               A B C D E F G H I J K\n"
+  "          11 / / / / / / / / / / / / 11\n"
+  "         10 / / /W/ / / / / / / / / 10\n"
+  "         9 / / / / / / / / / / / /  9\n"
+  "        8 / / / / / / / / / / / /  8\n"
+  "       7 / / / / / / / / / / / /  7\n"
+  "      6 / / / / / / / / / / / /  6\n"
+  "     5 / / / / / / / / / / / /  5\n"
+  "    4 / / / / / / / / / / / /  4\n"
+  "   3 /B/ / / / / / / / / / /  3\n"
+  "  2 /B/ / / / / / / / / / /  2\n"
+  " 1 / / / / / / / / / / / /  1\n"
+  "   A B C D E F G H I J K\n\n";
+
+std::string get_repr(const State& state) {
+  std::ostringstream ss;
+  IO::print_state(ss, state);
+  return ss.str();
+}
 
 class UnionFindTest : public ::testing::Test {
 protected:
@@ -103,8 +143,63 @@ TEST_F(UnionFindTest, FindDoesPathCompression) {
   EXPECT_EQ(uf.find(n0), root_before);
 }
 
-TEST(Dummy, dummy) {
-  EXPECT_EQ(1, 1);
+TEST(Symmetry, identity) {
+  State state = make_init_state();
+
+  group::element_t sym = groups::C2::kIdentity;
+  group::element_t inv_sym = groups::C2::inverse(sym);
+  Game::Symmetries::apply(state, sym);
+
+  std::string repr = get_repr(state);
+  std::string expected_repr = init_state_repr;
+
+  EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
+  Game::Symmetries::apply(state, inv_sym);
+  EXPECT_STREQ(get_repr(state).c_str(), init_state_repr.c_str());
+
+  PolicyTensor init_policy = make_policy(0, 1);
+  PolicyTensor policy = init_policy;
+  Game::Symmetries::apply(policy, sym, 0);
+  PolicyTensor expected_policy = make_policy(0, 1);
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  Game::Symmetries::apply(policy, inv_sym, 0);
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+}
+
+TEST(Symmetry, rotate) {
+  State state = make_init_state();
+
+  group::element_t sym = groups::C2::kRot180;
+  group::element_t inv_sym = groups::C2::inverse(sym);
+  Game::Symmetries::apply(state, sym);
+
+  std::string repr = get_repr(state);
+  std::string expected_repr =
+    "               A B C D E F G H I J K\n"
+    "          11 / / / / / / / / / / / / 11\n"
+    "         10 / / / / / / / / / / /B/ 10\n"
+    "         9 / / / / / / / / / / /B/  9\n"
+    "        8 / / / / / / / / / / / /  8\n"
+    "       7 / / / / / / / / / / / /  7\n"
+    "      6 / / / / / / / / / / / /  6\n"
+    "     5 / / / / / / / / / / / /  5\n"
+    "    4 / / / / / / / / / / / /  4\n"
+    "   3 / / / / / / / / / / / /  3\n"
+    "  2 / / / / / / / / /W/ / /  2\n"
+    " 1 / / / / / / / / / / / /  1\n"
+    "   A B C D E F G H I J K\n\n";
+
+  EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
+  Game::Symmetries::apply(state, inv_sym);
+  EXPECT_STREQ(get_repr(state).c_str(), init_state_repr.c_str());
+
+  PolicyTensor init_policy = make_policy(0, 1);
+  PolicyTensor policy = init_policy;
+  Game::Symmetries::apply(policy, sym, 0);
+  PolicyTensor expected_policy = make_policy(119, 120);
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  Game::Symmetries::apply(policy, inv_sym, 0);
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
 int main(int argc, char** argv) {

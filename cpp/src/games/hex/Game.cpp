@@ -11,7 +11,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
 
   if (action == kSwap) {
     util::debug_assert(cp == Constants::kWhite && !core.post_swap_phase,
-                       "Swap action can only be applied by Red before the swap phase");
+                       "Swap action can only be applied by White before the swap phase");
     std::swap(core.rows[Constants::kWhite], core.rows[Constants::kBlack]);
     std::swap(aux.union_find[Constants::kWhite], aux.union_find[Constants::kBlack]);
   } else {
@@ -131,6 +131,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   }
 
   util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink_column) {
@@ -165,10 +166,10 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
       a = ansi::kBlink("");
     }
 
-    cx += snprintf(buf + cx, n - cx, "%s%s%s%s/%s%3d%s\n", a, b, c, d, ansi::kBlue(""), row + 1,
-                   ansi::kReset(""));
+    cx += snprintf(buf + cx, n - cx, "%s%s%s%s/", a, b, c, d);
   }
 
+  cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kBlue(""), row + 1, ansi::kReset(""));
   return cx;
 }
 
