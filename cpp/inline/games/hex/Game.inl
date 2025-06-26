@@ -18,7 +18,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 
   int offset = 0;
   for (int i = 0; i < Constants::kBoardDim; ++i) {
-    mask_t occupied_mask = core.rows[Constants::kBlue][i] | core.rows[Constants::kRed][i];
+    mask_t occupied_mask = core.rows[Constants::kBlack][i] | core.rows[Constants::kWhite][i];
     mask_t free_mask = ~occupied_mask & ((mask_t(1)<<Constants::kBoardDim)-1);
     for (; free_mask; free_mask &= free_mask-1) {
       int j = std::countr_zero(free_mask);
@@ -28,7 +28,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
     offset += Constants::kBoardDim;
   }
 
-  if (core.cur_player == Constants::kRed && !core.post_swap_phase) {
+  if (core.cur_player == Constants::kSecondPlayer && !core.post_swap_phase) {
     valid_actions[kSwap] = true;
   }
   return valid_actions;
@@ -54,8 +54,8 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
 }
 
 inline std::string Game::IO::player_to_str(core::seat_index_t player) {
-  return (player == Constants::kRed)
-             ? std::format("{}{}{}", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""))
+  return (player == Constants::kWhite)
+             ? std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("W"), ansi::kReset(""))
              : std::format("{}{}{}", ansi::kBlue(""), ansi::kCircle("B"), ansi::kReset(""));
 }
 
@@ -85,7 +85,7 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter 
     i += P;
   }
 
-  if (cp == Constants::kRed && !cur->core.post_swap_phase) {
+  if (cp == Constants::kWhite && !cur->core.post_swap_phase) {
     // add swap legality plane
     tensor.chip(i, 0).setConstant(1);
   }

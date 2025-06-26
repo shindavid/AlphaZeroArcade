@@ -10,10 +10,10 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
   auto cp = core.cur_player;
 
   if (action == kSwap) {
-    util::debug_assert(cp == Constants::kRed && !core.post_swap_phase,
+    util::debug_assert(cp == Constants::kWhite && !core.post_swap_phase,
                        "Swap action can only be applied by Red before the swap phase");
-    std::swap(core.rows[Constants::kRed], core.rows[Constants::kBlue]);
-    std::swap(aux.union_find[Constants::kRed], aux.union_find[Constants::kBlue]);
+    std::swap(core.rows[Constants::kWhite], core.rows[Constants::kBlack]);
+    std::swap(aux.union_find[Constants::kWhite], aux.union_find[Constants::kBlack]);
   } else {
     int8_t row = action / B;
     int8_t col = action % B;
@@ -62,13 +62,13 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
       U.unite(action, to_vertex(nr, nc));
     }
 
-    if (cp == Constants::kRed) {  // red connects N to S
+    if (cp == Constants::kBlack) {  // black connects N to S
       if (row == 0) {
         U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (row == B - 1) {
         U.unite(action, hex::UnionFind::kVirtualVertex2);
       }
-    } else {  // blue connects W to E
+    } else {  // white connects W to E
       if (col == 0) {
         U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (col == B - 1) {
@@ -77,7 +77,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     }
   }
 
-  core.post_swap_phase |= (cp == Constants::kRed);
+  core.post_swap_phase |= (cp == Constants::kWhite);
   core.cur_player = 1 - cp;
 }
 
@@ -114,13 +114,13 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   int cx = 0;
 
   cx += snprintf(buffer + cx, buf_size - cx, "               %sA B C D E F G H I J K%s\n",
-                 ansi::kRed(""), ansi::kReset(""));
+                 ansi::kWhite(""), ansi::kReset(""));
   for (int row = B - 1; row >= 0; --row) {
     cx += print_row(buffer + cx, buf_size - cx, state, row,
                     row == blink_row ? blink_col : -1);
   }
   cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n",
-                 ansi::kRed(""), ansi::kReset(""));
+                 ansi::kWhite(""), ansi::kReset(""));
 
   if (player_names) {
     cx += snprintf(buffer + cx, buf_size - cx, "\n");
@@ -144,21 +144,21 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
   cx += snprintf(buf + cx, n - cx, "%s%2d%s /", ansi::kBlue(""), row + 1, ansi::kReset(""));
 
   mask_t row_masks[Constants::kNumPlayers];
-  row_masks[Constants::kBlue] = state.core.rows[Constants::kBlue][row];
-  row_masks[Constants::kRed] = state.core.rows[Constants::kRed][row];
+  row_masks[Constants::kBlack] = state.core.rows[Constants::kBlack][row];
+  row_masks[Constants::kWhite] = state.core.rows[Constants::kWhite][row];
 
   for (int col = 0; col < Constants::kBoardDim; ++col) {
     const char* a = "";
     const char* b = "";
     const char* c = " ";
     const char* d = "";
-    if (row_masks[Constants::kBlue] & (mask_t(1) << col)) {
+    if (row_masks[Constants::kBlack] & (mask_t(1) << col)) {
       b = ansi::kBlue("");
       c = ansi::kCircle("B");
       d = ansi::kReset("");
-    } else if (row_masks[Constants::kRed] & (mask_t(1) << col)) {
-      b = ansi::kRed("");
-      c = ansi::kCircle("R");
+    } else if (row_masks[Constants::kWhite] & (mask_t(1) << col)) {
+      b = ansi::kWhite("");
+      c = ansi::kCircle("W");
       d = ansi::kReset("");
     }
     if (col == blink_column) {

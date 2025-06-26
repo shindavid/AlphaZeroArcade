@@ -36,8 +36,8 @@ namespace hex {
  *    A2  B2  C2  D2  E2  F2  G2  H2  I2  J2  K2
  *  A1  B1  C1  D1  E1  F1  G1  H1  I1  J1  K1
  *
- * First player (blue) aims to connect east to west.
- * Second player (red) aims to connect north to south.
+ * First player (black) aims to connect north to south.
+ * Second player (white) aims to connect west to east.
  */
 constexpr int kA1 = 0;
 constexpr int kB1 = 1;
@@ -171,8 +171,11 @@ struct Constants : public core::ConstantsBase {
   static constexpr int kNumPlayers = 2;
   static constexpr int kMaxBranchingFactor = KNumActions;
 
-  static constexpr core::seat_index_t kBlue = 0;
-  static constexpr core::seat_index_t kRed = 1;
+  static constexpr core::seat_index_t kBlack = 0;  // connects N to S
+  static constexpr core::seat_index_t kWhite = 1;  // connects W to E
+
+  static constexpr core::seat_index_t kFirstPlayer = kBlack;
+  static constexpr core::seat_index_t kSecondPlayer = kWhite;
 
   static_assert(sizeof(mask_t) * 8 >= kBoardDim, "mask_t must be large enough to hold a row");
   static_assert(kSwap == kNumSquares, "kSwap must be equal to kNumSquares");

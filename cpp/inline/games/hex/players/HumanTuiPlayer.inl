@@ -11,7 +11,7 @@ namespace hex {
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
                                                         const ActionMask& valid_actions) {
   constexpr int B = Constants::kBoardDim;
-  bool can_swap = state.core.cur_player == Constants::kRed && !state.core.post_swap_phase;
+  bool can_swap = state.core.cur_player == Constants::kSecondPlayer && !state.core.post_swap_phase;
 
   std::string prompt = std::format("Enter move [A1-K11{}]: ", can_swap ? " (or S to swap)" : "");
   std::cout << prompt;
