@@ -364,6 +364,7 @@ class EvalManager(GamingManagerBase):
             self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
             has_pending = any(v.status == MatchRequestStatus.PENDING for v in self._eval_status_dict[ix1].ix_match_status.values())
 
+        logger.debug('Has pending matches for ix %s: %s', ix1, has_pending)
         if not has_pending:
             self._calc_ratings(conn, ix1)
 
@@ -379,14 +380,16 @@ class EvalManager(GamingManagerBase):
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
         table.release_lock(conn.client_domain)
 
+        logger.debug('Calculating rating for gen %s...', self._evaluator.indexed_agents[eval_ix].agent)
         rating = self._evaluator.eval_elo(eval_ix)
+        logger.debug('Calculated rating for gen %s: %s', self._evaluator.indexed_agents[eval_ix].agent, rating)
         test_iagent = self._evaluator.indexed_agents[eval_ix]
         with self._evaluator.db.db_lock:
             self._evaluator.db.commit_ratings([test_iagent], [rating])
         self._evaluator._elo_ratings.update(test_iagent, rating)
         conn.aux.estimated_rating = None
         conn.aux.ix = None
-        logger.debug('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
+        logger.info('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
 
     def _task_finished(self) -> None:
         rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
