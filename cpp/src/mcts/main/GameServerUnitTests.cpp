@@ -39,6 +39,7 @@ class GameServerTest : public testing::Test {
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
     server_params.shuffle_player_seats = false; // Preserve random seed sequence for tree search by skipping seat shuffling
+    server_params.print_game_result_summary = false;
     TraingDataWriterParams training_data_writer_params;
     server_ = new GameServer(server_params, training_data_writer_params, initial_actions);
 

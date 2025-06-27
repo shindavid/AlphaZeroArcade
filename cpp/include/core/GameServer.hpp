@@ -132,6 +132,7 @@ class GameServer
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
     bool shuffle_player_seats = true;
+    bool print_game_result_summary = true;
     // The game server can choose to alternate between players, like so:
     //
     // 1. All instances of player 0 make their moves
