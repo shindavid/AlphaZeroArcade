@@ -1012,24 +1012,7 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
     return false;
   };
 
-  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-  cv_main_.wait_until(lock, deadline, predicate);
-  bool deadline_reached = std::chrono::steady_clock::now() >= deadline;
-  if (deadline_reached) {
-    // If this happens, there is some sort of bug. Retrying here potentially covers up for the bug.
-    LOG_WARN("<-- {}::{}() Timed out waiting for batch data. Indicates a bug!", kCls, func);
-    if (server_) server_->debug_dump();
-    BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
-    if (!batch_data) {
-      return nullptr;
-    } else {
-      LOG_WARN("<-- {}::{}() Retrying (seq:{} accepting:{} alloc:{} write:{})", kCls, func,
-               batch_data->sequence_id, batch_data->accepting_allocations,
-               batch_data->allocate_count, batch_data->write_count);
-      batch_data->accepting_allocations = false;
-      cv_main_.wait(lock, predicate);
-    }
-  }
+  cv_main_.wait(lock, predicate);
   if (system_state_ == kPausingScheduleLoop || system_state_ == kShuttingDownScheduleLoop) {
     return nullptr;
   }
