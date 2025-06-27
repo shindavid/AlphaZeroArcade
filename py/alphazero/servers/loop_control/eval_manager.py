@@ -366,23 +366,28 @@ class EvalManager(GamingManagerBase):
 
         logger.debug('Has pending matches for ix %s: %s', ix1, has_pending)
         if not has_pending:
-            self._calc_ratings(conn, ix1)
+            self._calc_ratings(conn, ix1, new_rating)
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        logger.debug('Inside handle_match_results, releasing GPU lock for %s after match result', conn.client_domain)
         table.release_lock(conn.client_domain)
         self.set_priority()
+        logger.debug('End of handle_match_result')
 
-    def _calc_ratings(self, conn: ClientConnection, eval_ix: int):
+    def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float]=None):
         self._eval_status_dict[eval_ix].status = EvalRequestStatus.COMPLETE
         self._eval_status_dict[eval_ix].owner = None
         ix = conn.aux.ix
         assert ix == eval_ix
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        logger.debug('Inside _calc_ratings, releasing GPU lock for %s', conn.client_domain)
         table.release_lock(conn.client_domain)
 
-        logger.debug('Calculating rating for gen %s...', self._evaluator.indexed_agents[eval_ix].agent)
-        rating = self._evaluator.eval_elo(eval_ix)
-        logger.debug('Calculated rating for gen %s: %s', self._evaluator.indexed_agents[eval_ix].agent, rating)
+        if rating is None:
+            logger.debug('Calculating rating for gen %s...', self._evaluator.indexed_agents[eval_ix].agent)
+            rating = self._evaluator.eval_elo(eval_ix)
+            logger.debug('Calculated rating for gen %s: %s', self._evaluator.indexed_agents[eval_ix].agent, rating)
+
         test_iagent = self._evaluator.indexed_agents[eval_ix]
         with self._evaluator.db.db_lock:
             self._evaluator.db.commit_ratings([test_iagent], [rating])
