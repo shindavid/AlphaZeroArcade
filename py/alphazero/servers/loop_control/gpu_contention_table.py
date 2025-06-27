@@ -216,6 +216,7 @@ class GpuContentionTable:
             return
         self._states[domain].lock_status = LockStatus.RELEASED
         self._cond.notify_all()
+        logger.debug('Released lock and nofitied for %s: %s', domain, self)
 
     def _wait_for_lock_expiry(self, domain: Domain) -> bool:
         self._cond.wait_for(lambda: not self._active(domain) or self._lock_expired(domain))
@@ -259,6 +260,7 @@ class GpuContentionTable:
         lock_status = LockStatus.ACQUIRED if active else LockStatus.RELEASED
         self._states[domain].lock_status = lock_status
         self._cond.notify_all()
+        logger.debug('Acquired lock for %s: %s', domain, self)
         return active
 
     def _lock_available(self, domain: Domain) -> bool:
