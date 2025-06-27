@@ -77,8 +77,8 @@ class LoopControllerClient : public PerfStatsClient {
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
   void handle_worker_ready();
-  void handle_pause_receipt();
-  void handle_unpause_receipt();
+  void handle_pause_receipt(const char* file, int line);
+  void handle_unpause_receipt(const char* file, int line);
 
   void update_perf_stats(PerfStats& stats) override;
 

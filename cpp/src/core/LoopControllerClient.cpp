@@ -42,7 +42,7 @@ void LoopControllerClient::send_worker_ready() {
   send(msg);
 }
 
-void LoopControllerClient::handle_pause_receipt() {
+void LoopControllerClient::handle_pause_receipt(const char* file, int line) {
   std::unique_lock lock(receipt_mutex_);
   pause_receipt_count_++;
 
@@ -50,11 +50,11 @@ void LoopControllerClient::handle_pause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
-  LOG_INFO("LoopControllerClient::{}() [{} of {}]", __func__,
+  LOG_INFO("LoopControllerClient::{}() [{}@{}] [{} of {}]", __func__, file, line,
            pause_receipt_count_, pause_listeners_.size());
 }
 
-void LoopControllerClient::handle_unpause_receipt() {
+void LoopControllerClient::handle_unpause_receipt(const char* file, int line) {
   std::unique_lock lock(receipt_mutex_);
   unpause_receipt_count_++;
 
@@ -62,7 +62,7 @@ void LoopControllerClient::handle_unpause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
-  LOG_INFO("LoopControllerClient: {}() [{} of {}]", __func__,
+  LOG_INFO("LoopControllerClient: {}() [{}@{}] [{} of {}]", __func__, file, line,
            unpause_receipt_count_, pause_listeners_.size());
 }
 

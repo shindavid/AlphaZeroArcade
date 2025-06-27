@@ -375,12 +375,11 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
 
   if (!Rules::is_chance_mode(results.action_mode)) {
     int num_valid = valid_actions.count();
-    int num_rows = std::min(num_valid, params_.verbose_num_rows_to_display);
-    LocalPolicyArray actions_arr(num_rows);
-    LocalPolicyArray net_policy_arr(num_rows);
-    LocalPolicyArray action_policy_arr(num_rows);
-    LocalPolicyArray mcts_counts_arr(num_rows);
-    LocalPolicyArray posterior_arr(num_rows);
+    LocalPolicyArray actions_arr(num_valid);
+    LocalPolicyArray net_policy_arr(num_valid);
+    LocalPolicyArray action_policy_arr(num_valid);
+    LocalPolicyArray mcts_counts_arr(num_valid);
+    LocalPolicyArray posterior_arr(num_valid);
 
     float total_count = 0;
     for (int a : bitset_util::on_indices(valid_actions)) {
@@ -394,18 +393,19 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
       action_policy_arr(r) = action_policy(a);
       mcts_counts_arr(r) = mcts_counts(a);
       r++;
-      if (r >= params_.verbose_num_rows_to_display) {
-        break;
-      }
     }
+
+    int num_rows = std::min(num_valid, params_.verbose_num_rows_to_display);
 
     posterior_arr = mcts_counts_arr / total_count;
     static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts",
                                                "Modified"};
     auto data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
-                                        action_policy_arr), 3, false);
-    eigen_util::print_array(std::cout, data, columns, &fmt_map);
+      eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
+                                      action_policy_arr),
+      3, false);
+
+    eigen_util::print_array(std::cout, data.topRows(num_rows), columns, &fmt_map);
 
     if (num_valid > num_rows) {
       int x = num_valid - num_rows;

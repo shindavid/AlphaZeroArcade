@@ -135,20 +135,46 @@ TEST(eigen_util, sort_rows) {
   using Array = Eigen::Array<float, Eigen::Dynamic, kNumCols, 0, kMaxNumRows, kNumCols>;
 
   Array array{
-      {3, 30, 300},
-      {1, 10, 100},
-      {5, 50, 500},
-      {4, 40, 400},
-      {2, 20, 200},
+      {3, 10, 500},
+      {1, 40, 200},
+      {5, 50, 300},
+      {4, 20, 400},
+      {2, 30, 100},
   };
 
-  array = eigen_util::sort_rows(array);
+  Array array2 = eigen_util::sort_rows(array);
 
-  int pow10[] = {1, 10, 100};
+  Array expected_array2{
+      {1, 40, 200},
+      {2, 30, 100},
+      {3, 10, 500},
+      {4, 20, 400},
+      {5, 50, 300},
+  };
+
   for (int r = 0; r < kNumRows; ++r) {
     for (int c = 0; c < kNumCols; ++c) {
-      float expected = (r + 1) * pow10[c];
-      EXPECT_EQ(array(r, c), expected);
+      EXPECT_EQ(array2(r, c), expected_array2(r, c)) << " at (" << r << ", " << c << ")"
+                << " expected: " << expected_array2(r, c)
+                << " got: " << array2(r, c);
+    }
+  }
+
+  Array array3 = eigen_util::sort_rows(array, 1, false);
+
+  Array expected_array3{
+      {5, 50, 300},
+      {1, 40, 200},
+      {2, 30, 100},
+      {4, 20, 400},
+      {3, 10, 500},
+  };
+
+  for (int r = 0; r < kNumRows; ++r) {
+    for (int c = 0; c < kNumCols; ++c) {
+      EXPECT_EQ(array3(r, c), expected_array3(r, c)) << " at (" << r << ", " << c << ")"
+                << " expected: " << expected_array3(r, c)
+                << " got: " << array3(r, c);
     }
   }
 }

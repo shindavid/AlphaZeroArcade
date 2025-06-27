@@ -1,11 +1,11 @@
 #include <util/BitSet.hpp>
 
-#include <algorithm>
-#include <cassert>
-
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
+
+#include <algorithm>
+#include <cassert>
 
 namespace bitset_util {
 

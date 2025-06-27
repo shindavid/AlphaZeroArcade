@@ -7,7 +7,7 @@ namespace bitmap_util {
 namespace detail {
 
 inline void flip_vertical(uint64_t& mask) {
-  mask = __builtin_bswap64(mask);
+  mask = std::byteswap(mask);
 }
 
 inline void mirror_horizontal(uint64_t& mask) {

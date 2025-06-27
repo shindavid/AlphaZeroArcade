@@ -86,8 +86,14 @@ class BenchmarkData:
         organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
+        if self.df is None:
+            self.valid = False
+            return
 
         x_df = make_x_df(organizer)
+        if x_df is None:
+            self.valid = False
+            return
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
         self.valid = len(self.df) > 0
 
@@ -102,8 +108,7 @@ class BenchmarkData:
 
         except Exception as e:
             print(f"Error loading benchmark for {self.tag}: {e}")
-            self.valid = False
-            return
+            return None
 
         benchmark_gens = np.array([iagent.agent.gen for iagent in benchmark_rating_data.iagents])
         benchmark_ratings = benchmark_rating_data.ratings
@@ -116,6 +121,9 @@ class BenchmarkData:
             "mcts_gen": gens_sorted,
             "rating": ratings_sorted
         })
+
+        if len(df) == 0:
+            return None
 
         return df
 
@@ -214,7 +222,9 @@ def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
     if RunParams.is_valid_tag(benchmark_tag):
         benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+        if not benchmark_data.valid:
+            return figure(title='No data available')
     else:
-        benchmark_data = None
+        return figure(title='No data available')
     plotter = Plotter(data_list, benchmark_data)
     return plotter.figure

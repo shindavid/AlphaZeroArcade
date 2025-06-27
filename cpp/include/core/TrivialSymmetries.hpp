@@ -3,8 +3,6 @@
 #include <core/BasicTypes.hpp>
 #include <util/FiniteGroups.hpp>
 
-#include <utility>
-
 namespace core {
 
 struct TrivialSymmetries {

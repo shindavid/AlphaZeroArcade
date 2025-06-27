@@ -40,6 +40,11 @@ class WinShareActionValueTarget(LearningTarget):
         return nn.BCEWithLogitsLoss()
 
 
+class WinLossValueTarget(LearningTarget):
+    def loss_fn(self) -> nn.Module:
+        return nn.CrossEntropyLoss()
+
+
 class WinLossDrawValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.CrossEntropyLoss()

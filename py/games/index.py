@@ -3,6 +3,7 @@ import argparse
 from games.game_spec import GameSpec
 from games.blokus.spec import Blokus
 from games.connect4.spec import Connect4
+from games.hex.spec import Hex
 from games.othello.spec import Othello
 from games.tictactoe.spec import TicTacToe
 from games.stochastic_nim.spec import StochasticNim
@@ -11,6 +12,7 @@ from games.stochastic_nim.spec import StochasticNim
 ALL_GAME_SPECS = [
     Blokus,
     Connect4,
+    Hex,
     Othello,
     TicTacToe,
     StochasticNim,
