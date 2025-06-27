@@ -62,7 +62,7 @@ void LoopControllerClient::handle_unpause_receipt(const char* file, int line) {
     lock.unlock();
     receipt_cv_.notify_all();
   }
-  LOG_INFO("LoopControllerClient: {}() [{} of {}] [{} of {}]", __func__, file, line,
+  LOG_INFO("LoopControllerClient: {}() [{}@{}] [{} of {}]", __func__, file, line,
            unpause_receipt_count_, pause_listeners_.size());
 }
 
