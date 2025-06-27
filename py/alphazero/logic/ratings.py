@@ -170,9 +170,12 @@ def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: fl
     k     : array of T's wins versus each opponent
     elos  : array of opponent Elo ratings (same length as n, k)
     init  : initial guess for R_T
-    beta  : scaling constant in the logistic formula
+    lower : lower bound on R_T
+    upper : upper bound on R_T
+    max_step : maximum step size in each Newton iteration
     tol   : convergence threshold on the gradient
     max_iter : cap on Newton iterations
+    eps   : small value to ensure Hessian is not too close to zero
 
     Returns
     -------
