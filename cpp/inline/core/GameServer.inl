@@ -498,7 +498,7 @@ void GameServer<Game>::SharedData::decrement_paused_thread_count() {
   std::unique_lock lock(mutex_);
   util::release_assert(!paused_);
   if (paused_thread_count_ == 1) {
-    core::LoopControllerClient::get()->handle_unpause_receipt();
+    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
     paused_thread_count_--;
     lock.unlock();
     cv_.notify_all();
@@ -531,7 +531,7 @@ void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
   if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
     pause_receipt_pending_ = false;
     LOG_INFO("<-- GameServer: handling pause receipt");
-    core::LoopControllerClient::get()->handle_pause_receipt();
+    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
   }
 }
 

@@ -785,7 +785,7 @@ void NNEvaluationService<Game>::state_loop() {
     util::release_assert(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
                          system_state_, kPaused);
 
-    core::LoopControllerClient::get()->handle_pause_receipt();
+    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
 
     cv_main_.wait(lock, [&] {
       if (system_state_ == kUnpaused) {
@@ -820,7 +820,7 @@ void NNEvaluationService<Game>::state_loop() {
       return true;
     });
 
-    core::LoopControllerClient::get()->handle_unpause_receipt();
+    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
   }
 
   system_state_ = kShuttingDownScheduleLoop;

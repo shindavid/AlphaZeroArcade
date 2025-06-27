@@ -87,7 +87,7 @@ void TrainingDataWriter<Game>::pause() {
   std::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_pause_receipt (already paused)");
-    core::LoopControllerClient::get()->handle_pause_receipt();
+    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
     return;
   }
   game_queue_data_.paused = true;
@@ -103,7 +103,7 @@ void TrainingDataWriter<Game>::unpause() {
   std::unique_lock lock(game_queue_mutex_);
   if (!game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_unpause_receipt (already unpaused)");
-    core::LoopControllerClient::get()->handle_unpause_receipt();
+    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
     return;
   }
   game_queue_data_.paused = false;
@@ -138,9 +138,9 @@ void TrainingDataWriter<Game>::loop() {
       return !queue.empty() || misc_data_.closed || game_queue_data_.paused;
     });
     if (game_queue_data_.paused) {
-      core::LoopControllerClient::get()->handle_pause_receipt();
+      core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
       game_queue_cv_.wait(lock, [&] { return !game_queue_data_.paused; });
-      core::LoopControllerClient::get()->handle_unpause_receipt();
+      core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
     }
     game_queue_data_.queue_index = 1 - game_queue_data_.queue_index;
     lock.unlock();
