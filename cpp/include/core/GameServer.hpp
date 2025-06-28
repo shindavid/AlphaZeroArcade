@@ -284,11 +284,9 @@ class GameServer
     void debug_dump() const;
     void pause();
     void unpause();
-    void wait_until_pause_state_is(core::game_thread_id_t, pause_state_t state);
+    void run_prelude(core::game_thread_id_t id);
     void increment_active_thread_count();
     void decrement_active_thread_count();
-    void increment_paused_thread_count();
-    void decrement_paused_thread_count();
 
     void increment_mcts_time_ns(int64_t ns) { mcts_time_ns_ += ns; }
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
@@ -349,6 +347,7 @@ class GameServer
 
     int active_thread_count_ = 0;
     int paused_thread_count_ = 0;
+    int in_prelude_count_ = 0;
     player_id_t global_active_player_id_ = -1;  // used in alternating mode
     pause_state_t pause_state_ = kUnpaused;
     bool waiting_in_next_ = false;
@@ -368,7 +367,6 @@ class GameServer
 
    private:
     void run();
-    void run_prelude();
 
     SharedData& shared_data_;
     std::thread thread_;
