@@ -89,6 +89,9 @@ GameServer<Game>::SharedData::SharedData(
 
 template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
+  if (state_thread_.joinable()) {
+    state_thread_.join();
+  }
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
@@ -183,7 +186,7 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
       lock.lock();
       waiting_in_next_ = true;
       cv_.wait(lock, [&] {
-        if (paused_) return true;
+        if (pause_state_ != kUnpaused) return true;
         if (!queue_.empty()) return true;
         if (pending_queue_count_ == 0) return true;
         if (deferred_count_ == pending_queue_count_) return true;
@@ -224,8 +227,8 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
     }
   }
 
-  if (paused_) {
-    LOG_DEBUG("<-- GameServer::{}(): paused", __func__);
+  if (pause_state_ != kUnpaused) {
+    LOG_DEBUG("<-- GameServer::{}(): pause_state={}", __func__, pause_state_);
     return kHandlePause;
   }
 
@@ -413,12 +416,11 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::debug_dump() const {
   std::unique_lock lock(mutex_);
   LOG_WARN(
-    "GameServer {} paused:{} queue.size():{} pending_queue_count:{} deferred_count_:{} "
-    "active_thread_count:{} "
-    "paused_thread_count:{} pause_receipt_pending:{} waiting_in_next:{} num_games_started:{} "
+    "GameServer {} pause_state:{} queue.size():{} pending_queue_count:{} deferred_count_:{} "
+    "active_thread_count:{} paused_thread_count:{} waiting_in_next:{} num_games_started:{} "
     "num_games_ended:{}",
-    __func__, paused_, queue_.size(), pending_queue_count_, deferred_count_, active_thread_count_,
-    paused_thread_count_, pause_receipt_pending_, waiting_in_next_, num_games_started_,
+    __func__, pause_state_, queue_.size(), pending_queue_count_, deferred_count_,
+    active_thread_count_, paused_thread_count_, waiting_in_next_, num_games_started_,
     num_games_ended_);
 
   for (int i = 0; i < (int)game_slots_.size(); ++i) {
@@ -445,9 +447,8 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::pause() {
   LOG_INFO("GameServer: pausing");
   std::unique_lock lock(mutex_);
-  util::release_assert(!paused_, "double pause");
-  paused_ = true;
-  pause_receipt_pending_ = true;
+  cv_.wait(lock, [&] { return pause_state_ == kUnpaused && in_prelude_count_ == 0; });
+  pause_state_ = kPausing;
   lock.unlock();
   cv_.notify_all();
 }
@@ -456,55 +457,123 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::unpause() {
   LOG_INFO("GameServer: unpausing");
   std::unique_lock lock(mutex_);
-  util::release_assert(paused_, "double unpause");
-  paused_ = false;
+  util::release_assert(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_,
+                       kPaused, __LINE__);
+  pause_state_ = kUnpausing;
   lock.unlock();
   cv_.notify_all();
-}
-
-template <concepts::Game Game>
-void GameServer<Game>::SharedData::wait_for_unpause() {
-  LOG_DEBUG("<-- GameServer: waiting for unpause...");
-  std::unique_lock lock(mutex_);
-  cv_.wait(lock, [&] { return !paused_; });
-  LOG_DEBUG("<-- GameServer: unpause wait complete!");
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::increment_active_thread_count() {
   std::unique_lock lock(mutex_);
   active_thread_count_++;
+  if (!state_thread_launched_) {
+    state_thread_launched_ = true;
+    state_thread_ = std::thread([&] { this->state_loop(); });
+  }
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::decrement_active_thread_count() {
   std::unique_lock lock(mutex_);
   active_thread_count_--;
-  issue_pause_receipt_if_necessary();
+  lock.unlock();
+  cv_.notify_all();
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::increment_paused_thread_count() {
+void GameServer<Game>::SharedData::run_prelude(core::game_thread_id_t id) {
+  if (pause_state_ == kUnpaused) return;  // avoid mutex in common case
+
   std::unique_lock lock(mutex_);
-  util::release_assert(paused_);
+  in_prelude_count_++;
+
+  util::release_assert(pause_state_ == kPausing,
+                       "{}(): {} != {} @{}", __func__, pause_state_, kPausing, __LINE__);
   paused_thread_count_++;
-  LOG_DEBUG("<-- GameServer: pause_thread_count={} active_thread_count={}", paused_thread_count_,
-            active_thread_count_);
-  issue_pause_receipt_if_necessary();
-}
-
-template <concepts::Game Game>
-void GameServer<Game>::SharedData::decrement_paused_thread_count() {
-  std::unique_lock lock(mutex_);
-  util::release_assert(!paused_);
-  if (paused_thread_count_ == 1) {
-    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
-    paused_thread_count_--;
+  bool notify = paused_thread_count_ == active_thread_count_;
+  LOG_INFO("<-- GameServer: thread={} pause={} in_prelude={} active={} notify={} @{}", id,
+           paused_thread_count_, in_prelude_count_, active_thread_count_, notify, __LINE__);
+  if (notify) {
     lock.unlock();
     cv_.notify_all();
-  } else {
-    paused_thread_count_--;
-    cv_.wait(lock, [&] { return paused_thread_count_ == 0; });
+    lock.lock();
+  }
+
+  cv_.wait(lock, [&] {
+    if (pause_state_ == kUnpausing) return true;
+    LOG_DEBUG("<-- GameServer: thread {} still waiting for pause state {} (current: {})", id,
+              kUnpausing, pause_state_);
+    return false;
+  });
+
+  paused_thread_count_--;
+  notify = paused_thread_count_ == 0;
+  LOG_INFO("<-- GameServer: thread={} pause={} in_prelude={} active={} notify={} @{}", id,
+           paused_thread_count_, in_prelude_count_, active_thread_count_, notify, __LINE__);
+  if (notify) {
+    lock.unlock();
+    cv_.notify_all();
+    lock.lock();
+  }
+
+  cv_.wait(lock, [&] {
+    if (pause_state_ == kUnpaused) return true;
+    LOG_DEBUG("<-- GameServer: thread {} still waiting for pause state {} (current: {})", id,
+              kUnpaused, pause_state_);
+    return false;
+  });
+
+  in_prelude_count_--;
+  notify = in_prelude_count_ == 0;
+  LOG_INFO("<-- GameServer: thread={} pause={} in_prelude={} active={} notify={} @{}", id,
+           paused_thread_count_, in_prelude_count_, active_thread_count_, notify, __LINE__);
+  if (notify) {
+    lock.unlock();
+    cv_.notify_all();
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::SharedData::state_loop() {
+  std::unique_lock lock(mutex_);
+  while (true) {
+    cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kUnpaused; });
+    if (active_thread_count_ == 0) break;
+
+    util::release_assert(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_,
+                         kPausing, __LINE__);
+
+    LOG_INFO("GameServer: pausing, waiting for threads to be ready for pause...");
+    cv_.wait(lock, [&] {
+      // Wait until all threads are paused
+      return paused_thread_count_ == active_thread_count_;
+    });
+
+    LOG_INFO("GameServer: all threads ready for pause, issuing pause receipt...");
+    pause_state_ = kPaused;
+    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
+
+    LOG_INFO("GameServer: paused, waiting for unpause from loop controller...");
+    cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kPaused; });
+    if (active_thread_count_ == 0) break;
+
+    util::release_assert(pause_state_ == kUnpausing, "{}(): {} != {} @{}", __func__, pause_state_,
+                         kUnpausing, __LINE__);
+
+    LOG_INFO("GameServer: unpausing, waiting for threads to be ready for unpause...");
+    cv_.wait(lock, [&] {
+      // Wait until all threads are unpaused
+      return paused_thread_count_ == 0;
+    });
+
+    pause_state_ = kUnpaused;
+    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
+    LOG_INFO("GameServer: unpaused!");
+    lock.unlock();
+    cv_.notify_all();
+    lock.lock();
   }
 }
 
@@ -523,16 +592,6 @@ slot_context_queue_t& GameServer<Game>::SharedData::get_queue_to_use(game_slot_i
   }
   // This slot is for a deferred player, use the deferred queue for that player
   return deferred_queues_[p];
-}
-
-template <concepts::Game Game>
-void GameServer<Game>::SharedData::issue_pause_receipt_if_necessary() {
-  // assumes mutex_ is locked
-  if (paused_ && pause_receipt_pending_ && active_thread_count_ == paused_thread_count_) {
-    pause_receipt_pending_ = false;
-    LOG_INFO("<-- GameServer: handling pause receipt");
-    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
-  }
 }
 
 template <concepts::Game Game>
@@ -870,15 +929,13 @@ template <concepts::Game Game>
 void GameServer<Game>::GameThread::run() {
   shared_data_.increment_active_thread_count();
   while (true) {
+    shared_data_.run_prelude(id_);
     int64_t wait_for_game_slot_time_ns = 0;
     SlotContext item;
     next_result_t next_result = shared_data_.next(wait_for_game_slot_time_ns, item);
     if (next_result == kExit) {
       break;
     } else if (next_result == kHandlePause) {
-      shared_data_.increment_paused_thread_count();
-      shared_data_.wait_for_unpause();
-      shared_data_.decrement_paused_thread_count();
       continue;
     } else if (next_result == kProceed) {
       // do nothing
