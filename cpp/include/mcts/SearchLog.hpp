@@ -73,7 +73,7 @@ class SearchLog {
   void update();
   std::string json_str();
   std::string last_graph_json_str();
-  std::vector<Graph> graphs() { return graphs_; }
+  const std::vector<Graph>& graphs() const { return graphs_; }
 
  private:
   const LookupTable* lookup_table_;
