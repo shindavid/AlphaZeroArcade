@@ -833,14 +833,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   game_started_ = true;
 
   state_history_.initialize(Rules{});
-  for (const core::action_t& action : shared_data_.initial_actions()) {
-    pre_step();
-    Rules::apply(state_history_, action);
-    for (int p = 0; p < kNumPlayers; ++p) {
-      players_[p]->receive_state_change(active_seat_, state_history_.current(), action);
-    }
-  }
-
   move_number_ = 0;
   action_mode_ = -1;
   active_seat_ = -1;

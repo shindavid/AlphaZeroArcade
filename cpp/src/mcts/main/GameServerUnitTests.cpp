@@ -54,8 +54,20 @@ class GameServerTest : public testing::Test {
       server_->register_player(gen_seat.seat, gen_seat.generator);
     }
 
-    server_->set_post_setup_hook([this]() {
-      auto player = server_->shared_data().get_game_slot(0)->active_player();
+    server_->set_post_setup_hook([&, this]() {
+      auto slot = server_->shared_data().get_game_slot(0);
+      auto& state_history = slot->state_history();
+      auto& players = slot->players();
+
+      for (const core::action_t& action : initial_actions) {
+        Game::Rules::apply(state_history, action);
+        for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+          players[p]->receive_state_change(slot->active_seat(), state_history.current(), action);
+        }
+      }
+      slot->pre_step();
+
+      auto player = slot->active_player();
       auto mcts_player = dynamic_cast<generic::MctsPlayer<Game>*>(player);
       auto manager = mcts_player->get_manager();
 

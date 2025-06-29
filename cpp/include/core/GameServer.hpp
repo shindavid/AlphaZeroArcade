@@ -184,10 +184,12 @@ class GameServer
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     State current_state() const { return state_history_.current(); }
+    StateHistory& state_history() { return state_history_; }
+    player_array_t& players() { return players_; }
+    void pre_step();
 
    private:
     const Params& params() const { return shared_data_.params(); }
-    void pre_step();
 
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance(StepResult& result);
