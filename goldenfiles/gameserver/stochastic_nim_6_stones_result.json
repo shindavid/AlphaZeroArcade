@@ -1,0 +1,18 @@
+{
+"valid_actions" : "111",
+"counts" : [75, 17, 0],
+"policy_target" : [75, 17, 0],
+"policy_prior" : [0.333333, 0.333333, 0.333333],
+"Q" : [0.196494, 0.113346, 0],
+"Q_sq" : [0.108638, 0.0635577, 0],
+"action_values" : [0.5, 0.5, 0.5],
+"win_rates" : [0.811579, 0.188421],
+"value_prior" : [0.5, 0.5],
+"action_symmetry_table" : [
+  [2],
+  [1],
+  [0]
+],
+"trivial" : false,
+"provably_lost" : false
+}

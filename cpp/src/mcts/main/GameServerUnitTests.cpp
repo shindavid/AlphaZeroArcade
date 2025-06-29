@@ -38,7 +38,6 @@ class GameServerTest : public testing::Test {
     GameServerParams server_params = create_server_params();
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
-    server_params.shuffle_player_seats = false; // Preserve random seed sequence for tree search by skipping seat shuffling
     server_params.print_game_result_summary = false;
     TraingDataWriterParams training_data_writer_params;
     server_ = new GameServer(server_params, training_data_writer_params, initial_actions);
@@ -78,9 +77,23 @@ class GameServerTest : public testing::Test {
     init_search(initial_actions, num_iters);
     server_->run();
 
-    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
+    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "gameserver";
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
+
+    std::stringstream last_snapshot;
+    boost_util::pretty_print(last_snapshot, search_log_->graphs()[num_iters - 1].graph_repr());
+
+    if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+      boost_util::write_str_to_file(ss_result_.str(), file_path_result);
+      boost_util::write_str_to_file(last_snapshot.str(), file_path_graph);
+    }
+
+    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
+      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "gameserver";
+      boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
+      boost_util::write_str_to_file(search_log_->json_str(), log_file_path);
+    }
 
     std::ifstream graph_file(file_path_graph);
     std::ifstream result_file(file_path_result);
@@ -90,17 +103,8 @@ class GameServerTest : public testing::Test {
     std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
                                      std::istreambuf_iterator<char>());
 
-    std::stringstream search_log;
-    boost_util::pretty_print(search_log, search_log_->graphs()[num_iters - 1].graph_repr());
-
-    EXPECT_EQ(search_log.str(), expected_graph_json);
+    EXPECT_EQ(last_snapshot.str(), expected_graph_json);
     EXPECT_EQ(ss_result_.str(), expected_result_json);
-
-    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
-      boost::filesystem::path log_file_path = log_dir / (testname + "_log_debug.json");
-      boost_util::write_str_to_file(search_log_->json_str(), log_file_path);
-    }
   }
 
  private:

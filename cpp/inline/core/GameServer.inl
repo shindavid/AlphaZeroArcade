@@ -165,9 +165,8 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
   for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
-  if (params_.shuffle_player_seats) {
-    util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
-  }
+
+  util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
 
 template <concepts::Game Game>
