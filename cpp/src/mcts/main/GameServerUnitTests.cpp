@@ -40,7 +40,7 @@ class GameServerTest : public testing::Test {
     server_params.num_games = 1;         // run only one game
     server_params.print_game_result_summary = false;
     TraingDataWriterParams training_data_writer_params;
-    server_ = new GameServer(server_params, training_data_writer_params, initial_actions);
+    server_ = new GameServer(server_params, training_data_writer_params);
 
     std::string player_str1 = std::format(
       "--type=MCTS-C --name=MCTS --no-model --num-search-thread=1 --num-full-iters {}", num_iters);

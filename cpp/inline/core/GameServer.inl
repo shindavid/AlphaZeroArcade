@@ -918,12 +918,10 @@ void GameServer<Game>::handle_alternating_mode_recommendation() {
 
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params,
-                             const TrainingDataWriterParams& training_data_writer_params,
-                             const action_vec_t& initial_actions)
+                             const TrainingDataWriterParams& training_data_writer_params)
     : PerfStatsClient(),
       GameServerBase(params.num_game_threads),
-      shared_data_(this, params, training_data_writer_params),
-      initial_actions_(initial_actions) {
+      shared_data_(this, params, training_data_writer_params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
