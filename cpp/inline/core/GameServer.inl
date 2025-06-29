@@ -1033,21 +1033,21 @@ void GameServer<Game>::run() {
   duration_t duration = end_time - start_time;
   int64_t ns = duration.count();
 
-  if (shared_data_.params().print_game_result_summary) {
-    results_array_t results = shared_data_.get_results();
+  results_array_t results = shared_data_.get_results();
 
+  if (params_.display_progress_bar) {
     fprintf(stderr, "\n");  // flush progress-bar
-    LOG_INFO("All games complete!");
-    for (player_id_t p = 0; p < kNumPlayers; ++p) {
-      LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p),
-               get_results_str(results[p]));
-    }
-
-    util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());
-    util::KeyValueDumper::add("Num games", "%d", num_games);
-    util::KeyValueDumper::add("Total runtime", "%.3fs", ns * 1e-9);
-    util::KeyValueDumper::add("Avg runtime", "%.3fs", ns * 1e-9 / num_games);
   }
+
+  LOG_INFO("All games complete!");
+  for (player_id_t p = 0; p < kNumPlayers; ++p) {
+    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), get_results_str(results[p]));
+  }
+
+  util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());
+  util::KeyValueDumper::add("Num games", "%d", num_games);
+  util::KeyValueDumper::add("Total runtime", "%.3fs", ns * 1e-9);
+  util::KeyValueDumper::add("Avg runtime", "%.3fs", ns * 1e-9 / num_games);
 
   for (auto thread : threads_) {
     delete thread;

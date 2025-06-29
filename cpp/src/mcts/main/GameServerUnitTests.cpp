@@ -38,7 +38,6 @@ class GameServerTest : public testing::Test {
     GameServerParams server_params = create_server_params();
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
-    server_params.print_game_result_summary = false;
     TraingDataWriterParams training_data_writer_params;
     server_ = new GameServer(server_params, training_data_writer_params);
 
