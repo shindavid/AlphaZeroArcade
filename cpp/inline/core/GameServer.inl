@@ -1035,13 +1035,14 @@ void GameServer<Game>::run() {
 
   results_array_t results = shared_data_.get_results();
 
-  if (params_.display_progress_bar) {
+  if (shared_data_.params().display_progress_bar) {
     fprintf(stderr, "\n");  // flush progress-bar
-  }
 
-  LOG_INFO("All games complete!");
-  for (player_id_t p = 0; p < kNumPlayers; ++p) {
-    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), get_results_str(results[p]));
+    LOG_INFO("All games complete!");
+    for (player_id_t p = 0; p < kNumPlayers; ++p) {
+      LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p),
+               get_results_str(results[p]));
+    }
   }
 
   util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());
@@ -1054,7 +1055,6 @@ void GameServer<Game>::run() {
   }
 
   shared_data_.end_session();
-  util::KeyValueDumper::flush();
 }
 
 template <concepts::Game Game>
