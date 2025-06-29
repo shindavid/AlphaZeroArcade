@@ -87,7 +87,6 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
-  using action_vec_t = std::vector<core::action_t>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -131,6 +130,7 @@ class GameServer
     bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
+
     // The game server can choose to alternate between players, like so:
     //
     // 1. All instances of player 0 make their moves
