@@ -94,6 +94,7 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
+  using action_vec_t = std::vector<core::action_t>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -379,7 +380,11 @@ class GameServer
   virtual void debug_dump() const override { shared_data_.debug_dump(); }
 
  public:
-  GameServer(const Params&, const TrainingDataWriterParams&, const action_vec_t& initial_actions = {});
+  GameServer(const Params&, const TrainingDataWriterParams&);
+
+  void set_initial_actions(const action_vec_t& initial_actions) {
+    initial_actions_ = initial_actions;
+  }
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -422,7 +427,7 @@ class GameServer
  private:
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
-  const action_vec_t initial_actions_;
+  action_vec_t initial_actions_;
   std::function<void()> post_setup_hook_;
 };
 
