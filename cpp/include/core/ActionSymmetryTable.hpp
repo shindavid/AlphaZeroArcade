@@ -6,7 +6,6 @@
 #include <util/FiniteGroups.hpp>
 
 #include <array>
-#include <map>
 #include <vector>
 
 namespace core {

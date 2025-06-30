@@ -19,7 +19,7 @@ struct ActionSelector {
   static constexpr float eps = 1e-6;  // needed when N == 0
 
   ActionSelector(const ManagerParams& manager_params, const SearchParams& search_params,
-            const Node* node, bool is_root);
+                 const Node* node, bool is_root);
 
   core::seat_index_t seat;
   LocalPolicyArray P;

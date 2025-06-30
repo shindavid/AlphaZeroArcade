@@ -6,8 +6,9 @@
 #include <core/GameServerBase.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/stochastic_nim/players/PerfectPlayer.hpp>
-#include <string>
 #include <util/BoostUtil.hpp>
+
+#include <string>
 #include <vector>
 
 namespace stochastic_nim {

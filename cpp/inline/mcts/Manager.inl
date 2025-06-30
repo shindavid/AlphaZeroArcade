@@ -501,9 +501,7 @@ core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& 
   context.canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
   context.active_seat = root_info_.active_seat;
-  if (!root->trivial()) {  // this if is here to match existing code, to make unit-tests pass
-    post_visit_func_();
-  }
+  if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
   return core::kContinue;
 }

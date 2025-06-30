@@ -320,7 +320,7 @@ class Manager {
   math::ExponentialDecay root_softmax_temperature_;
   mutable Eigen::Rand::P8_mt19937_64 rng_;
   RootInfo root_info_;
-  post_visit_func_t post_visit_func_ = []() {};
+  post_visit_func_t post_visit_func_;
 
   context_vec_t contexts_;
   StateMachine state_machine_;

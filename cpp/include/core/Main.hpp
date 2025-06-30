@@ -12,7 +12,6 @@
 
 #include <boost/program_options.hpp>
 
-#include <iostream>
 #include <string>
 #include <vector>
 

@@ -8,11 +8,11 @@
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 
+#include <Eigen/Core>
+
 #include <array>
 #include <bitset>
 #include <string>
-
-#include <Eigen/Core>
 
 namespace core {
 

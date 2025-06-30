@@ -1,8 +1,8 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
 #include <games/stochastic_nim/Game.hpp>
+#include <generic_players/HumanTuiPlayer.hpp>
 
 namespace stochastic_nim {
 
