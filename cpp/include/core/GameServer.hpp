@@ -381,6 +381,7 @@ class GameServer
 
  public:
   GameServer(const Params&, const TrainingDataWriterParams&);
+  GameServer(const Params& params) : GameServer(params, TrainingDataWriterParams()) {}
 
   void set_initial_actions(const action_vec_t& initial_actions) {
     initial_actions_ = initial_actions;

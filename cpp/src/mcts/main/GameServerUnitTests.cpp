@@ -21,8 +21,7 @@ class GameServerTest : public testing::Test {
  protected:
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
-  using TraingDataWriterParams = core::TrainingDataWriter<Game>::Params;
-  using action_vec_t = std::vector<core::action_t>;
+  using action_vec_t = GameServer::action_vec_t;
   using SearchResponse = mcts::Manager<Game>::SearchResponse;
   using SearchResults = Game::Types::SearchResults;
 
@@ -121,8 +120,7 @@ class GameServerTest : public testing::Test {
     GameServerParams server_params;
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
-    TraingDataWriterParams training_data_writer_params;
-    server_ = new GameServer(server_params, training_data_writer_params);
+    server_ = new GameServer(server_params);
     server_->set_initial_actions(initial_actions);
 
     std::vector<std::string> player_strs =
