@@ -414,9 +414,6 @@ class GameServer
   void create_threads();
   void launch_threads();
   void join_threads();
-  void set_post_setup_hook(std::function<void()> hook) {
-    post_setup_hook_ = std::move(hook);
-  }
 
   void pause() override { shared_data_.pause(); }
   void unpause() override { shared_data_.unpause(); }
@@ -428,7 +425,6 @@ class GameServer
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
   action_vec_t initial_actions_;
-  std::function<void()> post_setup_hook_;
 };
 
 }  // namespace core

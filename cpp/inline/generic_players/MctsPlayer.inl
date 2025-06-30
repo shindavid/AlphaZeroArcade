@@ -144,7 +144,6 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
 
   SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
-  if (search_response_processor_) { search_response_processor_(response); }
 
   if (response.yield_instruction == core::kYield) {
     return ActionResponse::yield(response.extra_enqueue_count);

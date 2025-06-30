@@ -4,6 +4,7 @@
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <games/stochastic_nim/Game.hpp>
+#include <generic_players/MctsPlayer.hpp>
 #include <generic_players/MctsPlayerGenerator.hpp>
 #include <mcts/SearchLog.hpp>
 #include <util/CppUtil.hpp>
@@ -25,8 +26,87 @@ class GameServerTest : public testing::Test {
   using SearchResponse = mcts::Manager<Game>::SearchResponse;
   using SearchResults = Game::Types::SearchResults;
 
-  using Generator = generic::CompetitiveMctsPlayerGenerator<Game>;
-  using Subfactory = core::PlayerSubfactory<Generator>;
+  // TestPlayer is a simple extension of MctsPlayer. The key differences are:
+  //
+  // - Records the first MCTS response to a stringstream.
+  // - Configures the MCTS manager to record a search log.
+  //
+  // NOTE[dshin]: I was *tempted* to also incorporate the "initial moves" functionality into
+  // TestPlayer. The problem is that for stochastic games, initial moves includes chance-events,
+  // which are not executed by AbstractPlayer objects. So it wasn't possible to maintain the
+  // existing testing behavior simply by extending MctsPlayer.
+  //
+  // Also, if we later want to extend this test to operate on multiple concurrent games to test
+  // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
+  // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
+  class TestPlayer : public generic::MctsPlayer<Game> {
+   public:
+    using base_t = generic::MctsPlayer<Game>;
+    using State = Game::State;
+    using ActionMask = base_t::ActionMask;
+    using ActionRequest = base_t::ActionRequest;
+    using ActionResponse = base_t::ActionResponse;
+
+    using base_t::base_t;
+
+    void set_test(GameServerTest* test) {
+      test_ = test;
+
+      if (!test->search_log_) {
+        auto manager = this->get_manager();
+        test->search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
+        manager->set_post_visit_func([&] { test_->search_log_->update(); });
+      }
+    }
+
+   protected:
+    ActionResponse get_action_response_helper(const SearchResults* results,
+                                              const ActionMask& valid_actions) const override {
+      if (!test_->is_recorded_) {
+        boost_util::pretty_print(test_->ss_result_, results->to_json());
+        test_->is_recorded_ = true;
+      }
+      return base_t::get_action_response_helper(results, valid_actions);
+    }
+
+    GameServerTest* test_ = nullptr;
+  };
+
+  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<Game, TestPlayer> {
+   public:
+    using base_t = generic::MctsPlayerGeneratorBase<Game, TestPlayer>;
+
+    using base_t::base_t;
+
+    void set_test(GameServerTest* test) {
+      test_ = test;
+    }
+
+    core::AbstractPlayer<Game>* generate(core::game_slot_index_t game_slot_index) override {
+      auto player = base_t::generate(game_slot_index);
+      dynamic_cast<TestPlayer*>(player)->set_test(test_);
+      return player;
+    }
+
+   private:
+    GameServerTest* test_ = nullptr;
+  };
+
+  class TestPlayerSubfactory : public generic::MctsSubfactory<TestPlayerGenerator> {
+   public:
+    using base_t = generic::MctsSubfactory<TestPlayerGenerator>;
+
+    TestPlayerSubfactory(GameServerTest* test) : test_(test) {}
+
+    TestPlayerGenerator* create(core::GameServerBase* server) override {
+      TestPlayerGenerator* generator = base_t::create(server);
+      generator->set_test(test_);
+      return generator;
+    }
+
+   private:
+    GameServerTest* test_;
+  };
 
  public:
   GameServerTest() {};
@@ -50,32 +130,14 @@ class GameServerTest : public testing::Test {
     std::vector<std::string> player_strs =
       util::split(std::format("--no-model --num-search-thread=1 --num-full-iters {}", num_iters));
 
-    subfactory_ = new Subfactory();
-    Generator* generator1 = subfactory_->create(server_);
-    Generator* generator2 = subfactory_->create(server_);
+    subfactory_ = new TestPlayerSubfactory(this);
+    TestPlayerGenerator* generator1 = subfactory_->create(server_);
+    TestPlayerGenerator* generator2 = subfactory_->create(server_);
     generator1->parse_args(player_strs);
     generator2->parse_args(player_strs);
 
     server_->register_player(-1, generator1);
     server_->register_player(-1, generator2);
-
-    server_->set_post_setup_hook([this]() {
-      auto player = server_->shared_data().get_game_slot(0)->active_player();
-      auto mcts_player = dynamic_cast<generic::MctsPlayer<Game>*>(player);
-      auto manager = mcts_player->get_manager();
-
-      search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
-      manager->set_post_visit_func([this] { search_log_->update(); });
-
-      mcts_player->set_search_response_processor([this](SearchResponse r) {
-        if (is_recorded_) {
-          return;
-        } else {
-          boost_util::pretty_print(ss_result_, r.results->to_json());
-          is_recorded_ = true;
-        }
-      });
-    });
   }
 
   void test_search(const std::string& testname, int num_iters, const action_vec_t& initial_actions) {
@@ -113,7 +175,8 @@ class GameServerTest : public testing::Test {
   }
 
  private:
-  Subfactory* subfactory_;
+  friend class TestPlayer;
+  TestPlayerSubfactory* subfactory_;
   GameServer* server_;
   mcts::SearchLog<Game>* search_log_ = nullptr;
   std::stringstream ss_result_;

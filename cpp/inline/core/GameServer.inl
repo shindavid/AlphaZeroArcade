@@ -1079,10 +1079,6 @@ template <concepts::Game Game>
 void GameServer<Game>::run() {
   setup();
 
-  if (post_setup_hook_) {
-    post_setup_hook_();
-  }
-
   time_point_t start_time = std::chrono::steady_clock::now();
   LOG_DEBUG("GameServer> Launching threads...");
   launch_threads();
