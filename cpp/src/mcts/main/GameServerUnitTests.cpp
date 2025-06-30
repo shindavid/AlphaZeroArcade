@@ -3,9 +3,7 @@
 #include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
-#include <games/tictactoe/PlayerFactory.hpp>
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/PlayerFactory.hpp>
 #include <generic_players/MctsPlayerGenerator.hpp>
 #include <mcts/SearchLog.hpp>
 #include <util/CppUtil.hpp>
@@ -17,7 +15,7 @@
 #include <string>
 #include <vector>
 
-template <core::concepts::Game Game, typename PlayerFactory>
+template <core::concepts::Game Game>
 class GameServerTest : public testing::Test {
  protected:
   using GameServer = core::GameServer<Game>;
@@ -140,8 +138,8 @@ class GameServerTest : public testing::Test {
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-using TicTacToeTest = GameServerTest<TicTacToe, tictactoe::PlayerFactory>;
-using StochasticNimTest = GameServerTest<Stochastic_nim, stochastic_nim::PlayerFactory>;
+using TicTacToeTest = GameServerTest<TicTacToe>;
+using StochasticNimTest = GameServerTest<Stochastic_nim>;
 
 TEST_F(StochasticNimTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {
