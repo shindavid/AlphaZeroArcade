@@ -168,6 +168,7 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
   for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
+
   util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
 
@@ -1053,7 +1054,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::run() {
+void GameServer<Game>::setup() {
   Game::static_init();
   wait_for_remote_player_registrations();
   shared_data_.init_random_seat_indices();
@@ -1064,6 +1065,15 @@ void GameServer<Game>::run() {
   shared_data_.start_session();
   RemotePlayerProxy<Game>::PacketDispatcher::start_all(shared_data_.num_slots());
   shared_data_.start_games();
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::run() {
+  setup();
+
+  if (post_setup_hook_) {
+    post_setup_hook_();
+  }
 
   time_point_t start_time = std::chrono::steady_clock::now();
   LOG_DEBUG("GameServer> Launching threads...");
@@ -1082,10 +1092,14 @@ void GameServer<Game>::run() {
 
   results_array_t results = shared_data_.get_results();
 
-  fprintf(stderr, "\n");  // flush progress-bar
-  LOG_INFO("All games complete!");
-  for (player_id_t p = 0; p < kNumPlayers; ++p) {
-    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), get_results_str(results[p]));
+  if (shared_data_.params().display_progress_bar) {
+    fprintf(stderr, "\n");  // flush progress-bar
+
+    LOG_INFO("All games complete!");
+    for (player_id_t p = 0; p < kNumPlayers; ++p) {
+      LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p),
+               get_results_str(results[p]));
+    }
   }
 
   util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());
@@ -1098,7 +1112,6 @@ void GameServer<Game>::run() {
   }
 
   shared_data_.end_session();
-  util::KeyValueDumper::flush();
 }
 
 template <concepts::Game Game>

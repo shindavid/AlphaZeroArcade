@@ -73,12 +73,13 @@ class SearchLog {
   void update();
   std::string json_str();
   std::string last_graph_json_str();
+  const std::vector<Graph>& graphs() const { return graphs_; }
 
  private:
   const LookupTable* lookup_table_;
-  std::vector<Graph> graphs;
+  std::vector<Graph> graphs_;
 
-  void add_graph(const Graph& graph) { graphs.push_back(graph); }
+  void add_graph(const Graph& graph) { graphs_.push_back(graph); }
   void build_graph(Graph& graph);
   boost::json::object combine_json();
 };

@@ -1,0 +1,148 @@
+{
+"nodes" : [
+  {
+  "index" : 0,
+  "N" : 101,
+  "Q" : [0.77104, 0.22896],
+  "state" : "p0@4",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 1,
+  "N" : 5,
+  "Q" : [0.5, 0.5],
+  "state" : "p0*@3",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 2,
+  "N" : 5,
+  "Q" : [0.5, 0.5],
+  "state" : "p0*@2",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 3,
+  "N" : 90,
+  "Q" : [0.804167, 0.195833],
+  "state" : "p0*@1",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 4,
+  "N" : 24,
+  "Q" : [0.0208333, 0.979167],
+  "state" : "p1@1",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
+  "index" : 5,
+  "N" : 65,
+  "Q" : [1, 0],
+  "state" : "p1@0",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : -1
+  },
+  {
+  "index" : 6,
+  "N" : 1,
+  "Q" : [0.5, 0.5],
+  "state" : "p1@2",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 7,
+  "N" : 23,
+  "Q" : [0, 1],
+  "state" : "p1*@0",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : -1
+  }
+],
+"edges" : [
+  {
+  "index" : 0,
+  "from" : 0,
+  "to" : 1,
+  "E" : 5,
+  "action" : 0
+  },
+  {
+  "index" : 1,
+  "from" : 0,
+  "to" : 2,
+  "E" : 5,
+  "action" : 1
+  },
+  {
+  "index" : 2,
+  "from" : 0,
+  "to" : 3,
+  "E" : 90,
+  "action" : 2
+  },
+  {
+  "index" : 4,
+  "from" : 1,
+  "to" : 6,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 5,
+  "from" : 1,
+  "to" : 4,
+  "E" : 3,
+  "action" : 2
+  },
+  {
+  "index" : 6,
+  "from" : 2,
+  "to" : 6,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 8,
+  "from" : 2,
+  "to" : 5,
+  "E" : 3,
+  "action" : 2
+  },
+  {
+  "index" : 9,
+  "from" : 3,
+  "to" : 4,
+  "E" : 24,
+  "action" : 0
+  },
+  {
+  "index" : 10,
+  "from" : 3,
+  "to" : 5,
+  "E" : 65,
+  "action" : 1
+  },
+  {
+  "index" : 11,
+  "from" : 4,
+  "to" : 7,
+  "E" : 23,
+  "action" : 0
+  }
+]
+}

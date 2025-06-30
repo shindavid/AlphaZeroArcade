@@ -144,6 +144,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
 
   SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
+  if (search_response_processor_) { search_response_processor_(response); }
 
   if (response.yield_instruction == core::kYield) {
     return ActionResponse::yield(response.extra_enqueue_count);
@@ -341,6 +342,9 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
 
 template <core::concepts::Game Game>
 core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
+  if (params_.full_pct >= 1.0) {
+    return core::kFull;
+  }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
 }

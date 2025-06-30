@@ -190,10 +190,12 @@ class GameServer
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     State current_state() const { return state_history_.current(); }
+    StateHistory& state_history() { return state_history_; }
+    player_array_t& players() { return players_; }
+    void pre_step();
 
    private:
     const Params& params() const { return shared_data_.params(); }
-    void pre_step();
 
     // Returns true if it successfully processed a non-terminal game state transition.
     bool step_chance(StepResult& result);
@@ -402,18 +404,24 @@ class GameServer
   const Params& params() const { return shared_data_.params(); }
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
+  void setup();
   void run();
   void create_threads();
   void launch_threads();
   void join_threads();
+  void set_post_setup_hook(std::function<void()> hook) {
+    post_setup_hook_ = std::move(hook);
+  }
 
   void pause() override { shared_data_.pause(); }
   void unpause() override { shared_data_.unpause(); }
   void update_perf_stats(PerfStats&) override;
+  SharedData& shared_data() { return shared_data_; }
 
  private:
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
+  std::function<void()> post_setup_hook_;
 };
 
 }  // namespace core

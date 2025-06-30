@@ -1,0 +1,447 @@
+{
+"nodes" : [
+  {
+  "index" : 0,
+  "N" : 101,
+  "Q" : [0.811579, 0.188421],
+  "state" : "p1@6",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 1,
+  "N" : 75,
+  "Q" : [0.803506, 0.196494],
+  "state" : "p1*@5",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 2,
+  "N" : 17,
+  "Q" : [0.886654, 0.113346],
+  "state" : "p1*@4",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 3,
+  "N" : 8,
+  "Q" : [0.766667, 0.233333],
+  "state" : "p1*@3",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : 1
+  },
+  {
+  "index" : 4,
+  "N" : 39,
+  "Q" : [0.970513, 0.0294872],
+  "state" : "p0@3",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : 0
+  },
+  {
+  "index" : 5,
+  "N" : 6,
+  "Q" : [0.9, 0.1],
+  "state" : "p0@2",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : 0
+  },
+  {
+  "index" : 6,
+  "N" : 4,
+  "Q" : [0.5, 0.5],
+  "state" : "p0*@2",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 7,
+  "N" : 13,
+  "Q" : [0.85, 0.15],
+  "state" : "p0*@1",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 8,
+  "N" : 3,
+  "Q" : [0.833333, 0.166667],
+  "state" : "p0@1",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : 0
+  },
+  {
+  "index" : 9,
+  "N" : 20,
+  "Q" : [0.7275, 0.2725],
+  "state" : "p0@4",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 10,
+  "N" : 36,
+  "Q" : [1, 0],
+  "state" : "p0*@0",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : -1
+  },
+  {
+  "index" : 11,
+  "N" : 15,
+  "Q" : [0.5, 0.5],
+  "state" : "p0@5",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 12,
+  "N" : 5,
+  "Q" : [0.5, 0.5],
+  "state" : "p0*@4",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 13,
+  "N" : 5,
+  "Q" : [0.5, 0.5],
+  "state" : "p0*@3",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 14,
+  "N" : 3,
+  "Q" : [0.333333, 0.666667],
+  "state" : "p1@2",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
+  "index" : 15,
+  "N" : 10,
+  "Q" : [1, 0],
+  "state" : "p1@0",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : -1
+  },
+  {
+  "index" : 16,
+  "N" : 2,
+  "Q" : [0.25, 0.75],
+  "state" : "p1@1",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
+  "index" : 17,
+  "N" : 2,
+  "Q" : [0.5, 0.5],
+  "state" : "p1@3",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 18,
+  "N" : 1,
+  "Q" : [0.5, 0.5],
+  "state" : "p1*@2",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 19,
+  "N" : 1,
+  "Q" : [0.5, 0.5],
+  "state" : "p1*@1",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 20,
+  "N" : 1,
+  "Q" : [0, 1],
+  "state" : "p1*@0",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : -1
+  }
+],
+"edges" : [
+  {
+  "index" : 0,
+  "from" : 0,
+  "to" : 1,
+  "E" : 75,
+  "action" : 0
+  },
+  {
+  "index" : 1,
+  "from" : 0,
+  "to" : 2,
+  "E" : 17,
+  "action" : 1
+  },
+  {
+  "index" : 2,
+  "from" : 0,
+  "to" : 3,
+  "E" : 8,
+  "action" : 2
+  },
+  {
+  "index" : 3,
+  "from" : 1,
+  "to" : 11,
+  "E" : 15,
+  "action" : 0
+  },
+  {
+  "index" : 4,
+  "from" : 1,
+  "to" : 9,
+  "E" : 20,
+  "action" : 1
+  },
+  {
+  "index" : 5,
+  "from" : 1,
+  "to" : 4,
+  "E" : 39,
+  "action" : 2
+  },
+  {
+  "index" : 6,
+  "from" : 2,
+  "to" : 9,
+  "E" : 5,
+  "action" : 0
+  },
+  {
+  "index" : 7,
+  "from" : 2,
+  "to" : 4,
+  "E" : 5,
+  "action" : 1
+  },
+  {
+  "index" : 8,
+  "from" : 2,
+  "to" : 5,
+  "E" : 6,
+  "action" : 2
+  },
+  {
+  "index" : 9,
+  "from" : 3,
+  "to" : 4,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 10,
+  "from" : 3,
+  "to" : 5,
+  "E" : 3,
+  "action" : 1
+  },
+  {
+  "index" : 11,
+  "from" : 3,
+  "to" : 8,
+  "E" : 3,
+  "action" : 2
+  },
+  {
+  "index" : 12,
+  "from" : 4,
+  "to" : 6,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 13,
+  "from" : 4,
+  "to" : 7,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 14,
+  "from" : 4,
+  "to" : 10,
+  "E" : 36,
+  "action" : 2
+  },
+  {
+  "index" : 15,
+  "from" : 5,
+  "to" : 7,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 16,
+  "from" : 5,
+  "to" : 10,
+  "E" : 4,
+  "action" : 1
+  },
+  {
+  "index" : 18,
+  "from" : 6,
+  "to" : 16,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 19,
+  "from" : 6,
+  "to" : 15,
+  "E" : 2,
+  "action" : 2
+  },
+  {
+  "index" : 20,
+  "from" : 7,
+  "to" : 16,
+  "E" : 2,
+  "action" : 0
+  },
+  {
+  "index" : 21,
+  "from" : 7,
+  "to" : 15,
+  "E" : 10,
+  "action" : 1
+  },
+  {
+  "index" : 22,
+  "from" : 8,
+  "to" : 10,
+  "E" : 2,
+  "action" : 0
+  },
+  {
+  "index" : 23,
+  "from" : 9,
+  "to" : 13,
+  "E" : 3,
+  "action" : 0
+  },
+  {
+  "index" : 24,
+  "from" : 9,
+  "to" : 6,
+  "E" : 3,
+  "action" : 1
+  },
+  {
+  "index" : 25,
+  "from" : 9,
+  "to" : 7,
+  "E" : 13,
+  "action" : 2
+  },
+  {
+  "index" : 26,
+  "from" : 11,
+  "to" : 12,
+  "E" : 5,
+  "action" : 0
+  },
+  {
+  "index" : 27,
+  "from" : 11,
+  "to" : 13,
+  "E" : 5,
+  "action" : 1
+  },
+  {
+  "index" : 28,
+  "from" : 11,
+  "to" : 6,
+  "E" : 4,
+  "action" : 2
+  },
+  {
+  "index" : 30,
+  "from" : 12,
+  "to" : 17,
+  "E" : 2,
+  "action" : 1
+  },
+  {
+  "index" : 31,
+  "from" : 12,
+  "to" : 14,
+  "E" : 2,
+  "action" : 2
+  },
+  {
+  "index" : 32,
+  "from" : 13,
+  "to" : 17,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 33,
+  "from" : 13,
+  "to" : 14,
+  "E" : 3,
+  "action" : 1
+  },
+  {
+  "index" : 35,
+  "from" : 14,
+  "to" : 19,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 36,
+  "from" : 14,
+  "to" : 20,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 37,
+  "from" : 16,
+  "to" : 20,
+  "E" : 1,
+  "action" : 0
+  },
+  {
+  "index" : 38,
+  "from" : 17,
+  "to" : 18,
+  "E" : 1,
+  "action" : 0
+  }
+]
+}
