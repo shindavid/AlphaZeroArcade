@@ -1,14 +1,21 @@
 #include <core/GameServer.hpp>
 #include <core/PlayerFactory.hpp>
+#include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <games/tictactoe/PlayerFactory.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/stochastic_nim/PlayerFactory.hpp>
+#include <generic_players/MctsPlayerGenerator.hpp>
 #include <mcts/SearchLog.hpp>
+#include <util/CppUtil.hpp>
 #include <util/GTestUtil.hpp>
+#include <util/StringUtil.hpp>
 
 #include <gtest/gtest.h>
+
+#include <string>
+#include <vector>
 
 template <core::concepts::Game Game, typename PlayerFactory>
 class GameServerTest : public testing::Test {
@@ -20,6 +27,9 @@ class GameServerTest : public testing::Test {
   using SearchResponse = mcts::Manager<Game>::SearchResponse;
   using SearchResults = Game::Types::SearchResults;
 
+  using Generator = generic::CompetitiveMctsPlayerGenerator<Game>;
+  using Subfactory = core::PlayerSubfactory<Generator>;
+
  public:
   GameServerTest() {};
 
@@ -30,8 +40,9 @@ class GameServerTest : public testing::Test {
   void SetUp() override { util::Random::set_seed(0); }
 
   void TearDown() override {
-    delete server_;
     delete search_log_;
+    delete subfactory_;
+    delete server_;
   }
 
   void init_search(const action_vec_t& initial_actions, int num_iters) {
@@ -41,17 +52,17 @@ class GameServerTest : public testing::Test {
     TraingDataWriterParams training_data_writer_params;
     server_ = new GameServer(server_params, training_data_writer_params);
 
-    std::string player_str1 = std::format(
-      "--type=MCTS-C --name=MCTS --no-model --num-search-thread=1 --num-full-iters {}", num_iters);
-    std::string player_str2 = "--name=MCTS2 --copy-from=MCTS";
-    std::vector<std::string> player_strs = {player_str1, player_str2};
+    std::vector<std::string> player_strs =
+      util::split(std::format("--no-model --num-search-thread=1 --num-full-iters {}", num_iters));
 
-    PlayerFactory player_factory;
-    player_factory.set_server(server_);
-    auto generator_seats = player_factory.parse(player_strs);
-    for (const auto& gen_seat : generator_seats) {
-      server_->register_player(gen_seat.seat, gen_seat.generator);
-    }
+    subfactory_ = new Subfactory();
+    Generator* generator1 = subfactory_->create(server_);
+    Generator* generator2 = subfactory_->create(server_);
+    generator1->parse_args(player_strs);
+    generator2->parse_args(player_strs);
+
+    server_->register_player(-1, generator1);
+    server_->register_player(-1, generator2);
 
     server_->set_post_setup_hook([&, this]() {
       auto slot = server_->shared_data().get_game_slot(0);
@@ -119,14 +130,18 @@ class GameServerTest : public testing::Test {
   }
 
  private:
+  Subfactory* subfactory_;
   GameServer* server_;
   mcts::SearchLog<Game>* search_log_ = nullptr;
   std::stringstream ss_result_;
   bool is_recorded_ = false;
 };
 
-using TicTacToeTest = GameServerTest<tictactoe::Game, tictactoe::PlayerFactory>;
-using StochasticNimTest = GameServerTest<stochastic_nim::Game, stochastic_nim::PlayerFactory>;
+using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
+using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
+
+using TicTacToeTest = GameServerTest<TicTacToe, tictactoe::PlayerFactory>;
+using StochasticNimTest = GameServerTest<Stochastic_nim, stochastic_nim::PlayerFactory>;
 
 TEST_F(StochasticNimTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {
