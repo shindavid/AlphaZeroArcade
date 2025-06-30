@@ -80,16 +80,12 @@ template <core::concepts::Game Game>
 using TrainingMctsPlayerGenerator =
   MctsPlayerGeneratorBase<Game, generic::DataExportingMctsPlayer<Game>, mcts::kTraining>;
 
-}  // namespace generic
-
-namespace core {
-
 template <typename GeneratorT>
-class MctsSubfactory : public PlayerSubfactoryBase<typename GeneratorT::Game> {
+class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {
  public:
   using shared_data_map_t = GeneratorT::shared_data_map_t;
 
-  GeneratorT* create(GameServerBase* server) override {
+  GeneratorT* create(core::GameServerBase* server) override {
     return new GeneratorT(server, shared_data_cache_);
   }
 
@@ -97,13 +93,17 @@ class MctsSubfactory : public PlayerSubfactoryBase<typename GeneratorT::Game> {
   shared_data_map_t shared_data_cache_;
 };
 
+}  // namespace generic
+
+namespace core {
+
 template <core::concepts::Game Game>
 class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>
-    : public MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>> {};
+    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>> {};
 
 template <core::concepts::Game Game>
 class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>
-    : public MctsSubfactory<generic::TrainingMctsPlayerGenerator<Game>> {};
+    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<Game>> {};
 
 }  // namespace core
 

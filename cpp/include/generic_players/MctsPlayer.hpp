@@ -94,8 +94,11 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   bool init_search_mode(const ActionRequest&);
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
-  ActionResponse get_action_response_helper(const SearchResults*,
-                                            const ActionMask& valid_actions) const;
+
+  // This is virtual so that it can be overridden in tests.
+  virtual ActionResponse get_action_response_helper(const SearchResults*,
+                                                    const ActionMask& valid_actions) const;
+
   void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                           const SearchResults& results) const;
 
