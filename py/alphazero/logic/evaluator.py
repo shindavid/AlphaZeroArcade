@@ -122,7 +122,6 @@ class Evaluator:
         elos = np.array([self._benchmark_rating_data.lookup_elo[i] for i in played_ixs])
         min_elo = self.benchmark_ratings.min()
         max_elo = self.benchmark_ratings.max()
-        logger.info(f"Agent {ix} played {n_games_played.sum()} games against {len(played_ixs)} opponents")
         return estimate_elo_newton(n, k, elos, lower=min_elo, upper=max_elo)
 
     def test_agent_ixs(self) -> np.ndarray:

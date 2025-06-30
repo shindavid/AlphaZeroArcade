@@ -194,8 +194,6 @@ def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: fl
         step = np.clip(step, -max_step, max_step)
         R_T -= step
 
-    print(f"Converged after {_+1} iterations with R_T = {R_T}, grad = {grad}, hess = {hess}")
-
     return np.clip(R_T, lower, upper)
 
 if __name__ == "__main__":
