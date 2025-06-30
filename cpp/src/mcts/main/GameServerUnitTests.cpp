@@ -31,10 +31,6 @@ class GameServerTest : public testing::Test {
  public:
   GameServerTest() {};
 
-  static GameServerParams create_server_params() {
-    return GameServerParams();
-  }
-
   void SetUp() override { util::Random::set_seed(0); }
 
   void TearDown() override {
@@ -44,7 +40,7 @@ class GameServerTest : public testing::Test {
   }
 
   void init_search(const action_vec_t& initial_actions, int num_iters) {
-    GameServerParams server_params = create_server_params();
+    GameServerParams server_params;
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
     TraingDataWriterParams training_data_writer_params;
