@@ -42,9 +42,7 @@ class GameServerTest : public testing::Test {
   class TestPlayer : public generic::MctsPlayer<Game> {
    public:
     using base_t = generic::MctsPlayer<Game>;
-    using State = Game::State;
     using ActionMask = base_t::ActionMask;
-    using ActionRequest = base_t::ActionRequest;
     using ActionResponse = base_t::ActionResponse;
 
     using base_t::base_t;
