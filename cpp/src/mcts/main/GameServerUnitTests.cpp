@@ -44,7 +44,7 @@ class GameServerTest : public testing::Test {
     server_params.num_game_threads = 1;  // single-threaded for unit tests
     server_params.num_games = 1;         // run only one game
     TraingDataWriterParams training_data_writer_params;
-    server_ = new GameServer(server_params, training_data_writer_params);
+    server_ = new GameServer(server_params, training_data_writer_params, initial_actions);
 
     std::vector<std::string> player_strs =
       util::split(std::format("--no-model --num-search-thread=1 --num-full-iters {}", num_iters));
