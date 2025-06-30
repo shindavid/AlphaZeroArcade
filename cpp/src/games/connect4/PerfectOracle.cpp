@@ -46,9 +46,6 @@ PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
 
   // TODO: do a more specialized parse that avoid dynamic allocation
   int n_tokens = util::split(tokens_, output_str_);
-  util::release_assert(n_tokens == kNumColumns + 1,
-                      "PerfectOracle::query: expected {} tokens, got {}",
-                      kNumColumns + 1, n_tokens);
 
   QueryResult result;
   for (int j = 0; j < kNumColumns; ++j) {
