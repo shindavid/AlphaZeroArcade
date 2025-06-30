@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <util/FiniteGroups.hpp>
 
 #include <concepts>
 

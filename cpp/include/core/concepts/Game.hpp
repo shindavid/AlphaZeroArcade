@@ -1,10 +1,5 @@
 #pragma once
 
-#include <array>
-#include <bitset>
-#include <concepts>
-#include <string>
-
 #include <Eigen/Core>
 
 #include <core/BasicTypes.hpp>
@@ -22,6 +17,8 @@
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <concepts>
 
 namespace core {
 
