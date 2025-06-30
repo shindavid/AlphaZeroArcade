@@ -406,6 +406,7 @@ class GameServer
   int num_registered_players() const { return shared_data_.num_registrations(); }
   void setup();
   void run();
+  void print_summary() const;
   void create_threads();
   void launch_threads();
   void join_threads();

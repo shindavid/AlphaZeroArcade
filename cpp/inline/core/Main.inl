@@ -1,5 +1,5 @@
 #include <core/Main.hpp>
-#include <util/KeyValueDumper.hpp>
+
 #include <util/LoggingUtil.hpp>
 
 template <typename PlayerFactory>
@@ -92,9 +92,8 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
         client->start();
       }
       server.run();
+      server.print_summary();
     }
-
-    util::KeyValueDumper::flush();
 
     if (client) {
       client->shutdown();
