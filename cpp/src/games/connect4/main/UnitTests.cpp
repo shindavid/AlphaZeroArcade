@@ -1,6 +1,7 @@
 #include <core/tests/Common.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
+#include <games/connect4/PerfectOracle.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <util/CppUtil.hpp>
@@ -14,7 +15,7 @@
 #include <vector>
 
 /*
- * Tests connect4 symmetry classes.
+ * Connect4 tests.
  */
 
 using Game = c4::Game;
@@ -123,8 +124,94 @@ TEST(Symmetry, flip) {
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-TEST(Symmetry, action_transforms) {
-  core::tests::Common<Game>::gtest_action_transforms();
+TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
+
+TEST(PerfectOracle, query) {
+  c4::PerfectOracle oracle;
+  c4::PerfectOracle::MoveHistory move_history;
+  c4::PerfectOracle::QueryResult result;
+
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, 21);
+  EXPECT_EQ(result.scores[0], -20);
+  EXPECT_EQ(result.scores[1], -21);
+  EXPECT_EQ(result.scores[2], 0);
+  EXPECT_EQ(result.scores[3], 21);
+  EXPECT_EQ(result.scores[4], 0);
+  EXPECT_EQ(result.scores[5], -21);
+  EXPECT_EQ(result.scores[6], -20);
+
+  move_history.append(3);
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, -20);
+  EXPECT_EQ(result.scores[0], -17);
+  EXPECT_EQ(result.scores[1], -19);
+  EXPECT_EQ(result.scores[2], -19);
+  EXPECT_EQ(result.scores[3], -20);
+  EXPECT_EQ(result.scores[4], -19);
+  EXPECT_EQ(result.scores[5], -19);
+  EXPECT_EQ(result.scores[6], -17);
+
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, 18);
+  EXPECT_EQ(result.scores[0], -18);
+  EXPECT_EQ(result.scores[1], 0);
+  EXPECT_EQ(result.scores[2], 18);
+  EXPECT_EQ(result.scores[3], c4::PerfectOracle::QueryResult::kIllegalMoveScore);
+  EXPECT_EQ(result.scores[4], 18);
+  EXPECT_EQ(result.scores[5], 0);
+  EXPECT_EQ(result.scores[6], -18);
+}
+
+// PerfectOracle reuses a std::vector<std::string> buffer in-between query() calls. So it's worth
+// repeating the test cases of TEST(PerfectOracle, query) in a different order to stress-test the
+// correctness of the buffer reuse.
+TEST(PerfectOracle, query2) {
+  c4::PerfectOracle oracle;
+  c4::PerfectOracle::MoveHistory move_history;
+  c4::PerfectOracle::QueryResult result;
+
+  move_history.append(3);
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, -20);
+  EXPECT_EQ(result.scores[0], -17);
+  EXPECT_EQ(result.scores[1], -19);
+  EXPECT_EQ(result.scores[2], -19);
+  EXPECT_EQ(result.scores[3], -20);
+  EXPECT_EQ(result.scores[4], -19);
+  EXPECT_EQ(result.scores[5], -19);
+  EXPECT_EQ(result.scores[6], -17);
+
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  move_history.append(3);
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, 18);
+  EXPECT_EQ(result.scores[0], -18);
+  EXPECT_EQ(result.scores[1], 0);
+  EXPECT_EQ(result.scores[2], 18);
+  EXPECT_EQ(result.scores[3], c4::PerfectOracle::QueryResult::kIllegalMoveScore);
+  EXPECT_EQ(result.scores[4], 18);
+  EXPECT_EQ(result.scores[5], 0);
+  EXPECT_EQ(result.scores[6], -18);
+
+  move_history.reset();
+  result = oracle.query(move_history);
+  EXPECT_EQ(result.best_score, 21);
+  EXPECT_EQ(result.scores[0], -20);
+  EXPECT_EQ(result.scores[1], -21);
+  EXPECT_EQ(result.scores[2], 0);
+  EXPECT_EQ(result.scores[3], 21);
+  EXPECT_EQ(result.scores[4], 0);
+  EXPECT_EQ(result.scores[5], -21);
+  EXPECT_EQ(result.scores[6], -20);
 }
 
 int main(int argc, char** argv) {
