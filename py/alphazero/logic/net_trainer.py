@@ -183,7 +183,6 @@ class NetTrainer:
         load_time = total_time - train_time
 
         stats.dump(logging.INFO)
-        logger.info('Gen %s training complete', gen)
         logger.info('Data loading time:   %10.3f seconds', load_time)
         logger.info('Training time:       %10.3f seconds', train_time)
 

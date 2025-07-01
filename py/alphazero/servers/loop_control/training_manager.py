@@ -426,5 +426,5 @@ class TrainingManager:
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
         self._latest_gen = gen
-        logger.info('Checkpoint saved: %s', checkpoint_filename)
+        logger.debug('Checkpoint saved: %s', checkpoint_filename)
         logger.info('Model saved: %s', model_filename)
