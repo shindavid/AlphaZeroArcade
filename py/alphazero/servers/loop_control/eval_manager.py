@@ -317,7 +317,7 @@ class EvalManager(GamingManagerBase):
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
             if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                 match_status.status = MatchRequestStatus.OBSOLETE
-                logger.info('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_level)
+                logger.debug('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_level)
 
         for ix, n_games in zip(chosen_ixs, num_matches):
             if ix not in self._eval_status_dict[test_ix].ix_match_status:
@@ -325,12 +325,12 @@ class EvalManager(GamingManagerBase):
                 new_opponent_level = agent.level
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
                     MatchStatus(new_opponent_level, n_games, MatchRequestStatus.PENDING)
-                logger.info('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                logger.debug('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
             else:
                 self._eval_status_dict[test_ix].ix_match_status[ix].n_games = n_games
                 if self._eval_status_dict[test_ix].ix_match_status[ix].status == MatchRequestStatus.OBSOLETE:
                     self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
-                logger.info('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                logger.debug('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
 
     def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
         W_matrix = self._evaluator._arena._W_matrix
@@ -354,9 +354,9 @@ class EvalManager(GamingManagerBase):
 
         new_rating = self._evaluator.eval_elo(ix1)
         old_rating = conn.aux.estimated_rating
-        logger.info('Old rating: %s, New rating: %s', old_rating, new_rating)
+        logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
-            logger.info('Rating change too large, requesting new opponents...')
+            logger.debug('Rating change too large, requesting new opponents...')
             conn.aux.needs_new_opponents = True
             conn.aux.estimated_rating = new_rating
 
@@ -394,7 +394,7 @@ class EvalManager(GamingManagerBase):
         self._evaluator._elo_ratings.update(test_iagent, rating)
         conn.aux.estimated_rating = None
         conn.aux.ix = None
-        logger.info('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
+        logger.debug('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
 
     def _task_finished(self) -> None:
         rated_percent = self.num_evaluated_gens() / self._controller._organizer.get_latest_model_generation()
