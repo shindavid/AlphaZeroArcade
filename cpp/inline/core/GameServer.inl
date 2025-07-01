@@ -22,7 +22,9 @@
 #include <format>
 #include <iostream>
 #include <netinet/in.h>
+#include <string>
 #include <sys/socket.h>
+#include <vector>
 
 namespace core {
 
@@ -37,6 +39,9 @@ auto GameServer<Game>::Params::make_options_description() {
     .template add_option<"port">(po::value<int>(&port)->default_value(port),
                                  "port for external players to connect to (must be set to a "
                                  "nonzero value if using external players)")
+    .template add_option<"initial-actions">(
+      po::value<std::string>(&initial_actions_str)->default_value(initial_actions_str),
+      "initial actions of each game (comma-separated integers, e.g. \"0,1,2\")")
     .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
                                            "num games (<=0 means run indefinitely)")
     .template add_option<"parallelism", 'p'>(
@@ -990,6 +995,18 @@ GameServer<Game>::GameServer(const Params& params,
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
+  }
+
+  if (!params.initial_actions_str.empty()) {
+    std::vector<std::string> action_strs = util::split(params.initial_actions_str, ",");
+    std::vector<core::action_t> initial_actions;
+    for (const auto& action_str : action_strs) {
+      core::action_t action = std::stoi(action_str);
+      util::clean_assert(action >= 0, "Invalid initial action: {} in {}", action_str,
+                         params.initial_actions_str);
+      initial_actions.push_back(action);
+    }
+    set_initial_actions(initial_actions);
   }
 }
 

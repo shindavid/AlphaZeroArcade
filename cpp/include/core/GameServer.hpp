@@ -129,6 +129,7 @@ class GameServer
   struct Params {
     auto make_options_description();
 
+    std::string initial_actions_str;  // integers separated by commas
     int num_games = 1024;       // if <=0, run indefinitely
     int parallelism = 1024;      // number of games to run simultaneously
     int num_game_threads = 16;  // number of threads to use
