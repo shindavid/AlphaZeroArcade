@@ -1,5 +1,6 @@
 #include <util/BoostUtil.hpp>
 
+#include <util/Exception.hpp>
 #include <util/ScreenUtil.hpp>
 
 #include <format>
@@ -167,7 +168,12 @@ template <typename T, typename... Ts>
 boost::program_options::variables_map parse_args(const T& desc, Ts&&... ts) {
   namespace po = boost::program_options;
   po::variables_map vm;
-  po::store(po::command_line_parser(std::forward<Ts>(ts)...).options(detail::wrap(desc)).run(), vm);
+  try {
+    po::store(po::command_line_parser(std::forward<Ts>(ts)...).options(detail::wrap(desc)).run(),
+              vm);
+  } catch (const po::error& e) {
+    throw util::CleanException("{}", e.what());
+  }
   po::notify(vm);
   return vm;
 }
