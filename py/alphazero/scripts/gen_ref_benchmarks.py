@@ -22,7 +22,7 @@ from typing import List
 
 REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
 logger = logging.getLogger(__name__)
-
+TARGET_ELO_GAP = 500
 
 class ReferenceBenchmarker:
     def __init__(self, game_spec: GameSpec):

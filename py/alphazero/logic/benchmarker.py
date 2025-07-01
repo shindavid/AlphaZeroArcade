@@ -9,7 +9,7 @@ from util.index_set import IndexSet
 import numpy as np
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from typing import Dict, List, Optional
 
@@ -30,6 +30,10 @@ class BenchmarkRatingData:
     ratings: np.ndarray
     committee: IndexSet
     tag: str
+    lookup_elo: Dict[int, float] = field(init=False)
+
+    def __post_init__(self):
+        self.lookup_elo = {iagent.index: rating for iagent, rating in zip(self.iagents, self.ratings)}
 
 
 class Benchmarker:

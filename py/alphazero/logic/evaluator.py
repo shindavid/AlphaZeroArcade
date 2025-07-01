@@ -1,17 +1,16 @@
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent
 from alphazero.logic.arena import RatingData
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.match_runner import Match, MatchType
-from alphazero.logic.ratings import win_prob
+from alphazero.logic.match_runner import MatchType
+from alphazero.logic.ratings import estimate_elo_newton, win_prob
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
 import numpy as np
-from scipy.interpolate import interp1d
 
 import logging
-from dataclasses import dataclass
-from typing import List, Optional, Set
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set
 
 
 logger = logging.getLogger(__name__)
@@ -22,20 +21,29 @@ class EvalRatingData:
     evaluated_iagents: List[IndexedAgent]
     ratings: np.ndarray
     tag: str
+    lookup_elo: Dict[int, float] = field(init=False)
 
+    def __post_init__(self):
+        self.lookup_elo = {iagent.index: rating for iagent, rating in zip(self.evaluated_iagents, self.ratings)}
+
+    def update(self, iagent: IndexedAgent, rating: float):
+        self.evaluated_iagents.append(iagent)
+        self.ratings = np.concatenate((self.ratings, [rating]))
+        self.lookup_elo[iagent.index] = rating
 
 class Evaluator:
     def __init__(self, organizer: DirectoryOrganizer, benchmark_tag: str):
         self._organizer = organizer
-        self._benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename(benchmark_tag))
-        self._benchmark_rating_data = self._benchmark.read_ratings_from_db()
-        self._arena = self._benchmark.clone_arena()
+        benchmark = Benchmarker(organizer, db_filename=organizer.eval_db_filename(benchmark_tag))
+        self._benchmark_rating_data = benchmark.read_ratings_from_db()
+        self._arena = benchmark.clone_arena()
         self.db = RatingDB(self._organizer.eval_db_filename(benchmark_tag))
         self.load_from_db()
 
     def load_from_db(self):
         self._arena.load_agents_from_db(self.db, role=AgentRole.TEST)
         self._arena.load_matches_from_db(self.db, type=MatchType.EVALUATE)
+        self._elo_ratings = self.read_ratings_from_db()
 
     def gen_matches(self, estimated_rating: float, opponent_ix_played: np.ndarray, n_games: int, top_k: int=5):
         """
@@ -101,22 +109,20 @@ class Evaluator:
 
         return chosen_ixs, num_matches
 
-    def interpolate_ratings(self) -> np.ndarray:
-        benchmark_ixs = self.benchmark_agent_ixs()
-        n_benchmark_ixs = len(benchmark_ixs)
-        test_ixs = self.test_agent_ixs()
+    def eval_elo(self, ix: int) -> float:
+        if ix < 0 or ix >= len(self._arena.indexed_agents):
+            raise IndexError(f"Invalid agent index: {ix}")
 
-        self._arena.refresh_ratings()
-        xs = self._arena.ratings[benchmark_ixs][self.benchmark_committee.resize(n_benchmark_ixs)]
-        ys = self.benchmark_ratings[self.benchmark_committee]
-        test_agents_elo = self._arena.ratings[test_ixs]
-        sorted_ixs = np.argsort(xs)
-        xs_sorted = xs[sorted_ixs]
-        ys_sorted = ys[sorted_ixs]
-        interp_func = interp1d(xs_sorted, ys_sorted, kind="linear", fill_value=(min(ys), max(ys)), bounds_error=False)
-        interpolated_ratings = interp_func(test_agents_elo)
+        n_games_played = self._arena._W_matrix[ix, :] + self._arena._W_matrix[:, ix]
+        n_games_won = self._arena._W_matrix[ix, :]
 
-        return test_ixs, interpolated_ratings
+        played_ixs = np.where(n_games_played > 0)[0]
+        n = n_games_played[played_ixs]
+        k = n_games_won[played_ixs]
+        elos = np.array([self._benchmark_rating_data.lookup_elo[i] for i in played_ixs])
+        min_elo = self.benchmark_ratings.min()
+        max_elo = self.benchmark_ratings.max()
+        return estimate_elo_newton(n, k, elos, lower=min_elo, upper=max_elo)
 
     def test_agent_ixs(self) -> np.ndarray:
         test_ixs = [iagent.index for iagent in self._arena.indexed_agents if AgentRole.TEST in iagent.roles]
@@ -131,9 +137,6 @@ class Evaluator:
         ratings = rating_data.ratings
         evaluated_iagents = [self._arena.agent_lookup_db_id[db_id] for db_id in rating_data.agent_ids]
         return EvalRatingData(evaluated_iagents, ratings, rating_data.tag)
-
-    def refresh_ratings(self):
-        self._arena.refresh_ratings()
 
     def add_agent(self, agent: Agent, roles: Set[AgentRole], expand_matrix: bool=True, db: Optional[RatingDB]=None):
         return self._arena.add_agent(agent, roles, expand_matrix=expand_matrix, db=db)
@@ -155,11 +158,11 @@ class Evaluator:
         return self._arena.indexed_agents
 
     @property
-    def agent_lookup(self) -> dict:
+    def agent_lookup(self) -> Dict[Agent, IndexedAgent]:
         return self._arena._agent_lookup
 
     @property
-    def agent_lookup_db_id(self) -> dict:
+    def agent_lookup_db_id(self) -> Dict[AgentDBId, IndexedAgent]:
         return self._arena._agent_lookup_db_id
 
 
