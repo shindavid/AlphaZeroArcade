@@ -24,11 +24,13 @@ REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
 logger = logging.getLogger(__name__)
 TARGET_ELO_GAP = 500
 
+
 class ReferenceBenchmarker:
-    def __init__(self, game_spec: GameSpec):
+    def __init__(self, args, game_spec: GameSpec):
         assert game_spec.reference_player_family is not None, \
             f'Game {game_spec.name} does not have a reference player family'
 
+        self.neighborhood_size = args.neighborhood_size
         self.game_spec = game_spec
         self.db_filename = os.path.join('/workspace/output', self.game_spec.name, 'reference.players/databases', 'benchmark.db')
         os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
@@ -51,12 +53,16 @@ class ReferenceBenchmarker:
 
     def get_matches(self, n_games) -> list[Match]:
         matches = []
-        for i in range(1, len(self.arena.indexed_agents)):
-            match = Match(agent1=self.arena.indexed_agents[i-1].agent,
-                          agent2=self.arena.indexed_agents[i].agent,
-                          n_games=n_games,
-                          type=MatchType.BENCHMARK)
-            matches.append(match)
+        A = self.neighborhood_size
+        B = len(self.arena.indexed_agents)
+
+        for i in range(B):
+            for j in range(max(0, i - A), i):
+                match = Match(agent1=self.arena.indexed_agents[i].agent,
+                              agent2=self.arena.indexed_agents[j].agent,
+                              n_games=n_games,
+                              type=MatchType.BENCHMARK)
+                matches.append(match)
         return matches
 
     def play_matches(self, n_games: int=100):
@@ -89,14 +95,14 @@ class ReferenceBenchmarker:
         return self.game_spec.name
 
 
-def benchmark_reference_players(game_specs: List[GameSpec]):
+def benchmark_reference_players(args, game_specs: List[GameSpec]):
     os.makedirs(REF_DIR, exist_ok=True)
     for game_spec in game_specs:
         if game_spec.reference_player_family is None:
             logger.info(f'Skipped for game: {game_spec.name}, no reference_player_family')
             continue
         logger.info(f'Benchmarking reference players for game {game_spec.name}')
-        benchmarker = ReferenceBenchmarker(game_spec)
+        benchmarker = ReferenceBenchmarker(args, game_spec)
         benchmarker.run()
         logger.info(f'Finished for game: {game_spec.name}')
 
@@ -104,6 +110,8 @@ def benchmark_reference_players(game_specs: List[GameSpec]):
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
+    parser.add_argument('-n', '--neighborhood-size', type=int, default=1,
+                        help='Neighborhood size (default: %(default)s)')
     game_index.add_parser_argument(parser, '-g', '--game',
                                    help='Comma-separate games. If not specified, all games will be benchmarked.')
     LoggingParams.add_args(parser)
@@ -120,7 +128,7 @@ def main():
         specs = ALL_GAME_SPECS
     else:
         specs = [game_index.get_game_spec(g) for g in args.game.split(',')]
-    benchmark_reference_players(specs)
+    benchmark_reference_players(args, specs)
 
 
 if __name__ == "__main__":
