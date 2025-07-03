@@ -205,7 +205,7 @@ class NNEvaluationService
   // Not only must it do this allocation logic, but it must also do the work of constructing the
   // BatchData's on the fly as needed, recycling them when possible.
   //
-  // The underlying implementation uses both std::atomic and std::mutex. Usually, it can respond to
+  // The underlying implementation uses both std::atomic and mit::mutex. Usually, it can respond to
   // requests without locking the mutex. Only when the current batch_data is full does it resort to
   // locking the mutex. This is done to avoid contention on the mutex.
   class BatchDataSliceAllocator {
@@ -221,7 +221,7 @@ class NNEvaluationService
     // BatchDataSliceAllocator attempts to do this without locking the mutex, relying on atomic
     // members of BatchData instead to ensure thread-safety. If it is unable to do this, then it
     // resorts to locking the passed-in mutex.
-    void allocate_slices(BatchDataSlice* slices, int n, std::mutex& main_mutex);
+    void allocate_slices(BatchDataSlice* slices, int n, mit::mutex& main_mutex);
 
     void recycle(BatchData* batch_data);
 
@@ -278,7 +278,7 @@ class NNEvaluationService
     void init(int cache_size);
     void decrement_ref_count(NNEvaluation* eval);
 
-    mutable std::mutex mutex;
+    mutable mit::mutex mutex;
     LRUCache eval_cache;
     EvalPool eval_pool;
   };
@@ -360,9 +360,9 @@ class NNEvaluationService
   mit::thread drain_thread_;
   mit::thread state_thread_;
 
-  mutable std::mutex main_mutex_;
-  mutable std::mutex perf_stats_mutex_;
-  std::condition_variable cv_main_;
+  mutable mit::mutex main_mutex_;
+  mutable mit::mutex perf_stats_mutex_;
+  mit::condition_variable cv_main_;
 
   NeuralNet net_;
 

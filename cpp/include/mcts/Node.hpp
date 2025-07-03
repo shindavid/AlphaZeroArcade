@@ -198,7 +198,7 @@ class Node {
     const map_t* map() const { return &map_; }
 
     int get_random_mutex_id() const;
-    std::mutex& get_mutex(int mutex_id);
+    mit::mutex& get_mutex(int mutex_id);
 
    private:
     friend class Defragmenter;
@@ -207,7 +207,7 @@ class Node {
     util::AllocPool<Node> node_pool_;
     mutex_vec_sptr_t mutex_pool_;
     const int mutex_pool_size_;
-    mutable std::mutex map_mutex_;
+    mutable mit::mutex map_mutex_;
   };
 
   Node(LookupTable*, const StateHistory&, core::seat_index_t active_seat);  // for non-terminal
@@ -244,7 +244,7 @@ class Node {
   bool is_terminal() const { return stable_data_.terminal; }
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
-  std::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
+  mit::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
 
   void initialize_edges();
 

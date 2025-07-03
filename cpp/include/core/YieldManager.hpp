@@ -11,7 +11,7 @@ struct YieldNotificationUnit;
 
 class YieldManager {
  public:
-  YieldManager(std::condition_variable& cv, std::mutex& mutex, std::queue<SlotContext>& queue,
+  YieldManager(mit::condition_variable& cv, mit::mutex& mutex, std::queue<SlotContext>& queue,
               int& pending_queue_count)
       : cv_(cv), mutex_(mutex), queue_(queue), pending_queue_count_(pending_queue_count) {}
 
@@ -19,8 +19,8 @@ class YieldManager {
   void notify(const YieldNotificationUnit&);
 
  private:
-  std::condition_variable& cv_;
-  std::mutex& mutex_;
+  mit::condition_variable& cv_;
+  mit::mutex& mutex_;
   std::queue<SlotContext>& queue_;
   int& pending_queue_count_;
 };

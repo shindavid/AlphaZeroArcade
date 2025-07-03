@@ -152,7 +152,7 @@ void GameServer<Game>::SharedData::start_games() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_progress_bar() {
-  mit::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   if (bar_) return;
 
   if (params_.display_progress_bar && params_.num_games > 0 && util::tty_mode()) {
@@ -301,7 +301,7 @@ bool GameServer<Game>::SharedData::request_game() {
   if (LoopControllerClient::deactivated()) return false;
   if (training_data_writer_ && training_data_writer_->closed()) return false;
 
-  mit::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return false;
   num_games_started_++;
   return true;
@@ -309,7 +309,7 @@ bool GameServer<Game>::SharedData::request_game() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
-  mit::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   num_games_ended_++;
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
     results_array_[s][outcome[s]]++;
@@ -320,7 +320,7 @@ void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
 
 template <concepts::Game Game>
 auto GameServer<Game>::SharedData::get_results() const {
-  mit::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   return results_array_;
 }
 

@@ -104,8 +104,8 @@ class NeuralNet {
   std::deque<pipeline_index_t> available_pipeline_indices_;
   std::vector<char> plan_data_;
 
-  mutable std::mutex pipeline_mutex_;
-  std::condition_variable pipeline_cv_;
+  mutable mit::mutex pipeline_mutex_;
+  mit::condition_variable pipeline_cv_;
 
   int batch_size_ = 0;
   const int cuda_device_id_;

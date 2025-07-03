@@ -195,7 +195,7 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
                                                                          int n,
-                                                                         std::mutex& main_mutex) {
+                                                                         mit::mutex& main_mutex) {
   mit::unique_lock lock(main_mutex);
 
   int slice_index = 0;

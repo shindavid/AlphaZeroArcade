@@ -803,7 +803,7 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
   core::SlotContext slot_context(context.search_request->game_slot_index(), context.id);
 
   SearchContext& notifying_context = contexts_[edge->expanding_context_id];
-  std::mutex& mutex = (*context_mutex_pool_)[notifying_context.pending_notifications_mutex_id];
+  mit::mutex& mutex = (*context_mutex_pool_)[notifying_context.pending_notifications_mutex_id];
   mit::unique_lock lock(mutex);
   notifying_context.pending_notifications.push_back(slot_context);
 }
@@ -820,7 +820,7 @@ void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion
     edge->expanding_context_id = context.id;
   } else if (state == Node::kExpanded) {
     // Assumes edge's parent node's mutex is held
-    std::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
+    mit::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
     mit::unique_lock lock(mutex);
     edge->state = state;
     edge->expanding_context_id = -1;

@@ -207,7 +207,7 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-std::mutex& Node<Game>::LookupTable::get_mutex(int mutex_id) {
+mit::mutex& Node<Game>::LookupTable::get_mutex(int mutex_id) {
   return (*mutex_pool_)[mutex_id];
 }
 

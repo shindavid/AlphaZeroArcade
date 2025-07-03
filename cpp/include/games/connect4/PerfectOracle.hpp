@@ -80,7 +80,7 @@ class PerfectOracle {
   std::string output_str_;
   std::vector<std::string> tokens_;
 
-  mutable std::mutex mutex_;
+  mutable mit::mutex mutex_;
 };
 
 }  // namespace c4

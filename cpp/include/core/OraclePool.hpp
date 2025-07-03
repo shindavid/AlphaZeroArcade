@@ -39,7 +39,7 @@ class OraclePool {
   oracle_vec_t free_oracles_;
   oracle_vec_t all_oracles_;
   notification_unit_vec_t pending_notification_units_;
-  mutable std::mutex mutex_;
+  mutable mit::mutex mutex_;
   size_t capacity_;
 };
 

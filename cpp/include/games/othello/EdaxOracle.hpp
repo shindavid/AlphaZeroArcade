@@ -29,7 +29,7 @@ class EdaxOracle {
   boost::process::opstream in_;
   boost::process::child* child_;
 
-  mutable std::mutex mutex_;
+  mutable mit::mutex mutex_;
   const bool verbose_;
   const bool deterministic_mode_;
 };

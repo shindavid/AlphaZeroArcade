@@ -145,8 +145,8 @@ class GameServerProxy : public core::GameServerBase {
     const Params params_;
     io::Socket* socket_ = nullptr;
 
-    std::condition_variable cv_;
-    mutable std::mutex mutex_;
+    mit::condition_variable cv_;
+    mutable mit::mutex mutex_;
     int num_games_started_ = 0;
     int num_games_ended_ = 0;
     bool running_ = true;

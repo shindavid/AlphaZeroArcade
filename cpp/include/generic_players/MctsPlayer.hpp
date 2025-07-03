@@ -118,7 +118,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
 
-  mutable std::mutex search_mode_mutex_;
+  mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
   template<core::concepts::Game> friend class MctsPlayerTest;

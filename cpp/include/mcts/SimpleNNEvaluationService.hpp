@@ -34,7 +34,7 @@ class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   core::yield_instruction_t evaluate(NNEvaluationRequest& request) override;
 
  private:
-  std::mutex mutex_;
+  mit::mutex mutex_;
   EvalPool eval_pool_;
   init_func_t init_func_ = [](NNEvaluation*, const Item&) {};
 };

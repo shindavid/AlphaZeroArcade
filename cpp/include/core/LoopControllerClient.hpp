@@ -110,8 +110,8 @@ class LoopControllerClient : public PerfStatsClient {
   std::vector<WorkerReadyListener*> worker_ready_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
 
-  std::condition_variable receipt_cv_;
-  mutable std::mutex receipt_mutex_;
+  mit::condition_variable receipt_cv_;
+  mutable mit::mutex receipt_mutex_;
   int worker_ready_count_ = 0;
   size_t pause_receipt_count_ = 0;
   size_t unpause_receipt_count_ = 0;
