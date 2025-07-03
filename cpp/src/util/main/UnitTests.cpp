@@ -11,6 +11,10 @@
 
 #include <array>
 
+#ifndef MIT_TEST_MODE
+  static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
+#endif
+
 template <typename T>
 void test_zero_out() {
   util::Random::set_seed(1);
