@@ -1,7 +1,7 @@
 #pragma once
 
 #include <util/CppUtil.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/dynamic_bitset.hpp>
 

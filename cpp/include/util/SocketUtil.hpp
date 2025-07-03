@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/json.hpp>
 

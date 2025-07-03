@@ -5,7 +5,7 @@
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/LoggingUtil.hpp>
-#include <util/mit/thread.hpp>
+#include <util/mit/mit.hpp>
 
 #include <chrono>
 #include <vector>

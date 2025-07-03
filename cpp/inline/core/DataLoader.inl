@@ -6,7 +6,7 @@
 #include <util/FileUtil.hpp>
 #include <util/IndexedDispatcher.hpp>
 #include <util/Random.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/filesystem.hpp>
 

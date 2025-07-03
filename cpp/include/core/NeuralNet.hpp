@@ -4,8 +4,7 @@
 #include <core/concepts/Game.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/LoggingUtil.hpp>
-#include <util/mit/condition_variable.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>

@@ -20,8 +20,7 @@
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
 #include <util/RecyclingAllocPool.hpp>
-#include <util/mit/condition_variable.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <deque>
 #include <map>

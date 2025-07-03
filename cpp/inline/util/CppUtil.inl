@@ -1,6 +1,6 @@
 #include <util/CppUtil.hpp>
 
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <chrono>
 #include <cstring>

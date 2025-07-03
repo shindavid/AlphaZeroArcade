@@ -8,8 +8,7 @@
 #include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
-#include <util/mit/condition_variable.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <string>
 #include <vector>

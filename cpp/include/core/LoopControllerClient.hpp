@@ -4,9 +4,7 @@
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
-#include <util/mit/condition_variable.hpp>
-#include <util/mit/mutex.hpp>
-#include <util/mit/thread.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/json.hpp>
 

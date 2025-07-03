@@ -2,7 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/YieldManager.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 namespace core {
 

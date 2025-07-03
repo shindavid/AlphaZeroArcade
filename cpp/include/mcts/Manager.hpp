@@ -14,7 +14,7 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Math.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <array>
 #include <queue>

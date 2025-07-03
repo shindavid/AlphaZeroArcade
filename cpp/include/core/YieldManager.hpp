@@ -1,8 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <util/mit/condition_variable.hpp>
-#include <util/mit/mutex.hpp>
+#include <util/mit/mit.hpp>
 
 #include <queue>
 

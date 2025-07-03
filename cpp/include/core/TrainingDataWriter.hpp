@@ -7,8 +7,7 @@
 #include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/mit/mutex.hpp>
-#include <util/mit/thread.hpp>
+#include <util/mit/mit.hpp>
 
 #include <chrono>
 #include <cstdint>
