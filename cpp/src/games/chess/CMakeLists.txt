@@ -10,35 +10,30 @@ set(LC0_SOURCES
 )
 
 add_library(lc0_lib STATIC ${LC0_SOURCES})
-target_include_directories(lc0_lib
-    PUBLIC ${LC0_DIR}  # for includes within lc0
-)
+target_include_directories(lc0_lib PUBLIC ${LC0_DIR})
 set_target_properties(lc0_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(lc0_lib PRIVATE -mbmi2 -Wno-restrict)
 
-add_library(chess_lib STATIC Game.cpp)
-
-set_target_properties(chess_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_include_directories(chess_lib
-    PUBLIC ${EXTRA_DEPS_DIR}  # for our usage of lc0
-    PUBLIC ${LC0_DIR}  # for includes within lc0
+set(COMMON_SOURCES
+    Game.cpp
 )
 
-add_executable(chess_tests main/UnitTests.cpp)
-add_executable(chess_exe main/Chess.cpp)
-add_library(chess_ffi SHARED shared/Chess_ffi.cpp)
-set_target_properties(chess_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(chess_tests PRIVATE ${GTEST_LIBS})
+set(EXTRA_INCLUDES
+    ${EXTRA_DEPS_DIR}  # for our usage of lc0
+    ${LC0_DIR}         # for includes within lc0
+)
 
-set(LINK_LIBS lc0_lib chess_lib util_lib ${COMMON_EXTERNAL_LIBS})
-set(TARGETS chess_tests chess_exe chess_ffi)
-foreach(target ${TARGETS})
-    target_link_libraries(${target} PRIVATE ${LINK_LIBS})
-    set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+add_game(
+    NAME chess
+    EXE main/Chess.cpp
+    TEST main/UnitTests.cpp
+    FFI shared/Chess_ffi.cpp
+    SOURCES ${COMMON_SOURCES}
+    INCLUDES ${EXTRA_INCLUDES}
+)
+
+# Hook lc0_lib into the chess targets
+foreach(tgt IN ITEMS chess_tests chess_exe chess_ffi)
+  target_link_libraries(${tgt} PRIVATE lc0_lib)
+  set_target_properties(${tgt} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endforeach()
-
-set_target_properties(chess_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
-set_target_properties(chess_exe PROPERTIES OUTPUT_NAME "chess")
-set_target_properties(chess_ffi PROPERTIES OUTPUT_NAME "chess")
-
-append_target_metadata("chess" ${TARGETS})
