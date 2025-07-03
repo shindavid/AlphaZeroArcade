@@ -210,6 +210,66 @@ function(add_game)
     endif()
 endfunction()
 
+# Function add a standalone test, separate from a game-specific test added via add_game()
+function(add_test)
+  # 1) Parse named args: NAME, TEST are single-value; EXTRA_LIBS is optional multi-value
+  cmake_parse_arguments(AT
+    ""                    # no boolean flags
+    "NAME;TEST"           # single-value keywords
+    "EXTRA_LIBS"          # multi-value keyword
+    ${ARGN}
+  )
+
+  # 2) Sanity‐check
+  if(NOT AT_NAME OR NOT AT_TEST)
+    message(FATAL_ERROR
+      "add_test() requires:\n"
+      "  NAME      <test_target_name>\n"
+      "  TEST      <test_source_file>\n"
+      "Optional:\n"
+      "  EXTRA_LIBS <lib1> [lib2…]\n"
+    )
+  endif()
+
+  # 3) Verify every EXTRA_LIB ends with "_test"
+  foreach(_lib IN LISTS AT_EXTRA_LIBS)
+    string(LENGTH "${_lib}" _len)
+    if(_len LESS 5)
+      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+    endif()
+    math(EXPR _start "${_len} - 5")
+    string(SUBSTRING "${_lib}" ${_start} 5 _suffix)
+    if(NOT _suffix STREQUAL "_test")
+      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+    endif()
+  endforeach()
+
+  # 4) Create the test executable
+  add_executable(${AT_NAME} ${AT_TEST})
+
+  # 5) Compile‐time definitions
+  target_compile_definitions(${AT_NAME}
+    PRIVATE ${TEST_COMPILE_DEFINITIONS}
+  )
+
+  # 6) Link libraries: EXTRA_LIBS → util_lib_test, tictactoe_common_objs_test, etc.
+  #    plus COMMON_EXTERNAL_LIBS and GTEST_LIBS
+  target_link_libraries(${AT_NAME}
+    PRIVATE
+      ${AT_EXTRA_LIBS}
+      ${COMMON_EXTERNAL_LIBS}
+      ${GTEST_LIBS}
+  )
+
+  # 7) Put the binary into the tests/ folder
+  set_target_properties(${AT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests"
+  )
+
+  # 8) Metadata for listing
+  append_target_metadata("aux" ${AT_NAME})
+endfunction()
+
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")
 add_subdirectory("cpp/src/games/chess")
