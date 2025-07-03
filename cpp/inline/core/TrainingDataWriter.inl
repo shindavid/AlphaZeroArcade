@@ -48,7 +48,7 @@ TrainingDataWriter<Game>::TrainingDataWriter(GameServerBase* server, const Param
   batch_data_.next_heartbeat_time = std::chrono::steady_clock::now();
   misc_data_.heartbeat_interval =
       std::chrono::milliseconds(int64_t(1e3 * params.heartbeat_frequency_seconds));
-  misc_data_.thread = new std::thread([&] { loop(); });
+  misc_data_.thread = new mit::thread([&] { loop(); });
   misc_data_.num_game_threads = server->num_game_threads();
 }
 
@@ -59,7 +59,7 @@ TrainingDataWriter<Game>::~TrainingDataWriter() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::add(GameWriteLog_sptr data) {
-  std::unique_lock lock(game_queue_mutex_);
+  mit::unique_lock lock(game_queue_mutex_);
   game_queue_data_.completed_games[game_queue_data_.queue_index].push_back(data);
   lock.unlock();
   game_queue_cv_.notify_one();
@@ -77,14 +77,14 @@ void TrainingDataWriter<Game>::shut_down() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::wait_until_batch_empty() {
-  std::unique_lock lock(batch_mutex_);
+  mit::unique_lock lock(batch_mutex_);
   batch_cv_.wait(lock, [&] { return batch_data_.size == 0; });
 }
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::pause() {
   LOG_INFO("TrainingDataWriter: pausing");
-  std::unique_lock lock(game_queue_mutex_);
+  mit::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_pause_receipt (already paused)");
     core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
@@ -100,7 +100,7 @@ template <concepts::Game Game>
 void TrainingDataWriter<Game>::unpause() {
   // TODO: consider sending a heartbeat here.
   LOG_INFO("TrainingDataWriter: unpausing");
-  std::unique_lock lock(game_queue_mutex_);
+  mit::unique_lock lock(game_queue_mutex_);
   if (!game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_unpause_receipt (already unpaused)");
     core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
@@ -114,7 +114,7 @@ void TrainingDataWriter<Game>::unpause() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::handle_data_request(int n_rows, int next_row_limit) {
-  std::unique_lock lock(batch_mutex_);
+  mit::unique_lock lock(batch_mutex_);
 
   send_batch(n_rows);
   batch_data_.reset();
@@ -125,14 +125,14 @@ void TrainingDataWriter<Game>::handle_data_request(int n_rows, int next_row_limi
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::handle_data_pre_request(int n_rows_limit) {
-  std::unique_lock lock(batch_mutex_);
+  mit::unique_lock lock(batch_mutex_);
   batch_data_.limit = n_rows_limit;
 }
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::loop() {
   while (!misc_data_.closed) {
-    std::unique_lock lock(game_queue_mutex_);
+    mit::unique_lock lock(game_queue_mutex_);
     game_queue_t& queue = game_queue_data_.completed_games[game_queue_data_.queue_index];
     game_queue_cv_.wait(lock, [&] {
       return !queue.empty() || misc_data_.closed || game_queue_data_.paused;
@@ -147,7 +147,7 @@ void TrainingDataWriter<Game>::loop() {
 
     // ok to access queue without a lock from here on
 
-    std::unique_lock batch_lock(batch_mutex_);
+    mit::unique_lock batch_lock(batch_mutex_);
     for (GameWriteLog_sptr& data : queue) {
       if (batch_data_.full()) {
         misc_data_.closed |= (misc_data_.params.max_rows > 0);

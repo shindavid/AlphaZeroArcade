@@ -6,12 +6,12 @@
 #include <games/connect4/Game.hpp>
 #include <util/Asserts.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
 
-#include <mutex>
 #include <string>
 #include <vector>
 

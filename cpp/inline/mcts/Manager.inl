@@ -225,7 +225,7 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
 
 template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const SearchRequest& request) {
-  std::unique_lock lock(state_machine_.mutex);
+  mit::unique_lock lock(state_machine_.mutex);
   auto context_id = request.context_id();
   SearchContext& context = contexts_[context_id];
   int extra_enqueue_count = 0;
@@ -536,7 +536,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
   context.inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
   if (edge->state != Node::kExpanded) {
     // reread state under mutex in case of race-condition
-    std::unique_lock lock(node->mutex());
+    mit::unique_lock lock(node->mutex());
 
     if (edge->state == Node::kNotExpanded) {
       set_edge_state(context, edge, Node::kMidExpansion);
@@ -784,7 +784,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
     edge->child_index = child_index;
   }
 
-  std::unique_lock lock(parent->mutex());
+  mit::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
   set_edge_state(context, edge, Node::kExpanded);
   lock.unlock();
@@ -804,7 +804,7 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
 
   SearchContext& notifying_context = contexts_[edge->expanding_context_id];
   std::mutex& mutex = (*context_mutex_pool_)[notifying_context.pending_notifications_mutex_id];
-  std::unique_lock lock(mutex);
+  mit::unique_lock lock(mutex);
   notifying_context.pending_notifications.push_back(slot_context);
 }
 
@@ -821,7 +821,7 @@ void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion
   } else if (state == Node::kExpanded) {
     // Assumes edge's parent node's mutex is held
     std::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
-    std::unique_lock lock(mutex);
+    mit::unique_lock lock(mutex);
     edge->state = state;
     edge->expanding_context_id = -1;
     context.search_request->yield_manager()->notify(context.pending_notifications);

@@ -1,24 +1,24 @@
 #include <util/SocketUtil.hpp>
 
+#include <util/Exception.hpp>
+
 #include <arpa/inet.h>
 #include <chrono>
 #include <cstring>
 #include <netdb.h>
 #include <sys/socket.h>
-#include <thread>
+#include <util/mit/thread.hpp>
 #include <unistd.h>
-
-#include <util/Exception.hpp>
 
 namespace io {
 
 inline void Socket::write(const void* data, int size) {
-  std::unique_lock lock(write_mutex_);
+  mit::unique_lock lock(write_mutex_);
   write_helper(data, size, "Could not write to socket");
 }
 
 inline bool Socket::read(void* data, int size) {
-  std::unique_lock lock(read_mutex_);
+  mit::unique_lock lock(read_mutex_);
   return read_helper(data, size, "Could not read from socket");
 }
 

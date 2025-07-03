@@ -10,9 +10,9 @@
 #include <mcts/SearchParams.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <memory>
-#include <mutex>
 
 namespace generic {
 

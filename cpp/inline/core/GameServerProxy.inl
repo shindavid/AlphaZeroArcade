@@ -279,7 +279,7 @@ void GameServerProxy<Game>::SharedData::end_session() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::shutdown() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   running_ = false;
   lock.unlock();
   cv_.notify_all();
@@ -303,7 +303,7 @@ void GameServerProxy<Game>::SharedData::init_game_slots() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::debug_dump() const {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   LOG_WARN(
     "GameServerProxy {} running:{} queue.size():{} waiting_in_next:{} num_games_started:{} "
     "num_games_ended:{}",
@@ -332,7 +332,7 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
 
 template <concepts::Game Game>
 GameServerBase::next_result_t GameServerProxy<Game>::SharedData::next(SlotContext& item) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
     LOG_DEBUG("<-- GameServerProxy::{}(): waiting (queue:{})", __func__, queue_.size());
@@ -360,7 +360,7 @@ GameServerBase::next_result_t GameServerProxy<Game>::SharedData::next(SlotContex
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   if (request.instruction == kEnqueueNow) {
     util::release_assert(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
@@ -431,7 +431,7 @@ void GameServerProxy<Game>::GameThread::join() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameThread::launch() {
-  thread_ = std::thread([&] { run(); });
+  thread_ = mit::thread([&] { run(); });
 }
 
 template <concepts::Game Game>

@@ -4,13 +4,13 @@
 #include <core/concepts/Game.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/LoggingUtil.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 
-#include <condition_variable>
 #include <deque>
-#include <mutex>
 #include <spanstream>
 #include <vector>
 

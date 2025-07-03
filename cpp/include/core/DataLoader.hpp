@@ -2,14 +2,14 @@
 
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
+#include <util/mit/thread.hpp>
 
-#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 /*
@@ -198,7 +198,7 @@ class DataLoader {
 
     mutable std::mutex mutex_;
     mutable std::condition_variable cv_;
-    std::thread thread_;
+    mit::thread thread_;
     DataFile* file_ = nullptr;
     bool quitting_ = false;
   };
@@ -255,7 +255,7 @@ class DataLoader {
 
     mutable std::mutex mutex_;
     mutable std::condition_variable cv_;
-    std::thread prefetch_loop_thread_;
+    mit::thread prefetch_loop_thread_;
     bool quitting_ = false;
 
     std::vector<PrefetchThread*> prefetch_threads_;
@@ -292,7 +292,7 @@ class DataLoader {
 
     mutable std::mutex mutex_;
     mutable std::condition_variable cv_;
-    std::thread thread_;
+    mit::thread thread_;
     const LoadInstructions* load_instructions_;
     WorkUnit unit_;
     bool quitting_ = false;

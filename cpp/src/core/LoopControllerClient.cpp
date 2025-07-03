@@ -5,9 +5,9 @@
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/LoggingUtil.hpp>
+#include <util/mit/thread.hpp>
 
 #include <chrono>
-#include <thread>
 #include <vector>
 
 namespace core {
@@ -24,7 +24,7 @@ void LoopControllerClient::init(const Params& params) {
 
 void LoopControllerClient::handle_worker_ready() {
   LOG_INFO("LoopControllerClient::{}()", __func__);
-  std::unique_lock lock(receipt_mutex_);
+  mit::unique_lock lock(receipt_mutex_);
   worker_ready_count_++;
   if (worker_ready_count_ == (int)worker_ready_listeners_.size()) {
     lock.unlock();
@@ -43,7 +43,7 @@ void LoopControllerClient::send_worker_ready() {
 }
 
 void LoopControllerClient::handle_pause_receipt(const char* file, int line) {
-  std::unique_lock lock(receipt_mutex_);
+  mit::unique_lock lock(receipt_mutex_);
   pause_receipt_count_++;
 
   if (pause_receipt_count_ == pause_listeners_.size()) {
@@ -55,7 +55,7 @@ void LoopControllerClient::handle_pause_receipt(const char* file, int line) {
 }
 
 void LoopControllerClient::handle_unpause_receipt(const char* file, int line) {
-  std::unique_lock lock(receipt_mutex_);
+  mit::unique_lock lock(receipt_mutex_);
   unpause_receipt_count_++;
 
   if (unpause_receipt_count_ == pause_listeners_.size()) {
@@ -89,7 +89,7 @@ LoopControllerClient::LoopControllerClient(const Params& params)
 LoopControllerClient::~LoopControllerClient() { shutdown(); }
 
 void LoopControllerClient::start() {
-  thread_ = new std::thread([this]() { loop(); });
+  thread_ = new mit::thread([this]() { loop(); });
 }
 
 void LoopControllerClient::shutdown() {
@@ -211,13 +211,13 @@ void LoopControllerClient::handle_data_pre_request(int n_rows_limit) {
 
 void LoopControllerClient::wait_for_pause_receipts() {
   LOG_INFO("LoopControllerClient: waiting for pause receipts...");
-  std::unique_lock lock(receipt_mutex_);
+  mit::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return pause_receipt_count_ == pause_listeners_.size(); });
   LOG_INFO("LoopControllerClient: pause receipts received!");
 }
 
 void LoopControllerClient::wait_for_unpause_receipts() {
-  std::unique_lock lock(receipt_mutex_);
+  mit::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return unpause_receipt_count_ == pause_listeners_.size(); });
   LOG_INFO("LoopControllerClient: unpause receipts received!");
 

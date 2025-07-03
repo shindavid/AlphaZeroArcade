@@ -1,11 +1,11 @@
 #pragma once
 
 #include <mcts/Constants.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 namespace mcts {

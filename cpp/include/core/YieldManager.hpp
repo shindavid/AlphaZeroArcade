@@ -1,9 +1,9 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <queue>
 
 namespace core {

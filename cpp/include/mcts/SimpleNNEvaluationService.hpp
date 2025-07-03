@@ -7,9 +7,9 @@
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
 #include <util/RecyclingAllocPool.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <functional>
-#include <mutex>
 
 namespace mcts {
 

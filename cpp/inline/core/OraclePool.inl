@@ -22,7 +22,7 @@ template <class OracleT>
 template <typename... Ts>
 OracleT* OraclePool<OracleT>::get_oracle(const YieldNotificationUnit& unit,
                                          Ts&&... constructor_args) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   if (!free_oracles_.empty()) {
     OracleT* oracle = free_oracles_.back();
     free_oracles_.pop_back();
@@ -42,7 +42,7 @@ OracleT* OraclePool<OracleT>::get_oracle(const YieldNotificationUnit& unit,
 
 template <class OracleT>
 void OraclePool<OracleT>::release_oracle(OracleT* oracle) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   free_oracles_.push_back(oracle);
   if (!pending_notification_units_.empty()) {
     YieldNotificationUnit unit = pending_notification_units_.back();

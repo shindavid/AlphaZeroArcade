@@ -1,12 +1,12 @@
 #pragma once
 
 #include <util/CppUtil.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <boost/dynamic_bitset.hpp>
 
 #include <atomic>
 #include <cstdint>
-#include <mutex>
 #include <type_traits>
 #include <vector>
 
@@ -30,7 +30,7 @@ template<typename T, int N=10, bool ThreadSafe=true>
 class AllocPool {
  public:
   using atomic_size_t = std::conditional_t<ThreadSafe, std::atomic<uint64_t>, uint64_t>;
-  using mutex_t = std::conditional_t<ThreadSafe, std::mutex, dummy_mutex>;
+  using mutex_t = std::conditional_t<ThreadSafe, mit::mutex, dummy_mutex>;
 
   // The below static_assert fails currently because Eigen::Array incorrectly reports itself as
   // non-trivially copyable. So we leave it commented out for now.

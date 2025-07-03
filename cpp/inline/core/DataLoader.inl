@@ -6,6 +6,7 @@
 #include <util/FileUtil.hpp>
 #include <util/IndexedDispatcher.hpp>
 #include <util/Random.hpp>
+#include <util/mit/mutex.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -14,7 +15,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <mutex>
 
 namespace core {
 
@@ -29,7 +29,7 @@ DataLoader<Game>::DataFile::~DataFile() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::DataFile::load() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   if (!buffer_) {
     buffer_ = util::read_file(filename_.c_str(), file_size_);
   }
@@ -39,7 +39,7 @@ void DataLoader<Game>::DataFile::load() {
 
 template <concepts::Game Game>
 int64_t DataLoader<Game>::DataFile::unload() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   if (!buffer_) return 0;
 
   delete[] buffer_;
@@ -52,7 +52,7 @@ int64_t DataLoader<Game>::DataFile::unload() {
 
 template <concepts::Game Game>
 const char* DataLoader<Game>::DataFile::buffer() const {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
   return buffer_;
 }
@@ -182,7 +182,7 @@ DataLoader<Game>::ThreadTable::ThreadTable(int n_threads) : n_threads_(n_threads
 
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::mark_as_available(thread_id_t id) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   available_thread_ids_.push_back(id);
   lock.unlock();
   cv_.notify_one();
@@ -190,7 +190,7 @@ void DataLoader<Game>::ThreadTable::mark_as_available(thread_id_t id) {
 
 template <concepts::Game Game>
 typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_thread() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return quitting_ || !available_thread_ids_.empty(); });
   if (quitting_) return -1;
   thread_id_t id = available_thread_ids_.back();
@@ -200,7 +200,7 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
 
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] {
     return quitting_ || (int)available_thread_ids_.size() == n_threads_;
     });
@@ -208,7 +208,7 @@ void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::quit() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
@@ -217,7 +217,7 @@ void DataLoader<Game>::ThreadTable::quit() {
 template <concepts::Game Game>
 DataLoader<Game>::PrefetchThread::PrefetchThread(ThreadTable* table, thread_id_t id)
     : table_(table), id_(id) {
-  thread_ = std::thread(&PrefetchThread::loop, this);
+  thread_ = mit::thread(&PrefetchThread::loop, this);
 }
 
 template <concepts::Game Game>
@@ -227,7 +227,7 @@ DataLoader<Game>::PrefetchThread::~PrefetchThread() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::quit() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
@@ -236,7 +236,7 @@ void DataLoader<Game>::PrefetchThread::quit() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::schedule_prefetch(DataFile* data_file) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   file_ = data_file;
   lock.unlock();
   cv_.notify_all();
@@ -245,7 +245,7 @@ void DataLoader<Game>::PrefetchThread::schedule_prefetch(DataFile* data_file) {
 template <concepts::Game Game>
 void DataLoader<Game>::PrefetchThread::loop() {
   while (!quitting_) {
-    std::unique_lock lock(mutex_);
+    mit::unique_lock lock(mutex_);
     cv_.wait(lock, [this] { return quitting_ || file_ != nullptr; });
     if (quitting_) return;
     lock.unlock();
@@ -263,7 +263,7 @@ DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_d
   for (int i = 0; i < num_prefetch_threads; ++i) {
     prefetch_threads_.push_back(new PrefetchThread(&thread_table_, i));
   }
-  prefetch_loop_thread_ = std::thread(&FileManager::prefetch_loop, this);
+  prefetch_loop_thread_ = mit::thread(&FileManager::prefetch_loop, this);
 }
 
 template <concepts::Game Game>
@@ -282,7 +282,7 @@ DataLoader<Game>::FileManager::~FileManager() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   unload_queue_.push_back(file);
   util::release_assert(active_file_count_ > 0, "FileManager::{}() bug", __func__);
   active_file_count_--;
@@ -293,7 +293,7 @@ void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
 template <concepts::Game Game>
 void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_deque_t& work_units,
                                                                       generation_t* gen_range) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   load_queue_.clear();
   unload_queue_.clear();
   active_file_count_ = 0;
@@ -354,7 +354,7 @@ void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t fi
   auto filename = data_dir_ / std::format("gen-{}.data", end_gen);
   DataFile* data_file = new DataFile(filename.c_str(), end_gen, num_rows, file_size);
 
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   n_total_rows_ += num_rows;
   all_files_.push_front(data_file);
 }
@@ -366,7 +366,7 @@ void DataLoader<Game>::FileManager::reset_prefetch_loop() {
   // We do this to ensure that when we call DataLoader::load(), we'll know for sure that we aren't
   // in the middle of prefetching any files. I haven't seen this happening, but I can't rule out
   // the possibility, so doing this seems like a good idea.
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
@@ -375,7 +375,7 @@ void DataLoader<Game>::FileManager::reset_prefetch_loop() {
     prefetch_loop_thread_.join();
   }
   quitting_ = false;
-  prefetch_loop_thread_ = std::thread(&FileManager::prefetch_loop, this);
+  prefetch_loop_thread_ = mit::thread(&FileManager::prefetch_loop, this);
 }
 
 template <concepts::Game Game>
@@ -431,7 +431,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
 template <concepts::Game Game>
 void DataLoader<Game>::FileManager::prefetch_loop() {
   while (!quitting_) {
-    std::unique_lock lock(mutex_);
+    mit::unique_lock lock(mutex_);
     Instruction instruction = kWait;
     cv_.wait(lock, [&] {
       instruction = get_next_instruction();
@@ -461,7 +461,7 @@ void DataLoader<Game>::FileManager::prefetch_loop() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::FileManager::exit_prefetch_loop() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
@@ -479,7 +479,7 @@ template <concepts::Game Game>
 DataLoader<Game>::WorkerThread::WorkerThread(FileManager* file_manager, ThreadTable* table,
                                              thread_id_t id)
     : file_manager_(file_manager), table_(table), id_(id) {
-  thread_ = std::thread(&WorkerThread::loop, this);
+  thread_ = mit::thread(&WorkerThread::loop, this);
 }
 
 template <concepts::Game Game>
@@ -489,7 +489,7 @@ DataLoader<Game>::WorkerThread::~WorkerThread() {
 
 template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::quit() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
@@ -499,7 +499,7 @@ void DataLoader<Game>::WorkerThread::quit() {
 template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::schedule_work(const LoadInstructions& load_instructions,
                                                    const WorkUnit& unit) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   load_instructions_ = &load_instructions;
   unit_ = unit;
   has_work_ = true;
@@ -510,7 +510,7 @@ void DataLoader<Game>::WorkerThread::schedule_work(const LoadInstructions& load_
 template <concepts::Game Game>
 void DataLoader<Game>::WorkerThread::loop() {
   while (!quitting_) {
-    std::unique_lock lock(mutex_);
+    mit::unique_lock lock(mutex_);
     cv_.wait(lock, [this] { return quitting_ || has_work_; });
     if (quitting_) return;
 

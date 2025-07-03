@@ -1,9 +1,10 @@
 #pragma once
 
+#include <util/mit/mutex.hpp>
+
 #include <boost/json.hpp>
 
 #include <map>
-#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -152,8 +153,8 @@ class Socket {
 
   static map_t map_;
 
-  mutable std::mutex write_mutex_;
-  mutable std::mutex read_mutex_;
+  mutable mit::mutex write_mutex_;
+  mutable mit::mutex read_mutex_;
   const file_descriptor_t fd_;
   std::vector<char> json_buffer_;
   std::string json_str_;

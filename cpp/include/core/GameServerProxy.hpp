@@ -8,9 +8,9 @@
 #include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -174,7 +174,7 @@ class GameServerProxy : public core::GameServerBase {
     void run();
 
     SharedData& shared_data_;
-    std::thread thread_;
+    mit::thread thread_;
     game_thread_id_t id_;
   };
 

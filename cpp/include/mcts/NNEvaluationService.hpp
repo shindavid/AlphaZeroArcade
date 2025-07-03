@@ -20,11 +20,11 @@
 #include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
 #include <util/RecyclingAllocPool.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
 
-#include <condition_variable>
 #include <deque>
 #include <map>
-#include <mutex>
 #include <queue>
 #include <vector>
 
@@ -357,9 +357,9 @@ class NNEvaluationService
   const NNEvaluationServiceParams params_;
   const int num_game_threads_ = 0;
 
-  std::thread schedule_thread_;
-  std::thread drain_thread_;
-  std::thread state_thread_;
+  mit::thread schedule_thread_;
+  mit::thread drain_thread_;
+  mit::thread state_thread_;
 
   mutable std::mutex main_mutex_;
   mutable std::mutex perf_stats_mutex_;

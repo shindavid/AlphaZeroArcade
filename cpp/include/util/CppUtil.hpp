@@ -36,7 +36,7 @@ namespace util {
 template<typename T>
 size_t hash(const T& t) { return std::hash<T>{}(t); }
 
-// Drop-in replacement for std::mutex that does nothing.
+// Drop-in replacement for mit::mutex that does nothing.
 struct dummy_mutex {
   void lock() noexcept {}
   void unlock() noexcept {}

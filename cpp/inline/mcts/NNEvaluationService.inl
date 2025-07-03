@@ -42,20 +42,20 @@ NNEvaluationService<Game>* NNEvaluationService<Game>::create(
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::connect() {
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   bool first_connect = (num_connections_ == 0);
   num_connections_++;
 
   if (first_connect) {
-    schedule_thread_ = std::thread([&] { this->schedule_loop(); });
-    drain_thread_ = std::thread([&] { this->drain_loop(); });
-    state_thread_ = std::thread([&] { this->state_loop(); });
+    schedule_thread_ = mit::thread([&] { this->schedule_loop(); });
+    drain_thread_ = mit::thread([&] { this->drain_loop(); });
+    state_thread_ = mit::thread([&] { this->state_loop(); });
   }
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::disconnect() {
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   num_connections_--;
   lock.unlock();
   cv_main_.notify_all();
@@ -196,7 +196,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
                                                                          int n,
                                                                          std::mutex& main_mutex) {
-  std::unique_lock lock(main_mutex);
+  mit::unique_lock lock(main_mutex);
 
   int slice_index = 0;
   BatchData* batch_data = pending_batch_datas_.back();
@@ -352,7 +352,7 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
         write_to_batch(item, batch_data, row);
       }
 
-      std::unique_lock lock(main_mutex_);
+      mit::unique_lock lock(main_mutex_);
       for (int i = 0; i < result.stats.cache_misses; ++i) {
         CacheMissInfo& miss_info = miss_infos[i];
         BatchData* batch_data = miss_info.batch_data;
@@ -365,7 +365,7 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
     }
   }
 
-  std::unique_lock perf_stats_lock(perf_stats_mutex_);
+  mit::unique_lock perf_stats_lock(perf_stats_mutex_);
   perf_stats_.update(result.stats);
   perf_stats_lock.unlock();
 
@@ -447,7 +447,7 @@ void NNEvaluationService<Game>::end_session() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
-  std::unique_lock lock(perf_stats_mutex_);
+  mit::unique_lock lock(perf_stats_mutex_);
   core::PerfStats perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::PerfStats();
   lock.unlock();
@@ -457,7 +457,7 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::handle_force_progress() {
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
 
@@ -692,7 +692,7 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
   core::nn_evaluation_sequence_id_t seq = result.notifying_sequence_id;
 
   LOG_DEBUG("<-- {}::{}() acquiring mutex...", kCls, __func__);
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   if (last_evaluated_sequence_id_ < seq) {
     LOG_DEBUG("<!-- {}::{} REJECT last={} seq={} slot={}:{}", kCls, __func__,
               last_evaluated_sequence_id_, seq, unit.slot_context().slot,
@@ -758,7 +758,7 @@ void NNEvaluationService<Game>::drain_loop() {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::state_loop() {
   const char* func = __func__;
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   while (true) {
     cv_main_.wait(lock, [&] {
       if (system_state_ == kPaused) {
@@ -866,7 +866,7 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
 
   LOG_INFO("{}: handling worker-ready...", kCls);
   client->handle_worker_ready();
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   cv_main_.wait(lock, [&] {
     return initial_weights_loaded_ || system_state_ == kShuttingDownScheduleLoop ||
            system_state_ == kPausingScheduleLoop;
@@ -885,7 +885,7 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
 
   in_schedule_loop_prelude_ = true;
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
@@ -936,7 +936,7 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   in_drain_loop_prelude_ = true;
   cv_main_.wait(lock, [&] {
     if (system_state_ == kShuttingDownDrainLoop || system_state_ == kPausingDrainLoop) {
@@ -979,7 +979,7 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
 template <core::concepts::Game Game>
 typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_next_batch_data(
   core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
 
   const char* func = __func__;
@@ -1041,7 +1041,7 @@ void NNEvaluationService<Game>::schedule_batch(
   net_.schedule(pipeline_index);
   pipeline_schedule_clocker.stop();
 
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   load_queue_.emplace(batch_data, pipeline_index);
   lock.unlock();
   cv_main_.notify_all();
@@ -1051,7 +1051,7 @@ void NNEvaluationService<Game>::schedule_batch(
   schedule_loop_stats.batches_evaluated = 1;
   schedule_loop_stats.full_batches_evaluated = num_rows == max_size ? 1 : 0;
 
-  std::unique_lock perf_lock(perf_stats_mutex_);
+  mit::unique_lock perf_lock(perf_stats_mutex_);
   perf_stats_.update(schedule_loop_stats);
 }
 
@@ -1062,7 +1062,7 @@ bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
     LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
              this->instance_id_);
   }
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   cv_main_.wait(lock, [&] {
     if (!load_queue_.empty() || system_state_ == kPausingDrainLoop ||
         system_state_ == kShuttingDownDrainLoop) {
@@ -1111,7 +1111,7 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
   batch_data->load(policy_data, value_data, action_values_data);
   net_.release(pipeline_index);
 
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   yield_manager_->notify(batch_data->notification_tasks);
   util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
@@ -1133,7 +1133,7 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
   util::release_assert(system_state_ == kPaused, "{}() called while not paused", func);
 
   std::ispanstream stream{std::span<const char>(buf)};
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   net_.deactivate();
   net_.load_weights(stream);
   initial_weights_loaded_ = true;
@@ -1145,7 +1145,7 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
   // TODO: we can clear each shard's cache in parallel for a slight performance boost
   for (int i = 0; i < kNumHashShards; ++i) {
     ShardData& shard_data = shard_datas_[i];
-    std::unique_lock shard_lock(shard_data.mutex);
+    mit::unique_lock shard_lock(shard_data.mutex);
     shard_data.eval_cache.clear();
   }
 }
@@ -1154,7 +1154,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::pause() {
   const char* func = __func__;
   LOG_INFO("{}::{}()", kCls, func);
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
   system_state_ = kPausingScheduleLoop;
   lock.unlock();
   cv_main_.notify_all();
@@ -1164,7 +1164,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::unpause() {
   const char* func = __func__;
   LOG_INFO("{}::{}() [state:{}]", kCls, func, system_state_);
-  std::unique_lock lock(main_mutex_);
+  mit::unique_lock lock(main_mutex_);
 
   // we wait in case we are already in the middle of a pause/unpause operation
   cv_main_.wait(lock, [&] {

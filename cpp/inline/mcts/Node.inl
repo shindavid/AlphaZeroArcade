@@ -180,7 +180,7 @@ void Node<Game>::LookupTable::defragment(node_pool_index_t& root_index) {
 template <core::concepts::Game Game>
 typename Node<Game>::node_pool_index_t
 Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value, bool overwrite) {
-  std::lock_guard lock(map_mutex_);
+  mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;
     return value;
@@ -193,7 +193,7 @@ Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value
 template <core::concepts::Game Game>
 typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::lookup_node(
     const MCTSKey& key) const {
-  std::lock_guard lock(map_mutex_);
+  mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {
     return -1;
@@ -282,7 +282,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
 void Node<Game>::update_stats(MutexProtectedFunc func) {
-  std::unique_lock lock(mutex());
+  mit::unique_lock lock(mutex());
   func();
   lock.unlock();
 
@@ -401,7 +401,7 @@ typename Node<Game>::Stats Node<Game>::stats_safe() const {
   // the mutex only when a set dirty-bit was found on the copied stats. Contrary to my expectations,
   // this was slightly but clearly slower than the current version. I don't really understand why
   // this might be, but it's not worth investigating further at this time.
-  std::unique_lock lock(mutex());
+  mit::unique_lock lock(mutex());
   return stats_;
 }
 
@@ -495,7 +495,7 @@ void Node<Game>::validate_state() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
   if (is_terminal()) return;
 
-  std::unique_lock lock(mutex());
+  mit::unique_lock lock(mutex());
 
   int N = 1;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {

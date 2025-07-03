@@ -1,8 +1,9 @@
 #include <util/CppUtil.hpp>
 
+#include <util/mit/mutex.hpp>
+
 #include <chrono>
 #include <cstring>
-#include <mutex>
 
 namespace util {
 
@@ -71,8 +72,8 @@ template <typename TimePoint>
 }
 
 inline int64_t get_unique_id() {
-  static std::mutex mut;
-  std::lock_guard<std::mutex> lock(mut);
+  static mit::mutex mut;
+  mit::lock_guard<mit::mutex> lock(mut);
 
   static int64_t last = 0;
   int64_t id = ns_since_epoch();

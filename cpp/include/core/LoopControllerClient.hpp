@@ -4,13 +4,13 @@
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
+#include <util/mit/condition_variable.hpp>
+#include <util/mit/mutex.hpp>
+#include <util/mit/thread.hpp>
 
 #include <boost/json.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace core {
@@ -105,7 +105,7 @@ class LoopControllerClient : public PerfStatsClient {
   const Params params_;
   const int64_t proc_start_ts_;
   io::Socket* socket_;
-  std::thread* thread_ = nullptr;
+  mit::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<DataRequestListener*> data_request_listeners_;

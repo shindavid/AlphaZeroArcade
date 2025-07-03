@@ -7,11 +7,11 @@
 #include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
+#include <util/mit/mutex.hpp>
+#include <util/mit/thread.hpp>
 
 #include <chrono>
 #include <cstdint>
-#include <mutex>
-#include <thread>
 #include <vector>
 
 namespace core {
@@ -150,7 +150,7 @@ class TrainingDataWriter
    */
   struct MiscData {
     Params params;
-    std::thread* thread;
+    mit::thread* thread;
     std::chrono::nanoseconds heartbeat_interval;
     bool closed = false;
     bool direct_game_log_write_optimization_enabled = false;
