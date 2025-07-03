@@ -2,6 +2,10 @@
 
 #include <util/LoggingUtil.hpp>
 
+#ifdef MIT_TEST_MODE
+  static_assert(false, "MIT_TEST_MODE macro must not be defined for game-exe's");
+#endif
+
 template <typename PlayerFactory>
 auto Main<PlayerFactory>::Args::make_options_description() {
   namespace po = boost::program_options;
