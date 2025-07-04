@@ -6,16 +6,31 @@
 static_assert(false, "This file is not intended to be #include'd directly.");
 #endif  // MIT_TEST_MODE
 
-// TODO: implement MIT_TEST_MODE overrides
-
 namespace mit {
 
-using mutex = std::mutex;
+// Drop-in replacement for std::mutex that can be used in unit tests.
+//
+// Not all std::mutex functionality is implemented in this class. Only those methods that are
+// used in the AlphaZeroArcade codebase are provided. In the future, we can extend this class to
+// include more functionality as needed.
+class mutex {
+ public:
+  friend class scheduler;
 
-template <typename Mutex>
-using lock_guard = std::lock_guard<Mutex>;
+  mutex();
+  ~mutex();
 
-template <typename Mutex>
-using unique_lock = std::unique_lock<Mutex>;
+  mutex(const mutex&) = delete;
+  mutex& operator=(const mutex&) = delete;
+
+  void lock();
+  void unlock();
+
+ private:
+  std::mutex mutex_;
+  int mutex_id_ = -1;  // used by scheduler
+};
 
 }  // namespace mit
+
+#include <inline/util/mit/mutex.inl>

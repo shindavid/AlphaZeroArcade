@@ -10,8 +10,10 @@
 #ifdef MIT_TEST_MODE
 
 #include <util/mit/condition_variable.hpp>
+#include <util/mit/lock_guard.hpp>
 #include <util/mit/mutex.hpp>
 #include <util/mit/thread.hpp>
+#include <util/mit/unique_lock.hpp>
 
 #else  // MIT_TEST_MODE
 
