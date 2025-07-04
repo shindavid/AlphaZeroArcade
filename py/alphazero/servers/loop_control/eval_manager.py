@@ -443,12 +443,11 @@ class EvalManager(GamingManagerBase):
         counts = WinLossDrawCounts.from_json(msg['record'])
         logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
 
-        #TODO: update this part to save the match result without evaluator or arena
-        with self._evaluator.db.db_lock:
-            self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator.db)
+        with self._db.db_lock:
+            self._update_match_results(ix1, ix2, counts, MatchType.EVALUATE)
 
         #TODO: update elo eval usage
-        new_rating = self._evaluator.eval_elo(ix1)
+        new_rating = self._eval_elo(ix1)
         old_rating = conn.aux.estimated_rating
         logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
@@ -471,6 +470,13 @@ class EvalManager(GamingManagerBase):
         self.set_priority()
         logger.debug('End of handle_match_result')
 
+    def _update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts):
+        db_id1 = self._indexed_agents[ix1].db_id
+        db_id2 = self._indexed_agents[ix2].db_id
+        self._db.commit_counts(db_id1, db_id2, counts, MatchType.EVALUATE)
+        self._eval_status_dict[ix1].ix_match_status[ix2].result = counts
+        self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
+
     def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float]=None):
         self._eval_status_dict[eval_ix].status = EvalRequestStatus.COMPLETE
         self._eval_status_dict[eval_ix].owner = None
@@ -481,14 +487,14 @@ class EvalManager(GamingManagerBase):
         table.release_lock(conn.client_domain)
 
         if rating is None:
-            logger.debug('Calculating rating for gen %s...', self._evaluator.indexed_agents[eval_ix].agent)
-            rating = self._evaluator.eval_elo(eval_ix)
-            logger.debug('Calculated rating for gen %s: %s', self._evaluator.indexed_agents[eval_ix].agent, rating)
+            logger.debug('Calculating rating for gen %s...', self._indexed_agents[eval_ix].agent)
+            rating = self._eval_elo(eval_ix)
+            logger.debug('Calculated rating for gen %s: %s', self._indexed_agents[eval_ix].agent, rating)
 
-        test_iagent = self._evaluator.indexed_agents[eval_ix]
-        with self._evaluator.db.db_lock:
-            self._evaluator.db.commit_ratings([test_iagent], [rating])
-        self._evaluator._elo_ratings.update(test_iagent, rating)
+        test_iagent = self._indexed_agents[eval_ix]
+        with self._db.db_lock:
+            self._db.commit_ratings([test_iagent], [rating])
+        self._eval_status_dict[eval_ix].elo = rating
         conn.aux.estimated_rating = None
         conn.aux.ix = None
         logger.debug('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
