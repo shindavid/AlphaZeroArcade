@@ -3,6 +3,7 @@
 #include <util/CppUtil.hpp>
 #include <util/StringUtil.hpp>
 
+#include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/json.hpp>
@@ -11,6 +12,9 @@
 #include <string>
 
 namespace boost_util {
+
+// Returns a random index of a set bit in the given bitset. If no bits are set, returns -1.
+int get_random_set_index(const boost::dynamic_bitset<>& bitset);
 
 /*
  * get_option_value(util::split("--foo=bar --baz ..."), "foo") -> "bar"

@@ -1,10 +1,28 @@
 #include <util/BoostUtil.hpp>
 
 #include <util/Asserts.hpp>
+#include <util/Random.hpp>
 
 #include <format>
 
 namespace boost_util {
+
+int get_random_set_index(const boost::dynamic_bitset<>& bitset) {
+  int count = bitset.count();
+
+  if (count == 0) {
+    return -1;  // No bits are set
+  }
+
+  int n = util::Random::uniform_sample(0, count);
+
+  int index = bitset.find_first();
+  while (n-- > 0) {
+    index = bitset.find_next(index);
+  }
+
+  return index;
+}
 
 std::string get_option_value(const std::vector<std::string>& args,
                                     const std::string& option_name) {
