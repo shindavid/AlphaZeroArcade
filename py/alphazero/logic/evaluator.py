@@ -1,35 +1,13 @@
-from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent
-from alphazero.logic.arena import RatingData
-from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.match_runner import MatchType
-from alphazero.logic.ratings import estimate_elo_newton, win_prob
-from alphazero.logic.rating_db import RatingDB
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.logic.ratings import  win_prob
 
 import numpy as np
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Tuple
 
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class EvalRatingData:
-    evaluated_iagents: List[IndexedAgent]
-    ratings: np.ndarray
-    tag: str
-    lookup_elo: Dict[int, float] = field(init=False)
-
-    def __post_init__(self):
-        self.lookup_elo = {iagent.index: rating for iagent, rating in zip(self.evaluated_iagents, self.ratings)}
-
-    def update(self, iagent: IndexedAgent, rating: float):
-        self.evaluated_iagents.append(iagent)
-        self.ratings = np.concatenate((self.ratings, [rating]))
-        self.lookup_elo[iagent.index] = rating
 
 class EvalUtils:
     @staticmethod
