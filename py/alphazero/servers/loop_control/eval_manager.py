@@ -101,9 +101,9 @@ class EvalManager(GamingManagerBase):
         self._set_domain_priority(dict_len, rating_in_progress)
 
     def load_past_data(self):
-        self._load_agents_from_db() # update _indexed_agents list and _agent_lookup dict
-        self._load_matches_from_db() # update the match status data structure
-        self._load_elos_from_db() # update the eval status data structure
+        self._load_agents_from_db()
+        self._load_matches_from_db()
+        self._load_elos_from_db()
         self.set_priority()
 
     def _load_agents_from_db(self):
@@ -170,21 +170,23 @@ class EvalManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
+
+            #TODO: add agent to the internal list and commit to database without evaluator
             test_iagent = self._evaluator.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self._evaluator.db)
+
             conn.aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
                     assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
                     self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
                 else:
-                    ix_match_status = self._load_ix_match_status(test_iagent.index)
                     self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
-                                                                           ix_match_status=ix_match_status,
+                                                                           ix_match_status={},
                                                                            status=EvalRequestStatus.REQUESTED)
             conn.aux.needs_new_opponents = True
             self.set_priority()
         else:
-            test_iagent = self._evaluator.indexed_agents[eval_ix]
+            test_iagent = self._indexed_agents[eval_ix]
 
         estimated_rating = conn.aux.estimated_rating
         if estimated_rating is None:
@@ -212,6 +214,8 @@ class EvalManager(GamingManagerBase):
         need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
+
+            #TODO: changet this part to just call a static function
             chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
             logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
             with self._lock:
@@ -220,7 +224,8 @@ class EvalManager(GamingManagerBase):
 
         candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
         next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[0]
-        next_opponent_iagent = self._evaluator.indexed_agents[next_opponent_ix]
+
+        next_opponent_iagent = self._indexed_agents[next_opponent_ix]
 
         data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
         conn.socket.send_json(data)
@@ -330,6 +335,7 @@ class EvalManager(GamingManagerBase):
         return gen
 
     def _estimate_rating(self, test_iagent):
+        #TODO: change this part to use the new structure without evaluator or arena
         if self._evaluator._arena.n_games_played(test_iagent.agent) > 0:
             estimated_rating = self._evaluator.eval_elo(test_iagent.index)
         else:
@@ -339,6 +345,7 @@ class EvalManager(GamingManagerBase):
         return estimated_rating
 
     def _estimate_rating_nearby_gens(self, gen):
+        #TODO: need to update this method too
         if len(self._evaluator._elo_ratings.evaluated_iagents) == 0:
             return None
 
@@ -383,9 +390,12 @@ class EvalManager(GamingManagerBase):
         ix2 = msg['ix2']
         counts = WinLossDrawCounts.from_json(msg['record'])
         logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
+
+        #TODO: update this part to save the match result without evaluator or arena
         with self._evaluator.db.db_lock:
             self._evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.EVALUATE, self._evaluator.db)
 
+        #TODO: update elo eval usage
         new_rating = self._evaluator.eval_elo(ix1)
         old_rating = conn.aux.estimated_rating
         logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
@@ -400,6 +410,7 @@ class EvalManager(GamingManagerBase):
 
         logger.debug('Has pending matches for ix %s: %s', ix1, has_pending)
         if not has_pending:
+            #TODO: check this part
             self._calc_ratings(conn, ix1, new_rating)
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
