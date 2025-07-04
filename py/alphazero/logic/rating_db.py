@@ -52,19 +52,6 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        query = '''SELECT agents.id, gen, n_iters, tag, is_zero_temp, role
-                   FROM agents
-                   JOIN mcts_agents
-                   ON agents.sub_id = mcts_agents.id
-                   WHERE subtype="mcts"
-                   '''
-
-        c.execute(query)
-        for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
-            agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
-            agent_roles = AgentRole.from_str(roles)
-            yield DBAgent(agent, agent_id, agent_roles)
-
         query = '''SELECT agents.id, type_str, strength_param, strength, tag, role
                    FROM agents
                    JOIN ref_agents
@@ -75,6 +62,19 @@ class RatingDB:
         c.execute(query)
         for agent_id, type_str, strength_param, strength, tag, roles in c.fetchall():
             agent = ReferenceAgent(type_str, strength_param, strength, tag)
+            agent_roles = AgentRole.from_str(roles)
+            yield DBAgent(agent, agent_id, agent_roles)
+
+        query = '''SELECT agents.id, gen, n_iters, tag, is_zero_temp, role
+                   FROM agents
+                   JOIN mcts_agents
+                   ON agents.sub_id = mcts_agents.id
+                   WHERE subtype="mcts"
+                   '''
+
+        c.execute(query)
+        for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
+            agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
