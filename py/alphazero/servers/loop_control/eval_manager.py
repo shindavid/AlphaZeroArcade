@@ -432,7 +432,7 @@ class EvalManager(GamingManagerBase):
         logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
 
         with self._db.db_lock:
-            self._update_match_results(ix1, ix2, counts, MatchType.EVALUATE)
+            self._update_match_results(ix1, ix2, counts)
 
         #TODO: update elo eval usage
         new_rating = self._eval_elo(ix1)
