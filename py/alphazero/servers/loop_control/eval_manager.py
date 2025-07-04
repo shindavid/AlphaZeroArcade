@@ -432,7 +432,6 @@ class EvalManager(GamingManagerBase):
         with self._db.db_lock:
             self._update_match_results(ix1, ix2, counts)
 
-        #TODO: update elo eval usage
         new_rating = self._eval_elo(ix1)
         old_rating = conn.aux.estimated_rating
         logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
@@ -447,7 +446,6 @@ class EvalManager(GamingManagerBase):
 
         logger.debug('Has pending matches for ix %s: %s', ix1, has_pending)
         if not has_pending:
-            #TODO: check this part
             self._calc_ratings(conn, ix1, new_rating)
 
         table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
