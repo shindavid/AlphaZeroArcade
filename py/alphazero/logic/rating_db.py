@@ -34,6 +34,7 @@ class DBAgentRating:
     rating: float
     is_committee: Optional[bool] = None
     tag: Optional[str] = None
+    level: Optional[str] = None
 
 
 class RatingDB:
@@ -110,59 +111,63 @@ class RatingDB:
                     benchmark_ratings.agent_id,
                     benchmark_ratings.rating,
                     benchmark_ratings.is_committee,
-                    mcts_agents.tag
+                    mcts_agents.tag,
+                    mcts_agents.gen
                 FROM benchmark_ratings
                 JOIN agents ON benchmark_ratings.agent_id = agents.id
                 JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
                 WHERE agents.subtype = 'mcts';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, is_committee, tag = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag))
+                agent_id, rating, is_committee, tag, gen = row
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag, gen))
 
             c.execute('''
                 SELECT
                     benchmark_ratings.agent_id,
                     benchmark_ratings.rating,
                     benchmark_ratings.is_committee,
-                    ref_agents.tag
+                    ref_agents.tag,
+                    ref_agents.strength
                 FROM benchmark_ratings
                 JOIN agents ON benchmark_ratings.agent_id = agents.id
                 JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
                 WHERE agents.subtype = 'ref';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, is_committee, tag = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag))
+                agent_id, rating, is_committee, tag, strength = row
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag, strength))
 
         elif role == AgentRole.TEST:
             c.execute('''
                 SELECT
                     evaluator_ratings.agent_id,
                     evaluator_ratings.rating,
-                    mcts_agents.tag
+                    mcts_agents.tag,
+                    mcts_agents.gen
                 FROM evaluator_ratings
                 JOIN agents ON evaluator_ratings.agent_id = agents.id
                 JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
                 WHERE agents.subtype = 'mcts';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, tag = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag))
+                agent_id, rating, tag, gen = row
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag, gen))
 
             c.execute('''
                 SELECT
                     evaluator_ratings.agent_id,
                     evaluator_ratings.rating,
-                    ref_agents.tag
+                    ref_agents.tag,
+                    ref_agents.strength
                 FROM evaluator_ratings
                 JOIN agents ON evaluator_ratings.agent_id = agents.id
                 JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
                 WHERE agents.subtype = 'ref';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, tag = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag))
+                agent_id, rating, tag, strength = row
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag, strength))
 
         return db_agent_ratings
 

@@ -179,8 +179,6 @@ class EvalManager(GamingManagerBase):
         need_new_opponents = conn.aux.needs_new_opponents
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
-
-            #TODO: changet this part to just call a static function
             chosen_ixs, num_matches = self._gen_matches(test_iagent.index, estimated_rating, n_games_needed)
             logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
             with self._lock:
