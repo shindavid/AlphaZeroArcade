@@ -425,18 +425,6 @@ class EvalManager(GamingManagerBase):
                 self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
                 logger.debug('+++modify to %s matches between %s and %s', n_games, self._indexed_agents[test_ix].index, ix)
 
-    def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
-        W_matrix = self._evaluator._arena._W_matrix
-        n_games_played = W_matrix[test_ix, :] + W_matrix[:, test_ix]
-        match_status_dict = {}
-        for ix, n_games in enumerate(n_games_played):
-            if ix == test_ix:
-                continue
-            if n_games > 0:
-                level = self._evaluator.indexed_agents[ix].agent.level
-                match_status_dict[ix] = MatchStatus(level, int(n_games), MatchRequestStatus.COMPLETE)
-        return match_status_dict
-
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         ix1 = msg['ix1']
         ix2 = msg['ix2']
@@ -515,6 +503,3 @@ class EvalManager(GamingManagerBase):
     def error_threshold(self):
         return self._controller.rating_params.eval_error_threshold
 
-    @property
-    def elo_ratings(self):
-        return self._evaluator._elo_ratings
