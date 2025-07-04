@@ -7,7 +7,7 @@ from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, Fil
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils
 from alphazero.logic.match_runner import MatchType
-from alphazero.logic.ratings import WinLossDrawCounts
+from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -22,7 +22,7 @@ from enum import Enum
 import logging
 import os
 import threading
-from typing import Dict, List, Optional, TYPE_CHECKING, Union
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
@@ -93,6 +93,9 @@ class EvalManager(GamingManagerBase):
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}
         self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
+        self._benchmark_elos: Dict[int, float] = {}  # ix -> elo
+        self._min_benchmark_elo: Optional[float] = None
+        self._max_benchmark_elo: Optional[float] = None
         self._db = RatingDB(self._controller._organizer.eval_db_filename(benchmark_tag))
 
     def set_priority(self):
@@ -104,7 +107,94 @@ class EvalManager(GamingManagerBase):
         self._load_agents_from_db()
         self._load_matches_from_db()
         self._load_elos_from_db()
+        self._load_benchmark_elos()
         self.set_priority()
+
+    def num_evaluated_gens(self):
+        return sum(1 for data in self._eval_status_dict.values() if data.status == EvalRequestStatus.COMPLETE)
+
+    def handle_server_disconnect(self, conn: ClientConnection):
+        logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
+        ix = conn.aux.ix
+        if ix is not None:
+            with self._lock:
+                eval_status = self._eval_status_dict[ix].status
+                if eval_status != EvalRequestStatus.COMPLETE:
+                    self._eval_status_dict[ix].status = EvalRequestStatus.FAILED
+                    self._eval_status_dict[ix].owner = None
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.deactivate(conn.client_domain)
+
+        status_cond: threading.Condition = conn.aux.status_cond
+        with status_cond:
+            conn.aux.status= ServerStatus.DISCONNECTED
+            status_cond.notify_all()
+
+    def send_match_request(self, conn: ClientConnection):
+        assert conn.is_on_localhost()
+        eval_ix = conn.aux.ix
+        if eval_ix is None:
+            gen = self._get_next_gen_to_eval()
+            assert gen is not None
+            test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
+            test_iagent = self._add_agent(test_agent, {AgentRole.TEST}, db=self._db)
+
+            conn.aux.ix = test_iagent.index
+            with self._lock:
+                if test_iagent.index in self._eval_status_dict:
+                    assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
+                    self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
+                else:
+                    self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
+                                                                           ix_match_status={},
+                                                                           status=EvalRequestStatus.REQUESTED)
+            conn.aux.needs_new_opponents = True
+            self.set_priority()
+        else:
+            test_iagent = self._indexed_agents[eval_ix]
+
+        estimated_rating = conn.aux.estimated_rating
+        if estimated_rating is None:
+            estimated_rating = self._estimate_rating(test_iagent)
+            logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
+            conn.aux.estimated_rating = estimated_rating
+
+        n_games_completed = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
+            if data.status == MatchRequestStatus.COMPLETE])
+        n_games_to_do = self.n_games - n_games_completed
+
+        opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
+            if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
+
+        if n_games_to_do <= 0 or len(opponent_ixs_played) >= len(self._benchmark_elos):
+            self._calc_ratings(conn, conn.aux.ix)
+            self._set_ready(conn)
+            return
+
+        n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
+            if data.status == MatchRequestStatus.REQUESTED])
+        n_games_needed = n_games_to_do - n_games_in_progress
+        assert n_games_needed > 0, f"{self.n_games} games needed, but {n_games_in_progress} already in progress"
+
+        need_new_opponents = conn.aux.needs_new_opponents
+        if need_new_opponents:
+            logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
+
+            #TODO: changet this part to just call a static function
+            chosen_ixs, num_matches = self._gen_matches(test_iagent.index, estimated_rating, n_games_needed)
+            logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
+            with self._lock:
+                self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
+            conn.aux.needs_new_opponents = False
+
+        candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
+        next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[0]
+
+        next_opponent_iagent = self._indexed_agents[next_opponent_ix]
+
+        data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
+        conn.socket.send_json(data)
+        self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
 
     def _load_agents_from_db(self):
         for db_agent in self._db.fetch_agents():
@@ -136,6 +226,15 @@ class EvalManager(GamingManagerBase):
                                        result=result.counts)
             self._eval_status_dict[indexed_agent1.index].ix_match_status[indexed_agent2.index] = match_status
 
+    def _load_benchmark_elos(self):
+        ratings: List[DBAgentRating] = self._db.load_ratings(AgentRole.BENCHMARK)
+        for db_rating in ratings:
+            indexed_agent = self._agent_lookup_db_id[db_rating.agent_id]
+            self._benchmark_elos[indexed_agent.index] = db_rating.rating
+        elos = np.array(list(self._benchmark_elos.values()))
+        self._min_benchmark_elo = elos.min()
+        self._max_benchmark_elo = elos.max()
+
     def _load_elos_from_db(self):
         ratings: List[DBAgentRating] = self._db.load_ratings(AgentRole.TEST)
         for db_rating in ratings:
@@ -143,93 +242,29 @@ class EvalManager(GamingManagerBase):
             self._eval_status_dict[indexed_agent.index].elo = db_rating.rating
             self._eval_status_dict[indexed_agent.index].status = EvalRequestStatus.COMPLETE
 
-    def num_evaluated_gens(self):
-        return sum(1 for data in self._eval_status_dict.values() if data.status == EvalRequestStatus.COMPLETE)
+    def _add_agent(self, agent: Agent, roles: set[AgentRole], db: RatingDB) -> IndexedAgent:
+        iagent = self._agent_lookup.get(agent, None)
+        if iagent is not None:
+            return iagent
 
-    def handle_server_disconnect(self, conn: ClientConnection):
-        logger.debug('Server disconnected: %s, evaluating ix %s', conn, conn.aux.ix)
-        ix = conn.aux.ix
-        if ix is not None:
-            with self._lock:
-                eval_status = self._eval_status_dict[ix].status
-                if eval_status != EvalRequestStatus.COMPLETE:
-                    self._eval_status_dict[ix].status = EvalRequestStatus.FAILED
-                    self._eval_status_dict[ix].owner = None
-        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
-        table.deactivate(conn.client_domain)
+        index = len(self._indexed_agents)
+        iagent = IndexedAgent(agent=agent, index=index, roles=roles, db_id=None)
+        self._indexed_agents.append(iagent)
+        self._agent_lookup[agent] = iagent
+        db.commit_agent(iagent)
+        self._agent_lookup_db_id[iagent.db_id] = iagent
+        return iagent
 
-        status_cond: threading.Condition = conn.aux.status_cond
-        with status_cond:
-            conn.aux.status= ServerStatus.DISCONNECTED
-            status_cond.notify_all()
-
-    def send_match_request(self, conn: ClientConnection):
-        assert conn.is_on_localhost()
-        eval_ix = conn.aux.ix
-        if eval_ix is None:
-            gen = self._get_next_gen_to_eval()
-            assert gen is not None
-            test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self._controller._organizer.tag)
-
-            #TODO: add agent to the internal list and commit to database without evaluator
-            test_iagent = self._evaluator.add_agent(test_agent, {AgentRole.TEST}, expand_matrix=True, db=self._evaluator.db)
-
-            conn.aux.ix = test_iagent.index
-            with self._lock:
-                if test_iagent.index in self._eval_status_dict:
-                    assert self._eval_status_dict[test_iagent.index].status == EvalRequestStatus.FAILED
-                    self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
-                else:
-                    self._eval_status_dict[test_iagent.index] = EvalStatus(mcts_gen=gen, owner=conn.client_id,
-                                                                           ix_match_status={},
-                                                                           status=EvalRequestStatus.REQUESTED)
-            conn.aux.needs_new_opponents = True
-            self.set_priority()
-        else:
-            test_iagent = self._indexed_agents[eval_ix]
-
-        estimated_rating = conn.aux.estimated_rating
-        if estimated_rating is None:
-            estimated_rating = self._estimate_rating(test_iagent)
-            logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
-            conn.aux.estimated_rating = estimated_rating
-
-        n_games_completed = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
-            if data.status == MatchRequestStatus.COMPLETE])
-        n_games_to_do = self.n_games - n_games_completed
-
-        opponent_ixs_played = [ix for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() \
-            if data.status in (MatchRequestStatus.COMPLETE, MatchRequestStatus.REQUESTED)]
-
-        if n_games_to_do <= 0 or len(opponent_ixs_played) >= len(self._evaluator.benchmark_committee):
-            self._calc_ratings(conn, conn.aux.ix)
-            self._set_ready(conn)
-            return
-
-        n_games_in_progress = sum([data.n_games for data in self._eval_status_dict[test_iagent.index].ix_match_status.values() \
-            if data.status == MatchRequestStatus.REQUESTED])
-        n_games_needed = n_games_to_do - n_games_in_progress
-        assert n_games_needed > 0, f"{self.n_games} games needed, but {n_games_in_progress} already in progress"
-
-        need_new_opponents = conn.aux.needs_new_opponents
-        if need_new_opponents:
-            logger.debug('Requesting %s games for gen %s, estimated rating: %s', n_games_needed, test_iagent.agent.gen, estimated_rating)
-
-            #TODO: changet this part to just call a static function
-            chosen_ixs, num_matches = self._evaluator.gen_matches(estimated_rating, opponent_ixs_played, n_games_needed)
-            logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
-            with self._lock:
-                self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
-            conn.aux.needs_new_opponents = False
-
-        candidates = [(ix, data.n_games) for ix, data in self._eval_status_dict[test_iagent.index].ix_match_status.items() if data.status == MatchRequestStatus.PENDING]
-        next_opponent_ix, next_n_games = sorted(candidates, key=lambda x: x[1])[0]
-
-        next_opponent_iagent = self._indexed_agents[next_opponent_ix]
-
-        data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
-        conn.socket.send_json(data)
-        self._eval_status_dict[test_iagent.index].ix_match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
+    def _gen_matches(self, ix: int, estimated_rating: float, n_games_needed: int) -> Tuple[np.ndarray, np.ndarray]:
+        ixs = []
+        elos = []
+        ix_match_status: Dict[int, MatchStatus] = self._eval_status_dict[ix].ix_match_status
+        for benchmark_ix, benchmark_elo in self._benchmark_elos.items():
+            if benchmark_ix in ix_match_status and ix_match_status[benchmark_ix].status in (MatchRequestStatus.REQUESTED, MatchRequestStatus.COMPLETE):
+                continue
+            ixs.append(benchmark_ix)
+            elos.append(benchmark_elo)
+        return EvalUtils.gen_matches(estimated_rating, ixs, elos, n_games_needed)
 
     def _gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent, next_n_games) -> JsonDict:
         game = self._controller._run_params.game
@@ -335,43 +370,60 @@ class EvalManager(GamingManagerBase):
         return gen
 
     def _estimate_rating(self, test_iagent):
-        #TODO: change this part to use the new structure without evaluator or arena
-        if self._evaluator._arena.n_games_played(test_iagent.agent) > 0:
-            estimated_rating = self._evaluator.eval_elo(test_iagent.index)
+        if any(match_status.status == MatchRequestStatus.COMPLETE for match_status in self._eval_status_dict[test_iagent.index].ix_match_status.values()):
+            estimated_rating = self._eval_elo(test_iagent.index)
         else:
             estimated_rating = self._estimate_rating_nearby_gens(test_iagent.agent.gen)
             if estimated_rating is None:
-                estimated_rating = 0.0
+                estimated_rating = self._min_benchmark_elo
         return estimated_rating
 
-    def _estimate_rating_nearby_gens(self, gen):
-        #TODO: need to update this method too
-        if len(self._evaluator._elo_ratings.evaluated_iagents) == 0:
-            return None
+    def _eval_elo(self, ix: int) -> float:
+        eval_status: EvalStatus = self._eval_status_dict[ix]
+        n = []
+        k = []
+        elos = []
+        for ix, match_status in eval_status.ix_match_status.items():
+            if match_status.status == MatchRequestStatus.COMPLETE:
+                n.append(match_status.n_games)
+                k.append(match_status.result.win + 0.5 * match_status.result.draw)
+                elos.append(self._benchmark_elos[ix])
+        assert len(n) > 0
+        return estimate_elo_newton(np.array(n), np.array(k), np.array(elos), lower=self._min_benchmark_elo, upper=self._max_benchmark_elo)
 
-        evaluated_gens = [iagent.agent.gen for iagent in self.elo_ratings.evaluated_iagents]
-        ratings = self.elo_ratings.ratings
-        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, ratings)
+    def _estimate_rating_nearby_gens(self, gen):
+        evaluated_gens = []
+        elos = []
+        for eval_status in self._eval_status_dict.values():
+            if eval_status.status == EvalRequestStatus.COMPLETE:
+                evaluated_gens.append(eval_status.mcts_gen)
+                elos.append(eval_status.elo)
+
+        if not evaluated_gens:
+            return None
+        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, elos)
         return estimated_rating
 
     def _update_eval_status(self, test_ix, chosen_ixs, num_matches):
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
             if ix not in chosen_ixs and match_status.status == MatchRequestStatus.PENDING:
                 match_status.status = MatchRequestStatus.OBSOLETE
-                logger.debug('...set match between %s and %s to obsolete', self._evaluator.indexed_agents[test_ix].index, match_status.opponent_level)
+                logger.debug('...set match between %s and %s to obsolete', self._indexed_agents[test_ix].index, match_status.opponent_level)
 
         for ix, n_games in zip(chosen_ixs, num_matches):
             if ix not in self._eval_status_dict[test_ix].ix_match_status:
-                agent: Agent = self._evaluator.indexed_agents[ix].agent
+                agent: Agent = self._indexed_agents[ix].agent
                 new_opponent_level = agent.level
                 self._eval_status_dict[test_ix].ix_match_status[ix] = \
                     MatchStatus(new_opponent_level, n_games, MatchRequestStatus.PENDING)
-                logger.debug('+++add new %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                logger.debug('+++add new %s matches between %s and %s', n_games, self._indexed_agents[test_ix].index, ix)
+            elif self._eval_status_dict[test_ix].ix_match_status[ix].status == MatchRequestStatus.REQUESTED:
+                continue
             else:
+                assert self._eval_status_dict[test_ix].ix_match_status[ix].status in (MatchRequestStatus.PENDING, MatchRequestStatus.OBSOLETE)
                 self._eval_status_dict[test_ix].ix_match_status[ix].n_games = n_games
-                if self._eval_status_dict[test_ix].ix_match_status[ix].status == MatchRequestStatus.OBSOLETE:
-                    self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
-                logger.debug('+++modify to %s matches between %s and %s', n_games, self._evaluator.indexed_agents[test_ix].index, ix)
+                self._eval_status_dict[test_ix].ix_match_status[ix].status = MatchRequestStatus.PENDING
+                logger.debug('+++modify to %s matches between %s and %s', n_games, self._indexed_agents[test_ix].index, ix)
 
     def _load_ix_match_status(self, test_ix: int) -> Dict[int, MatchStatus]:
         W_matrix = self._evaluator._arena._W_matrix
