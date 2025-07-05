@@ -227,8 +227,9 @@ class EvalManager(GamingManagerBase):
     def _load_benchmark_elos(self):
         ratings: List[DBAgentRating] = self._db.load_ratings(AgentRole.BENCHMARK)
         for db_rating in ratings:
-            indexed_agent = self._agent_lookup_db_id[db_rating.agent_id]
-            self._benchmark_elos[indexed_agent.index] = db_rating.rating
+            if db_rating.is_committee:
+                indexed_agent = self._agent_lookup_db_id[db_rating.agent_id]
+                self._benchmark_elos[indexed_agent.index] = db_rating.rating
         elos = np.array(list(self._benchmark_elos.values()))
         self._min_benchmark_elo = elos.min()
         self._max_benchmark_elo = elos.max()
@@ -434,9 +435,8 @@ class EvalManager(GamingManagerBase):
 
         new_rating = self._eval_elo(ix1)
         old_rating = conn.aux.estimated_rating
-        logger.debug('Old rating: %s, New rating: %s', old_rating, new_rating)
         if abs(new_rating - old_rating) > self.error_threshold:
-            logger.debug('Rating change too large, requesting new opponents...')
+            logger.debug('Rating change too large, old=%s, new=%s. requesting new opponents...', old_rating, new_rating)
             conn.aux.needs_new_opponents = True
             conn.aux.estimated_rating = new_rating
 
