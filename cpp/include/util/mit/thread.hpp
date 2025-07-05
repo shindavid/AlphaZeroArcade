@@ -34,14 +34,15 @@ class thread {
   void join() { return thread_.join(); }
 
  private:
+  thread(bool dummy) {}  // used to construct the main thread
+
   void mark_as_blocked_by(mutex* m);
   void lift_block(mutex* m);
   bool viable() const;
   void move_to(thread* other);
-  using mutex_set_t = std::set<mutex*>;
 
   std::thread thread_;  // not set for main thread
-  mutex_set_t blocked_by_mutexes_;  // Mutexes that this thread is currently blocked on
+  mutex* blocking_mutex_ = nullptr;  // Mutex that this thread is currently blocked on
   int thread_id_ = -1;              // 0 for main thread
 };
 
