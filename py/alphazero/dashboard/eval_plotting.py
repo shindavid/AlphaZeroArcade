@@ -16,8 +16,9 @@ If no other runs have been evaluated against the benchmark, only the benchmark's
 
 from .x_var_logic import XVarSelector, make_x_df
 
+from alphazero.logic.agent_types import AgentRole
 from alphazero.logic.benchmarker import Benchmarker
-from alphazero.logic.evaluator import Evaluator
+from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
@@ -39,32 +40,34 @@ class EvaluationData:
         self.benchmark_elos = {}
         self.df = self.make_df(organizer, benchmark_tag)
 
-        x_df = make_x_df(organizer)
-        self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
-        self.valid = len(self.df) > 0
+        if self.df is not None:
+            x_df = make_x_df(organizer)
+            self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
+            self.valid = len(self.df) > 0
 
     def make_df(self, organizer: DirectoryOrganizer, benchmark_tag: str):
         try:
-            evaluator = Evaluator(organizer, benchmark_tag)
-            eval_rating_data = evaluator.read_ratings_from_db()
-            benchmark_rating = evaluator._benchmark_rating_data.ratings
-            benchmark_iagents = evaluator._benchmark_rating_data.iagents
-            if len(benchmark_rating) > 0:
-                for ia, rating in zip(benchmark_iagents, benchmark_rating):
-                    self.benchmark_elos[ia.agent.level] = rating
+            db = RatingDB(organizer.eval_db_filename(benchmark_tag))
+            eval_ratings: List[DBAgentRating] = db.load_ratings(AgentRole.TEST)
+            benchmark_ratings: List[DBAgentRating] = db.load_ratings(AgentRole.BENCHMARK)
+
+            if len(benchmark_ratings) > 0:
+                for data in benchmark_ratings:
+                    self.benchmark_elos[data.level] = data.rating
+
+            evaluated_gens, evaluated_ratings = zip(*[(data.level, data.rating) for data in eval_ratings])
+            evaluated_gens = np.array(evaluated_gens, dtype=int)
+            evaluated_ratings = np.array(evaluated_ratings, dtype=float)
+            sorted_ix = np.argsort(evaluated_gens)
+
+            df = pd.DataFrame({
+                "mcts_gen": evaluated_gens[sorted_ix],
+                "rating": evaluated_ratings[sorted_ix]
+            })
+
         except Exception as e:
-            print(f"Error loading evaluation for {self.tag}: {e}")
             self.valid = False
-            return
-
-        evaluated_gens = np.array([ia.agent.gen for ia in eval_rating_data.evaluated_iagents])
-        evaluated_ratings = eval_rating_data.ratings
-        sorted_ix = np.argsort(evaluated_gens)
-
-        df = pd.DataFrame({
-            "mcts_gen": evaluated_gens[sorted_ix],
-            "rating": evaluated_ratings[sorted_ix]
-        })
+            return None
 
         return df
 
