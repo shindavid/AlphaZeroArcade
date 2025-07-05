@@ -72,7 +72,8 @@ TEST(BoostUtil, get_random_set_index) {
 
   int count = bitset.count();
   int c = bitset.find_first();
-  while (count-- > 0) {
+  int i = count;
+  while (i-- > 0) {
     EXPECT_GT(counts[c], N / (2 * count));
     c = bitset.find_next(c);
   }
