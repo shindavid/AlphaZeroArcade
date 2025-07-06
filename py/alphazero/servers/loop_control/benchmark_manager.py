@@ -334,8 +334,10 @@ class BenchmarkManager(GamingManagerBase):
         return latest_gen
 
     def _update_committee(self):
+        if self._benchmarker.has_no_matches():
+            return
         self._benchmarker.refresh_ratings()
-        committee: IndexSet = self._benchmarker.select_committee(self.target_elo_gap)
+        committee: IndexSet = Benchmarker.select_committee(self._benchmarker.ratings, self.target_elo_gap)
         self.excluded_agent_indices = ~committee
         self.evaluated_iagents = self._benchmarker.indexed_agents
         with self._benchmarker.db.db_lock:

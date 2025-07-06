@@ -179,7 +179,8 @@ class Benchmarker:
                              set_temp_zero=True,
                              tag=self._organizer.tag)
 
-    def select_committee(self, target_elo_gap) -> IndexSet:
+    @staticmethod
+    def select_committee(elos, target_elo_gap) -> IndexSet:
         """
         Selects a committee of generations that are spaced out by the target elo gap.
         The committee is selected by sorting the generations by their elo ratings, and then
@@ -187,7 +188,6 @@ class Benchmarker:
         spaced out by at least the target elo gap. This is done until all agents are scanned.
         The committee is returned as a set of IndexedAgent objects.
         """
-        elos = self._arena.ratings
         sorted_ix = np.argsort(elos)[::-1]
         sorted_elos = elos[sorted_ix]
         committee_ixs = [sorted_ix[0]]
@@ -198,7 +198,7 @@ class Benchmarker:
                 committee_ixs.append(sorted_ix[i])
                 last_selected_elo = sorted_elos[i]
 
-        committee = np.zeros(len(self._arena.indexed_agents), dtype=bool)
+        committee = np.zeros(len(elos), dtype=bool)
         committee[committee_ixs] = True
         return IndexSet.from_bits(committee)
 
@@ -229,3 +229,7 @@ class Benchmarker:
     @property
     def adjacent_matrix(self) -> np.ndarray:
         return self._arena.adjacent_matrix()
+
+    @property
+    def ratings(self) -> np.ndarray:
+        return self._arena.ratings

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from alphazero.logic.agent_types import AgentRole, ReferenceAgent
 from alphazero.logic.arena import Arena
+from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.rating_db import RatingDB
 from games.game_spec import GameSpec
@@ -22,7 +23,6 @@ from typing import List
 
 REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
 logger = logging.getLogger(__name__)
-TARGET_ELO_GAP = 500
 
 
 class ReferenceBenchmarker:
@@ -31,6 +31,7 @@ class ReferenceBenchmarker:
             f'Game {game_spec.name} does not have a reference player family'
 
         self.neighborhood_size = args.neighborhood_size
+        self.min_elo_gap = args.min_elo_gap
         self.game_spec = game_spec
         self.db_filename = os.path.join('/workspace/output', self.game_spec.name, 'reference.players/databases', 'benchmark.db')
         os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
@@ -72,12 +73,18 @@ class ReferenceBenchmarker:
 
     def commit_benchmark_ratings(self):
         self.arena.refresh_ratings()
-        committee = IndexSet.from_bits(np.ones(len(self.arena.indexed_agents), dtype=bool))
+        committee = Benchmarker.select_committee(self.arena.ratings, self.min_elo_gap)
         self.db.commit_ratings(self.arena.indexed_agents,
                                self.arena.ratings,
                                committee=committee)
         cmd = shlex.join(sys.argv)
-        self.db.save_ratings_to_json(self.arena.indexed_agents, self.arena.ratings,
+        committee_iagents = []
+        committee_ratings = []
+        for ix in committee:
+            committee_iagents.append(self.arena.indexed_agents[ix])
+            committee_ratings.append(self.arena.ratings[ix])
+
+        self.db.save_ratings_to_json(committee_iagents, committee_ratings,
                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):
@@ -114,6 +121,7 @@ def load_args():
                         help='Neighborhood size (default: %(default)s)')
     game_index.add_parser_argument(parser, '-g', '--game',
                                    help='Comma-separate games. If not specified, all games will be benchmarked.')
+    parser.add_argument('--min-elo-gap', type=float, default=200.0, help='Minimum elo gap between generations in the committee (default: %(default)s)')
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
