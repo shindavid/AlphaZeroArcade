@@ -30,10 +30,6 @@ class BenchmarkRatingData:
     ratings: np.ndarray
     committee: IndexSet
     tag: str
-    lookup_elo: Dict[int, float] = field(init=False)
-
-    def __post_init__(self):
-        self.lookup_elo = {iagent.index: rating for iagent, rating in zip(self.iagents, self.ratings)}
 
 
 class Benchmarker:
