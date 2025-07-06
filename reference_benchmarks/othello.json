@@ -1,5 +1,5 @@
 {
-  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py --neighborhood-size 5",
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g othello --neighborhood-size 5",
   "ReferenceAgent-depth-0": {
     "iagent": {
       "agent": {
@@ -48,6 +48,22 @@
     },
     "rating": 1033.8024166543455
   },
+  "ReferenceAgent-depth-3": {
+    "iagent": {
+      "agent": {
+        "type_str": "edax",
+        "strength_param": "--depth",
+        "strength": 3,
+        "tag": null,
+        "binary": null
+      },
+      "index": 3,
+      "roles": "benchmark",
+      "db_id": 4,
+      "type": "Reference"
+    },
+    "rating": 1363.3832861863757
+  },
   "ReferenceAgent-depth-4": {
     "iagent": {
       "agent": {
@@ -64,37 +80,53 @@
     },
     "rating": 1522.8947836616933
   },
-  "ReferenceAgent-depth-6": {
+  "ReferenceAgent-depth-5": {
     "iagent": {
       "agent": {
         "type_str": "edax",
         "strength_param": "--depth",
-        "strength": 6,
+        "strength": 5,
         "tag": null,
         "binary": null
       },
-      "index": 6,
+      "index": 5,
       "roles": "benchmark",
-      "db_id": 7,
+      "db_id": 6,
       "type": "Reference"
     },
-    "rating": 1891.3292746225986
+    "rating": 1704.338727963137
   },
-  "ReferenceAgent-depth-8": {
+  "ReferenceAgent-depth-7": {
     "iagent": {
       "agent": {
         "type_str": "edax",
         "strength_param": "--depth",
-        "strength": 8,
+        "strength": 7,
         "tag": null,
         "binary": null
       },
-      "index": 8,
+      "index": 7,
       "roles": "benchmark",
-      "db_id": 9,
+      "db_id": 8,
       "type": "Reference"
     },
-    "rating": 2153.2976822768183
+    "rating": 1978.0849485266674
+  },
+  "ReferenceAgent-depth-9": {
+    "iagent": {
+      "agent": {
+        "type_str": "edax",
+        "strength_param": "--depth",
+        "strength": 9,
+        "tag": null,
+        "binary": null
+      },
+      "index": 9,
+      "roles": "benchmark",
+      "db_id": 10,
+      "type": "Reference"
+    },
+    "rating": 2252.461452858843
   },
   "ReferenceAgent-depth-10": {
     "iagent": {
@@ -111,6 +143,22 @@
       "type": "Reference"
     },
     "rating": 2423.9753049184737
+  },
+  "ReferenceAgent-depth-12": {
+    "iagent": {
+      "agent": {
+        "type_str": "edax",
+        "strength_param": "--depth",
+        "strength": 12,
+        "tag": null,
+        "binary": null
+      },
+      "index": 12,
+      "roles": "benchmark",
+      "db_id": 13,
+      "type": "Reference"
+    },
+    "rating": 2557.370968529248
   },
   "ReferenceAgent-depth-14": {
     "iagent": {

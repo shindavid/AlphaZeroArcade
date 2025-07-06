@@ -121,7 +121,7 @@ def load_args():
                         help='Neighborhood size (default: %(default)s)')
     game_index.add_parser_argument(parser, '-g', '--game',
                                    help='Comma-separate games. If not specified, all games will be benchmarked.')
-    parser.add_argument('--min-elo-gap', type=float, default=200.0, help='Minimum elo gap between generations in the committee (default: %(default)s)')
+    parser.add_argument('--min-elo-gap', type=float, default=100.0, help='Minimum elo gap between generations in the committee (default: %(default)s)')
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
