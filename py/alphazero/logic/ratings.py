@@ -155,8 +155,16 @@ def compute_ratings(w: np.ndarray, eps: float=0.0) -> np.ndarray:
     beta = np.log(p) * BETA_SCALE_FACTOR
     return beta
 
-def win_prob(elo1: float, elo2: float) -> float:
+
+def win_prob(elo1, elo2):
+    """
+    Computes the win probability of player 1 against player 2 given their Elo ratings.
+
+    Note that elo1 and elo2 can be scalars or numpy arrays. They should be compatible via standard
+    numpy broadcasting rules, and the output will reflect any broadcasting that occurs.
+    """
     return 1 / (1 + np.exp((elo2 - elo1) / BETA_SCALE_FACTOR))
+
 
 def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: float = 0.0,
                         lower: float = -np.inf, upper: float = np.inf, max_step: float = 200,
