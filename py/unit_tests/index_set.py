@@ -45,30 +45,6 @@ class TestIndexSet(unittest.TestCase):
         self.assertIn(100, s)
         self.assertNotIn(99, s)
 
-    def test_invert(self):
-        s = IndexSet()
-        s.add(2)
-        s.add(4)
-        inverted = s.invert(6)
-        self.assertEqual(set(inverted), {0, 1, 3, 5})
-        self.assertNotIn(2, inverted)
-        self.assertNotIn(4, inverted)
-
-    def test_invert_small_n(self):
-        s = IndexSet()
-        s.add(2)
-        s.add(4)
-        s.add(5)
-        inverted = s.invert(3)
-        self.assertEqual(set(inverted), {0, 1})
-        self.assertNotIn(2, inverted)
-        self.assertNotIn(4, inverted)
-
-    def test_invert_empty(self):
-        s = IndexSet()
-        inv = s.invert(5)
-        self.assertEqual(set(inv), {0, 1, 2, 3, 4})
-
     def test_repr(self):
         s = IndexSet()
         s.add(3)

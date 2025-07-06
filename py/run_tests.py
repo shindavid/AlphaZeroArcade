@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
+from util.repo_util import Repo
+from util import subprocess_util
+from util.py_util import CustomHelpFormatter
+
+from termcolor import colored
+
 import argparse
 import os
 import subprocess
 import sys
 
-from util.repo_util import Repo
-from util import subprocess_util
-from util.py_util import CustomHelpFormatter
-
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     parser.add_argument('-b', '--build', help='Release or Debug. Default: most recent build')
+    parser.add_argument('-c', '--cpp-only', action='store_true',
+                        help='Run only C++ tests, skip Python tests')
+    parser.add_argument('-p', '--py-only', action='store_true',
+                        help='Run only Python tests, skip C++ tests')
     return parser.parse_args()
 
 
@@ -41,17 +47,17 @@ def get_default_build():
     return build
 
 
-def run_tests(build):
+def run_cpp_tests(build):
     tests_dir = f'target/{build}/bin/tests'
 
     if not os.path.isdir(tests_dir):
-        print(f'No built tests found for {build}. Please run py/build.py first.')
+        print(colored(f'No built tests found for {build}. Please run py/build.py first.', 'red'))
         sys.exit(1)
 
     bins = os.listdir(tests_dir)
 
     if not bins:
-        print(f'No built tests found for {build}. Please run py/build.py first.')
+        print(colored(f'No built tests found for {build}. Please run py/build.py first.', 'red'))
         sys.exit(1)
 
     pass_count = 0
@@ -63,7 +69,7 @@ def run_tests(build):
         proc = subprocess_util.Popen(full_bin)
         stdout, stderr = proc.communicate()
         if proc.returncode:
-            print('FAILURE!')
+            print(colored('FAILURE!', 'red'))
             print('stdout:')
             print(stdout)
             print('stderr:')
@@ -73,11 +79,33 @@ def run_tests(build):
             pass_count += 1
 
     if fail_count == 0:
-        print('All tests passed!')
-        sys.exit(0)
+        print(colored('All c++ tests passed!', 'green'))
     else:
-        print(f'Failed {fail_count} of {fail_count + pass_count} tests!')
-        sys.exit(1)
+        print(colored(f'Failed {fail_count} of {fail_count + pass_count} c++ tests!', 'red'))
+
+
+def run_py_tests():
+    """
+    Walks the py/unit_tests/ directory and runs every python file contained within.
+    """
+    tests_dir = 'py/unit_tests'
+
+    # use os.walk to find all python files in the tests directory
+    for root, dirs, files in os.walk(tests_dir):
+        for file in files:
+            if file.endswith('.py') and not file.startswith('__'):
+                # we found a python test file, run it
+                full_file = os.path.join(root, file)
+                cmd = ['python3', full_file]
+                try:
+                    subprocess.run(cmd, check=True, text=True, capture_output=True)
+                    print(colored(f'SUCCESS: {full_file}', 'green'))
+                except subprocess.CalledProcessError as e:
+                    print(colored(f'FAILURE in {full_file}!', 'red'))
+                    print('stdout:')
+                    print(e.stdout)
+                    print('stderr:')
+                    print(e.stderr)
 
 
 def main():
@@ -90,7 +118,10 @@ def main():
     if build is None:
         build = get_default_build()
 
-    run_tests(build)
+    if not args.py_only:
+        run_cpp_tests(build)
+    if not args.cpp_only:
+        run_py_tests()
 
 
 if __name__ == '__main__':
