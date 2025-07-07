@@ -1,7 +1,5 @@
 #pragma once
 
-#include <mutex>
-
 #ifndef MIT_TEST_MODE
 static_assert(false, "This file is not intended to be #include'd directly.");
 #endif  // MIT_TEST_MODE
@@ -27,8 +25,8 @@ class mutex {
   void unlock();
 
  private:
-  std::mutex mutex_;
-  int mutex_id_ = -1;  // used by scheduler
+  int id_ = -1;  // set by scheduler
+  bool locked_ = false;
 };
 
 }  // namespace mit

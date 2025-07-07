@@ -2,6 +2,9 @@
 
 #include <util/Asserts.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/LoggingUtil.hpp>
+#include <util/Random.hpp>
+#include <util/mit/condition_variable.hpp>
 #include <util/mit/thread.hpp>
 #include <util/mit/mutex.hpp>
 
@@ -9,190 +12,205 @@ namespace mit {
 
 scheduler* scheduler::instance_ = nullptr;
 
-void scheduler::register_thread(thread* t) {
-  std::unique_lock lock(mutex_);
-  util::release_assert(t->thread_id_ < 0, "Thread already registered ({})", t->thread_id_);
-  t->thread_id_ = all_threads_.size();
-  all_threads_.push_back(t);
-  viable_threads_.resize(all_threads_.size(), true);
+void scheduler::register_thread(thread_impl* t) {
+  util::release_assert(t->id < 0, "Thread already registered ({})", t->id);
+
+  t->id = thread_id_provider_.get_next_id();
+  if (t->id >= (int)all_threads_.size()) {
+    all_threads_.resize(t->id + 1);
+    viable_threads_.resize(t->id + 1);
+  }
+  all_threads_[t->id] = t;
+  viable_threads_[t->id] = t->viable();
+  LOG_INFO("Registering thread {} (viable={})", t->id, t->viable());
 }
 
-void scheduler::unregister_thread(thread* t) {
-  util::release_assert(t->thread_id_ > 0, "Cannot unregister main thread");
-  util::release_assert(active_thread_ != t, "Cannot unregister active thread ({})", t->thread_id_);
+void scheduler::unregister_thread(thread_impl* t) {
+  util::release_assert(t->id >= 0, "Thread not registered ({})", t->id);
 
-  validate_thread(t);
-  all_threads_.erase(all_threads_.begin() + t->thread_id_);
-
-  size_t n = all_threads_.size();
-
-  // Reset thread ID for the remaining threads
-  for (size_t i = t->thread_id_; i < n; ++i) {
-    all_threads_[i]->thread_id_ = i;
-  }
-
-  // Splice the viable threads bitset to match the new size
-  for (size_t i = t->thread_id_; i < n; ++i) {
-    viable_threads_[i] = viable_threads_[i + 1];
-  }
-  viable_threads_.resize(n);
+  all_threads_[t->id] = nullptr;  // Clear the thread from the list
+  viable_threads_[t->id] = false;
+  thread_id_provider_.recycle(t->id);
+  LOG_INFO("Unregistering thread {}", t->id);
 }
 
-void scheduler::pass_control_to(thread* t) {
+void scheduler::deactivate_thread(thread_impl* t) {
+  LOG_INFO("Deactivating thread {}", t->id);
+  t->activated = false;
+  viable_threads_[t->id] = false;
+
+  thread_impl* next_thread = get_next_thread();
+  {
+    std::unique_lock lock(mutex_);
+    active_thread_ = next_thread;
+  }
+
+  cv_.notify_all();
+}
+
+void scheduler::block_until_has_control(thread_impl* t) {
+  LOG_INFO("Blocking thread {} until it has control", t->id);
   std::unique_lock lock(mutex_);
+  cv_.wait(lock, [&]() { return active_thread_ == t; });
+}
+
+void scheduler::pass_control_to(thread_impl* t) {
+  LOG_INFO("Passing control from thread {} to thread {}", active_thread_->id, t->id);
   validate_thread_viability(t);
-  if (active_thread_ == t) return;
 
-  thread* current_thread = active_thread_;
-  active_thread_ = t;
-  cv_.wait(lock, [&]() { return active_thread_ == current_thread; });
-}
-
-void scheduler::switch_active_thread() {
   std::unique_lock lock(mutex_);
+  if (active_thread_ == t) return;
+  thread_impl* current_thread = active_thread_;
+  active_thread_ = t;
 
-  int next = boost_util::get_random_set_index(viable_threads_);
-  util::release_assert(next >= 0, "No viable threads available for switching");
-  active_thread_ = all_threads_[next];
+  LOG_INFO("Active thread is now {}. Waiting until {} becomes the active thread",
+           active_thread_->id, current_thread->id);
 
   lock.unlock();
-  cv_.notify_all();  // Notify all threads that the active thread has changed
-}
-
-void scheduler::move_thread(thread* from, thread* to) {
-  std::unique_lock lock(mutex_);
-  unregister_thread(from);
-  validate_thread(to);
-
-  if (active_thread_ == from) {
-    active_thread_ = to;
-    lock.unlock();
-    cv_.notify_all();  // Notify all threads that the active thread has changed (not needed?)
-  }
-}
-
-void scheduler::deactivate_thread(thread* t) {
-  util::release_assert(t->thread_id_ > 0, "Cannot deactivate main thread");
-
-  validate_thread(t);
-  viable_threads_[t->thread_id_] = false;
-  switch_active_thread();
+  cv_.notify_all();
+  lock.lock();
+  cv_.wait(lock, [&]() { return active_thread_ == current_thread; });
+  LOG_INFO("Wait over. Thread {} has control", active_thread_->id);
 }
 
 void scheduler::register_mutex(mutex* m) {
-  util::release_assert(m->mutex_id_ < 0, "Mutex already registered ({})", m->mutex_id_);
-  m->mutex_id_ = all_mutexes_.size();
-  all_mutexes_.push_back(m);
-  locked_mutexes_.resize(all_mutexes_.size(), false);
+  util::release_assert(m->id_ < 0, "Mutex already registered ({})", m->id_);
+
+  m->id_ = mutex_id_provider_.get_next_id();
+  if (m->id_ >= (int)mutex_block_map_.size()) {
+    mutex_block_map_.resize(m->id_ + 1, nullptr);
+  }
+  util::release_assert(mutex_block_map_[m->id_] == nullptr);
 }
 
 void scheduler::unregister_mutex(mutex* m) {
-  util::release_assert(all_mutexes_.size() == locked_mutexes_.size(),
-                      "all_mutexes_ and locked_mutexes_ not in sync ({} != {})",
-                      all_mutexes_.size(), locked_mutexes_.size());
+  util::release_assert(m->id_ >= 0, "Mutex not registered ({})", m->id_);
 
-  validate_mutex(m);
-  all_mutexes_.erase(all_mutexes_.begin() + m->mutex_id_);
-
-  size_t n = all_mutexes_.size();
-
-  // Reset mutex ID for the remaining mutexes
-  for (size_t i = m->mutex_id_; i < n; ++i) {
-    all_mutexes_[i]->mutex_id_ = i;
-  }
-
-  // Splice the locked mutexes bitset to match the new size
-  for (size_t i = m->mutex_id_; i < n; ++i) {
-    locked_mutexes_[i] = locked_mutexes_[i + 1];
-  }
-  locked_mutexes_.resize(n);
+  delete mutex_block_map_[m->id_];
+  mutex_block_map_[m->id_] = nullptr;
+  mutex_id_provider_.recycle(m->id_);
 }
 
 void scheduler::mark_active_thread_as_blocked_by(mutex* m) {
-  std::unique_lock lock(mutex_);
-  validate_thread(active_thread_);
-
+  LOG_INFO("Marking active thread {} as blocked by mutex {}", active_thread_->id, m->id_);
   active_thread_->mark_as_blocked_by(m);
-  mutex_block_map_[m].push_back(active_thread_);
-  viable_threads_[active_thread_->thread_id_] = false;
+  if (!mutex_block_map_[m->id_]) {
+    mutex_block_map_[m->id_] = new thread_vec_t();
+  }
+  mutex_block_map_[m->id_]->push_back(active_thread_);
+  viable_threads_[active_thread_->id] = false;
 }
 
-bool scheduler::is_locked(mutex* m) const {
-  validate_mutex(m);
-  return locked_mutexes_[m->mutex_id_];
-}
-
-void scheduler::mark_as_locked(mutex* m) {
-  validate_mutex(m);
-  locked_mutexes_[m->mutex_id_] = true;
-}
 
 void scheduler::mark_as_unlocked(mutex* m) {
-  validate_mutex(m);
-  locked_mutexes_[m->mutex_id_] = false;
+  LOG_INFO("Marking mutex {} as unlocked", m->id_);
+  thread_vec_t* blocked_threads = mutex_block_map_[m->id_];
+  if (!blocked_threads) return;
 
-  auto it = mutex_block_map_.find(m);
-  if (it == mutex_block_map_.end()) return;
-
-  thread_vec_t& blocked_threads = it->second;
-  for (thread* t : blocked_threads) {
+  for (thread_impl* t : *blocked_threads) {
     t->lift_block(m);
-    viable_threads_[t->thread_id_] = t->viable();
+    viable_threads_[t->id] = t->viable();
   }
-  mutex_block_map_.erase(it);
+  blocked_threads->clear();
 }
 
 void scheduler::register_condition_variable(condition_variable* cv) {
-  throw util::Exception("TODO");
+  util::release_assert(cv->id_ < 0, "Condition variable already registered ({})", cv->id_);
+
+  cv->id_ = cv_id_provider_.get_next_id();
+  if (cv->id_ >= (int)cv_block_map_.size()) {
+    cv_block_map_.resize(cv->id_ + 1, nullptr);
+  }
+  util::release_assert(cv_block_map_[cv->id_] == nullptr);
 }
 
 void scheduler::unregister_condition_variable(condition_variable* cv) {
-    throw util::Exception("TODO");
+  util::release_assert(cv->id_ >= 0, "Condition variable not registered ({})", cv->id_);
+
+  delete cv_block_map_[cv->id_];
+  cv_block_map_[cv->id_] = nullptr;
+  cv_id_provider_.recycle(cv->id_);
 }
 
 void scheduler::notify_one(condition_variable* cv) {
-    throw util::Exception("TODO");
+  LOG_INFO("Notifying one thread waiting on condition variable {}", cv->id_);
+  thread_predicate_vec_t* blocked_threads = cv_block_map_[cv->id_];
+  if (!blocked_threads || blocked_threads->empty()) return;
+
+  int n = blocked_threads->size();
+
+  // notify a random thread:
+  auto it = blocked_threads->begin() + util::Random::uniform_sample(0, n);
+
+  thread_impl* t = it->first;
+  predicate_t& pred = it->second;
+  if (pred()) {
+    // If the predicate is satisfied, lift the block and remove the thread from the vector
+    t->lift_block(cv);
+    viable_threads_[t->id] = t->viable();
+    blocked_threads->erase(it);
+  }
 }
 
 void scheduler::notify_all(condition_variable* cv) {
-    throw util::Exception("TODO");
+  LOG_INFO("Notifying all threads waiting on condition variable {}", cv->id_);
+  thread_predicate_vec_t* blocked_threads = cv_block_map_[cv->id_];
+  if (!blocked_threads || blocked_threads->empty()) return;
+
+  for (auto& pair : *blocked_threads) {
+    thread_impl* t = pair.first;
+    predicate_t& pred = pair.second;
+
+    if (pred()) {
+      t->lift_block(cv);
+      viable_threads_[t->id] = t->viable();
+    } else {
+      tmp_thread_predicate_vec_.push_back(pair);
+    }
+  }
+
+  std::swap(*blocked_threads, tmp_thread_predicate_vec_);
+  tmp_thread_predicate_vec_.clear();
 }
 
 void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock) {
-    throw util::Exception("TODO");
+  wait_on_helper(cv, lock, []() { return true; });
 }
 
 scheduler::scheduler() {
   thread* main_thread = new thread(true);
-  register_thread(main_thread);
-  util::release_assert(main_thread->thread_id_ == 0,
-                       "Main thread should have thread_id_ 0, got {}", main_thread->thread_id_);
-  active_thread_ = main_thread;  // Set the main thread as the active thread
+  register_thread(main_thread->impl_.get());
+
+  util::release_assert(main_thread->id() == 0,
+                       "Main thread should have id() 0, got {}", main_thread->id());
+  active_thread_ = main_thread->impl_.get();  // Set the main thread as the active thread
 }
 
-void scheduler::validate_thread(thread* t) const {
-  int i = t->thread_id_;
-  util::release_assert(i >= 0 && i < (int)all_threads_.size(),
-                       "Thread ID out of range ({}), all_threads_ size: {}", i,
-                       all_threads_.size());
-  util::release_assert(all_threads_[i] == t,
-                       "Thread at index {} does not match expected thread pointer", i);
+thread_impl* scheduler::get_next_thread() const {
+  int next = boost_util::get_random_set_index(viable_threads_);
+  if (next < 0) throw DeadlockException();
+  LOG_INFO("Next viable thread index: {}", next);
+  return all_threads_[next];
 }
 
-void scheduler::validate_thread_viability(thread* t) const {
-  int i = t ? t->thread_id_ : 0;
+
+void scheduler::validate_thread_viability(thread_impl* t) const {
+  int i = t ? t->id : 0;
+  int m = all_threads_.size();
   int n = viable_threads_.size();
 
-  util::release_assert(i >= 0 && i < n, "Thread ID out of range (i={} n={})", i, n);
-  util::release_assert(viable_threads_[i], "Thread ID {} is not viable", i);
+  util::debug_assert(i >= 0 && i < n, "Thread ID out of range (i={} n={} m={})", i, n, m);
+  util::debug_assert(viable_threads_[i], "Thread ID {} is not viable", i);
 }
 
-void scheduler::validate_mutex(mutex* m) const {
-  int i = m->mutex_id_;
-  util::release_assert(i >= 0 && i < (int)all_mutexes_.size(),
-                       "Mutex ID out of range ({}), all_mutexes_ size: {}", i, all_mutexes_.size());
-  util::release_assert(all_mutexes_[i] == m,
-                       "Mutex at index {} does not match expected mutex pointer", i);
+void scheduler::wait_on_helper(condition_variable* cv, unique_lock<mutex>& lock, predicate_t pred) {
+  LOG_INFO("Thread {} waiting on condition variable {}", active_thread_->id, cv->id_);
+  active_thread_->mark_as_blocked_by(cv);
+  if (!cv_block_map_[cv->id_]) {
+    cv_block_map_[cv->id_] = new thread_predicate_vec_t();
+  }
+  cv_block_map_[cv->id_]->push_back(std::make_pair(active_thread_, []() { return true; }));
+  viable_threads_[active_thread_->id] = false;
 }
 
 }  // namespace mit

@@ -3,8 +3,6 @@
 #include <util/mit/mutex.hpp>
 #include <util/mit/unique_lock.hpp>
 
-#include <condition_variable>
-
 #ifndef MIT_TEST_MODE
 static_assert(false, "This file is not intended to be #include'd directly.");
 #endif  // MIT_TEST_MODE
@@ -18,6 +16,8 @@ namespace mit {
 // class to include more functionality as needed.
 class condition_variable {
  public:
+  friend class scheduler;
+
   condition_variable();
   ~condition_variable();
 
@@ -33,7 +33,7 @@ class condition_variable {
   void wait(mit::unique_lock<mit::mutex>& lock, Predicate pred);
 
  private:
-  std::condition_variable cv_;
+  int id_ = -1;  // used by scheduler
 };
 
 }  // namespace mit
