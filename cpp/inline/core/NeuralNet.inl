@@ -101,7 +101,10 @@ void NeuralNet<Game>::deactivate() {
     delete pipeline;
   }
   pipelines_.clear();
-  available_pipeline_indices_.clear();
+  {
+    std::unique_lock lock(pipeline_mutex_);
+    available_pipeline_indices_.clear();
+  }
 
   delete engine_;
   engine_ = nullptr;
@@ -125,11 +128,16 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
   batch_size_ = input_shape.d[0];
 
   util::release_assert(pipelines_.empty());
-  util::release_assert(available_pipeline_indices_.empty());
-  for (int i = 0; i < num_pipelines; ++i) {
-    pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));
-    available_pipeline_indices_.push_back(i);
+
+  {
+    std::unique_lock lock(pipeline_mutex_);
+    util::release_assert(available_pipeline_indices_.empty());
+    for (int i = 0; i < num_pipelines; ++i) {
+      pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));
+      available_pipeline_indices_.push_back(i);
+    }
   }
+  pipeline_cv_.notify_all();
 
   LOG_DEBUG("Done activating NeuralNet ({})!", num_pipelines);
   return true;
