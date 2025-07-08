@@ -23,5 +23,11 @@ class TestSelectCommittee(unittest.TestCase):
         committee = Benchmarker.select_committee(elos, min_elo_gap)
         self.assertTrue(np.array_equal(committee, [1, 1, 0]))
 
+    def test_duplicate_elos(self):
+        elos = np.array([1000, 1300, 1300, 1300])
+        min_elo_gap = 200
+        committee = Benchmarker.select_committee(elos, min_elo_gap)
+        self.assertTrue(np.array_equal(committee, [1, 0, 0, 1]))
+
 if __name__ == '__main__':
     unittest.main()
