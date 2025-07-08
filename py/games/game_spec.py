@@ -89,6 +89,14 @@ class GameSpec(abc.ABC):
         return None
 
     @property
+    def ref_neighborhood_size(self) -> Optional[int]:
+        """
+        The size of strength neighborhood of reference players to use when generating a benchmark,
+        using the reference players.
+        """
+        return None
+
+    @property
     def training_params(self) -> Optional[TrainingParams]:
         """
         Default TrainingParams to use for this game. If not specified, the default uses the
