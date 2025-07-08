@@ -21,7 +21,7 @@ import sys
 from typing import List, Optional
 
 
-REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
+REF_DIR = os.path.join('/workspace/repo/benchmarks/reference.players')
 logger = logging.getLogger(__name__)
 
 
