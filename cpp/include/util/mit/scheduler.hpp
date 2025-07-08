@@ -6,6 +6,7 @@
 #include <boost/dynamic_bitset.hpp>
 
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <vector>
 
@@ -37,16 +38,18 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
+  using func_t = std::function<void()>;
+
   static scheduler* instance();
 
   void register_thread(thread_impl*);
   void unregister_thread(thread_impl*);
   thread_impl* active_thread();
-  void yield_control();
+  void join_thread(thread_impl* t);
 
+  void yield_control(thread_impl* t=nullptr);    // Beware thread-safety
   void deactivate_thread(thread_impl* t);        // Beware thread-safety
   void block_until_has_control(thread_impl* t);  // Beware thread-safety
-  void pass_control_to(thread_impl*);            // Beware thread-safety
 
   void register_mutex(mutex* m);
   void unregister_mutex(mutex* m);
@@ -74,6 +77,8 @@ class scheduler {
 
   scheduler();
 
+  void dump_state() const;
+  void pass_control_to(thread_impl*);
   thread_impl* get_next_thread() const;
   void validate_thread_viability(thread_impl*) const;
   void wait_on_helper(condition_variable* cv, unique_lock<mutex>& lock, predicate_t pred);

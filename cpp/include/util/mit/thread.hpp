@@ -60,7 +60,7 @@ class thread {
   thread& operator=(const thread&) = delete;
 
   bool joinable() const noexcept { return this == owner() && impl_->std_thread.joinable(); }
-  void join() { return impl_->std_thread.join(); }
+  void join();
 
  private:
   // Special constructor for the main thread.

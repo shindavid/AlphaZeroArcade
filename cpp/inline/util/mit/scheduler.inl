@@ -25,8 +25,6 @@ inline scheduler* scheduler::instance() {
 
 inline thread_impl* scheduler::active_thread() { return active_thread_; }
 
-inline void scheduler::yield_control() { pass_control_to(get_next_thread()); }
-
 template <class Predicate>
 void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock, Predicate pred) {
   if (pred()) {

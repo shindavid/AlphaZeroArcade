@@ -15,7 +15,6 @@ inline mutex::~mutex() {
 }
 
 inline void mutex::lock() {
-  LOG_INFO("Attempting to lock mutex {}", id_);
   auto sched = scheduler::instance();
 
   if (locked_) {

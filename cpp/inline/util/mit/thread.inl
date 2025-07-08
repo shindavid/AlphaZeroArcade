@@ -24,7 +24,8 @@ thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true
   };
 
   impl_->std_thread = std::thread(std::move(wrapper));
-  sched->pass_control_to(impl_.get());
+  LOG_INFO("DBG thread={} {}@{}", impl_->id, __FILE__, __LINE__);
+  sched->yield_control(impl_.get());
 }
 
 inline thread::thread(thread&& other) noexcept {
@@ -36,6 +37,13 @@ inline thread& thread::operator=(thread&& other) noexcept {
   impl_ = other.impl_;  // intentionally do not reset other.impl_
   impl_->owner = this;  // transfer ownership to this thread
   return *this;
+}
+
+inline void thread::join() {
+  if (this != impl_->owner) return;
+
+  auto sched = scheduler::instance();
+  sched->join_thread(impl_.get());
 }
 
 inline thread_impl::thread_impl(thread* t, bool activate, bool skip_registration)
