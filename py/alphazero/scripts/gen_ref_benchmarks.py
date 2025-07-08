@@ -31,13 +31,15 @@ class ReferenceBenchmarker:
             f'Game {game_spec.name} does not have a reference player family'
 
         self.min_elo_gap = args.min_elo_gap
+
         if args.neighborhood_size == 1 and game_spec.ref_neighborhood_size is not None:
             self.neighborhood_size = game_spec.ref_neighborhood_size
         else:
             self.neighborhood_size = args.neighborhood_size
 
         self.game_spec = game_spec
-        self.db_filename = os.path.join('/workspace/output', self.game_spec.name, 'reference.players/databases', 'benchmark.db')
+        self.db_filename = os.path.join('/workspace/output', self.game_spec.name,
+                                        'reference.players/databases', 'benchmark.db')
         os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
         self.db = RatingDB(self.db_filename)
         self.arena = Arena()
@@ -123,9 +125,12 @@ def load_args():
 
     parser.add_argument('-n', '--neighborhood-size', type=int, default=1,
                         help='Neighborhood size (default: %(default)s)')
-    game_index.add_parser_argument(parser, '-g', '--game',
-                                   help='Comma-separate games. If not specified, all games will be benchmarked.')
-    parser.add_argument('--min-elo-gap', type=float, default=100.0, help='Minimum elo gap between generations in the committee (default: %(default)s)')
+    game_index.add_parser_argument(
+        parser, '-g', '--game',
+        help='Comma-separate games. If not specified, all games will be benchmarked.')
+    parser.add_argument(
+        '--min-elo-gap', type=float, default=100.0,
+        help='Minimum elo gap between generations in the committee (default: %(default)s)')
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
