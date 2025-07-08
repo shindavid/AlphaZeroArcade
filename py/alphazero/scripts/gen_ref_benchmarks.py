@@ -86,13 +86,14 @@ class ReferenceBenchmarker:
                                self.arena.ratings,
                                committee=committee)
         cmd = shlex.join(sys.argv)
+
         committee_iagents = []
         committee_ratings = []
         for ix in committee:
             committee_iagents.append(self.arena.indexed_agents[ix])
             committee_ratings.append(self.arena.ratings[ix])
 
-        self.db.save_ratings_to_json(committee_iagents, committee_ratings,
+        RatingDB.db.save_ratings_to_json(committee_iagents, committee_ratings,
                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):

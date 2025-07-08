@@ -244,7 +244,8 @@ class RatingDB:
         c.execute('SELECT 1 FROM agents LIMIT 1')
         return c.fetchone() is None
 
-    def save_ratings_to_json(self, iagents: List[IndexedAgent], ratings: np.ndarray, file: str, cmd_used: str):
+    @staticmethod
+    def save_ratings_to_json(iagents: List[IndexedAgent], ratings: np.ndarray, file: str, cmd_used: str):
         data = {}
         data['cmd_used'] = json.dumps(cmd_used)[1:-1] # Remove quotes around the command string
         for ia, elo in zip(iagents, ratings):
