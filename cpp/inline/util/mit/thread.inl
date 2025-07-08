@@ -1,46 +1,53 @@
 #include <util/mit/thread.hpp>
 
 #include <util/Asserts.hpp>
-#include <util/LoggingUtil.hpp>
 #include <util/mit/scheduler.hpp>
 
 namespace mit {
 
-inline thread::thread() noexcept : impl_(std::make_shared<thread_impl>(this)) {}
+inline thread::thread() : impl_(std::make_shared<thread_impl>(this)) {}
 
-inline thread::thread(bool dummy) noexcept
+inline thread::thread(bool dummy)
     : impl_(std::make_shared<thread_impl>(this, true, true)) {}
 
 template <typename Function>
 thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true)) {
   auto sched = scheduler::instance();
 
-  auto wrapper = [sched, this, func = std::forward<Function>(func)]() mutable {
+  thread_impl_ptr impl = impl_;
+  auto wrapper = [sched, impl, func = std::forward<Function>(func)]() mutable {
     // Note: this can be std::move()'d at any point within this lambda, but this->impl_ will
     // continue to point to the same impl, making this kosher.
-    sched->block_until_has_control(this->impl_.get());
+    sched->block_until_has_control(impl.get());
     func();
-    sched->deactivate_thread(this->impl_.get());
+    sched->deactivate_thread(impl.get());
   };
 
   impl_->std_thread = std::thread(std::move(wrapper));
-  LOG_INFO("DBG thread={} {}@{}", impl_->id, __FILE__, __LINE__);
   sched->yield_control(impl_.get());
 }
 
-inline thread::thread(thread&& other) noexcept {
+inline thread::thread(thread&& other) {
   impl_ = other.impl_;  // intentionally do not reset other.impl_
   impl_->owner = this;  // transfer ownership to this thread
 }
 
-inline thread& thread::operator=(thread&& other) noexcept {
+inline thread& thread::operator=(thread&& other) {
   impl_ = other.impl_;  // intentionally do not reset other.impl_
   impl_->owner = this;  // transfer ownership to this thread
   return *this;
 }
 
+inline bool thread::joinable() const {
+  return impl_->std_thread.joinable();
+}
+
+
 inline void thread::join() {
-  if (this != impl_->owner) return;
+  if (this != impl_->owner || !impl_->activated) {
+    impl_->std_thread.join();
+    return;
+  }
 
   auto sched = scheduler::instance();
   sched->join_thread(impl_.get());
@@ -55,6 +62,7 @@ inline thread_impl::thread_impl(thread* t, bool activate, bool skip_registration
 }
 
 inline thread_impl::~thread_impl() {
+  if (id == 0) return;  // Do not unregister the main thread
   auto sched = scheduler::instance();
   sched->unregister_thread(this);
 }

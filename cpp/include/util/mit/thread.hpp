@@ -49,22 +49,22 @@ class thread {
  public:
   friend class scheduler;
 
-  thread() noexcept;
+  thread();
   template <typename Function> explicit thread(Function&& func);
   ~thread() { impl_ = nullptr; }
 
-  thread(thread&& other) noexcept;
-  thread& operator=(thread&& other) noexcept;
+  thread(thread&& other);
+  thread& operator=(thread&& other);
 
   thread(const thread&) = delete;
   thread& operator=(const thread&) = delete;
 
-  bool joinable() const noexcept { return this == owner() && impl_->std_thread.joinable(); }
+  bool joinable() const;
   void join();
 
  private:
   // Special constructor for the main thread.
-  thread(bool dummy) noexcept;
+  thread(bool dummy);
 
   thread* owner() const { return impl_->owner; }
 

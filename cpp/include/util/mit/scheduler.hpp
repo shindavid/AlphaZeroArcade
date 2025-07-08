@@ -68,6 +68,7 @@ class scheduler {
  private:
   using index_vec_t = std::vector<int>;
   using predicate_t = std::function<bool()>;
+  using thread_map_t = std::vector<thread_impl*>;
   using thread_vec_t = std::vector<thread_impl*>;
   using mutex_block_map_t = std::vector<thread_vec_t*>;
 
@@ -90,6 +91,7 @@ class scheduler {
   thread_vec_t all_threads_;
   boost::dynamic_bitset<> viable_threads_;  // Bitset to track which threads are viable
   thread_impl* active_thread_ = nullptr;
+  thread_map_t join_map_;
 
   id_provider mutex_id_provider_;
   mutex_block_map_t mutex_block_map_;
