@@ -15,6 +15,7 @@ import argparse
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from typing import Optional
@@ -70,7 +71,8 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
 def save_benchmark_files(organizer: DirectoryOrganizer):
     benchmarker = Benchmarker(organizer)
     path = os.path.join(BENCHMARK_DIR, organizer.game, organizer.tag)
-    os.makedirs(path, exist_ok=True)
+    model_path = os.path.join(path, 'models')
+    os.makedirs(model_path, exist_ok=True)
     file = os.path.join(path, 'ratings.json')
     rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
 
@@ -86,9 +88,16 @@ def save_benchmark_files(organizer: DirectoryOrganizer):
         db_id += 1
         indexed_agents.append(ia)
         ratings.append(rating_data.ratings[i])
+        gen = ia.agent.gen
+        if gen == 0:
+            continue
+        src = organizer.get_model_filename(gen)
+        shutil.copyfile(src, os.path.join(model_path, f'gen-{gen}.pt'))
 
+    indexed_agents, ratings = zip(*sorted(zip(indexed_agents, ratings), key=lambda x: x[1]))
     cmd = shlex.join(sys.argv)
     RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
+    shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
 
 def main():
     args = load_args()
