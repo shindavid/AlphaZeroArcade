@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+from alphazero.logic.agent_types import IndexedAgent
+from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.build_params import BuildParams
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.scripts.run_local import get_benchmark_tag
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -11,10 +14,13 @@ from util.py_util import CustomHelpFormatter
 import argparse
 import logging
 import os
+import shlex
 import subprocess
+import sys
 from typing import Optional
 
 
+BENCHMARK_DIR = os.path.join('/workspace/repo/benchmarks/mcts')
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +67,28 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
+def save_benchmark_files(organizer: DirectoryOrganizer):
+    benchmarker = Benchmarker(organizer)
+    path = os.path.join(BENCHMARK_DIR, organizer.game, organizer.tag)
+    os.makedirs(path, exist_ok=True)
+    file = os.path.join(path, 'ratings.json')
+    rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
+
+    ix = 0
+    db_id = 1
+    indexed_agents = []
+    ratings = []
+    for i in rating_data.committee:
+        ia: IndexedAgent = rating_data.iagents[i]
+        ia.index = ix
+        ia.db_id = db_id
+        ix += 1
+        db_id += 1
+        indexed_agents.append(ia)
+        ratings.append(rating_data.ratings[i])
+
+    cmd = shlex.join(sys.argv)
+    RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
 
 def main():
     args = load_args()
@@ -89,14 +117,7 @@ def main():
     if not args.skip_set_as_default:
         organizer.save_default_benchmark()
 
-    eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
-    logger.info(f"Running command: {' '.join(eval_cmd)}")
-    try:
-        subprocess.run(eval_cmd, text=True, check=True)
-    except:
-        logger.error(f"Command: {eval_cmd} failed.")
-        return
-    logger.info("Benchmark evaluation completed successfully.")
+    save_benchmark_files(organizer)
 
 
 if __name__ == "__main__":
