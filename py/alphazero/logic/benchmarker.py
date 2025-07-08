@@ -180,7 +180,7 @@ class Benchmarker:
                              tag=self._organizer.tag)
 
     @staticmethod
-    def select_committee(elos, target_elo_gap) -> IndexSet:
+    def select_committee(elos: np.ndarray, target_elo_gap: float) -> IndexSet:
         """
         Selects a committee of generations that are spaced out by the target elo gap.
         The committee is selected by sorting the generations by their elo ratings, and then
