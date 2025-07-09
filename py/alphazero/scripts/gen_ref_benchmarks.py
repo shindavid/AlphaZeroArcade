@@ -18,7 +18,7 @@ import logging
 import os
 import shlex
 import sys
-from typing import List
+from typing import List, Optional
 
 
 REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
@@ -32,10 +32,12 @@ class ReferenceBenchmarker:
 
         self.min_elo_gap = args.min_elo_gap
 
-        if args.neighborhood_size == 1 and game_spec.ref_neighborhood_size is not None:
+        if args.neighborhood_size is not None:
+            self.neighborhood_size = args.neighborhood_size
+        elif game_spec.ref_neighborhood_size is not None:
             self.neighborhood_size = game_spec.ref_neighborhood_size
         else:
-            self.neighborhood_size = args.neighborhood_size
+            self.neighborhood_size = 1
 
         self.game_spec = game_spec
         self.db_filename = os.path.join('/workspace/output', self.game_spec.name,
@@ -123,7 +125,7 @@ def benchmark_reference_players(args, game_specs: List[GameSpec]):
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    parser.add_argument('-n', '--neighborhood-size', type=int, default=1,
+    parser.add_argument('-n', '--neighborhood-size', type=Optional[int], default=None,
                         help='Neighborhood size (default: %(default)s)')
     game_index.add_parser_argument(
         parser, '-g', '--game',
