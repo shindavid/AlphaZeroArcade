@@ -19,8 +19,6 @@
 
 namespace mit {
 
-scheduler* scheduler::instance_ = nullptr;
-
 void scheduler::register_thread(thread_impl* t) {
   util::release_assert(t->id < 0, "Thread already registered ({})", t->id);
 

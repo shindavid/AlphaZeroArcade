@@ -5,7 +5,7 @@
 namespace mit {
 
 void seed(int s) {
-  scheduler::instance()->seed(s);
+  scheduler::instance().seed(s);
 }
 
 }  // namespace mit

@@ -39,8 +39,11 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
+  scheduler(const scheduler&) = delete;
+  scheduler& operator=(const scheduler&) = delete;
+
   static constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
-  static scheduler* instance();
+  static scheduler& instance();
   void seed(int s) { prng_.seed(s); }
 
   void register_thread(thread_impl*);
@@ -103,8 +106,6 @@ class scheduler {
   cv_block_map_t cv_block_map_;
 
   thread_predicate_vec_t tmp_thread_predicate_vec_;  // Used to avoid dynamic allocation
-
-  static scheduler* instance_;
 };
 
 }  // namespace mit

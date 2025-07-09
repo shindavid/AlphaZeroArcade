@@ -16,11 +16,9 @@ inline void id_provider::recycle(int id) {
   recycled_ids_.push_back(id);
 }
 
-inline scheduler* scheduler::instance() {
-  if (!instance_) {
-    instance_ = new scheduler();
-  }
-  return instance_;
+inline scheduler& scheduler::instance() {
+  static scheduler instance;
+  return instance;
 }
 
 inline thread_impl* scheduler::active_thread() { return active_thread_; }
