@@ -180,7 +180,7 @@ class EvalManager(GamingManagerBase):
                     assert self._eval_status_dict[test_iagent.index].failed()
                     self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
                 else:
-                    status = EvalStatus(mcts_gen=gen, owner=conn.client_id, ix_match_status={},
+                    status = EvalStatus(mcts_gen=gen, owner=conn.client_id,
                                         status=EvalRequestStatus.REQUESTED)
                     self._eval_status_dict[test_iagent.index] = status
             aux.needs_new_opponents = True
@@ -248,11 +248,7 @@ class EvalManager(GamingManagerBase):
 
             if indexed_agent1.index not in self._eval_status_dict:
                 self._eval_status_dict[indexed_agent1.index] = EvalStatus(
-                    mcts_gen=indexed_agent1.agent.gen,
-                    owner=None,
-                    ix_match_status={},
-                    status=EvalRequestStatus.FAILED
-                )
+                    mcts_gen=indexed_agent1.agent.gen, owner=None, status=EvalRequestStatus.FAILED)
 
             match_status = MatchStatus(opponent_level=indexed_agent2.agent.level,
                                        n_games=result.counts.n_games,
