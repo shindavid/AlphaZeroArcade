@@ -3,7 +3,7 @@
 #include <util/LoggingUtil.hpp>
 
 #ifdef MIT_TEST_MODE
-  static_assert(false, "MIT_TEST_MODE macro must not be defined for game-exe's");
+static_assert(false, "MIT_TEST_MODE macro must not be defined for game-exe's");
 #endif
 
 template <typename PlayerFactory>

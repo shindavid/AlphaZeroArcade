@@ -16,7 +16,7 @@
  */
 
 #ifndef MIT_TEST_MODE
-  static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
+static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;

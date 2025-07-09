@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #ifndef MIT_TEST_MODE
-  static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
+static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using namespace blokus;
