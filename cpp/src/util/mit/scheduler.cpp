@@ -8,6 +8,7 @@
 #include <util/mit/thread.hpp>
 #include <util/mit/mutex.hpp>
 
+#include <ctime>
 #include <format>
 #include <map>
 #include <sstream>
@@ -165,7 +166,7 @@ void scheduler::notify_one(condition_variable* cv) {
   int n = blocked_threads->size();
 
   // notify a random thread:
-  auto it = blocked_threads->begin() + util::Random::uniform_sample(0, n);
+  auto it = blocked_threads->begin() + util::Random::uniform_sample(prng_, 0, n);
 
   thread_impl* t = it->first;
   predicate_t& pred = it->second;
@@ -206,6 +207,7 @@ void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock) {
 }
 
 scheduler::scheduler() {
+  seed(std::time(nullptr));
   thread* main_thread = new thread(true);
   register_thread(main_thread->impl_.get());
 
@@ -274,7 +276,7 @@ void scheduler::pass_control_to(thread_impl* t) {
 }
 
 thread_impl* scheduler::get_next_thread() const {
-  int next = boost_util::get_random_set_index(viable_threads_);
+  int next = boost_util::get_random_set_index(prng_, viable_threads_);
   if (next < 0) throw DeadlockException();
   return all_threads_[next];
 }

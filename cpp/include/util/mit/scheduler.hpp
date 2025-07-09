@@ -6,8 +6,8 @@
 #include <boost/dynamic_bitset.hpp>
 
 #include <condition_variable>
-#include <functional>
 #include <mutex>
+#include <random>
 #include <vector>
 
 namespace mit {
@@ -38,9 +38,8 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
-  using func_t = std::function<void()>;
-
   static scheduler* instance();
+  void seed(int s) { prng_.seed(s); }
 
   void register_thread(thread_impl*);
   void unregister_thread(thread_impl*);
@@ -84,6 +83,7 @@ class scheduler {
   void validate_thread_viability(thread_impl*) const;
   void wait_on_helper(condition_variable* cv, unique_lock<mutex>& lock, predicate_t pred);
 
+  mutable std::mt19937 prng_;
   std::condition_variable cv_;
   std::mutex mutex_;
 

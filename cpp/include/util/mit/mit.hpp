@@ -10,6 +10,7 @@
 #ifdef MIT_TEST_MODE
 
 #include <util/mit/condition_variable.hpp>
+#include <util/mit/functions.hpp>
 #include <util/mit/lock_guard.hpp>
 #include <util/mit/mutex.hpp>
 #include <util/mit/thread.hpp>
@@ -32,6 +33,9 @@ using lock_guard = std::lock_guard<Mutex>;
 
 template <typename Mutex>
 using unique_lock = std::unique_lock<Mutex>;
+
+inline void seed(int) {}
+
 }  // namespace mit
 
 #endif  // MIT_TEST_MODE
