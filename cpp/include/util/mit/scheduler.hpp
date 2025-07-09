@@ -1,5 +1,6 @@
 #pragma once
 
+#include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/mit/unique_lock.hpp>
 
@@ -38,6 +39,7 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
+  static constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
   static scheduler* instance();
   void seed(int s) { prng_.seed(s); }
 
@@ -78,6 +80,7 @@ class scheduler {
   scheduler();
 
   void dump_state() const;
+  void dump_state_helper() const;
   void pass_control_to(thread_impl*);
   thread_impl* get_next_thread() const;
   void validate_thread_viability(thread_impl*) const;

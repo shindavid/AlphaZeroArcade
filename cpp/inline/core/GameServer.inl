@@ -28,6 +28,27 @@
 
 namespace core {
 
+namespace detail {
+
+/*
+ * Between machine reboots, no two calls to this function from the same machine should return equal
+ * values.
+ */
+inline int64_t get_unique_game_id() {
+  static mit::mutex mut;
+  mit::lock_guard<mit::mutex> lock(mut);
+
+  static int64_t last = 0;
+  int64_t id = util::ns_since_epoch();
+  while (id <= last) {
+    id = util::ns_since_epoch();
+  }
+  last = id;
+  return id;
+}
+
+}  // namespace detail
+
 template <concepts::Game Game>
 auto GameServer<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
@@ -874,7 +895,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::start_game() {
   if (!shared_data_.request_game()) return false;
 
-  game_id_ = util::get_unique_id();
+  game_id_ = detail::get_unique_game_id();
   if (shared_data_.training_data_writer()) {
     game_log_ = std::make_shared<GameWriteLog>(game_id_, util::ns_since_epoch());
   }

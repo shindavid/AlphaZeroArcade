@@ -12,6 +12,11 @@
 #include <format>
 #include <sstream>
 
+#define MIT_LOG(fmt, ...) \
+  if (scheduler::kEnableDebugLogging) { \
+    LOG_INFO(fmt, __VA_ARGS__); \
+  }
+
 namespace mit {
 
 scheduler* scheduler::instance_ = nullptr;
@@ -28,7 +33,7 @@ void scheduler::register_thread(thread_impl* t) {
   all_threads_[t->id] = t;
   viable_threads_[t->id] = t->viable();
   join_map_[t->id] = nullptr;
-  LOG_DEBUG("Registered thread {} (viable={})", t->id, t->viable());
+  MIT_LOG("Registered thread {} (viable={})", t->id, t->viable());
   dump_state();
 }
 
@@ -38,13 +43,13 @@ void scheduler::unregister_thread(thread_impl* t) {
   all_threads_[t->id] = nullptr;  // Clear the thread from the list
   viable_threads_[t->id] = false;
   thread_id_provider_.recycle(t->id);
-  LOG_DEBUG("Unregistered thread {}", t->id);
+  MIT_LOG("Unregistered thread {}", t->id);
   dump_state();
 }
 
 void scheduler::join_thread(thread_impl* t) {
   thread_impl* current_thread = active_thread_;
-  LOG_DEBUG("Joining thread {} (current thread={})", t->id, current_thread->id);
+  MIT_LOG("Joining thread {} (current thread={})", t->id, current_thread->id);
 
   util::release_assert(join_map_[t->id] == nullptr);
   current_thread->activated = false;
@@ -67,13 +72,13 @@ void scheduler::yield_control(thread_impl* t) {
 
 void scheduler::deactivate_thread(thread_impl* t) {
   std::unique_lock lock(mutex_);
-  LOG_DEBUG("Deactivating thread {}", t->id);
+  MIT_LOG("Deactivating thread {}", t->id);
   t->activated = false;
   viable_threads_[t->id] = false;
 
   thread_impl* joining_thread = join_map_[t->id];
   if (joining_thread) {
-    LOG_DEBUG("Reactivating thread {}, which was joining {}", joining_thread->id, t->id);
+    MIT_LOG("Reactivating thread {}, which was joining {}", joining_thread->id, t->id);
     joining_thread->activated = true;
     viable_threads_[joining_thread->id] = joining_thread->viable();
     join_map_[t->id] = nullptr;  // Clear the join map for this
@@ -82,7 +87,7 @@ void scheduler::deactivate_thread(thread_impl* t) {
   thread_impl* next_thread = get_next_thread();
   active_thread_ = next_thread;
 
-  LOG_DEBUG("Deactivation of thread {} complete", t->id);
+  MIT_LOG("Deactivation of thread {} complete", t->id);
   dump_state();
 
   lock.unlock();
@@ -90,10 +95,10 @@ void scheduler::deactivate_thread(thread_impl* t) {
 }
 
 void scheduler::block_until_has_control(thread_impl* t) {
-  LOG_DEBUG("Blocking until thread {} has control", t->id);
+  MIT_LOG("Blocking until thread {} has control", t->id);
   std::unique_lock lock(mutex_);
   cv_.wait(lock, [&]() { return active_thread_ == t; });
-  LOG_DEBUG("Thread {} now has control", t->id);
+  MIT_LOG("Thread {} now has control", t->id);
   dump_state();
 }
 
@@ -116,7 +121,7 @@ void scheduler::unregister_mutex(mutex* m) {
 }
 
 void scheduler::mark_active_thread_as_blocked_by(mutex* m) {
-  LOG_DEBUG("Marking active thread {} as blocked by mutex {}", active_thread_->id, m->id_);
+  MIT_LOG("Marking active thread {} as blocked by mutex {}", active_thread_->id, m->id_);
   active_thread_->mark_as_blocked_by(m);
   if (!mutex_block_map_[m->id_]) {
     mutex_block_map_[m->id_] = new thread_vec_t();
@@ -134,7 +139,7 @@ void scheduler::mark_as_unlocked(mutex* m) {
   for (thread_impl* t : *blocked_threads) {
     t->lift_block(m);
     viable_threads_[t->id] = t->viable();
-    LOG_DEBUG("Thread {} no longer blocked by mutex {}", t->id, m->id_);
+    MIT_LOG("Thread {} no longer blocked by mutex {}", t->id, m->id_);
   }
   blocked_threads->clear();
   dump_state();
@@ -170,7 +175,7 @@ void scheduler::notify_one(condition_variable* cv) {
   thread_impl* t = it->first;
   predicate_t& pred = it->second;
   if (pred()) {
-    LOG_DEBUG("Notifying thread {}, which was blocked on condition variable {}", t->id, cv->id_);
+    MIT_LOG("Notifying thread {}, which was blocked on condition variable {}", t->id, cv->id_);
     // If the predicate is satisfied, lift the block and remove the thread from the vector
     t->lift_block(cv);
     viable_threads_[t->id] = t->viable();
@@ -188,7 +193,7 @@ void scheduler::notify_all(condition_variable* cv) {
     predicate_t& pred = pair.second;
 
     if (pred()) {
-      LOG_DEBUG("Notifying thread {}, which was blocked on condition variable {}", t->id, cv->id_);
+      MIT_LOG("Notifying thread {}, which was blocked on condition variable {}", t->id, cv->id_);
       t->lift_block(cv);
       viable_threads_[t->id] = t->viable();
     } else {
@@ -215,8 +220,8 @@ scheduler::scheduler() {
   active_thread_ = main_thread->impl_.get();  // Set the main thread as the active thread
 }
 
-void scheduler::dump_state() const {
-  LOG_DEBUG("Scheduler state:");
+void scheduler::dump_state_helper() const {
+  LOG_INFO("Scheduler state:");
 
   for (size_t i = 0; i < all_threads_.size(); ++i) {
     thread_impl* t = all_threads_[i];
@@ -230,7 +235,7 @@ void scheduler::dump_state() const {
       if (t->blocking_cv) {
         ss << " blocked_by=cv" << t->blocking_cv->id_;
       }
-      LOG_DEBUG("{}", ss.str());
+      LOG_INFO("{}", ss.str());
     }
   }
 }
@@ -241,7 +246,7 @@ void scheduler::pass_control_to(thread_impl* t) {
 
   if (active_thread_ == t) return;
 
-  LOG_DEBUG("Passing control from thread {} to thread {}", active_thread_->id, t->id);
+  MIT_LOG("Passing control from thread {} to thread {}", active_thread_->id, t->id);
   active_thread_ = t;
 
   dump_state();
@@ -266,7 +271,7 @@ void scheduler::validate_thread_viability(thread_impl* t) const {
 }
 
 void scheduler::wait_on_helper(condition_variable* cv, unique_lock<mutex>& lock, predicate_t pred) {
-  LOG_DEBUG("Thread {} waiting on condition variable {}", active_thread_->id, cv->id_);
+  MIT_LOG("Thread {} waiting on condition variable {}", active_thread_->id, cv->id_);
   active_thread_->mark_as_blocked_by(cv);
   if (!cv_block_map_[cv->id_]) {
     cv_block_map_[cv->id_] = new thread_predicate_vec_t();

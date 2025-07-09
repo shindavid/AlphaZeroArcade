@@ -42,7 +42,6 @@ inline bool thread::joinable() const {
   return impl_->std_thread.joinable();
 }
 
-
 inline void thread::join() {
   if (this != impl_->owner || !impl_->activated) {
     impl_->std_thread.join();

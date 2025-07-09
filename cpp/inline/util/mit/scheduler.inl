@@ -35,4 +35,10 @@ void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock, Predic
   wait_on_helper(cv, lock, pred);
 }
 
+inline void scheduler::dump_state() const {
+  if (kEnableDebugLogging) {
+    dump_state_helper();
+  }
+}
+
 }  // namespace mit
