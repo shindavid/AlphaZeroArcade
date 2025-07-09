@@ -10,7 +10,6 @@
 
 #include <ctime>
 #include <format>
-#include <map>
 #include <sstream>
 
 namespace mit {
@@ -219,42 +218,17 @@ scheduler::scheduler() {
 void scheduler::dump_state() const {
   LOG_DEBUG("Scheduler state:");
 
-  std::map<int, std::vector<int>> inverse_mutex_block_map;
-  std::map<int, std::vector<int>> inverse_cv_block_map;
-
-  for (size_t m = 0; m < mutex_block_map_.size(); ++m) {
-    if (mutex_block_map_[m]) {
-      for (thread_impl* t : *mutex_block_map_[m]) {
-        inverse_mutex_block_map[t->id].push_back(m);
-      }
-    }
-  }
-
-  for (size_t c = 0; c < cv_block_map_.size(); ++c) {
-    if (cv_block_map_[c]) {
-      for (const auto& pair : *cv_block_map_[c]) {
-        inverse_cv_block_map[pair.first->id].push_back(c);
-      }
-    }
-  }
-
   for (size_t i = 0; i < all_threads_.size(); ++i) {
     thread_impl* t = all_threads_[i];
     if (t) {
       std::stringstream ss;
       bool active = (t == active_thread_);
       ss << std::format("{} Thread {}: viable={}", active ? '*' : ' ', i, viable_threads_[i]);
-      auto it = inverse_mutex_block_map.find(i);
-      if (it != inverse_mutex_block_map.end()) {
-        for (int m : it->second) {
-          ss << " m" << m;
-        }
+      if (t->blocking_mutex) {
+        ss << " blocked_by=m" << t->blocking_mutex->id_;
       }
-      it = inverse_cv_block_map.find(i);
-      if (it != inverse_cv_block_map.end()) {
-        for (int c : it->second) {
-          ss << " cv" << c;
-        }
+      if (t->blocking_cv) {
+        ss << " blocked_by=cv" << t->blocking_cv->id_;
       }
       LOG_DEBUG("{}", ss.str());
     }
