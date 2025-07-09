@@ -10,4 +10,9 @@ inline void seed(int s) {
   scheduler::instance().seed(s);
 }
 
+inline void reset() {
+  auto& sched = scheduler::instance();
+  sched.reset();
+}
+
 }  // namespace mit

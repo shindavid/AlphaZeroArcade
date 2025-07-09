@@ -43,6 +43,8 @@ using unique_lock = std::unique_lock<Mutex>;
 
 inline void seed(int) {}
 
+inline void reset() {}
+
 }  // namespace mit
 
 #endif  // MIT_TEST_MODE

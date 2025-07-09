@@ -15,6 +15,7 @@ namespace mit {
 
 class condition_variable;
 class mutex;
+class thread;
 class thread_impl;
 
 class DeadlockException : public util::Exception {
@@ -27,6 +28,7 @@ class id_provider {
  public:
   int get_next_id();
   void recycle(int id);
+  void clear();
 
  private:
   std::vector<int> recycled_ids_;
@@ -39,12 +41,14 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
+  static constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
+
   scheduler(const scheduler&) = delete;
   scheduler& operator=(const scheduler&) = delete;
 
-  static constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
   static scheduler& instance();
   void seed(int s) { prng_.seed(s); }
+  void reset();
 
   void register_thread(thread_impl*);
   void unregister_thread(thread_impl*);
@@ -82,6 +86,7 @@ class scheduler {
 
   scheduler();
 
+  void init_main_thread();
   void dump_state() const;
   void pass_control_to(thread_impl*);
   thread_impl* get_next_thread() const;
@@ -95,6 +100,7 @@ class scheduler {
   id_provider thread_id_provider_;
   thread_vec_t all_threads_;
   boost::dynamic_bitset<> viable_threads_;  // Bitset to track which threads are viable
+  thread* main_thread_ = nullptr;
   thread_impl* active_thread_ = nullptr;
   thread_map_t join_map_;
 

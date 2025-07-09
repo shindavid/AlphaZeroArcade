@@ -34,11 +34,38 @@ inline int id_provider::get_next_id() {
 
 inline void id_provider::recycle(int id) { recycled_ids_.push_back(id); }
 
+inline void id_provider::clear() {
+  recycled_ids_.clear();
+  next_ = 0;
+}
+
 // scheduler
 
 inline scheduler& scheduler::instance() {
   static scheduler instance;
   return instance;
+}
+
+inline void scheduler::reset() {
+  thread_id_provider_.clear();
+  all_threads_.clear();
+  viable_threads_.clear();
+  active_thread_ = nullptr;
+  join_map_.clear();
+
+  mutex_id_provider_.clear();
+  for (auto* blocked_threads : mutex_block_map_) {
+    delete blocked_threads;
+  }
+  mutex_block_map_.clear();
+
+  cv_id_provider_.clear();
+  for (auto* blocked_threads : cv_block_map_) {
+    delete blocked_threads;
+  }
+  cv_block_map_.clear();
+
+  init_main_thread();
 }
 
 inline void scheduler::register_thread(thread_impl* t) {
@@ -266,12 +293,17 @@ inline void scheduler::dump_state() const {
 
 inline scheduler::scheduler() {
   seed(std::time(nullptr));
-  thread* main_thread = new thread(true);
-  register_thread(main_thread->impl_.get());
+  init_main_thread();
+}
 
-  util::release_assert(main_thread->id() == 0,
-                       "Main thread should have id() 0, got {}", main_thread->id());
-  active_thread_ = main_thread->impl_.get();  // Set the main thread as the active thread
+inline void scheduler::init_main_thread() {
+  delete main_thread_;
+  main_thread_ = new thread(true);
+  register_thread(main_thread_->impl_.get());
+
+  util::release_assert(main_thread_->id() == 0,
+                       "Main thread should have id() 0, got {}", main_thread_->id());
+  active_thread_ = main_thread_->impl_.get();  // Set the main thread as the active thread
 }
 
 inline void scheduler::pass_control_to(thread_impl* t) {

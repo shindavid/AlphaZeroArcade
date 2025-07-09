@@ -24,10 +24,15 @@ add_library(util_lib_test STATIC $<TARGET_OBJECTS:util_core_objs>)
 target_compile_definitions(util_lib_test PRIVATE ${TEST_COMPILE_DEFINITIONS})
 target_link_libraries(util_lib_test PRIVATE ${COMMON_EXTERNAL_LIBS})
 
-# 5) test executable
+# 5) test executables
 add_test(
   NAME util_tests
   TEST util/main/UnitTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME mit_tests
+  TEST util/main/mit/UnitTests.cpp
   EXTRA_LIBS util_lib_test
 )
 
