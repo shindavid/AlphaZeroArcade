@@ -79,5 +79,3 @@ class thread {
 };
 
 }  // namespace mit
-
-#include <inline/util/mit/thread.inl>

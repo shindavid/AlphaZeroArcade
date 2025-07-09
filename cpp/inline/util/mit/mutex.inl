@@ -1,3 +1,5 @@
+#pragma once
+
 #include <util/mit/mutex.hpp>
 
 #include <util/Asserts.hpp>

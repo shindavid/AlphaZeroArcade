@@ -13,8 +13,15 @@
 #include <util/mit/functions.hpp>
 #include <util/mit/lock_guard.hpp>
 #include <util/mit/mutex.hpp>
+#include <util/mit/scheduler.hpp>
 #include <util/mit/thread.hpp>
 #include <util/mit/unique_lock.hpp>
+
+#include <inline/util/mit/condition_variable.inl>
+#include <inline/util/mit/functions.inl>
+#include <inline/util/mit/mutex.inl>
+#include <inline/util/mit/scheduler.inl>
+#include <inline/util/mit/thread.inl>
 
 #else  // MIT_TEST_MODE
 

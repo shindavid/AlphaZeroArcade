@@ -1,3 +1,5 @@
+#pragma once
+
 #include <util/mit/thread.hpp>
 
 #include <util/Asserts.hpp>

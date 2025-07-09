@@ -30,5 +30,3 @@ class mutex {
 };
 
 }  // namespace mit
-
-#include <inline/util/mit/mutex.inl>

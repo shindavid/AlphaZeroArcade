@@ -83,7 +83,6 @@ class scheduler {
   scheduler();
 
   void dump_state() const;
-  void dump_state_helper() const;
   void pass_control_to(thread_impl*);
   thread_impl* get_next_thread() const;
   void validate_thread_viability(thread_impl*) const;
@@ -109,5 +108,3 @@ class scheduler {
 };
 
 }  // namespace mit
-
-#include <inline/util/mit/scheduler.inl>

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <util/mit/mutex.hpp>
 #include <util/mit/unique_lock.hpp>
 
 #ifndef MIT_TEST_MODE
@@ -8,6 +7,8 @@ static_assert(false, "This file is not intended to be #include'd directly.");
 #endif  // MIT_TEST_MODE
 
 namespace mit {
+
+class mutex;
 
 // Drop-in replacement for std::condition_variable that can be used in unit tests.
 //
@@ -37,5 +38,3 @@ class condition_variable {
 };
 
 }  // namespace mit
-
-#include <inline/util/mit/condition_variable.inl>
