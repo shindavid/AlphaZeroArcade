@@ -27,50 +27,68 @@ inline void Random::init(const Params& params) {
 }
 
 inline void Random::set_seed(int seed) {
-  instance()->prng_.seed(seed);
+  default_prng().seed(seed);
 }
 
 template <std::integral T, std::integral U>
-inline auto Random::uniform_sample(T lower, U upper) {
+inline auto Random::uniform_sample(std::mt19937& prng, T lower, U upper) {
   if (lower >= upper) {
     throw std::runtime_error("Random::uniform_sample() - invalid range");
   }
   using V = std::common_type_t<T, U>;
   std::uniform_int_distribution<V> dist{(V)lower, (V)(upper - 1)};
-  return dist(instance()->prng_);
+  return dist(prng);
+}
+
+template <std::integral T, std::integral U>
+inline auto Random::uniform_sample(T lower, U upper) {
+  return uniform_sample(default_prng(), lower, upper);
 }
 
 template <typename FloatType>
-FloatType Random::uniform_real(FloatType left, FloatType right) {
+FloatType Random::uniform_real(std::mt19937& prng, FloatType left, FloatType right) {
   if (left >= right) {
     throw std::runtime_error("Random::uniform_real() - invalid range");
   }
   std::uniform_real_distribution<FloatType> dist(left, right);
-  return dist(instance()->prng_);
+  return dist(prng);
+}
+
+template <typename FloatType>
+FloatType Random::uniform_real(FloatType left, FloatType right) {
+  return uniform_real(default_prng(), left, right);
+}
+
+template <typename RealType>
+RealType Random::exponential(std::mt19937& prng, RealType lambda) {
+  std::exponential_distribution<RealType> dist(lambda);
+  return dist(prng);
 }
 
 template <typename RealType>
 RealType Random::exponential(RealType lambda) {
-  std::exponential_distribution<RealType> dist(lambda);
-  return dist(instance()->prng_);
+  return exponential(default_prng(), lambda);
+}
+
+template <std::random_access_iterator T>
+void Random::shuffle(std::mt19937& prng, T begin, T end) {
+  std::shuffle(begin, end, prng);
 }
 
 template <std::random_access_iterator T>
 void Random::shuffle(T begin, T end) {
-  return std::shuffle(begin, end, instance()->prng_);
+  shuffle(default_prng(), begin, end);
 }
 
 template <std::random_access_iterator T>
-void Random::chunked_shuffle(T begin, T end, int chunk_size) {
-  auto& rng = instance()->prng_;
-
+void Random::chunked_shuffle(std::mt19937& prng, T begin, T end, int chunk_size) {
   int c = chunk_size;
   int n = (end - begin) / c;
 
   // Fisher–Yates shuffle on groups.
   for (int i = n - 1; i > 0; i--) {
     std::uniform_int_distribution<int> dist(0, i);
-    int j = dist(rng);
+    int j = dist(prng);
     if (i != j) {
       T a = begin + i * c;
       T b = begin + j * c;
@@ -79,19 +97,24 @@ void Random::chunked_shuffle(T begin, T end, int chunk_size) {
   }
 }
 
-template <typename IntType, typename InputIt>
-inline IntType Random::weighted_sample(InputIt begin, InputIt end) {
-  std::discrete_distribution<IntType> dist(begin, end);
-  return dist(instance()->prng_);
+template <std::random_access_iterator T>
+void Random::chunked_shuffle(T begin, T end, int chunk_size) {
+  chunked_shuffle(default_prng(), begin, end, chunk_size);
+}
+
+template <typename InputIt>
+inline int Random::weighted_sample(std::mt19937& prng, InputIt begin, InputIt end) {
+  std::discrete_distribution<int> dist(begin, end);
+  return dist(prng);
 }
 
 template <typename InputIt>
 inline int Random::weighted_sample(InputIt begin, InputIt end) {
-  return weighted_sample<int>(begin, end);
+  return weighted_sample(default_prng(), begin, end);
 }
 
 template <typename InputIt>
-void Random::zero_out(InputIt begin, InputIt end, size_t n) {
+void Random::zero_out(std::mt19937& prng, InputIt begin, InputIt end, size_t n) {
   // reservoir sampling
   std::vector<InputIt> reservoir;
   reservoir.reserve(n);
@@ -104,7 +127,7 @@ void Random::zero_out(InputIt begin, InputIt end, size_t n) {
     if (reservoir.size() < n) {
       reservoir.push_back(it);
     } else {
-      size_t j = uniform_sample(size_t(0), num_non_zero_entries_found);
+      size_t j = uniform_sample(prng, size_t(0), num_non_zero_entries_found);
       if (j < n) {
         reservoir[j] = it;
       }
@@ -116,13 +139,14 @@ void Random::zero_out(InputIt begin, InputIt end, size_t n) {
   }
 }
 
-inline Random* Random::instance() {
-  if (!instance_) {
-    instance_ = new Random();
-  }
-  return instance_;
+template <typename InputIt>
+void Random::zero_out(InputIt begin, InputIt end, size_t n) {
+  zero_out(default_prng(), begin, end, n);
 }
 
-inline Random::Random() : prng_(std::time(nullptr)) {}
+inline std::mt19937& Random::default_prng() {
+  static std::mt19937 prng(std::time(nullptr));
+  return prng;
+}
 
 }  // namespace util

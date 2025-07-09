@@ -7,14 +7,14 @@
 
 namespace boost_util {
 
-int get_random_set_index(const boost::dynamic_bitset<>& bitset) {
+int get_random_set_index(std::mt19937& prng, const boost::dynamic_bitset<>& bitset) {
   int count = bitset.count();
 
   if (count == 0) {
     return -1;  // No bits are set
   }
 
-  int n = util::Random::uniform_sample(0, count);
+  int n = util::Random::uniform_sample(prng, 0, count);
 
   int index = bitset.find_first();
   while (n-- > 0) {
@@ -22,6 +22,10 @@ int get_random_set_index(const boost::dynamic_bitset<>& bitset) {
   }
 
   return index;
+}
+
+int get_random_set_index(const boost::dynamic_bitset<>& bitset) {
+  return get_random_set_index(util::Random::default_prng(), bitset);
 }
 
 std::string get_option_value(const std::vector<std::string>& args,
