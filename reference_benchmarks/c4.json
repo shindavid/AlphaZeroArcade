@@ -1,5 +1,5 @@
 {
-  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g c4 -n 21",
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g c4 --neighborhood-size 21",
   "ReferenceAgent-strength-0": {
     "iagent": {
       "agent": {
@@ -30,7 +30,7 @@
       "db_id": 2,
       "type": "Reference"
     },
-    "rating": 472.0035697727016
+    "rating": 592.3497624182843
   },
   "ReferenceAgent-strength-2": {
     "iagent": {
@@ -46,23 +46,7 @@
       "db_id": 3,
       "type": "Reference"
     },
-    "rating": 643.9484225943237
-  },
-  "ReferenceAgent-strength-3": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 3,
-        "tag": null,
-        "binary": null
-      },
-      "index": 3,
-      "roles": "benchmark",
-      "db_id": 4,
-      "type": "Reference"
-    },
-    "rating": 739.333877222957
+    "rating": 772.8753631993912
   },
   "ReferenceAgent-strength-4": {
     "iagent": {
@@ -78,23 +62,7 @@
       "db_id": 5,
       "type": "Reference"
     },
-    "rating": 825.7921475907175
-  },
-  "ReferenceAgent-strength-5": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 5,
-        "tag": null,
-        "binary": null
-      },
-      "index": 5,
-      "roles": "benchmark",
-      "db_id": 6,
-      "type": "Reference"
-    },
-    "rating": 893.7144870980121
+    "rating": 937.1914862175257
   },
   "ReferenceAgent-strength-6": {
     "iagent": {
@@ -110,23 +78,7 @@
       "db_id": 7,
       "type": "Reference"
     },
-    "rating": 988.1293683062759
-  },
-  "ReferenceAgent-strength-7": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 7,
-        "tag": null,
-        "binary": null
-      },
-      "index": 7,
-      "roles": "benchmark",
-      "db_id": 8,
-      "type": "Reference"
-    },
-    "rating": 1031.887708655709
+    "rating": 1057.939716742807
   },
   "ReferenceAgent-strength-8": {
     "iagent": {
@@ -142,23 +94,7 @@
       "db_id": 9,
       "type": "Reference"
     },
-    "rating": 1091.6324461501767
-  },
-  "ReferenceAgent-strength-9": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 9,
-        "tag": null,
-        "binary": null
-      },
-      "index": 9,
-      "roles": "benchmark",
-      "db_id": 10,
-      "type": "Reference"
-    },
-    "rating": 1164.629926512168
+    "rating": 1205.9129921933509
   },
   "ReferenceAgent-strength-10": {
     "iagent": {
@@ -174,23 +110,7 @@
       "db_id": 11,
       "type": "Reference"
     },
-    "rating": 1248.4623464352612
-  },
-  "ReferenceAgent-strength-11": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 11,
-        "tag": null,
-        "binary": null
-      },
-      "index": 11,
-      "roles": "benchmark",
-      "db_id": 12,
-      "type": "Reference"
-    },
-    "rating": 1342.4121816532572
+    "rating": 1353.9798924943534
   },
   "ReferenceAgent-strength-12": {
     "iagent": {
@@ -206,7 +126,7 @@
       "db_id": 13,
       "type": "Reference"
     },
-    "rating": 1426.6914253984462
+    "rating": 1544.667876542873
   },
   "ReferenceAgent-strength-13": {
     "iagent": {
@@ -222,7 +142,7 @@
       "db_id": 14,
       "type": "Reference"
     },
-    "rating": 1586.4238132906578
+    "rating": 1686.212547957518
   },
   "ReferenceAgent-strength-14": {
     "iagent": {
@@ -238,7 +158,7 @@
       "db_id": 15,
       "type": "Reference"
     },
-    "rating": 1742.2780679650773
+    "rating": 1816.20035496061
   },
   "ReferenceAgent-strength-15": {
     "iagent": {
@@ -254,7 +174,7 @@
       "db_id": 16,
       "type": "Reference"
     },
-    "rating": 1939.251091891347
+    "rating": 2007.6906518396286
   },
   "ReferenceAgent-strength-16": {
     "iagent": {
@@ -270,7 +190,7 @@
       "db_id": 17,
       "type": "Reference"
     },
-    "rating": 2153.0055061771945
+    "rating": 2187.536322185905
   },
   "ReferenceAgent-strength-17": {
     "iagent": {
@@ -286,7 +206,7 @@
       "db_id": 18,
       "type": "Reference"
     },
-    "rating": 2314.8581714791803
+    "rating": 2364.362428573132
   },
   "ReferenceAgent-strength-18": {
     "iagent": {
@@ -302,23 +222,7 @@
       "db_id": 19,
       "type": "Reference"
     },
-    "rating": 2473.8982917865283
-  },
-  "ReferenceAgent-strength-19": {
-    "iagent": {
-      "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 19,
-        "tag": null,
-        "binary": null
-      },
-      "index": 19,
-      "roles": "benchmark",
-      "db_id": 20,
-      "type": "Reference"
-    },
-    "rating": 2626.950571209809
+    "rating": 2526.755033899546
   },
   "ReferenceAgent-strength-20": {
     "iagent": {
@@ -334,7 +238,7 @@
       "db_id": 21,
       "type": "Reference"
     },
-    "rating": 2690.337694512287
+    "rating": 2728.427466051912
   },
   "ReferenceAgent-strength-21": {
     "iagent": {
@@ -350,6 +254,6 @@
       "db_id": 22,
       "type": "Reference"
     },
-    "rating": 2947.008523484726
+    "rating": 2999.3599348961325
   }
 }
