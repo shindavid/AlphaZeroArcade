@@ -212,11 +212,10 @@ class EvalManager(GamingManagerBase):
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s',
                          n_games_needed, test_iagent.agent.gen, estimated_rating)
-            chosen_ixs, num_matches = self._gen_matches(test_iagent.index, estimated_rating,
-                                                        n_games_needed)
-            logger.debug('chosen ixs and num matches: %s', list(zip(chosen_ixs, num_matches)))
+            num_matches = self._gen_matches(test_iagent.index, estimated_rating, n_games_needed)
+            logger.debug('chosen ixs and num matches: %s', num_matches)
             with self._lock:
-                self._update_eval_status(test_iagent.index, chosen_ixs, num_matches)
+                self._update_eval_status(test_iagent.index, num_matches)
             aux.needs_new_opponents = False
 
         next_opponent_ix, next_n_games = sorted(eval_status.candidates(), key=lambda x: x[1])[0]
@@ -289,7 +288,7 @@ class EvalManager(GamingManagerBase):
         return iagent
 
     def _gen_matches(self, ix: int, estimated_rating: float,
-                     n_games_needed: int) -> Tuple[np.ndarray, np.ndarray]:
+                     n_games_needed: int) -> Dict[int, int]:
         ixs = []
         elos = []
         match_status: Dict[int, MatchStatus] = self._eval_status_dict[ix].ix_match_status
@@ -336,6 +335,9 @@ class EvalManager(GamingManagerBase):
             )
             files_required.append(eval_model)
 
+        test_agent: Agent = replace(test_iagent.agent, binary=eval_binary.scratch_path,
+                             model=eval_model.scratch_path if eval_model else None)
+
         if isinstance(next_opponent_agent, MCTSAgent):
             run_params = RunParams(game, next_opponent_agent.tag)
             benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
@@ -371,21 +373,8 @@ class EvalManager(GamingManagerBase):
 
         data = {
             'type': 'match-request',
-            'agent1': {
-                'type': 'MCTS',
-                'data': {
-                    'gen': test_iagent.agent.gen,
-                    'n_iters': self.n_iters,
-                    'set_temp_zero': True,
-                    'tag': self._controller._organizer.tag,
-                    'binary': eval_binary.scratch_path,
-                    'model': eval_model.scratch_path if eval_model else None,
-                    }
-                },
-            'agent2': {
-                'type':'MCTS' if isinstance(next_opponent_agent, MCTSAgent) else 'Reference',
-                'data': opponent_agent.to_dict()
-                },
+            'agent1': test_agent.to_dict(),
+            'agent2': opponent_agent.to_dict(),
             'ix1': test_iagent.index,
             'ix2': int(next_opponent_iagent.index),
             'n_games': int(next_n_games),
@@ -444,14 +433,14 @@ class EvalManager(GamingManagerBase):
         estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, elos)
         return estimated_rating
 
-    def _update_eval_status(self, test_ix, chosen_ixs, num_matches):
+    def _update_eval_status(self, test_ix: int, num_matches: Dict[int, int]):
         for ix, match_status in self._eval_status_dict[test_ix].ix_match_status.items():
-            if ix not in chosen_ixs and match_status.pending():
+            if ix not in num_matches and match_status.pending():
                 match_status.status = MatchRequestStatus.OBSOLETE
                 logger.debug('...set match between %s and %s to obsolete',
                              self._indexed_agents[test_ix].index, match_status.opponent_level)
 
-        for ix, n_games in zip(chosen_ixs, num_matches):
+        for ix, n_games in num_matches.items():
             match_status = self._eval_status_dict[test_ix].ix_match_status
             if ix not in match_status:
                 agent: Agent = self._indexed_agents[ix].agent

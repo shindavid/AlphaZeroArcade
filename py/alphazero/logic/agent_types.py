@@ -70,12 +70,15 @@ class MCTSAgent(Agent):
 
     def to_dict(self) -> JsonDict:
         return {
-            'gen': self.gen,
-            'n_iters': self.n_iters,
-            'set_temp_zero': self.set_temp_zero,
-            'tag': self.tag,
-            'binary': self.binary,
-            'model': self.model
+            'type': 'MCTS',
+            'data': {
+                'gen': self.gen,
+                'n_iters': self.n_iters,
+                'set_temp_zero': self.set_temp_zero,
+                'tag': self.tag,
+                'binary': self.binary,
+                'model': self.model
+            }
         }
 
     def __str__(self) -> str:
@@ -103,11 +106,14 @@ class ReferenceAgent(Agent):
 
     def to_dict(self) -> JsonDict:
         return {
-            'type_str': self.type_str,
-            'strength_param': self.strength_param,
-            'strength': self.strength,
-            'tag': self.tag,
-            'binary': self.binary
+            'type': 'Reference',
+            'data': {
+                'type_str': self.type_str,
+                'strength_param': self.strength_param,
+                'strength': self.strength,
+                'tag': self.tag,
+                'binary': self.binary
+            }
         }
 
     def __str__(self) -> str:
@@ -150,12 +156,12 @@ class IndexedAgent:
     db_id: Optional[AgentDBId] = None
 
     def to_dict(self):
-        agent_type = 'MCTS' if isinstance(self.agent, MCTSAgent) else 'Reference'
+
         return {'agent': self.agent.to_dict(),
                 'index': self.index,
                 'roles': AgentRole.to_str(self.roles),
-                'db_id': self.db_id,
-                'type': agent_type}
+                'db_id': self.db_id
+                }
 
 
 class MatchType(Enum):
