@@ -30,6 +30,10 @@ class Agent(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def tag(self) -> Optional[str]:
+        pass
 
 @dataclass(frozen=True)
 class MCTSAgent(Agent):

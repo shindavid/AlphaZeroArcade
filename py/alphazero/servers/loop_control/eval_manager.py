@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent
+from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent, ReferenceAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils
@@ -299,76 +299,17 @@ class EvalManager(GamingManagerBase):
             elos.append(benchmark_elo)
         return EvalUtils.gen_matches(estimated_rating, ixs, elos, n_games_needed)
 
-    def _gen_match_request_data(self, test_iagent: IndexedAgent, next_opponent_iagent: IndexedAgent,
+    def _gen_match_request_data(self, test_iagent: IndexedAgent, opponent_iagent: IndexedAgent,
                                 next_n_games) -> JsonDict:
-        game = self._controller._run_params.game
-        next_opponent_agent = next_opponent_iagent.agent
+        files_required: List[FileToTransfer] = []
+        test_agent = self._update_agent_required_files(test_iagent, files_required)
+        opponent_agent = self._update_agent_required_files(opponent_iagent, files_required)
 
-        benchmark_organizer = None
-        if next_opponent_agent.tag:
-            run_params = RunParams(game, next_opponent_agent.tag)
-            benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-
-        eval_binary_src = self._controller._get_binary_path()
-        benchmark_binary_src = self._controller._get_binary_path(
-            benchmark_organizer=benchmark_organizer)
-
-        eval_binary = FileToTransfer.from_src_scratch_path(
-            source_path=eval_binary_src,
-            scratch_path=f'bin/{game}',
-            asset_path_mode='hash'
-        )
-
-        benchmark_binary = FileToTransfer.from_src_scratch_path(
-            source_path=benchmark_binary_src,
-            scratch_path=f'benchmark-bin/{game}',
-            asset_path_mode='hash'
-        )
-        files_required = [eval_binary, benchmark_binary]
-
-        eval_model = None
-        if test_iagent.agent.gen > 0:
-            eval_model = FileToTransfer.from_src_scratch_path(
-                source_path=self._controller._organizer.get_model_filename(test_iagent.agent.gen),
-                scratch_path=f'eval-models/{test_iagent.agent.tag}/gen-{test_iagent.agent.gen}.pt',
-                asset_path_mode='scratch'
-            )
-            files_required.append(eval_model)
-
-        test_agent: Agent = replace(test_iagent.agent, binary=eval_binary.scratch_path,
-                             model=eval_model.scratch_path if eval_model else None)
-
-        if isinstance(next_opponent_agent, MCTSAgent):
-            run_params = RunParams(game, next_opponent_agent.tag)
-            benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-            benchmark_binary = FileToTransfer.from_src_scratch_path(
-                source_path=benchmark_organizer.binary_filename,
-                scratch_path=f'benchmark-bin/{game}',
-                asset_path_mode='hash'
-            )
-            files_required.append(benchmark_binary)
-
-            benchmark_model = None
-            if next_opponent_agent.gen > 0:
-                path = f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt'
-                benchmark_model = FileToTransfer.from_src_scratch_path(
-                    source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen),
-                    scratch_path=path,
-                    asset_path_mode='scratch'
-                )
-                files_required.append(benchmark_model)
-
-            opponent_agent = replace(next_opponent_agent,
-                                     binary=benchmark_binary.scratch_path,
-                                     model=benchmark_model.scratch_path if benchmark_model else None)
-        else:
-            opponent_agent = replace(next_opponent_agent, binary=eval_binary.scratch_path)
+        if isinstance(opponent_agent, ReferenceAgent):
             for dep in self._controller.game_spec.extra_runtime_deps:
                 dep_file = FileToTransfer.from_src_scratch_path(
                     source_path=os.path.join('/workspace/repo/', dep),
-                    scratch_path=dep,
-                    asset_path_mode='hash'
-                )
+                    scratch_path=dep, asset_path_mode='hash')
                 files_required.append(dep_file)
 
         data = {
@@ -376,14 +317,77 @@ class EvalManager(GamingManagerBase):
             'agent1': test_agent.to_dict(),
             'agent2': opponent_agent.to_dict(),
             'ix1': test_iagent.index,
-            'ix2': int(next_opponent_iagent.index),
+            'ix2': int(opponent_iagent.index),
             'n_games': int(next_n_games),
             'files_required': [f.to_dict() for f in files_required],
         }
 
         n_games = data['n_games']
-        logger.info(f"Evaluating {test_iagent.agent} vs {next_opponent_agent}, ({n_games} games)")
+        logger.info(f"Evaluating {test_iagent.agent} vs {opponent_agent}, ({n_games} games)")
         return data
+
+    def _update_agent_required_files(self, iagent: IndexedAgent,
+                                     files_required: List[FileToTransfer]) -> Agent:
+        binary = self._get_binary_to_transfer(iagent)
+        model = self._get_model_to_transfer(iagent)
+
+        if isinstance(iagent.agent, ReferenceAgent):
+            agent = replace(iagent.agent, binary=binary.scratch_path)
+        else:
+            agent = replace(iagent.agent, binary=binary.scratch_path,
+                            model=model.scratch_path if model else None)
+
+        files_required.append(binary)
+        if model:
+            files_required.append(model)
+        return agent
+
+    def _get_binary_to_transfer(self, iagent: IndexedAgent) -> FileToTransfer:
+        game = self._controller._run_params.game
+        if iagent.roles == {AgentRole.TEST}:
+            binary = FileToTransfer.from_src_scratch_path(
+                source_path=self._controller._get_binary_path(),
+                scratch_path=f'bin/{game}',
+                asset_path_mode='hash'
+            )
+        elif iagent.roles == {AgentRole.BENCHMARK}:
+            benchmark_organizer = None
+            if iagent.agent.tag:
+                run_params = RunParams(game, iagent.agent.tag)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            benchmark_binary_src = self._controller._get_binary_path(
+                benchmark_organizer=benchmark_organizer)
+
+            binary = FileToTransfer.from_src_scratch_path(
+                source_path=benchmark_binary_src,
+                scratch_path=f'benchmark-bin/{game}',
+                asset_path_mode='hash'
+            )
+        return binary
+
+    def _get_model_to_transfer(self, iagent: IndexedAgent) -> Optional[FileToTransfer]:
+        if isinstance(iagent.agent, ReferenceAgent) or iagent.agent.gen == 0:
+            return None
+        game = self._controller._run_params.game
+        gen = iagent.agent.gen
+        if iagent.roles == {AgentRole.TEST}:
+            model = FileToTransfer.from_src_scratch_path(
+                source_path=self._controller._organizer.get_model_filename(gen),
+                scratch_path=f'eval-models/{iagent.agent.tag}/gen-{gen}.pt',
+                asset_path_mode='scratch'
+            )
+        elif iagent.roles == {AgentRole.BENCHMARK}:
+            benchmark_organizer = None
+            if iagent.agent.tag:
+                run_params = RunParams(game, iagent.agent.tag)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            scratch_path = f'benchmark-models/{iagent.agent.tag}/gen-{gen}.pt'
+            model = FileToTransfer.from_src_scratch_path(
+                source_path=benchmark_organizer.get_model_filename(gen),
+                scratch_path=scratch_path,
+                asset_path_mode='scratch'
+            )
+        return model
 
     def _get_next_gen_to_eval(self):
         failed_gen = [data.mcts_gen for data in self._eval_status_dict.values() \

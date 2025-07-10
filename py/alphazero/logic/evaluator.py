@@ -74,6 +74,6 @@ class EvalUtils:
         sample_ixs = ixs[np.random.choice(len(ixs), p=var, size=n_games)]
 
         num_matches = {}
-        for ix, count in np.unique(sample_ixs, return_counts=True):
+        for ix, count in zip(*np.unique(sample_ixs, return_counts=True)):
             num_matches[ix] = count
         return num_matches
