@@ -374,6 +374,8 @@ class LoopController:
                         raise Exception(f"Reference database file not found: {ref_json_file}")
                     db.load_ratings_from_json(ref_json_file)
             else:
+                #TODO: update here to expand a run folder based on a saved benchmark folder
+                # 1. load db 2. copy models 3. copy binary
                 benchmark_tag = self.params.benchmark_tag
                 db_file = self.organizer.eval_db_filename(benchmark_tag)
                 if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
