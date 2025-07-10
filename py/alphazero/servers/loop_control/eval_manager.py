@@ -88,8 +88,8 @@ class EvalStatus:
     def num_actioned_matches(self) -> int:
         return sum(1 for status in self.ix_match_status.values() if status.actioned())
 
-    def candidates(self) -> List[Tuple[int, int]]: #[(ix, n_games)]
-        return [(ix, s.n_games) for ix, s in self.ix_match_status.items() if s.pending()]
+    def candidates(self) -> Dict[int, int]: # Dict[ix, n_games]
+        return {ix: s.n_games for ix, s in self.ix_match_status.items() if s.pending()}
 
     def any_complete(self) -> bool:
         return any(s.complete() for s in self.ix_match_status.values())
@@ -166,6 +166,31 @@ class EvalManager(GamingManagerBase):
 
     def send_match_request(self, conn: ClientConnection):
         assert conn.is_on_localhost()
+        test_iagent: IndexedAgent = self._get_test_iagent(conn)
+        estimated_rating = self._get_estimated_rating(conn, test_iagent)
+
+        n_games_completed = self._get_n_games_completed(test_iagent.index)
+        n_games_to_do = self.n_games - n_games_completed
+        eval_status = self._eval_status_dict[test_iagent.index]
+        if n_games_to_do <= 0 or eval_status.num_actioned_matches() >= len(self._benchmark_elos):
+            self._calc_ratings(conn, conn.aux.ix)
+            self._set_ready(conn)
+            return
+
+        match_status = eval_status.ix_match_status
+        n_games_in_progress = sum(d.n_games for d in match_status.values() if d.requested())
+        n_games_needed = n_games_to_do - n_games_in_progress
+        assert n_games_needed > 0, f"{self.n_games} games needed; {n_games_in_progress} in progress"
+        self._update_opponents(conn, test_iagent, estimated_rating, n_games_needed)
+
+        next_opponent_ix, next_n_games = sorted(eval_status.candidates().items(), key=lambda x: x[1])[0]
+        next_opponent_iagent = self._indexed_agents[next_opponent_ix]
+
+        data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
+        conn.socket.send_json(data)
+        match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
+
+    def _get_test_iagent(self, conn: ClientConnection) -> IndexedAgent:
         aux: EvalServerAux = conn.aux
         eval_ix = aux.ix
         if eval_ix is None:
@@ -188,26 +213,20 @@ class EvalManager(GamingManagerBase):
         else:
             test_iagent = self._indexed_agents[eval_ix]
 
+        return test_iagent
+
+    def _get_estimated_rating(self, conn: ClientConnection, test_iagent: IndexedAgent) -> float:
+        aux: EvalServerAux = conn.aux
         estimated_rating = aux.estimated_rating
         if estimated_rating is None:
             estimated_rating = self._estimate_rating(test_iagent)
             logger.info('Estimated rating for gen %s: %s', test_iagent.agent.gen, estimated_rating)
             aux.estimated_rating = estimated_rating
+        return estimated_rating
 
-        n_games_completed = self._get_n_games_completed(test_iagent.index)
-        n_games_to_do = self.n_games - n_games_completed
-
-        eval_status = self._eval_status_dict[test_iagent.index]
-        if n_games_to_do <= 0 or eval_status.num_actioned_matches() >= len(self._benchmark_elos):
-            self._calc_ratings(conn, conn.aux.ix)
-            self._set_ready(conn)
-            return
-
-        match_status = eval_status.ix_match_status
-        n_games_in_progress = sum(d.n_games for d in match_status.values() if d.requested())
-        n_games_needed = n_games_to_do - n_games_in_progress
-        assert n_games_needed > 0, f"{self.n_games} games needed; {n_games_in_progress} in progress"
-
+    def _update_opponents(self, conn: ClientConnection, test_iagent: IndexedAgent,
+                           estimated_rating: float, n_games_needed: int):
+        aux: EvalServerAux = conn.aux
         need_new_opponents = aux.needs_new_opponents
         if need_new_opponents:
             logger.debug('Requesting %s games for gen %s, estimated rating: %s',
@@ -217,13 +236,6 @@ class EvalManager(GamingManagerBase):
             with self._lock:
                 self._update_eval_status(test_iagent.index, num_matches)
             aux.needs_new_opponents = False
-
-        next_opponent_ix, next_n_games = sorted(eval_status.candidates(), key=lambda x: x[1])[0]
-        next_opponent_iagent = self._indexed_agents[next_opponent_ix]
-
-        data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
-        conn.socket.send_json(data)
-        match_status[next_opponent_ix].status = MatchRequestStatus.REQUESTED
 
     def _get_n_games_completed(self, ix: int) -> int:
         match_status = self._eval_status_dict[ix].ix_match_status
