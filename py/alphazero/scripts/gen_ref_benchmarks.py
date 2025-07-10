@@ -18,7 +18,7 @@ import logging
 import os
 import shlex
 import sys
-from typing import List
+from typing import List, Optional
 
 
 REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
@@ -30,10 +30,18 @@ class ReferenceBenchmarker:
         assert game_spec.reference_player_family is not None, \
             f'Game {game_spec.name} does not have a reference player family'
 
-        self.neighborhood_size = args.neighborhood_size
         self.min_elo_gap = args.min_elo_gap
+
+        if args.neighborhood_size is not None:
+            self.neighborhood_size = args.neighborhood_size
+        elif game_spec.ref_neighborhood_size is not None:
+            self.neighborhood_size = game_spec.ref_neighborhood_size
+        else:
+            self.neighborhood_size = 1
+
         self.game_spec = game_spec
-        self.db_filename = os.path.join('/workspace/output', self.game_spec.name, 'reference.players/databases', 'benchmark.db')
+        self.db_filename = os.path.join('/workspace/output', self.game_spec.name,
+                                        'reference.players/databases', 'benchmark.db')
         os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
         self.db = RatingDB(self.db_filename)
         self.arena = Arena()
@@ -117,11 +125,14 @@ def benchmark_reference_players(args, game_specs: List[GameSpec]):
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
-    parser.add_argument('-n', '--neighborhood-size', type=int, default=1,
+    parser.add_argument('-n', '--neighborhood-size', type=Optional[int], default=None,
                         help='Neighborhood size (default: %(default)s)')
-    game_index.add_parser_argument(parser, '-g', '--game',
-                                   help='Comma-separate games. If not specified, all games will be benchmarked.')
-    parser.add_argument('--min-elo-gap', type=float, default=100.0, help='Minimum elo gap between generations in the committee (default: %(default)s)')
+    game_index.add_parser_argument(
+        parser, '-g', '--game',
+        help='Comma-separate games. If not specified, all games will be benchmarked.')
+    parser.add_argument(
+        '--min-elo-gap', type=float, default=100.0,
+        help='Minimum elo gap between generations in the committee (default: %(default)s)')
     LoggingParams.add_args(parser)
 
     return parser.parse_args()

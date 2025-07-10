@@ -132,6 +132,7 @@ class Connect4Spec(GameSpec):
         'default': b7_c128,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
+    ref_neighborhood_size = 21
 
     training_params = TrainingParams(
         target_sample_rate=8,

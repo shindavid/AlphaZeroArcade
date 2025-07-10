@@ -1,5 +1,4 @@
 from alphazero.logic.benchmarker import Benchmarker
-from util.index_set import IndexSet
 
 import numpy as np
 import unittest
