@@ -3,7 +3,7 @@ from alphazero.logic.ratings import  win_prob
 import numpy as np
 
 import logging
-from typing import List, Tuple
+from typing import Dict, List
 
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,8 @@ class EvalUtils:
         return left_gen, right_gen
 
     @staticmethod
-    def gen_matches(estimated_rating: float, ixs: List[int], elos: List[float], n_games: int, top_k: int=5) -> Tuple[np.ndarray, np.ndarray]:
+    def gen_matches(estimated_rating: float, ixs: List[int], elos: List[float], n_games: int,
+                    top_k: int=5) -> Dict[int, int]:
         """
         The opponent selection algorithm is adapted from KataGo:
         "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).
@@ -71,4 +72,8 @@ class EvalUtils:
         var[np.argsort(var)[:-top_k]] = 0.0
         var /= np.sum(var)
         sample_ixs = ixs[np.random.choice(len(ixs), p=var, size=n_games)]
-        return np.unique(sample_ixs, return_counts=True)
+
+        num_matches = {}
+        for ix, count in zip(*np.unique(sample_ixs, return_counts=True)):
+            num_matches[ix] = count
+        return num_matches

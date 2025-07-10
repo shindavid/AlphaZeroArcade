@@ -267,12 +267,12 @@ class RatingDB:
                 continue
             agent: Agent = None
             iagent_dict = entry['iagent']
-            if iagent_dict['type'] == 'MCTS':
-                agent = MCTSAgent(**iagent_dict['agent'])
-            elif iagent_dict['type'] == 'Reference':
-                agent = ReferenceAgent(**iagent_dict['agent'])
+            if iagent_dict['agent']['type'] == 'MCTS':
+                agent = MCTSAgent(**iagent_dict['agent']['data'])
+            elif iagent_dict['agent']['type'] == 'Reference':
+                agent = ReferenceAgent(**iagent_dict['agent']['data'])
             else:
-                raise ValueError(f"unknown agent type {iagent_dict['type']}")
+                raise ValueError(f"unknown agent type {iagent_dict['agent']['type']}")
 
             ia = IndexedAgent(agent=agent,
                               index=iagent_dict['index'],
