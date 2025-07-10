@@ -353,7 +353,7 @@ class EvalManager(GamingManagerBase):
                 path = f'benchmark-models/{next_opponent_agent.tag}/gen-{next_opponent_agent.gen}.pt'
                 benchmark_model = FileToTransfer.from_src_scratch_path(
                     source_path=benchmark_organizer.get_model_filename(next_opponent_agent.gen),
-                    scratch_path= path,
+                    scratch_path=path,
                     asset_path_mode='scratch'
                 )
                 files_required.append(benchmark_model)
