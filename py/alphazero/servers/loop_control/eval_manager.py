@@ -22,7 +22,7 @@ from enum import Enum
 import logging
 import os
 import threading
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
