@@ -1,258 +1,290 @@
 {
-  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g c4 --neighborhood-size 21",
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py",
   "ReferenceAgent-strength-0": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 0,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 0,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 0,
       "roles": "benchmark",
-      "db_id": 1,
-      "type": "Reference"
+      "db_id": 1
     },
     "rating": 0.0
   },
   "ReferenceAgent-strength-1": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 1,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 1,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 1,
       "roles": "benchmark",
-      "db_id": 2,
-      "type": "Reference"
+      "db_id": 2
     },
     "rating": 592.3497624182843
   },
   "ReferenceAgent-strength-2": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 2,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 2,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 2,
       "roles": "benchmark",
-      "db_id": 3,
-      "type": "Reference"
+      "db_id": 3
     },
     "rating": 772.8753631993912
   },
   "ReferenceAgent-strength-4": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 4,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 4,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 4,
       "roles": "benchmark",
-      "db_id": 5,
-      "type": "Reference"
+      "db_id": 5
     },
     "rating": 937.1914862175257
   },
   "ReferenceAgent-strength-6": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 6,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 6,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 6,
       "roles": "benchmark",
-      "db_id": 7,
-      "type": "Reference"
+      "db_id": 7
     },
     "rating": 1057.939716742807
   },
   "ReferenceAgent-strength-8": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 8,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 8,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 8,
       "roles": "benchmark",
-      "db_id": 9,
-      "type": "Reference"
+      "db_id": 9
     },
     "rating": 1205.9129921933509
   },
   "ReferenceAgent-strength-10": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 10,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 10,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 10,
       "roles": "benchmark",
-      "db_id": 11,
-      "type": "Reference"
+      "db_id": 11
     },
     "rating": 1353.9798924943534
   },
   "ReferenceAgent-strength-12": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 12,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 12,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 12,
       "roles": "benchmark",
-      "db_id": 13,
-      "type": "Reference"
+      "db_id": 13
     },
     "rating": 1544.667876542873
   },
   "ReferenceAgent-strength-13": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 13,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 13,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 13,
       "roles": "benchmark",
-      "db_id": 14,
-      "type": "Reference"
+      "db_id": 14
     },
     "rating": 1686.212547957518
   },
   "ReferenceAgent-strength-14": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 14,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 14,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 14,
       "roles": "benchmark",
-      "db_id": 15,
-      "type": "Reference"
+      "db_id": 15
     },
     "rating": 1816.20035496061
   },
   "ReferenceAgent-strength-15": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 15,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 15,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 15,
       "roles": "benchmark",
-      "db_id": 16,
-      "type": "Reference"
+      "db_id": 16
     },
     "rating": 2007.6906518396286
   },
   "ReferenceAgent-strength-16": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 16,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 16,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 16,
       "roles": "benchmark",
-      "db_id": 17,
-      "type": "Reference"
+      "db_id": 17
     },
     "rating": 2187.536322185905
   },
   "ReferenceAgent-strength-17": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 17,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 17,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 17,
       "roles": "benchmark",
-      "db_id": 18,
-      "type": "Reference"
+      "db_id": 18
     },
     "rating": 2364.362428573132
   },
   "ReferenceAgent-strength-18": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 18,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 18,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 18,
       "roles": "benchmark",
-      "db_id": 19,
-      "type": "Reference"
+      "db_id": 19
     },
     "rating": 2526.755033899546
   },
   "ReferenceAgent-strength-20": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 20,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 20,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 20,
       "roles": "benchmark",
-      "db_id": 21,
-      "type": "Reference"
+      "db_id": 21
     },
     "rating": 2728.427466051912
   },
   "ReferenceAgent-strength-21": {
     "iagent": {
       "agent": {
-        "type_str": "Perfect",
-        "strength_param": "--strength",
-        "strength": 21,
-        "tag": null,
-        "binary": null
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 21,
+          "tag": null,
+          "binary": null
+        }
       },
       "index": 21,
       "roles": "benchmark",
-      "db_id": 22,
-      "type": "Reference"
+      "db_id": 22
     },
     "rating": 2999.3599348961325
   }
