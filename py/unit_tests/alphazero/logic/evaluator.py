@@ -14,10 +14,8 @@ class TestEvalUtils(unittest.TestCase):
         n_games = 10000
         top_k = 5
 
-        chosen_ixs, num_matches = EvalUtils.gen_matches(est_rating, ixs, elos, n_games, top_k)
-
-        counts = dict(zip(chosen_ixs, num_matches))
-        pcts = {int(k): float(v / n_games) for k, v in counts.items()}
+        num_matches = EvalUtils.gen_matches(est_rating, ixs, elos, n_games, top_k)
+        pcts = {int(k): float(v / n_games) for k, v in num_matches.items()}
 
         self.assertAlmostEqual(pcts.get(4, -1), 0.13, delta=0.05)
         self.assertAlmostEqual(pcts.get(5, -1), 0.27, delta=0.05)
