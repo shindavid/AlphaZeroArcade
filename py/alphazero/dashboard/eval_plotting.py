@@ -131,6 +131,7 @@ class Plotter:
         else:
             self.benchmark_tag = data_list[0].benchmark_tag
 
+        self.benchmark_data = benchmark_data
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
@@ -210,6 +211,20 @@ class Plotter:
 
             slider.on_change("value", update_hline)
             return column(plot, row(radio_group, slider))
+
+        else:
+            benchmark_source = ColumnDataSource(self.benchmark_data.df)
+            plot.scatter(
+                x='x',
+                y='rating',
+                source=benchmark_source,
+                size=8,
+                color='grey',
+                legend_label=self.benchmark_tag,
+                marker='circle'
+            )
+            radio_group = self.x_selector.create_radio_group(
+                [plot], list(self.sources.values()) + [benchmark_source])
 
         return column(plot, radio_group)
 
