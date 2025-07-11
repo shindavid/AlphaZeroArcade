@@ -5,7 +5,7 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.scripts.run_local import get_benchmark_tag
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer, BENCHMARK_DIR
 from games.game_spec import GameSpec
 from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
@@ -13,6 +13,7 @@ from util.py_util import CustomHelpFormatter
 
 import argparse
 import logging
+import json
 import os
 import shlex
 import shutil
@@ -21,7 +22,6 @@ import sys
 from typing import Optional
 
 
-BENCHMARK_DIR = os.path.join('/workspace/repo/benchmarks/mcts')
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +58,8 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
                  logging_params: LoggingParams):
     benchmark_tag = get_benchmark_tag(run_params)
     cmd = ['./py/alphazero/scripts/run_local.py',
-           '--task-mode']
+           '--task-mode',
+           '--run-eval-server']
     assert benchmark_tag is not None, "Benchmark tag should not be None after running benchmark server."
     cmd.extend(['--benchmark-tag', benchmark_tag])
 
@@ -99,6 +100,18 @@ def save_benchmark_files(organizer: DirectoryOrganizer):
     RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
     shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
 
+
+def save_default_benchmark(game: str, tag: str):
+    benchmark_info = {
+        "benchmark_tag": tag
+    }
+    benchmark_info_filename = DirectoryOrganizer.benchmark_info_filename(game)
+    with open(benchmark_info_filename, 'w') as f:
+        json.dump(benchmark_info, f, indent=4)
+
+    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_info_filename}")
+
+
 def main():
     args = load_args()
     run_params = RunParams.create(args)
@@ -124,9 +137,18 @@ def main():
 
     organizer.freeze_tag()
     if not args.skip_set_as_default:
-        organizer.save_default_benchmark()
+        save_default_benchmark(run_params.game, run_params.tag)
 
     save_benchmark_files(organizer)
+
+    eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
+    logger.info(f"Running command: {' '.join(eval_cmd)}")
+    try:
+        subprocess.run(eval_cmd, text=True, check=True)
+    except:
+        logger.error(f"Command: {eval_cmd} failed.")
+        return
+    logger.info("Benchmark evaluation completed successfully.")
 
 
 if __name__ == "__main__":

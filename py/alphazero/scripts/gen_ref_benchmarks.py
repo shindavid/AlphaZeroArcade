@@ -4,6 +4,7 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.rating_db import RatingDB
+from alphazero.servers.loop_control.directory_organizer import REF_DIR
 from games.game_spec import GameSpec
 import games.index as game_index
 from games.index import ALL_GAME_SPECS
@@ -21,7 +22,6 @@ import sys
 from typing import List, Optional
 
 
-REF_DIR = os.path.join('/workspace/repo/benchmarks/reference.players')
 logger = logging.getLogger(__name__)
 
 

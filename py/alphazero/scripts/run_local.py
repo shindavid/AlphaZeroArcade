@@ -318,7 +318,7 @@ def load_benchmark_info(game: str):
         /workspace/output/{game}/benchmark_info.json
     """
 
-    file_path = os.path.join("/workspace/output", game, "benchmark_info.json")
+    file_path = DirectoryOrganizer.benchmark_info_filename(game)
 
     if not os.path.exists(file_path):
         print(f"No benchmark info found for game '{game}'.")

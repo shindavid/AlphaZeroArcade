@@ -218,12 +218,12 @@ class ServerBase:
             return WinLossDrawCounts()
 
         num_thread_option = {'-n': self.num_threads}
+        run_dir = self._session_data.run_dir
 
-        ps1 = agent1.make_player_str(self._session_data.run_dir, args=num_thread_option)
-        ps2 = agent2.make_player_str(self._session_data.run_dir, args=num_thread_option)
-        binary1 = os.path.join(self._session_data.run_dir, agent1.binary)
-        binary2 = os.path.join(self._session_data.run_dir, agent2.binary)
-        cwd = self._session_data.run_dir
+        ps1 = agent1.make_player_str(run_dir, args=num_thread_option, suffix='-A')
+        ps2 = agent2.make_player_str(run_dir, args=num_thread_option, suffix='-B')
+        binary1 = os.path.join(run_dir, agent1.binary)
+        binary2 = os.path.join(run_dir, agent2.binary)
 
         if args is None:
             args = {}
@@ -271,8 +271,8 @@ class ServerBase:
             logger.info('cmd1: %s', cmd1)
             logger.info('cmd2: %s', cmd2)
 
-            proc1 = subprocess_util.Popen(cmd1, cwd=cwd)
-            proc2 = subprocess_util.Popen(cmd2, cwd=cwd)
+            proc1 = subprocess_util.Popen(cmd1, cwd=run_dir)
+            proc2 = subprocess_util.Popen(cmd2, cwd=run_dir)
 
             procs_list = [proc1, proc2]
         else:
@@ -293,7 +293,7 @@ class ServerBase:
             cmd.append(make_args_str(args))
             cmd = ' '.join(map(str, cmd))
             logger.info('cmd:\n %s', cmd)
-            proc1 = subprocess_util.Popen(cmd, cwd=cwd)
+            proc1 = subprocess_util.Popen(cmd, cwd=run_dir)
             procs_list = [proc1]
 
         procs_set = set(procs_list)
