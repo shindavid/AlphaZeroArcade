@@ -234,7 +234,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        agent_roles = AgentRole.to_str(iagent.roles.to_str)
+        agent_roles = AgentRole.to_str(iagent.roles)
         c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
         conn.commit()
 

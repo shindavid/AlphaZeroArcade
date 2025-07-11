@@ -390,9 +390,15 @@ class LoopController:
         self._create_db_from_json(benchmark_tag, organizer)
         if benchmark_tag is not None and benchmark_tag != 'reference.players':
             benchmark_src = os.path.join(BENCHMARK_DIR, self.run_params.game, benchmark_tag)
-            shutil.copyfile(os.path.join(benchmark_src, 'binary'), organizer.binary_filename)
-            models_src = os.path.join(benchmark_src, 'models')
-            shutil.copytree(models_src, organizer.models_dir, dirs_exist_ok=True)
+            binary = os.path.join(benchmark_src, 'binary')
+            models = os.path.join(benchmark_src, 'models')
+            self_play_db = os.path.join(benchmark_src, 'self_play.db')
+            training_db = os.path.join(benchmark_src, 'training.db')
+
+            shutil.copyfile(binary, organizer.binary_filename)
+            shutil.copytree(models, organizer.models_dir, dirs_exist_ok=True)
+            shutil.copyfile(self_play_db, organizer.self_play_db_filename)
+            shutil.copyfile(training_db, organizer.training_db_filename)
 
         return benchmark_tag
 
