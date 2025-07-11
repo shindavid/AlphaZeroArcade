@@ -99,6 +99,8 @@ def save_benchmark_files(organizer: DirectoryOrganizer):
     cmd = shlex.join(sys.argv)
     RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
     shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
+    shutil.copyfile(organizer.self_play_db_filename, os.path.join(path, 'self_play.db'))
+    shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
 
 
 def save_default_benchmark(game: str, tag: str):

@@ -291,7 +291,7 @@ class EvalManager(GamingManagerBase):
         if iagent is not None:
             if role not in iagent.roles:
                 iagent.roles.add(role)
-                db.update_agent_roles(iagent.db_id, iagent.roles)
+                db.update_agent_roles(iagent)
             return iagent
 
         index = len(self._indexed_agents)
