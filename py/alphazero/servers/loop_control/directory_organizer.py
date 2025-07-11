@@ -125,7 +125,6 @@ class DirectoryOrganizer:
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
         self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
 
-        self.benchmark_info_filename = os.path.join(self.game_dir, 'benchmark_info.json')
         self.binary_filename = os.path.join(self.binary_dir, game)
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
         self.lock_filename = os.path.join(self.runtime_dir, 'lock')
@@ -362,16 +361,10 @@ class DirectoryOrganizer:
             f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
-    def save_default_benchmark(self):
-        benchmark_info = {
-            "benchmark_tag": self.tag
-        }
-
-        with open(self.benchmark_info_filename, 'w') as f:
-            json.dump(benchmark_info, f, indent=4)
-
-        logger.info(f"Benchmark tag '{self.tag}' saved to {self.benchmark_info_filename}")
-
     @staticmethod
     def benchmark_folder_name(benchmark_tag: str) -> str:
         return benchmark_tag + '.benchmark'
+
+    @staticmethod
+    def benchmark_info_filename(game: str) -> str:
+        return os.path.join(BENCHMARK_DIR, game, 'benchmark_info.json')

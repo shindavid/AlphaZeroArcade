@@ -5,7 +5,7 @@ from util.str_util import make_args_str
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Set
+from typing import Dict, Optional, Set
 import os
 
 
@@ -44,11 +44,13 @@ class MCTSAgent(Agent):
     binary: Optional[str] = None
     model: Optional[str] = None
 
-    def make_player_str(self, run_dir, args=None) -> str:
-        name_tokens = [self.tag, 'MCTS', str(self.gen)]
+    def make_player_str(self, run_dir, args: Dict=None, suffix: str=None) -> str:
+        name_tokens = ['MCTS', str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
         name = '-'.join(name_tokens)
+        if suffix is not None:
+            name += suffix
         player_args = {
             '--type': 'MCTS-C',
             '--name': name,
