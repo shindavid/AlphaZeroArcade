@@ -45,7 +45,7 @@ class MCTSAgent(Agent):
     model: Optional[str] = None
 
     def make_player_str(self, run_dir, args=None) -> str:
-        name_tokens = ['MCTS', str(self.gen)]
+        name_tokens = [self.tag, 'MCTS', str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
         name = '-'.join(name_tokens)
@@ -103,7 +103,7 @@ class ReferenceAgent(Agent):
     def make_player_str(self, run_dir: str, args=None) -> str:
         player_args = {
             '--type': self.type_str,
-            '--name': f'{self.type_str}-{self.strength}',
+            '--name': f'{self.tag}-{self.type_str}-{self.strength}',
             f'{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)

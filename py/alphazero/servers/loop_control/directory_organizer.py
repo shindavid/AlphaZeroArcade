@@ -184,20 +184,25 @@ class DirectoryOrganizer:
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def dir_setup(self):
+    def dir_setup(self, benchmark_tag: Optional[str]=None):
         """
         Performs initial setup of the directory structure.
         """
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
-        os.makedirs(self.eval_db_dir, exist_ok=True)
-        os.makedirs(self.self_play_data_dir, exist_ok=True)
-        os.makedirs(self.models_dir, exist_ok=True)
-        os.makedirs(self.logs_dir, exist_ok=True)
-        os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.misc_dir, exist_ok=True)
-        os.makedirs(self.binary_dir, exist_ok=True)
-        os.makedirs(self.runtime_dir, exist_ok=True)
+
+        if benchmark_tag != 'reference.players':
+            os.makedirs(self.binary_dir, exist_ok=True)
+            os.makedirs(self.models_dir, exist_ok=True)
+
+        if benchmark_tag is None:
+            os.makedirs(self.eval_db_dir, exist_ok=True)
+            os.makedirs(self.self_play_data_dir, exist_ok=True)
+            os.makedirs(self.logs_dir, exist_ok=True)
+            os.makedirs(self.checkpoints_dir, exist_ok=True)
+            os.makedirs(self.misc_dir, exist_ok=True)
+            os.makedirs(self.runtime_dir, exist_ok=True)
 
         if not os.path.isfile(self.version_filename):
             with open(self.version_filename, 'w') as f:
@@ -366,3 +371,7 @@ class DirectoryOrganizer:
             json.dump(benchmark_info, f, indent=4)
 
         logger.info(f"Benchmark tag '{self.tag}' saved to {self.benchmark_info_filename}")
+
+    @staticmethod
+    def benchmark_folder_name(benchmark_tag: str) -> str:
+        return benchmark_tag + '.benchmark'

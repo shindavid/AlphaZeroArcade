@@ -93,7 +93,7 @@ class ReferenceBenchmarker:
             committee_iagents.append(self.arena.indexed_agents[ix])
             committee_ratings.append(self.arena.ratings[ix])
 
-        RatingDB.db.save_ratings_to_json(committee_iagents, committee_ratings,
+        RatingDB.save_ratings_to_json(committee_iagents, committee_ratings,
                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):

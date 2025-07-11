@@ -314,8 +314,10 @@ class EvalManager(GamingManagerBase):
     def _gen_match_request_data(self, test_iagent: IndexedAgent, opponent_iagent: IndexedAgent,
                                 next_n_games) -> JsonDict:
         files_required: List[FileToTransfer] = []
-        test_agent = self._update_agent_required_files(test_iagent, files_required)
-        opponent_agent = self._update_agent_required_files(opponent_iagent, files_required)
+        agent1 = test_iagent.agent
+        agent2 = opponent_iagent.agent
+        test_agent = self._update_agent_files(agent1, AgentRole.TEST, files_required)
+        opponent_agent = self._update_agent_files(agent2, AgentRole.BENCHMARK, files_required)
 
         if isinstance(opponent_agent, ReferenceAgent):
             for dep in self._controller.game_spec.extra_runtime_deps:
@@ -338,34 +340,35 @@ class EvalManager(GamingManagerBase):
         logger.info(f"Evaluating {test_iagent.agent} vs {opponent_agent}, ({n_games} games)")
         return data
 
-    def _update_agent_required_files(self, iagent: IndexedAgent,
+    def _update_agent_files(self, agent: Agent, role: AgentRole,
                                      files_required: List[FileToTransfer]) -> Agent:
-        binary = self._get_binary_to_transfer(iagent)
-        model = self._get_model_to_transfer(iagent)
+        binary = self._get_binary_to_transfer(agent, role)
+        model = self._get_model_to_transfer(agent, role)
 
-        if isinstance(iagent.agent, ReferenceAgent):
-            agent = replace(iagent.agent, binary=binary.scratch_path)
+        if isinstance(agent, ReferenceAgent):
+            agent = replace(agent, binary=binary.scratch_path)
         else:
-            agent = replace(iagent.agent, binary=binary.scratch_path,
-                            model=model.scratch_path if model else None)
+            model_path = model.scratch_path if model else None
+            agent = replace(agent, binary=binary.scratch_path, model=model_path)
 
         files_required.append(binary)
         if model:
             files_required.append(model)
         return agent
 
-    def _get_binary_to_transfer(self, iagent: IndexedAgent) -> FileToTransfer:
+    def _get_binary_to_transfer(self, agent: Agent, role: AgentRole) -> FileToTransfer:
         game = self._controller._run_params.game
-        if iagent.roles == {AgentRole.TEST}:
+        if role == AgentRole.TEST:
             binary = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._get_binary_path(),
                 scratch_path=f'bin/{game}',
                 asset_path_mode='hash'
             )
-        elif iagent.roles == {AgentRole.BENCHMARK}:
+        elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
-            if iagent.agent.tag:
-                run_params = RunParams(game, iagent.agent.tag)
+            if agent.tag:
+                benchmark_folder = DirectoryOrganizer.benchmark_folder_name(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
                 benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
             benchmark_binary_src = self._controller._get_binary_path(
                 benchmark_organizer=benchmark_organizer)
@@ -377,23 +380,24 @@ class EvalManager(GamingManagerBase):
             )
         return binary
 
-    def _get_model_to_transfer(self, iagent: IndexedAgent) -> Optional[FileToTransfer]:
-        if isinstance(iagent.agent, ReferenceAgent) or iagent.agent.gen == 0:
+    def _get_model_to_transfer(self, agent: Agent, role: AgentRole) -> Optional[FileToTransfer]:
+        if isinstance(agent, ReferenceAgent) or agent.gen == 0:
             return None
         game = self._controller._run_params.game
-        gen = iagent.agent.gen
-        if iagent.roles == {AgentRole.TEST}:
+        gen = agent.gen
+        if role == AgentRole.TEST:
             model = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'eval-models/{iagent.agent.tag}/gen-{gen}.pt',
+                scratch_path=f'eval-models/{agent.tag}/gen-{gen}.pt',
                 asset_path_mode='scratch'
             )
-        elif iagent.roles == {AgentRole.BENCHMARK}:
+        elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
-            if iagent.agent.tag:
-                run_params = RunParams(game, iagent.agent.tag)
+            if agent.tag:
+                benchmark_folder = DirectoryOrganizer.benchmark_folder_name(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
                 benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-            scratch_path = f'benchmark-models/{iagent.agent.tag}/gen-{gen}.pt'
+            scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_organizer.get_model_filename(gen),
                 scratch_path=scratch_path,
@@ -534,7 +538,7 @@ class EvalManager(GamingManagerBase):
         self._eval_status_dict[eval_ix].elo = rating
         conn.aux.estimated_rating = None
         conn.aux.ix = None
-        logger.debug('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
+        logger.info('Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
 
     def _task_finished(self) -> None:
         latest_gen = self._controller._organizer.get_latest_model_generation()

@@ -390,8 +390,7 @@ def main():
     # This is not desirable long-term and will need to be refactored to follow the same format as other
     # agents, which might eventually include agents of external types such as KataGo.
     if benchmark_tag is None:
-        if game_spec.reference_player_family is None:
-            benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+        benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
 
     descs = []
     procs = []
