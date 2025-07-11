@@ -197,7 +197,7 @@ class EvalManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self.tag)
-            test_iagent = self._add_agent(test_agent, {AgentRole.TEST}, db=self._db)
+            test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index
             with self._lock:
@@ -286,13 +286,16 @@ class EvalManager(GamingManagerBase):
             self._eval_status_dict[indexed_agent.index].elo = db_rating.rating
             self._eval_status_dict[indexed_agent.index].status = EvalRequestStatus.COMPLETE
 
-    def _add_agent(self, agent: Agent, roles: set[AgentRole], db: RatingDB) -> IndexedAgent:
+    def _add_agent(self, agent: Agent, role: AgentRole, db: RatingDB) -> IndexedAgent:
         iagent = self._agent_lookup.get(agent, None)
         if iagent is not None:
+            if role not in iagent.roles:
+                iagent.roles.add(role)
+                db.update_agent_roles(iagent.db_id, iagent.roles)
             return iagent
 
         index = len(self._indexed_agents)
-        iagent = IndexedAgent(agent=agent, index=index, roles=roles, db_id=None)
+        iagent = IndexedAgent(agent=agent, index=index, roles={role}, db_id=None)
         self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
         db.commit_agent(iagent)
