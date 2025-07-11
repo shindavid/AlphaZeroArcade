@@ -205,7 +205,7 @@ class Plotter:
             )
 
             def update_hline(attr, old, new):
-                new_elo = self.benchmark_elos[new]
+                new_elo = self.benchmark_elos.get(new, None)
                 hline.location = new_elo
 
             slider.on_change("value", update_hline)
@@ -216,7 +216,8 @@ class Plotter:
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
     if RunParams.is_valid_tag(benchmark_tag):
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+        benchmark_folder = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_folder))
     else:
         benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)

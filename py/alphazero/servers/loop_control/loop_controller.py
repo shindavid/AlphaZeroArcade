@@ -369,6 +369,8 @@ class LoopController:
 
     def _copy_eval_db(self, benchmark_tag: str):
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
+        if os.path.exists(eval_db_file):
+            return
         benchmark_organizer = self._benchmark_organizer(benchmark_tag)
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
 
