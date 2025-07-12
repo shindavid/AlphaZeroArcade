@@ -1,0 +1,39 @@
+{
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py",
+  "ReferenceAgent-strength-0": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 0,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 0,
+      "roles": "benchmark",
+      "db_id": 1
+    },
+    "rating": 0.0
+  },
+  "ReferenceAgent-strength-1": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "Perfect",
+          "strength_param": "--strength",
+          "strength": 1,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 1,
+      "roles": "benchmark",
+      "db_id": 2
+    },
+    "rating": 219.97090911211063
+  }
+}
