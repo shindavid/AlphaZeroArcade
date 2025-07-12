@@ -102,9 +102,12 @@ def run_container(args):
             return
 
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
+              '-v', f"{Path.home()}/.aws:/aws-creds"
+              ]
     post_mount_cmds = [
         'mkdir -p ~/scratch',
+        'ln -s /aws-creds ~/.aws',
         ]
 
     # Check if output_dir is inside REPO_ROOT
