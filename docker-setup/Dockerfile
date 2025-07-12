@@ -32,7 +32,7 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
       sudo gosu ack curl rsync vim git cmake gcc-12 g++-12 python3-pip \
       ninja-build software-properties-common libeigen3-dev libncurses5-dev \
       python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 gdb tmux \
-      graphviz graphviz-dev openssh-server && \
+      graphviz graphviz-dev openssh-server boto3 && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
 ###################################################################################################
