@@ -1,0 +1,237 @@
+{
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py",
+  "ReferenceAgent-depth-0": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 0,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 0,
+      "roles": "benchmark",
+      "db_id": 1
+    },
+    "rating": 0.0
+  },
+  "ReferenceAgent-depth-1": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 1,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 1,
+      "roles": "benchmark",
+      "db_id": 2
+    },
+    "rating": 647.0133967338447
+  },
+  "ReferenceAgent-depth-2": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 2,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 2,
+      "roles": "benchmark",
+      "db_id": 3
+    },
+    "rating": 929.1318064397384
+  },
+  "ReferenceAgent-depth-3": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 3,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 3,
+      "roles": "benchmark",
+      "db_id": 4
+    },
+    "rating": 1171.0535224615255
+  },
+  "ReferenceAgent-depth-4": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 4,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 4,
+      "roles": "benchmark",
+      "db_id": 5
+    },
+    "rating": 1341.2186681081294
+  },
+  "ReferenceAgent-depth-5": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 5,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 5,
+      "roles": "benchmark",
+      "db_id": 6
+    },
+    "rating": 1501.7267403817823
+  },
+  "ReferenceAgent-depth-6": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 6,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 6,
+      "roles": "benchmark",
+      "db_id": 7
+    },
+    "rating": 1739.0717944886114
+  },
+  "ReferenceAgent-depth-7": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 7,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 7,
+      "roles": "benchmark",
+      "db_id": 8
+    },
+    "rating": 1850.2568372658043
+  },
+  "ReferenceAgent-depth-8": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 8,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 8,
+      "roles": "benchmark",
+      "db_id": 9
+    },
+    "rating": 2012.0191794444145
+  },
+  "ReferenceAgent-depth-9": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 9,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 9,
+      "roles": "benchmark",
+      "db_id": 10
+    },
+    "rating": 2150.2144323135326
+  },
+  "ReferenceAgent-depth-10": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 10,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 10,
+      "roles": "benchmark",
+      "db_id": 11
+    },
+    "rating": 2275.3601413996553
+  },
+  "ReferenceAgent-depth-12": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 12,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 12,
+      "roles": "benchmark",
+      "db_id": 13
+    },
+    "rating": 2396.1862166015453
+  },
+  "ReferenceAgent-depth-14": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 14,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 14,
+      "roles": "benchmark",
+      "db_id": 15
+    },
+    "rating": 2514.2717504328602
+  }
+}

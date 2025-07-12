@@ -22,6 +22,7 @@ build
 # output
 output
 profiling
+benchmarks/mcts
 
 # egg files
 **/AlphaZeroArcade.egg-info
