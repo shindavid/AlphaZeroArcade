@@ -103,7 +103,7 @@ def run_container(args):
 
     output_dir = Path(output_dir)
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo",
-              '-v', f"{Path.home()}/.aws:/aws-creds"
+              '-v', f"{Path.home()}/.aws:/workspace/aws-creds"
               ]
     post_mount_cmds = [
         'mkdir -p ~/scratch',
