@@ -103,39 +103,6 @@ function(append_target_metadata game_name)
     endforeach()
 endfunction()
 
-function(download_benchmark_zip GAME)
-    set(URL      "https://download.alphazeroarcade.io/benchmarks/mcts/${GAME}.zip")
-    set(ZIP_PATH "/workspace/repo/benchmarks/mcts/${GAME}.zip")
-    set(DEST_DIR "/workspace/repo/benchmarks/mcts/${GAME}")
-    set(STAMP    "${DEST_DIR}/.ready")
-
-    # ONE literal string – no unescaped semicolons, no embedded newlines
-    set(DL_SCRIPT
-        "set -euo pipefail && "
-        "echo '→ downloading ${URL}' && "
-        "( command -v curl >/dev/null && "
-        "  curl -fL -o \"${ZIP_PATH}\" \"${URL}\" || "
-        "  command -v wget >/dev/null && "
-        "  wget -O \"${ZIP_PATH}\" \"${URL}\" )"
-    )
-    string(JOIN "" DL_SCRIPT ${DL_SCRIPT})      # collapse list into one string
-
-    add_custom_command(
-        OUTPUT  "${STAMP}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_DIR}"
-        COMMAND bash -c "${DL_SCRIPT}"            # <— one clean argument
-        COMMAND ${CMAKE_COMMAND} -E echo "→ extracting to ${DEST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E chdir "${DEST_DIR}"
-                ${CMAKE_COMMAND} -E tar xf "${ZIP_PATH}" --format=zip
-        COMMAND ${CMAKE_COMMAND} -E touch "${STAMP}"
-        COMMENT "Fetching benchmark data for ${GAME}"
-        VERBATIM
-    )
-
-    add_custom_target(fetch_${GAME} ALL DEPENDS "${STAMP}")
-    set(FETCH_TARGET fetch_${GAME} PARENT_SCOPE)
-endfunction()
-
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
 link_directories(/usr/local/cuda/lib64)
 set(COMMON_EXTERNAL_LIBS ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
