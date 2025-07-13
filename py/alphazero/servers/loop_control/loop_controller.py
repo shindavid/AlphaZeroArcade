@@ -387,6 +387,7 @@ class LoopController:
 
         organizer = self._benchmark_organizer(benchmark_tag)
         organizer.dir_setup(benchmark_tag)
+
         self._create_db_from_json(benchmark_tag, organizer)
         if benchmark_tag is not None and benchmark_tag != 'reference.players':
             benchmark_src = os.path.join(BENCHMARK_DIR, self.run_params.game, benchmark_tag)
