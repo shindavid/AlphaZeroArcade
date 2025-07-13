@@ -2,6 +2,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 import base64
 import boto3
+import json
 import os
 import requests
 import time
@@ -29,9 +30,20 @@ def generate_signed_url(url, private_key_path, key_pair_id, expire_minutes=10):
     parsed_url = urlparse(url)
     expire_time = int(time.time()) + expire_minutes * 60
 
-    policy = (
-        f'{{"Statement":[{{"Resource":"{url}","Condition":{{"DateLessThan":{{"AWS:EpochTime":{expire_time}}}}}}}]}}'
-    )
+    policy_dict = {
+        "Statement": [
+            {
+                "Resource": url,
+                "Condition": {
+                    "DateLessThan": {
+                        "AWS:EpochTime": expire_time
+                    }
+                }
+            }
+        ]
+    }
+
+    policy = json.dumps(policy_dict, separators=(',', ':'))
 
     # Load private key
     with open(private_key_path, 'rb') as key_file:
@@ -76,7 +88,8 @@ def download_file_from_s3_via_cloudfront(cloudfront_url, private_key_path, key_p
 if __name__ == "__main__":
     download_file_from_s3_via_cloudfront(
     cloudfront_url="https://download.alphazeroarcade.io/benchmarks/mcts/c4.zip",
-    private_key_path="/workspace/.aws/cloudfront-private.pem",
+    private_key_path="/workspace/aws-creds/cloudfront-private.pem",
     key_pair_id="KDHZFFYK6PB1L",
     destination_path="/workspace/c4.zip"
 )
+
