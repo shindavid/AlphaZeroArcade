@@ -3,7 +3,7 @@
 # This file should not depend on any repo python files outside of the top-level directory.
 
 from pull_docker_image import docker_pull
-from setup_common import get_env_json, update_env_json, LATEST_DOCKER_HUB_IMAGE
+from setup_common import get_env_json, update_env_json, is_subpath, LATEST_DOCKER_HUB_IMAGE
 
 import os
 import subprocess
@@ -99,17 +99,24 @@ def setup_mount_dir():
     print("AlphaZeroArcade writes a significant amount of data to disk and requires persistent storage.")
     print("Please specify a directory where this data should be stored. The directory will be mounted")
     print("into the Docker container. For best performance, use a fast SSD if available.")
-    print("It's also recommended to place this directory **outside** the project repo to avoid")
-    print("slowing down your IDE or cluttering version control.")
+    print("It's required to place this directory **outside** the project repo.")
 
     env = get_env_json()
     cwd = os.getcwd()
     parent_dir = os.path.dirname(cwd)
     default_mount_dir = env.get('MOUNT_DIR', os.path.join(parent_dir, 'mount'))
-    prompt = f'Please enter the location of your mount directory [{default_mount_dir}]: '
-    mount_dir = input(prompt).strip()
-    if not mount_dir:
-        mount_dir = default_mount_dir
+
+    while True:
+        prompt = f'Please enter the location of your mount directory [{default_mount_dir}]: '
+        mount_dir = input(prompt).strip()
+        if not mount_dir:
+            mount_dir = default_mount_dir
+
+        if is_subpath(mount_dir, cwd):
+            print_red(f"❌ The mount directory cannot be inside the project repo: {cwd}")
+            continue
+        else:
+            break
 
     expanded_mount_dir = os.path.expanduser(mount_dir)
     try:
