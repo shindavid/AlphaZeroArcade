@@ -92,34 +92,35 @@ def validate_nvidia_installation(image):
         raise SetupException()
 
 
-def setup_output_dir():
+def setup_mount_dir():
     """
     Request user to set the output directory.
     """
-    print('AlphaZeroArcade runs write (a lot of) data to disk. Please specify a directory')
-    print('where that data will be written. This directory will be mounted into the docker')
-    print('container. If you have a fast SSD, it is recommended to use that for the data')
-    print('directory.')
-    print('')
+    print("AlphaZeroArcade writes a significant amount of data to disk and requires persistent storage.")
+    print("Please specify a directory where this data should be stored. The directory will be mounted")
+    print("into the Docker container. For best performance, use a fast SSD if available.")
+    print("It's also recommended to place this directory **outside** the project repo to avoid")
+    print("slowing down your IDE or cluttering version control.")
 
     env = get_env_json()
     cwd = os.getcwd()
-    default_output_dir = env.get('OUTPUT_DIR', os.path.join(cwd, 'output'))
-    prompt = f'Please enter the location of your output directory [{default_output_dir}]: '
-    output_dir = input(prompt).strip()
-    if not output_dir:
-        output_dir = default_output_dir
+    parent_dir = os.path.dirname(cwd)
+    default_mount_dir = env.get('MOUNT_DIR', os.path.join(parent_dir, 'mount'))
+    prompt = f'Please enter the location of your mount directory [{default_mount_dir}]: '
+    mount_dir = input(prompt).strip()
+    if not mount_dir:
+        mount_dir = default_mount_dir
 
-    expanded_output_dir = os.path.expanduser(output_dir)
+    expanded_mount_dir = os.path.expanduser(mount_dir)
     try:
-        os.makedirs(expanded_output_dir, exist_ok=True)
+        os.makedirs(expanded_mount_dir, exist_ok=True)
     except Exception as e:
-        print(f"❌ Failed to create output directory: {expanded_output_dir}")
+        print(f"❌ Failed to create mount directory: {expanded_mount_dir}")
         print(f"Error: {e}")
         raise SetupException()
 
-    update_env_json({'OUTPUT_DIR': expanded_output_dir})
-    print(f"✅ Successfully registered output directory: {output_dir}")
+    update_env_json({'MOUNT_DIR': expanded_mount_dir})
+    print(f"✅ Successfully registered mount directory: {expanded_mount_dir}")
 
 
 def check_docker_permissions():
@@ -165,7 +166,7 @@ def main():
     os.chdir(os.path.dirname(__file__))
 
     try:
-        setup_output_dir()
+        setup_mount_dir()
         print('*' * 80)
         check_docker_permissions()
         print('*' * 80)
