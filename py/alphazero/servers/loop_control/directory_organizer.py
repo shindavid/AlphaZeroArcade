@@ -56,7 +56,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
 VERSION = 4
-BENCHMARK_DIR = os.path.join('/workspace/repo/benchmarks/mcts')
+BENCHMARK_DATA_DIR = os.path.join('/workspace/mount/benchmark_data')
 REF_DIR = os.path.join('/workspace/repo/benchmarks/reference.players')
 
 logger = logging.getLogger(__name__)
@@ -370,4 +370,4 @@ class DirectoryOrganizer:
 
     @staticmethod
     def benchmark_info_filename(game: str) -> str:
-        return os.path.join(BENCHMARK_DIR, game, 'benchmark_info.json')
+        return os.path.join(BENCHMARK_DATA_DIR, game, 'benchmark_info.json')
