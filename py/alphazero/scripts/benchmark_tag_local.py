@@ -5,13 +5,14 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.scripts.run_local import get_benchmark_tag
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer, BENCHMARK_DIR
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR
 from games.game_spec import GameSpec
 from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
+from datetime import datetime, timezone
 import logging
 import json
 import os
@@ -69,9 +70,10 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
-def save_benchmark_files(organizer: DirectoryOrganizer):
+def save_benchmark_data(organizer: DirectoryOrganizer):
     benchmarker = Benchmarker(organizer)
-    path = os.path.join(BENCHMARK_DIR, organizer.game, organizer.tag)
+    utc_now = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
+    path = os.path.join(BENCHMARK_DATA_DIR, organizer.game, utc_now, organizer.tag)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
     file = os.path.join(path, 'ratings.json')
@@ -117,7 +119,7 @@ def save_default_benchmark(game: str, tag: str):
 def main():
     args = load_args()
     run_params = RunParams.create(args)
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
     if not os.path.exists(organizer.base_dir):
         raise Exception(f"Run {organizer.base_dir} does not exist.")
 
@@ -141,7 +143,7 @@ def main():
     if not args.skip_set_as_default:
         save_default_benchmark(run_params.game, run_params.tag)
 
-    save_benchmark_files(organizer)
+    save_benchmark_data(organizer)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
     logger.info(f"Running command: {' '.join(eval_cmd)}")

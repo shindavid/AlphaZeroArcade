@@ -1,7 +1,7 @@
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
-from .directory_organizer import DirectoryOrganizer
+from .directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR
 from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
@@ -20,7 +20,6 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from alphazero.scripts.benchmark_tag_local import BENCHMARK_DIR
 from alphazero.scripts.gen_ref_benchmarks import REF_DIR
 from games.game_spec import GameSpec
 from games.index import get_game_spec
@@ -390,7 +389,7 @@ class LoopController:
 
         self._create_db_from_json(benchmark_tag, organizer)
         if benchmark_tag is not None and benchmark_tag != 'reference.players':
-            benchmark_src = os.path.join(BENCHMARK_DIR, self.run_params.game, benchmark_tag)
+            benchmark_src = os.path.join(BENCHMARK_DATA_DIR, self.run_params.game, benchmark_tag)
             binary = os.path.join(benchmark_src, 'binary')
             models = os.path.join(benchmark_src, 'models')
             self_play_db = os.path.join(benchmark_src, 'self_play.db')
@@ -408,7 +407,7 @@ class LoopController:
         if benchmark_tag == 'reference.players':
             json_path = os.path.join(REF_DIR, f'{game}.json')
         else:
-            json_path = os.path.join(BENCHMARK_DIR, game, benchmark_tag, 'ratings.json')
+            json_path = os.path.join(BENCHMARK_DATA_DIR, game, benchmark_tag, 'ratings.json')
         db = RatingDB(organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
 

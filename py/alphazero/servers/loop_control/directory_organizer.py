@@ -367,4 +367,4 @@ class DirectoryOrganizer:
 
     @staticmethod
     def benchmark_info_filename(game: str) -> str:
-        return os.path.join(BENCHMARK_DIR, game, 'benchmark_info.json')
+        return os.path.join(BENCHMARK_DATA_DIR, game, 'benchmark_info.json')
