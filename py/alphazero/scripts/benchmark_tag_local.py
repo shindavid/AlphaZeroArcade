@@ -5,7 +5,8 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.scripts.run_local import get_benchmark_tag
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR
+from alphazero.servers.loop_control.base_dir import Workspace
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
@@ -57,7 +58,7 @@ def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_p
 
 def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params: RatingParams,
                  logging_params: LoggingParams):
-    benchmark_tag = get_benchmark_tag(run_params)
+    benchmark_tag = get_benchmark_tag(run_params.game)
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--task-mode',
            '--run-eval-server']
@@ -70,10 +71,9 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
-def save_benchmark_data(organizer: DirectoryOrganizer):
+def save_benchmark_data(organizer: DirectoryOrganizer, utc_key: str):
     benchmarker = Benchmarker(organizer)
-    utc_now = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
-    path = os.path.join(BENCHMARK_DATA_DIR, organizer.game, utc_now, organizer.tag)
+    path = os.path.join(Workspace.benchmark_data_dir, organizer.game, utc_key, organizer.tag)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
     file = os.path.join(path, 'ratings.json')
@@ -105,21 +105,22 @@ def save_benchmark_data(organizer: DirectoryOrganizer):
     shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
 
 
-def save_default_benchmark(game: str, tag: str):
+def save_benchmark_info(game: str, tag: str, utc_key: str):
     benchmark_info = {
-        "benchmark_tag": tag
+        "utc_key": utc_key,
+        "tag": tag
     }
-    benchmark_info_filename = DirectoryOrganizer.benchmark_info_filename(game)
-    with open(benchmark_info_filename, 'w') as f:
+    benchmark_info_file = Workspace.benchmark_info_file(game)
+    with open(benchmark_info_file, 'w') as f:
         json.dump(benchmark_info, f, indent=4)
 
-    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_info_filename}")
+    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_info_file}")
 
 
 def main():
     args = load_args()
     run_params = RunParams.create(args)
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
     if not os.path.exists(organizer.base_dir):
         raise Exception(f"Run {organizer.base_dir} does not exist.")
 
@@ -140,10 +141,11 @@ def main():
         return
 
     organizer.freeze_tag()
+    utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
     if not args.skip_set_as_default:
-        save_default_benchmark(run_params.game, run_params.tag)
+        save_benchmark_info(run_params.game, run_params.tag, utc_key)
 
-    save_benchmark_data(organizer)
+    save_benchmark_data(organizer, utc_key)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
     logger.info(f"Running command: {' '.join(eval_cmd)}")

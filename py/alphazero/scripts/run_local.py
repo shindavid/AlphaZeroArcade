@@ -58,6 +58,8 @@ from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.gaming.server_base import ServerParams
+from alphazero.servers.loop_control.base_dir import Workspace
+from alphazero.servers.loop_control.loop_controller import BenchmarkRecord
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
@@ -318,24 +320,30 @@ def load_benchmark_info(game: str):
         /workspace/output/{game}/benchmark_info.json
     """
 
-    file_path = DirectoryOrganizer.benchmark_info_filename(game)
+    file_path = Workspace.benchmark_info_file(game)
 
     if not os.path.exists(file_path):
-        print(f"No benchmark info found for game '{game}'.")
+        print(f"No benchmark info found for game '{game}' at {file_path}. ")
         return None
 
     with open(file_path, 'r') as f:
         benchmark_info = json.load(f)
+        print(benchmark_info)
 
-    utc_key = benchmark_info.get("utc_key")
-    tag = benchmark_info.get("benchmark_tag")
+    utc_key = benchmark_info.get("utc_key", None)
+    tag = benchmark_info.get("tag", None)
 
-    return utc_key, tag
+    if utc_key is None or tag is None:
+        raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
+
+    return BenchmarkRecord(utc_key, tag)
 
 
-def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]=None) -> Optional[str]:
+def get_benchmark_tag(game: str, benchmark_tag: Optional[str]=None) -> Optional[str]:
     if benchmark_tag is None:
-        utc_key, benchmark_tag = load_benchmark_info(run_params.game)
+        record: BenchmarkRecord = load_benchmark_info(game)
+        if record is None:
+            return None
     return benchmark_tag
 
 
@@ -367,7 +375,7 @@ def main():
 
     os.chdir(Repo.root())
 
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
     if not organizer.version_check():
         print('The following output directory is outdated:\n')
         print(organizer.base_dir + '\n')
@@ -393,7 +401,7 @@ def main():
     # This is not desirable long-term and will need to be refactored to follow the same format as other
     # agents, which might eventually include agents of external types such as KataGo.
     if benchmark_tag is None:
-        benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
+        benchmark_tag = get_benchmark_tag(run_params.game, params.benchmark_tag)
 
     descs = []
     procs = []
