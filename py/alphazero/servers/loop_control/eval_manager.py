@@ -372,7 +372,7 @@ class EvalManager(GamingManagerBase):
             if agent.tag:
                 benchmark_folder = DirectoryOrganizer.benchmark_folder_name(agent.tag)
                 run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
             benchmark_binary_src = self._controller._get_binary_path(
                 benchmark_organizer=benchmark_organizer)
 
@@ -399,7 +399,7 @@ class EvalManager(GamingManagerBase):
             if agent.tag:
                 benchmark_folder = DirectoryOrganizer.benchmark_folder_name(agent.tag)
                 run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
             scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_organizer.get_model_filename(gen),

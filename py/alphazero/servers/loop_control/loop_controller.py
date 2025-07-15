@@ -1,7 +1,7 @@
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
-from .directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR
+from .directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR, BENCHMARK_RUN_DIR
 from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
@@ -40,6 +40,21 @@ from typing import Callable, Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
+
+
+class BenchmarkType(Enum):
+    REF: str = 'reference'
+    MCTS: str = 'mcts'
+
+
+@dataclass
+class BenchmarkRecord:
+    type: BenchmarkType
+    utc_key: str
+    tag: str
+
+    def path_str(self):
+        return os.path.join(utc_key, tag)
 
 
 class LoopController:
@@ -85,9 +100,9 @@ class LoopController:
 
         if self._on_ephemeral_local_disk_env:
             self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
-            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
         else:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
             self._persistent_organizer = None
 
         self._shutdown_manager = ShutdownManager()
@@ -381,13 +396,13 @@ class LoopController:
         else:
             raise Exception('No benchmark is available. Please specify --benchmark-tag.')
 
-        if os.path.isdir(self._benchmark_dir(benchmark_tag)):
+        if os.path.isdir(self._benchmark_data_dir(benchmark_tag)):
             return benchmark_tag
 
         organizer = self._benchmark_organizer(benchmark_tag)
         organizer.dir_setup(benchmark_tag)
 
-        self._create_db_from_json(benchmark_tag, organizer)
+        self._create_db_from_json(self.benchmark_record, organizer)
         if benchmark_tag is not None and benchmark_tag != 'reference.players':
             benchmark_src = os.path.join(BENCHMARK_DATA_DIR, self.run_params.game, benchmark_tag)
             binary = os.path.join(benchmark_src, 'binary')
@@ -402,24 +417,24 @@ class LoopController:
 
         return benchmark_tag
 
-    def _create_db_from_json(self, benchmark_tag: str, organizer: DirectoryOrganizer):
+    def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
         game = self.game_spec.name
-        if benchmark_tag == 'reference.players':
+        if record.tag == 'reference.players':
             json_path = os.path.join(REF_DIR, f'{game}.json')
         else:
-            json_path = os.path.join(BENCHMARK_DATA_DIR, game, benchmark_tag, 'ratings.json')
+            json_path = os.path.join(BENCHMARK_DATA_DIR, game, record.path_str(), 'ratings.json')
         db = RatingDB(organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
 
-    def _benchmark_dir(self, benchmark_tag: str) -> str:
+    def _benchmark_data_dir(self, benchmark_tag: str) -> str:
         game = self.game_spec.name
         folder_name = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
-        return os.path.join('/workspace/output', game, folder_name)
+        return os.path.join(BENCHMARK_DATA_DIR, game, folder_name)
 
     def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
         benchmark_folder_name = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
         run_params = RunParams(self.run_params.game, benchmark_folder_name)
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
         return organizer
 
     def _get_benchmark_manager(self) -> BenchmarkManager:

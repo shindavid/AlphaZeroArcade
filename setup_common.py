@@ -77,6 +77,7 @@ def is_version_ok(version_str):
         return False
     return version.parse(version_str) >= version.parse(MINIMUM_REQUIRED_IMAGE_VERSION)
 
+
 def is_subpath(child_path, parent_path):
     child = Path(child_path).resolve()
     parent = Path(parent_path).resolve()
