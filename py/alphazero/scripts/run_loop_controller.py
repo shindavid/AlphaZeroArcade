@@ -2,6 +2,7 @@
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
 from games.game_spec import GameSpec
@@ -51,7 +52,7 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
     if not organizer.version_check():
         print('The following output directory is outdated:\n')
         print(organizer.base_dir + '\n')

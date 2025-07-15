@@ -1,7 +1,7 @@
+from .base_dir import BaseDir, Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
-from
 from .directory_organizer import DirectoryOrganizer
 from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
@@ -21,7 +21,6 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from alphazero.scripts.gen_ref_benchmarks import REF_DIR
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
@@ -32,6 +31,8 @@ from util.socket_util import JsonDict, SocketRecvException, SocketSendException,
 from util.sqlite3_util import DatabaseConnectionPool
 from util import ssh_util
 
+from dataclasses import dataclass
+from enum import Enum
 import logging
 import os
 import shutil
@@ -43,19 +44,13 @@ from typing import Callable, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-class BenchmarkType(Enum):
-    REF: str = 'reference'
-    MCTS: str = 'mcts'
-
-
 @dataclass
 class BenchmarkRecord:
-    type: BenchmarkType
     utc_key: str
     tag: str
 
     def path_str(self):
-        return os.path.join(utc_key, tag)
+        return os.path.join(self.utc_key, self.tag)
 
 
 class LoopController:
@@ -100,10 +95,10 @@ class LoopController:
         self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs) or params.simulate_cloud
 
         if self._on_ephemeral_local_disk_env:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
-            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root=Scratch)
+            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         else:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
             self._persistent_organizer = None
 
         self._shutdown_manager = ShutdownManager()
@@ -435,7 +430,7 @@ class LoopController:
     def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
         benchmark_folder_name = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
         run_params = RunParams(self.run_params.game, benchmark_folder_name)
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         return organizer
 
     def _get_benchmark_manager(self) -> BenchmarkManager:

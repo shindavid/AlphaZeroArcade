@@ -37,7 +37,7 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
 """
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
-from alphazero.logic.base_dir import BaseDir
+from alphazero.servers.loop_control.base_dir import BaseDir
 from util import sqlite3_util
 
 from natsort import natsorted
@@ -107,8 +107,8 @@ class DirectoryOrganizer:
 
         self.args = args
 
-        self.base_dir_root = base_dir_root
-        self.game_dir = os.path.join(base_dir_root, 'output', game)
+        self.base_dir_root = base_dir_root.output_dir()
+        self.game_dir = os.path.join(self.base_dir_root, game)
         self.base_dir = os.path.join(self.game_dir, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
