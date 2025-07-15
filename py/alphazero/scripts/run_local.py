@@ -327,12 +327,15 @@ def load_benchmark_info(game: str):
     with open(file_path, 'r') as f:
         benchmark_info = json.load(f)
 
-    return benchmark_info.get("benchmark_tag")
+    utc_key = benchmark_info.get("utc_key")
+    tag = benchmark_info.get("benchmark_tag")
+
+    return utc_key, tag
 
 
 def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]=None) -> Optional[str]:
     if benchmark_tag is None:
-        benchmark_tag = load_benchmark_info(run_params.game)
+        utc_key, benchmark_tag = load_benchmark_info(run_params.game)
     return benchmark_tag
 
 
@@ -364,7 +367,7 @@ def main():
 
     os.chdir(Repo.root())
 
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
     if not organizer.version_check():
         print('The following output directory is outdated:\n')
         print(organizer.base_dir + '\n')

@@ -37,6 +37,7 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
 """
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
+from alphazero.logic.base_dir import BaseDir
 from util import sqlite3_util
 
 from natsort import natsorted
@@ -56,8 +57,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
 VERSION = 4
-BENCHMARK_DATA_DIR = os.path.join('/workspace/mount/benchmark_data')
-REF_DIR = os.path.join('/workspace/repo/benchmarks/reference.players')
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +98,7 @@ class ForkInfo:
 
 
 class DirectoryOrganizer:
-    def __init__(self, args: RunParams, base_dir_root='/home/devuser/scratch'):
+    def __init__(self, args: RunParams, base_dir_root: BaseDir):
         """
         This constructor should not actually do any filesystem reading or writing. It should just
         set data members corresonding to expected filesystem paths.
@@ -364,10 +363,3 @@ class DirectoryOrganizer:
             f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
-    @staticmethod
-    def benchmark_folder_name(benchmark_tag: str) -> str:
-        return benchmark_tag + '.benchmark'
-
-    @staticmethod
-    def benchmark_info_filename(game: str) -> str:
-        return os.path.join(BENCHMARK_DATA_DIR, game, 'benchmark_info.json')
