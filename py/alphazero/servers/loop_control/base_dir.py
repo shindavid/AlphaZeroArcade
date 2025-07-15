@@ -19,5 +19,5 @@ class Workspace(BaseDir):
     ref_dir = '/workspace/repo/reference.players'
 
     @staticmethod
-    def benchmark_info_file(game: str) -> str:
+    def benchmark_record_file(game: str) -> str:
         return os.path.join('/workspace/repo/benchmark_info', f'{game}.json')
