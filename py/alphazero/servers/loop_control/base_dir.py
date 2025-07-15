@@ -1,18 +1,19 @@
+import os
+
 class BaseDir:
     base_dir = ''
-    
-    @class_method
-    def output_dir(class):
-        return os.join.path(class.base_dir, 'output')
+
+    @classmethod
+    def output_dir(cls):
+        return os.path.join(cls.base_dir, 'output')
 
 
 class Scratch(BaseDir):
     base_dir = '/home/devuser/scratch'
 
 
-class Workspace(BaseDir):    
+class Workspace(BaseDir):
     base_dir = '/workspace/mount'
-    output_dir = os.path.join(base_dir, 'output')
     benchmark_run_dir = os.path.join(base_dir, 'benchmark_runs')
     benchmark_data_dir = os.path.join(base_dir, 'benchmark_data')
     ref_dir = '/workspace/repo/reference.players'
