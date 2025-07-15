@@ -105,16 +105,16 @@ def save_benchmark_data(organizer: DirectoryOrganizer, utc_key: str):
     shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
 
 
-def save_benchmark_info(game: str, tag: str, utc_key: str):
+def save_benchmark_record(game: str, tag: str, utc_key: str):
     benchmark_info = {
         "utc_key": utc_key,
         "tag": tag
     }
-    benchmark_info_file = Workspace.benchmark_info_file(game)
-    with open(benchmark_info_file, 'w') as f:
+    benchmark_record_file = Workspace.benchmark_record_file(game)
+    with open(benchmark_record_file, 'w') as f:
         json.dump(benchmark_info, f, indent=4)
 
-    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_info_file}")
+    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_record_file}")
 
 
 def main():
