@@ -1,7 +1,8 @@
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
-from .directory_organizer import DirectoryOrganizer, BENCHMARK_DATA_DIR, BENCHMARK_RUN_DIR
+from
+from .directory_organizer import DirectoryOrganizer
 from .eval_manager import EvalManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
