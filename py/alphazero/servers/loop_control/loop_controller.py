@@ -47,12 +47,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BenchmarkRecord:
-    utc_key: str
-    tag: str
-    game: str
+    utc_key: Optional[str] = None
+    tag: Optional[str] = None
+    game: Optional[str] = None
 
     def data_folder_path(self):
-        return os.path.join(Workspace.benchmark_data_dir, self.game, self.utc_key, self.tag)
+        return os.path.join(Workspace.benchmark_data_dir, self.game, self.tag, self.utc_key)
     
     def to_dict(self):
         return {'utc_key': self.utc_key, 'tag': self.tag}
@@ -389,12 +389,8 @@ class LoopController:
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
 
     def _expand_rundir_from_json(self) -> str:
-
         if self.params.benchmark_tag is not None:
-            organizer = self._benchmark_organizer(self.params.benchmark_tag)
-            assert os.path.isdir(organizer.base_dir)
-            return self.params.benchmark_tag
-        
+            record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name) 
         elif self.game_spec.reference_player_family is not None:
             record = BenchmarkRecord(tag='reference.players')
         else:
@@ -406,7 +402,7 @@ class LoopController:
         benchmark_organizer.dir_setup(record.tag)
         self._create_db_from_json(record, benchmark_organizer)
         if record.tag == 'reference.players':
-            return record.tab
+            return record.tag
 
         binary = os.path.join(record.data_folder_path(), 'binary')
         models = os.path.join(record.data_folder_path(), 'models')
@@ -417,9 +413,7 @@ class LoopController:
         shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
         shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
         shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
-        
-
-        return benchmark_tag
+        return record.tag
     
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
         record = self._load_benchmark_record()

@@ -4,7 +4,6 @@ from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.scripts.run_local import get_benchmark_tag
 from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.loop_controller import BenchmarkRecord
@@ -59,8 +58,7 @@ def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_p
     return cmd
 
 def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params: RatingParams,
-                 logging_params: LoggingParams):
-    benchmark_tag = get_benchmark_tag(run_params.game)
+                 logging_params: LoggingParams, benchmark_tag: str):
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--task-mode',
            '--run-eval-server']
@@ -148,7 +146,7 @@ def main():
     save_benchmark_data(organizer, record)
     
 
-    eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
+    eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
     try:
         subprocess.run(eval_cmd, text=True, check=True)
