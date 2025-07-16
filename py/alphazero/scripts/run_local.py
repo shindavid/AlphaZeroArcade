@@ -312,41 +312,6 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
 
-def load_benchmark_info(game: str):
-    """
-    Load the default benchmark tag for a given game from a JSON file.
-
-    This will read the file:
-        /workspace/output/{game}/benchmark_info.json
-    """
-
-    file_path = Workspace.benchmark_record_file(game)
-
-    if not os.path.exists(file_path):
-        print(f"No benchmark info found for game '{game}' at {file_path}. ")
-        return None
-
-    with open(file_path, 'r') as f:
-        benchmark_info = json.load(f)
-        print(benchmark_info)
-
-    utc_key = benchmark_info.get("utc_key", None)
-    tag = benchmark_info.get("tag", None)
-
-    if utc_key is None or tag is None:
-        raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
-
-    return BenchmarkRecord(utc_key, tag)
-
-
-def get_benchmark_tag(game: str, benchmark_tag: Optional[str]=None) -> Optional[str]:
-    if benchmark_tag is None:
-        record: BenchmarkRecord = load_benchmark_info(game)
-        if record is None:
-            return None
-    return benchmark_tag
-
-
 def main():
     args, game_spec = load_args()
 
