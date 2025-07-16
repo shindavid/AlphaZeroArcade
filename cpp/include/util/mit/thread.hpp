@@ -26,13 +26,16 @@ struct thread_impl {
   void lift_block(mutex* m);
   bool viable() const;
 
+  std::thread std_thread;  // not set for main thread
+
   // owner is the thread that owns this impl. If the parent thread is std::move()'d, the owner
   // will be set to the new thread instance. The defunct thread will continue to have its impl_
   // pointer set to this impl, but it will no longer be the owner. Maintaining this defunct
   // thread pointer makes bookkeeping easier.
   thread* owner = nullptr;
 
-  std::thread std_thread;  // not set for main thread
+  thread_impl* parent = nullptr;  // thread that spawned this thread
+  thread_impl* joinee = nullptr;  // thread that this called join() on (whose parent must be this)
   condition_variable* blocking_cv = nullptr;
   mutex* blocking_mutex = nullptr;
   int id = -1;  // set by scheduler, 0 for main thread
@@ -51,7 +54,7 @@ class thread {
 
   thread();
   template <typename Function> explicit thread(Function&& func);
-  ~thread() { impl_ = nullptr; }
+  ~thread();
 
   thread(thread&& other);
   thread& operator=(thread&& other);

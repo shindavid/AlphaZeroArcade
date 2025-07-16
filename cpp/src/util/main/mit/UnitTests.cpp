@@ -1,5 +1,7 @@
+#include <gtest/gtest.h>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>
+#include <util/mit/exceptions.hpp>
 #include <util/mit/mit.hpp>
 
 #include <vector>
@@ -72,6 +74,51 @@ TEST(mit, seed_matters) {
   bool equal = eigen_util::equal(tensor1, tensor2);
   EXPECT_FALSE(equal) << "tensor1: \n" << tensor1 << "\n"
                       << "tensor2: " << tensor2;
+}
+
+// A class that has a non-deterministic mutex deadlock bug
+class DeadlockBug {
+ public:
+  void run() {
+    mit::BugDetectGuard guard;  // Enable bug catching mode
+
+    mit::mutex m1, m2;
+
+    mit::thread t1([&]() {
+      mit::unique_lock lock1(m1);
+      mit::unique_lock lock2(m2);
+    });
+
+    mit::thread t2([&]() {
+      mit::unique_lock lock2(m2);
+      mit::unique_lock lock1(m1);
+    });
+
+    if (t1.joinable()) t1.join();
+    if (t2.joinable()) t2.join();
+  }
+};
+
+TEST(mit, deadlock_bug) {
+  mit::reset();
+  mit::seed(42);
+
+  DeadlockBug bug;
+  int throw_count = 0;
+  int non_throw_count = 0;
+
+  for (int i = 0; i < 100; ++i) {
+    try {
+      mit::reset();
+      bug.run();
+      non_throw_count++;
+    } catch (const mit::BugDetectedError&) {
+      throw_count++;
+    }
+  }
+
+  EXPECT_GT(throw_count, 0);
+  EXPECT_GT(non_throw_count, 0);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

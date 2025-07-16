@@ -2,7 +2,11 @@
 
 #include <util/mit/thread.hpp>
 
+#include <util/mit/exceptions.hpp>
+#include <util/mit/scheduler.hpp>
+
 #include <util/Asserts.hpp>
+#include <util/LoggingUtil.hpp>
 #include <util/mit/scheduler.hpp>
 
 namespace mit {
@@ -16,13 +20,19 @@ template <typename Function>
 thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true)) {
   auto& sched = scheduler::instance();
 
-  thread_impl_ptr impl = impl_;
+  thread_impl* impl = impl_.get();
   auto wrapper = [&sched, impl, func = std::forward<Function>(func)]() mutable {
     // Note: this can be std::move()'d at any point within this lambda, but this->impl_ will
     // continue to point to the same impl, making this kosher.
-    sched.block_until_has_control(impl.get());
-    func();
-    sched.deactivate_thread(impl.get());
+    try {
+      sched.block_until_has_control(impl);
+      func();
+    } catch (const BugDetectedError& e) {
+      sched.handle_bug_detected_error(e);
+    } catch (...) {
+      sched.handle_exception();
+    }
+    sched.deactivate_thread(impl);
   };
 
   impl_->std_thread = std::thread(std::move(wrapper));
@@ -33,6 +43,8 @@ inline thread::thread(thread&& other) {
   impl_ = other.impl_;  // intentionally do not reset other.impl_
   impl_->owner = this;  // transfer ownership to this thread
 }
+
+inline thread::~thread() { impl_ = nullptr; }
 
 inline thread& thread::operator=(thread&& other) {
   impl_ = other.impl_;  // intentionally do not reset other.impl_
@@ -86,7 +98,7 @@ inline void thread_impl::lift_block(mutex* m) {
 }
 
 inline bool thread_impl::viable() const {
-  return !blocking_cv && !blocking_mutex && activated;
+  return !blocking_cv && !blocking_mutex && !joinee && activated;
 }
 
 }  // namespace mit

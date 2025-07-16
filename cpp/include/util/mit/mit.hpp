@@ -10,6 +10,7 @@
 #ifdef MIT_TEST_MODE
 
 #include <util/mit/condition_variable.hpp>
+#include <util/mit/exceptions.hpp>
 #include <util/mit/functions.hpp>
 #include <util/mit/lock_guard.hpp>
 #include <util/mit/mutex.hpp>
@@ -18,6 +19,7 @@
 #include <util/mit/unique_lock.hpp>
 
 #include <inline/util/mit/condition_variable.inl>
+#include <inline/util/mit/exceptions.inl>
 #include <inline/util/mit/functions.inl>
 #include <inline/util/mit/mutex.inl>
 #include <inline/util/mit/scheduler.inl>
