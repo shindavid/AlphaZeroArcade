@@ -400,8 +400,6 @@ def main():
     # NOTE: reference_player_family is treated as a special case from regular MCTS agent runs.
     # This is not desirable long-term and will need to be refactored to follow the same format as other
     # agents, which might eventually include agents of external types such as KataGo.
-    if benchmark_tag is None:
-        benchmark_tag = get_benchmark_tag(run_params.game, params.benchmark_tag)
 
     descs = []
     procs = []

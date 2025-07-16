@@ -388,10 +388,16 @@ class LoopController:
         if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
             benchmark_tag = 'reference.players'
         elif self.params.benchmark_tag is not None:
-            benchmark_tag = self.params.benchmark_tag
+            organizer = self._benchmark_organizer(self.params.benchmark_tag)
+            if os.path.isdir(organizer.base_dir):
+                benchmark_tag = self.params.benchmark_tag
         else:
-            raise Exception('No benchmark is available. Please specify --benchmark-tag.')
-
+            record = self._load_benchmark_record()
+            assert record is not None
+            benchmark_run_dir = DirectoryOrganizer.benchmark_folder(record.tag)
+            organizer = self._benchmark_organizer(benchmark_run_dir)
+        
+            if os.path.isdir(organizer.base_dir):
         if os.path.isdir(self._benchmark_data_dir(benchmark_tag)):
             return benchmark_tag
 
@@ -413,6 +419,31 @@ class LoopController:
 
         return benchmark_tag
 
+    def _load_benchmark_record():
+        """
+        Load the default benchmark tag for a given game from a JSON file.
+
+        This will read the file:
+            /workspace/output/{game}/benchmark_info.json
+        """
+
+        file_path = Workspace.benchmark_record_file(self.run_params.game)
+
+        if not os.path.exists(file_path):
+            print(f"No benchmark info found for game '{game}' at {file_path}. ")
+            return None
+
+        with open(file_path, 'r') as f:
+            benchmark_info = json.load(f)
+
+        utc_key = benchmark_info.get("utc_key", None)
+        tag = benchmark_info.get("tag", None)
+
+        if utc_key is None or tag is None:
+            raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
+
+        return BenchmarkRecord(utc_key, tag)
+
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
         game = self.game_spec.name
         if record.tag == 'reference.players':
@@ -428,7 +459,7 @@ class LoopController:
         return os.path.join(BENCHMARK_DATA_DIR, game, folder_name)
 
     def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
-        benchmark_folder_name = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
+        benchmark_folder_name = DirectoryOrganizer.benchmark_folder(benchmark_tag)
         run_params = RunParams(self.run_params.game, benchmark_folder_name)
         organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         return organizer
