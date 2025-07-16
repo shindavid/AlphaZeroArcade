@@ -25,6 +25,7 @@ from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
+from util.aws_util import BUCKET
 from util.py_util import atomic_cp, sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
@@ -48,10 +49,13 @@ logger = logging.getLogger(__name__)
 class BenchmarkRecord:
     utc_key: str
     tag: str
+    game: str
 
-    def path_str(self):
-        return os.path.join(self.utc_key, self.tag)
-
+    def data_folder_path(self):
+        return os.path.join(Workspace.benchmark_data_dir, self.game, self.utc_key, self.tag)
+    
+    def to_dict(self):
+        return {'utc_key': self.utc_key, 'tag': self.tag}
 
 class LoopController:
     """
@@ -385,41 +389,54 @@ class LoopController:
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
 
     def _expand_rundir_from_json(self) -> str:
-        if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
-            benchmark_tag = 'reference.players'
-        elif self.params.benchmark_tag is not None:
+
+        if self.params.benchmark_tag is not None:
             organizer = self._benchmark_organizer(self.params.benchmark_tag)
-            if os.path.isdir(organizer.base_dir):
-                benchmark_tag = self.params.benchmark_tag
-        else:
-            record = self._load_benchmark_record()
-            assert record is not None
-            benchmark_run_dir = DirectoryOrganizer.benchmark_folder(record.tag)
-            organizer = self._benchmark_organizer(benchmark_run_dir)
+            assert os.path.isdir(organizer.base_dir)
+            return self.params.benchmark_tag
         
-            if os.path.isdir(organizer.base_dir):
-        if os.path.isdir(self._benchmark_data_dir(benchmark_tag)):
-            return benchmark_tag
+        elif self.game_spec.reference_player_family is not None:
+            record = BenchmarkRecord(tag='reference.players')
+        else:
+            record = self._download_from_s3()
+        
+        assert record is not None
+        
+        benchmark_organizer = self._benchmark_organizer(record.tag)
+        benchmark_organizer.dir_setup(record.tag)
+        self._create_db_from_json(record, benchmark_organizer)
+        if record.tag == 'reference.players':
+            return record.tab
 
-        organizer = self._benchmark_organizer(benchmark_tag)
-        organizer.dir_setup(benchmark_tag)
+        binary = os.path.join(record.data_folder_path(), 'binary')
+        models = os.path.join(record.data_folder_path(), 'models')
+        self_play_db = os.path.join(record.data_folder_path(), 'self_play.db')
+        training_db = os.path.join(record.data_folder_path(), 'training.db')
 
-        self._create_db_from_json(self.benchmark_record, organizer)
-        if benchmark_tag is not None and benchmark_tag != 'reference.players':
-            benchmark_src = os.path.join(BENCHMARK_DATA_DIR, self.run_params.game, benchmark_tag)
-            binary = os.path.join(benchmark_src, 'binary')
-            models = os.path.join(benchmark_src, 'models')
-            self_play_db = os.path.join(benchmark_src, 'self_play.db')
-            training_db = os.path.join(benchmark_src, 'training.db')
-
-            shutil.copyfile(binary, organizer.binary_filename)
-            shutil.copytree(models, organizer.models_dir, dirs_exist_ok=True)
-            shutil.copyfile(self_play_db, organizer.self_play_db_filename)
-            shutil.copyfile(training_db, organizer.training_db_filename)
+        shutil.copyfile(binary, benchmark_organizer.binary_filename)
+        shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
+        shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
+        shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
+        
 
         return benchmark_tag
+    
+    def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
+        record = self._load_benchmark_record()
+        if record is None:
+            return None
 
-    def _load_benchmark_record():
+        organizer = self._benchmark_organizer(record.tag)
+        if os.path.isdir(organizer.base_dir):
+            return record
+
+        if not os.path.isdir(record.data_folder_path()):
+            key = os.path.join(record.utc_key, f'{record.tag}.zip')
+            BUCKET.download_from_s3(key, os.path.join(Workspace.benchmark_data_dir, key))
+        
+        return record
+
+    def _load_benchmark_record(self):
         """
         Load the default benchmark tag for a given game from a JSON file.
 
@@ -435,7 +452,6 @@ class LoopController:
 
         with open(file_path, 'r') as f:
             benchmark_info = json.load(f)
-
         utc_key = benchmark_info.get("utc_key", None)
         tag = benchmark_info.get("tag", None)
 
@@ -447,9 +463,9 @@ class LoopController:
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
         game = self.game_spec.name
         if record.tag == 'reference.players':
-            json_path = os.path.join(REF_DIR, f'{game}.json')
+            json_path = os.path.join(Workspace.ref_dir, f'{game}.json')
         else:
-            json_path = os.path.join(BENCHMARK_DATA_DIR, game, record.path_str(), 'ratings.json')
+            json_path = os.path.join(record.data_folder_path(), 'ratings.json')
         db = RatingDB(organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
 

@@ -7,8 +7,10 @@ from alphazero.logic.run_params import RunParams
 from alphazero.scripts.run_local import get_benchmark_tag
 from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.loop_controller import BenchmarkRecord
 from games.game_spec import GameSpec
 from shared.rating_params import RatingParams
+from util.aws_util import BUCKET
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
@@ -71,9 +73,9 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
-def save_benchmark_data(organizer: DirectoryOrganizer, utc_key: str):
+def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
     benchmarker = Benchmarker(organizer)
-    path = os.path.join(Workspace.benchmark_data_dir, organizer.game, utc_key, organizer.tag)
+    path = record.data_folder_path()
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
     file = os.path.join(path, 'ratings.json')
@@ -105,16 +107,13 @@ def save_benchmark_data(organizer: DirectoryOrganizer, utc_key: str):
     shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
 
 
-def save_benchmark_record(game: str, tag: str, utc_key: str):
-    benchmark_info = {
-        "utc_key": utc_key,
-        "tag": tag
-    }
-    benchmark_record_file = Workspace.benchmark_record_file(game)
+def save_benchmark_record(record: BenchmarkRecord):
+    benchmark_info = record.to_dict()
+    benchmark_record_file = Workspace.benchmark_record_file(record.game)
     with open(benchmark_record_file, 'w') as f:
         json.dump(benchmark_info, f, indent=4)
 
-    logger.info(f"Benchmark tag '{tag}' saved to {benchmark_record_file}")
+    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
 
 
 def main():
@@ -142,10 +141,12 @@ def main():
 
     organizer.freeze_tag()
     utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
+    record = BenchmarkRecord(utc_key=utc_key, tag=organizer.tag, game=organizer.game)
     if not args.skip_set_as_default:
-        save_benchmark_info(run_params.game, run_params.tag, utc_key)
+        save_benchmark_record(record)
 
-    save_benchmark_data(organizer, utc_key)
+    save_benchmark_data(organizer, record)
+    
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
