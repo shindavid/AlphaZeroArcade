@@ -362,3 +362,6 @@ class DirectoryOrganizer:
             f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
+    @staticmethod
+    def benchmark_folder(tag: str):
+        return f'{tag}.benchmark'
