@@ -17,7 +17,9 @@ class Workspace(BaseDir):
     benchmark_run_dir = os.path.join(base_dir, 'benchmark_runs')
     benchmark_data_dir = os.path.join(base_dir, 'benchmark_data')
     ref_dir = '/workspace/repo/reference.players'
+    aws_dir = os.path.join(base_dir, 'aws')
 
     @staticmethod
     def benchmark_record_file(game: str) -> str:
-        return os.path.join('/workspace/repo/benchmark_info', f'{game}.json')
+        return os.path.join('/workspace/repo/benchmark_records', f'{game}.json')
+
