@@ -50,6 +50,8 @@ class BenchmarkRecord:
     def to_dict(self):
         return {'utc_key': self.utc_key, 'tag': self.tag, 'hash': self.hash}
 
+    def key(self):
+        return os.path.join(self.game, self.tag, f"{self.utc_key}.tar")
 
 class Workspace(BaseDir):
     base_dir = '/workspace/mount'
