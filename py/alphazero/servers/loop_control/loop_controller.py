@@ -27,7 +27,7 @@ from games.index import get_game_spec
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.aws_util import BUCKET
-from util.py_util import atomic_cp, sha256sum
+from util.py_util import atomic_cp, sha256sum, untar_remote_file_to_local_directory
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
