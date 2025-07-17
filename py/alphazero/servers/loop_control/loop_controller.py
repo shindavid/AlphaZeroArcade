@@ -387,7 +387,7 @@ class LoopController:
             elif record.data_folder_path() is not None:
                 logger.info(f"{organizer.base_dir} does not exist. Using {record.data_folder_path()}")
             else:
-                record_on_file = load_benchmark_record(self.game_spec.game)
+                record_on_file = Workspace.load_benchmark_record(self.game_spec.name)
                 if record.tag == record_on_file.tag:
                     logger.info(f"No data folder for {record}. Tag is the same with record on file.")
                     record = self._download_from_s3()
@@ -418,14 +418,14 @@ class LoopController:
         return record.tag
     
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
-        record = load_benchmark_record(self.game_spec.name)
+        record = Workspace.load_benchmark_record(self.game_spec.name)
         if record is None:
             return None
 
         organizer = self._benchmark_organizer(record.tag)
         if os.path.isdir(organizer.base_dir):
             return record
-
+        print(record)
         if not os.path.isdir(record.data_folder_path()):
             tar_path = os.path.join(Workspace.benchmark_data_dir, record.key()) 
             BUCKET.download_from_s3(record.key(), tar_path) 
