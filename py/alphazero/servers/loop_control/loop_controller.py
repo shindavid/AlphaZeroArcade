@@ -380,6 +380,9 @@ class LoopController:
     def _expand_rundir_from_json(self) -> str:
         if self.params.benchmark_tag is not None:
             record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name) 
+            organizer = self._benchmark_organizer(record.tag)
+            if os.path.isdir(organizer.base_dir):
+                return record.tag
         elif self.game_spec.reference_player_family is not None:
             record = BenchmarkRecord(tag='reference.players')
         else:
