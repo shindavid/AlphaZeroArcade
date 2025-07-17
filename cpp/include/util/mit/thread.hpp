@@ -34,8 +34,8 @@ struct thread_impl {
   // thread pointer makes bookkeeping easier.
   thread* owner = nullptr;
 
-  thread_impl* parent = nullptr;  // thread that spawned this thread
-  thread_impl* joinee = nullptr;  // thread that this called join() on (whose parent must be this)
+  thread_impl* joiner = nullptr;  // thread that is calling join() on this
+  thread_impl* joinee = nullptr;  // thread that this called join() on
   condition_variable* blocking_cv = nullptr;
   mutex* blocking_mutex = nullptr;
   int id = -1;  // set by scheduler, 0 for main thread

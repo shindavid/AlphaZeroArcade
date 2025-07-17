@@ -86,9 +86,7 @@ inline void scheduler::register_thread(thread_impl* t) {
   }
   all_threads_[t->id] = t;
   viable_threads_[t->id] = t->viable();
-  t->parent = active_thread_;
-  MIT_LOG("Registered thread {} (viable={} parent={})", t->id, t->viable(),
-          (t->parent ? t->parent->id : -1));
+  MIT_LOG("Registered thread {} (viable={})", t->id, t->viable());
   debug_dump_state();
 }
 
@@ -108,8 +106,8 @@ inline void scheduler::join_thread(thread_impl* t) {
   thread_impl* current_thread = active_thread_;
   MIT_LOG("Joining thread {} (current thread={})", t->id, current_thread->id);
 
-  util::release_assert(t->parent == current_thread);
   current_thread->joinee = t;
+  t->joiner = current_thread;
   viable_threads_[current_thread->id] = false;
   try {
     pass_control_to_once_viable(t);
@@ -155,14 +153,16 @@ inline void scheduler::deactivate_thread(thread_impl* t) {
   t->activated = false;
   viable_threads_[t->id] = false;
 
-  thread_impl* parent = t->parent;
+  thread_impl* joiner = t->joiner;
   thread_impl* next_thread = nullptr;
-  if (parent && parent->joinee == t) {
-    MIT_LOG("Reactivating thread {}, which was joining {}", parent->id, t->id);
-    parent->joinee = nullptr;
-    viable_threads_[parent->id] = parent->viable();
-    if (parent->viable()) {
-      next_thread = parent;
+  if (joiner) {
+    util::release_assert(joiner->joinee == t);
+    MIT_LOG("Reactivating thread {}, which was joining {}", joiner->id, t->id);
+    joiner->joinee = nullptr;
+    t->joiner = nullptr;
+    viable_threads_[joiner->id] = joiner->viable();
+    if (joiner->viable()) {
+      next_thread = joiner;
     }
   }
 
@@ -463,8 +463,8 @@ inline void scheduler::dump_state() const {
       if (t->blocking_cv) {
         ss << " blocked_by=cv" << t->blocking_cv->id_;
       }
-      if (t->parent) {
-        ss << " spawned_by=" << t->parent->id;
+      if (t->joiner) {
+        ss << " joined_by=" << t->joiner->id;
       }
       if (t->joinee) {
         ss << " joining=" << t->joinee->id;
