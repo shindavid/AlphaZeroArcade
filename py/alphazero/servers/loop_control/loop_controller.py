@@ -21,6 +21,7 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
+from alphazero.servers.loop_control.base_dir import BenchmarkRecord, Workspace
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
@@ -44,18 +45,6 @@ from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class BenchmarkRecord:
-    utc_key: Optional[str] = None
-    tag: Optional[str] = None
-    game: Optional[str] = None
-
-    def data_folder_path(self):
-        return os.path.join(Workspace.benchmark_data_dir, self.game, self.tag, self.utc_key)
-    
-    def to_dict(self):
-        return {'utc_key': self.utc_key, 'tag': self.tag}
 
 class LoopController:
     """
@@ -413,10 +402,11 @@ class LoopController:
         shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
         shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
         shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
+        logger.info(f"copied binary, models, self_play_db and training_db to {benchmark_organizer.base_dir}")
         return record.tag
     
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
-        record = self._load_benchmark_record()
+        record = load_benchmark_record(self.game_spec.name)
         if record is None:
             return None
 
@@ -426,33 +416,10 @@ class LoopController:
 
         if not os.path.isdir(record.data_folder_path()):
             key = os.path.join(record.utc_key, f'{record.tag}.zip')
-            BUCKET.download_from_s3(key, os.path.join(Workspace.benchmark_data_dir, key))
-        
+            dst_dir = os.path.join(Workspace.benchmark_data_dir, key) 
+            BUCKET.download_from_s3(key, dst_dir) 
+            logger.info("downloaded data to {dst_dir}")
         return record
-
-    def _load_benchmark_record(self):
-        """
-        Load the default benchmark tag for a given game from a JSON file.
-
-        This will read the file:
-            /workspace/output/{game}/benchmark_info.json
-        """
-
-        file_path = Workspace.benchmark_record_file(self.run_params.game)
-
-        if not os.path.exists(file_path):
-            print(f"No benchmark info found for game '{game}' at {file_path}. ")
-            return None
-
-        with open(file_path, 'r') as f:
-            benchmark_info = json.load(f)
-        utc_key = benchmark_info.get("utc_key", None)
-        tag = benchmark_info.get("tag", None)
-
-        if utc_key is None or tag is None:
-            raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
-
-        return BenchmarkRecord(utc_key, tag)
 
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
         game = self.game_spec.name
@@ -462,6 +429,7 @@ class LoopController:
             json_path = os.path.join(record.data_folder_path(), 'ratings.json')
         db = RatingDB(organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
+        logger.info(f"created db {db.db_filename} from {json_path}")
 
     def _benchmark_data_dir(self, benchmark_tag: str) -> str:
         game = self.game_spec.name
