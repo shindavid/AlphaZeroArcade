@@ -370,7 +370,7 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                benchmark_folder = DirectoryOrganizer.benchmark_folder_name(agent.tag)
+                benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
                 run_params = RunParams(game, benchmark_folder)
                 benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace/mount')
             benchmark_binary_src = self._controller._get_binary_path(
