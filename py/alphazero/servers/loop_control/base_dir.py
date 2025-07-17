@@ -89,4 +89,4 @@ class Workspace(BaseDir):
         if utc_key is None or tag is None or hash is None:
             raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
 
-        return BenchmarkRecord(utc_key=utc_key, tag=tag, hash=hash)
+        return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game, hash=hash)
