@@ -17,6 +17,7 @@ import zipfile
 CREDENTIALS = os.path.join(Workspace.aws_dir, "credentials")
 CONFIG = os.path.join(Workspace.aws_dir, "config")
 PRIVATE_KEY = os.path.join(Workspace.aws_dir, "cloudfront-private.pem")
+PROFILE = 'default'
 
 @dataclass
 class Bucket:
@@ -32,7 +33,7 @@ class Bucket:
         
         conf = configparser.ConfigParser()
         conf.read(CONFIG)
-        region = conf[f'profile {PROFILE}']['region'] 
+        region = conf[PROFILE]['region'] 
         
         session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
@@ -41,8 +42,8 @@ class Bucket:
         )
         s3 = session.client('s3')
         
-        s3.upload_file(file_path, self.bucket, key)
-        print(f"Uploaded '{file_path}' to 's3://{bucket}/{key}'")
+        s3.upload_file(file_path, self.name, key)
+        print(f"Uploaded '{file_path}' to 's3://{self.name}/{key}'")
 
     def generate_signed_url(self, key: str, expire_minutes=10):
         parsed_url = urlparse(os.path.join(self.cloudfront_url, key))
