@@ -32,7 +32,9 @@ class BenchmarkRecord:
         utc_key = self.utc_key
         if utc_key is None:
             tag_dir = os.path.join(Workspace.benchmark_data_dir, self.game, self.tag)
-            
+            if not os.path.isdir(tag_dir):
+                return None
+
             folders = []
             for name in os.listdir(tag_dir):
                 try:
