@@ -46,13 +46,15 @@ class Bucket:
         print(f"Uploaded '{file_path}' to 's3://{self.name}/{key}'")
 
     def generate_signed_url(self, key: str, expire_minutes=10):
-        parsed_url = urlparse(os.path.join(self.cloudfront_url, key))
+        full_url = os.path.join(self.cloudfront_url, key)
+        parsed_url = urlparse(full_url)
+        print("parsed url; ", parsed_url)
         expire_time = int(time.time()) + expire_minutes * 60
 
         policy_dict = {
             "Statement": [
                 {
-                    "Resource": self.cloudfront_url,
+                    "Resource": full_url,
                     "Condition": {
                         "DateLessThan": {
                             "AWS:EpochTime": expire_time
@@ -79,7 +81,7 @@ class Bucket:
         query_params = {
             'Policy': base64.b64encode(policy.encode('utf-8')).decode('utf-8').replace('+', '-').replace('=', '_').replace('/', '~'),
             'Signature': signature_encoded,
-            'Key-Pair-Id': bucket.key_pair_id
+            'Key-Pair-Id': self.key_pair_id
         }
 
         signed_url = urlunparse(parsed_url._replace(query=urlencode(query_params)))
@@ -90,10 +92,12 @@ class Bucket:
         response = requests.get(signed_url)
 
         if response.status_code == 200:
+            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
             with open(destination_path, 'wb') as f:
                 f.write(response.content)
             print(f"✅ File downloaded to: {destination_path}")
         else:
+            print(f"failed on key: {key}")
             raise Exception(f"❌ Failed to download file: HTTP {response.status_code} - {response.text}")
 
 
