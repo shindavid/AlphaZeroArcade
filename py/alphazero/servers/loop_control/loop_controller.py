@@ -385,7 +385,7 @@ class LoopController:
                 logger.info(f"Skip creating {organizer.base_dir}")
                 return record.tag
             elif record.data_folder_path() is not None:
-                logger.info(f"{organizer.base_dir} does not exist. Using {record.data_folder_path().}")
+                logger.info(f"{organizer.base_dir} does not exist. Using {record.data_folder_path()}")
             else:
                 record_on_file = load_benchmark_record(self.game_spec.game)
                 if record.tag == record_on_file.tag:
@@ -427,10 +427,10 @@ class LoopController:
             return record
 
         if not os.path.isdir(record.data_folder_path()):
-            key = os.path.join(record.utc_key, f'{record.tag}.zip')
-            dst_dir = os.path.join(Workspace.benchmark_data_dir, key) 
-            BUCKET.download_from_s3(record.key(), dst_dir) 
-            logger.info("downloaded data to {dst_dir}")
+            tar_path = os.path.join(Workspace.benchmark_data_dir, record.key()) 
+            BUCKET.download_from_s3(record.key(), tar_path) 
+            logger.info("downloaded data to {tar_path}")
+            untar_remote_file_to_local_directory(tar_path, record.data_folder_path())
         return record
 
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
