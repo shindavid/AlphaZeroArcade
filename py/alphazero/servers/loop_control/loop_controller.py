@@ -417,7 +417,7 @@ class LoopController:
         if not os.path.isdir(record.data_folder_path()):
             key = os.path.join(record.utc_key, f'{record.tag}.zip')
             dst_dir = os.path.join(Workspace.benchmark_data_dir, key) 
-            BUCKET.download_from_s3(key, dst_dir) 
+            BUCKET.download_from_s3(record.key(), dst_dir) 
             logger.info("downloaded data to {dst_dir}")
         return record
 

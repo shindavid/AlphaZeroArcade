@@ -164,8 +164,7 @@ def main():
             save_benchmark_record(record)
         tar_file = f"{record.data_folder_path()}.tar"
         tar_and_remotely_copy(record.data_folder_path(), tar_file)
-        key = os.path.join(record.game, record.tag, f"{record.utc_key}.tar")
-        BUCKET.upload_file_to_s3(tar_file, key)
+        BUCKET.upload_file_to_s3(tar_file, record.key())
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
