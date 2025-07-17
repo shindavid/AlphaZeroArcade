@@ -99,7 +99,7 @@ class SessionData:
         self.socket.send_json(data)
 
     def recv_handshake(self, role: ClientRole):
-        data = self.socket.recv_json(timeout=1)
+        data = self.socket.recv_json(timeout=60)
         assert data['type'] == 'handshake-ack', data
 
         rejection = data.get('rejection', None)
