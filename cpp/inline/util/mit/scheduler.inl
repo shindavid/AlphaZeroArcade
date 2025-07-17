@@ -69,6 +69,7 @@ inline void scheduler::reset() {
   tmp_thread_predicate_vec_.clear();
 
   caught_exception_ = nullptr;
+  original_exception_from_main_thread_ = false;
   bug_catching_enabled_ = false;
   mid_orderly_shutdown_ = false;
 
@@ -336,6 +337,7 @@ inline void scheduler::enable_bug_catching_mode() {
 inline void scheduler::disable_bug_catching_mode() {
   bug_catching_enabled_ = false;
   if (!caught_exception_) return;
+  if (original_exception_from_main_thread_) return;
 
   MIT_LOG("{}(), caught exception", __func__);
   std::exception_ptr caught_exception_copy = std::move(caught_exception_);
@@ -353,15 +355,47 @@ inline void scheduler::handle_bug_detected_error(const BugDetectedError& e) {
 
 inline void scheduler::throw_bug_detected_error(const char* func) {
   MIT_LOG("Throwing BugDetectedError from {}", func);
-  if (bug_catching_enabled_) {
+  if (bug_catching_enabled_ && !mid_orderly_shutdown_) {
     commence_orderly_shutdown();
+  }
+
+  if (active_thread_->id == 0) {
+    // If the main thread is the one that detected the bug, we need to pre-emptively join the
+    // pending threads to avoid a std::terminate() due to the destruction of a joinable std::thread.
+    original_exception_from_main_thread_ = true;
+
+    // Set caught_exception_ to ensure proper downstream exception handling
+    try {
+      throw BugDetectedError();
+    } catch (const BugDetectedError& e) {
+      if (!caught_exception_) {
+        caught_exception_ = std::make_exception_ptr(e);
+      }
+    }
+
+    MIT_LOG("Yielding to all threads before throwing BugDetectedError from main thread");
+    while (viable_threads_.any()) {
+      size_t n = viable_threads_.find_first();
+      if (n == 0) {
+        n = viable_threads_.find_next(n);
+        if (n == boost::dynamic_bitset<>::npos) {
+          break;  // No more viable threads
+        }
+      }
+      yield_control(all_threads_[n]);
+    }
+    for (thread_impl* t : all_threads_) {
+      if (t && t->std_thread.joinable()) {
+        MIT_LOG("Joining thread {}", t->id);
+        t->std_thread.join();
+      }
+    }
+    MIT_LOG("Done joining all threads");
   }
   throw BugDetectedError();
 }
 
 inline void scheduler::commence_orderly_shutdown() {
-  if (mid_orderly_shutdown_) return;
-
   MIT_LOG("Commencing orderly shutdown...");
   mid_orderly_shutdown_ = true;
 

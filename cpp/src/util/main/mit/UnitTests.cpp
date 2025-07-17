@@ -15,14 +15,13 @@ class TensorBuilder {
  public:
   using Tensor = eigen_util::FTensor<Eigen::Sizes<4, 4>>;
 
-  TensorBuilder() {
+  TensorBuilder(bool use_main_thread) {
     for (int i = 0; i < 4; ++i) {
-      threads_.emplace_back([this, i]() {
-        for (int j = 0; j < 4; ++j) {
-          mit::unique_lock lock(mutex_);
-          tensor_(i, j) = next_value_++;
-        }
-      });
+      if (i == 3 && use_main_thread) {
+        fill_row(i);  // Fill the first row in the main thread
+      } else {
+        threads_.emplace_back([this, i]() { fill_row(i); });
+      }
     }
 
     for (auto& thread : threads_) {
@@ -33,6 +32,12 @@ class TensorBuilder {
   const Tensor& tensor() const { return tensor_; }
 
  private:
+  void fill_row(int i) {
+    for (int j = 0; j < 4; ++j) {
+      mit::unique_lock lock(mutex_);
+      tensor_(i, j) = next_value_++;
+    }
+  }
   std::vector<mit::thread> threads_;
   mit::mutex mutex_;
 
@@ -40,85 +45,135 @@ class TensorBuilder {
   int next_value_ = 0;
 };
 
-// Validate that TensorBuilder is deterministic for a fixed seed
-TEST(mit, deterministic_threading) {
-  std::vector<TensorBuilder::Tensor> tensors;
-  int seed = 42;
-
-  for (int i = 0; i < 5; ++i) {
-    mit::reset();
+class TensorBuildTest : public ::testing::Test {
+ public:
+  void run(bool use_main_thread, bool reseed) {
+    std::vector<TensorBuilder::Tensor> tensors;
+    int n = 5;
+    int seed = 42;
     mit::seed(seed);
-    TensorBuilder builder;
-    tensors.push_back(builder.tensor());
+
+    for (int i = 0; i < n; ++i) {
+      mit::reset();
+      if (reseed) {
+        mit::seed(seed);
+      }
+      TensorBuilder builder(use_main_thread);
+      tensors.push_back(builder.tensor());
+    }
+
+    if (reseed) {
+      // If reseeding, we expect all tensors to be equal
+      for (int i = 1; i < n; ++i) {
+        bool equal = eigen_util::equal(tensors[0], tensors[i]);
+        EXPECT_TRUE(equal) << "tensors[0]: \n"
+                          << tensors[0] << "\n"
+                          << "tensors[" << i << "]: " << tensors[i];
+      }
+    } else {
+      // If not reseeding, we expect variation
+      for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+          bool equal = eigen_util::equal(tensors[i], tensors[j]);
+          EXPECT_FALSE(equal) << "tensors[" << i << "]: \n"
+                              << tensors[i] << "\n"
+                              << "tensors[" << j << "]: " << tensors[j];
+        }
+      }
+    }
   }
+};
 
-  for (int i = 1; i < (int)tensors.size(); ++i) {
-    bool equal = eigen_util::equal(tensors[0], tensors[i]);
-    EXPECT_TRUE(equal) << "tensors[0]: \n" << tensors[0] << "\n"
-                       << "tensors[" << i << "]: " << tensors[i];
-  }
-}
-
-// Validate that TensorBuilder produces different tensors with different seeds
-TEST(mit, seed_matters) {
-  mit::reset();
-  mit::seed(42);
-  TensorBuilder builder1;
-  auto tensor1 = builder1.tensor();
-
-  mit::reset();
-  mit::seed(43);
-  TensorBuilder builder2;
-  auto tensor2 = builder2.tensor();
-
-  bool equal = eigen_util::equal(tensor1, tensor2);
-  EXPECT_FALSE(equal) << "tensor1: \n" << tensor1 << "\n"
-                      << "tensor2: " << tensor2;
-}
+// These tests verify that TensorBuilder acts deterministically for a fixed seed, and that
+// otherwise each run produces a different tensor.
+//
+// We run the tests with and without having the main thread perform business logic, in order to
+// stress-test the mit::scheduler logic, as the main thread follows different code paths than other
+// threads in the mit::scheduler implementation.
+TEST_F(TensorBuildTest, test1) { run(true, true); }
+TEST_F(TensorBuildTest, test2) { run(true, false); }
+TEST_F(TensorBuildTest, test3) { run(false, true); }
+TEST_F(TensorBuildTest, test4) { run(false, false); }
 
 // A class that has a non-deterministic mutex deadlock bug
 class DeadlockBug {
  public:
-  void run() {
+  void run(bool use_main_thread) {
     mit::BugDetectGuard guard;  // Enable bug catching mode
 
-    mit::mutex m1, m2;
+    std::vector<mit::thread> threads;
+    threads.emplace_back([this]() { func1(); });
 
-    mit::thread t1([&]() {
-      mit::unique_lock lock1(m1);
-      mit::unique_lock lock2(m2);
-    });
+    if (use_main_thread) {
+      func2();  // Run func2 in the main thread
+    } else {
+      threads.emplace_back([this]() { func2(); });
+    }
 
-    mit::thread t2([&]() {
-      mit::unique_lock lock2(m2);
-      mit::unique_lock lock1(m1);
-    });
-
-    if (t1.joinable()) t1.join();
-    if (t2.joinable()) t2.join();
-  }
-};
-
-TEST(mit, deadlock_bug) {
-  mit::reset();
-  mit::seed(42);
-
-  DeadlockBug bug;
-  int throw_count = 0;
-  int non_throw_count = 0;
-
-  for (int i = 0; i < 100; ++i) {
-    try {
-      mit::reset();
-      bug.run();
-      non_throw_count++;
-    } catch (const mit::BugDetectedError&) {
-      throw_count++;
+    for (auto& thread : threads) {
+      if (thread.joinable()) {
+        thread.join();
+      }
     }
   }
 
-  EXPECT_GT(throw_count, 0);
-  EXPECT_GT(non_throw_count, 0);
-}
+ private:
+  void func1() {
+    mit::unique_lock lock1(m1_);
+    mit::unique_lock lock2(m2_);
+  }
+
+  void func2() {
+    mit::unique_lock lock2(m2_);
+    mit::unique_lock lock1(m1_);
+  }
+
+  mit::mutex m1_, m2_;
+};
+
+class DeadlockTest : public ::testing::Test {
+public:
+  void run(bool use_main_thread, bool reseed) {
+    mit::reset();
+    mit::seed(42);
+
+    DeadlockBug bug;
+    int throw_count = 0;
+    int non_throw_count = 0;
+
+    for (int i = 0; i < 100; ++i) {
+      try {
+        mit::reset();
+        if (reseed) {
+          mit::seed(42);
+        }
+        bug.run(use_main_thread);
+        non_throw_count++;
+      } catch (const mit::BugDetectedError&) {
+        throw_count++;
+      }
+    }
+
+    if (reseed) {
+      EXPECT_EQ(throw_count * non_throw_count, 0)
+          << "Expected either all threads to throw or none to throw, but got "
+          << throw_count << " throws and " << non_throw_count << " non-throws.";
+    } else {
+      EXPECT_GT(throw_count, 10);
+      EXPECT_GT(non_throw_count, 10);
+    }
+  }
+};
+
+// These tests verify that DeadlockBug behaves deterministically for a fixed seed, and that
+// otherwise it throws a BugDetectedError in some runs but not in others.
+//
+// We run the tests with and without having the main thread perform business logic, in order to
+// stress-test the mit::scheduler logic, as the main thread follows different code paths than other
+// threads in the mit::scheduler implementation.
+TEST_F(DeadlockTest, test1) { run(true, true); }
+TEST_F(DeadlockTest, test2) { run(true, false); }
+TEST_F(DeadlockTest, test3) { run(false, true); }
+TEST_F(DeadlockTest, test4) { run(false, false); }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

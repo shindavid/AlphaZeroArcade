@@ -119,6 +119,7 @@ class scheduler {
   thread_predicate_vec_t tmp_thread_predicate_vec_;  // Used to avoid dynamic allocation
 
   std::exception_ptr caught_exception_;  // Used to catch exceptions in unit tests
+  bool original_exception_from_main_thread_ = false;
   bool bug_catching_enabled_ = false;
   bool mid_orderly_shutdown_ = false;
 };

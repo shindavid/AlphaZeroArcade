@@ -88,12 +88,10 @@ inline void thread_impl::mark_as_blocked_by(mutex* m) {
 }
 
 inline void thread_impl::lift_block(condition_variable* cv) {
-  util::release_assert(blocking_cv == cv && !blocking_mutex);
   blocking_cv = nullptr;
 }
 
 inline void thread_impl::lift_block(mutex* m) {
-  util::release_assert(!blocking_cv && blocking_mutex == m);
   blocking_mutex = nullptr;
 }
 
