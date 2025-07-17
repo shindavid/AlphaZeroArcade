@@ -32,7 +32,11 @@ thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true
     } catch (...) {
       sched.handle_exception();
     }
-    sched.deactivate_thread(impl);
+    try {
+      sched.deactivate_thread(impl);
+    } catch (const BugDetectedError& e) {
+      sched.handle_bug_detected_error(e);
+    }
   };
 
   impl_->std_thread = std::thread(std::move(wrapper));

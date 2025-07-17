@@ -69,7 +69,7 @@ inline void scheduler::reset() {
   tmp_thread_predicate_vec_.clear();
 
   caught_exception_ = nullptr;
-  original_exception_from_main_thread_ = false;
+  uncaught_throw_count_ = 0;
   bug_catching_enabled_ = false;
   mid_orderly_shutdown_ = false;
 
@@ -168,7 +168,15 @@ inline void scheduler::deactivate_thread(thread_impl* t) {
 
   if (!next_thread) {
     next_thread = get_next_thread();
-    util::release_assert(next_thread, "Unexpected error: no viable threads available");
+    if (!next_thread) {
+      try {
+        throw_bug_detected_error(__func__);
+      } catch (const BugDetectedError& e) {
+        handle_bug_detected_error(e);
+      }
+      next_thread = get_next_thread();
+      util::release_assert(next_thread, "No viable threads available after bug handling");
+    }
   }
   active_thread_ = next_thread;
 
@@ -324,6 +332,7 @@ template <class Predicate>
 void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock, Predicate pred) {
   if (pred()) {
     // If the predicate is already satisfied, we don't need to wait.
+    MIT_LOG("Predicate already satisfied, not waiting on condition variable {}", cv->id_);
     return;
   }
 
@@ -337,7 +346,7 @@ inline void scheduler::enable_bug_catching_mode() {
 inline void scheduler::disable_bug_catching_mode() {
   bug_catching_enabled_ = false;
   if (!caught_exception_) return;
-  if (original_exception_from_main_thread_) return;
+  if (uncaught_throw_count_ > 0) return;
 
   MIT_LOG("{}(), caught exception", __func__);
   std::exception_ptr caught_exception_copy = std::move(caught_exception_);
@@ -348,6 +357,7 @@ inline void scheduler::disable_bug_catching_mode() {
 inline void scheduler::handle_bug_detected_error(const BugDetectedError& e) {
   if (!bug_catching_enabled_) throw e;  // Re-throw the error if bug catching is not enabled
 
+  uncaught_throw_count_--;
   if (!caught_exception_) {
     caught_exception_ = std::make_exception_ptr(e);
   }
@@ -362,7 +372,6 @@ inline void scheduler::throw_bug_detected_error(const char* func) {
   if (active_thread_->id == 0) {
     // If the main thread is the one that detected the bug, we need to pre-emptively join the
     // pending threads to avoid a std::terminate() due to the destruction of a joinable std::thread.
-    original_exception_from_main_thread_ = true;
 
     // Set caught_exception_ to ensure proper downstream exception handling
     try {
@@ -373,7 +382,7 @@ inline void scheduler::throw_bug_detected_error(const char* func) {
       }
     }
 
-    MIT_LOG("Yielding to all threads before throwing BugDetectedError from main thread");
+    MIT_LOG("Yielding to all threads before throwing BugDetectedError");
     while (viable_threads_.any()) {
       size_t n = viable_threads_.find_first();
       if (n == 0) {
@@ -392,6 +401,7 @@ inline void scheduler::throw_bug_detected_error(const char* func) {
     }
     MIT_LOG("Done joining all threads");
   }
+  uncaught_throw_count_++;
   throw BugDetectedError();
 }
 
@@ -422,6 +432,9 @@ inline void scheduler::commence_orderly_shutdown() {
       blocked_threads->clear();  // Clear all cv blocks
     }
   }
+
+  debug_dump_state();
+  cv_.notify_all();
 }
 
 inline void scheduler::handle_exception() {

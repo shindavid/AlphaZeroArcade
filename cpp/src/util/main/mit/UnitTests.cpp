@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <util/EigenUtil.hpp>
 #include <util/GTestUtil.hpp>
+#include <util/Random.hpp>
 #include <util/mit/exceptions.hpp>
 #include <util/mit/mit.hpp>
 
@@ -96,7 +97,7 @@ TEST_F(TensorBuildTest, test3) { run(false, true); }
 TEST_F(TensorBuildTest, test4) { run(false, false); }
 
 // A class that has a non-deterministic mutex deadlock bug
-class DeadlockBug {
+class MutexDeadlockBug {
  public:
   void run(bool use_main_thread) {
     mit::BugDetectGuard guard;  // Enable bug catching mode
@@ -131,13 +132,13 @@ class DeadlockBug {
   mit::mutex m1_, m2_;
 };
 
-class DeadlockTest : public ::testing::Test {
+class MutexDeadlockTest : public ::testing::Test {
 public:
   void run(bool use_main_thread, bool reseed) {
     mit::reset();
     mit::seed(42);
 
-    DeadlockBug bug;
+    MutexDeadlockBug bug;
     int throw_count = 0;
     int non_throw_count = 0;
 
@@ -165,15 +166,105 @@ public:
   }
 };
 
-// These tests verify that DeadlockBug behaves deterministically for a fixed seed, and that
+// These tests verify that MutexDeadlockBug behaves deterministically for a fixed seed, and that
 // otherwise it throws a BugDetectedError in some runs but not in others.
 //
 // We run the tests with and without having the main thread perform business logic, in order to
 // stress-test the mit::scheduler logic, as the main thread follows different code paths than other
 // threads in the mit::scheduler implementation.
-TEST_F(DeadlockTest, test1) { run(true, true); }
-TEST_F(DeadlockTest, test2) { run(true, false); }
-TEST_F(DeadlockTest, test3) { run(false, true); }
-TEST_F(DeadlockTest, test4) { run(false, false); }
+TEST_F(MutexDeadlockTest, test1) { run(true, true); }
+TEST_F(MutexDeadlockTest, test2) { run(true, false); }
+TEST_F(MutexDeadlockTest, test3) { run(false, true); }
+TEST_F(MutexDeadlockTest, test4) { run(false, false); }
+
+// A class that non-deterministically fails to issue a condition variable notify
+class ConditionVariableNotifyBug {
+ public:
+  void run(bool use_main_thread) {
+    mit::BugDetectGuard guard;  // Enable bug catching mode
+    notified_ = false;
+    std::vector<mit::thread> threads;
+    threads.emplace_back([this]() { func1(); });
+    if (use_main_thread) {
+      func2();  // Run func2 in the main thread
+    } else {
+      threads.emplace_back([this]() { func2(); });
+    }
+    for (auto& thread : threads) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
+  }
+
+ private:
+  void func1() {
+    mit::unique_lock lock(mutex_);
+    cv_.wait(lock, [this]() {
+      return notified_;
+    });
+  }
+
+  void func2() {
+    mit::unique_lock lock(mutex_);
+    notified_ = true;
+    if (util::Random::uniform_real(0.0, 1.0) < 0.5) {
+      // Randomly fail to notify
+      return;
+    }
+    cv_.notify_one();
+  }
+
+  mit::mutex mutex_;
+  mit::condition_variable cv_;
+  bool notified_ = false;
+};
+
+class ConditionVariableNotifyTest : public ::testing::Test {
+ public:
+  void run(bool use_main_thread, bool reseed) {
+    mit::reset();
+    util::Random::set_seed(42);
+    mit::seed(42);
+
+    ConditionVariableNotifyBug bug;
+    int throw_count = 0;
+    int non_throw_count = 0;
+
+    for (int i = 0; i < 100; ++i) {
+      try {
+        mit::reset();
+        if (reseed) {
+          util::Random::set_seed(42);
+          mit::seed(42);
+        }
+        bug.run(use_main_thread);
+        non_throw_count++;
+      } catch (const mit::BugDetectedError&) {
+        throw_count++;
+      }
+    }
+
+    if (reseed) {
+      EXPECT_EQ(throw_count * non_throw_count, 0)
+          << "Expected either all threads to throw or none to throw, but got "
+          << throw_count << " throws and " << non_throw_count << " non-throws.";
+    } else {
+      EXPECT_GT(throw_count, 10);
+      EXPECT_GT(non_throw_count, 10);
+    }
+  }
+};
+
+// These tests verify that ConditionVariableNotifyBug behaves deterministically for a fixed seed,
+// and that otherwise it throws a BugDetectedError in some runs but not in others.
+//
+// We run the tests with and without having the main thread perform business logic, in order to
+// stress-test the mit::scheduler logic, as the main thread follows different code paths than other
+// threads in the mit::scheduler implementation.
+TEST_F(ConditionVariableNotifyTest, test1) { run(true, true); }
+TEST_F(ConditionVariableNotifyTest, test2) { run(true, false); }
+TEST_F(ConditionVariableNotifyTest, test3) { run(false, true); }
+TEST_F(ConditionVariableNotifyTest, test4) { run(false, false); }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
