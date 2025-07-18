@@ -1,8 +1,8 @@
-from alphazero.logic.agent_types import Agent, MCTSAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, MatchType, MCTSAgent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
-from alphazero.logic.match_runner import Match, MatchType
+from alphazero.logic.match_runner import Match
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -43,7 +43,7 @@ class ServerParams(BaseParams):
         return cls(**kwargs)
 
     @classmethod
-    def add_args(cls, parser, omit_base=False, server_name: Optional[str]=None):
+    def add_args(cls, parser, omit_base=False, server_name: Optional[str] = None):
         group_title = f'{cls.__name__} options'
         group = parser.add_argument_group(group_title)
 
@@ -59,7 +59,8 @@ class ServerParams(BaseParams):
 
 class ServerBase:
     def __init__(self, params: ServerParams, logging_params: LoggingParams,
-                 build_params: BuildParams, rating_params: RatingParams, server_config: ServerConfig):
+                 build_params: BuildParams, rating_params: RatingParams,
+                 server_config: ServerConfig):
         self._params = params
         self._build_params = build_params
         self._rating_params = rating_params
@@ -123,19 +124,19 @@ class ServerBase:
                     break
         except SocketRecvException:
             logger.warning('Encountered SocketRecvException in recv_loop(). '
-                        'Loop controller likely shut down.')
+                           'Loop controller likely shut down.')
             self._shutdown_manager.request_shutdown(0)
         except SocketSendException:
             # Include exc_info in send-case because it's a bit more unexpected
             logger.warning('Encountered SocketSendException in recv_loop(). '
-                        'Loop controller likely shut down.', exc_info=True)
+                           'Loop controller likely shut down.', exc_info=True)
             self._shutdown_manager.request_shutdown(0)
         except:
             logger.error('Unexpected error in recv_loop():', exc_info=True)
             self._shutdown_manager.request_shutdown(1)
 
     def _send_ready(self):
-        data = { 'type': 'ready', }
+        data = {'type': 'ready'}
         self._session_data.socket.send_json(data)
 
     def _handle_msg(self, msg: JsonDict) -> bool:
@@ -192,7 +193,8 @@ class ServerBase:
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
 
-        logger.info('Match result between:\n%s\n%s\nresult: %s', msg['agent1'], msg['agent2'], result)
+        logger.info('Match result between:\n%s\n%s\nresult: %s',
+                    msg['agent1'], msg['agent2'], result)
 
         self._running = False
 
@@ -206,7 +208,7 @@ class ServerBase:
         self._session_data.socket.send_json(data)
         self._send_ready()
 
-    def _eval_match(self, match: Match, args: Optional[Dict]=None) -> WinLossDrawCounts:
+    def _eval_match(self, match: Match, args: Optional[Dict] = None) -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -278,8 +280,9 @@ class ServerBase:
         else:
             if sha256sum(binary1) != sha256sum(binary2):
                 raise Exception(
-                    f'Binary mismatch: {binary1} and {binary2} are not the same when use-remote-play is False.'
-                    'Please use the same binary for both players or set use-remote-play to True.'                )
+                    f'Binary mismatch: {binary1} and {binary2} are not the same when\
+                    use-remote-play is False.'
+                    'Please use the same binary for both players or set use-remote-play to True.')
 
             log_filename = self._session_data.get_log_filename(self._config.worker_name)
             cmd = [binary1,

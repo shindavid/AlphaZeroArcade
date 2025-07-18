@@ -1,7 +1,7 @@
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MatchType, MCTSAgent
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
-from alphazero.logic.match_runner import Match, MatchType
+from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
 from util.index_set import IndexSet
@@ -64,9 +64,11 @@ class Benchmarker:
         with the biggest gap.
         """
         if self.has_no_matches():
+            logger.debug("arena has no matches.")
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
             if last_gen is None or last_gen < 2:
+                logger.debug(f"last_gen: {last_gen} is None or < 2")
                 return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
             self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
@@ -81,6 +83,7 @@ class Benchmarker:
         else:
             gap = self.get_biggest_mcts_ratings_gap()
             if gap is None or gap.elo_diff < target_elo_gap:
+                logger.debug(f"biggest_gap: {gap} < {target_elo_gap}")
                 return []
             next_gen = (gap.left_gen + gap.right_gen) // 2
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen,
@@ -89,7 +92,7 @@ class Benchmarker:
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena.add_agent(next_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
                                             db=self.db)
-        matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices=excluded_indices)
+        matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices)
         return matches
 
     def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, excluded_indices: IndexSet)\
@@ -104,7 +107,9 @@ class Benchmarker:
                 continue
             if ia.index in excluded_indices:
                 continue
-            if self._arena.adjacent_matrix()[iagent.index, ia.index] is False:
+            logger.debug(f"test-agent ix: {iagent.index} played with {ia.index} is \
+                    {self._arena.adjacent_matrix()[iagent.index, ia.index]}")
+            if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
                 logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches

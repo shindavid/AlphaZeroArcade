@@ -1,7 +1,6 @@
 from alphazero.logic import constants
 from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
-    MCTSAgent, ReferenceAgent
-from alphazero.logic.match_runner import MatchType
+        MatchType, MCTSAgent, ReferenceAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
