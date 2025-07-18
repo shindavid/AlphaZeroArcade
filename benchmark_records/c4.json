@@ -1,12 +1,5 @@
 {
-<<<<<<< HEAD
     "utc_key": "2025-07-18_07-40-10_UTC",
     "tag": "benchmark",
     "hash": "1c7dfb5fee2eca3f36cace232c7368d0942964bf3b992e64f647f2e5b6926104"
 }
-=======
-    "utc_key": "2025-07-17_15-28-11_UTC",
-    "tag": "eval2",
-    "hash": "b6e28c090a5ec77ab717af1450e1aaf1a5c5263e4fa8b5f061b3c6770b8b4428"
-}
->>>>>>> 36025f9a (add key() to record)

@@ -57,9 +57,7 @@ from alphazero.logic.run_params import RunParams
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
-from alphazero.servers.gaming.server_base import ServerParams
 from alphazero.servers.loop_control.base_dir import Workspace
-from alphazero.servers.loop_control.loop_controller import BenchmarkRecord
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
@@ -73,7 +71,6 @@ from util import subprocess_util
 import atexit
 import argparse
 from dataclasses import dataclass, fields
-import json
 import logging
 import os
 from pipes import quote
@@ -112,7 +109,6 @@ class Params:
 
     benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
 
-
     @staticmethod
     def create(args) -> 'Params':
         kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
@@ -130,11 +126,9 @@ class Params:
                            default=defaults.num_cuda_devices_to_use,
                            help='Num cuda devices to use (default: all)')
         group.add_argument('--run-ratings-server', action='store_true',
-                            help='Run the ratings server')
-        group.add_argument('--run-benchmark-server', action='store_true',
-                            help=argparse.SUPPRESS)
-        group.add_argument('--run-eval-server', action='store_true',
-                            help=argparse.SUPPRESS)
+                           help='Run the ratings server')
+        group.add_argument('--run-benchmark-server', action='store_true', help=argparse.SUPPRESS)
+        group.add_argument('--run-eval-server', action='store_true', help=argparse.SUPPRESS)
 
 
 def load_args():
@@ -208,7 +202,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
 
 def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
-    params:Params = params_dict['Params']
+    params: Params = params_dict['Params']
     docker_params: DockerParams = params_dict['DockerParams']
     logging_params: LoggingParams = params_dict['LoggingParams']
     build_params: BuildParams = params_dict['BuildParams']
@@ -261,7 +255,8 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str], game_spec: GameSpec):
+def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str],
+                           game_spec: GameSpec):
     params: Params = params_dict['Params']
     run_params: RunParams = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
@@ -362,9 +357,6 @@ def main():
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     benchmark_tag = params.benchmark_tag
-    # NOTE: reference_player_family is treated as a special case from regular MCTS agent runs.
-    # This is not desirable long-term and will need to be refactored to follow the same format as other
-    # agents, which might eventually include agents of external types such as KataGo.
 
     descs = []
     procs = []
@@ -372,7 +364,8 @@ def main():
         organizer.assert_unlocked()
 
         descs.append('Loop-controller')
-        procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec))
+        p = launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec)
+        procs.append(p)
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
             for self_play_gpu in self_play_gpus:
@@ -401,7 +394,8 @@ def main():
             descs.append('Ratings')
             procs.append(launch_ratings_server(params_dict, ratings_gpu))
 
-        atexit.register(subprocess_util.terminate_processes, [procs[descs.index('Loop-controller')]])
+        loop_control_proc = procs[descs.index('Loop-controller')]
+        atexit.register(subprocess_util.terminate_processes, [loop_control_proc])
 
         loop = True
         while loop:
@@ -421,7 +415,7 @@ def main():
                 else:
                     print('*' * 80)
                     logger.info('%s process %s exited with code %s', descr, proc.pid,
-                                 proc.returncode)
+                                proc.returncode)
             time.sleep(1)
 
         if any_subprocess_error:
@@ -438,6 +432,7 @@ def main():
         sys.exit(1)
 
     logger.info('All processes exited cleanly')
+
 
 if __name__ == '__main__':
     main()
