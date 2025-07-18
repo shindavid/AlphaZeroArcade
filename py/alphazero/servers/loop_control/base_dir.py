@@ -46,7 +46,7 @@ class BenchmarkRecord:
             if folders:
                 utc_key = max(folders, key=lambda x: x[0])[1]
             else:
-                raise Exception(f"no utc_key is specified for {self} and no valid utc_key folder exists.")
+                return None
         return os.path.join(Workspace.benchmark_data_dir, self.game, self.tag, utc_key) 
     
     def to_dict(self):

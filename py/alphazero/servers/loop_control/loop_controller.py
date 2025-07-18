@@ -425,12 +425,14 @@ class LoopController:
         organizer = self._benchmark_organizer(record.tag)
         if os.path.isdir(organizer.base_dir):
             return record
-        print(record)
-        if not os.path.isdir(record.data_folder_path()):
-            tar_path = os.path.join(Workspace.benchmark_data_dir, record.key()) 
+        
+        tar_path = os.path.join(Workspace.benchmark_data_dir, record.key()) 
+        if not os.path.exists(tar_path):    
             BUCKET.download_from_s3(record.key(), tar_path) 
-            logger.info("downloaded data to {tar_path}")
-            untar_remote_file_to_local_directory(tar_path, record.data_folder_path())
+            logger.info(f"downloaded data to {tar_path}")
+
+        if not os.path.isdir(record.data_folder_path()):
+            untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
         return record
 
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
