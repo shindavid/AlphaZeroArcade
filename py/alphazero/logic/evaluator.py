@@ -1,4 +1,5 @@
 from alphazero.logic.ratings import win_prob
+
 import numpy as np
 
 import logging
