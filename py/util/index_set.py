@@ -1,17 +1,20 @@
 import numpy as np
-from typing import Optional
+
 
 class IndexSet:
     """
     A set-like data structure for storing non-negative integers using a NumPy boolean array.
 
-    This class behaves like a set of integers (i.e., supports membership testing, adding/removing elements,
-    iteration, and length), but is implemented using a dynamic NumPy bit array for performance and memory efficiency.
+    This class behaves like a set of integers (i.e., supports membership testing,
+    adding/removing elements,
+    iteration, and length), but is implemented using a dynamic NumPy bit array for performance and
+    memory efficiency.
 
     ### Key Features
     - Internally stores membership using a NumPy array of dtype `bool`
     - Automatically resizes to accommodate new indices
-    - Supports NumPy-style inversion: `invert(n)` returns a new `IndexSet` containing indices in `[0, n)` not present in the original
+    - Supports NumPy-style inversion: `invert(n)` returns a new `IndexSet` containing indices in
+        `[0, n)` not present in the original
     - Iterable and convertible to a NumPy array (`np.array(index_set)`)
 
     ### Example:
@@ -61,7 +64,7 @@ class IndexSet:
         if 0 <= value < self.bits.size:
             self.bits[value] = False
 
-    def resize(self, n: int) ->  'IndexSet':
+    def resize(self, n: int) -> 'IndexSet':
         """
         Returns a boolean array of size n where the i-th element is True if i is in the set.
         """
@@ -98,4 +101,3 @@ class IndexSet:
 
     def __getitem__(self, index):
         return self.bits[index]
-

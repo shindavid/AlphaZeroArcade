@@ -41,7 +41,7 @@ def load_args():
 
 
 def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_params: RatingParams,
-                     logging_params: LoggingParams):
+                      logging_params: LoggingParams):
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--task-mode',
            '--run-benchmark-server']
@@ -57,12 +57,14 @@ def get_benchmark_cmd(run_params: RunParams, build_params: BuildParams, rating_p
     rating_params.add_to_cmd(cmd, loop_controller=True, server=True)
     return cmd
 
+
 def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params: RatingParams,
                  logging_params: LoggingParams, benchmark_tag: str):
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--task-mode',
            '--run-eval-server']
-    assert benchmark_tag is not None, "Benchmark tag should not be None after running benchmark server."
+    assert benchmark_tag is not None, \
+        "Benchmark tag should not be None after running benchmark server."
     cmd.extend(['--benchmark-tag', benchmark_tag])
 
     logging_params.add_to_cmd(cmd)
@@ -152,10 +154,11 @@ def main():
         return
 
     organizer.freeze_tag()
-    hash = hash_benchmark_data_files(organizer) 
+    hash = hash_benchmark_data_files(organizer)
     existing_record = Workspace.load_benchmark_record(organizer.game)
     if existing_record and existing_record.hash == hash:
-        logger.info(f"run at {organizer.base_dir} has the same hash with existing record. Skip updating.")
+        logger.info(f"run at {organizer.base_dir} has the same hash with existing record. \
+                Skip updating.")
     else:
         utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
         record = BenchmarkRecord(utc_key=utc_key, tag=organizer.tag, game=organizer.game, hash=hash)
@@ -174,6 +177,7 @@ def main():
         logger.error(f"Command: {eval_cmd} failed.")
         return
     logger.info("Benchmark evaluation completed successfully.")
+
 
 if __name__ == "__main__":
     main()

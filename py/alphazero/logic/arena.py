@@ -31,14 +31,15 @@ class Arena:
         self._agent_lookup_db_id: Dict[AgentDBId, IndexedAgent] = {}
         self._ratings: np.ndarray = np.array([])
 
-    def load_agents_from_db(self, db: RatingDB, role: Optional[AgentRole]=None):
+    def load_agents_from_db(self, db: RatingDB, role: Optional[AgentRole] = None):
         for db_agent in db.fetch_agents():
             if role not in db_agent.roles:
                 continue
-            self.add_agent(db_agent.agent, roles=db_agent.roles, db_id=db_agent.db_id, expand_matrix=False)
+            self.add_agent(db_agent.agent, roles=db_agent.roles, db_id=db_agent.db_id,
+                           expand_matrix=False)
         self._expand_matrix()
 
-    def load_matches_from_db(self, db: RatingDB, type: Optional[MatchType]=None) -> List[Agent]:
+    def load_matches_from_db(self, db: RatingDB, type: Optional[MatchType] = None) -> List[Agent]:
         for result in db.fetch_match_results():
             if type is not None and result.type != type:
                 continue
@@ -49,8 +50,8 @@ class Arena:
             self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
             self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
 
-    def play_matches(self, matches: List[Match], binary: str, db: Optional[RatingDB]=None) \
-        -> WinLossDrawCounts:
+    def play_matches(self, matches: List[Match], binary: str, db: Optional[RatingDB] = None)\
+            -> WinLossDrawCounts:
         """
         Play matches between agents and update the W_matrix with the results. If db is provided,
         the results are committed to the database.
@@ -80,7 +81,8 @@ class Arena:
                 db.commit_counts(db_id1, db_id2, counts, match.type)
         return counts_list
 
-    def update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts, type: MatchType, db: RatingDB):
+    def update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts, type: MatchType,
+                             db: RatingDB):
         self._W_matrix[ix1, ix2] += counts.win + 0.5 * counts.draw
         self._W_matrix[ix2, ix1] += counts.loss + 0.5 * counts.draw
         db_id1 = self._indexed_agents[ix1].db_id
@@ -127,8 +129,8 @@ class Arena:
     def adjacent_matrix(self) -> np.ndarray:
         return (self._W_matrix > 0) | (self._W_matrix.T > 0)
 
-    def add_agent(self, agent: Agent, roles: Set[AgentRole], db_id: Optional[AgentDBId]=None,
-                   expand_matrix: bool=True, db: Optional[RatingDB]=None) -> IndexedAgent:
+    def add_agent(self, agent: Agent, roles: Set[AgentRole], db_id: Optional[AgentDBId] = None,
+                  expand_matrix: bool = True, db: Optional[RatingDB] = None) -> IndexedAgent:
         """
         Between the two optional arguments db_id and db, exactly one of them must be provided.
         db_id is provided when the agent is already in the database and we want to load it.

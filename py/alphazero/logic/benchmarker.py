@@ -9,7 +9,7 @@ from util.index_set import IndexSet
 import numpy as np
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
 from typing import Dict, List, Optional
 
@@ -36,7 +36,7 @@ class Benchmarker:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
     """
-    def __init__(self, organizer: DirectoryOrganizer, db_filename: Optional[str]=None):
+    def __init__(self, organizer: DirectoryOrganizer, db_filename: Optional[str] = None):
         self._organizer = organizer
         self._arena = Arena()
 
@@ -59,18 +59,19 @@ class Benchmarker:
         2. If there are matches in the arena, check if there are any incomplete generations.
         3. If there are incomplete generations, let it be the next generation to be played and play
         it against all other generations.
-        4. If there are no incomplete generations, check if the biggest gap in ratings is greater
-        than the target elo gap. If it is, play the next generation in the middle of the two generations
+        4. If there are no incomplete gens, check if the biggest gap in ratings is greater than the
+        target elo gap. If it is, play the next generation in the middle of the two generations
         with the biggest gap.
         """
         if self.has_no_matches():
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
-            if last_gen is None or last_gen <2:
+            if last_gen is None or last_gen < 2:
                 return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
             self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
-            self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
+            self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
+                                  db=self.db)
             return [Match(gen0_agent, last_gen_agent, n_games, MatchType.BENCHMARK)]
 
         incomplete_gen = self.incomplete_gen(excluded_indices=excluded_indices)
@@ -82,15 +83,17 @@ class Benchmarker:
             if gap is None or gap.elo_diff < target_elo_gap:
                 return []
             next_gen = (gap.left_gen + gap.right_gen) // 2
-            logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen, gap.right_gen, gap.elo_diff)
+            logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen,
+                         gap.right_gen, gap.elo_diff)
 
         next_agent = self.build_agent(next_gen, n_iters)
         next_iagent = self._arena.add_agent(next_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
-                                             db=self.db)
+                                            db=self.db)
         matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices=excluded_indices)
         return matches
 
-    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, excluded_indices: IndexSet) -> List[Match]:
+    def get_unplayed_matches(self, iagent: IndexedAgent, n_games: int, excluded_indices: IndexSet)\
+            -> List[Match]:
         """
         Returns a list of matches that have not been played for the given IndexedAgent, only for the
         agents that are not in the exclude_agents set.
@@ -101,7 +104,7 @@ class Benchmarker:
                 continue
             if ia.index in excluded_indices:
                 continue
-            if self._arena.adjacent_matrix()[iagent.index, ia.index] == False:
+            if self._arena.adjacent_matrix()[iagent.index, ia.index] is False:
                 matches.append(Match(iagent.agent, ia.agent, n_games, MatchType.BENCHMARK))
                 logger.debug(f'Unplayed match: {iagent.agent.gen} vs {ia.agent.gen}')
         return matches
@@ -109,7 +112,7 @@ class Benchmarker:
     def incomplete_gen(self, excluded_indices: IndexSet) -> Optional[Generation]:
         """
         A set of agents is complete if every agent has played every other agent. The set of agents
-        is defined as the set of agents in the arena, excluding the agents in the exclude_agents set.
+        is defined as the set of agents in arena, excluding the agents in the exclude_agents set.
         Returns the generation of the agent that has played the least number of matches.
         Returns None if all agents have played every other agent.
         """
@@ -152,7 +155,7 @@ class Benchmarker:
         """
         self.refresh_ratings()
         elos = self._arena.ratings
-        gens, agent_ix = zip(*[(indexed_agent.agent.gen, indexed_agent.index) for indexed_agent in self._arena.indexed_agents])
+        gens, agent_ix = zip(*[(ia.agent.gen, ia.index) for ia in self._arena.indexed_agents])
         gens = np.array(gens)
         agent_ix = np.array(agent_ix)
 

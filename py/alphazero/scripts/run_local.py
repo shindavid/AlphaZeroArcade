@@ -33,7 +33,8 @@ Standard Usage Recipes:
 1. Start a new training run:
     ./py/alphazero/scripts/run_local.py -g {game} -t {tag}
 
-    Wait for a few generations to be written, and then launch the dashboard in a separate tab to visualize:
+    Wait for a few generations to be written, and then launch the dashboard in a separate tab to
+    visualize:
 
     ./py/alphazero/scripts/launch_dashboard.py -g {game}
 

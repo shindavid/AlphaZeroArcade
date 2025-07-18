@@ -69,11 +69,12 @@ class MatchStatus:
     def obsolete(self) -> bool:
         return self.status == MatchRequestStatus.OBSOLETE
 
+
 @dataclass
 class EvalStatus:
     mcts_gen: Generation
     owner: Optional[ClientId] = None
-    ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict) # ix -> MatchStatus
+    ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict)  # ix -> MatchStatus
     status: Optional[EvalRequestStatus] = None
     elo: Optional[float] = None
 
@@ -89,7 +90,7 @@ class EvalStatus:
     def num_actioned_matches(self) -> int:
         return sum(1 for status in self.ix_match_status.values() if status.actioned())
 
-    def candidates(self) -> Dict[int, int]: # Dict[ix, n_games]
+    def candidates(self) -> Dict[int, int]:  # Dict[ix, n_games]
         return {ix: s.n_games for ix, s in self.ix_match_status.items() if s.pending()}
 
     def any_complete(self) -> bool:
@@ -97,6 +98,7 @@ class EvalStatus:
 
     def any_pending(self) -> bool:
         return any(s.pending() for s in self.ix_match_status.values())
+
 
 @dataclass
 class EvalServerAux(ServerAuxBase):
@@ -109,6 +111,7 @@ class EvalServerAux(ServerAuxBase):
 
     def work_in_progress(self) -> bool:
         return self.ix is not None
+
 
 class EvalManager(GamingManagerBase):
     """
@@ -127,7 +130,7 @@ class EvalManager(GamingManagerBase):
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}
-        self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
+        self._eval_status_dict: Dict[int, EvalStatus] = {}  # ix -> EvalStatus
         self._benchmark_elos: Dict[int, float] = {}  # ix -> elo
         self._min_benchmark_elo: Optional[float] = None
         self._max_benchmark_elo: Optional[float] = None
@@ -162,7 +165,7 @@ class EvalManager(GamingManagerBase):
 
         status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
-            conn.aux.status= ServerStatus.DISCONNECTED
+            conn.aux.status = ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
     def send_match_request(self, conn: ClientConnection):
@@ -184,7 +187,8 @@ class EvalManager(GamingManagerBase):
         assert n_games_needed > 0, f"{self.n_games} games needed; {n_games_in_progress} in progress"
         self._update_opponents(conn, test_iagent, estimated_rating, n_games_needed)
 
-        next_opponent_ix, next_n_games = sorted(eval_status.candidates().items(), key=lambda x: x[1])[0]
+        candidates = eval_status.candidates()
+        next_opponent_ix, next_n_games = sorted(candidates.items(), key=lambda x: x[1])[0]
         next_opponent_iagent = self._indexed_agents[next_opponent_ix]
 
         data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
@@ -226,7 +230,7 @@ class EvalManager(GamingManagerBase):
         return estimated_rating
 
     def _update_opponents(self, conn: ClientConnection, test_iagent: IndexedAgent,
-                           estimated_rating: float, n_games_needed: int):
+                          estimated_rating: float, n_games_needed: int):
         aux: EvalServerAux = conn.aux
         need_new_opponents = aux.needs_new_opponents
         if need_new_opponents:
@@ -345,7 +349,7 @@ class EvalManager(GamingManagerBase):
         return data
 
     def _update_agent_files(self, agent: Agent, role: AgentRole,
-                                     files_required: List[FileToTransfer]) -> Agent:
+                            files_required: List[FileToTransfer]) -> Agent:
         binary = self._get_binary_to_transfer(agent, role)
         model = self._get_model_to_transfer(agent, role)
 
@@ -410,14 +414,14 @@ class EvalManager(GamingManagerBase):
         return model
 
     def _get_next_gen_to_eval(self):
-        failed_gen = [data.mcts_gen for data in self._eval_status_dict.values() \
-            if data.status == EvalRequestStatus.FAILED]
+        failed_gen = [data.mcts_gen for data in self._eval_status_dict.values()
+                      if data.status == EvalRequestStatus.FAILED]
         if failed_gen:
             return failed_gen[0]
 
         latest_gen = self._controller._organizer.get_latest_model_generation()
-        evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values() \
-            if data.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)]
+        eval_status = self._eval_status_dict
+        evaluated_gens = [s.mcts_gen for s in eval_status.values() if s.status.actioned()]
         gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens)
         return gen
 
@@ -521,7 +525,7 @@ class EvalManager(GamingManagerBase):
         self._eval_status_dict[ix1].ix_match_status[ix2].result = counts
         self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
 
-    def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float]=None):
+    def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float] = None):
         self._eval_status_dict[eval_ix].status = EvalRequestStatus.COMPLETE
         self._eval_status_dict[eval_ix].owner = None
         ix = conn.aux.ix
@@ -564,4 +568,3 @@ class EvalManager(GamingManagerBase):
     @property
     def tag(self):
         return self._controller._organizer.tag
-

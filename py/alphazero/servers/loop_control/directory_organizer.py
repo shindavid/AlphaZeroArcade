@@ -38,7 +38,6 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import BaseDir
-from util import sqlite3_util
 
 from natsort import natsorted
 
@@ -47,7 +46,7 @@ import logging
 import os
 import shutil
 import sqlite3
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 # VERSION is stored in the version_file in the base directory
@@ -92,7 +91,7 @@ class ForkInfo:
             json_dict = json.load(f)
 
         fork_info = ForkInfo(json_dict['forked_base_dir'])
-        fork_info.train_windows = {int(k):v for k, v in json_dict['train_windows'].items()}
+        fork_info.train_windows = {int(k): v for k, v in json_dict['train_windows'].items()}
         return fork_info
 
 
@@ -184,7 +183,7 @@ class DirectoryOrganizer:
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def dir_setup(self, benchmark_tag: Optional[str]=None):
+    def dir_setup(self, benchmark_tag: Optional[str] = None):
         """
         Performs initial setup of the directory structure.
         """
@@ -269,7 +268,7 @@ class DirectoryOrganizer:
         return self.get_any_self_play_data_filename(gen - 1)
 
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
-                            last_model_gen: Optional[Generation]=None):
+                            last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
             assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
             gen = int(filename.split('.')[0].split('-')[1])
@@ -280,7 +279,7 @@ class DirectoryOrganizer:
             shutil.copyfile(src, dst)
 
     def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
-                                 last_model_gen: Optional[Generation]=None):
+                                 last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
             assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
             gen = int(filename.split('.')[0].split('-')[1])
@@ -291,7 +290,7 @@ class DirectoryOrganizer:
             os.symlink(src, dst)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
-                                    last_gen: Optional[Generation]=None):
+                                    last_gen: Optional[Generation] = None):
         if last_gen is None:
             last_gen = self.get_latest_model_generation(default=0)
 
@@ -359,7 +358,8 @@ class DirectoryOrganizer:
 
     def freeze_tag(self):
         with open(self.freeze_filename, 'w') as f:
-            f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
+            f.write('The existence of this file indicates that this run was benchmarked, and thus \
+                    that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
     @staticmethod

@@ -1,27 +1,20 @@
-from alphazero.logic.agent_types import Agent, Match, MatchType
-from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
+from alphazero.logic.agent_types import Match
 from alphazero.logic.ratings import WinLossDrawCounts, extract_match_record
-from alphazero.logic.run_params import RunParams
 from alphazero.servers.gaming import platform_overrides
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import subprocess_util
 from util.str_util import make_args_str
-
-from dataclasses import dataclass
-from enum import Enum
 
 import logging
 from typing import Dict, Optional
 
 
-
 logger = logging.getLogger(__name__)
-
 
 
 class MatchRunner:
     @staticmethod
-    def run_match_helper(match: Match, binary: str, args: Optional[Dict]=None) -> WinLossDrawCounts:
+    def run_match_helper(match: Match, binary: str, args: Optional[Dict] = None)\
+            -> WinLossDrawCounts:
         """
         Run a match between two agents and return the results by running two subprocesses
         of C++ binaries.
@@ -41,7 +34,6 @@ class MatchRunner:
         args['-G'] = n_games
         platform_overrides.update_cpp_bin_args(args)
 
-
         cmd = [
             binary,
             '--player', f'"{ps1}"',
@@ -49,7 +41,6 @@ class MatchRunner:
         ]
         cmd.append(make_args_str(args))
         cmd = ' '.join(map(str, cmd))
-
 
         logger.info('Running match:\n%s', cmd)
 
