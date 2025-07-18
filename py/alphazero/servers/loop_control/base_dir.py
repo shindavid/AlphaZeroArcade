@@ -41,19 +41,20 @@ class BenchmarkRecord:
                     dt = datetime.strptime(name, '%Y-%m-%d_%H-%M-%S_UTC')
                     folders.append((dt, name))
                 except ValueError:
-                    pass  
+                    pass
 
             if folders:
                 utc_key = max(folders, key=lambda x: x[0])[1]
             else:
                 return None
-        return os.path.join(Workspace.benchmark_data_dir, self.game, self.tag, utc_key) 
-    
+        return os.path.join(Workspace.benchmark_data_dir, self.game, self.tag, utc_key)
+
     def to_dict(self):
         return {'utc_key': self.utc_key, 'tag': self.tag, 'hash': self.hash}
 
     def key(self):
         return os.path.join(self.game, self.tag, f"{self.utc_key}.tar")
+
 
 class Workspace(BaseDir):
     base_dir = '/workspace/mount'
@@ -65,7 +66,7 @@ class Workspace(BaseDir):
     @staticmethod
     def benchmark_record_file(game: str) -> str:
         return os.path.join('/workspace/repo/benchmark_records', f'{game}.json')
-    
+
     @staticmethod
     def load_benchmark_record(game: str) -> Optional[BenchmarkRecord]:
         """
@@ -81,7 +82,7 @@ class Workspace(BaseDir):
 
         with open(file_path, 'r') as f:
             benchmark_record = json.load(f)
-        
+
         utc_key = benchmark_record.get("utc_key", None)
         tag = benchmark_record.get("tag", None)
         hash = benchmark_record.get("hash", None)
