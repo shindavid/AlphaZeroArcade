@@ -28,6 +28,7 @@ class scheduler {
  public:
   scheduler(const scheduler&) = delete;
   scheduler& operator=(const scheduler&) = delete;
+  ~scheduler() noexcept(false);
 
   static scheduler& instance();
   void seed(int s) { prng_.seed(s); }

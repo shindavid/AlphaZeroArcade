@@ -19,6 +19,15 @@
 
 namespace mit {
 
+inline scheduler::~scheduler() noexcept(false) {
+  // If any threads are still joinable, that's a potential bug.
+  for (const auto& thread : all_threads_) {
+    if (thread && thread->std_thread.joinable()) {
+      throw BugDetectedError("Program exiting with joinable threads");
+    }
+  }
+}
+
 inline scheduler& scheduler::instance() {
   static scheduler instance;
   return instance;
