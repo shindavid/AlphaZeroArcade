@@ -59,6 +59,12 @@ void NNEvaluationService<Game>::disconnect() {
   num_connections_--;
   lock.unlock();
   cv_main_.notify_all();
+
+  for (auto* thread : {&schedule_thread_, &drain_thread_, &state_thread_}) {
+    if (thread->joinable()) {
+      thread->join();
+    }
+  }
 }
 
 template <core::concepts::Game Game>
@@ -297,10 +303,6 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
 template <core::concepts::Game Game>
 NNEvaluationService<Game>::~NNEvaluationService() {
   disconnect();
-
-  if (state_thread_.joinable()) {
-    state_thread_.join();
-  }
 }
 
 template <core::concepts::Game Game>
@@ -713,7 +715,6 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::schedule_loop() {
-  const char* func = __func__;
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
@@ -726,7 +727,7 @@ void NNEvaluationService<Game>::schedule_loop() {
     }
   } catch (const ShutDownException&) {
     // This is expected when the state loop is shutting down.
-    LOG_INFO("{}::{}() caught ShutDownException, exiting...", kCls, func);
+    LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
   system_state_ = kShuttingDownDrainLoop;
@@ -736,7 +737,6 @@ void NNEvaluationService<Game>::schedule_loop() {
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::drain_loop() {
-  const char* func = __func__;
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       drain_loop_prelude();
@@ -747,7 +747,7 @@ void NNEvaluationService<Game>::drain_loop() {
     }
   } catch (const ShutDownException&) {
     // This is expected when the state loop is shutting down.
-    LOG_INFO("{}::{}() caught ShutDownException, exiting...", kCls, func);
+    LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
   system_state_ = kShutDownComplete;
