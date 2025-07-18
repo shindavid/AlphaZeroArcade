@@ -7,11 +7,10 @@
 #include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
+#include <util/mit/mit.hpp>
 
 #include <chrono>
 #include <cstdint>
-#include <mutex>
-#include <thread>
 #include <vector>
 
 namespace core {
@@ -150,7 +149,7 @@ class TrainingDataWriter
    */
   struct MiscData {
     Params params;
-    std::thread* thread;
+    mit::thread* thread;
     std::chrono::nanoseconds heartbeat_interval;
     bool closed = false;
     bool direct_game_log_write_optimization_enabled = false;
@@ -163,10 +162,10 @@ class TrainingDataWriter
   BatchData batch_data_;
   GameLogSerializer serializer_;
 
-  std::condition_variable game_queue_cv_;
-  std::condition_variable batch_cv_;
-  mutable std::mutex game_queue_mutex_;
-  mutable std::mutex batch_mutex_;
+  mit::condition_variable game_queue_cv_;
+  mit::condition_variable batch_cv_;
+  mutable mit::mutex game_queue_mutex_;
+  mutable mit::mutex batch_mutex_;
 };
 
 }  // namespace core

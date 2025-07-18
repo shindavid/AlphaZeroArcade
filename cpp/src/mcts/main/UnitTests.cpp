@@ -24,6 +24,10 @@
 #include <string>
 #include <vector>
 
+#ifndef MIT_TEST_MODE
+static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
+#endif
+
 using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;

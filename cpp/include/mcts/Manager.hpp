@@ -14,9 +14,9 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Math.hpp>
+#include <util/mit/mit.hpp>
 
 #include <array>
-#include <mutex>
 #include <queue>
 #include <vector>
 
@@ -197,7 +197,7 @@ class Manager {
   // If it reaches 0, we transition to kIdle and return results. Otherwise, we issue a kDrop to the
   // caller, which will cause the GameServer to drop the context.
   struct StateMachine {
-    mutable std::mutex mutex;
+    mutable mit::mutex mutex;
     int16_t in_visit_loop_count = 0;
     execution_state_t state = kIdle;
   };

@@ -138,7 +138,7 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 template <core::concepts::Game Game>
 typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  std::unique_lock lock(search_mode_mutex_);
+  mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
   lock.unlock();
 
@@ -156,7 +156,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
 
 template <core::concepts::Game Game>
 void MctsPlayer<Game>::clear_search_mode() {
-  std::unique_lock lock(search_mode_mutex_);
+  mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 

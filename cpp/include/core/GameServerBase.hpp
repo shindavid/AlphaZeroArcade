@@ -47,11 +47,9 @@ class GameServerBase {
     std::atomic<bool>& in_critical_section_;
   };
 
-  GameServerBase(int num_game_threads) : num_game_threads_(num_game_threads) {
-    game_servers_.push_back(this);
-  }
+  GameServerBase(int num_game_threads) : num_game_threads_(num_game_threads) {}
 
-  static void add_client(GameServerClient* client);
+  void add_client(GameServerClient* client);
 
   int num_game_threads() const {
     return num_game_threads_;
@@ -69,7 +67,6 @@ class GameServerBase {
   using server_vec_t = std::vector<GameServerBase*>;
   using client_vec_t = std::vector<GameServerClient*>;
 
-  static server_vec_t game_servers_;
   client_vec_t clients_;
   const int num_game_threads_;
 };

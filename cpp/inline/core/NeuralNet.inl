@@ -57,7 +57,7 @@ void NeuralNet<Game>::load_weights(std::ispanstream& stream) {
 
 template <concepts::Game Game>
 pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
-  std::unique_lock lock(pipeline_mutex_);
+  mit::unique_lock lock(pipeline_mutex_);
   pipeline_cv_.wait(lock, [&] {
     return !available_pipeline_indices_.empty();
   });
@@ -79,7 +79,7 @@ void NeuralNet<Game>::schedule(pipeline_index_t index) const {
 
 template <concepts::Game Game>
 void NeuralNet<Game>::release(pipeline_index_t index) {
-  std::unique_lock lock(pipeline_mutex_);
+  mit::unique_lock lock(pipeline_mutex_);
   available_pipeline_indices_.push_back(index);
   lock.unlock();
   pipeline_cv_.notify_all();
@@ -102,7 +102,7 @@ void NeuralNet<Game>::deactivate() {
   }
   pipelines_.clear();
   {
-    std::unique_lock lock(pipeline_mutex_);
+    mit::unique_lock lock(pipeline_mutex_);
     available_pipeline_indices_.clear();
   }
 
@@ -130,7 +130,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
   util::release_assert(pipelines_.empty());
 
   {
-    std::unique_lock lock(pipeline_mutex_);
+    mit::unique_lock lock(pipeline_mutex_);
     util::release_assert(available_pipeline_indices_.empty());
     for (int i = 0; i < num_pipelines; ++i) {
       pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));

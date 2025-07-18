@@ -36,7 +36,7 @@ namespace util {
 template<typename T>
 size_t hash(const T& t) { return std::hash<T>{}(t); }
 
-// Drop-in replacement for std::mutex that does nothing.
+// Drop-in replacement for mit::mutex that does nothing.
 struct dummy_mutex {
   void lock() noexcept {}
   void unlock() noexcept {}
@@ -109,12 +109,6 @@ template <typename TimePoint>
 int64_t ns_since_epoch(const TimePoint&);
 
 inline int64_t ns_since_epoch() { return ns_since_epoch(std::chrono::system_clock::now()); }
-
-/*
- * Between machine reboots, no two calls to this function from the same machine should return equal
- * values.
- */
-int64_t get_unique_id();
 
 /*
  * This identity function is intended to be used to declare required members in concepts.

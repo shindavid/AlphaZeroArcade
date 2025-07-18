@@ -11,11 +11,11 @@
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
+#include <util/mit/mit.hpp>
 
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <map>
 #include <vector>
 
@@ -312,9 +312,9 @@ class GameServer
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
     int num_random_seats_ = 0;
 
-    std::condition_variable cv_;
-    mutable std::mutex mutex_;
-    mutable std::mutex perf_stats_mutex_;
+    mit::condition_variable cv_;
+    mutable mit::mutex mutex_;
+    mutable mit::mutex perf_stats_mutex_;
     progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
     int num_games_ended_ = 0;
@@ -344,7 +344,7 @@ class GameServer
 
     YieldManager yield_manager_;
 
-    std::thread state_thread_;
+    mit::thread state_thread_;
 
     results_array_t results_array_;  // indexed by player_id
 
@@ -372,7 +372,7 @@ class GameServer
     void run();
 
     SharedData& shared_data_;
-    std::thread thread_;
+    mit::thread thread_;
     game_thread_id_t id_;
   };
 

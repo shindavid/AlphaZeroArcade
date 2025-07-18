@@ -63,6 +63,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
+set(TEST_COMPILE_DEFINITIONS MIT_TEST_MODE)
+
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
@@ -104,6 +106,169 @@ endfunction()
 link_directories(/usr/local/cuda/lib64)
 set(COMMON_EXTERNAL_LIBS ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
+
+# Function to add a game with common sources, main file, unit-test file and shared file
+function(add_game)
+    # 1) Parse args:
+    #    no boolean options
+    #    single‐value-required: NAME
+    #    single-value-optional: EXE, TEST, FFI
+    #    multi‐value-optional: SOURCES, INCLUDES
+    cmake_parse_arguments(AG
+        ""                     # <OPTIONS>
+        "NAME;EXE;TEST;FFI"    # <ONE_VALUE>
+        "SOURCES;INCLUDES"     # <MULTI_VALUE>
+        ${ARGN}
+    )
+
+    # 2) Sanity-check required parameters
+    if(NOT AG_NAME OR (NOT AG_EXE AND NOT AG_TEST AND NOT AG_FFI))
+        message(FATAL_ERROR
+        "add_game() requires:\n"
+        "  NAME   <game_name>\n"
+        "and at least one of:\n"
+        "  EXE    <exe_source>\n"
+        "  TEST   <test_source>\n"
+        "  FFI    <ffi_source>\n"
+        "Optional:\n"
+        "  SOURCES <common_source1> [common_source2…]\n"
+        "  INCLUDES <inc_dir1> [inc_dir2…]\n"
+        )
+    endif()
+
+    # 3) How many common sources?
+    list(LENGTH AG_SOURCES _src_count)
+
+    if(_src_count GREATER 0)
+        # build the two object-libs
+        add_library(${AG_NAME}_common_objs  OBJECT ${AG_SOURCES})
+        set_target_properties(${AG_NAME}_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+        add_library(${AG_NAME}_common_objs_test OBJECT ${AG_SOURCES})
+        set_target_properties(${AG_NAME}_common_objs_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        target_compile_definitions(${AG_NAME}_common_objs_test PRIVATE ${TEST_COMPILE_DEFINITIONS})
+
+        if(AG_INCLUDES)
+        target_include_directories(${AG_NAME}_common_objs PUBLIC ${AG_INCLUDES})
+        target_include_directories(${AG_NAME}_common_objs_test PUBLIC ${AG_INCLUDES})
+        endif()
+
+        set(_test_objs ${AG_NAME}_common_objs_test)
+        set(_link_objs ${AG_NAME}_common_objs)
+    else()
+        # no common sources → omit object-libs
+        set(_test_objs)
+        set(_link_objs)
+    endif()
+
+    # 4) Test executable
+    if (AG_TEST)
+        add_executable(${AG_NAME}_tests ${AG_TEST})
+        target_compile_definitions(${AG_NAME}_tests PRIVATE ${TEST_COMPILE_DEFINITIONS})
+        target_link_libraries(${AG_NAME}_tests
+            PRIVATE
+            ${_test_objs}
+            util_lib_test
+            ${GTEST_LIBS}
+            ${COMMON_EXTERNAL_LIBS}
+        )
+        set_target_properties(${AG_NAME}_tests PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests"
+        )
+        append_target_metadata("${AG_NAME}" ${AG_NAME}_tests)
+    endif()
+
+    # 5) Normal executable
+    if (AG_EXE)
+        add_executable(${AG_NAME}_exe ${AG_EXE})
+        target_link_libraries(${AG_NAME}_exe
+            PRIVATE
+            ${_link_objs}
+            util_lib
+            ${COMMON_EXTERNAL_LIBS}
+        )
+        set_target_properties(${AG_NAME}_exe PROPERTIES
+            OUTPUT_NAME "${AG_NAME}"
+        )
+        append_target_metadata("${AG_NAME}" ${AG_NAME}_exe)
+    endif()
+
+    # 6) FFI shared library
+    if (AG_FFI)
+        add_library(${AG_NAME}_ffi SHARED ${AG_FFI})
+        set_target_properties(${AG_NAME}_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        target_link_libraries(${AG_NAME}_ffi
+            PRIVATE
+            ${_link_objs}
+            util_lib
+            ${COMMON_EXTERNAL_LIBS}
+        )
+        set_target_properties(${AG_NAME}_ffi PROPERTIES
+            OUTPUT_NAME "${AG_NAME}"
+        )
+        append_target_metadata("${AG_NAME}" ${AG_NAME}_ffi)
+    endif()
+endfunction()
+
+# Function add a standalone test, separate from a game-specific test added via add_game()
+function(add_test)
+  # 1) Parse named args: NAME, TEST are single-value; EXTRA_LIBS is optional multi-value
+  cmake_parse_arguments(AT
+    ""                    # no boolean flags
+    "NAME;TEST"           # single-value keywords
+    "EXTRA_LIBS"          # multi-value keyword
+    ${ARGN}
+  )
+
+  # 2) Sanity‐check
+  if(NOT AT_NAME OR NOT AT_TEST)
+    message(FATAL_ERROR
+      "add_test() requires:\n"
+      "  NAME      <test_target_name>\n"
+      "  TEST      <test_source_file>\n"
+      "Optional:\n"
+      "  EXTRA_LIBS <lib1> [lib2…]\n"
+    )
+  endif()
+
+  # 3) Verify every EXTRA_LIB ends with "_test"
+  foreach(_lib IN LISTS AT_EXTRA_LIBS)
+    string(LENGTH "${_lib}" _len)
+    if(_len LESS 5)
+      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+    endif()
+    math(EXPR _start "${_len} - 5")
+    string(SUBSTRING "${_lib}" ${_start} 5 _suffix)
+    if(NOT _suffix STREQUAL "_test")
+      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+    endif()
+  endforeach()
+
+  # 4) Create the test executable
+  add_executable(${AT_NAME} ${AT_TEST})
+
+  # 5) Compile‐time definitions
+  target_compile_definitions(${AT_NAME}
+    PRIVATE ${TEST_COMPILE_DEFINITIONS}
+  )
+
+  # 6) Link libraries: EXTRA_LIBS → util_lib_test, tictactoe_common_objs_test, etc.
+  #    plus COMMON_EXTERNAL_LIBS and GTEST_LIBS
+  target_link_libraries(${AT_NAME}
+    PRIVATE
+      ${AT_EXTRA_LIBS}
+      ${COMMON_EXTERNAL_LIBS}
+      ${GTEST_LIBS}
+  )
+
+  # 7) Put the binary into the tests/ folder
+  set_target_properties(${AT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests"
+  )
+
+  # 8) Metadata for listing
+  append_target_metadata("aux" ${AT_NAME})
+endfunction()
 
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")

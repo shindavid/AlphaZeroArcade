@@ -6,9 +6,9 @@
 #include <core/YieldManager.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/SocketUtil.hpp>
+#include <util/mit/mit.hpp>
 
 #include <map>
-#include <thread>
 
 namespace core {
 
@@ -52,7 +52,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
     static dispatcher_map_t dispatcher_map_;
 
-    std::thread* thread_ = nullptr;
+    mit::thread* thread_ = nullptr;
     io::Socket* socket_;
     player_vec_array_t player_vec_array_;
   };

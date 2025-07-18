@@ -6,12 +6,12 @@
 #include <games/connect4/Game.hpp>
 #include <util/Asserts.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
 
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -80,7 +80,7 @@ class PerfectOracle {
   std::string output_str_;
   std::vector<std::string> tokens_;
 
-  mutable std::mutex mutex_;
+  mutable mit::mutex mutex_;
 };
 
 }  // namespace c4

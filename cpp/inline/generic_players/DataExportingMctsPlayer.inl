@@ -10,7 +10,7 @@ typename DataExportingMctsPlayer<Game>::ActionResponse
 DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request) {
   const ActionMask& valid_actions = request.valid_actions;
 
-  std::unique_lock lock(this->search_mode_mutex_);
+  mit::unique_lock lock(this->search_mode_mutex_);
   if (this->init_search_mode(request)) {
     GameWriteLog_sptr game_log = this->get_game_log();
     use_for_training_ = game_log && this->search_mode_ == core::kFull;

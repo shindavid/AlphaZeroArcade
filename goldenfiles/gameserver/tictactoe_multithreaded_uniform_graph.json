@@ -1,0 +1,251 @@
+{
+"nodes" : [
+  {
+  "index" : 0,
+  "N" : 41,
+  "Q" : [0.454995, 0.545004],
+  "state" : "X__\nOOX\nX__",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 1,
+  "N" : 17,
+  "Q" : [0.441136, 0.558864],
+  "state" : "XO_\nOOX\nX__",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 3,
+  "N" : 5,
+  "Q" : [0.496759, 0.503241],
+  "state" : "X_O\nOOX\nX__",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 4,
+  "N" : 11,
+  "Q" : [0.556143, 0.443857],
+  "state" : "XOX\nOOX\n_X_",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 5,
+  "N" : 2,
+  "Q" : [0.589145, 0.410855],
+  "state" : "XOX\n_OX\nOX_",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 6,
+  "N" : 2,
+  "Q" : [0.183683, 0.816317],
+  "state" : "XOX\nOOX\nX__",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
+  "index" : 7,
+  "N" : 8,
+  "Q" : [0.517552, 0.482448],
+  "state" : "XXO\nOOX\nXO_",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 0
+  },
+  {
+  "index" : 8,
+  "N" : 2,
+  "Q" : [0.810682, 0.189318],
+  "state" : "XOX\nOOX\nOX_",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : 0
+  },
+  {
+  "index" : 9,
+  "N" : 1,
+  "Q" : [0.368282, 0.631718],
+  "state" : "XXO\nOOX\nX__",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 10,
+  "N" : 1,
+  "Q" : [0.365134, 0.634866],
+  "state" : "X_O\nOOX\nX_X",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : 1
+  },
+  {
+  "index" : 11,
+  "N" : 3,
+  "Q" : [0.127657, 0.872343],
+  "state" : "XOX\n_OO\nXX_",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : 1
+  },
+  {
+  "index" : 12,
+  "N" : 1,
+  "Q" : [1, 0],
+  "state" : "XOO\nOOX\nXXX",
+  "provably_winning" : "10",
+  "provably_losing" : "01",
+  "active_seat" : -1
+  },
+  {
+  "index" : 13,
+  "N" : 7,
+  "Q" : [0.5, 0.5],
+  "state" : "XOX\nXOO\nOXX",
+  "provably_winning" : "00",
+  "provably_losing" : "00",
+  "active_seat" : -1
+  },
+  {
+  "index" : 15,
+  "N" : 2,
+  "Q" : [0, 1],
+  "state" : "XOX\nOOX\nXO_",
+  "provably_winning" : "01",
+  "provably_losing" : "10",
+  "active_seat" : -1
+  }
+],
+"edges" : [
+  {
+  "index" : 0,
+  "from" : 0,
+  "to" : 1,
+  "E" : 17,
+  "action" : 1
+  },
+  {
+  "index" : 1,
+  "from" : 0,
+  "to" : 3,
+  "E" : 5,
+  "action" : 2
+  },
+  {
+  "index" : 2,
+  "from" : 0,
+  "to" : 1,
+  "E" : 13,
+  "action" : 7
+  },
+  {
+  "index" : 3,
+  "from" : 0,
+  "to" : 3,
+  "E" : 7,
+  "action" : 8
+  },
+  {
+  "index" : 4,
+  "from" : 1,
+  "to" : 6,
+  "E" : 2,
+  "action" : 2
+  },
+  {
+  "index" : 5,
+  "from" : 1,
+  "to" : 4,
+  "E" : 11,
+  "action" : 7
+  },
+  {
+  "index" : 6,
+  "from" : 1,
+  "to" : 11,
+  "E" : 3,
+  "action" : 8
+  },
+  {
+  "index" : 10,
+  "from" : 3,
+  "to" : 9,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 11,
+  "from" : 3,
+  "to" : 5,
+  "E" : 3,
+  "action" : 7
+  },
+  {
+  "index" : 12,
+  "from" : 3,
+  "to" : 10,
+  "E" : 2,
+  "action" : 8
+  },
+  {
+  "index" : 13,
+  "from" : 4,
+  "to" : 8,
+  "E" : 2,
+  "action" : 6
+  },
+  {
+  "index" : 14,
+  "from" : 4,
+  "to" : 7,
+  "E" : 8,
+  "action" : 8
+  },
+  {
+  "index" : 15,
+  "from" : 5,
+  "to" : 8,
+  "E" : 1,
+  "action" : 3
+  },
+  {
+  "index" : 17,
+  "from" : 6,
+  "to" : 15,
+  "E" : 1,
+  "action" : 7
+  },
+  {
+  "index" : 19,
+  "from" : 7,
+  "to" : 13,
+  "E" : 7,
+  "action" : 8
+  },
+  {
+  "index" : 20,
+  "from" : 8,
+  "to" : 12,
+  "E" : 1,
+  "action" : 8
+  },
+  {
+  "index" : 25,
+  "from" : 11,
+  "to" : 15,
+  "E" : 2,
+  "action" : 3
+  }
+]
+}

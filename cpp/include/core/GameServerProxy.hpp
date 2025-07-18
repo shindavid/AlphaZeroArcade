@@ -8,9 +8,8 @@
 #include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
+#include <util/mit/mit.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -146,8 +145,8 @@ class GameServerProxy : public core::GameServerBase {
     const Params params_;
     io::Socket* socket_ = nullptr;
 
-    std::condition_variable cv_;
-    mutable std::mutex mutex_;
+    mit::condition_variable cv_;
+    mutable mit::mutex mutex_;
     int num_games_started_ = 0;
     int num_games_ended_ = 0;
     bool running_ = true;
@@ -174,7 +173,7 @@ class GameServerProxy : public core::GameServerBase {
     void run();
 
     SharedData& shared_data_;
-    std::thread thread_;
+    mit::thread thread_;
     game_thread_id_t id_;
   };
 

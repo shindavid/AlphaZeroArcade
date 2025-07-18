@@ -4,13 +4,11 @@
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
+#include <util/mit/mit.hpp>
 
 #include <boost/json.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace core {
@@ -105,15 +103,15 @@ class LoopControllerClient : public PerfStatsClient {
   const Params params_;
   const int64_t proc_start_ts_;
   io::Socket* socket_;
-  std::thread* thread_ = nullptr;
+  mit::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<DataRequestListener*> data_request_listeners_;
   std::vector<WorkerReadyListener*> worker_ready_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
 
-  std::condition_variable receipt_cv_;
-  mutable std::mutex receipt_mutex_;
+  mit::condition_variable receipt_cv_;
+  mutable mit::mutex receipt_mutex_;
   int worker_ready_count_ = 0;
   size_t pause_receipt_count_ = 0;
   size_t unpause_receipt_count_ = 0;

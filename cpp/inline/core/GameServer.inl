@@ -28,6 +28,27 @@
 
 namespace core {
 
+namespace detail {
+
+/*
+ * Between machine reboots, no two calls to this function from the same machine should return equal
+ * values.
+ */
+inline int64_t get_unique_game_id() {
+  static mit::mutex mut;
+  mit::lock_guard<mit::mutex> lock(mut);
+
+  static int64_t last = 0;
+  int64_t id = util::ns_since_epoch();
+  while (id <= last) {
+    id = util::ns_since_epoch();
+  }
+  last = id;
+  return id;
+}
+
+}  // namespace detail
+
 template <concepts::Game Game>
 auto GameServer<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
@@ -152,7 +173,7 @@ void GameServer<Game>::SharedData::start_games() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_progress_bar() {
-  std::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   if (bar_) return;
 
   if (params_.display_progress_bar && params_.num_games > 0 && util::tty_mode()) {
@@ -181,7 +202,7 @@ template <concepts::Game Game>
 GameServerBase::next_result_t GameServer<Game>::SharedData::next(
   int64_t& wait_for_game_slot_time_ns, SlotContext& item) {
   core::PerfClocker clocker(wait_for_game_slot_time_ns);
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
@@ -258,7 +279,7 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   auto& queue = get_queue_to_use(item.slot);
   bool deferred = &queue != &queue_;
   if (request.instruction == kEnqueueNow) {
@@ -301,7 +322,7 @@ bool GameServer<Game>::SharedData::request_game() {
   if (LoopControllerClient::deactivated()) return false;
   if (training_data_writer_ && training_data_writer_->closed()) return false;
 
-  std::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return false;
   num_games_started_++;
   return true;
@@ -309,7 +330,7 @@ bool GameServer<Game>::SharedData::request_game() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
-  std::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   num_games_ended_++;
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
     results_array_[s][outcome[s]]++;
@@ -320,7 +341,7 @@ void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
 
 template <concepts::Game Game>
 auto GameServer<Game>::SharedData::get_results() const {
-  std::lock_guard<std::mutex> guard(mutex_);
+  mit::lock_guard<mit::mutex> guard(mutex_);
   return results_array_;
 }
 
@@ -382,7 +403,7 @@ template <concepts::Game Game>
 typename GameServer<Game>::player_instantiation_array_t
 GameServer<Game>::SharedData::generate_player_order(
     const player_instantiation_array_t& instantiations) {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   std::next_permutation(random_seat_indices_.begin(),
                         random_seat_indices_.begin() + num_random_seats_);
   player_id_array_t random_seat_index_permutation = random_seat_indices_;
@@ -420,7 +441,7 @@ void GameServer<Game>::SharedData::handle_alternating_mode_recommendation() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::debug_dump() const {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   LOG_WARN(
     "GameServer {} pause_state:{} queue.size():{} pending_queue_count:{} deferred_count_:{} "
     "active_thread_count:{} paused_thread_count:{} waiting_in_next:{} num_games_started:{} "
@@ -452,7 +473,7 @@ void GameServer<Game>::SharedData::debug_dump() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::pause() {
   LOG_INFO("GameServer: pausing");
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   cv_.wait(lock, [&] { return pause_state_ == kUnpaused && in_prelude_count_ == 0; });
   pause_state_ = kPausing;
   lock.unlock();
@@ -462,7 +483,7 @@ void GameServer<Game>::SharedData::pause() {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::unpause() {
   LOG_INFO("GameServer: unpausing");
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   util::release_assert(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_,
                        kPaused, __LINE__);
   pause_state_ = kUnpausing;
@@ -472,17 +493,17 @@ void GameServer<Game>::SharedData::unpause() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::increment_active_thread_count() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   active_thread_count_++;
   if (!state_thread_launched_) {
     state_thread_launched_ = true;
-    state_thread_ = std::thread([&] { this->state_loop(); });
+    state_thread_ = mit::thread([&] { this->state_loop(); });
   }
 }
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::decrement_active_thread_count() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   active_thread_count_--;
   lock.unlock();
   cv_.notify_all();
@@ -492,7 +513,7 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::run_prelude(core::game_thread_id_t id) {
   if (pause_state_ == kUnpaused) return;  // avoid mutex in common case
 
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   in_prelude_count_++;
 
   util::release_assert(pause_state_ == kPausing,
@@ -543,7 +564,7 @@ void GameServer<Game>::SharedData::run_prelude(core::game_thread_id_t id) {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::state_loop() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   while (true) {
     cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kUnpaused; });
     if (active_thread_count_ == 0) break;
@@ -874,7 +895,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::start_game() {
   if (!shared_data_.request_game()) return false;
 
-  game_id_ = util::get_unique_id();
+  game_id_ = detail::get_unique_game_id();
   if (shared_data_.training_data_writer()) {
     game_log_ = std::make_shared<GameWriteLog>(game_id_, util::ns_since_epoch());
   }
@@ -936,7 +957,7 @@ void GameServer<Game>::GameThread::join() {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameThread::launch() {
-  thread_ = std::thread([&] { run(); });
+  thread_ = mit::thread([&] { run(); });
 }
 
 template <concepts::Game Game>

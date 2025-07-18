@@ -1,8 +1,8 @@
 #include <util/AllocPool.hpp>
 
 #include <util/Asserts.hpp>
+#include <util/mit/mit.hpp>
 
-#include <mutex>
 #include <type_traits>
 
 namespace util {
@@ -32,7 +32,7 @@ AllocPool<T, N, ThreadSafe>::~AllocPool() {
 
 template <typename T, int N, bool ThreadSafe>
 void AllocPool<T, N, ThreadSafe>::clear() {
-  std::unique_lock lock(mutex_);
+  mit::unique_lock lock(mutex_);
   size_ = 0;
 }
 
@@ -114,7 +114,7 @@ uint64_t AllocPool<T, N, ThreadSafe>::fetch_add_to_size(uint64_t n) {
 template <typename T, int N, bool ThreadSafe>
 void AllocPool<T, N, ThreadSafe>::add_blocks_if_necessary(int block_index) {
   if (block_index >= num_blocks_) {
-    std::unique_lock lock(mutex_);
+    mit::unique_lock lock(mutex_);
     while (num_blocks_ <= block_index) {
       blocks_[num_blocks_] = new char[sizeof(T) * (1 << (N + num_blocks_ - 1))];
       ++num_blocks_;

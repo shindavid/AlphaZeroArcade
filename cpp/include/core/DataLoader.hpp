@@ -2,14 +2,12 @@
 
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
+#include <util/mit/mit.hpp>
 
-#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 /*
@@ -98,8 +96,8 @@ class DataLoader {
     const int num_rows_;
     const int64_t file_size_;
 
-    mutable std::mutex mutex_;
-    mutable std::condition_variable cv_;
+    mutable mit::mutex mutex_;
+    mutable mit::condition_variable cv_;
     char* buffer_ = nullptr;
     bool locked_ = false;
   };
@@ -171,8 +169,8 @@ class DataLoader {
     void quit();
 
    private:
-    mutable std::mutex mutex_;
-    mutable std::condition_variable cv_;
+    mutable mit::mutex mutex_;
+    mutable mit::condition_variable cv_;
     std::vector<thread_id_t> available_thread_ids_;
     const int n_threads_;
     bool quitting_ = false;
@@ -196,9 +194,9 @@ class DataLoader {
     ThreadTable* const table_;
     const thread_id_t id_;
 
-    mutable std::mutex mutex_;
-    mutable std::condition_variable cv_;
-    std::thread thread_;
+    mutable mit::mutex mutex_;
+    mutable mit::condition_variable cv_;
+    mit::thread thread_;
     DataFile* file_ = nullptr;
     bool quitting_ = false;
   };
@@ -253,9 +251,9 @@ class DataLoader {
     const boost::filesystem::path data_dir_;
     const int64_t memory_budget_;
 
-    mutable std::mutex mutex_;
-    mutable std::condition_variable cv_;
-    std::thread prefetch_loop_thread_;
+    mutable mit::mutex mutex_;
+    mutable mit::condition_variable cv_;
+    mit::thread prefetch_loop_thread_;
     bool quitting_ = false;
 
     std::vector<PrefetchThread*> prefetch_threads_;
@@ -290,9 +288,9 @@ class DataLoader {
     ThreadTable* const table_;
     const thread_id_t id_;
 
-    mutable std::mutex mutex_;
-    mutable std::condition_variable cv_;
-    std::thread thread_;
+    mutable mit::mutex mutex_;
+    mutable mit::condition_variable cv_;
+    mit::thread thread_;
     const LoadInstructions* load_instructions_;
     WorkUnit unit_;
     bool quitting_ = false;

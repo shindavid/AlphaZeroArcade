@@ -6,7 +6,7 @@ namespace core {
 
 class GameServerClient {
  public:
-  GameServerClient() { GameServerBase::add_client(this); }
+  GameServerClient(GameServerBase* server) { server->add_client(this); }
   virtual ~GameServerClient() = default;
 
   // When the GameServer has an empty queue, it will call this function to force progress.

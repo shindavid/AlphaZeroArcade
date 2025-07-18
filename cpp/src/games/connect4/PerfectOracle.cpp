@@ -39,7 +39,7 @@ std::string PerfectOracle::QueryResult::get_overlay() const {
 
 PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
   {
-    std::unique_lock lock(mutex_);
+    mit::unique_lock lock(mutex_);
     history.write(in_);
     std::getline(out_, output_str_);
   }

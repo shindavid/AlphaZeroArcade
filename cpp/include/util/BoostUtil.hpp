@@ -3,14 +3,26 @@
 #include <util/CppUtil.hpp>
 #include <util/StringUtil.hpp>
 
+#include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/json.hpp>
 
 #include <format>
+#include <random>
 #include <string>
 
 namespace boost_util {
+
+// Returns a random index of a set bit in the given bitset. If no bits are set, returns -1.
+//
+// Uses prng as the random number generator.
+int get_random_set_index(std::mt19937& prng, const boost::dynamic_bitset<>& bitset);
+
+// Returns a random index of a set bit in the given bitset. If no bits are set, returns -1.
+//
+// Uses util::Random::default_prng() as the random number generator.
+int get_random_set_index(const boost::dynamic_bitset<>& bitset);
 
 /*
  * get_option_value(util::split("--foo=bar --baz ..."), "foo") -> "bar"

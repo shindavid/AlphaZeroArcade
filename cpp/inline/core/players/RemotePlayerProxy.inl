@@ -71,7 +71,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::add_player(
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::PacketDispatcher::start() {
-  thread_ = new std::thread([&] { loop(); });
+  thread_ = new mit::thread([&] { loop(); });
 }
 
 template <concepts::Game Game>
