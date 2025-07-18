@@ -382,8 +382,8 @@ class LoopController:
                 logger.info(f"Skip creating {organizer.base_dir}")
                 return record.tag
             elif record.data_folder_path() is not None:
-                logger.info(f"{organizer.base_dir} does not exist. \
-                        Use data folder: {record.data_folder_path()}")
+                logger.info(f"{organizer.base_dir} does not exist."
+                            f"Expand from data folder: {record.data_folder_path()}")
             else:
                 record_on_file = Workspace.load_benchmark_record(self.game_spec.name)
                 if record.tag == record_on_file.tag:
@@ -412,8 +412,8 @@ class LoopController:
         shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
         shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
         shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
-        logger.info(f"copied binary, models, self_play_db and training_db to\
-                {benchmark_organizer.base_dir}")
+        logger.info(f"copied binary, models, self_play_db and training_db to"
+                    f"{benchmark_organizer.base_dir}")
         return record.tag
 
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
@@ -428,10 +428,10 @@ class LoopController:
         tar_path = os.path.join(Workspace.benchmark_data_dir, record.key())
         if not os.path.exists(tar_path):
             BUCKET.download_from_s3(record.key(), tar_path)
-            logger.info(f"downloaded data to {tar_path}")
 
         if not os.path.isdir(record.data_folder_path()):
             untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
+            logger.info(f"untar {tar_path}"
         return record
 
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
