@@ -120,15 +120,16 @@ class GameServerTest : public testing::Test {
     delete server_;
   }
 
-  void init_search(const action_vec_t& initial_actions, int num_iters) {
+  void init_search(const action_vec_t& initial_actions, int num_iters, int num_threads) {
     GameServerParams server_params;
-    server_params.num_game_threads = 1;  // single-threaded for unit tests
-    server_params.num_games = 1;         // run only one game
+    server_params.num_game_threads = 1;
+    server_params.num_games = 1;
     server_ = new GameServer(server_params);
     server_->set_initial_actions(initial_actions);
 
-    std::vector<std::string> player_strs =
-      util::split(std::format("--no-model --num-search-thread=1 --num-full-iters {}", num_iters));
+    std::vector<std::string> player_strs = util::split(
+      std::format("--no-model --num-search-threads={} --num-full-iters {}",
+                  num_threads, num_iters));
 
     subfactory_ = new TestPlayerSubfactory(this);
     TestPlayerGenerator* generator1 = subfactory_->create(server_);
@@ -140,8 +141,9 @@ class GameServerTest : public testing::Test {
     server_->register_player(-1, generator2);
   }
 
-  void test_search(const std::string& testname, int num_iters, const action_vec_t& initial_actions) {
-    init_search(initial_actions, num_iters);
+  void test_search(const std::string& testname, int num_iters, int num_threads,
+                   const action_vec_t& initial_actions) {
+    init_search(initial_actions, num_iters, num_threads);
     server_->run();
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "gameserver";
@@ -193,11 +195,11 @@ TEST_F(StochasticNimTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {
     stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
 
-  test_search("stochastic_nim_uniform_10", 10, initial_actions);
+  test_search("stochastic_nim_uniform_10", 10, 1, initial_actions);
 }
 
 TEST_F(StochasticNimTest, 20_searches_from_scratch) {
-  test_search("stochastic_nim_uniform", 20, {});
+  test_search("stochastic_nim_uniform", 20, 1, {});
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_4_stones) {
@@ -205,7 +207,7 @@ TEST_F(StochasticNimTest, 100_searches_from_4_stones) {
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
 
-  test_search("stochastic_nim_4_stones", 100, initial_actions);
+  test_search("stochastic_nim_4_stones", 100, 1, initial_actions);
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_5_stones) {
@@ -213,7 +215,7 @@ TEST_F(StochasticNimTest, 100_searches_from_5_stones) {
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
 
-  test_search("stochastic_nim_5_stones", 100, initial_actions);
+  test_search("stochastic_nim_5_stones", 100, 1, initial_actions);
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_6_stones) {
@@ -221,12 +223,17 @@ TEST_F(StochasticNimTest, 100_searches_from_6_stones) {
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
     stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
 
-  test_search("stochastic_nim_6_stones", 100, initial_actions);
+  test_search("stochastic_nim_6_stones", 100, 1, initial_actions);
 }
 
 TEST_F(TicTacToeTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_search("tictactoe_uniform", 40, initial_actions);
+  test_search("tictactoe_uniform", 40, 1, initial_actions);
+}
+
+TEST_F(TicTacToeTest, multi_threaded_uniform_search) {
+  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
+  test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
