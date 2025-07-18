@@ -89,7 +89,6 @@ def untar_remote_file_to_local_directory(src_tar, dst_dir):
     fd, local_tar = tempfile.mkstemp(suffix=".tar", prefix="untar_", dir="/tmp")
     os.close(fd)
     shutil.copy2(src_tar, local_tar)
-
     try:
         subprocess.run(["tar", "-xf", local_tar, "-C", dst_dir], check=True)
     finally:
