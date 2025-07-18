@@ -87,7 +87,7 @@ template <core::concepts::Game Game>
 inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
                                                       core::GameServerBase* server)
     : core::PerfStatsClient(),
-      core::GameServerClient(),
+      core::GameServerClient(server),
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),

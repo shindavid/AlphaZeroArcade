@@ -83,7 +83,7 @@ class PerfStatsClient {
 class PerfStatsRegistry {
  public:
   static PerfStatsRegistry* instance();
-
+  static void clear() { instance()->clients_.clear(); }
   void add(PerfStatsClient* client);
 
   PerfStats get_perf_stats();

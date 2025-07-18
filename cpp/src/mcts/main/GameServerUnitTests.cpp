@@ -1,4 +1,5 @@
 #include <core/GameServer.hpp>
+#include <core/PerfStats.hpp>
 #include <core/PlayerFactory.hpp>
 #include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
@@ -112,7 +113,10 @@ class GameServerTest : public testing::Test {
  public:
   GameServerTest() {};
 
-  void SetUp() override { util::Random::set_seed(0); }
+  void SetUp() override {
+    util::Random::set_seed(0);
+    core::PerfStatsRegistry::clear();
+  }
 
   void TearDown() override {
     delete search_log_;
@@ -120,16 +124,21 @@ class GameServerTest : public testing::Test {
     delete server_;
   }
 
-  void init_search(const action_vec_t& initial_actions, int num_iters, int num_threads) {
+  void init_search(const action_vec_t& initial_actions, int num_iters, int num_threads,
+                   const char* model = nullptr) {
     GameServerParams server_params;
     server_params.num_game_threads = 1;
     server_params.num_games = 1;
     server_ = new GameServer(server_params);
     server_->set_initial_actions(initial_actions);
 
-    std::vector<std::string> player_strs = util::split(
-      std::format("--no-model --num-search-threads={} --num-full-iters {}",
-                  num_threads, num_iters));
+    std::vector<std::string> player_strs = util::split(std::format(
+      "--num-search-threads={} --num-full-iters {}", num_threads, num_iters));
+    if (model) {
+      player_strs.push_back(std::format("--model-filename={}", model));
+    } else {
+      player_strs.push_back("--no-model");
+    }
 
     subfactory_ = new TestPlayerSubfactory(this);
     TestPlayerGenerator* generator1 = subfactory_->create(server_);
@@ -142,8 +151,8 @@ class GameServerTest : public testing::Test {
   }
 
   void test_search(const std::string& testname, int num_iters, int num_threads,
-                   const action_vec_t& initial_actions) {
-    init_search(initial_actions, num_iters, num_threads);
+                   const action_vec_t& initial_actions, const char* model=nullptr) {
+    init_search(initial_actions, num_iters, num_threads, model);
     server_->run();
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "gameserver";
@@ -233,7 +242,8 @@ TEST_F(TicTacToeTest, uniform_search) {
 
 TEST_F(TicTacToeTest, multi_threaded_uniform_search) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions);
+  test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions,
+              "test_models/tictactoe_mini.plan");
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
