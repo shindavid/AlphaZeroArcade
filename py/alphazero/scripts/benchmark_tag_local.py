@@ -124,6 +124,8 @@ def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
 def save_benchmark_record(record: BenchmarkRecord):
     benchmark_info = record.to_dict()
     benchmark_record_file = Workspace.benchmark_record_file(record.game)
+
+    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
     with open(benchmark_record_file, 'w') as f:
         json.dump(benchmark_info, f, indent=4)
 

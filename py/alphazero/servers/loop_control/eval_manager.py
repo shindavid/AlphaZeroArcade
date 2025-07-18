@@ -87,6 +87,9 @@ class EvalStatus:
     def failed(self) -> bool:
         return self.status == EvalRequestStatus.FAILED
 
+    def actioned(self) -> bool:
+        return self.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)
+
     def num_actioned_matches(self) -> int:
         return sum(1 for status in self.ix_match_status.values() if status.actioned())
 
@@ -420,9 +423,8 @@ class EvalManager(GamingManagerBase):
             return failed_gen[0]
 
         latest_gen = self._controller._organizer.get_latest_model_generation()
-        eval_status = self._eval_status_dict
-        evaluated_gens = [s.mcts_gen for s in eval_status.values() if s.status.actioned()]
-        gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens)
+        actioned_gens = [es.mcts_gen for es in self._eval_status_dict.values() if es.actioned()]
+        gen = EvalUtils.get_next_gen_to_eval(latest_gen, actioned_gens)
         return gen
 
     def _estimate_rating(self, test_iagent):
