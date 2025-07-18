@@ -1,4 +1,4 @@
-from .base_dir import BaseDir, Scratch, Workspace
+from .base_dir import BenchmarkRecord, Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
@@ -21,7 +21,6 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from alphazero.servers.loop_control.base_dir import BenchmarkRecord, Workspace
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
@@ -33,8 +32,6 @@ from util.socket_util import JsonDict, SocketRecvException, SocketSendException,
 from util.sqlite3_util import DatabaseConnectionPool
 from util import ssh_util
 
-from dataclasses import dataclass
-from enum import Enum
 import logging
 import os
 import shutil
@@ -379,26 +376,27 @@ class LoopController:
 
     def _expand_rundir_from_json(self) -> str:
         if self.params.benchmark_tag is not None:
-            record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name) 
+            record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name)
             organizer = self._benchmark_organizer(record.tag)
             if os.path.isdir(organizer.base_dir):
                 logger.info(f"Skip creating {organizer.base_dir}")
                 return record.tag
             elif record.data_folder_path() is not None:
-                logger.info(f"{organizer.base_dir} does not exist. Using {record.data_folder_path()}")
+                logger.info(f"{organizer.base_dir} does not exist. \
+                        Use data folder: {record.data_folder_path()}")
             else:
                 record_on_file = Workspace.load_benchmark_record(self.game_spec.name)
                 if record.tag == record_on_file.tag:
-                    logger.info(f"No data folder for {record}. Tag is the same with record on file.")
+                    logger.info(f"No data folder for {record}. Tag found record on file.")
                     record = self._download_from_s3()
 
         elif self.game_spec.reference_player_family is not None:
             record = BenchmarkRecord(tag='reference.players')
         else:
             record = self._download_from_s3()
-        
+
         assert record is not None
-        
+
         benchmark_organizer = self._benchmark_organizer(record.tag)
         benchmark_organizer.dir_setup(record.tag)
         self._create_db_from_json(record, benchmark_organizer)
@@ -414,9 +412,10 @@ class LoopController:
         shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
         shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
         shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
-        logger.info(f"copied binary, models, self_play_db and training_db to {benchmark_organizer.base_dir}")
+        logger.info(f"copied binary, models, self_play_db and training_db to\
+                {benchmark_organizer.base_dir}")
         return record.tag
-    
+
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
         record = Workspace.load_benchmark_record(self.game_spec.name)
         if record is None:
@@ -425,10 +424,10 @@ class LoopController:
         organizer = self._benchmark_organizer(record.tag)
         if os.path.isdir(organizer.base_dir):
             return record
-        
-        tar_path = os.path.join(Workspace.benchmark_data_dir, record.key()) 
-        if not os.path.exists(tar_path):    
-            BUCKET.download_from_s3(record.key(), tar_path) 
+
+        tar_path = os.path.join(Workspace.benchmark_data_dir, record.key())
+        if not os.path.exists(tar_path):
+            BUCKET.download_from_s3(record.key(), tar_path)
             logger.info(f"downloaded data to {tar_path}")
 
         if not os.path.isdir(record.data_folder_path()):
@@ -444,11 +443,6 @@ class LoopController:
         db = RatingDB(organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
         logger.info(f"created db {db.db_filename} from {json_path}")
-
-    def _benchmark_data_dir(self, benchmark_tag: str) -> str:
-        game = self.game_spec.name
-        folder_name = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
-        return os.path.join(BENCHMARK_DATA_DIR, game, folder_name)
 
     def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
         benchmark_folder_name = DirectoryOrganizer.benchmark_folder(benchmark_tag)
@@ -582,11 +576,10 @@ class LoopController:
         else:
             logger.info('Copying binary file to persistent run dir...')
 
-
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer]=None) -> str:
+    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer] = None) -> str:
         use_stored_binary = self.build_params.use_stored_binary
         if not use_stored_binary:
             return self.build_params.get_binary_path(self.game_spec.name)
