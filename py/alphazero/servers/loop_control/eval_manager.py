@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, ReferenceAgent, MatchType, \
+        MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils
-from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams

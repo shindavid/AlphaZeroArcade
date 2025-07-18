@@ -1,5 +1,5 @@
-from alphazero.logic.agent_types import Agent, IndexedAgent, AgentDBId, AgentRole
-from alphazero.logic.match_runner import Match, MatchRunner, MatchType
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, MatchType
+from alphazero.logic.match_runner import Match, MatchRunner
 from alphazero.logic.ratings import WinLossDrawCounts, compute_ratings
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from util.index_set import IndexSet
