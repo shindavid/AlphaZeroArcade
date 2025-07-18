@@ -8,6 +8,7 @@
 #include <util/Random.hpp>
 #include <util/mit/condition_variable.hpp>
 #include <util/mit/exceptions.hpp>
+#include <util/mit/logging.hpp>
 #include <util/mit/thread.hpp>
 #include <util/mit/mutex.hpp>
 
@@ -16,32 +17,7 @@
 #include <format>
 #include <sstream>
 
-#define MIT_LOG(...) \
-  if (scheduler::kEnableDebugLogging) { \
-    LOG_INFO(__VA_ARGS__); \
-  }
-
 namespace mit {
-
-// id_provider
-
-inline int id_provider::get_next_id() {
-  if (!recycled_ids_.empty()) {
-    int id = recycled_ids_.back();
-    recycled_ids_.pop_back();
-    return id;
-  }
-  return next_++;
-}
-
-inline void id_provider::recycle(int id) { recycled_ids_.push_back(id); }
-
-inline void id_provider::clear() {
-  recycled_ids_.clear();
-  next_ = 0;
-}
-
-// scheduler
 
 inline scheduler& scheduler::instance() {
   static scheduler instance;
@@ -443,7 +419,7 @@ inline void scheduler::handle_exception() {
 }
 
 inline void scheduler::debug_dump_state() const {
-  if (kEnableDebugLogging) {
+  if (mit::kEnableDebugLogging) {
     dump_state();
   }
 }

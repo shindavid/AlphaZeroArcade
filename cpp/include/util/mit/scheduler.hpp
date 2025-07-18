@@ -1,8 +1,8 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/mit/exceptions.hpp>
+#include <util/mit/id_provider.hpp>
 #include <util/mit/unique_lock.hpp>
 
 #include <boost/dynamic_bitset.hpp>
@@ -19,17 +19,6 @@ class condition_variable;
 class mutex;
 class thread;
 class thread_impl;
-// Helper class for scheduler
-class id_provider {
- public:
-  int get_next_id();
-  void recycle(int id);
-  void clear();
-
- private:
-  std::vector<int> recycled_ids_;
-  int next_ = 0;
-};
 
 // Singleton class used to coordinate thread execution in a single-threaded manner.
 //
@@ -37,8 +26,6 @@ class id_provider {
 // invoked inside the mit::thread constructor.
 class scheduler {
  public:
-  static constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
-
   scheduler(const scheduler&) = delete;
   scheduler& operator=(const scheduler&) = delete;
 
