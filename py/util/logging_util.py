@@ -28,14 +28,14 @@ class LoggingParams:
         group.add_argument('--debug', action='store_true', help='enable debug logging')
         group.add_argument('--debug-module', type=str, nargs='+', default=[],
                            help='specific module(s) to enable debug logging for. Example: '
-                                '--debug-module=util.sqlite3_util --debug-module=alphazero.servers.gaming.session_data')
+                                '--debug-module util.sqlite3_util alphazero.servers.gaming.session_data')
 
     def add_to_cmd(self, cmd: List[str]):
         if self.debug:
             cmd.append('--debug')
         if self.debug_module:
+            cmd.append('--debug-module')
             for module in self.debug_module:
-                cmd.append('--debug-module')
                 cmd.append(module)
 
 
