@@ -8,11 +8,8 @@ from alphazero.servers.loop_control.directory_organizer import REF_DIR
 from games.game_spec import GameSpec
 import games.index as game_index
 from games.index import ALL_GAME_SPECS
-from util.index_set import IndexSet
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
-
-import numpy as np
 
 import argparse
 import logging
@@ -74,7 +71,7 @@ class ReferenceBenchmarker:
                 matches.append(match)
         return matches
 
-    def play_matches(self, n_games: int=100):
+    def play_matches(self, n_games: int = 100):
         matches = self.get_matches(n_games)
         binary = os.path.join('/workspace/repo/target/Release/bin', self.game)
         self.arena.play_matches(matches, binary=binary, db=self.db)
@@ -94,7 +91,7 @@ class ReferenceBenchmarker:
             committee_ratings.append(self.arena.ratings[ix])
 
         RatingDB.save_ratings_to_json(committee_iagents, committee_ratings,
-                                     os.path.join(REF_DIR, f'{self.game}.json'), cmd)
+                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):
         self.load_from_db()

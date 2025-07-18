@@ -1,4 +1,3 @@
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
@@ -35,6 +34,7 @@ class Agent(ABC):
     def tag(self) -> Optional[str]:
         pass
 
+
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
@@ -44,7 +44,7 @@ class MCTSAgent(Agent):
     binary: Optional[str] = None
     model: Optional[str] = None
 
-    def make_player_str(self, run_dir, args: Dict=None, suffix: str=None) -> str:
+    def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
         name_tokens = ['MCTS', str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
@@ -95,6 +95,7 @@ class MCTSAgent(Agent):
     def level(self) -> int:
         return self.gen
 
+
 @dataclass(frozen=True)
 class ReferenceAgent(Agent):
     type_str: str
@@ -103,7 +104,7 @@ class ReferenceAgent(Agent):
     tag: Optional[str] = None
     binary: Optional[str] = None
 
-    def make_player_str(self, run_dir: str, args=None, suffix: str=None) -> str:
+    def make_player_str(self, run_dir: str, args=None, suffix: str = None) -> str:
         name = f'{self.type_str}-{self.strength}'
         if suffix is not None:
             name += suffix
@@ -133,6 +134,7 @@ class ReferenceAgent(Agent):
     @property
     def level(self) -> int:
         return self.strength
+
 
 ArenaIndex = int  # index of an agent in an Arena
 AgentDBId = int  # id in agents table of the database

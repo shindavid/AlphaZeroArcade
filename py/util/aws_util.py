@@ -11,13 +11,13 @@ import os
 import requests
 import time
 from urllib.parse import urlencode, urlparse, urlunparse
-import zipfile
 
 
 CREDENTIALS = os.path.join(Workspace.aws_dir, "credentials")
 CONFIG = os.path.join(Workspace.aws_dir, "config")
 PRIVATE_KEY = os.path.join(Workspace.aws_dir, "cloudfront-private.pem")
 PROFILE = 'default'
+
 
 @dataclass
 class Bucket:
@@ -29,19 +29,19 @@ class Bucket:
         cred = configparser.ConfigParser()
         cred.read(CREDENTIALS)
         aws_access_key_id = cred[PROFILE]['aws_access_key_id']
-        aws_secret_access_key = cred[PROFILE]['aws_secret_access_key'] 
-        
+        aws_secret_access_key = cred[PROFILE]['aws_secret_access_key']
+
         conf = configparser.ConfigParser()
         conf.read(CONFIG)
-        region = conf[PROFILE]['region'] 
-        
+        region = conf[PROFILE]['region']
+
         session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=region
         )
         s3 = session.client('s3')
-        
+
         s3.upload_file(file_path, self.name, key)
         print(f"Uploaded '{file_path}' to 's3://{self.name}/{key}'")
 
@@ -78,8 +78,11 @@ class Bucket:
         signature_encoded = signature_encoded.replace('+', '-').replace('=', '_').replace('/', '~')
 
         # Create query params
+        encoded = base64.b64encode(policy.encode('utf-8')).decode('utf-8')
+        safe_encoded = encoded.replace('+', '-').replace('=', '_').replace('/', '~')
+
         query_params = {
-            'Policy': base64.b64encode(policy.encode('utf-8')).decode('utf-8').replace('+', '-').replace('=', '_').replace('/', '~'),
+            'Policy': safe_encoded,
             'Signature': signature_encoded,
             'Key-Pair-Id': self.key_pair_id
         }
@@ -98,11 +101,9 @@ class Bucket:
             print(f"✅ File downloaded to: {destination_path}")
         else:
             print(f"failed on key: {key}")
-            raise Exception(f"❌ Failed to download file: HTTP {response.status_code} - {response.text}")
+            raise Exception(f"❌ Failed to download: HTTP {response.status_code} - {response.text}")
 
 
 BUCKET = Bucket(name='alphazeroarcade',
                 cloudfront_url='https://download.alphazeroarcade.io',
                 key_pair_id='KDHZFFYK6PB1L')
-
-
