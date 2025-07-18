@@ -159,8 +159,8 @@ def main():
     hash = hash_benchmark_data_files(organizer)
     existing_record = Workspace.load_benchmark_record(organizer.game)
     if existing_record and existing_record.hash == hash:
-        logger.info(f"run at {organizer.base_dir} has the same hash with existing record. \
-                Skip updating.")
+        logger.info(f"run at {organizer.base_dir} has the same hash with existing record."
+                    f"Skip updating.")
     else:
         utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
         record = BenchmarkRecord(utc_key=utc_key, tag=organizer.tag, game=organizer.game, hash=hash)
