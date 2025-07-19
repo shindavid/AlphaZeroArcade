@@ -131,6 +131,7 @@ class Plotter:
         else:
             self.benchmark_tag = data_list[0].benchmark_tag
 
+        self.benchmark_data = benchmark_data
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
@@ -205,18 +206,33 @@ class Plotter:
             )
 
             def update_hline(attr, old, new):
-                new_elo = self.benchmark_elos[new]
+                new_elo = self.benchmark_elos.get(new, None)
                 hline.location = new_elo
 
             slider.on_change("value", update_hline)
             return column(plot, row(radio_group, slider))
+
+        else:
+            benchmark_source = ColumnDataSource(self.benchmark_data.df)
+            plot.scatter(
+                x='x',
+                y='rating',
+                source=benchmark_source,
+                size=8,
+                color='grey',
+                legend_label=self.benchmark_tag,
+                marker='circle'
+            )
+            radio_group = self.x_selector.create_radio_group(
+                [plot], list(self.sources.values()) + [benchmark_source])
 
         return column(plot, radio_group)
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
     if RunParams.is_valid_tag(benchmark_tag):
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+        benchmark_folder = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
+        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_folder))
     else:
         benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, MCTSAgent, AgentRole, IndexedAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, ReferenceAgent, MatchType, \
+        MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils
-from alphazero.logic.match_runner import MatchType
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
     ServerAuxBase, WorkerAux
@@ -68,11 +69,12 @@ class MatchStatus:
     def obsolete(self) -> bool:
         return self.status == MatchRequestStatus.OBSOLETE
 
+
 @dataclass
 class EvalStatus:
     mcts_gen: Generation
     owner: Optional[ClientId] = None
-    ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict) # ix -> MatchStatus
+    ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict)  # ix -> MatchStatus
     status: Optional[EvalRequestStatus] = None
     elo: Optional[float] = None
 
@@ -85,10 +87,13 @@ class EvalStatus:
     def failed(self) -> bool:
         return self.status == EvalRequestStatus.FAILED
 
+    def actioned(self) -> bool:
+        return self.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)
+
     def num_actioned_matches(self) -> int:
         return sum(1 for status in self.ix_match_status.values() if status.actioned())
 
-    def candidates(self) -> Dict[int, int]: # Dict[ix, n_games]
+    def candidates(self) -> Dict[int, int]:  # Dict[ix, n_games]
         return {ix: s.n_games for ix, s in self.ix_match_status.items() if s.pending()}
 
     def any_complete(self) -> bool:
@@ -96,6 +101,7 @@ class EvalStatus:
 
     def any_pending(self) -> bool:
         return any(s.pending() for s in self.ix_match_status.values())
+
 
 @dataclass
 class EvalServerAux(ServerAuxBase):
@@ -108,6 +114,7 @@ class EvalServerAux(ServerAuxBase):
 
     def work_in_progress(self) -> bool:
         return self.ix is not None
+
 
 class EvalManager(GamingManagerBase):
     """
@@ -126,7 +133,7 @@ class EvalManager(GamingManagerBase):
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}
-        self._eval_status_dict: Dict[int, EvalStatus] = {} # ix -> EvalStatus
+        self._eval_status_dict: Dict[int, EvalStatus] = {}  # ix -> EvalStatus
         self._benchmark_elos: Dict[int, float] = {}  # ix -> elo
         self._min_benchmark_elo: Optional[float] = None
         self._max_benchmark_elo: Optional[float] = None
@@ -161,7 +168,7 @@ class EvalManager(GamingManagerBase):
 
         status_cond: threading.Condition = conn.aux.status_cond
         with status_cond:
-            conn.aux.status= ServerStatus.DISCONNECTED
+            conn.aux.status = ServerStatus.DISCONNECTED
             status_cond.notify_all()
 
     def send_match_request(self, conn: ClientConnection):
@@ -183,7 +190,8 @@ class EvalManager(GamingManagerBase):
         assert n_games_needed > 0, f"{self.n_games} games needed; {n_games_in_progress} in progress"
         self._update_opponents(conn, test_iagent, estimated_rating, n_games_needed)
 
-        next_opponent_ix, next_n_games = sorted(eval_status.candidates().items(), key=lambda x: x[1])[0]
+        candidates = eval_status.candidates()
+        next_opponent_ix, next_n_games = sorted(candidates.items(), key=lambda x: x[1])[0]
         next_opponent_iagent = self._indexed_agents[next_opponent_ix]
 
         data = self._gen_match_request_data(test_iagent, next_opponent_iagent, next_n_games)
@@ -197,7 +205,7 @@ class EvalManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self.tag)
-            test_iagent = self._add_agent(test_agent, {AgentRole.TEST}, db=self._db)
+            test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index
             with self._lock:
@@ -225,7 +233,7 @@ class EvalManager(GamingManagerBase):
         return estimated_rating
 
     def _update_opponents(self, conn: ClientConnection, test_iagent: IndexedAgent,
-                           estimated_rating: float, n_games_needed: int):
+                          estimated_rating: float, n_games_needed: int):
         aux: EvalServerAux = conn.aux
         need_new_opponents = aux.needs_new_opponents
         if need_new_opponents:
@@ -286,13 +294,16 @@ class EvalManager(GamingManagerBase):
             self._eval_status_dict[indexed_agent.index].elo = db_rating.rating
             self._eval_status_dict[indexed_agent.index].status = EvalRequestStatus.COMPLETE
 
-    def _add_agent(self, agent: Agent, roles: set[AgentRole], db: RatingDB) -> IndexedAgent:
+    def _add_agent(self, agent: Agent, role: AgentRole, db: RatingDB) -> IndexedAgent:
         iagent = self._agent_lookup.get(agent, None)
         if iagent is not None:
+            if role not in iagent.roles:
+                iagent.roles.add(role)
+                db.update_agent_roles(iagent)
             return iagent
 
         index = len(self._indexed_agents)
-        iagent = IndexedAgent(agent=agent, index=index, roles=roles, db_id=None)
+        iagent = IndexedAgent(agent=agent, index=index, roles={role}, db_id=None)
         self._indexed_agents.append(iagent)
         self._agent_lookup[agent] = iagent
         db.commit_agent(iagent)
@@ -314,8 +325,10 @@ class EvalManager(GamingManagerBase):
     def _gen_match_request_data(self, test_iagent: IndexedAgent, opponent_iagent: IndexedAgent,
                                 next_n_games) -> JsonDict:
         files_required: List[FileToTransfer] = []
-        test_agent = self._update_agent_required_files(test_iagent, files_required)
-        opponent_agent = self._update_agent_required_files(opponent_iagent, files_required)
+        agent1 = test_iagent.agent
+        agent2 = opponent_iagent.agent
+        test_agent = self._update_agent_files(agent1, AgentRole.TEST, files_required)
+        opponent_agent = self._update_agent_files(agent2, AgentRole.BENCHMARK, files_required)
 
         if isinstance(opponent_agent, ReferenceAgent):
             for dep in self._controller.game_spec.extra_runtime_deps:
@@ -338,35 +351,36 @@ class EvalManager(GamingManagerBase):
         logger.info(f"Evaluating {test_iagent.agent} vs {opponent_agent}, ({n_games} games)")
         return data
 
-    def _update_agent_required_files(self, iagent: IndexedAgent,
-                                     files_required: List[FileToTransfer]) -> Agent:
-        binary = self._get_binary_to_transfer(iagent)
-        model = self._get_model_to_transfer(iagent)
+    def _update_agent_files(self, agent: Agent, role: AgentRole,
+                            files_required: List[FileToTransfer]) -> Agent:
+        binary = self._get_binary_to_transfer(agent, role)
+        model = self._get_model_to_transfer(agent, role)
 
-        if isinstance(iagent.agent, ReferenceAgent):
-            agent = replace(iagent.agent, binary=binary.scratch_path)
+        if isinstance(agent, ReferenceAgent):
+            agent = replace(agent, binary=binary.scratch_path)
         else:
-            agent = replace(iagent.agent, binary=binary.scratch_path,
-                            model=model.scratch_path if model else None)
+            model_path = model.scratch_path if model else None
+            agent = replace(agent, binary=binary.scratch_path, model=model_path)
 
         files_required.append(binary)
         if model:
             files_required.append(model)
         return agent
 
-    def _get_binary_to_transfer(self, iagent: IndexedAgent) -> FileToTransfer:
+    def _get_binary_to_transfer(self, agent: Agent, role: AgentRole) -> FileToTransfer:
         game = self._controller._run_params.game
-        if iagent.roles == {AgentRole.TEST}:
+        if role == AgentRole.TEST:
             binary = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._get_binary_path(),
                 scratch_path=f'bin/{game}',
                 asset_path_mode='hash'
             )
-        elif iagent.roles == {AgentRole.BENCHMARK}:
+        elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
-            if iagent.agent.tag:
-                run_params = RunParams(game, iagent.agent.tag)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            if agent.tag:
+                benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
             benchmark_binary_src = self._controller._get_binary_path(
                 benchmark_organizer=benchmark_organizer)
 
@@ -377,23 +391,24 @@ class EvalManager(GamingManagerBase):
             )
         return binary
 
-    def _get_model_to_transfer(self, iagent: IndexedAgent) -> Optional[FileToTransfer]:
-        if isinstance(iagent.agent, ReferenceAgent) or iagent.agent.gen == 0:
+    def _get_model_to_transfer(self, agent: Agent, role: AgentRole) -> Optional[FileToTransfer]:
+        if isinstance(agent, ReferenceAgent) or agent.gen == 0:
             return None
         game = self._controller._run_params.game
-        gen = iagent.agent.gen
-        if iagent.roles == {AgentRole.TEST}:
+        gen = agent.gen
+        if role == AgentRole.TEST:
             model = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'eval-models/{iagent.agent.tag}/gen-{gen}.pt',
+                scratch_path=f'eval-models/{agent.tag}/gen-{gen}.pt',
                 asset_path_mode='scratch'
             )
-        elif iagent.roles == {AgentRole.BENCHMARK}:
+        elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
-            if iagent.agent.tag:
-                run_params = RunParams(game, iagent.agent.tag)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
-            scratch_path = f'benchmark-models/{iagent.agent.tag}/gen-{gen}.pt'
+            if agent.tag:
+                benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+            scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_organizer.get_model_filename(gen),
                 scratch_path=scratch_path,
@@ -402,15 +417,14 @@ class EvalManager(GamingManagerBase):
         return model
 
     def _get_next_gen_to_eval(self):
-        failed_gen = [data.mcts_gen for data in self._eval_status_dict.values() \
-            if data.status == EvalRequestStatus.FAILED]
+        failed_gen = [data.mcts_gen for data in self._eval_status_dict.values()
+                      if data.status == EvalRequestStatus.FAILED]
         if failed_gen:
             return failed_gen[0]
 
         latest_gen = self._controller._organizer.get_latest_model_generation()
-        evaluated_gens = [data.mcts_gen for data in self._eval_status_dict.values() \
-            if data.status in (EvalRequestStatus.COMPLETE, EvalRequestStatus.REQUESTED)]
-        gen = EvalUtils.get_next_gen_to_eval(latest_gen, evaluated_gens)
+        actioned_gens = [es.mcts_gen for es in self._eval_status_dict.values() if es.actioned()]
+        gen = EvalUtils.get_next_gen_to_eval(latest_gen, actioned_gens)
         return gen
 
     def _estimate_rating(self, test_iagent):
@@ -513,7 +527,7 @@ class EvalManager(GamingManagerBase):
         self._eval_status_dict[ix1].ix_match_status[ix2].result = counts
         self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
 
-    def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float]=None):
+    def _calc_ratings(self, conn: ClientConnection, eval_ix: int, rating: Optional[float] = None):
         self._eval_status_dict[eval_ix].status = EvalRequestStatus.COMPLETE
         self._eval_status_dict[eval_ix].owner = None
         ix = conn.aux.ix
@@ -534,7 +548,7 @@ class EvalManager(GamingManagerBase):
         self._eval_status_dict[eval_ix].elo = rating
         conn.aux.estimated_rating = None
         conn.aux.ix = None
-        logger.debug('///Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
+        logger.info('Finished evaluating gen %s, rating: %s', test_iagent.agent, rating)
 
     def _task_finished(self) -> None:
         latest_gen = self._controller._organizer.get_latest_model_generation()
@@ -556,4 +570,3 @@ class EvalManager(GamingManagerBase):
     @property
     def tag(self):
         return self._controller._organizer.tag
-

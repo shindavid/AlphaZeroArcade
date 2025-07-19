@@ -4,14 +4,12 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.match_runner import Match, MatchType
 from alphazero.logic.rating_db import RatingDB
+from alphazero.servers.loop_control.directory_organizer import REF_DIR
 from games.game_spec import GameSpec
 import games.index as game_index
 from games.index import ALL_GAME_SPECS
-from util.index_set import IndexSet
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
-
-import numpy as np
 
 import argparse
 import logging
@@ -21,7 +19,6 @@ import sys
 from typing import List, Optional
 
 
-REF_DIR = os.path.join('/workspace/repo/reference_benchmarks')
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +71,7 @@ class ReferenceBenchmarker:
                 matches.append(match)
         return matches
 
-    def play_matches(self, n_games: int=100):
+    def play_matches(self, n_games: int = 100):
         matches = self.get_matches(n_games)
         binary = os.path.join('/workspace/repo/target/Release/bin', self.game)
         self.arena.play_matches(matches, binary=binary, db=self.db)
@@ -86,14 +83,15 @@ class ReferenceBenchmarker:
                                self.arena.ratings,
                                committee=committee)
         cmd = shlex.join(sys.argv)
+
         committee_iagents = []
         committee_ratings = []
         for ix in committee:
             committee_iagents.append(self.arena.indexed_agents[ix])
             committee_ratings.append(self.arena.ratings[ix])
 
-        self.db.save_ratings_to_json(committee_iagents, committee_ratings,
-                                     os.path.join(REF_DIR, f'{self.game}.json'), cmd)
+        RatingDB.save_ratings_to_json(committee_iagents, committee_ratings,
+                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
 
     def run(self):
         self.load_from_db()
