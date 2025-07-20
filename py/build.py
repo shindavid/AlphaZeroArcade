@@ -33,9 +33,7 @@ def get_args():
                         help='rm core.* from cwd and ~/scratch/runs/*/*/*/ before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
     parser.add_argument('-D', '--macro-defines', action='append',
-                        help='macro definitions to forward to make cmd (-D FOO -D BAR=2). If a macro name is passed'
-                        ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
-                        ' IS_MACRO_ENABLED() macro function defined in cpp/util/CppUtil.hpp')
+                        help='macro definitions to forward to make cmd (-D FOO -D BAR=2)')
     return parser.parse_args()
 
 
@@ -90,9 +88,8 @@ def main():
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
 
     macro_defines = args.macro_defines if args.macro_defines else []
-    macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
     if debug:
-        macro_defines.append('DEBUG_BUILD=1')
+        macro_defines.append('DEBUG_BUILD')
     if enable_debug_logging:
         macro_defines.append('SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG')
 

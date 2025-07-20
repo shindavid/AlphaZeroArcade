@@ -29,6 +29,29 @@ struct TupleHasher {
 
 }  // namespace detail
 
+// simple constexpr string‑equality
+inline constexpr bool constexpr_str_equal(const char* a, const char* b) {
+  // compare chars until they differ or both hit '\0'
+  return (*a == *b) && (*a == '\0'  // if we reached end, they’re equal
+                        || constexpr_str_equal(a + 1, b + 1));
+}
+
+// Produced by ChatGPT
+inline constexpr bool constexpr_is_defined(const char* symbol_name, const char* symbol_value) {
+  // if symbol_value is shorter than 2 chars, we can’t have "= …"
+  if (symbol_value == nullptr || symbol_value[0] == '\0' || symbol_value[1] == '\0') {
+    return false;
+  }
+
+  // skip the leading "= " (two characters)
+  const char* v = symbol_value + 2;
+
+  // if the remainder exactly equals the symbol_name, then
+  // the macro was *not* defined (it literally stringized back
+  // to its own name).  Otherwise it was defined to something else.
+  return !constexpr_str_equal(symbol_name, v);
+}
+
 // Produced by ChatGPT
 template<typename T>
 std::size_t PODHash<T>::operator()(const T& s) const {

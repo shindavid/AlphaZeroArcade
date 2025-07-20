@@ -11,27 +11,32 @@
 #include <unistd.h>
 #include <vector>
 
+#include <boost/config/helper_macros.hpp>
 #include <boost/core/demangle.hpp>
 
-#define CONCAT_HELPER(x, y) x##y
-#define CONCAT(x, y) CONCAT_HELPER(x, y)
-
-#define XSTR(a) STR(a)
-#define STR(a) #a
 
 /*
- * Useful macro for constexpr-detection of whether a macro is assigned to 1. This is useful given
- * the behavior of the -D option in py/build.py.
+ * Useful macro for constexpr-detection of whether a macro is defined.
+ *
+ * This is based off of boost's BOOST_IS_DEFINED macro, which almost works for our purposes,
+ * except for the fact that it produces a non-constexpr result.
  *
  * #define FOO 1
- * // #define BAR
+ * #define BAR
+ * // #define BAZ
  *
  * static_assert(IS_MACRO_ENABLED(FOO))
- * static_assert(!IS_MACRO_ENABLED(BAR))
+ * static_assert(IS_MACRO_ENABLED(BAR))
+ * static_assert(!IS_MACRO_ENABLED(BAZ))
  */
-#define IS_MACRO_ENABLED(macro) (XSTR(macro)[0] == '1')
+#define IS_MACRO_ENABLED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
 
 namespace util {
+
+constexpr bool constexpr_str_equal(const char* a, const char* b);
+
+// A constexpr version of boost::test_tools::tt_detail::is_defined_impl()
+constexpr bool constexpr_is_defined(const char* symbol_name, const char* symbol_value);
 
 template<typename T>
 size_t hash(const T& t) { return std::hash<T>{}(t); }
