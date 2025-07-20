@@ -5,6 +5,7 @@ from alphazero.dashboard.training_plotting import create_training_figure, \
 from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.py_util import CustomHelpFormatter
 from util.str_util import rreplace
@@ -74,7 +75,7 @@ app.secret_key = secrets.token_hex(16)
 if params.debug:
     app.debug = True
 
-game_dir = os.path.join('/workspace/output', run_params.game)
+game_dir = os.path.join(Workspace.base_dir, 'output', run_params.game)
 if not os.path.isdir(game_dir):
     raise ValueError(f'Directory does not exist: {game_dir}')
 
@@ -89,7 +90,7 @@ for tag in all_tags:
         rp = RunParams(run_params.game, tag)
     else:
         continue
-    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
     if directory_organizer.version_check():
         usable_tags.append(tag)
     else:
@@ -113,7 +114,7 @@ usable_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
 all_training_heads = []
 for tag in usable_tags:
     rp = RunParams(run_params.game, tag)
-    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
     training_db_filename = directory_organizer.training_db_filename
     if not os.path.isfile(training_db_filename):
         continue
@@ -140,7 +141,7 @@ if run_params.tag:
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
         rp = RunParams(run_params.game, tag)
-        directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+        directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
         if not directory_organizer.version_check():
             outdated_tags.append(tag)
     if outdated_tags:
@@ -162,7 +163,7 @@ def get_benchmark_tags(tag: str) -> List[str]:
     returns a list of benchmark tags used for evaluating the given run tag
     """
     rp = RunParams(run_params.game, tag)
-    directory_organizer = DirectoryOrganizer(rp, base_dir_root='/workspace')
+    directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
 
     benchmark_tags = []
     filename = directory_organizer.benchmark_db_filename

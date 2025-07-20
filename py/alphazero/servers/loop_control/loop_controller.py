@@ -371,11 +371,19 @@ class LoopController:
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
         if os.path.exists(eval_db_file):
             return
-        benchmark_organizer = self._benchmark_organizer(benchmark_tag)
+
+        if benchmark_tag == self._organizer.tag:
+            benchmark_organizer = self._organizer
+        else:
+            run_params = RunParams(self.run_params.game, benchmark_tag)
+            benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
 
     def _expand_rundir_from_json(self) -> str:
         if self.params.benchmark_tag is not None:
+            if self.params.benchmark_tag == self.run_params.tag:
+                return self.run_params.tag
             record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name)
             organizer = self._benchmark_organizer(record.tag)
             if os.path.isdir(organizer.base_dir):
@@ -386,7 +394,7 @@ class LoopController:
                             f"Expand from data folder: {record.data_folder_path()}")
             else:
                 record_on_file = Workspace.load_benchmark_record(self.game_spec.name)
-                if record.tag == record_on_file.tag:
+                if record is not None and  record.tag == record_on_file.tag:
                     logger.info(f"No data folder for {record}. Tag found record on file.")
                     record = self._download_from_s3()
 
@@ -431,7 +439,7 @@ class LoopController:
 
         if not os.path.isdir(record.data_folder_path()):
             untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
-            logger.info(f"untar {tar_path}"
+            logger.info(f"untar {tar_path}")
         return record
 
     def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):

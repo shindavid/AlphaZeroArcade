@@ -204,13 +204,15 @@ class EvalManager(GamingManagerBase):
         if eval_ix is None:
             gen = self._get_next_gen_to_eval()
             assert gen is not None
-            test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=True, tag=self.tag)
+            temp0 = True if gen > 0 else False
+            test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=temp0, tag=self.tag)
             test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index
             with self._lock:
                 if test_iagent.index in self._eval_status_dict:
-                    assert self._eval_status_dict[test_iagent.index].failed()
+                    assert self._eval_status_dict[test_iagent.index].failed(), \
+                        f"{self._eval_status_dict[test_iagent.index]}"
                     self._eval_status_dict[test_iagent.index].status = EvalRequestStatus.REQUESTED
                 else:
                     status = EvalStatus(mcts_gen=gen, owner=conn.client_id,
@@ -263,7 +265,6 @@ class EvalManager(GamingManagerBase):
         for result in self._db.fetch_match_results():
             indexed_agent1 = self._agent_lookup_db_id[result.agent_id1]
             indexed_agent2 = self._agent_lookup_db_id[result.agent_id2]
-            assert AgentRole.TEST in indexed_agent1.roles
 
             if indexed_agent1.index not in self._eval_status_dict:
                 self._eval_status_dict[indexed_agent1.index] = EvalStatus(
@@ -378,11 +379,15 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
-                run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                if agent.tag == self.tag:
+                    benchmark_organizer = self._controller._organizer
+                else:
+                    benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
+                    run_params = RunParams(game, benchmark_folder)
+                    benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+
             benchmark_binary_src = self._controller._get_binary_path(
-                benchmark_organizer=benchmark_organizer)
+                    benchmark_organizer=benchmark_organizer)
 
             binary = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_binary_src,
@@ -405,9 +410,13 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
-                run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                if agent.tag == self.tag:
+                    benchmark_organizer = self._controller._organizer
+                else:
+                    benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
+                    run_params = RunParams(game, benchmark_folder)
+                    benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+
             scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_organizer.get_model_filename(gen),
@@ -441,11 +450,11 @@ class EvalManager(GamingManagerBase):
         n = []
         k = []
         elos = []
-        for ix, match_status in eval_status.ix_match_status.items():
-            if match_status.status == MatchRequestStatus.COMPLETE:
+        for i, match_status in eval_status.ix_match_status.items():
+            if match_status.status == MatchRequestStatus.COMPLETE and i in self._benchmark_elos:
                 n.append(match_status.n_games)
                 k.append(match_status.result.win + 0.5 * match_status.result.draw)
-                elos.append(self._benchmark_elos[ix])
+                elos.append(self._benchmark_elos[i])
         assert len(n) > 0
         return estimate_elo_newton(np.array(n), np.array(k), np.array(elos),
                                    lower=self._min_benchmark_elo, upper=self._max_benchmark_elo)

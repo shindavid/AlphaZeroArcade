@@ -1,27 +1,17 @@
 #!/usr/bin/env python3
-from alphazero.logic.agent_types import IndexedAgent
-from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.build_params import BuildParams
-from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import BenchmarkRecord, Workspace
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from shared.rating_params import RatingParams
-from util.aws_util import BUCKET
 from util.logging_util import LoggingParams, configure_logger
-from util.py_util import CustomHelpFormatter, sha256sum, tar_and_remotely_copy
+from util.py_util import CustomHelpFormatter
 
 import argparse
-from datetime import datetime, timezone
-import hashlib
 import logging
-import json
 import os
-import shlex
-import shutil
 import subprocess
-import sys
 from typing import Optional
 
 
@@ -74,64 +64,6 @@ def get_eval_cmd(run_params: RunParams, build_params: BuildParams, rating_params
     return cmd
 
 
-def hash_benchmark_data_files(organizer: DirectoryOrganizer) -> str:
-    files_to_hash = []
-    files_to_hash.append(organizer.benchmark_db_filename)
-    files_to_hash.append(organizer.binary_filename)
-    files_to_hash.append(organizer.self_play_db_filename)
-    files_to_hash.append(organizer.training_db_filename)
-    hashes = [sha256sum(f) for f in files_to_hash]
-    combined = ''.join(sorted(hashes)).encode()
-    hash_of_hashes = hashlib.sha256(combined).hexdigest()
-    return hash_of_hashes
-
-
-def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
-    benchmarker = Benchmarker(organizer)
-    path = record.data_folder_path()
-    model_path = os.path.join(path, 'models')
-    os.makedirs(model_path, exist_ok=True)
-    file = os.path.join(path, 'ratings.json')
-    rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
-
-    ix = 0
-    db_id = 1
-    indexed_agents = []
-    ratings = []
-    for i in rating_data.committee:
-        ia: IndexedAgent = rating_data.iagents[i]
-        ia.index = ix
-        ia.db_id = db_id
-        ix += 1
-        db_id += 1
-        indexed_agents.append(ia)
-        ratings.append(rating_data.ratings[i])
-        gen = ia.agent.gen
-        if gen == 0:
-            continue
-        src = organizer.get_model_filename(gen)
-        shutil.copyfile(src, os.path.join(model_path, f'gen-{gen}.pt'))
-
-    indexed_agents, ratings = zip(*sorted(zip(indexed_agents, ratings), key=lambda x: x[1]))
-    cmd = shlex.join(sys.argv)
-    RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
-    shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
-    shutil.copyfile(organizer.self_play_db_filename, os.path.join(path, 'self_play.db'))
-    shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
-    logger.info(f"Created benchmark data folder {path}")
-
-
-def save_benchmark_record(record: BenchmarkRecord):
-    benchmark_info = record.to_dict()
-    benchmark_record_file = Workspace.benchmark_record_file(record.game)
-
-    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
-    with open(benchmark_record_file, 'w') as f:
-        json.dump(benchmark_info, f, indent=4)
-
-    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
-
-
 def main():
     args = load_args()
     run_params = RunParams.create(args)
@@ -156,20 +88,6 @@ def main():
         return
 
     organizer.freeze_tag()
-    hash = hash_benchmark_data_files(organizer)
-    existing_record = Workspace.load_benchmark_record(organizer.game)
-    if existing_record and existing_record.hash == hash:
-        logger.info(f"run at {organizer.base_dir} has the same hash with existing record."
-                    f"Skip updating.")
-    else:
-        utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S_UTC')
-        record = BenchmarkRecord(utc_key=utc_key, tag=organizer.tag, game=organizer.game, hash=hash)
-        save_benchmark_data(organizer, record)
-        if not args.skip_set_as_default:
-            save_benchmark_record(record)
-        tar_file = f"{record.data_folder_path()}.tar"
-        tar_and_remotely_copy(record.data_folder_path(), tar_file)
-        BUCKET.upload_file_to_s3(tar_file, record.key())
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")

@@ -20,6 +20,7 @@ from alphazero.logic.agent_types import AgentRole
 from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
@@ -27,8 +28,9 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Slider, Span
 from bokeh.layouts import column, row
 import numpy as np
+import os
 import pandas as pd
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 class EvaluationData:
@@ -36,7 +38,7 @@ class EvaluationData:
         self.tag = run_params.tag
         self.benchmark_tag = benchmark_tag
 
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         self.benchmark_elos = {}
         self.df = self.make_df(organizer, benchmark_tag)
 
@@ -83,10 +85,7 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
 
 
 class BenchmarkData:
-    def __init__(self, run_params: RunParams):
-        self.tag = run_params.tag
-
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    def __init__(self, organizer: DirectoryOrganizer):
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
 
@@ -228,11 +227,17 @@ class Plotter:
 
         return column(plot, radio_group)
 
+
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
     if RunParams.is_valid_tag(benchmark_tag):
-        benchmark_folder = DirectoryOrganizer.benchmark_folder_name(benchmark_tag)
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_folder))
+        organizer = DirectoryOrganizer(RunParams(game, benchmark_tag), base_dir_root=Workspace)
+        if os.path.exists(organizer.benchmark_db_filename):
+            benchmark_organizer = organizer
+        else:
+            benchmark_folder = DirectoryOrganizer.benchmark_folder(benchmark_tag)
+            benchmark_organizer = DirectoryOrganizer(RunParams(game, benchmark_folder))
+        benchmark_data = BenchmarkData(benchmark_organizer)
     else:
         benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)
