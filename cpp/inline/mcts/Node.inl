@@ -492,7 +492,7 @@ void Node<Game>::update_child_expand_count(int n) {
 
 template <core::concepts::Game Game>
 void Node<Game>::validate_state() const {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (is_terminal()) return;
 
   mit::unique_lock lock(mutex());

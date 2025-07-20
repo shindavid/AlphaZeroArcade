@@ -8,7 +8,7 @@
 namespace util {
 
 inline void debug_assert(bool condition) {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (condition) return;
   throw Exception();
 }
@@ -25,7 +25,7 @@ inline void clean_assert(bool condition) {
 
 template <typename... Ts>
 void debug_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts) {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (condition) return;
   throw Exception(fmt, std::forward<Ts>(ts)...);
 }

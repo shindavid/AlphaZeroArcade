@@ -320,7 +320,7 @@ auto& reinterpret_as_array(Tensor& tensor) {
 
 template <typename T>
 void debug_assert_is_valid_prob_distr(const T& distr, float eps) {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
   assert_is_valid_prob_distr(distr, eps);
 }
 

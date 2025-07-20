@@ -4,7 +4,7 @@
 
 namespace mit {
 
-constexpr bool kEnableDebugLogging = IS_MACRO_ENABLED(MIT_DEBUG_LOGGING);
+constexpr bool kEnableDebugLogging = IS_DEFINED(MIT_DEBUG_LOGGING);
 
 }  // namespace mit
 

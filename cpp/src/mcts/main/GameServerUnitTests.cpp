@@ -162,12 +162,12 @@ class GameServerTest : public testing::Test {
     std::stringstream last_snapshot;
     boost_util::pretty_print(last_snapshot, search_log_->graphs()[num_iters - 1].graph_repr());
 
-    if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+    if (IS_DEFINED(WRITE_GOLDENFILES)) {
       boost_util::write_str_to_file(ss_result_.str(), file_path_result);
       boost_util::write_str_to_file(last_snapshot.str(), file_path_graph);
     }
 
-    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
+    if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "gameserver";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(search_log_->json_str(), log_file_path);

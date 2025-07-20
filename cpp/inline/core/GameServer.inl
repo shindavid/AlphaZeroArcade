@@ -624,7 +624,7 @@ slot_context_queue_t& GameServer<Game>::SharedData::get_queue_to_use(game_slot_i
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::validate_deferred_count() const {
   // assumes mutex_ is locked
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
 
   int deferred_count = 0;
   for (const auto& queue : deferred_queues_) {

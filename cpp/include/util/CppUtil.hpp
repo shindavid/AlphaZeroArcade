@@ -15,21 +15,8 @@
 #include <boost/core/demangle.hpp>
 
 
-/*
- * Useful macro for constexpr-detection of whether a macro is defined.
- *
- * This is based off of boost's BOOST_IS_DEFINED macro, which almost works for our purposes,
- * except for the fact that it produces a non-constexpr result.
- *
- * #define FOO 1
- * #define BAR
- * // #define BAZ
- *
- * static_assert(IS_MACRO_ENABLED(FOO))
- * static_assert(IS_MACRO_ENABLED(BAR))
- * static_assert(!IS_MACRO_ENABLED(BAZ))
- */
-#define IS_MACRO_ENABLED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
+// constexpr version of BOOST_IS_DEFINED. Returns true if the macro is defined, false otherwise.
+#define IS_DEFINED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
 
 namespace util {
 

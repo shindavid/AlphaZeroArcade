@@ -83,7 +83,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history
 void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
 
-  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+  if (IS_DEFINED(DEBUG_BUILD)) {
     state.validate_aux();
   }
 

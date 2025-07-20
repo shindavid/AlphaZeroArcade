@@ -169,12 +169,12 @@ class ManagerTest : public testing::Test {
     std::stringstream ss_result;
     boost_util::pretty_print(ss_result, result->to_json());
 
-    if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+    if (IS_DEFINED(WRITE_GOLDENFILES)) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
       boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_graph);
     }
 
-    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
+    if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);

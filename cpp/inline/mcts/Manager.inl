@@ -1098,7 +1098,7 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
     Symmetries::apply(context.canonical_history, context.canonical_sym);
   }
 
-  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+  if (IS_DEFINED(DEBUG_BUILD)) {
     State s = context.canonical_history.current();
     Symmetries::apply(s, Symmetries::get_canonical_symmetry(s));
     if (s != context.canonical_history.current()) {
@@ -1124,7 +1124,7 @@ void Manager<Game>::print_visit_info(const SearchContext& context) {
 
 template <core::concepts::Game Game>
 void Manager<Game>::validate_search_path(const SearchContext& context) const {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
 
   int N = context.search_path.size();
   for (int i = N - 1; i >= 0; --i) {

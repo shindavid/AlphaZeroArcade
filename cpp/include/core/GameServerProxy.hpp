@@ -19,7 +19,7 @@ template <concepts::Game Game>
 class GameServerProxy : public core::GameServerBase {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
+  static constexpr bool kEnableDebug = IS_DEFINED(GAME_SERVER_PROXY_DEBUG);
 
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using next_result_t = core::GameServerBase::next_result_t;
