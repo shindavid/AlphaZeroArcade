@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from alphazero.logic.agent_types import IndexedAgent
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
+from alphazero.logic.benchmark_record import UTC_FORMAT
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import BenchmarkRecord, Workspace
@@ -82,7 +83,7 @@ def main():
     logging_params = LoggingParams.create(args)
     run_params = RunParams.create(args)
     configure_logger(params=logging_params, prefix='[upload_benchmark_to_s3]')
-    utc_key = datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S.%f_UTC')
+    utc_key = datetime.now(timezone.utc).strftime(UTC_FORMAT)
     record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
 
     organizer = DirectoryOrganizer(RunParams(args.game, args.tag), base_dir_root=Workspace)

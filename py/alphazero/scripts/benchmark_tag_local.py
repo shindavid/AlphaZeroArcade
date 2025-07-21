@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from alphazero.logic.benchmark_record import save_benchmark_data, UTC_FORMAT
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
@@ -25,8 +26,6 @@ def load_args():
     RatingParams.add_args(parser, defaults=default_rating_params)
     BuildParams.add_args(parser, loop_controller=True)
     LoggingParams.add_args(parser)
-    parser.add_argument('--skip-set-as-default', action='store_true',
-                        help='Skip setting the benchmark as default.')
     return parser.parse_args()
 
 
@@ -88,6 +87,8 @@ def main():
         return
 
     organizer.freeze_tag()
+    zero_time = datetime(1, 1, 1, tzinfo=timezone.utc).str
+    utc_key =zerotime.strftime(UTC_FORMAT)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
