@@ -70,8 +70,10 @@ RUN for tool in gcc g++; do \
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
     ./llvm.sh 19 && \
-    apt-get install -y clangd-19 && \
+    apt-get install -y clangd-19 clang-tidy-19 clang-format-19 && \
     update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-19 100 && \
+    update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-19 100 && \
+    update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-19 100 && \
     rm llvm.sh
 
 #######################
@@ -156,6 +158,8 @@ RUN apt-get install -y --no-install-recommends -f
 # # 4) Update & install all TensorRT packages, then fix deps
 # RUN apt-get update && dpkg -i ${VAR_DIR}/*.deb && apt-get install -y --no-install-recommends -f
 
+RUN apt-get install -y plocate
+
 ###################
 # Clean up + Misc #
 ###################
@@ -171,7 +175,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="5.0.1"
+ARG VERSION="5.0.2"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
