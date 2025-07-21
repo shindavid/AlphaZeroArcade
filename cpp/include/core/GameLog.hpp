@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
 
 #include <vector>
