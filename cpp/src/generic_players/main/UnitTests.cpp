@@ -89,7 +89,7 @@ class MctsPlayerTest : public ::testing::Test {
     start_manager(initial_actions);
 
     const StateHistory& state_history =
-        mcts_player_->get_manager()->root_info()->history_array[group::kIdentity];
+      mcts_player_->get_manager()->root_info()->history_array[group::kIdentity];
     ActionMask valid_actions = Rules::get_legal_moves(state_history);
 
     ActionRequest request(state_history.current(), valid_actions);
@@ -98,8 +98,7 @@ class MctsPlayerTest : public ::testing::Test {
     const SearchResults* search_results =
       mcts_player_->get_manager()->search(search_request).results;
 
-    PolicyTensor modified_policy =
-        mcts_player_->get_action_policy(search_results, valid_actions);
+    PolicyTensor modified_policy = mcts_player_->get_action_policy(search_results, valid_actions);
 
     std::stringstream ss_result, ss_policy;
     boost_util::pretty_print(ss_result, search_results->to_json());
@@ -117,7 +116,8 @@ class MctsPlayerTest : public ::testing::Test {
     }
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "generic_players";
+      boost::filesystem::path log_dir =
+        util::Repo::root() / "sample_search_logs" / "generic_players";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }
@@ -131,7 +131,7 @@ class MctsPlayerTest : public ::testing::Test {
     std::string expected_policy_json((std::istreambuf_iterator<char>(policy_file)),
                                      std::istreambuf_iterator<char>());
     std::string expected_graph_json((std::istreambuf_iterator<char>(graph_file)),
-                                  std::istreambuf_iterator<char>());
+                                    std::istreambuf_iterator<char>());
 
     EXPECT_EQ(ss_result.str(), expected_result_json);
     EXPECT_EQ(ss_policy.str(), expected_policy_json);
@@ -154,9 +154,7 @@ class MctsPlayerTest : public ::testing::Test {
 };
 
 using tictactoe_test = MctsPlayerTest<TicTacToe>;
-TEST_F(tictactoe_test, uniform_search) {
-  test_get_action_policy("tictactoe");
-}
+TEST_F(tictactoe_test, uniform_search) { test_get_action_policy("tictactoe"); }
 
 TEST_F(tictactoe_test, uniform_search_01247) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
@@ -165,6 +163,4 @@ TEST_F(tictactoe_test, uniform_search_01247) {
 
 }  // namespace generic
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

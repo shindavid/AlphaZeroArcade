@@ -1,18 +1,18 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/IOBase.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
-#include "games/stochastic_nim/Constants.hpp"
+#include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
+#include "games/stochastic_nim/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
@@ -29,10 +29,10 @@ namespace stochastic_nim {
 struct Game {
   struct Constants : public core::ConstantsBase {
     using kNumActionsPerMode =
-        util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
+      util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor =
-        std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
+      std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
   };
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
@@ -58,7 +58,9 @@ struct Game {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     static core::action_mode_t get_action_mode(const State& state) { return state.current_mode; }
-    static core::seat_index_t get_current_player(const State& state) { return state.current_player; }
+    static core::seat_index_t get_current_player(const State& state) {
+      return state.current_player;
+    }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
@@ -104,7 +106,9 @@ struct Game {
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
     template <typename Iter>
     static Tensor tensorize(Iter start, Iter cur);
   };

@@ -70,29 +70,27 @@ std::string get_repr(const State& state) {
 }
 
 class UnionFindTest : public ::testing::Test {
-protected:
+ protected:
   UnionFind uf;
 
-  void SetUp() override {
-    uf.init();
-  }
+  void SetUp() override { uf.init(); }
 };
 
 TEST_F(UnionFindTest, InitParentsAreSelf) {
   // After init, every node should be its own parent
   for (vertex_t i = 0; i < UnionFind::kNumVertices; ++i) {
     EXPECT_EQ(uf.find(i), i) << "Node " << i << " should be its own root";
-    EXPECT_FALSE(uf.connected(i, (i+1) % UnionFind::kNumVertices))
-        << "Different nodes should not be connected by default";
+    EXPECT_FALSE(uf.connected(i, (i + 1) % UnionFind::kNumVertices))
+      << "Different nodes should not be connected by default";
   }
 }
 
 TEST_F(UnionFindTest, UniteTwoElements) {
   constexpr auto a = vertex_t(1);
   constexpr auto b = vertex_t(2);
-  EXPECT_FALSE(uf.connected(a,b));
-  uf.unite(a,b);
-  EXPECT_TRUE(uf.connected(a,b));
+  EXPECT_FALSE(uf.connected(a, b));
+  uf.unite(a, b);
+  EXPECT_TRUE(uf.connected(a, b));
   EXPECT_EQ(uf.find(a), uf.find(b));
 }
 
@@ -101,10 +99,10 @@ TEST_F(UnionFindTest, ChainedUnions) {
   constexpr auto a = vertex_t(3);
   constexpr auto b = vertex_t(4);
   constexpr auto c = vertex_t(5);
-  uf.unite(a,b);
-  uf.unite(b,c);
+  uf.unite(a, b);
+  uf.unite(b, c);
 
-  EXPECT_TRUE(uf.connected(a,c));
+  EXPECT_TRUE(uf.connected(a, c));
   EXPECT_EQ(uf.find(a), uf.find(c));
 }
 
@@ -112,12 +110,12 @@ TEST_F(UnionFindTest, MultipleUniteIdempotent) {
   constexpr auto x = vertex_t(6);
   constexpr auto y = vertex_t(7);
   // multiple unites should not break
-  uf.unite(x,y);
+  uf.unite(x, y);
   auto first_root = uf.find(x);
-  uf.unite(x,y);
-  uf.unite(y,x);
+  uf.unite(x, y);
+  uf.unite(y, x);
   EXPECT_EQ(uf.find(x), first_root);
-  EXPECT_TRUE(uf.connected(x,y));
+  EXPECT_TRUE(uf.connected(x, y));
 }
 
 TEST_F(UnionFindTest, VirtualNodesSeparatePerPlayer) {
@@ -304,7 +302,7 @@ TEST(Rules, connections) {
 
   constexpr int kNumMoves = 5;
   std::vector<core::action_t> black_moves = {hex::kC10, hex::kC9, hex::kI1, hex::kI2, hex::kI3};
-  std::vector<core::action_t> white_moves = {hex::kA2, hex::kB2,  hex::kH10, hex::kI10, hex::kJ10};
+  std::vector<core::action_t> white_moves = {hex::kA2, hex::kB2, hex::kH10, hex::kI10, hex::kJ10};
 
   RELEASE_ASSERT(black_moves.size() == kNumMoves && white_moves.size() == kNumMoves);
 
@@ -449,6 +447,4 @@ TEST(Rules, terminal) {
   }
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

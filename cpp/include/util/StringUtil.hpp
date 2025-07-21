@@ -38,7 +38,7 @@ std::vector<std::string> split(const std::string& s, const char* t = "");
 // repeatedly with the same result vector. If the s/t arguments are assumed to be drawn iid from
 // some distribution, then the expected number of dynamic memory allocations will asymptotically
 // approach zero.
-int split(std::vector<std::string>& result, const std::string& s, const char* t="");
+int split(std::vector<std::string>& result, const std::string& s, const char* t = "");
 
 /*
  * splitlines(s) behaves just like s.splitlines() in python.

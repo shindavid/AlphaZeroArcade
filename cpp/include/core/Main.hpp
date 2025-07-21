@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
 #include "core/LoopControllerClient.hpp"
 #include "core/TrainingDataWriter.hpp"
+#include "core/concepts/Game.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/SocketUtil.hpp"

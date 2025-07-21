@@ -1,5 +1,4 @@
 #include "mcts/NNEvaluationServiceParams.hpp"
-
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/RepoUtil.hpp"
@@ -30,8 +29,7 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       po::value<int>(&num_pipelines)->default_value(num_pipelines),
       "number of nn eval pipelines to use")
     .template add_hidden_option<"cache-size">(
-      po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size")
-      ;
+      po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size");
 }
 
 }  // namespace mcts

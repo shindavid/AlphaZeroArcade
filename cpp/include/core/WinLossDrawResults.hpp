@@ -46,9 +46,7 @@ struct WinLossDrawResults {
     }
   }
 
-  static void right_rotate(Tensor& t, core::seat_index_t s) {
-    left_rotate(t, s);
-  }
+  static void right_rotate(Tensor& t, core::seat_index_t s) { left_rotate(t, s); }
 
   static void print_array(const Tensor& net_value, const ValueArray& win_rates,
                           const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
@@ -61,7 +59,7 @@ struct WinLossDrawResults {
       net_draw_array(i) = net_value(2);
     }
     auto data =
-        eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array, win_rates);
+      eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array, win_rates);
     static std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
     eigen_util::print_array(std::cout, data, columns, fmt_map);
   }

@@ -26,7 +26,7 @@ using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
-template<typename... Ts>
+template <typename... Ts>
 State make_state(Ts... moves) {
   StateHistory history;
   history.initialize(Rules{});
@@ -37,9 +37,7 @@ State make_state(Ts... moves) {
   return history.current();
 }
 
-State make_init_state() {
-  return make_state(7, 2);
-}
+State make_init_state() { return make_state(7, 2); }
 
 PolicyTensor make_policy(int move1, int move2) {
   PolicyTensor tensor;
@@ -50,9 +48,9 @@ PolicyTensor make_policy(int move1, int move2) {
 }
 
 const std::string init_state_repr =
-    "0 1 2  | | |O|\n"
-    "3 4 5  | | | |\n"
-    "6 7 8  | |X| |\n";
+  "0 1 2  | | |O|\n"
+  "3 4 5  | | | |\n"
+  "6 7 8  | |X| |\n";
 
 std::string get_repr(const State& state) {
   std::ostringstream ss;
@@ -107,9 +105,9 @@ TEST(Symmetry, rot90_clockwise) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  | | | |\n"
-      "3 4 5  |X| | |\n"
-      "6 7 8  | | |O|\n";
+    "0 1 2  | | | |\n"
+    "3 4 5  |X| | |\n"
+    "6 7 8  | | |O|\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -133,9 +131,9 @@ TEST(Symmetry, rot180) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  | |X| |\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  |O| | |\n";
+    "0 1 2  | |X| |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  |O| | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -159,9 +157,9 @@ TEST(Symmetry, rot270_clockwise) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  |O| | |\n"
-      "3 4 5  | | |X|\n"
-      "6 7 8  | | | |\n";
+    "0 1 2  |O| | |\n"
+    "3 4 5  | | |X|\n"
+    "6 7 8  | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -185,9 +183,9 @@ TEST(Symmetry, flip_vertical) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  | |X| |\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  | | |O|\n";
+    "0 1 2  | |X| |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | |O|\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -211,9 +209,9 @@ TEST(Symmetry, mirror_horizontal) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  |O| | |\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  | |X| |\n";
+    "0 1 2  |O| | |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | |X| |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -237,9 +235,9 @@ TEST(Symmetry, flip_main_diag) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  | | | |\n"
-      "3 4 5  | | |X|\n"
-      "6 7 8  |O| | |\n";
+    "0 1 2  | | | |\n"
+    "3 4 5  | | |X|\n"
+    "6 7 8  |O| | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -263,9 +261,9 @@ TEST(Symmetry, flip_anti_diag) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "0 1 2  | | |O|\n"
-      "3 4 5  |X| | |\n"
-      "6 7 8  | | | |\n";
+    "0 1 2  | | |O|\n"
+    "3 4 5  |X| | |\n"
+    "6 7 8  | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -280,17 +278,15 @@ TEST(Symmetry, flip_anti_diag) {
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-TEST(Symmetry, action_transforms) {
-  core::tests::Common<Game>::gtest_action_transforms();
-}
+TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
 TEST(Symmetry, canonicalization) {
   State state = make_state(2, 1);
 
   std::string expected_repr =
-      "0 1 2  | |O|X|\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  | | | |\n";
+    "0 1 2  | |O|X|\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | | |\n";
 
   std::string repr = get_repr(state);
 
@@ -302,15 +298,13 @@ TEST(Symmetry, canonicalization) {
   Game::Symmetries::apply(state, e);
 
   expected_repr =
-      "0 1 2  |X|O| |\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  | | | |\n";
+    "0 1 2  |X|O| |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | | |\n";
 
   repr = get_repr(state);
 
   EXPECT_EQ(repr, expected_repr);
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

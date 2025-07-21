@@ -1,6 +1,5 @@
-#include "util/BoostUtil.hpp"
-
 #include "util/Asserts.hpp"
+#include "util/BoostUtil.hpp"
 #include "util/Random.hpp"
 
 #include <format>
@@ -28,8 +27,7 @@ int get_random_set_index(const boost::dynamic_bitset<>& bitset) {
   return get_random_set_index(util::Random::default_prng(), bitset);
 }
 
-std::string get_option_value(const std::vector<std::string>& args,
-                                    const std::string& option_name) {
+std::string get_option_value(const std::vector<std::string>& args, const std::string& option_name) {
   std::string dashed_option_name = "--" + option_name;
   for (size_t i = 0; i < args.size(); ++i) {
     const std::string& arg = args[i];
@@ -50,15 +48,13 @@ std::string get_option_value(const std::vector<std::string>& args,
   return "";
 }
 
-std::string pop_option_value(std::vector<std::string>& args,
-                                    const std::string& option_name) {
+std::string pop_option_value(std::vector<std::string>& args, const std::string& option_name) {
   std::string dashed_option_name = "--" + option_name;
   for (size_t i = 0; i < args.size(); ++i) {
     const std::string& arg = args[i];
     if (arg == dashed_option_name) {
       if (i + 1 >= args.size()) {
-        throw std::runtime_error(
-            std::format("Missing value for option '{}'", option_name.c_str()));
+        throw std::runtime_error(std::format("Missing value for option '{}'", option_name.c_str()));
       }
       std::string value = args[i + 1];
       args.erase(args.begin() + i, args.begin() + i + 2);
@@ -104,14 +100,14 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
     case boost::json::kind::array: {
       auto const& arr = jv.get_array();
       auto it = arr.begin();
-      bool is_simple_array = (it->kind() != boost::json::kind::object) &&
-          (it->kind() != boost::json::kind::array);
+      bool is_simple_array =
+        (it->kind() != boost::json::kind::object) && (it->kind() != boost::json::kind::array);
 
       // print without newlines if the array contains only simple elements
       if (is_simple_array) {
         os << "[";
 
-        while(true) {
+        while (true) {
           pretty_print(os, *it, indent);
           if (++it == arr.end()) break;
           os << ", ";

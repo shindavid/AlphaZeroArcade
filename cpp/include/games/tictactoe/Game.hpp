@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
@@ -10,8 +9,9 @@
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
-#include "games/tictactoe/Constants.hpp"
+#include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
+#include "games/tictactoe/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
@@ -67,8 +67,8 @@ class Game {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
     static void apply(StateHistory& history, group::element_t sym);  // optional
-    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t=0);
-    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t=0);
+    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t = 0);
+    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t = 0);
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
@@ -102,8 +102,12 @@ class Game {
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {
@@ -122,13 +126,13 @@ class Game {
       static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
-                              OwnershipTarget>;
+    using List =
+      mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
   };
 
   static constexpr mask_t kThreeInARowMasks[] = {
-      make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
-      make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
+    make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
+    make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
   static void static_init() {}
 

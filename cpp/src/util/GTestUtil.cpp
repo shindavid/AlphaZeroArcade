@@ -1,5 +1,4 @@
 #include "util/GTestUtil.hpp"
-
 #include "util/LoggingUtil.hpp"
 
 #include <boost/program_options.hpp>
@@ -25,7 +24,7 @@ int launch_gtest(int argc, char** argv) {
   po2::options_description raw_desc("Options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help (most used options)")
                 .template add_option<"help-full">("help (all options)")
-              .add(log_params.make_options_description());
+                .add(log_params.make_options_description());
 
   bool help_full = false;
   bool help = false;

@@ -1,7 +1,6 @@
 
-#include "generic_players/DataExportingMctsPlayer.hpp"
-
 #include "core/BasicTypes.hpp"
+#include "generic_players/DataExportingMctsPlayer.hpp"
 #include "util/BitSet.hpp"
 
 namespace generic {
@@ -19,7 +18,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
     // TODO: if we have chance-events between player-events, we should compute this bool
     // differently.
     previous_used_for_training_ =
-        game_log && game_log->was_previous_entry_used_for_policy_training();
+      game_log && game_log->was_previous_entry_used_for_policy_training();
 
     if (kForceFullSearchIfRecordingAsOppReply && previous_used_for_training_) {
       this->search_mode_ = core::kFull;
@@ -38,8 +37,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
 
   const SearchResults* mcts_results = response.results;
-  ActionResponse action_response =
-      base_t::get_action_response_helper(mcts_results, valid_actions);
+  ActionResponse action_response = base_t::get_action_response_helper(mcts_results, valid_actions);
 
   TrainingInfo& training_info = action_response.training_info;
   training_info.policy_target = nullptr;
@@ -67,9 +65,9 @@ DataExportingMctsPlayer<Game>::prehandle_chance_event(const ChangeEventPreHandle
   }
 
   if (!mid_prehandle_chance_event_) {
-    // Sample chance events at the same frequency as we do for player events. This seems right, as it
-    // ensures that chance events are represented in the training data proportionally to how often
-    // they occur in the game.
+    // Sample chance events at the same frequency as we do for player events. This seems right, as
+    // it ensures that chance events are represented in the training data proportionally to how
+    // often they occur in the game.
     if (this->get_random_search_mode() != core::kFull) {
       return ChanceEventPreHandleResponse();
     }

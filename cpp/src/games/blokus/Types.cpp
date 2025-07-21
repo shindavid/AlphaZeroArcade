@@ -1,10 +1,9 @@
 #include "games/blokus/Types.hpp"
-
 #include "util/Asserts.hpp"
 
 #include <algorithm>
-#include <format>
 #include <bit>
+#include <format>
 
 namespace blokus {
 
@@ -76,7 +75,7 @@ class MiniBoard {
 
     if (left == kMiniBoardLookupSize || tables::kMiniBoardLookup[left].key != mask_) {
       throw util::Exception(
-          "MiniBoard::to_piece_orientation_corner_index() failed to find key {:08x}", mask_);
+        "MiniBoard::to_piece_orientation_corner_index() failed to find key {:08x}", mask_);
     }
     return tables::kMiniBoardLookup[left].value;
   }
@@ -194,15 +193,15 @@ void BoardString::pretty_print(std::ostream& os) const {
   int c = 0;
 
   constexpr const char* color_strs[dNumDrawings] = {
-      "  ",                         // dBlankSpace
-      "\033[44m  \033[0m",          // dBlueSpace
-      "\033[43m  \033[0m",          // dYellowSpace
-      "\033[41m  \033[0m",          // dRedSpace
-      "\033[42m  \033[0m",          // dGreenSpace
-      "\033[47m\033[34m⚫\033[0m",  // dCircle
-      "\033[47m\033[34m+\033[0m",   // dPlus
-      "\033[47m\033[34m*\033[0m",   // dStar
-      "\033[47m\033[34m×\033[0m"    // dTimes
+    "  ",                        // dBlankSpace
+    "\033[44m  \033[0m",         // dBlueSpace
+    "\033[43m  \033[0m",         // dYellowSpace
+    "\033[41m  \033[0m",         // dRedSpace
+    "\033[42m  \033[0m",         // dGreenSpace
+    "\033[47m\033[34m⚫\033[0m",  // dCircle
+    "\033[47m\033[34m+\033[0m",  // dPlus
+    "\033[47m\033[34m*\033[0m",  // dStar
+    "\033[47m\033[34m×\033[0m"   // dTimes
   };
 
   c += sprintf(buffer + c, "   ");
@@ -274,10 +273,10 @@ void PieceOrientation::write_to(TuiPrompt& prompt, color_t color, int label) con
   const char* reset = "\033[0m";
 
   constexpr const char* color_strs[kNumColors] = {
-      "\033[44m",  // cBlue
-      "\033[43m",  // cYellow
-      "\033[41m",  // cRed
-      "\033[42m"   // cGreen
+    "\033[44m",  // cBlue
+    "\033[43m",  // cYellow
+    "\033[41m",  // cRed
+    "\033[42m"   // cGreen
   };
   const char* color_str = color_strs[color];
 
@@ -336,10 +335,10 @@ void PieceOrientationCorner::pretty_print(std::ostream& os, color_t color) const
   const char* reset = "\033[0m";
 
   constexpr const char* color_strs[kNumColors] = {
-      "\033[44m",  // cBlue
-      "\033[43m",  // cYellow
-      "\033[41m",  // cRed
-      "\033[42m"   // cGreen
+    "\033[44m",  // cBlue
+    "\033[43m",  // cYellow
+    "\033[41m",  // cRed
+    "\033[42m"   // cGreen
   };
   const char* color_str = color_strs[color];
 

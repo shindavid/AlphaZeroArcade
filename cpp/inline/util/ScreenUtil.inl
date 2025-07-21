@@ -1,9 +1,9 @@
+#include "util/Exceptions.hpp"
 #include "util/ScreenUtil.hpp"
 
-#include "util/Exceptions.hpp"
+#include <sys/ioctl.h>
 
 #include <cstdlib>
-#include <sys/ioctl.h>
 #include <unistd.h>
 
 namespace util {

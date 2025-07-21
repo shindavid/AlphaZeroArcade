@@ -1,5 +1,4 @@
 #include "core/PlayerFactory.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -14,18 +13,18 @@ auto PlayerFactory<Game>::Params::make_options_description() {
 
   po2::options_description desc("PlayerFactory options, for each instance of --player \"...\"");
   return desc.template add_option<"type">(po::value<std::string>(&type), "required")
-      .template add_option<"name">(po::value<std::string>(&name),
-                                   "if unspecified, then a default name is chosen")
-      .template add_option<"copy-from">(
-          po::value<std::string>(&copy_from),
-          "copy everything but --name and --seat from the --player with this name")
-      .template add_option<"seat">(po::value<int>(&seat),
-                                   "zero-indexed seat (0=first-player, 1=second-player, etc.). If "
-                                   "unspecified, then the seat is selected "
-                                   "randomly among the available seats for the first game. For "
-                                   "subsequent games, we round-robin through the "
-                                   "set of N! possible seat assignments, where N is the number of "
-                                   "players with unspecified seats.");
+    .template add_option<"name">(po::value<std::string>(&name),
+                                 "if unspecified, then a default name is chosen")
+    .template add_option<"copy-from">(
+      po::value<std::string>(&copy_from),
+      "copy everything but --name and --seat from the --player with this name")
+    .template add_option<"seat">(po::value<int>(&seat),
+                                 "zero-indexed seat (0=first-player, 1=second-player, etc.). If "
+                                 "unspecified, then the seat is selected "
+                                 "randomly among the available seats for the first game. For "
+                                 "subsequent games, we round-robin through the "
+                                 "set of N! possible seat assignments, where N is the number of "
+                                 "players with unspecified seats.");
 }
 
 template <concepts::Game Game>
@@ -47,9 +46,8 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
 
 template <concepts::Game Game>
 typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::parse(
-    const std::vector<std::string>& player_strs) {
-  RELEASE_ASSERT(server_ != nullptr,
-                       "PlayerFactory::parse() called without a server");
+  const std::vector<std::string>& player_strs) {
+  RELEASE_ASSERT(server_ != nullptr, "PlayerFactory::parse() called without a server");
   player_generator_seat_vec_t vec;
 
   for (const auto& player_str : player_strs) {
@@ -61,8 +59,8 @@ typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::p
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      CLEAN_ASSERT(seat < Game::Constants::kNumPlayers,
-                         "Invalid seat ({}) in --player \"{}\"", seat, player_str);
+      CLEAN_ASSERT(seat < Game::Constants::kNumPlayers, "Invalid seat ({}) in --player \"{}\"",
+                   seat, player_str);
     }
 
     PlayerGeneratorSeat player_generator_seat;
@@ -164,8 +162,8 @@ bool PlayerFactory<Game>::matches(const PlayerGenerator* generator, const std::s
 
 template <concepts::Game Game>
 typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper(
-    const std::string& player_str, const std::string& name,
-    const std::vector<std::string>& orig_tokens) {
+  const std::string& player_str, const std::string& name,
+  const std::vector<std::string>& orig_tokens) {
   std::vector<std::string> tokens = orig_tokens;
 
   std::string type = boost_util::pop_option_value(tokens, "type");
@@ -176,13 +174,11 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
       throw util::Exception("Invalid usage of --copy-from with --type in --player \"{}\"",
                             player_str);
     }
-    CLEAN_ASSERT(name_map_.count(copy_from), "Invalid --copy-from in --player \"{}\"",
-                       player_str);
+    CLEAN_ASSERT(name_map_.count(copy_from), "Invalid --copy-from in --player \"{}\"", player_str);
     return parse_helper(player_str, name, name_map_.at(copy_from));
   }
 
-  CLEAN_ASSERT(!type.empty(), "Must specify --type or --copy-from in --player \"{}\"",
-                     player_str);
+  CLEAN_ASSERT(!type.empty(), "Must specify --type or --copy-from in --player \"{}\"", player_str);
   if (!name.empty()) {
     CLEAN_ASSERT(!name_map_.count(name), "Duplicate --name \"{}\"", name);
     name_map_[name] = orig_tokens;

@@ -1,5 +1,4 @@
 #include "games/blokus/Game.hpp"
-
 #include "util/AnsiCodes.hpp"
 #include "util/CppUtil.hpp"
 #include "util/StringUtil.hpp"
@@ -15,7 +14,7 @@ void Game::Rules::init_state(State& state) {
   state.core.partial_move.set(-1, -1);
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    Location loc((kBoardDimension-1)*(c%3>0), (kBoardDimension-1)*(c/2>0));
+    Location loc((kBoardDimension - 1) * (c % 3 > 0), (kBoardDimension - 1) * (c / 2 > 0));
     state.aux.corner_locations[c].set(loc);
   }
 }
@@ -170,10 +169,10 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
   int cx = 0;
 
   static std::string color_strs[kNumColors] = {
-      std::format("{}{}{}", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
-      std::format("{}{}{}", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
-      std::format("{}{}{}", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
-      std::format("{}{}{}", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
+    std::format("{}{}{}", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
+    std::format("{}{}{}", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
+    std::format("{}{}{}", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
+    std::format("{}{}{}", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
 
   cx += snprintf(buffer + cx, buf_size - cx, "\nScore: Player\n");
   for (color_t c = 0; c < kNumColors; ++c) {

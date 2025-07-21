@@ -21,9 +21,7 @@ class RecyclingAllocPool {
   ~RecyclingAllocPool() { clear(); }
 
   // Set a function that will be called whenever a recycled object is allocated.
-  void set_recycle_func(recycle_func_t f) {
-    recycle_func_ = std::move(f);
-  }
+  void set_recycle_func(recycle_func_t f) { recycle_func_ = std::move(f); }
 
   void clear() {
     recycling_.clear();

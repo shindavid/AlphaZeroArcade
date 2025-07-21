@@ -1,10 +1,9 @@
-#include <algorithm>
-#include "util/Random.hpp"
-
-#include <ctime>
-
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
+#include "util/Random.hpp"
+
+#include <algorithm>
+#include <ctime>
 
 namespace util {
 
@@ -14,10 +13,8 @@ inline auto Random::Params::make_options_description() {
 
   po2::options_description desc("Random options");
 
-  return desc
-      .template add_option<"seed">(
-          po::value<int>(&seed)->default_value(seed),
-          "random seed (default: 0 means seed with current time)");
+  return desc.template add_option<"seed">(po::value<int>(&seed)->default_value(seed),
+                                          "random seed (default: 0 means seed with current time)");
 }
 
 inline void Random::init(const Params& params) {
@@ -26,9 +23,7 @@ inline void Random::init(const Params& params) {
   }
 }
 
-inline void Random::set_seed(int seed) {
-  default_prng().seed(seed);
-}
+inline void Random::set_seed(int seed) { default_prng().seed(seed); }
 
 template <std::integral T, std::integral U>
 inline auto Random::uniform_sample(std::mt19937& prng, T lower, U upper) {

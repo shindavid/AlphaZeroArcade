@@ -1,5 +1,4 @@
 #include "mcts/NNEvaluationService.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/KeyValueDumper.hpp"
 #include "util/LoggingUtil.hpp"
@@ -18,7 +17,7 @@ int NNEvaluationService<Game>::instance_count_ = 0;
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>* NNEvaluationService<Game>::create(
-    const NNEvaluationServiceParams& params, core::GameServerBase* server) {
+  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   static instance_map_t instance_map;
 
   auto it = instance_map.find(params.model_filename);
@@ -113,8 +112,8 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
   } else {
     if (!net_.loaded()) {
       throw util::CleanException(
-          "MCTS player configured without --model-filename/-m and without "
-          "--no-model, but --loop-controller-* options not specified");
+        "MCTS player configured without --model-filename/-m and without "
+        "--no-model, but --loop-controller-* options not specified");
     }
   }
 }
@@ -272,7 +271,7 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
   batch_size_limit_ = limit;
-  for (auto & batch_data : batch_data_reserve_) {
+  for (auto& batch_data : batch_data_reserve_) {
     batch_data->set_capacity(limit);
   }
   for (auto batch_data : pending_batch_datas_) {
@@ -337,7 +336,7 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
       // would never arrive.
 
       RELEASE_ASSERT(result.stats.cache_misses == 0, "Unexpected cache_misses={}",
-                           result.stats.cache_misses);
+                     result.stats.cache_misses);
       for (auto& item : request.fresh_items()) {
         RELEASE_ASSERT(!item.eval()->pending(), "Unexpected pending item");
       }
@@ -699,13 +698,13 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
               unit.slot_context().context);
 
     RELEASE_ASSERT(batch_data, "null batch_data");
-    RELEASE_ASSERT(batch_data->sequence_id == seq,
-                         "batch_data->sequence_id:{} != seq:{}", batch_data->sequence_id, seq);
+    RELEASE_ASSERT(batch_data->sequence_id == seq, "batch_data->sequence_id:{} != seq:{}",
+                   batch_data->sequence_id, seq);
     batch_data->notification_tasks.push_back(unit.slot_context());
     return true;
   } else {
-    LOG_DEBUG("<!-- {}::{} ACCEPT seq={} slot={}:{}", kCls, __func__, seq,
-              unit.slot_context().slot, unit.slot_context().context);
+    LOG_DEBUG("<!-- {}::{} ACCEPT seq={} slot={}:{}", kCls, __func__, seq, unit.slot_context().slot,
+              unit.slot_context().context);
 
     return false;
   }
@@ -781,7 +780,7 @@ void NNEvaluationService<Game>::state_loop() {
 
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
     RELEASE_ASSERT(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
-                         system_state_, kPaused);
+                   system_state_, kPaused);
 
     core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
 
@@ -806,7 +805,7 @@ void NNEvaluationService<Game>::state_loop() {
 
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
     RELEASE_ASSERT(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
-                         system_state_, kUnpaused);
+                   system_state_, kUnpaused);
 
     // wait for schedule-loop/drain-loop to exit their preludes
     cv_main_.wait(lock, [&] {
@@ -889,9 +888,8 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
-  RELEASE_ASSERT(system_state_ == kPausingScheduleLoop,
-                       "Unexpected system_state: {} (expected {})",
-                       system_state_, kPausingScheduleLoop);
+  RELEASE_ASSERT(system_state_ == kPausingScheduleLoop, "Unexpected system_state: {} (expected {})",
+                 system_state_, kPausingScheduleLoop);
   system_state_ = kPausingDrainLoop;
   lock.unlock();
   cv_main_.notify_all();
@@ -999,8 +997,8 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
         return true;
       }
       if (mcts::kEnableServiceDebug) {
-        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls,
-                 func, batch_data->sequence_id, batch_data->accepting_allocations,
+        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls, func,
+                 batch_data->sequence_id, batch_data->accepting_allocations,
                  batch_data->allocate_count, batch_data->write_count);
       }
     }
@@ -1066,7 +1064,7 @@ bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
         system_state_ == kShuttingDownDrainLoop) {
       if (mcts::kEnableServiceDebug) {
         LOG_INFO("<-- {}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, func,
-                this->instance_id_, system_state_, load_queue_.size());
+                 this->instance_id_, system_state_, load_queue_.size());
       }
       return true;
     }

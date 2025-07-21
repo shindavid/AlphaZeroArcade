@@ -1,9 +1,8 @@
 #include "util/CudaUtil.hpp"
 
-#include <iostream>
-
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <iostream>
 
 namespace cuda {
 
@@ -20,8 +19,8 @@ void dump_memory_info() {
   }
 }
 
-void validate_batch_size(nvinfer1::ICudaEngine* engine, const char* tensor_name,
-                                int profile_index, int batch_size) {
+void validate_batch_size(nvinfer1::ICudaEngine* engine, const char* tensor_name, int profile_index,
+                         int batch_size) {
   using namespace nvinfer1;
   auto min_dims = engine->getProfileShape(tensor_name, profile_index, OptProfileSelector::kMIN);
   auto max_dims = engine->getProfileShape(tensor_name, profile_index, OptProfileSelector::kMAX);
@@ -31,8 +30,8 @@ void validate_batch_size(nvinfer1::ICudaEngine* engine, const char* tensor_name,
 
   // 1) Are we really dynamic?
   if (min0 == max0) {
-    throw util::Exception("Engine for '{}' is built with a *fixed* batch size of {}",
-                          tensor_name, min0);
+    throw util::Exception("Engine for '{}' is built with a *fixed* batch size of {}", tensor_name,
+                          min0);
   }
 
   // 2) Does our request fit under the hood?

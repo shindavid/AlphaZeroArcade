@@ -1,5 +1,4 @@
 #include "core/NeuralNet.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -23,8 +22,7 @@ auto make_arr(int batch_size) {
 
 template <concepts::Game Game>
 NeuralNet<Game>::NeuralNet(int cuda_device_id)
-    : runtime_(nvinfer1::createInferRuntime(logger_)),
-      cuda_device_id_(cuda_device_id) {}
+    : runtime_(nvinfer1::createInferRuntime(logger_)), cuda_device_id_(cuda_device_id) {}
 
 template <concepts::Game Game>
 NeuralNet<Game>::~NeuralNet() {
@@ -41,8 +39,9 @@ template <concepts::Game Game>
 void NeuralNet<Game>::load_weights(const char* filename) {
   plan_data_.clear();
 
-  std::ifstream f(filename, std::ios::binary|std::ios::ate);
-  size_t sz = f.tellg(); f.seekg(0);
+  std::ifstream f(filename, std::ios::binary | std::ios::ate);
+  size_t sz = f.tellg();
+  f.seekg(0);
   plan_data_.resize(sz);
   f.read(plan_data_.data(), sz);
 }
@@ -58,9 +57,7 @@ void NeuralNet<Game>::load_weights(std::ispanstream& stream) {
 template <concepts::Game Game>
 pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
   mit::unique_lock lock(pipeline_mutex_);
-  pipeline_cv_.wait(lock, [&] {
-    return !available_pipeline_indices_.empty();
-  });
+  pipeline_cv_.wait(lock, [&] { return !available_pipeline_indices_.empty(); });
   pipeline_index_t index = available_pipeline_indices_.back();
   available_pipeline_indices_.pop_back();
   return index;

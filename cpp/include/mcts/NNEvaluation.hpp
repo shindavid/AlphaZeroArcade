@@ -45,7 +45,10 @@ class NNEvaluation {
   void clear();
 
   void set_aux(void* aux) { aux_ = aux; }
-  template <typename T> T* get_aux() { return static_cast<T*>(aux_); }
+  template <typename T>
+  T* get_aux() {
+    return static_cast<T*>(aux_);
+  }
 
   void set_eval_sequence_id(core::nn_evaluation_sequence_id_t id) { eval_sequence_id_ = id; }
   core::nn_evaluation_sequence_id_t eval_sequence_id() const { return eval_sequence_id_; }

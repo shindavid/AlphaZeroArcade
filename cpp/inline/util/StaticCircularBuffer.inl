@@ -1,5 +1,6 @@
-#include <stdexcept>
 #include "util/StaticCircularBuffer.hpp"
+
+#include <stdexcept>
 
 namespace util {
 

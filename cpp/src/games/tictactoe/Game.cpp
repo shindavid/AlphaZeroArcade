@@ -56,9 +56,9 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   mask_t x_mask = (cp == kX) ? state.cur_player_mask : opp_player_mask;
 
   char text[] =
-      "0 1 2  | | | |\n"
-      "3 4 5  | | | |\n"
-      "6 7 8  | | | |\n";
+    "0 1 2  | | | |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | | |\n";
 
   int offset_table[] = {8, 10, 12, 23, 25, 27, 38, 40, 42};
   for (int i = 0; i < kNumCells; ++i) {

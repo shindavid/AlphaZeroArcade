@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
@@ -10,8 +9,9 @@
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
-#include "games/othello/Constants.hpp"
+#include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
+#include "games/othello/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
@@ -62,8 +62,8 @@ class Game {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
     static void apply(StateHistory& history, group::element_t sym);  // optional
-    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t=0);
-    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t=0);
+    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t = 0);
+    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t = 0);
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
@@ -89,6 +89,7 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static void write_edax_board_str(char* buf, const State& state);
+
    private:
     static int print_row(char* buf, int n, const State&, const Types::ActionMask&, row_t row,
                          column_t blink_column);
@@ -101,8 +102,12 @@ class Game {
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

@@ -33,7 +33,8 @@
 namespace core {
 
 struct ShapeInfo {
-  template <eigen_util::concepts::FTensor Tensor> void init(const char* nm, int target_idx);
+  template <eigen_util::concepts::FTensor Tensor>
+  void init(const char* nm, int target_idx);
   ~ShapeInfo();
 
   const char* name = nullptr;
@@ -51,7 +52,7 @@ static_assert(sizeof(GameLogFileHeader) == 16);
 
 struct GameLogMetadata {
   uint64_t start_timestamp;
-  uint32_t start_offset;   // relative to start of file
+  uint32_t start_offset;  // relative to start of file
   uint32_t data_size;
   uint32_t num_samples;
   uint32_t num_positions;  // excludes terminal position
@@ -99,7 +100,7 @@ struct GameLogCommon {
   static constexpr int align(int offset);
 
   template <typename T>
-  static int write_section(std::vector<char>& buf, const T* t, int count=1, bool pad=true);
+  static int write_section(std::vector<char>& buf, const T* t, int count = 1, bool pad = true);
 };
 
 template <concepts::Game Game>
@@ -186,7 +187,6 @@ class GameReadLog : public GameLogBase<Game> {
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;
 
-
   // void replay() const;
   int num_sampled_positions() const { return metadata_.num_samples; }
 
@@ -214,7 +214,8 @@ class GameReadLog : public GameLogBase<Game> {
   const DataLayout layout_;
 };
 
-template <concepts::Game Game> class GameLogSerializer;  // Forward declaration
+template <concepts::Game Game>
+class GameLogSerializer;  // Forward declaration
 
 template <concepts::Game Game>
 class GameWriteLog : public GameLogBase<Game> {
@@ -235,7 +236,7 @@ class GameWriteLog : public GameLogBase<Game> {
 
   struct Entry {
     State position;
-    PolicyTensor policy_target;  // only valid if policy_target_is_valid
+    PolicyTensor policy_target;       // only valid if policy_target_is_valid
     ActionValueTensor action_values;  // only valid if action_values_are_valid
     action_t action;
     seat_index_t active_seat;

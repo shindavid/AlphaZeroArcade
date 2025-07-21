@@ -12,7 +12,7 @@ namespace detail {
  */
 inline auto lazyHasher = [](size_t& cur, auto&&... value) {
   auto lazyCombiner = [&cur](auto&& val) {
-    cur ^= std::hash<std::decay_t<decltype(val)>>{}(val) * 0x9e3779b9 + (cur << 6) + (cur >> 2);
+    cur ^= std::hash<std::decay_t<decltype(val)>>{}(val)*0x9e3779b9 + (cur << 6) + (cur >> 2);
   };
   (lazyCombiner(std::forward<decltype(value)>(value)), ...);
   return cur;
@@ -53,7 +53,7 @@ inline constexpr bool constexpr_is_defined(const char* symbol_name, const char* 
 }
 
 // Produced by ChatGPT
-template<typename T>
+template <typename T>
 std::size_t PODHash<T>::operator()(const T& s) const {
   const std::size_t* data = reinterpret_cast<const std::size_t*>(&s);
   std::size_t hash = 0;
@@ -67,9 +67,9 @@ std::size_t PODHash<T>::operator()(const T& s) const {
   if (sizeof(T) % sizeof(std::size_t) != 0) {
     std::size_t lastBlock = 0;
     std::memcpy(
-        &lastBlock,
-        reinterpret_cast<const char*>(&s) + (sizeof(T) / sizeof(std::size_t)) * sizeof(std::size_t),
-        sizeof(T) % sizeof(std::size_t));
+      &lastBlock,
+      reinterpret_cast<const char*>(&s) + (sizeof(T) / sizeof(std::size_t)) * sizeof(std::size_t),
+      sizeof(T) % sizeof(std::size_t));
     hash ^= std::hash<std::size_t>{}(lastBlock) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
   }
 
@@ -81,13 +81,11 @@ inline TtyMode& TtyMode::instance() {
   return instance;
 }
 
-inline TtyMode::TtyMode() {
-  mode_ = isatty(STDOUT_FILENO);
-}
+inline TtyMode::TtyMode() { mode_ = isatty(STDOUT_FILENO); }
 
 template <typename TimePoint>
-  int64_t ns_since_epoch(const TimePoint& t) {
-    return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();
+int64_t ns_since_epoch(const TimePoint& t) {
+  return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();
 }
 
 template <typename A>

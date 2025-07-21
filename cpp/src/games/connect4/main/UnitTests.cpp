@@ -48,12 +48,12 @@ PolicyTensor make_policy(int move1, int move2) {
 }
 
 const std::string init_state_repr =
-    "| | | | | | | |\n"
-    "| | | | | | | |\n"
-    "| | | | | | | |\n"
-    "| | | | | | | |\n"
-    "| | | |R| | | |\n"
-    "| | | |R|Y| | |\n";
+  "| | | | | | | |\n"
+  "| | | | | | | |\n"
+  "| | | | | | | |\n"
+  "| | | | | | | |\n"
+  "| | | |R| | | |\n"
+  "| | | |R|Y| | |\n";
 
 std::string get_repr(const State& state) {
   std::ostringstream ss;
@@ -108,12 +108,12 @@ TEST(Symmetry, flip) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "| | | | | | | |\n"
-      "| | | | | | | |\n"
-      "| | | | | | | |\n"
-      "| | | | | | | |\n"
-      "| | | |R| | | |\n"
-      "| | |Y|R| | | |\n";
+    "| | | | | | | |\n"
+    "| | | | | | | |\n"
+    "| | | | | | | |\n"
+    "| | | | | | | |\n"
+    "| | | |R| | | |\n"
+    "| | |Y|R| | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -218,6 +218,4 @@ TEST(PerfectOracle, query2) {
   EXPECT_EQ(result.scores[6], -20);
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

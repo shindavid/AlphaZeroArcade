@@ -1,23 +1,22 @@
-#include "core/GameServerProxy.hpp"
-
 #include "core/Constants.hpp"
+#include "core/GameServerProxy.hpp"
 #include "core/Packet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/KeyValueDumper.hpp"
 #include "util/LoggingUtil.hpp"
 
+#include <arpa/inet.h>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
-
-#include <arpa/inet.h>
-#include <cstdlib>
-#include <cstring>
-#include <netdb.h>
 #include <netinet/in.h>
-#include <string>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+
+#include <cstdlib>
+#include <cstring>
+#include <netdb.h>
+#include <string>
 #include <unistd.h>
 
 namespace core {
@@ -40,8 +39,7 @@ auto GameServerProxy<Game>::Params::make_options_description() {
 
 template <concepts::Game Game>
 GameServerProxy<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
-    : shared_data_(shared_data),
-      id_(id) {
+    : shared_data_(shared_data), id_(id) {
   for (player_id_t p = 0; p < (player_id_t)kNumPlayers; ++p) {
     players_[p] = nullptr;
     PlayerGenerator* gen = shared_data_.get_gen(p);
@@ -143,8 +141,8 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
 
   ActionResponse response = player->get_action_response(request);
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
-                     "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-                     int(response.yield_instruction));
+               "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+               int(response.yield_instruction));
 
   switch (response.yield_instruction) {
     case kContinue: {
@@ -215,8 +213,8 @@ void GameServerProxy<Game>::SharedData::register_player(seat_index_t seat, Playe
   // TODO: assert that we are not constructing MCTS-T players, since the MCTS-T implementation
   // implicitly assumes that all MCTS-T agents are running in the same process.
   std::string name = gen->get_name();
-  CLEAN_ASSERT(name.size() + 1 < kMaxNameLength, "Player name too long (\"{}\" size={})",
-                     name, name.size());
+  CLEAN_ASSERT(name.size() + 1 < kMaxNameLength, "Player name too long (\"{}\" size={})", name,
+               name.size());
   seat_generators_.emplace_back(seat, gen);
 }
 
@@ -251,10 +249,9 @@ void GameServerProxy<Game>::SharedData::init_socket() {
     player_id_t player_id = response.player_id;
     std::string name = response.dynamic_size_section.player_name;
 
-    CLEAN_ASSERT(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: {}",
-                       player_id);
+    CLEAN_ASSERT(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: {}", player_id);
     CLEAN_ASSERT(registered_name.empty() || registered_name == name,
-                       "Unexpected name in response: \"{}\" != \"{}\"", registered_name, name);
+                 "Unexpected name in response: \"{}\" != \"{}\"", registered_name, name);
 
     gen->set_name(name);
     players_[player_id] = gen;
@@ -325,7 +322,6 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
         "prompted_player_id:{} prompted_player:{} state:\n{}",
         __func__, i, mid_yield, continue_hit, in_critical_section, slot->prompted_player_id(),
         player ? player->get_name() : "-", ss.str());
-
     }
   }
 }
@@ -416,8 +412,7 @@ void GameServerProxy<Game>::SharedData::handle_end_game(const GeneralPacket& pac
 
 template <concepts::Game Game>
 GameServerProxy<Game>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
-    : shared_data_(shared_data), id_(id) {
-}
+    : shared_data_(shared_data), id_(id) {}
 
 template <concepts::Game Game>
 GameServerProxy<Game>::GameThread::~GameThread() {

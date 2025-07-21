@@ -26,7 +26,7 @@ using pool_index_t = int64_t;
  * The underlying implementation relies on an array of blocks of type T[]. The first two blocks are
  * of size 2^N, and each subsequent block is twice the size of the previous block.
  */
-template<typename T, int N=10, bool ThreadSafe=true>
+template <typename T, int N = 10, bool ThreadSafe = true>
 class AllocPool {
  public:
   using atomic_size_t = std::conditional_t<ThreadSafe, std::atomic<uint64_t>, uint64_t>;

@@ -22,9 +22,7 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::G
   std::string get_default_name() const override { return "Perfect"; }
   std::vector<std::string> get_types() const override { return {"Perfect"}; }
   std::string get_description() const override { return "Perfect player"; }
-  Player* generate(core::game_slot_index_t) override {
-    return new PerfectPlayer(params_);
-  }
+  Player* generate(core::game_slot_index_t) override { return new PerfectPlayer(params_); }
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override {
     namespace po2 = boost_util::program_options;

@@ -33,13 +33,9 @@ struct WinLossResults {
     return a;
   }
 
-  static void left_rotate(Tensor& t, core::seat_index_t) {
-    std::swap(t(0), t(1));
-  }
+  static void left_rotate(Tensor& t, core::seat_index_t) { std::swap(t(0), t(1)); }
 
-  static void right_rotate(Tensor& t, core::seat_index_t) {
-    std::swap(t(0), t(1));
-  }
+  static void right_rotate(Tensor& t, core::seat_index_t) { std::swap(t(0), t(1)); }
 
   static void print_array(const Tensor& net_value, const ValueArray& win_rates,
                           const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {

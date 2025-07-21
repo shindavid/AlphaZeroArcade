@@ -53,10 +53,6 @@ using slot_context_queue_t = std::queue<SlotContext>;
 // multi-threaded search is complete, the thread that finishes the job will return kContinue, and
 // the other n will return kDrop. The GameServer will then drop the n threads, going back to only
 // have one copy of the GameSlot in the queue.
-enum yield_instruction_t : int8_t {
-  kContinue,
-  kYield,
-  kDrop
-};
+enum yield_instruction_t : int8_t { kContinue, kYield, kDrop };
 
 }  // namespace core

@@ -84,13 +84,13 @@ class Node {
   };
 
   static constexpr bool kStoreStates =
-      IS_DEFINED(STORE_STATES) || Game::MctsConfiguration::kStoreStates;
+    IS_DEFINED(STORE_STATES) || Game::MctsConfiguration::kStoreStates;
   using StateData = mcts::StateData<Game, kStoreStates>;
 
   // We make the StateData a base-class of StableData because (1) the state is stable, and
   // (2) if STORE_STATES is not enabled, we get an empty base-class optimization.
   struct StableData : public StateData {
-    StableData(const StateHistory&, core::seat_index_t active_seat);  // for non-terminal nodes
+    StableData(const StateHistory&, core::seat_index_t active_seat);   // for non-terminal nodes
     StableData(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
     ValueTensor VT;
@@ -133,7 +133,7 @@ class Node {
   struct Edge {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
-    int E = 0;  // real or virtual count
+    int E = 0;            // real or virtual count
     float base_prob = 0;  // used for both raw policy prior and chance node probability
     // equal to base_prob, with possible adjustments from Dirichlet-noise and softmax-temperature
     float adjusted_base_prob = 0;
@@ -210,7 +210,7 @@ class Node {
     mutable mit::mutex map_mutex_;
   };
 
-  Node(LookupTable*, const StateHistory&, core::seat_index_t active_seat);  // for non-terminal
+  Node(LookupTable*, const StateHistory&, core::seat_index_t active_seat);   // for non-terminal
   Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
@@ -248,7 +248,7 @@ class Node {
 
   void initialize_edges();
 
-  template<typename PolicyTransformFunc>
+  template <typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
   bool all_children_edges_initialized() const;
@@ -257,7 +257,7 @@ class Node {
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const Edge* edge) const;
-  void update_child_expand_count(int n=1);
+  void update_child_expand_count(int n = 1);
   bool trivial() const { return trivial_; }
 
   // NO-OP in release builds, checks various invariants in debug builds

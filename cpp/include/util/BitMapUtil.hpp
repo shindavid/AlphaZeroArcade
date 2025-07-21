@@ -28,13 +28,20 @@
  */
 namespace bitmap_util {
 
-template <typename... UInt64T> void flip_vertical(UInt64T&... mask);
-template <typename... UInt64T> void mirror_horizontal(UInt64T&... mask);
-template <typename... UInt64T> void flip_main_diag(UInt64T&... mask);
-template <typename... UInt64T> void flip_anti_diag(UInt64T&... mask);
-template <typename... UInt64T> void rot90_clockwise(UInt64T&... mask);
-template <typename... UInt64T> void rot180(UInt64T&... mask);
-template <typename... UInt64T> void rot270_clockwise(UInt64T&... mask);
+template <typename... UInt64T>
+void flip_vertical(UInt64T&... mask);
+template <typename... UInt64T>
+void mirror_horizontal(UInt64T&... mask);
+template <typename... UInt64T>
+void flip_main_diag(UInt64T&... mask);
+template <typename... UInt64T>
+void flip_anti_diag(UInt64T&... mask);
+template <typename... UInt64T>
+void rot90_clockwise(UInt64T&... mask);
+template <typename... UInt64T>
+void rot180(UInt64T&... mask);
+template <typename... UInt64T>
+void rot270_clockwise(UInt64T&... mask);
 
 }  // namespace bitmap_util
 

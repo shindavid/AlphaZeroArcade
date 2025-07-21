@@ -1,9 +1,9 @@
 #include "util/LoggingUtil.hpp"
 
 #include <spdlog/common.h>
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <cstdarg>
 #include <ctime>
@@ -33,10 +33,10 @@ void Logging::init(const Params& params) {
 
   // File sink, if needed
   if (!params.log_filename.empty()) {
-      auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-          params.log_filename, !params.append_mode);
-      file_sink->set_pattern(format);
-      sinks.push_back(file_sink);
+    auto file_sink =
+      std::make_shared<spdlog::sinks::basic_file_sink_mt>(params.log_filename, !params.append_mode);
+    file_sink->set_pattern(format);
+    sinks.push_back(file_sink);
   }
 
   // Create and set the default logger

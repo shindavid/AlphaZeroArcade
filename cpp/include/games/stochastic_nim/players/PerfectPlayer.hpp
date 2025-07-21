@@ -54,6 +54,6 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
   const PerfectStrategy* strategy_;
 };
 
-} // namespace stochastic_nim
+}  // namespace stochastic_nim
 
 #include "inline/games/stochastic_nim/players/PerfectPlayer.inl"

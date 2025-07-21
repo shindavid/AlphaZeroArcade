@@ -8,7 +8,6 @@
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
-
 #include <deque>
 #include <spanstream>
 #include <vector>
@@ -71,7 +70,7 @@ class NeuralNet {
  private:
   // simple logger
   class Logger : public nvinfer1::ILogger {
-  public:
+   public:
     void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
       if (severity <= Severity::kWARNING) {
         LOG_WARN("[TRT] {}", msg);

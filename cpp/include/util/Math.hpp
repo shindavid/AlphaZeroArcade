@@ -46,7 +46,7 @@ inline float half_life_to_decay(float half_life) {
   return half_life > 0 ? exp(log(0.5) / half_life) : 1.0;
 }
 
-template<typename T>
+template <typename T>
 constexpr T round_up_to_nearest_multiple(T value, T multiple) {
   return ((value + multiple - 1) / multiple) * multiple;
 }

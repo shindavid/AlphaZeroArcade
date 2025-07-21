@@ -14,4 +14,3 @@ struct RulesBase {
   }
 };
 }  // namespace game_base
-

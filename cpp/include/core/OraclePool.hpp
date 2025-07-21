@@ -27,7 +27,7 @@ class OraclePool {
   //
   // If a new oracle needs to be created, then the constructor of OracleT is called with the
   // passed-in arguments.
-  template<typename... Ts>
+  template <typename... Ts>
   OracleT* get_oracle(const YieldNotificationUnit& unit, Ts&&... constructor_args);
 
   void release_oracle(OracleT* oracle);

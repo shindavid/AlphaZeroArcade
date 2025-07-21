@@ -80,8 +80,8 @@ LoopControllerClient::LoopControllerClient(const Params& params)
   if (role().empty()) {
     throw util::CleanException("--client-role must be specified");
   }
-  socket_ = io::Socket::create_client_socket(params.loop_controller_hostname,
-                                             params.loop_controller_port);
+  socket_ =
+    io::Socket::create_client_socket(params.loop_controller_hostname, params.loop_controller_port);
   send_handshake();
   recv_handshake();
 }

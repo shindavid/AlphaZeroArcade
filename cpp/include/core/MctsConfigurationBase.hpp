@@ -9,4 +9,4 @@ struct MctsConfigurationBase {
   static constexpr bool kStoreStates = false;
 };
 
-} // namespace core
+}  // namespace core

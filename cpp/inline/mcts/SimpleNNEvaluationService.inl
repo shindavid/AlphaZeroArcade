@@ -4,9 +4,7 @@ namespace mcts {
 
 template <core::concepts::Game Game>
 SimpleNNEvaluationService<Game>::SimpleNNEvaluationService() {
-  eval_pool_.set_recycle_func([](NNEvaluation* eval) {
-    eval->clear();
-  });
+  eval_pool_.set_recycle_func([](NNEvaluation* eval) { eval->clear(); });
 }
 
 template <core::concepts::Game Game>

@@ -1,12 +1,12 @@
-#include "util/SocketUtil.hpp"
-
 #include "util/Exceptions.hpp"
+#include "util/SocketUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <arpa/inet.h>
+#include <sys/socket.h>
+
 #include <cstring>
 #include <netdb.h>
-#include <sys/socket.h>
-#include "util/mit/mit.hpp"
 #include <unistd.h>
 
 namespace io {

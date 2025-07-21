@@ -43,7 +43,6 @@ concept Shape = is_eigen_shape_v<T>;
 
 }  // namespace concepts
 
-
 /*
  * 3 == extract_rank_v<Eigen::Sizes<10, 20, 30>>
  * 1 == extract_rank_v<Eigen::Sizes<5>>
@@ -75,7 +74,8 @@ constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
 
 /*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not
- * well-suited for usages with: (1) fixed size structures (Array/Matrix), and (2) a uniform alpha distribution.
+ * well-suited for usages with: (1) fixed size structures (Array/Matrix), and (2) a uniform alpha
+ * distribution.
  *
  * This implementation supports only the uniform-alpha case. When fixed-size matrices are used, it
  * avoids unnecessary dynamic memory allocation.
@@ -146,7 +146,7 @@ template <concepts::Shape Shape>
 using FTensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
 
 // DArray is a dynamic Eigen::Array of max size N
-template <int N, typename Scalar=float>
+template <int N, typename Scalar = float>
 using DArray = Eigen::Array<Scalar, Eigen::Dynamic, 1, 0, N>;
 
 // FArray is a fixed-size float Eigen::Array of size N
@@ -305,11 +305,16 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
 /*
  * Convenience methods that return scalars.
  */
-template <concepts::FTensor Tensor> float sum(const Tensor& tensor);
-template <concepts::FTensor Tensor> float max(const Tensor& tensor);
-template <concepts::FTensor Tensor> float min(const Tensor& tensor);
-template <concepts::FTensor Tensor> bool any(const Tensor& tensor);
-template <concepts::FTensor Tensor> int count(const Tensor& tensor);
+template <concepts::FTensor Tensor>
+float sum(const Tensor& tensor);
+template <concepts::FTensor Tensor>
+float max(const Tensor& tensor);
+template <concepts::FTensor Tensor>
+float min(const Tensor& tensor);
+template <concepts::FTensor Tensor>
+bool any(const Tensor& tensor);
+template <concepts::FTensor Tensor>
+int count(const Tensor& tensor);
 
 template <concepts::FTensor Tensor>
 bool equal(const Tensor& tensor1, const Tensor& tensor2);
@@ -325,8 +330,10 @@ bool equal(const Tensor& tensor1, const Tensor& tensor2);
  * right_rotate([0, 1, 2, 3], 2) -> [2, 3, 0, 1]
  * right_rotate([0, 1, 2, 3], 3) -> [1, 2, 3, 0]
  */
-template <concepts::FArray Array> void left_rotate(Array& array, int n);
-template <concepts::FArray Array> void right_rotate(Array& array, int n);
+template <concepts::FArray Array>
+void left_rotate(Array& array, int n);
+template <concepts::FArray Array>
+void right_rotate(Array& array, int n);
 
 /*
  * The below functions all accept a flat 1D tensor as input, and interpret the first Dim**2
@@ -351,26 +358,33 @@ template <concepts::FArray Array> void right_rotate(Array& array, int n);
  *
  * https://stackoverflow.com/a/8664879/543913
  */
-template<int Dim, concepts::FTensor Tensor> void rot90_clockwise(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void rot180(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void rot270_clockwise(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void flip_vertical(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void mirror_horizontal(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void flip_main_diag(Tensor& tensor);
-template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void rot90_clockwise(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void rot180(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void rot270_clockwise(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void flip_vertical(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void mirror_horizontal(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void flip_main_diag(Tensor& tensor);
+template <int Dim, concepts::FTensor Tensor>
+void flip_anti_diag(Tensor& tensor);
 
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor);
 
 /*
-* Note that compute_covariance() returns a tensor *operator*, not a tensor.
-* This means that a construct like this will almost certainly result in unexpected behavior:
-*
-*   x = compute_covariance(x);
-*
-* See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
-*/
-template<typename Derived>
+ * Note that compute_covariance() returns a tensor *operator*, not a tensor.
+ * This means that a construct like this will almost certainly result in unexpected behavior:
+ *
+ *   x = compute_covariance(x);
+ *
+ * See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
+ */
+template <typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X);
 
 using PrintArrayFormatMap = std::map<std::string, std::function<std::string(float)>>;
@@ -393,10 +407,13 @@ template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest);
 
-template <eigen_util::concepts::FTensor T> boost::json::array to_json(const T& tensor);
-template <eigen_util::concepts::FArray T> boost::json::array to_json(const T& array);
+template <eigen_util::concepts::FTensor T>
+boost::json::array to_json(const T& tensor);
+template <eigen_util::concepts::FArray T>
+boost::json::array to_json(const T& array);
 
-template <concepts::FTensor Tensor> Tensor zeros();
+template <concepts::FTensor Tensor>
+Tensor zeros();
 
 }  // namespace eigen_util
 

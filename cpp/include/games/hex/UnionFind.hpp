@@ -18,7 +18,7 @@ namespace hex {
 struct UnionFind {
   static constexpr vertex_t kVirtualVertex1 = Constants::kNumSquares + 0;  // S or W
   static constexpr vertex_t kVirtualVertex2 = Constants::kNumSquares + 1;  // N or E
-  static constexpr vertex_t kNumVertices = Constants::kNumSquares + 2;  // +2 for virtual nodes
+  static constexpr vertex_t kNumVertices = Constants::kNumSquares + 2;     // +2 for virtual nodes
 
   auto operator<=>(const UnionFind&) const = default;
   void init();

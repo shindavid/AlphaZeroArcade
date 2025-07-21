@@ -10,8 +10,9 @@
 #include "core/YieldManager.hpp"
 #include "core/concepts/Game.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include <third_party/ProgressBar.hpp>
 #include "util/mit/mit.hpp"
+
+#include <third_party/ProgressBar.hpp>
 
 #include <array>
 #include <atomic>
@@ -52,12 +53,7 @@ class GameServer
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  enum pause_state_t : int8_t {
-    kPausing,
-    kPaused,
-    kUnpausing,
-    kUnpaused
-  };
+  enum pause_state_t : int8_t { kPausing, kPaused, kUnpausing, kUnpaused };
 
   using enqueue_instruction_t = core::GameServerBase::enqueue_instruction_t;
   using next_result_t = core::GameServerBase::next_result_t;
@@ -130,13 +126,13 @@ class GameServer
     auto make_options_description();
 
     std::string initial_actions_str;  // integers separated by commas
-    int num_games = 1024;       // if <=0, run indefinitely
-    int parallelism = 1024;      // number of games to run simultaneously
-    int num_game_threads = 16;  // number of threads to use
+    int num_games = 1024;             // if <=0, run indefinitely
+    int parallelism = 1024;           // number of games to run simultaneously
+    int num_game_threads = 16;        // number of threads to use
     int port = 0;
     float mean_noisy_moves = 0.0;  // mean of exp distr from which to draw number of noisy moves
     bool display_progress_bar = false;
-    bool print_game_states = false;  // print game state between moves
+    bool print_game_states = false;      // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
 

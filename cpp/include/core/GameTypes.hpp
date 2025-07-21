@@ -77,7 +77,8 @@ struct GameTypes {
 
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
-    bool play_noisily = false;;
+    bool play_noisily = false;
+    ;
   };
 
   /*
@@ -102,7 +103,7 @@ struct GameTypes {
     ActionResponse(action_t a = -1, int e = 0, core::yield_instruction_t y = core::kContinue)
         : action(a), extra_enqueue_count(e), yield_instruction(y) {}
 
-    static ActionResponse yield(int e=0) { return ActionResponse(-1, e, core::kYield); }
+    static ActionResponse yield(int e = 0) { return ActionResponse(-1, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
 
     TrainingInfo training_info;

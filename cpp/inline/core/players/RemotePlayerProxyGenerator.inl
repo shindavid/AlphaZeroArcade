@@ -1,6 +1,5 @@
-#include "core/players/RemotePlayerProxyGenerator.hpp"
-
 #include "core/Packet.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "util/Exceptions.hpp"
 
 namespace core {
@@ -16,8 +15,7 @@ void RemotePlayerProxyGenerator<Game>::initialize(io::Socket* socket, int max_si
 template <concepts::Game Game>
 AbstractPlayer<Game>* RemotePlayerProxyGenerator<Game>::generate(
   game_slot_index_t game_slot_index) {
-  CLEAN_ASSERT(initialized(),
-                     "RemotePlayerProxyGenerator::generate() called before initialized");
+  CLEAN_ASSERT(initialized(), "RemotePlayerProxyGenerator::generate() called before initialized");
   return new RemotePlayerProxy<Game>(socket_, player_id_, game_slot_index);
 }
 
@@ -29,7 +27,7 @@ void RemotePlayerProxyGenerator<Game>::end_session() {
 template <concepts::Game Game>
 int RemotePlayerProxyGenerator<Game>::max_simultaneous_games() const {
   CLEAN_ASSERT(max_simultaneous_games_ >= 0,
-                     "RemotePlayerProxyGenerator::{}() called before initialized", __func__);
+               "RemotePlayerProxyGenerator::{}() called before initialized", __func__);
   return max_simultaneous_games_;
 }
 

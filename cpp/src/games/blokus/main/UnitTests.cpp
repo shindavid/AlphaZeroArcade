@@ -28,7 +28,7 @@ std::string get_repr(const B& board) {
 
 std::string get_repr(const State& state) {
   std::ostringstream ss;
-  Game::IO::print_state(ss, state, kPass+1);
+  Game::IO::print_state(ss, state, kPass + 1);
   std::string s = ss.str();
 
   std::vector<std::string> lines;
@@ -98,9 +98,9 @@ TEST(BitBoard, all) {
 
   std::string actual_repr = get_repr(board);
   std::string expected_repr =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      " 1 x..................x  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    " 1 x..................x  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr, expected_repr);
 
@@ -117,11 +117,11 @@ TEST(BitBoard, all) {
 
   std::string actual_repr3 = get_repr(board3);
   std::string expected_repr3 =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      " 6 .x..................  6\n"
-      " 3 ....x...............  3\n"
-      " 1 x..................x  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    " 6 .x..................  6\n"
+    " 3 ....x...............  3\n"
+    " 1 x..................x  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr3, expected_repr3);
 
@@ -132,9 +132,9 @@ TEST(BitBoard, all) {
 
   std::string actual_repr4 = get_repr(board4);
   std::string expected_repr4 =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      " 1 x...................  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    " 1 x...................  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr4, expected_repr4);
 
@@ -143,28 +143,28 @@ TEST(BitBoard, all) {
   BitBoard board5 = ~board;
   std::string actual_repr5 = get_repr(board5);
   std::string expected_repr5 =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      "20 xxxxxxxxxxxxxxxxxxxx 20\n"
-      "19 xxxxxxxxxxxxxxxxxxxx 19\n"
-      "18 xxxxxxxxxxxxxxxxxxxx 18\n"
-      "17 xxxxxxxxxxxxxxxxxxxx 17\n"
-      "16 xxxxxxxxxxxxxxxxxxxx 16\n"
-      "15 xxxxxxxxxxxxxxxxxxxx 15\n"
-      "14 xxxxxxxxxxxxxxxxxxxx 14\n"
-      "13 xxxxxxxxxxxxxxxxxxxx 13\n"
-      "12 xxxxxxxxxxxxxxxxxxxx 12\n"
-      "11 xxxxxxxxxxxxxxxxxxxx 11\n"
-      "10 xxxxxxxxxxxxxxxxxxxx 10\n"
-      " 9 xxxxxxxxxxxxxxxxxxxx  9\n"
-      " 8 xxxxxxxxxxxxxxxxxxxx  8\n"
-      " 7 xxxxxxxxxxxxxxxxxxxx  7\n"
-      " 6 xxxxxxxxxxxxxxxxxxxx  6\n"
-      " 5 xxxxxxxxxxxxxxxxxxxx  5\n"
-      " 4 xxxxxxxxxxxxxxxxxxxx  4\n"
-      " 3 xxxxxxxxxxxxxxxxxxxx  3\n"
-      " 2 xxxxxxxxxxxxxxxxxxxx  2\n"
-      " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    "20 xxxxxxxxxxxxxxxxxxxx 20\n"
+    "19 xxxxxxxxxxxxxxxxxxxx 19\n"
+    "18 xxxxxxxxxxxxxxxxxxxx 18\n"
+    "17 xxxxxxxxxxxxxxxxxxxx 17\n"
+    "16 xxxxxxxxxxxxxxxxxxxx 16\n"
+    "15 xxxxxxxxxxxxxxxxxxxx 15\n"
+    "14 xxxxxxxxxxxxxxxxxxxx 14\n"
+    "13 xxxxxxxxxxxxxxxxxxxx 13\n"
+    "12 xxxxxxxxxxxxxxxxxxxx 12\n"
+    "11 xxxxxxxxxxxxxxxxxxxx 11\n"
+    "10 xxxxxxxxxxxxxxxxxxxx 10\n"
+    " 9 xxxxxxxxxxxxxxxxxxxx  9\n"
+    " 8 xxxxxxxxxxxxxxxxxxxx  8\n"
+    " 7 xxxxxxxxxxxxxxxxxxxx  7\n"
+    " 6 xxxxxxxxxxxxxxxxxxxx  6\n"
+    " 5 xxxxxxxxxxxxxxxxxxxx  5\n"
+    " 4 xxxxxxxxxxxxxxxxxxxx  4\n"
+    " 3 xxxxxxxxxxxxxxxxxxxx  3\n"
+    " 2 xxxxxxxxxxxxxxxxxxxx  2\n"
+    " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr5, expected_repr5);
 
@@ -185,14 +185,14 @@ TEST(BitBoard, all) {
 
   std::string actual_repr6 = get_repr(board6);
   std::string expected_repr6 =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      " 6 xxx.................  6\n"
-      " 5 xxxxxxxxxxxxxxxxxxxx  5\n"
-      " 4 xxxxxxxxxxxxxxxxxxxx  4\n"
-      " 3 xxxxxxxxxxxxxxxxxxxx  3\n"
-      " 2 xxxxxxxxxxxxxxxxxxxx  2\n"
-      " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    " 6 xxx.................  6\n"
+    " 5 xxxxxxxxxxxxxxxxxxxx  5\n"
+    " 4 xxxxxxxxxxxxxxxxxxxx  4\n"
+    " 3 xxxxxxxxxxxxxxxxxxxx  3\n"
+    " 2 xxxxxxxxxxxxxxxxxxxx  2\n"
+    " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr6, expected_repr6);
 
@@ -314,9 +314,9 @@ TEST(BitBoard, all) {
   board10.set(17, 16);
 
   Location constraint_locs10[8] = {{19, 19}, {19, 17}, {19, 15}, {18, 18},
-                                  {18, 16}, {17, 19}, {17, 17}, {17, 15}};
+                                   {18, 16}, {17, 19}, {17, 17}, {17, 15}};
   corner_constraint_t expected_constraints10[8] = {ccNone, ccNone, ccW,  ccS,
-                                                  ccNone, ccSW,   ccSE, ccSW};
+                                                   ccNone, ccSW,   ccSE, ccSW};
 
   for (i = 0; i < 8; ++i) {
     corner_constraint_t actual = board10.get_corner_constraint(constraint_locs10[i]);
@@ -339,10 +339,10 @@ TEST(BitBoard, all) {
 
   std::string actual_repr11 = get_repr(board11);
   std::string expected_repr11 =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      " 2 xx..................  2\n"
-      " 1 xx.................x  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    " 2 xx..................  2\n"
+    " 1 xx.................x  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   EXPECT_EQ(actual_repr11, expected_repr11);
 
@@ -505,28 +505,28 @@ TEST(PieceOrientationCorner, all) {
 
 TEST(State, load) {
   std::string repr =
-      "   ABCDEFGHIJKLMNOPQRST\n"
-      "20 Y...Y..Y..YY.R....RR 20\n"
-      "19 Y...Y...YY.YYRR...RR 19\n"
-      "18 .Y..Y..YY.R...RR..R. 18\n"
-      "17 .YYY...Y.YRRR...RR.R 17\n"
-      "16 BBY.YYY.BY...RRR..RR 16\n"
-      "15 .B.Y.YB.BYR....R.... 15\n"
-      "14 BB.YYBBB.YRR.R.R.RRR 14\n"
-      "13 ..BBB.YY.YR.RRR.R... 13\n"
-      "12 BB.YBBYYY.R....RRR.. 12\n"
-      "11 B.BYYY...Y..R.R.R.R. 11\n"
-      "10 B.BB..YYYY..RRR....R 10\n"
-      " 9 B.YYYYBRRRRR..G.GG.R  9\n"
-      " 8 .BB.BBBB.BBBB.G..G.R  8\n"
-      " 7 B.BB.GG.B..G.GG.G..R  7\n"
-      " 6 GGGBG.G.BGGG.G.GGGG.  6\n"
-      " 5 BBBGGBGGB..G..G....G  5\n"
-      " 4 B..G.BBB..G...G...GG  4\n"
-      " 3 .BG.G.B.GGG...G..GG.  3\n"
-      " 2 BBG.GGGG.G.GG.G.....  2\n"
-      " 1 BB.G.......GGG.GGGGG  1\n"
-      "   ABCDEFGHIJKLMNOPQRST\n";
+    "   ABCDEFGHIJKLMNOPQRST\n"
+    "20 Y...Y..Y..YY.R....RR 20\n"
+    "19 Y...Y...YY.YYRR...RR 19\n"
+    "18 .Y..Y..YY.R...RR..R. 18\n"
+    "17 .YYY...Y.YRRR...RR.R 17\n"
+    "16 BBY.YYY.BY...RRR..RR 16\n"
+    "15 .B.Y.YB.BYR....R.... 15\n"
+    "14 BB.YYBBB.YRR.R.R.RRR 14\n"
+    "13 ..BBB.YY.YR.RRR.R... 13\n"
+    "12 BB.YBBYYY.R....RRR.. 12\n"
+    "11 B.BYYY...Y..R.R.R.R. 11\n"
+    "10 B.BB..YYYY..RRR....R 10\n"
+    " 9 B.YYYYBRRRRR..G.GG.R  9\n"
+    " 8 .BB.BBBB.BBBB.G..G.R  8\n"
+    " 7 B.BB.GG.B..G.GG.G..R  7\n"
+    " 6 GGGBG.G.BGGG.G.GGGG.  6\n"
+    " 5 BBBGGBGGB..G..G....G  5\n"
+    " 4 B..G.BBB..G...G...GG  4\n"
+    " 3 .BG.G.B.GGG...G..GG.  3\n"
+    " 2 BBG.GGGG.G.GG.G.....  2\n"
+    " 1 BB.G.......GGG.GGGGG  1\n"
+    "   ABCDEFGHIJKLMNOPQRST\n";
 
   State state = Game::IO::load(repr);
   std::string repr2 = get_repr(state);
@@ -534,6 +534,4 @@ TEST(State, load) {
   EXPECT_EQ(repr, repr2);
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

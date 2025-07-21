@@ -1,6 +1,5 @@
-#include "games/hex/GameState.hpp"
-
 #include "games/hex/Constants.hpp"
+#include "games/hex/GameState.hpp"
 #include "games/hex/MaskReverser.hpp"
 #include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -28,9 +27,7 @@ inline void GameState::rotate() {
   }
 }
 
-inline void GameState::Core::init() {
-  std::memset(this, 0, sizeof(Core));
-}
+inline void GameState::Core::init() { std::memset(this, 0, sizeof(Core)); }
 
 inline vertex_t GameState::Core::find_occupied(core::seat_index_t seat) const {
   for (int row = 0; row < Constants::kBoardDim; ++row) {

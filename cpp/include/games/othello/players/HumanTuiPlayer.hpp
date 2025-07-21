@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "generic_players/HumanTuiPlayer.hpp"
 #include "games/othello/Game.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
 
 namespace othello {
 

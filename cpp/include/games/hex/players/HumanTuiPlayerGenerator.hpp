@@ -2,9 +2,9 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
-#include "generic_players/HumanTuiPlayerGenerator.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayer.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
 
 namespace hex {
 

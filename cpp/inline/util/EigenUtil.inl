@@ -1,6 +1,5 @@
-#include "util/EigenUtil.hpp"
-
 #include "util/Asserts.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Random.hpp"
 
@@ -104,7 +103,7 @@ inline std::string float_to_str8(float x) {
 
   size_t e = s2.find('e');
   std::string mantissa = s2.substr(0, e);
-  int exponent = std::atoi(s2.substr(e+1).c_str());
+  int exponent = std::atoi(s2.substr(e + 1).c_str());
 
   if (exponent == 0) {
     return s;
@@ -155,7 +154,7 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
-template<typename Derived>
+template <typename Derived>
 auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix, bool ascending) {
   RELEASE_ASSERT(row_ix < array.rows());
 
@@ -166,13 +165,11 @@ auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix, bool ascen
     columns[i] = array.col(i);
   }
   if (ascending) {
-    std::sort(columns, columns + n, [row_ix](const Column& a, const Column& b) {
-      return a(row_ix) < b(row_ix);
-    });
+    std::sort(columns, columns + n,
+              [row_ix](const Column& a, const Column& b) { return a(row_ix) < b(row_ix); });
   } else {
-    std::sort(columns, columns + n, [row_ix](const Column& a, const Column& b) {
-      return a(row_ix) > b(row_ix);
-    });
+    std::sort(columns, columns + n,
+              [row_ix](const Column& a, const Column& b) { return a(row_ix) > b(row_ix); });
   }
 
   auto out = array.eval();
@@ -193,13 +190,11 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascendin
     rows[i] = array.row(i);
   }
   if (ascending) {
-    std::sort(rows, rows + n, [col_ix](const Row& a, const Row& b) {
-      return a(col_ix) < b(col_ix);
-    });
+    std::sort(rows, rows + n,
+              [col_ix](const Row& a, const Row& b) { return a(col_ix) < b(col_ix); });
   } else {
-    std::sort(rows, rows + n, [col_ix](const Row& a, const Row& b) {
-      return a(col_ix) > b(col_ix);
-    });
+    std::sort(rows, rows + n,
+              [col_ix](const Row& a, const Row& b) { return a(col_ix) > b(col_ix); });
   }
 
   auto out = array.eval();
@@ -410,7 +405,7 @@ template <int Dim, concepts::FTensor Tensor>
 struct MatrixSlice {
   static_assert(Dim * Dim <= Tensor::Dimensions::total_size, "Tensor is too small");
   using type = Eigen::Map<
-      Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
+    Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
 };
 
 template <int Dim, concepts::FTensor Tensor>
@@ -442,25 +437,29 @@ void rot270_clockwise(Tensor& tensor) {
   slice.colwise().reverseInPlace();
 }
 
-template<int Dim, concepts::FTensor Tensor> void flip_vertical(Tensor& tensor) {
+template <int Dim, concepts::FTensor Tensor>
+void flip_vertical(Tensor& tensor) {
   using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
   MatrixSlice slice(tensor.data());
   slice.colwise().reverseInPlace();
 }
 
-template<int Dim, concepts::FTensor Tensor> void mirror_horizontal(Tensor& tensor) {
+template <int Dim, concepts::FTensor Tensor>
+void mirror_horizontal(Tensor& tensor) {
   using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
   MatrixSlice slice(tensor.data());
   slice.rowwise().reverseInPlace();
 }
 
-template<int Dim, concepts::FTensor Tensor> void flip_main_diag(Tensor& tensor) {
+template <int Dim, concepts::FTensor Tensor>
+void flip_main_diag(Tensor& tensor) {
   using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
   MatrixSlice slice(tensor.data());
   slice.transposeInPlace();
 }
 
-template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor) {
+template <int Dim, concepts::FTensor Tensor>
+void flip_anti_diag(Tensor& tensor) {
   using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
   MatrixSlice slice(tensor.data());
   slice.transposeInPlace();
@@ -475,7 +474,7 @@ uint64_t hash(const Tensor& tensor) {
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 
-template<typename Derived>
+template <typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
   auto mean = X.colwise().mean();
   auto centered = X.rowwise() - mean;
@@ -563,7 +562,7 @@ auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
   constexpr int MaxRowsAtCompileTime = Derived0::MaxRowsAtCompileTime;
 
   using ResultT =
-      Eigen::Array<Scalar, RowsAtCompileTime, ColsAtCompileTime, Options, MaxRowsAtCompileTime>;
+    Eigen::Array<Scalar, RowsAtCompileTime, ColsAtCompileTime, Options, MaxRowsAtCompileTime>;
 
   ResultT result(rows, num_arrays);
 

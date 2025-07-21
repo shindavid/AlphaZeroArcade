@@ -1,5 +1,4 @@
 #include "core/Main.hpp"
-
 #include "util/LoggingUtil.hpp"
 
 #ifdef MIT_TEST_MODE
@@ -13,10 +12,9 @@ auto Main<PlayerFactory>::Args::make_options_description() {
 
   po2::options_description desc("Program options");
 
-  return desc
-      .template add_option<"player">(po::value<std::vector<std::string>>(&player_strs),
-                                     "Space-delimited list of player options, wrapped "
-                                     "in quotes, to be specified multiple times");
+  return desc.template add_option<"player">(po::value<std::vector<std::string>>(&player_strs),
+                                            "Space-delimited list of player options, wrapped "
+                                            "in quotes, to be specified multiple times");
 }
 
 template <typename PlayerFactory>
@@ -43,14 +41,14 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
 
     po2::options_description raw_desc("General options");
     auto desc = raw_desc.template add_option<"help", 'h'>("help (most used options)")
-                    .template add_option<"help-full">("help (all options)")
-                    .add(args.make_options_description())
-                    .add(training_data_writer_params.make_options_description())
-                    .add(log_params.make_options_description())
-                    .add(random_params.make_options_description())
-                    .add(loop_controller_params.make_options_description())
-                    .add(game_server_params.make_options_description())
-                    .add(game_server_proxy_params.make_options_description());
+                  .template add_option<"help-full">("help (all options)")
+                  .add(args.make_options_description())
+                  .add(training_data_writer_params.make_options_description())
+                  .add(log_params.make_options_description())
+                  .add(random_params.make_options_description())
+                  .add(loop_controller_params.make_options_description())
+                  .add(game_server_params.make_options_description())
+                  .add(game_server_proxy_params.make_options_description());
 
     po::variables_map vm = po2::parse_args(desc, ac, av);
 

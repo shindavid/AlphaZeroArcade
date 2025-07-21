@@ -8,7 +8,7 @@ constexpr bool kEnableDebugLogging = IS_DEFINED(MIT_DEBUG_LOGGING);
 
 }  // namespace mit
 
-#define MIT_LOG(...) \
+#define MIT_LOG(...)              \
   if (mit::kEnableDebugLogging) { \
-    LOG_INFO(__VA_ARGS__); \
+    LOG_INFO(__VA_ARGS__);        \
   }

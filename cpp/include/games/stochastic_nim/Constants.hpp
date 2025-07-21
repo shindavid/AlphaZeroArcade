@@ -26,4 +26,4 @@ constexpr core::seat_index_t kPlayer0 = 0;
 constexpr core::seat_index_t kPlayer1 = 1;
 
 constexpr int kStartingStonesBitWidth = std::bit_width(uint32_t(kStartingStones));
-}
+}  // namespace stochastic_nim

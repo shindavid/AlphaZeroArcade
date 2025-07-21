@@ -58,7 +58,6 @@ class ActionSymmetryTable {
   boost::json::array to_json() const;
 
  private:
-
   // action_array_ is a compact representation of the acton equivalence classes.
   //
   // The equivalence classes are concatenated together. Each maximal increasing subsequence

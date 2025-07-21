@@ -1,6 +1,5 @@
-#include "util/FiniteGroups.hpp"
-
 #include "util/Asserts.hpp"
+#include "util/FiniteGroups.hpp"
 #include "util/Random.hpp"
 
 namespace groups {

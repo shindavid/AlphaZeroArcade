@@ -4,7 +4,6 @@
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
-
 #include <format>
 #include <string>
 

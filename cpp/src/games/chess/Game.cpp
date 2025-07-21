@@ -8,8 +8,7 @@ void Game::IO::print_state(std::ostream&, const State&, core::action_t last_acti
 }
 
 // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
-Game::InputTensorizor::MCTSKey Game::InputTensorizor::mcts_key(
-    const StateHistory& history) {
+Game::InputTensorizor::MCTSKey Game::InputTensorizor::mcts_key(const StateHistory& history) {
   throw std::runtime_error("Not implemented");
 }
 

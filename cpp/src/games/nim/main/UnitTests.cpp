@@ -88,13 +88,11 @@ TEST(NimGameTest, tensorize) {
   Rules::apply(history, 0);  // Player 1
 
   Game::InputTensorizor::Tensor tensor =
-      Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
+    Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
   float expectedValues[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
   }
 }
 
-int main(int argc, char **argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char **argv) { return launch_gtest(argc, argv); }

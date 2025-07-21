@@ -1,5 +1,4 @@
 #include "util/AllocPool.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/mit/mit.hpp"
 
@@ -9,7 +8,7 @@ namespace util {
 
 namespace detail {
 
-template<int N>
+template <int N>
 int get_block_index(pool_index_t i) {
   return std::max(0, 64 - N - std::countl_zero(uint64_t(i)));
 }

@@ -15,8 +15,8 @@ concept GameMctsConfiguration = requires {
    * parameters for move-temperature and root-softmax-temperature. Those parameters will decay
    * using kOpeningLength as the *quarter-life* (or, 0.5 * kOpeningLength as the half-life).
    *
-   * Roughly speaking, if you are willing to tolerate slightly suboptimal move-selection in the first
-   * N moves of the game, tightening up to optimal play after that, then you should set
+   * Roughly speaking, if you are willing to tolerate slightly suboptimal move-selection in the
+   * first N moves of the game, tightening up to optimal play after that, then you should set
    * kOpeningLength to N. The reason to tolerate suboptimality in the opening is so that the agent
    * does not act too deterministically. This helps achieve data diversity in training, and also
    * more meaningful testing.
@@ -34,5 +34,5 @@ concept GameMctsConfiguration = requires {
   { util::decay_copy(MC::kStoreStates) } -> std::same_as<bool>;
 };
 
-} // namespace concepts
+}  // namespace concepts
 }  // namespace core

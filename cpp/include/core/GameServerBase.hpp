@@ -51,9 +51,7 @@ class GameServerBase {
 
   void add_client(GameServerClient* client);
 
-  int num_game_threads() const {
-    return num_game_threads_;
-  }
+  int num_game_threads() const { return num_game_threads_; }
 
   // Tells the server that it should probably use alternating mode.
   virtual void handle_alternating_mode_recommendation() {}

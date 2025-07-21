@@ -43,14 +43,12 @@ class PerfectPlayerTest : public testing::Test {
   PerfectPlayer player_;
 };
 
-class PerfectStrategyTest: public testing::Test {
+class PerfectStrategyTest : public testing::Test {
  protected:
   using PerfectStrategy = stochastic_nim::PerfectStrategy;
 
  public:
-  PerfectStrategy get_strategy() {
-    return PerfectStrategy();
-  }
+  PerfectStrategy get_strategy() { return PerfectStrategy(); }
 };
 
 TEST_F(PerfectPlayerTest, 4_stones_player0) {
@@ -109,7 +107,6 @@ TEST_F(PerfectStrategyTest, verify_state_values) {
   EXPECT_EQ(strategy.get_optimal_action(1), stochastic_nim::kTake1);
   EXPECT_THROW(strategy.get_optimal_action(0), util::Exception);
 }
-
 
 TEST(StochasticNimGameTest, InitialState) {
   StateHistory history;
@@ -192,18 +189,17 @@ TEST(StochasticNimGameTest, ChanceMove) {
   }
   float mean = 18 * 0.2 + 17 * 0.3 + 16 * 0.5;
   float sigma = std::sqrt(
-      (0.2 * std::pow(16 - mean, 2) + 0.3 * std::pow(17 - mean, 2) + 0.5 * std::pow(18 - mean, 2)) /
-      num_trials);
+    (0.2 * std::pow(16 - mean, 2) + 0.3 * std::pow(17 - mean, 2) + 0.5 * std::pow(18 - mean, 2)) /
+    num_trials);
   EXPECT_NEAR(sum / num_trials, mean, 3 * sigma);
 }
 
 TEST(StochasticNimGameTest, Player0Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3};
+  std::vector<core::action_t> actions = {
+    stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
+    stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -224,10 +220,9 @@ TEST(StochasticNimGameTest, Player0Wins) {
 TEST(StochasticNimGameTest, Player1Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake1, stochastic_nim::kTake2};
+  std::vector<core::action_t> actions = {
+    stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
+    stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake1, stochastic_nim::kTake2};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -269,12 +264,12 @@ TEST(StochasticNimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
   Rules::apply(history, stochastic_nim::kTake2);  // Player 0 removes 2 stones
-  Rules::apply(history, 0);  // chance
+  Rules::apply(history, 0);                       // chance
   Rules::apply(history, stochastic_nim::kTake1);  // Player 1 removes 1 stone
-  Rules::apply(history, 0);  // chance
+  Rules::apply(history, 0);                       // chance
 
   Game::InputTensorizor::Tensor tensor =
-      Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
+    Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
@@ -298,7 +293,7 @@ void print_perfect_strategy_info() {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   print_perfect_strategy_info();
   return launch_gtest(argc, argv);
 }

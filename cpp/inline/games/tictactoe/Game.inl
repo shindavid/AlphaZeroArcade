@@ -1,6 +1,5 @@
-#include "games/tictactoe/Game.hpp"
-
 #include "core/DefaultCanonicalizer.hpp"
+#include "games/tictactoe/Game.hpp"
 
 namespace tictactoe {
 
@@ -76,9 +75,7 @@ inline void flip_anti_diag(mask_t& mask1, mask_t& mask2) {
 
 }  // namespace detail
 
-inline size_t Game::State::hash() const {
-  return (size_t(full_mask) << 16) + cur_player_mask;
-}
+inline size_t Game::State::hash() const { return (size_t(full_mask) << 16) + cur_player_mask; }
 
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
@@ -91,14 +88,22 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   using D4 = groups::D4;
   auto& s = state;
   switch (sym) {
-    case D4::kIdentity: return;
-    case D4::kRot90: return rot90_clockwise(s.cur_player_mask, s.full_mask);
-    case D4::kRot180: return rot180(s.cur_player_mask, s.full_mask);
-    case D4::kRot270: return rot270_clockwise(s.cur_player_mask, s.full_mask);
-    case D4::kFlipVertical: return flip_vertical(s.cur_player_mask, s.full_mask);
-    case D4::kFlipMainDiag: return flip_main_diag(s.cur_player_mask, s.full_mask);
-    case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.full_mask);
-    case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.full_mask);
+    case D4::kIdentity:
+      return;
+    case D4::kRot90:
+      return rot90_clockwise(s.cur_player_mask, s.full_mask);
+    case D4::kRot180:
+      return rot180(s.cur_player_mask, s.full_mask);
+    case D4::kRot270:
+      return rot270_clockwise(s.cur_player_mask, s.full_mask);
+    case D4::kFlipVertical:
+      return flip_vertical(s.cur_player_mask, s.full_mask);
+    case D4::kFlipMainDiag:
+      return flip_main_diag(s.cur_player_mask, s.full_mask);
+    case D4::kMirrorHorizontal:
+      return mirror_horizontal(s.cur_player_mask, s.full_mask);
+    case D4::kFlipAntiDiag:
+      return flip_anti_diag(s.cur_player_mask, s.full_mask);
     default: {
       throw util::Exception("Unknown group element: {}", sym);
     }
@@ -117,14 +122,22 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
   switch (sym) {
-    case D4::kIdentity: return;
-    case D4::kRot90: return rot90_clockwise<N>(tensor);
-    case D4::kRot180: return rot180<N>(tensor);
-    case D4::kRot270: return rot270_clockwise<N>(tensor);
-    case D4::kFlipVertical: return flip_vertical<N>(tensor);
-    case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
-    case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
-    case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
+    case D4::kIdentity:
+      return;
+    case D4::kRot90:
+      return rot90_clockwise<N>(tensor);
+    case D4::kRot180:
+      return rot180<N>(tensor);
+    case D4::kRot270:
+      return rot270_clockwise<N>(tensor);
+    case D4::kFlipVertical:
+      return flip_vertical<N>(tensor);
+    case D4::kFlipMainDiag:
+      return flip_main_diag<N>(tensor);
+    case D4::kMirrorHorizontal:
+      return mirror_horizontal<N>(tensor);
+    case D4::kFlipAntiDiag:
+      return flip_anti_diag<N>(tensor);
     default: {
       throw util::Exception("Unknown group element: {}", sym);
     }
@@ -134,14 +147,14 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
 inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
                                     core::action_mode_t) {
   constexpr int8_t lookup[] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 8,  // kIdentity
-      2, 5, 8, 1, 4, 7, 0, 3, 6,  // kRot90
-      8, 7, 6, 5, 4, 3, 2, 1, 0,  // kRot180
-      6, 3, 0, 7, 4, 1, 8, 5, 2,  // kRot270
-      6, 7, 8, 3, 4, 5, 0, 1, 2,  // kFlipVertical
-      0, 3, 6, 1, 4, 7, 2, 5, 8,  // kFlipMainDiag
-      2, 1, 0, 5, 4, 3, 8, 7, 6,  // kMirrorHorizontal
-      8, 5, 2, 7, 4, 1, 6, 3, 0,  // kFlipAntiDiag
+    0, 1, 2, 3, 4, 5, 6, 7, 8,  // kIdentity
+    2, 5, 8, 1, 4, 7, 0, 3, 6,  // kRot90
+    8, 7, 6, 5, 4, 3, 2, 1, 0,  // kRot180
+    6, 3, 0, 7, 4, 1, 8, 5, 2,  // kRot270
+    6, 7, 8, 3, 4, 5, 0, 1, 2,  // kFlipVertical
+    0, 3, 6, 1, 4, 7, 2, 5, 8,  // kFlipMainDiag
+    2, 1, 0, 5, 4, 3, 8, 7, 6,  // kMirrorHorizontal
+    8, 5, 2, 7, 4, 1, 6, 3, 0,  // kFlipAntiDiag
   };
 
   action = lookup[sym * 9 + action];

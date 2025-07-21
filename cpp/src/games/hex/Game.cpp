@@ -9,7 +9,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
 
   if (action == kSwap) {
     DEBUG_ASSERT(cp == Constants::kWhite && !state->core.post_swap_phase,
-                       "Swap action can only be applied by White before the swap phase");
+                 "Swap action can only be applied by White before the swap phase");
 
     core::action_t prev_action = state->core.find_occupied(Constants::kBlack);
     history.initialize(Rules{});
@@ -24,12 +24,15 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     State::Aux& aux = state->aux;
 
     DEBUG_ASSERT(!(core.rows[cp][row] & (mask_t(1) << col)),
-                       "Cannot place a piece on an already occupied cell");
+                 "Cannot place a piece on an already occupied cell");
     core.rows[cp][row] |= (mask_t(1) << col);
 
     constexpr int kMaxNumNeighbors = 6;
     struct neighbor_t {
-      void init(int8_t r, int8_t c) { row = r; col = c; }
+      void init(int8_t r, int8_t c) {
+        row = r;
+        col = c;
+      }
       int8_t row;
       int8_t col;
     };
@@ -41,11 +44,11 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
       num_neighbors += use;
     };
 
-    init(row + 1, col,     row + 1 < B);
-    init(row - 1, col,     row > 0);
-    init(row,     col + 1,                col + 1 < B);
-    init(row,     col - 1,                col > 0);
-    init(row - 1, col + 1, row > 0     && col + 1 < B);
+    init(row + 1, col, row + 1 < B);
+    init(row - 1, col, row > 0);
+    init(row, col + 1, col + 1 < B);
+    init(row, col - 1, col > 0);
+    init(row - 1, col + 1, row > 0 && col + 1 < B);
     init(row + 1, col - 1, row + 1 < B && col > 0);
 
     // filter out neighbors that are not occupied by the current player
@@ -121,11 +124,10 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   cx += snprintf(buffer + cx, buf_size - cx, "               %sA B C D E F G H I J K%s\n",
                  ansi::kBlue(""), ansi::kReset(""));
   for (int row = B - 1; row >= 0; --row) {
-    cx += print_row(buffer + cx, buf_size - cx, state, row,
-                    row == blink_row ? blink_col : -1);
+    cx += print_row(buffer + cx, buf_size - cx, state, row, row == blink_row ? blink_col : -1);
   }
-  cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n",
-                 ansi::kBlue(""), ansi::kReset(""));
+  cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n", ansi::kBlue(""),
+                 ansi::kReset(""));
 
   if (player_names) {
     cx += snprintf(buffer + cx, buf_size - cx, "\n");
@@ -177,6 +179,5 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
   cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kWhite(""), row + 1, ansi::kReset(""));
   return cx;
 }
-
 
 }  // namespace hex

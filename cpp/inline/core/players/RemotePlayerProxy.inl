@@ -1,22 +1,20 @@
-#include "core/players/RemotePlayerProxy.hpp"
-
 #include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
+#include "core/players/RemotePlayerProxy.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
-
 #include <sys/socket.h>
 
 namespace core {
 
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::PacketDispatcher::dispatcher_map_t
-    RemotePlayerProxy<Game>::PacketDispatcher::dispatcher_map_;
+  RemotePlayerProxy<Game>::PacketDispatcher::dispatcher_map_;
 
 template <concepts::Game Game>
-RemotePlayerProxy<Game>::PacketDispatcher*
-RemotePlayerProxy<Game>::PacketDispatcher::create(io::Socket* socket) {
+RemotePlayerProxy<Game>::PacketDispatcher* RemotePlayerProxy<Game>::PacketDispatcher::create(
+  io::Socket* socket) {
   auto it = dispatcher_map_.find(socket);
   if (it != dispatcher_map_.end()) {
     return it->second;
@@ -54,17 +52,15 @@ void RemotePlayerProxy<Game>::PacketDispatcher::teardown() {
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::PacketDispatcher::add_player(
-    RemotePlayerProxy<Game>* player) {
+void RemotePlayerProxy<Game>::PacketDispatcher::add_player(RemotePlayerProxy<Game>* player) {
   game_slot_index_t game_slot_index = player->game_slot_index_;
   player_id_t player_id = player->player_id_;
 
-  CLEAN_ASSERT(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id ({})",
-                     player_id);
+  CLEAN_ASSERT(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id ({})", player_id);
   auto& vec = player_vec_array_[player_id];
 
-  CLEAN_ASSERT((int)game_slot_index == (int)vec.size(),
-                     "Unexpected game_slot_index ({} != {})", game_slot_index, vec.size());
+  CLEAN_ASSERT((int)game_slot_index == (int)vec.size(), "Unexpected game_slot_index ({} != {})",
+               game_slot_index, vec.size());
 
   vec.push_back(player);
 }
@@ -96,8 +92,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::loop() {
 }
 
 template <concepts::Game Game>
-RemotePlayerProxy<Game>::PacketDispatcher::PacketDispatcher(io::Socket* socket)
-    : socket_(socket) {}
+RemotePlayerProxy<Game>::PacketDispatcher::PacketDispatcher(io::Socket* socket) : socket_(socket) {}
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacket& packet) {
@@ -151,7 +146,7 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
-    const ActionRequest& request) {
+  const ActionRequest& request) {
   if (yielding_) {
     yielding_ = false;
     return action_response_;
@@ -160,8 +155,8 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
 
   action_response_.action = -1;
 
-  RELEASE_ASSERT(request.notification_unit.context_id == 0,
-                       "Unexpected context_id: {}", request.notification_unit.context_id);
+  RELEASE_ASSERT(request.notification_unit.context_id == 0, "Unexpected context_id: {}",
+                 request.notification_unit.context_id);
 
   Packet<ActionPrompt> packet;
   packet.payload().game_slot_index = game_slot_index_;

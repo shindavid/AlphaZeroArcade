@@ -17,7 +17,7 @@ class thread;
 // merely holds a shared pointer to it. This allows us to implement move semantics in a simple
 // way.
 struct thread_impl {
-  thread_impl(thread* t, bool activate=false, bool skip_registration=false);
+  thread_impl(thread* t, bool activate = false, bool skip_registration = false);
   ~thread_impl();
 
   void mark_as_blocked_by(condition_variable* cv);
@@ -53,7 +53,8 @@ class thread {
   friend class scheduler;
 
   thread();
-  template <typename Function> explicit thread(Function&& func);
+  template <typename Function>
+  explicit thread(Function&& func);
   ~thread();
 
   thread(thread&& other);

@@ -1,6 +1,5 @@
-#include "generic_players/MctsPlayerGenerator.hpp"
-
 #include "core/LoopControllerClient.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
 #include "mcts/Constants.hpp"
 
 #include <format>
@@ -75,8 +74,8 @@ std::string MctsPlayerGeneratorBase<Game, PlayerT, Mode>::get_description() cons
 }
 
 template <core::concepts::Game Game, typename PlayerT, mcts::Mode Mode>
-PlayerT* MctsPlayerGeneratorBase<Game, PlayerT, Mode>::generate_helper(
-  SharedData_sptr& shared_data, bool owns_shared_data) {
+PlayerT* MctsPlayerGeneratorBase<Game, PlayerT, Mode>::generate_helper(SharedData_sptr& shared_data,
+                                                                       bool owns_shared_data) {
   return new PlayerT(this->mcts_player_params_, shared_data, owns_shared_data);
 }
 

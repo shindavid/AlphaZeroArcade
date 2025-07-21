@@ -41,9 +41,7 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
   using ActionMask = NNEvaluation::ActionMask;
 
   MockNNEvaluationService(bool smart) : smart_(smart) {
-    this->set_init_func([&](NNEvaluation* eval, const Item& item) {
-      this->init_eval(eval, item);
-    });
+    this->set_init_func([&](NNEvaluation* eval, const Item& item) { this->init_eval(eval, item); });
   }
 
   void init_eval(NNEvaluation* eval, const Item& item) {
@@ -89,7 +87,7 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
   bool smart_;
 };
 
-template<core::concepts::Game Game>
+template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Manager = mcts::Manager<Game>;
@@ -186,7 +184,7 @@ class ManagerTest : public testing::Test {
     std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
                                      std::istreambuf_iterator<char>());
     std::string expected_graph_json((std::istreambuf_iterator<char>(graph_file)),
-                                  std::istreambuf_iterator<char>());
+                                    std::istreambuf_iterator<char>());
 
     EXPECT_EQ(ss_result.str(), expected_result_json);
     EXPECT_EQ(get_search_log()->last_graph_json_str(), expected_graph_json);
@@ -201,29 +199,27 @@ class ManagerTest : public testing::Test {
 
 using NimManagerTest = ManagerTest<Nim>;
 TEST_F(NimManagerTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake2};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
   test_search("nim_uniform_10", 10, initial_actions, nullptr);
 }
 
 TEST_F(NimManagerTest, smart_search) {
   MockNNEvaluationService mock_service(true);
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake2};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
   test_search("nim_smart_service", 10, initial_actions, &mock_service);
 }
 
 TEST_F(NimManagerTest, dumb_search) {
   MockNNEvaluationService mock_service(false);
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake2};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
 
   test_search("nim_dumb_service", 10, initial_actions, &mock_service);
 }
 
-TEST_F(NimManagerTest, 20_searches_from_scratch) {
-  test_search("nim_uniform", 20, {}, nullptr);
-}
+TEST_F(NimManagerTest, 20_searches_from_scratch) { test_search("nim_uniform", 20, {}, nullptr); }
 
 TEST_F(NimManagerTest, 40_searches_from_4_stones) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
@@ -275,7 +271,6 @@ TEST_F(StochasticNimManagerTest, 100_searches_from_6_stones) {
 
 using TicTacToeManagerTest = ManagerTest<TicTacToe>;
 TEST_F(TicTacToeManagerTest, uniform_search_log) {
-
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_search("tictactoe_uniform", 40, initial_actions, nullptr);
 }

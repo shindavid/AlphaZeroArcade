@@ -6,9 +6,7 @@ namespace bitmap_util {
 
 namespace detail {
 
-inline void flip_vertical(uint64_t& mask) {
-  mask = std::byteswap(mask);
-}
+inline void flip_vertical(uint64_t& mask) { mask = std::byteswap(mask); }
 
 inline void mirror_horizontal(uint64_t& mask) {
   constexpr uint64_t k1 = 0x5555555555555555UL;

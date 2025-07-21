@@ -1,6 +1,5 @@
-#include "games/blokus/players/HumanTuiPlayer.hpp"
-
 #include "games/blokus/Constants.hpp"
+#include "games/blokus/players/HumanTuiPlayer.hpp"
 #include "util/BitSet.hpp"
 
 #include <iostream>
@@ -58,8 +57,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
   }
 }
 
-inline void HumanTuiPlayer::prompt_for_piece(const State& state, const p_map_t& p_map,
-                                             Piece& p) {
+inline void HumanTuiPlayer::prompt_for_piece(const State& state, const p_map_t& p_map, Piece& p) {
   if (p >= 0) return;
 
   TuiPrompt prompt;

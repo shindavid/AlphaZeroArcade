@@ -1,24 +1,23 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/IOBase.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinLossDrawResults.hpp"
+#include "core/concepts/Game.hpp"
+#include "games/GameRulesBase.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/LcZeroPositionHistoryAdapter.hpp"
-#include "games/GameRulesBase.hpp"
+#include "lc0/chess/position.h"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
-
-#include "lc0/chess/position.h"
 
 #include <boost/functional/hash.hpp>
 
@@ -73,8 +72,12 @@ struct Game {
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history);
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

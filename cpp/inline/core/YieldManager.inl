@@ -1,5 +1,4 @@
 #include "core/YieldManager.hpp"
-
 #include "util/LoggingUtil.hpp"
 
 namespace core {

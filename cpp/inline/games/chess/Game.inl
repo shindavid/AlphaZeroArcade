@@ -1,16 +1,15 @@
-#include "games/chess/Game.hpp"
-
 #include "core/DefaultCanonicalizer.hpp"
+#include "games/chess/Game.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/BitMapUtil.hpp"
 #include "util/BitSet.hpp"
 #include "util/CppUtil.hpp"
 
+#include <boost/lexical_cast.hpp>
+
 #include <algorithm>
 #include <bit>
 #include <iostream>
-
-#include <boost/lexical_cast.hpp>
 
 namespace chess {
 
@@ -49,7 +48,7 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
   return lczero::MoveFromNNIndex(action, 0).as_string();
 }
 
-template<typename Iter>
+template <typename Iter>
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
   throw std::runtime_error("Not implemented");
 }

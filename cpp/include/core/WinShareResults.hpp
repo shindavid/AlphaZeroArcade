@@ -22,7 +22,7 @@ namespace core {
  * of length 2^p - 1, which is not practical (particularly because many of those outcomes may be
  * sparsely represented in the training data). WinShareResults is a good compromise.
  */
-template<int kNumPlayers>
+template <int kNumPlayers>
 struct WinShareResults {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers>>;
   using ValueArray = eigen_util::FArray<kNumPlayers>;
@@ -37,9 +37,7 @@ struct WinShareResults {
     return result;
   }
 
-  static ValueArray to_value_array(const Tensor& t) {
-    return eigen_util::reinterpret_as_array(t);
-  }
+  static ValueArray to_value_array(const Tensor& t) { return eigen_util::reinterpret_as_array(t); }
 
   static void left_rotate(Tensor& t, core::seat_index_t s) {
     ValueArray& v = eigen_util::reinterpret_as_array(t);

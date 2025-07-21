@@ -1,5 +1,4 @@
 #include "core/GameLog.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
@@ -27,16 +26,13 @@ void ShapeInfo::init(const char* nm, int target_idx) {
   }
 }
 
-inline ShapeInfo::~ShapeInfo() {
-  delete[] dims;
-}
+inline ShapeInfo::~ShapeInfo() { delete[] dims; }
 
 inline constexpr int GameLogCommon::align(int offset) {
   return math::round_up_to_nearest_multiple(offset, kAlignment);
 }
 
-inline GameLogFileReader::GameLogFileReader(const char* buffer)
-    : buffer_(buffer) {}
+inline GameLogFileReader::GameLogFileReader(const char* buffer) : buffer_(buffer) {}
 
 inline const GameLogFileHeader& GameLogFileReader::header() const {
   return *reinterpret_cast<const GameLogFileHeader*>(buffer_);
@@ -244,8 +240,8 @@ void GameReadLog<Game>::merge_files(const char** input_filenames, int n_input_fi
     out_buffer.insert(out_buffer.end(), game_buffer, game_buffer + metadata.data_size);
   }
 
-  RELEASE_ASSERT(out_buffer.size() == out_buffer_size, "Size mismatch {} != {}",
-                       out_buffer.size(), out_buffer_size);
+  RELEASE_ASSERT(out_buffer.size() == out_buffer_size, "Size mismatch {} != {}", out_buffer.size(),
+                 out_buffer_size);
 
   std::ofstream output_file(output_filename, std::ios::binary);
   output_file.write(out_buffer.data(), out_buffer.size());
@@ -261,8 +257,8 @@ template <concepts::Game Game>
 void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
                              const std::vector<int>& target_indices, float* output_array) const {
   RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_positions(),
-                       "Index {} out of bounds [0, {}) in {}[{}]", row_index,
-                       num_sampled_positions(), filename_, game_index_);
+                 "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_positions(),
+                 filename_, game_index_);
 
   pos_index_t state_index = get_pos_index(row_index);
   mem_offset_t mem_offset = get_mem_offset(state_index);
@@ -324,7 +320,7 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
   ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
-  GameLogView view{cur_pos, &final_state, &outcome, policy_ptr,
+  GameLogView view{cur_pos,         &final_state,      &outcome,   policy_ptr,
                    next_policy_ptr, action_values_ptr, active_seat};
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
@@ -403,7 +399,7 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
 template <concepts::Game Game>
 bool GameReadLog<Game>::get_policy(mem_offset_t mem_offset, PolicyTensor& policy) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
-  const TensorData* policy_data = (const TensorData*) &buffer_[full_offset];
+  const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
 
   return policy_data->load(policy);
 }
@@ -431,13 +427,13 @@ const typename GameReadLog<Game>::ValueTensor& GameReadLog<Game>::get_outcome() 
 
 template <concepts::Game Game>
 GameLogCommon::pos_index_t GameReadLog<Game>::get_pos_index(int index) const {
-  const pos_index_t* ptr = (const pos_index_t*) &buffer_[layout_.sampled_indices_start];
+  const pos_index_t* ptr = (const pos_index_t*)&buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
 template <concepts::Game Game>
 const typename GameReadLog<Game>::Record& GameReadLog<Game>::get_record(
-    mem_offset_t mem_offset) const {
+  mem_offset_t mem_offset) const {
   const Record* ptr = (const Record*)&buffer_[layout_.records_start + mem_offset];
   return *ptr;
 }
@@ -461,8 +457,8 @@ GameWriteLog<Game>::~GameWriteLog() {
 
 template <concepts::Game Game>
 void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t active_seat,
-                              const PolicyTensor* policy_target,
-                              const ActionValueTensor* action_values, bool use_for_training) {
+                             const PolicyTensor* policy_target,
+                             const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
   entry->position = state;

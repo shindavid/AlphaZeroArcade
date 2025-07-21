@@ -1,5 +1,4 @@
 #include "util/BoostUtil.hpp"
-
 #include "util/Exceptions.hpp"
 #include "util/ScreenUtil.hpp"
 
@@ -92,9 +91,9 @@ auto options_description<StrSeq, CharSeq>::augment() const {
                 "Options abbreviation clash!");
 
   using StrSeq2 =
-      util::concat_string_literal_sequence_t<StrSeq, util::StringLiteralSequence<StrLit>>;
+    util::concat_string_literal_sequence_t<StrSeq, util::StringLiteralSequence<StrLit>>;
   using CharSeq2 = std::conditional_t<
-      UsingAbbrev, util::concat_int_sequence_t<CharSeq, util::int_sequence<int(Char)>>, CharSeq>;
+    UsingAbbrev, util::concat_int_sequence_t<CharSeq, util::int_sequence<int(Char)>>, CharSeq>;
   using OutT = options_description<StrSeq2, CharSeq2>;
 
   OutT out(full_base_, base_);
@@ -128,9 +127,9 @@ auto options_description<StrSeq, CharSeq>::add_flag_helper(bool* flag, const cha
 
   namespace po = boost::program_options;
 
-  out.full_base_->add_options()
-      (true_name, po::value(flag)->implicit_value(true)->zero_tokens(), full_true_help.c_str())
-      (false_name, po::value(flag)->implicit_value(false)->zero_tokens(), full_false_help.c_str());
+  out.full_base_->add_options()(true_name, po::value(flag)->implicit_value(true)->zero_tokens(),
+                                full_true_help.c_str())(
+    false_name, po::value(flag)->implicit_value(false)->zero_tokens(), full_false_help.c_str());
 
   if (!hidden) {
     if (*flag) {

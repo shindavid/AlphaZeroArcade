@@ -1,13 +1,11 @@
 #include "core/Packet.hpp"
-
-#include <sys/socket.h>
+#include "util/Asserts.hpp"
+#include "util/Exceptions.hpp"
 
 #include <boost/lexical_cast.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
-
-#include "util/Asserts.hpp"
-#include "util/Exceptions.hpp"
+#include <sys/socket.h>
 
 namespace core {
 
@@ -20,8 +18,8 @@ void StartGame::load_player_names(PacketT& packet, const std::array<std::string,
   char* p = dynamic_size_section.player_names;
   for (const std::string& name : player_names) {
     CLEAN_ASSERT(name.size() <= kMaxNameLength,
-                       "StartGame::load_player_names() name too long [\"{}\"] ({} > {})",
-                       name, name.size(), kMaxNameLength);
+                 "StartGame::load_player_names() name too long [\"{}\"] ({} > {})", name,
+                 name.size(), kMaxNameLength);
     memcpy(p, name.c_str(), name.size() + 1);
     p += name.size() + 1;
   }
@@ -42,8 +40,8 @@ void StartGame::parse_player_names(std::array<std::string, N>& player_names) con
 
     CLEAN_ASSERT(n > 0, "StartGame::parse_player_names() empty name (i={})", i);
     CLEAN_ASSERT(n <= kMaxNameLength,
-                       "StartGame::parse_player_names() name too long [\"{}\"] (i={}) ({} > {})",
-                       p, i, n, kMaxNameLength);
+                 "StartGame::parse_player_names() name too long [\"{}\"] (i={}) ({} > {})", p, i, n,
+                 kMaxNameLength);
     p += player_names[i].size() + 1;
   }
 }
@@ -64,8 +62,8 @@ void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   constexpr int orig_size = sizeof(typename PacketPayload::DynamicSizeSection);
   if (buf_size < 0 || buf_size > orig_size) {
     throw util::Exception(
-        "Packet<{}>::set_dynamic_section_size() invalid buf_size ({}) orig_size={}",
-        PacketPayload::kType, buf_size, orig_size);
+      "Packet<{}>::set_dynamic_section_size() invalid buf_size ({}) orig_size={}",
+      PacketPayload::kType, buf_size, orig_size);
   }
   header_.payload_size = sizeof(PacketPayload) - orig_size + buf_size;
 }

@@ -1,13 +1,11 @@
 #include "mcts/Node.hpp"
-
 #include "util/CppUtil.hpp"
 #include "util/LoggingUtil.hpp"
 
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::StableData::StableData(const StateHistory& history,
-                                                core::seat_index_t as)
+inline Node<Game>::StableData::StableData(const StateHistory& history, core::seat_index_t as)
     : StateData(history.current()) {
   VT.setZero();  // to be set lazily
   VT_valid = false;
@@ -21,7 +19,7 @@ inline Node<Game>::StableData::StableData(const StateHistory& history,
 
 template <core::concepts::Game Game>
 inline Node<Game>::StableData::StableData(const StateHistory& history,
-                                                const ValueTensor& game_outcome)
+                                          const ValueTensor& game_outcome)
     : StateData(history.current()) {
   VT = game_outcome;
   VT_valid = true;
@@ -48,9 +46,9 @@ void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
 
 template <core::concepts::Game Game>
 void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
-                                               const player_bitset_t& all_actions_provably_losing,
-                                               int num_expanded_children, bool cp_has_winning_move,
-                                               const StableData& sdata) {
+                                             const player_bitset_t& all_actions_provably_losing,
+                                             int num_expanded_children, bool cp_has_winning_move,
+                                             const StableData& sdata) {
   int num_valid_actions = sdata.num_valid_actions;
   core::seat_index_t seat = sdata.active_seat;
 
@@ -158,8 +156,7 @@ void Node<Game>::LookupTable::Defragmenter::init_remapping(index_vec_t& remappin
 
 template <core::concepts::Game Game>
 Node<Game>::LookupTable::LookupTable(mcts::mutex_vec_sptr_t mutex_pool)
-    : mutex_pool_(mutex_pool)
-    , mutex_pool_size_(mutex_pool->size()) {}
+    : mutex_pool_(mutex_pool), mutex_pool_size_(mutex_pool->size()) {}
 
 template <core::concepts::Game Game>
 void Node<Game>::LookupTable::clear() {
@@ -178,8 +175,9 @@ void Node<Game>::LookupTable::defragment(node_pool_index_t& root_index) {
 }
 
 template <core::concepts::Game Game>
-typename Node<Game>::node_pool_index_t
-Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value, bool overwrite) {
+typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::insert_node(const MCTSKey& key,
+                                                                            node_pool_index_t value,
+                                                                            bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;
@@ -192,7 +190,7 @@ Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value
 
 template <core::concepts::Game Game>
 typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::lookup_node(
-    const MCTSKey& key) const {
+  const MCTSKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {
@@ -384,7 +382,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 // NOTE: this can be switched to use binary search if we'd like
 template <core::concepts::Game Game>
 typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
-    core::action_t action) const {
+  core::action_t action) const {
   int i = 0;
   for (core::action_t a : bitset_util::on_indices(stable_data_.valid_action_mask)) {
     if (a == action) {
@@ -508,7 +506,7 @@ void Node<Game>::validate_state() const {
   lock.unlock();
 
   DEBUG_ASSERT(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)this, N,
-                     stats_copy.RN, stats_copy.VN);
+               stats_copy.RN, stats_copy.VN);
   DEBUG_ASSERT(stats_copy.RN >= 0);
   DEBUG_ASSERT(stats_copy.VN >= 0);
 }

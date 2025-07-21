@@ -1,6 +1,5 @@
-#include "games/othello/Game.hpp"
-
 #include "core/DefaultCanonicalizer.hpp"
+#include "games/othello/Game.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/BitMapUtil.hpp"
 #include "util/BitSet.hpp"
@@ -29,15 +28,24 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   using D4 = groups::D4;
   auto& s = state;
   switch (sym) {
-    case D4::kIdentity: return;
-    case D4::kRot90: return rot90_clockwise(s.cur_player_mask, s.opponent_mask);
-    case D4::kRot180: return rot180(s.cur_player_mask, s.opponent_mask);
-    case D4::kRot270: return rot270_clockwise(s.cur_player_mask, s.opponent_mask);
-    case D4::kFlipVertical: return flip_vertical(s.cur_player_mask, s.opponent_mask);
-    case D4::kFlipMainDiag: return flip_main_diag(s.cur_player_mask, s.opponent_mask);
-    case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
-    case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
-    default: throw util::Exception("Unknown group element: {}", sym);
+    case D4::kIdentity:
+      return;
+    case D4::kRot90:
+      return rot90_clockwise(s.cur_player_mask, s.opponent_mask);
+    case D4::kRot180:
+      return rot180(s.cur_player_mask, s.opponent_mask);
+    case D4::kRot270:
+      return rot270_clockwise(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipVertical:
+      return flip_vertical(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipMainDiag:
+      return flip_main_diag(s.cur_player_mask, s.opponent_mask);
+    case D4::kMirrorHorizontal:
+      return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipAntiDiag:
+      return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -53,15 +61,24 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
   switch (sym) {
-    case D4::kIdentity: return;
-    case D4::kRot90: return rot90_clockwise<N>(tensor);
-    case D4::kRot180: return rot180<N>(tensor);
-    case D4::kRot270: return rot270_clockwise<N>(tensor);
-    case D4::kFlipVertical: return flip_vertical<N>(tensor);
-    case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
-    case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
-    case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
-    default: throw util::Exception("Unknown group element: {}", sym);
+    case D4::kIdentity:
+      return;
+    case D4::kRot90:
+      return rot90_clockwise<N>(tensor);
+    case D4::kRot180:
+      return rot180<N>(tensor);
+    case D4::kRot270:
+      return rot270_clockwise<N>(tensor);
+    case D4::kFlipVertical:
+      return flip_vertical<N>(tensor);
+    case D4::kFlipMainDiag:
+      return flip_main_diag<N>(tensor);
+    case D4::kMirrorHorizontal:
+      return mirror_horizontal<N>(tensor);
+    case D4::kFlipAntiDiag:
+      return flip_anti_diag<N>(tensor);
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -75,14 +92,29 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   mask_t mask = 1ULL << action;
 
   switch (sym) {
-    case D4::kRot90: rot90_clockwise(mask); break;
-    case D4::kRot180: rot180(mask); break;
-    case D4::kRot270: rot270_clockwise(mask); break;
-    case D4::kFlipVertical: flip_vertical(mask); break;
-    case D4::kFlipMainDiag: flip_main_diag(mask); break;
-    case D4::kMirrorHorizontal: mirror_horizontal(mask); break;
-    case D4::kFlipAntiDiag: flip_anti_diag(mask); break;
-    default: throw util::Exception("Unknown group element: {}", sym);
+    case D4::kRot90:
+      rot90_clockwise(mask);
+      break;
+    case D4::kRot180:
+      rot180(mask);
+      break;
+    case D4::kRot270:
+      rot270_clockwise(mask);
+      break;
+    case D4::kFlipVertical:
+      flip_vertical(mask);
+      break;
+    case D4::kFlipMainDiag:
+      flip_main_diag(mask);
+      break;
+    case D4::kMirrorHorizontal:
+      mirror_horizontal(mask);
+      break;
+    case D4::kFlipAntiDiag:
+      flip_anti_diag(mask);
+      break;
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 
   action = std::countr_zero(mask);

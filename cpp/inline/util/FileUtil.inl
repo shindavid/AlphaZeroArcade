@@ -1,6 +1,5 @@
-#include "util/FileUtil.hpp"
-
 #include "util/Exceptions.hpp"
+#include "util/FileUtil.hpp"
 
 #include <cstdio>
 
@@ -35,8 +34,8 @@ inline char* read_file(const char* filename, size_t file_size) {
   if (read_size != file_size) {
     delete[] buffer;
     fclose(file);
-    throw util::Exception("Failed to read all bytes ({} != {}) of file '{}'", read_size,
-                          file_size, filename);
+    throw util::Exception("Failed to read all bytes ({} != {}) of file '{}'", read_size, file_size,
+                          filename);
   }
 
   fclose(file);

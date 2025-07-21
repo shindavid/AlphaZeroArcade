@@ -1,7 +1,6 @@
-#include "mcts/Manager.hpp"
-
 #include "core/BasicTypes.hpp"
 #include "mcts/ActionSelector.hpp"
+#include "mcts/Manager.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/TypeDefs.hpp"
 #include "mcts/UniformNNEvaluationService.hpp"
@@ -156,8 +155,8 @@ template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest& request) {
   auto context_id = request.context_id();
 
-  DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
-                     context_id, num_search_threads());
+  DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})", context_id,
+               num_search_threads());
 
   LOG_TRACE("{:>{}}search(): manager={} state={} c={}", "", contexts_[context_id].log_prefix_n(),
             manager_id_, state_machine_.state, context_id);
@@ -165,8 +164,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
   SearchResponse response = search_helper(request);
 
   LOG_TRACE("{:>{}}{}() exit: manager={} state={} instr={}", "",
-            contexts_[context_id].log_prefix_n(), __func__, manager_id_,
-            state_machine_.state, response.yield_instruction);
+            contexts_[context_id].log_prefix_n(), __func__, manager_id_, state_machine_.state,
+            response.yield_instruction);
 
   return response;
 }
@@ -615,9 +614,8 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  RELEASE_ASSERT(edge->state == Node::kExpanded,
-                       "Expected edge state to be kExpanded, but got {}",
-                       edge->state);
+  RELEASE_ASSERT(edge->state == Node::kExpanded, "Expected edge state to be kExpanded, but got {}",
+                 edge->state);
 
   Node* child = node->get_child(edge);
   if (child) {
@@ -686,8 +684,8 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
     core::action_t last_action = edge->action;
     Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
-    bool terminal = Rules::is_terminal(
-        history->current(), parent->stable_data().active_seat, last_action, game_outcome);
+    bool terminal = Rules::is_terminal(history->current(), parent->stable_data().active_seat,
+                                       last_action, game_outcome);
 
     if (terminal) {
       new (child) Node(&lookup_table_, *history, game_outcome);
@@ -879,8 +877,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     }
 
     // determine canonical orientation of new leaf-state
-    group::element_t canonical_child_sym =
-        Symmetries::get_canonical_symmetry(raw_child_state);
+    group::element_t canonical_child_sym = Symmetries::get_canonical_symmetry(raw_child_state);
     edge->sym = SymmetryGroup::compose(canonical_child_sym, inv_canonical_sym);
 
     StateHistory& canonical_history = context.root_history_array[canonical_child_sym];
@@ -908,8 +905,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     DEBUG_ASSERT(parent_active_seat == context.active_seat);
 
     ValueTensor game_outcome;
-    if (Rules::is_terminal(raw_child_state, parent_active_seat,
-                                 raw_edge_action, game_outcome)) {
+    if (Rules::is_terminal(raw_child_state, parent_active_seat, raw_edge_action, game_outcome)) {
       new (child) Node(&lookup_table_, canonical_history, game_outcome);
     } else {
       new (child) Node(&lookup_table_, canonical_history, child_active_seat);
@@ -1092,8 +1088,8 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
     }
 
     RELEASE_ASSERT(cur_canonical_sym == leaf_canonical_sym,
-                         "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
-                         leaf_canonical_sym);
+                   "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
+                   leaf_canonical_sym);
   } else {
     Symmetries::apply(context.canonical_history, context.canonical_sym);
   }
@@ -1117,8 +1113,8 @@ template <core::concepts::Game Game>
 void Manager<Game>::print_visit_info(const SearchContext& context) {
   if (mcts::kEnableSearchDebug) {
     Node* node = context.visit_node;
-    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(),
-             search_path_str(context), node->stable_data().active_seat);
+    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), search_path_str(context),
+             node->stable_data().active_seat);
   }
 }
 
@@ -1150,8 +1146,8 @@ int Manager<Game>::get_best_child_index(const SearchContext& context) {
     // net-only, use P
     P.maxCoeff(&argmax_index);
   } else {
-    bool force_playouts = params_.forced_playouts && is_root &&
-                          search_params_.full_search && params_.dirichlet_mult > 0;
+    bool force_playouts = params_.forced_playouts && is_root && search_params_.full_search &&
+                          params_.dirichlet_mult > 0;
 
     if (force_playouts) {
       PVec n_forced = (P * params_.k_forced * mE.sum()).sqrt();
@@ -1219,7 +1215,7 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
     auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
 
-    eigen_util::PrintArrayFormatMap fmt_map1 {
+    eigen_util::PrintArrayFormatMap fmt_map1{
       {"Seat", [&](float x) { return std::to_string(int(x)); }},
       {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
     };
@@ -1262,11 +1258,11 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
     }
 
     static std::vector<std::string> action_columns = {
-        "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+      "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-        actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+      actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
-    eigen_util::PrintArrayFormatMap fmt_map2 {
+    eigen_util::PrintArrayFormatMap fmt_map2{
       {"action", [&](float x) { return IO::action_to_str(x, node->action_mode()); }},
       {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
       {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
@@ -1412,12 +1408,12 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
 
     LocalPolicyArray target = pruned / pruned.sum();
 
-    static std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",  "E",
+    static std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",   "E",
                                                "PW",     "PL", "mE", "pruned", "target"};
     auto data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
+      eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
-    eigen_util::PrintArrayFormatMap fmt_map {
+    eigen_util::PrintArrayFormatMap fmt_map{
       {"action", [&](float x) { return IO::action_to_str(x, mode); }},
     };
 

@@ -72,7 +72,9 @@ class GameServerProxy : public core::GameServerBase {
     bool game_ended() const { return !game_started_; }
     game_slot_index_t id() const { return id_; }
     seat_index_t prompted_player_id() const { return prompted_player_id_; }
-    Player* prompted_player() const { return prompted_player_id_ < 0 ? nullptr : players_[prompted_player_id_]; }
+    Player* prompted_player() const {
+      return prompted_player_id_ < 0 ? nullptr : players_[prompted_player_id_];
+    }
 
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }

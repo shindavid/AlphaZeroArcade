@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "core/GameLog.hpp"
+#include "core/concepts/Game.hpp"
 #include "util/mit/mit.hpp"
 
 #include <cstdint>
@@ -264,7 +264,7 @@ class DataLoader {
     int active_file_count_ = 0;
 
     int64_t n_total_rows_ = 0;
-    file_deque_t all_files_;  // stored in reverse order by generation
+    file_deque_t all_files_;    // stored in reverse order by generation
     int64_t memory_usage_ = 0;  // sum(file->memory_usage() for all files in all_files_)
   };
 

@@ -1,5 +1,4 @@
 #include "mcts/NNEvaluationRequest.hpp"
-
 #include "util/CppUtil.hpp"
 
 namespace mcts {
@@ -44,9 +43,9 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
 
 template <core::concepts::Game Game>
 typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::make_cache_key(
-    group::element_t sym, bool incorporate_sym_into_cache_key) const {
+  group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key = compute_over_history(
-      [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
+    [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }
@@ -69,8 +68,8 @@ void NNEvaluationRequest<Game>::mark_all_as_stale() {
   // one vector to the other. But, we don't expect that this case should get hit with the current
   // MCTS logic. So, I'm going to just throw an error if we get here.
   throw util::Exception(
-      "NNEvaluationRequest::mark_all_as_stale() - both fresh and stale items exist. "
-      "This should not happen with the current MCTS logic.");
+    "NNEvaluationRequest::mark_all_as_stale() - both fresh and stale items exist. "
+    "This should not happen with the current MCTS logic.");
 }
 
 }  // namespace mcts

@@ -8,14 +8,14 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("stochastic_nim::PerfectPlayer options");
   return desc
-      .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
-                                            "strength (0-1). 0 is random, 1 is perfect.")
-      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "verbose mode");
+    .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
+                                          "strength (0-1). 0 is random, 1 is perfect.")
+    .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                         "verbose mode");
 }
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
-    const ActionRequest& request) {
+  const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);

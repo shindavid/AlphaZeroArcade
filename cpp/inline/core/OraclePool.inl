@@ -1,5 +1,4 @@
 #include "core/OraclePool.hpp"
-
 #include "util/Asserts.hpp"
 
 namespace core {

@@ -3,8 +3,8 @@
 #include "core/PlayerFactory.hpp"
 #include "games/GameTransforms.hpp"
 #include "games/nim/Game.hpp"
-#include "games/tictactoe/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
+#include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "mcts/SearchLog.hpp"
@@ -80,9 +80,7 @@ class GameServerTest : public testing::Test {
 
     using base_t::base_t;
 
-    void set_test(GameServerTest* test) {
-      test_ = test;
-    }
+    void set_test(GameServerTest* test) { test_ = test; }
 
     core::AbstractPlayer<Game>* generate(core::game_slot_index_t game_slot_index) override {
       auto player = base_t::generate(game_slot_index);
@@ -111,7 +109,7 @@ class GameServerTest : public testing::Test {
   };
 
  public:
-  GameServerTest() {};
+  GameServerTest(){};
 
   void SetUp() override {
     util::Random::set_seed(0);
@@ -132,8 +130,8 @@ class GameServerTest : public testing::Test {
     server_ = new GameServer(server_params);
     server_->set_initial_actions(initial_actions);
 
-    std::vector<std::string> player_strs = util::split(std::format(
-      "--num-search-threads={} --num-full-iters {}", num_threads, num_iters));
+    std::vector<std::string> player_strs = util::split(
+      std::format("--num-search-threads={} --num-full-iters {}", num_threads, num_iters));
     if (model) {
       player_strs.push_back(std::format("--model-filename={}", model));
     } else {
@@ -151,7 +149,7 @@ class GameServerTest : public testing::Test {
   }
 
   void test_search(const std::string& testname, int num_iters, int num_threads,
-                   const action_vec_t& initial_actions, const char* model=nullptr) {
+                   const action_vec_t& initial_actions, const char* model = nullptr) {
     init_search(initial_actions, num_iters, num_threads, model);
     server_->run();
 

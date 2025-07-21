@@ -3,8 +3,7 @@
 namespace core {
 
 template <concepts::Game Game>
-void AbstractPlayer<Game>::init_game(game_id_t game_id,
-                                     const player_name_array_t& player_names,
+void AbstractPlayer<Game>::init_game(game_id_t game_id, const player_name_array_t& player_names,
                                      seat_index_t seat_assignment, GameWriteLog_sptr game_log) {
   game_id_ = game_id;
   player_names_ = player_names;

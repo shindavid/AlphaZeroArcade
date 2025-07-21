@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/mit/scheduler.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/LoggingUtil.hpp"
@@ -9,8 +7,9 @@
 #include "util/mit/condition_variable.hpp"
 #include "util/mit/exceptions.hpp"
 #include "util/mit/logging.hpp"
-#include "util/mit/thread.hpp"
 #include "util/mit/mutex.hpp"
+#include "util/mit/scheduler.hpp"
+#include "util/mit/thread.hpp"
 
 #include <ctime>
 #include <exception>
@@ -234,7 +233,6 @@ inline void scheduler::mark_active_thread_as_blocked_by(mutex* m) {
   debug_dump_state();
 }
 
-
 inline void scheduler::mark_as_unlocked(mutex* m) {
   thread_vec_t* blocked_threads = mutex_block_map_[m->id_];
   if (!blocked_threads || blocked_threads->empty()) return;
@@ -324,9 +322,7 @@ void scheduler::wait_on(condition_variable* cv, unique_lock<mutex>& lock, Predic
   wait_on_helper(cv, lock, pred);
 }
 
-inline void scheduler::enable_bug_catching_mode() {
-  bug_catching_enabled_ = true;
-}
+inline void scheduler::enable_bug_catching_mode() { bug_catching_enabled_ = true; }
 
 inline void scheduler::disable_bug_catching_mode() {
   bug_catching_enabled_ = false;
@@ -469,8 +465,8 @@ inline void scheduler::init_main_thread() {
   main_thread_ = new thread(true);
   register_thread(main_thread_->impl_.get());
 
-  RELEASE_ASSERT(main_thread_->id() == 0,
-                       "Main thread should have id() 0, got {}", main_thread_->id());
+  RELEASE_ASSERT(main_thread_->id() == 0, "Main thread should have id() 0, got {}",
+                 main_thread_->id());
   active_thread_ = main_thread_->impl_.get();  // Set the main thread as the active thread
 }
 

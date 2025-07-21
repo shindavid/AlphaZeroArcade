@@ -19,7 +19,8 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
-    for (int i = 0; i < std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1); ++i) {
+    for (int i = 0; i < std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1);
+         ++i) {
       mask[i] = true;
     }
   } else {

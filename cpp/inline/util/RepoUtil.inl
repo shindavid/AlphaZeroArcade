@@ -1,6 +1,5 @@
-#include "util/RepoUtil.hpp"
-
 #include "util/Exceptions.hpp"
+#include "util/RepoUtil.hpp"
 
 namespace util {
 

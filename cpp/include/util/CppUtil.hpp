@@ -10,20 +10,20 @@
 #include <cstdint>
 #include <initializer_list>
 #include <tuple>
-#include <typeinfo>
 #include <type_traits>
+#include <typeinfo>
 #include <unistd.h>
 #include <vector>
 
 // constexpr version of BOOST_IS_DEFINED. Returns true if the macro is defined, false otherwise.
-#define IS_DEFINED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
+#define IS_DEFINED(macro) (util::constexpr_is_defined(#macro, BOOST_STRINGIZE(= macro)))
 
 // Macro to "use" any number of args in an unevaluated context.
 //
 // This is useful to avoid unused variable warnings when the usage of a local variable would
 // otherwise be compiled out (for example because it is used only in an assert).
 // NOLINTBEGIN(bugprone-sizeof-expression)
-#define USE_UNEVALUATED(...)   (void)sizeof((__VA_ARGS__, 0))
+#define USE_UNEVALUATED(...) (void)sizeof((__VA_ARGS__, 0))
 // NOLINTEND(bugprone-sizeof-expression)
 
 // random static_assert to suppress unused #include <initializer_list> warning (vscode isn't smart
@@ -37,8 +37,10 @@ constexpr bool constexpr_str_equal(const char* a, const char* b);
 // A constexpr version of boost::test_tools::tt_detail::is_defined_impl()
 constexpr bool constexpr_is_defined(const char* symbol_name, const char* symbol_value);
 
-template<typename T>
-size_t hash(const T& t) { return std::hash<T>{}(t); }
+template <typename T>
+size_t hash(const T& t) {
+  return std::hash<T>{}(t);
+}
 
 // Drop-in replacement for mit::mutex that does nothing.
 struct dummy_mutex {
@@ -59,8 +61,7 @@ struct PODHash {
 template <class T>
 struct strict_type_match_t {
   template <class U>
-    requires(std::same_as<std::decay_t<T>, std::decay_t<U>>)
-  operator U&();
+  requires(std::same_as<std::decay_t<T>, std::decay_t<U>>) operator U&();
 };
 
 template <typename T>
@@ -98,7 +99,7 @@ int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
 int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }
 int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
 
-template<typename Rep, typename Period>
+template <typename Rep, typename Period>
 int64_t to_ns(const std::chrono::duration<Rep, Period>& duration) {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
 }
@@ -246,7 +247,7 @@ struct int64_sequence_contains {
 template <int64_t I, int64_t... Is, int64_t K>
 struct int64_sequence_contains<int64_sequence<I, Is...>, K> {
   static constexpr bool value =
-      (I == K) || int64_sequence_contains<int64_sequence<Is...>, K>::value;
+    (I == K) || int64_sequence_contains<int64_sequence<Is...>, K>::value;
 };
 template <typename T, int64_t K>
 static constexpr bool int64_sequence_contains_v = int64_sequence_contains<T, K>::value;
@@ -258,7 +259,7 @@ struct uint64_sequence_contains {
 template <uint64_t I, uint64_t... Is, uint64_t K>
 struct uint64_sequence_contains<uint64_sequence<I, Is...>, K> {
   static constexpr bool value =
-      (I == K) || uint64_sequence_contains<uint64_sequence<Is...>, K>::value;
+    (I == K) || uint64_sequence_contains<uint64_sequence<Is...>, K>::value;
 };
 template <typename T, uint64_t K>
 static constexpr bool uint64_sequence_contains_v = uint64_sequence_contains<T, K>::value;
@@ -270,11 +271,11 @@ struct string_literal_sequence_contains {
 template <StringLiteral I, StringLiteral... Is, StringLiteral S>
 struct string_literal_sequence_contains<StringLiteralSequence<I, Is...>, S> {
   static constexpr bool value =
-      (I == S) || string_literal_sequence_contains<StringLiteralSequence<Is...>, S>::value;
+    (I == S) || string_literal_sequence_contains<StringLiteralSequence<Is...>, S>::value;
 };
 template <typename T, StringLiteral S>
 static constexpr bool string_literal_sequence_contains_v =
-    string_literal_sequence_contains<T, S>::value;
+  string_literal_sequence_contains<T, S>::value;
 
 template <typename T>
 struct is_bit_set {
@@ -328,8 +329,8 @@ struct no_overlap<T, StringLiteralSequence<>> {
 };
 template <typename T, StringLiteral S, StringLiteral... Ss>
 struct no_overlap<T, StringLiteralSequence<S, Ss...>> {
-  static constexpr bool value = !string_literal_sequence_contains_v<T, S> &&
-                                no_overlap<T, StringLiteralSequence<Ss...>>::value;
+  static constexpr bool value =
+    !string_literal_sequence_contains_v<T, S> && no_overlap<T, StringLiteralSequence<Ss...>>::value;
 };
 template <typename T>
 struct no_overlap<T, int_sequence<>> {
@@ -338,7 +339,7 @@ struct no_overlap<T, int_sequence<>> {
 template <typename T, int I, int... Is>
 struct no_overlap<T, int_sequence<I, Is...>> {
   static constexpr bool value =
-      !int_sequence_contains_v<T, I> && no_overlap<T, int_sequence<Is...>>::value;
+    !int_sequence_contains_v<T, I> && no_overlap<T, int_sequence<Is...>>::value;
 };
 template <typename T, typename U>
 constexpr bool no_overlap_v = no_overlap<T, U>::value;
@@ -365,7 +366,7 @@ static constexpr auto std_array_v = std_array<T, S>::value;
 
 template <typename DerivedPtr, typename Base>
 concept is_pointer_derived_from =
-    std::is_pointer_v<DerivedPtr> && std::derived_from<Base, std::remove_pointer_t<DerivedPtr>>;
+  std::is_pointer_v<DerivedPtr> && std::derived_from<Base, std::remove_pointer_t<DerivedPtr>>;
 
 template <typename T, size_t N>
 constexpr size_t array_size(const std::array<T, N>&) {
@@ -419,7 +420,7 @@ constexpr std::array<float, N> generateReciprocalArray(std::index_sequence<I...>
 template <int N>
 struct ReciprocalTable {
   static constexpr std::array<float, N> values =
-      generateReciprocalArray<N>(std::make_index_sequence<N>{});
+    generateReciprocalArray<N>(std::make_index_sequence<N>{});
 
   // Accepts i >= 1, returns 1.0 / i, avoiding a division if i <= N.
   static float get(int i) { return i <= N ? values[i - 1] : 1.0f / i; }
@@ -446,7 +447,7 @@ concept IntSequence = is_int_sequence_v<T>;
 template <typename T>
 concept StdBitSet = is_bit_set_v<T>;
 
-template<typename T>
+template <typename T>
 concept UsableAsHashMapKey = requires(const T& a, const T& b) {
   { std::hash<T>{}(a) } -> std::convertible_to<size_t>;
   { a == b } -> std::convertible_to<bool>;
@@ -506,11 +507,9 @@ constexpr int get() {
 namespace std {
 
 // hash for std::tuple
-template<typename... Ts>
+template <typename... Ts>
 struct hash<std::tuple<Ts...>> {
-  size_t operator()(const std::tuple<Ts...>& tup) const {
-    return util::tuple_hash(tup);
-  }
+  size_t operator()(const std::tuple<Ts...>& tup) const { return util::tuple_hash(tup); }
 };
 
 }  // namespace std

@@ -1,5 +1,4 @@
 #include "core/SimpleStateHistory.hpp"
-
 #include "util/Exceptions.hpp"
 
 namespace core {

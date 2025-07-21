@@ -1,13 +1,12 @@
-#include "core/TrainingDataWriter.hpp"
-
-#include <format>
-#include <string>
-
 #include "core/PerfStats.hpp"
+#include "core/TrainingDataWriter.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/StringUtil.hpp"
+
+#include <format>
+#include <string>
 
 namespace core {
 
@@ -18,15 +17,13 @@ auto TrainingDataWriter<Game>::Params::make_options_description() {
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_option<"max-rows", 'M'>(
-          po::value<int64_t>(&max_rows)->default_value(max_rows),
-          "if specified, kill process after writing this many rows")
-      .template add_option<"heartbeat-frequency-seconds", 'H'>(
-          po::value<float>(&heartbeat_frequency_seconds)
-              ->default_value(heartbeat_frequency_seconds),
-          "heartbeat frequency in seconds")
-      .template add_flag<"enable-training", "disable-training">(&enabled, "enable training",
-                                                                "disable training");
+    .template add_option<"max-rows", 'M'>(po::value<int64_t>(&max_rows)->default_value(max_rows),
+                                          "if specified, kill process after writing this many rows")
+    .template add_option<"heartbeat-frequency-seconds", 'H'>(
+      po::value<float>(&heartbeat_frequency_seconds)->default_value(heartbeat_frequency_seconds),
+      "heartbeat frequency in seconds")
+    .template add_flag<"enable-training", "disable-training">(&enabled, "enable training",
+                                                              "disable training");
 }
 
 template <concepts::Game Game>
@@ -47,7 +44,7 @@ TrainingDataWriter<Game>::TrainingDataWriter(GameServerBase* server, const Param
   batch_data_.limit = params.max_rows;
   batch_data_.next_heartbeat_time = std::chrono::steady_clock::now();
   misc_data_.heartbeat_interval =
-      std::chrono::milliseconds(int64_t(1e3 * params.heartbeat_frequency_seconds));
+    std::chrono::milliseconds(int64_t(1e3 * params.heartbeat_frequency_seconds));
   misc_data_.thread = new mit::thread([&] { loop(); });
   misc_data_.num_game_threads = server->num_game_threads();
 }
@@ -134,9 +131,8 @@ void TrainingDataWriter<Game>::loop() {
   while (!misc_data_.closed) {
     mit::unique_lock lock(game_queue_mutex_);
     game_queue_t& queue = game_queue_data_.completed_games[game_queue_data_.queue_index];
-    game_queue_cv_.wait(lock, [&] {
-      return !queue.empty() || misc_data_.closed || game_queue_data_.paused;
-    });
+    game_queue_cv_.wait(
+      lock, [&] { return !queue.empty() || misc_data_.closed || game_queue_data_.paused; });
     if (game_queue_data_.paused) {
       core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
       game_queue_cv_.wait(lock, [&] { return !game_queue_data_.paused; });
@@ -195,8 +191,8 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
   }
 
   RELEASE_ASSERT(n_rows > 0, "TrainingDataWriter: n_rows <= 0 ({})", n_rows);
-  RELEASE_ASSERT(row_count >= n_rows, "TrainingDataWriter: row_count < n_rows ({} < {})",
-                       row_count, n_rows);
+  RELEASE_ASSERT(row_count >= n_rows, "TrainingDataWriter: row_count < n_rows ({} < {})", row_count,
+                 n_rows);
   RELEASE_ASSERT(n_games > 0, "TrainingDataWriter: n_games <= 0 ({})", n_games);
 
   LOG_INFO("TrainingDataWriter: sending batch of {} rows from {} games (of {} total)", row_count,

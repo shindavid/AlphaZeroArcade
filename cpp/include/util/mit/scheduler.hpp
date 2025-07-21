@@ -39,7 +39,7 @@ class scheduler {
   thread_impl* active_thread();
   void join_thread(thread_impl* t);
 
-  void yield_control(thread_impl* t=nullptr);    // Beware thread-safety
+  void yield_control(thread_impl* t = nullptr);  // Beware thread-safety
   void deactivate_thread(thread_impl* t);        // Beware thread-safety
   void block_until_has_control(thread_impl* t);  // Beware thread-safety
 

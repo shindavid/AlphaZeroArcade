@@ -1,5 +1,4 @@
 #include "games/othello/EdaxOracle.hpp"
-
 #include "util/StringUtil.hpp"
 
 #include <format>
@@ -75,7 +74,7 @@ Edax plays D3
   RELEASE_ASSERT(num_hints > 0 && num_hints <= 9);
   char buf[16] = "hint X\n";
   buf[5] = '0' + num_hints;  // set the number of hints
-  in_.write(buf, 7);  // "hint X" means "show top X moves"
+  in_.write(buf, 7);         // "hint X" means "show top X moves"
   in_.flush();
 
   /*
@@ -165,10 +164,10 @@ book    +1                                          d3
     int move_index = 2;
     bool is_book = false;
     if (n_tokens == 3) {
-      RELEASE_ASSERT(util::ends_with(tokens_[0], "book"),
-                           "EdaxOracle::query: unexpected line [{}]", line);
-      RELEASE_ASSERT(num_candidates == 0, "EdaxOracle::query: {} candidates [{}]",
-                           num_candidates, line);
+      RELEASE_ASSERT(util::ends_with(tokens_[0], "book"), "EdaxOracle::query: unexpected line [{}]",
+                     line);
+      RELEASE_ASSERT(num_candidates == 0, "EdaxOracle::query: {} candidates [{}]", num_candidates,
+                     line);
       is_book = true;
     } else {
       RELEASE_ASSERT(n_tokens >= 5, "EdaxOracle::query: got {} tokens [{}]", n_tokens, line);
@@ -197,9 +196,8 @@ book    +1                                          d3
       move_index += std::isdigit(first_char);
     }
 
-    RELEASE_ASSERT(tokens_[move_index].size() == 2,
-                         "EdaxOracle::query: tokens_[{}]=\"{}\" [{}]", move_index,
-                         tokens_[move_index], line);
+    RELEASE_ASSERT(tokens_[move_index].size() == 2, "EdaxOracle::query: tokens_[{}]=\"{}\" [{}]",
+                   move_index, tokens_[move_index], line);
 
     char move_char1 = tokens_[move_index][0];
     char move_char2 = tokens_[move_index][1];

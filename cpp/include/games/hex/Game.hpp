@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
@@ -11,9 +10,10 @@
 #include "core/TrainingTargets.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinLossResults.hpp"
+#include "core/concepts/Game.hpp"
+#include "games/GameRulesBase.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
-#include "games/GameRulesBase.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -61,10 +61,11 @@ struct Game {
 
   struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t mode=0);
+    static std::string action_to_str(core::action_t action, core::action_mode_t mode = 0);
     static std::string player_to_str(core::seat_index_t player);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
+
    private:
     static int print_row(char* buf, int n, const State&, int row, int blink_column);
   };
@@ -82,8 +83,12 @@ struct Game {
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

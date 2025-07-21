@@ -49,21 +49,22 @@ class LoopControllerClient : public PerfStatsClient {
   };
 
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
-  using ReloadWeightsListener = LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
+  using ReloadWeightsListener =
+    LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
   using DataRequestListener = LoopControllerListener<LoopControllerInteractionType::kDataRequest>;
   using WorkerReadyListener = LoopControllerListener<LoopControllerInteractionType::kWorkerReady>;
 
   static void init(const Params&);
-  static bool initialized() { return instance_;  }
+  static bool initialized() { return instance_; }
   static bool deactivated() { return instance_ && instance_->deactivated_; }
-  static LoopControllerClient* get() { return instance_;  }
+  static LoopControllerClient* get() { return instance_; }
   int client_id() const { return client_id_; }
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
   const std::string& ratings_tag() const { return params_.ratings_tag; }
   const std::string& output_base_dir() const { return params_.output_base_dir; }
   bool report_metrics() const { return params_.report_metrics; }
-  bool is_loop_controller_local() const {  return params_.loop_controller_hostname == "localhost"; }
+  bool is_loop_controller_local() const { return params_.loop_controller_hostname == "localhost"; }
 
   template <typename T>
   void add_listener(T* listener);

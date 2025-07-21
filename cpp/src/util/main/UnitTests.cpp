@@ -84,7 +84,7 @@ TEST(Random, zero_out) {
   test_zero_out<int>();
 }
 
-template<typename Pool>
+template <typename Pool>
 void test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
   // add 0, 1, 2, ... to the pool, in chunks given by sizes
   int x = 0;
@@ -110,7 +110,7 @@ void test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
   used_indices.set();
   int y = x;
   for (int i = 0; i * i < x; ++i) {
-    used_indices[i*i] = false;
+    used_indices[i * i] = false;
     --y;
   }
   pool.defragment(used_indices);
@@ -155,9 +155,9 @@ TEST(eigen_util, sort_columns) {
   using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
 
   Array array{
-      {3, 1, 5, 4, 2},
-      {30, 10, 50, 40, 20},
-      {300, 100, 500, 400, 200},
+    {3, 1, 5, 4, 2},
+    {30, 10, 50, 40, 20},
+    {300, 100, 500, 400, 200},
   };
 
   array = eigen_util::sort_columns(array);
@@ -178,46 +178,34 @@ TEST(eigen_util, sort_rows) {
   using Array = Eigen::Array<float, Eigen::Dynamic, kNumCols, 0, kMaxNumRows, kNumCols>;
 
   Array array{
-      {3, 10, 500},
-      {1, 40, 200},
-      {5, 50, 300},
-      {4, 20, 400},
-      {2, 30, 100},
+    {3, 10, 500}, {1, 40, 200}, {5, 50, 300}, {4, 20, 400}, {2, 30, 100},
   };
 
   Array array2 = eigen_util::sort_rows(array);
 
   Array expected_array2{
-      {1, 40, 200},
-      {2, 30, 100},
-      {3, 10, 500},
-      {4, 20, 400},
-      {5, 50, 300},
+    {1, 40, 200}, {2, 30, 100}, {3, 10, 500}, {4, 20, 400}, {5, 50, 300},
   };
 
   for (int r = 0; r < kNumRows; ++r) {
     for (int c = 0; c < kNumCols; ++c) {
-      EXPECT_EQ(array2(r, c), expected_array2(r, c)) << " at (" << r << ", " << c << ")"
-                << " expected: " << expected_array2(r, c)
-                << " got: " << array2(r, c);
+      EXPECT_EQ(array2(r, c), expected_array2(r, c))
+        << " at (" << r << ", " << c << ")"
+        << " expected: " << expected_array2(r, c) << " got: " << array2(r, c);
     }
   }
 
   Array array3 = eigen_util::sort_rows(array, 1, false);
 
   Array expected_array3{
-      {5, 50, 300},
-      {1, 40, 200},
-      {2, 30, 100},
-      {4, 20, 400},
-      {3, 10, 500},
+    {5, 50, 300}, {1, 40, 200}, {2, 30, 100}, {4, 20, 400}, {3, 10, 500},
   };
 
   for (int r = 0; r < kNumRows; ++r) {
     for (int c = 0; c < kNumCols; ++c) {
-      EXPECT_EQ(array3(r, c), expected_array3(r, c)) << " at (" << r << ", " << c << ")"
-                << " expected: " << expected_array3(r, c)
-                << " got: " << array3(r, c);
+      EXPECT_EQ(array3(r, c), expected_array3(r, c))
+        << " at (" << r << ", " << c << ")"
+        << " expected: " << expected_array3(r, c) << " got: " << array3(r, c);
     }
   }
 }
@@ -228,7 +216,7 @@ TEST(eigen_util, UniformDirchletGen) {
   float alpha = 0.1;
 
   eigen_util::UniformDirichletGen<float> gen;
-  Eigen::Rand::P8_mt19937_64 rng{ 35 };
+  Eigen::Rand::P8_mt19937_64 rng{35};
 
   // dynamic size matrix here due to the size of sample matrix X
   Eigen::MatrixXf X(M, N);
@@ -253,8 +241,8 @@ TEST(eigen_util, UniformDirchletGen) {
   // check the correlations
   for (int j = 0; j < N; j++) {
     for (int i = 0; i < j; i++) {
-      EXPECT_NEAR(cov(i, j)/std::sqrt(cov(i, i) * cov(j, j)), expected_cor,
-      std::abs(expected_cor) * 0.05);
+      EXPECT_NEAR(cov(i, j) / std::sqrt(cov(i, i) * cov(j, j)), expected_cor,
+                  std::abs(expected_cor) * 0.05);
     }
   }
 
@@ -272,13 +260,13 @@ TEST(eigen_util, sort_columns_one_element) {
   using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
 
   Array array{
-      {3},
+    {3},
   };
 
   array = eigen_util::sort_columns(array);
 
   Array expected{
-      {3},
+    {3},
   };
 
   for (int r = 0; r < array.rows(); r++) {
@@ -382,7 +370,7 @@ TEST(eigen_util, sample) {
   Tensor values;
   values.setValues({1, 2, 3, 4});
   Tensor expectedFreq = values * (numSamples / eigen_util::sum(values));
- // *numSamples;
+  // *numSamples;
 
   Tensor freq;
   freq.setZero();
@@ -603,21 +591,21 @@ TEST(eigen_util, print_array) {
   static std::vector<std::string> column_names = {"ansi", "col1", "col2", "col3", "col4"};
 
   static eigen_util::PrintArrayFormatMap fmt_map{
-      {"ansi", [](float x) { return "\033[32m\u25CF\033[00m"; }},  // green circle
-      {"col1", [](float x) { return "foo" + std::to_string((int)x); }},
+    {"ansi", [](float x) { return "\033[32m\u25CF\033[00m"; }},  // green circle
+    {"col1", [](float x) { return "foo" + std::to_string((int)x); }},
   };
 
   std::ostringstream ss;
   eigen_util::print_array(ss, array, column_names, &fmt_map);
 
   std::string expected_output =
-      "ansi col1 col2     col3 col4\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.2 0.009275    4\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.7 -0.00927    9\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.2 1.235e-8   14\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.7       18   19\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.2       23   24\n"
-      "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.7       28   29\n";
+    "ansi col1 col2     col3 col4\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.2 0.009275    4\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo0  0.7 -0.00927    9\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.2 1.235e-8   14\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo1  1.7       18   19\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.2       23   24\n"
+    "   \x1B[32m\xE2\x97\x8F\x1B[00m foo2  2.7       28   29\n";
 
   EXPECT_EQ(ss.str(), expected_output);
 }
@@ -759,7 +747,7 @@ TEST(StringUtil, ends_with) {
 TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width(""), 0);
   EXPECT_EQ(util::terminal_width("hello"), 5);
-  EXPECT_EQ(util::terminal_width("\033[31m\033[00m"), 0);  // red font
+  EXPECT_EQ(util::terminal_width("\033[31m\033[00m"), 0);       // red font
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
 }
 

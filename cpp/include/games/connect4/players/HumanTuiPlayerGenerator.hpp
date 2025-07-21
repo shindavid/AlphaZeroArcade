@@ -25,7 +25,7 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
 
       po2::options_description desc("c4::HumanTUIPlayer options");
       return desc.template add_option<"cheat-mode", 'C'>(
-          po::bool_switch(&cheat_mode)->default_value(false), "show winning moves");
+        po::bool_switch(&cheat_mode)->default_value(false), "show winning moves");
     }
   };
 

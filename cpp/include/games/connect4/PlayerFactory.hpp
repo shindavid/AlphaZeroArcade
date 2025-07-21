@@ -2,12 +2,11 @@
 
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
-#include "generic_players/RandomPlayerGenerator.hpp"
-
 #include "games/connect4/Game.hpp"
 #include "games/connect4/players/HumanTuiPlayerGenerator.hpp"
 #include "games/connect4/players/PerfectPlayerGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace c4 {
 
@@ -21,10 +20,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
  private:
   static player_subfactory_vec_t make_subfactories() {
     return {new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>(),
-            new core::PlayerSubfactory<
-                generic::CompetitiveMctsPlayerGenerator<Game>>(),
-            new core::PlayerSubfactory<
-                generic::TrainingMctsPlayerGenerator<Game>>(),
+            new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>(),
+            new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};

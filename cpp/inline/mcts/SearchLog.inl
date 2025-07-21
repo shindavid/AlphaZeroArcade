@@ -1,5 +1,4 @@
 #include "mcts/SearchLog.hpp"
-
 #include "util/BitSet.hpp"
 
 namespace mcts {
@@ -60,8 +59,7 @@ void SearchLog<Game>::build_graph(Graph& graph) {
     const State* state = node->stable_data().get_state();
     const auto stats = node->stats_safe();  // make a copy
     graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
-                   stats.provably_winning, stats.provably_losing,
-                   node->stable_data().active_seat);
+                   stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       Edge* edge = node->get_edge(i);
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "generic_players/HumanTuiPlayer.hpp"
 #include "games/blokus/Game.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
 
 #include <map>
 #include <vector>
@@ -21,12 +21,12 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   void start_game() override;
 
  private:
-  #pragma pack(push, 1)
+#pragma pack(push, 1)
   struct value_t {
     piece_orientation_corner_index_t poc;
     Location loc;
   };
-  #pragma pack(pop)
+#pragma pack(pop)
 
   using State = Game::State;
   using StateHistory = Game::StateHistory;

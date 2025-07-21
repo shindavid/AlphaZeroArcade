@@ -1,10 +1,11 @@
 #pragma once
 
+#include "util/CppUtil.hpp"
+
 #include <spdlog/fmt/ostr.h>  // Enables fallback to ostream <<
 #include <spdlog/spdlog.h>
 
 #include <string>
-#include "util/CppUtil.hpp"
 
 // The main logging macros are LOG_INFO(), LOG_DEBUG(), LOG_WARN(), and LOG_ERROR().
 //

@@ -9,8 +9,7 @@ namespace concepts {
 
 template <typename GTT, typename GameTypes>
 concept GameTrainingTargets = requires {
-  requires core::concepts::TrainingTargetList<typename GTT::List,
-                                              typename GameTypes::GameLogView>;
+  requires core::concepts::TrainingTargetList<typename GTT::List, typename GameTypes::GameLogView>;
 };
 
 }  // namespace concepts

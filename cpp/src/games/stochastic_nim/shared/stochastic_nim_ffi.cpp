@@ -10,9 +10,7 @@ State* Game_new_state(int stones_left, int mode) {
   return new State(stones_left, stochastic_nim::kPlayer0, mode);
 }
 
-void Game_delete_state(State* state) {
-  delete state;
-}
+void Game_delete_state(State* state) { delete state; }
 
 using PerfectStrategy = stochastic_nim::PerfectStrategy;
 
@@ -31,4 +29,4 @@ float get_state_value_after(PerfectStrategy* strategy, int stones_left) {
 int get_optimal_action(PerfectStrategy* strategy, int stones_left) {
   return strategy->get_optimal_action(stones_left);
 }
-} // extern "C"
+}  // extern "C"

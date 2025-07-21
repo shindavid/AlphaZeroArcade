@@ -31,7 +31,8 @@ class SimpleStateHistory {
    * Rules as a template parameter, but then we would need to use the "template" keyword at the
    * call-site, which is distasteful.
    */
-  template <typename Rules> void initialize(Rules);
+  template <typename Rules>
+  void initialize(Rules);
 
   /*
    * Push back a copy of the most recent state, and return a reference to it.

@@ -15,7 +15,7 @@ namespace core {
  * This can be inefficient, but it is guaranteed to work for any game, as long as the game's
  * State class is a comparable type.
  */
-template<concepts::Game Game>
+template <concepts::Game Game>
 class DefaultCanonicalizer {
  public:
   using State = Game::State;

@@ -1,5 +1,4 @@
 #include "core/DataLoader.hpp"
-
 #include "core/GameLog.hpp"
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
@@ -129,8 +128,8 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
     while (sample_index < n_samples && sampled_indices_[sample_index] >= file_start) {
       int64_t local_index = sampled_indices_[sample_index] - file_start;
       RELEASE_ASSERT(local_index >= 0 && local_index < num_rows,
-                           "SamplingManager::sample() bug at {} [local_index:{} num_rows:{}]",
-                           __LINE__, local_index, num_rows);
+                     "SamplingManager::sample() bug at {} [local_index:{} num_rows:{}]", __LINE__,
+                     local_index, num_rows);
       local_indices->push_back(local_index);
       sample_index++;
     }
@@ -201,9 +200,7 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
 template <concepts::Game Game>
 void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
   mit::unique_lock lock(mutex_);
-  cv_.wait(lock, [this] {
-    return quitting_ || (int)available_thread_ids_.size() == n_threads_;
-    });
+  cv_.wait(lock, [this] { return quitting_ || (int)available_thread_ids_.size() == n_threads_; });
 }
 
 template <concepts::Game Game>
@@ -304,7 +301,7 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
     start_gen = work_units.back().file->gen();
     end_gen = work_units.front().file->gen();
     RELEASE_ASSERT(start_gen <= end_gen, "DataFileSet::{}() bug [start:{} end:{}]", __func__,
-                         start_gen, end_gen);
+                   start_gen, end_gen);
   }
 
   // put work units with loaded files at the front
@@ -328,8 +325,8 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
   }
 
   RELEASE_ASSERT(memory_usage_ == expected_memory_usage,
-    "DataFileSet::prepare_files() memory-usage-tracking-bug [{} != {}]",
-     memory_usage_, expected_memory_usage);
+                 "DataFileSet::prepare_files() memory-usage-tracking-bug [{} != {}]", memory_usage_,
+                 expected_memory_usage);
 
   lock.unlock();
   cv_.notify_all();
@@ -421,7 +418,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
   }
 
   RELEASE_ASSERT(file->file_size() > memory_budget_, "DataFileSet::prefetch_loop() bug at {}",
-                       __LINE__);
+                 __LINE__);
 
   // our memory budget is insufficient to load this single file. In this case let's just violate
   // the memory budget and load the file anyway

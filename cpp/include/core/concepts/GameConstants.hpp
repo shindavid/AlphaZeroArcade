@@ -31,8 +31,6 @@ concept GameConstants = requires {
   //
   // If using the core::ConstantsBase base-class, this will be 0 by default.
   { util::decay_copy(GC::kNumPreviousStatesToEncode) } -> std::same_as<int>;
-
-
 };
 
 }  // namespace concepts

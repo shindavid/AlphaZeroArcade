@@ -1,5 +1,4 @@
 #include "games/connect4/players/PerfectPlayerGenerator.hpp"
-
 #include "util/BoostUtil.hpp"
 
 #include <format>

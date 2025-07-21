@@ -25,7 +25,7 @@ class KeyValueDumper {
    * - The right-alignment of the values
    */
   static void add(const std::string& key, const char* value_fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+    __attribute__((format(printf, 2, 3)));
 
   /*
    * Dumps all add()'ed parameters to stdout.

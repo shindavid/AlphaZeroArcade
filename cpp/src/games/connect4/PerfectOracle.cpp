@@ -88,11 +88,8 @@ PerfectOracle::QueryResult PerfectOracle::query(const MoveHistory& history) {
 PerfectOracle::PerfectOracle()
     : out_(),
       in_(),
-      child_(detail::make_cmd(), bp::std_out > out_,
-             bp::std_in < in_, bp::std_err > bp::null) {}
+      child_(detail::make_cmd(), bp::std_out > out_, bp::std_in<in_, bp::std_err> bp::null) {}
 
-PerfectOracle::~PerfectOracle() {
-  child_.terminate();
-}
+PerfectOracle::~PerfectOracle() { child_.terminate(); }
 
 }  // namespace c4

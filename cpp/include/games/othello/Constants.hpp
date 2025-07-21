@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
-
 #include "core/BasicTypes.hpp"
+
+#include <cstdint>
 
 /*
  * Bit order encoding for the board:

@@ -32,11 +32,13 @@ struct AllDerivedFrom<Base, TypeList<>> {
 template <typename Base, typename Head, typename... Tails>
 struct AllDerivedFrom<Base, TypeList<Head, Tails...>> {
   static constexpr bool value =
-      std::is_base_of_v<Base, Head> && AllDerivedFrom<Base, TypeList<Tails...>>::value;
+    std::is_base_of_v<Base, Head> && AllDerivedFrom<Base, TypeList<Tails...>>::value;
 };
 
 template <typename T>
-concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t); };
+concept IsTypeList = requires(T t) {
+  []<typename... Ts>(TypeList<Ts...>&) {}(t);
+};
 
 template <typename T, typename Base>
 concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;
@@ -56,7 +58,7 @@ struct AllSatisfyConcept<Pred, TypeList<Head, Tails...>>
  * NOTE(dshin): VSCode seems to get confused by the IsTypeList<T> requirement here, even though
  * gcc compiles it fine. I'm commenting it out to make the IDE happy.
  */
-template <typename T, template<typename> typename Pred>
+template <typename T, template <typename> typename Pred>
 concept IsTypeListSatisfying = /*IsTypeList<T> &&*/ AllSatisfyConcept<Pred, T>::value;
 
 // length of a typelist
@@ -112,9 +114,9 @@ struct IndexOf<TypeList<T, Tails...>, T> {
 template <typename Head, typename... Tails, typename T>
 struct IndexOf<TypeList<Head, Tails...>, T> {
   static constexpr std::size_t value =
-      std::is_same_v<Head, T>
-          ? 0
-          : (IndexOf_v<TypeList<Tails...>, T> == -1 ? -1 : IndexOf_v<TypeList<Tails...>, T> + 1);
+    std::is_same_v<Head, T>
+      ? 0
+      : (IndexOf_v<TypeList<Tails...>, T> == -1 ? -1 : IndexOf_v<TypeList<Tails...>, T> + 1);
 };
 
 // apply
@@ -148,13 +150,12 @@ struct MaxSizeOf<TypeList<T>> {
 template <typename Head, typename... Tails>
 struct MaxSizeOf<TypeList<Head, Tails...>> {
   static constexpr std::size_t value = sizeof(Head) > MaxSizeOf<TypeList<Tails...>>::value
-                                           ? sizeof(Head)
-                                           : MaxSizeOf<TypeList<Tails...>>::value;
+                                         ? sizeof(Head)
+                                         : MaxSizeOf<TypeList<Tails...>>::value;
 };
 
 template <typename TList>
 inline constexpr std::size_t MaxSizeOf_v = MaxSizeOf<TList>::value;
-
 
 template <typename T>
 struct MaxOf {};

@@ -1,5 +1,4 @@
 #include "games/connect4/Game.hpp"
-
 #include "util/AnsiCodes.hpp"
 #include "util/BitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -20,26 +19,26 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
   column_t col = last_action;
   mask_t piece_mask = ((state.full_mask + _bottom_mask(col)) & (_column_mask(col) << 1)) >> 1;
 
-  RELEASE_ASSERT(last_player != get_current_player(state), "Wrong player ({} == {})",
-                       last_player, get_current_player(state));
+  RELEASE_ASSERT(last_player != get_current_player(state), "Wrong player ({} == {})", last_player,
+                 get_current_player(state));
   RELEASE_ASSERT(last_action >= 0, "Bad last_action: {}", last_action);
-  RELEASE_ASSERT(std::popcount(piece_mask) == 1, "Wrong popcount({})={}",
-                       piece_mask, std::popcount(piece_mask));
+  RELEASE_ASSERT(std::popcount(piece_mask) == 1, "Wrong popcount({})={}", piece_mask,
+                 std::popcount(piece_mask));
 
   mask_t masks[] = {
-      (piece_mask << 1) - (piece_mask >> 3),      // vertical
-      piece_mask * horizontal_block,              // horizontal 1
-      (piece_mask >> 8) * horizontal_block,       // horizontal 2
-      (piece_mask >> 16) * horizontal_block,      // horizontal 3
-      (piece_mask >> 24) * horizontal_block,      // horizontal 4
-      piece_mask * nw_se_diagonal_block,          // nw-se diagonal 1
-      (piece_mask >> 7) * nw_se_diagonal_block,   // nw-se diagonal 2
-      (piece_mask >> 14) * nw_se_diagonal_block,  // nw-se diagonal 3
-      (piece_mask >> 21) * nw_se_diagonal_block,  // nw-se diagonal 4
-      piece_mask * sw_ne_diagonal_block,          // sw-ne diagonal 1
-      (piece_mask >> 9) * sw_ne_diagonal_block,   // sw-ne diagonal 2
-      (piece_mask >> 18) * sw_ne_diagonal_block,  // sw-ne diagonal 3
-      (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
+    (piece_mask << 1) - (piece_mask >> 3),      // vertical
+    piece_mask * horizontal_block,              // horizontal 1
+    (piece_mask >> 8) * horizontal_block,       // horizontal 2
+    (piece_mask >> 16) * horizontal_block,      // horizontal 3
+    (piece_mask >> 24) * horizontal_block,      // horizontal 4
+    piece_mask * nw_se_diagonal_block,          // nw-se diagonal 1
+    (piece_mask >> 7) * nw_se_diagonal_block,   // nw-se diagonal 2
+    (piece_mask >> 14) * nw_se_diagonal_block,  // nw-se diagonal 3
+    (piece_mask >> 21) * nw_se_diagonal_block,  // nw-se diagonal 4
+    piece_mask * sw_ne_diagonal_block,          // sw-ne diagonal 1
+    (piece_mask >> 9) * sw_ne_diagonal_block,   // sw-ne diagonal 2
+    (piece_mask >> 18) * sw_ne_diagonal_block,  // sw-ne diagonal 3
+    (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
   };
 
   mask_t updated_mask = state.full_mask ^ state.cur_player_mask;
@@ -115,8 +114,8 @@ int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_
 
 std::string Game::IO::player_to_str(core::seat_index_t player) {
   return (player == c4::kRed)
-             ? std::format("{}{}{}", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""))
-             : std::format("{}{}{}", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""));
+           ? std::format("{}{}{}", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""))
+           : std::format("{}{}{}", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""));
 }
 
 }  // namespace c4

@@ -65,7 +65,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   struct SharedData {
-    template<typename... Ts>
+    template <typename... Ts>
     SharedData(Ts&&... args) : manager(std::forward<Ts>(args)...) {}
 
     MctsManager manager;
@@ -121,7 +121,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
-  template<core::concepts::Game> friend class MctsPlayerTest;
+  template <core::concepts::Game>
+  friend class MctsPlayerTest;
 };
 
 }  // namespace generic

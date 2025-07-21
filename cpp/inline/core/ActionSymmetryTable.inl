@@ -1,5 +1,4 @@
 #include "core/ActionSymmetryTable.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
 
@@ -44,7 +43,8 @@ void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<Item>& items) 
   for (int p = 0; p < num_pairs; ++p) {
     int start_index = pair_array[p].cluster_start_index;
     auto equivalence_class = items[start_index].equivalence_class;
-    for (int index = start_index; index < num_items && items[index].equivalence_class == equivalence_class; ++index) {
+    for (int index = start_index;
+         index < num_items && items[index].equivalence_class == equivalence_class; ++index) {
       action_array[i++] = items[index].action;
     }
   }

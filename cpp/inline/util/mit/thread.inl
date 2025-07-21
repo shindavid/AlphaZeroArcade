@@ -1,20 +1,16 @@
 #pragma once
 
-#include "util/mit/thread.hpp"
-
-#include "util/mit/exceptions.hpp"
-#include "util/mit/scheduler.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/mit/exceptions.hpp"
 #include "util/mit/scheduler.hpp"
+#include "util/mit/thread.hpp"
 
 namespace mit {
 
 inline thread::thread() : impl_(std::make_shared<thread_impl>(this)) {}
 
-inline thread::thread(bool dummy)
-    : impl_(std::make_shared<thread_impl>(this, true, true)) {}
+inline thread::thread(bool dummy) : impl_(std::make_shared<thread_impl>(this, true, true)) {}
 
 template <typename Function>
 thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true)) {
@@ -56,9 +52,7 @@ inline thread& thread::operator=(thread&& other) {
   return *this;
 }
 
-inline bool thread::joinable() const {
-  return impl_->std_thread.joinable();
-}
+inline bool thread::joinable() const { return impl_->std_thread.joinable(); }
 
 inline void thread::join() {
   if (this != impl_->owner || !impl_->activated) {
@@ -91,13 +85,9 @@ inline void thread_impl::mark_as_blocked_by(mutex* m) {
   blocking_mutex = m;
 }
 
-inline void thread_impl::lift_block(condition_variable* cv) {
-  blocking_cv = nullptr;
-}
+inline void thread_impl::lift_block(condition_variable* cv) { blocking_cv = nullptr; }
 
-inline void thread_impl::lift_block(mutex* m) {
-  blocking_mutex = nullptr;
-}
+inline void thread_impl::lift_block(mutex* m) { blocking_mutex = nullptr; }
 
 inline bool thread_impl::viable() const {
   return !blocking_cv && !blocking_mutex && !joinee && activated;

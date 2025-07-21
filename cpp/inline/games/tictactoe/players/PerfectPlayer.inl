@@ -1,6 +1,5 @@
-#include "games/tictactoe/players/PerfectPlayer.hpp"
-
 #include "games/tictactoe/PerfectStrategyLookupTable.hpp"
+#include "games/tictactoe/players/PerfectPlayer.hpp"
 #include "util/BitSet.hpp"
 #include "util/Random.hpp"
 
@@ -15,10 +14,10 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("tictactoe::PerfectPlayer options");
   return desc
-      .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
-                                            "strength (0-1). 0 is random, 1 is perfect.")
-      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "verbose mode");
+    .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
+                                          "strength (0-1). 0 is random, 1 is perfect.")
+    .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                         "verbose mode");
 }
 
 inline PerfectPlayer::PerfectPlayer(const Params& params)
@@ -27,7 +26,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 }
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
-    const ActionRequest& request) {
+  const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 

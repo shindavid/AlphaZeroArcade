@@ -9,9 +9,9 @@ namespace generic {
 /*
  * RandomPlayer always chooses uniformly at random among the set of legal moves.
  */
-template<core::concepts::Game Game>
+template <core::concepts::Game Game>
 class RandomPlayer : public core::AbstractPlayer<Game> {
-public:
+ public:
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
 

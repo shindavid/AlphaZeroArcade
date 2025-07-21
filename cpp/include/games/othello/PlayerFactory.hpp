@@ -2,11 +2,11 @@
 
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
-#include "generic_players/RandomPlayerGenerator.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/players/EdaxPlayerGenerator.hpp"
 #include "games/othello/players/HumanTuiPlayerGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace othello {
 

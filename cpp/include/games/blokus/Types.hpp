@@ -23,7 +23,8 @@ char color_to_char(color_t c);
 struct Location {
   Location() = default;
 
-  template<typename R, typename C> Location(R r, C c) : row(r), col(c) {}
+  template <typename R, typename C>
+  Location(R r, C c) : row(r), col(c) {}
 
   auto operator<=>(const Location& other) const = default;
   void set(int8_t r, int8_t c);
@@ -97,10 +98,10 @@ class BitBoard {
  public:
   auto operator<=>(const BitBoard& other) const = default;
 
-  template<concepts::BitBoardLike Board>
+  template <concepts::BitBoardLike Board>
   BitBoard operator|(const Board& other) const;
 
-  template<concepts::BitBoardLike Board>
+  template <concepts::BitBoardLike Board>
   BitBoard operator&(const Board& other) const;
 
   BitBoard operator~() const;
@@ -108,7 +109,7 @@ class BitBoard {
   template <concepts::BitBoardLike Board>
   BitBoard& operator&=(const Board& other);
 
-  template<concepts::BitBoardLike Board>
+  template <concepts::BitBoardLike Board>
   BitBoard& operator|=(const Board& other);
 
   constexpr int start_row() const { return 0; }
@@ -181,7 +182,7 @@ class BoardString {
 
   void set(Location loc, drawing_t color);
 
-  template<concepts::BitBoardLike Board>
+  template <concepts::BitBoardLike Board>
   void set(const Board& board, drawing_t color);
 
  private:
@@ -315,7 +316,7 @@ extern const _MiniBoardLookup kMiniBoardLookup[kMiniBoardLookupSize];
 extern const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks];
 extern const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintArraySize];
 
-}  // tables
+}  // namespace tables
 
 }  // namespace blokus
 

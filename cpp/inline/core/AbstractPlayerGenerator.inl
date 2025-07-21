@@ -1,5 +1,4 @@
 #include "core/AbstractPlayerGenerator.hpp"
-
 #include "core/Constants.hpp"
 #include "util/Exceptions.hpp"
 

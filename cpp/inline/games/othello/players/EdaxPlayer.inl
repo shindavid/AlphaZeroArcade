@@ -1,5 +1,4 @@
 #include "games/othello/players/EdaxPlayer.hpp"
-
 #include "util/BoostUtil.hpp"
 
 namespace othello {
@@ -23,8 +22,7 @@ inline auto EdaxPlayer::Params::make_options_description() {
 
 inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
     : oracle_pool_(oracle_pool), params_(params) {
-  CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21,
-                     "edax depth must be in [0, 21]");
+  CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
 inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {

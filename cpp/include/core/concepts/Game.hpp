@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Eigen/Core>
-
 #include "core/BasicTypes.hpp"
 #include "core/GameTypes.hpp"
 #include "core/TrainingTargets.hpp"
@@ -17,6 +15,8 @@
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
+
+#include <Eigen/Core>
 
 #include <concepts>
 
@@ -51,8 +51,8 @@ namespace concepts {
  *
  * - G::InputTensorizor must be a struct containing a static method for converting an array of
  *   G::State's to a tensor, to be used as input to the neural network. It must also contain
- *   static methods to convert a G::StateHistory to a hashable map-key, to be used for neural network
- *   evaluation caching, and for MCGS node reuse.
+ *   static methods to convert a G::StateHistory to a hashable map-key, to be used for neural
+ * network evaluation caching, and for MCGS node reuse.
  *
  * - G::TrainingTargets::List must be an mp::TypeList that encodes the training targets used for
  *   supervised learning. This will include the policy target, the value target, and any other
@@ -62,10 +62,9 @@ template <class G>
 concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires core::concepts::GameMctsConfiguration<typename G::MctsConfiguration>;
-  requires std::same_as<
-      typename G::Types,
-      core::GameTypes<typename G::Constants, typename G::State, typename G::GameResults,
-                      typename G::SymmetryGroup>>;
+  requires std::same_as<typename G::Types,
+                        core::GameTypes<typename G::Constants, typename G::State,
+                                        typename G::GameResults, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
   requires std::is_trivially_destructible_v<typename G::State>;
@@ -85,7 +84,7 @@ concept Game = requires {
 
   // Any game-specific one-time static-initialization code should be placed in a static method
   // called static_init().
-  { G::static_init() };
+  {G::static_init()};
 };
 
 template <class G>

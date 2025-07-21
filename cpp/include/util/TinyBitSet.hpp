@@ -30,9 +30,7 @@ class TinyBitSet {
     using pointer = const size_t*;
     using reference = const size_t&;
 
-    Iterator(uint64_t bits, size_t pos) : bits_(bits), pos_(pos) {
-      advance_to_next();
-    }
+    Iterator(uint64_t bits, size_t pos) : bits_(bits), pos_(pos) { advance_to_next(); }
 
     size_t operator*() const { return pos_; }
 
@@ -46,9 +44,7 @@ class TinyBitSet {
       return bits_ == other.bits_ && pos_ == other.pos_;
     }
 
-    bool operator!=(const Iterator& other) const {
-      return !(*this == other);
-    }
+    bool operator!=(const Iterator& other) const { return !(*this == other); }
 
    private:
     void advance_to_next() {

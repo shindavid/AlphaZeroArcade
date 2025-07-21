@@ -1,19 +1,18 @@
-#include "generic_players/MctsPlayer.hpp"
-
-#include <unistd.h>
-
 #include "core/Constants.hpp"
+#include "generic_players/MctsPlayer.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
-#include "util/Math.hpp"
 #include "util/KeyValueDumper.hpp"
+#include "util/Math.hpp"
 #include "util/Random.hpp"
 #include "util/RepoUtil.hpp"
 #include "util/ScreenUtil.hpp"
 #include "util/StringUtil.hpp"
+
+#include <unistd.h>
 
 namespace generic {
 
@@ -53,31 +52,30 @@ auto MctsPlayer<Game>::Params::make_options_description() {
   po2::options_description desc("MctsPlayer options");
 
   return desc
-      .template add_option<"num-fast-iters">(
-          po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
-          "num mcts iterations to do per fast move")
-      .template add_option<"num-full-iters", 'i'>(
-          po::value<int>(&num_full_iters)->default_value(num_full_iters),
-          "num mcts iterations to do per full move")
-      .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
-                                            "pct of moves that should be full")
-      .template add_hidden_option<"starting-move-temp">(
-          po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
-          "starting temperature for move selection")
-      .template add_hidden_option<"ending-move-temp">(
-          po::value<float>(&ending_move_temperature)->default_value(ending_move_temperature),
-          "ending temperature for move selection")
-      .template add_option<"move-temp-half-life", 't'>(
-          po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
-          "half-life for move temperature")
-      .template add_option<"lcb-z-score">(
-          po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
-          "z-score for LCB. If zero, disable LCB")
-      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                           "mcts player verbose mode")
-      .template add_option<"verbose-num-rows-to-display", 'r'>(
-          po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
-          "mcts player number of rows to display in verbose mode");
+    .template add_option<"num-fast-iters">(
+      po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
+      "num mcts iterations to do per fast move")
+    .template add_option<"num-full-iters", 'i'>(
+      po::value<int>(&num_full_iters)->default_value(num_full_iters),
+      "num mcts iterations to do per full move")
+    .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
+                                          "pct of moves that should be full")
+    .template add_hidden_option<"starting-move-temp">(
+      po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
+      "starting temperature for move selection")
+    .template add_hidden_option<"ending-move-temp">(
+      po::value<float>(&ending_move_temperature)->default_value(ending_move_temperature),
+      "ending temperature for move selection")
+    .template add_option<"move-temp-half-life", 't'>(
+      po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
+      "half-life for move temperature")
+    .template add_option<"lcb-z-score">(po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
+                                        "z-score for LCB. If zero, disable LCB")
+    .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                         "mcts player verbose mode")
+    .template add_option<"verbose-num-rows-to-display", 'r'>(
+      po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
+      "mcts player number of rows to display in verbose mode");
 }
 
 template <core::concepts::Game Game>
@@ -85,9 +83,9 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared
                                     bool owns_shared_data)
     : params_(params),
       search_params_{
-          {params.num_fast_iters, false},  // kFast
-          {params.num_full_iters},         // kFull
-          {1, false}                       // kRawPolicy
+        {params.num_fast_iters, false},  // kFast
+        {params.num_full_iters},         // kFull
+        {1, false}                       // kRawPolicy
       },
       move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
                         params.move_temperature_half_life),
@@ -171,8 +169,7 @@ bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
 
 template <core::concepts::Game Game>
 typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_helper(
-    const SearchResults* mcts_results, const ActionMask& valid_actions) const {
-
+  const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
   if (verbose_info_) {
@@ -310,11 +307,11 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
           static std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
                                                      "Q_sigma", "LCB", "UCB", "P*"};
           auto data = eigen_util::sort_rows(
-              eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr,
-                                              Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
+            eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr,
+                                            LCB_arr, UCB_arr, policy_masked_arr));
 
           core::action_mode_t mode = mcts_results->action_mode;
-          eigen_util::PrintArrayFormatMap fmt_map {
+          eigen_util::PrintArrayFormatMap fmt_map{
             {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
           };
 
@@ -361,7 +358,7 @@ inline void MctsPlayer<Game>::verbose_dump() const {
 
 template <core::concepts::Game Game>
 void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                          const SearchResults& results) const{
+                                          const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
@@ -369,7 +366,7 @@ void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& 
   const auto& net_value = results.value_prior;
   core::action_mode_t mode = results.action_mode;
 
-  eigen_util::PrintArrayFormatMap fmt_map {
+  eigen_util::PrintArrayFormatMap fmt_map{
     {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
     {"action", [&](float x) { return IO::action_to_str(x, mode); }},
   };

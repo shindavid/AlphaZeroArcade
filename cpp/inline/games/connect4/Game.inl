@@ -1,6 +1,5 @@
-#include "games/connect4/Game.hpp"
-
 #include "core/DefaultCanonicalizer.hpp"
+#include "games/connect4/Game.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/BitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -25,7 +24,8 @@ inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) 
 
 inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   switch (sym) {
-    case groups::D1::kIdentity: return;
+    case groups::D1::kIdentity:
+      return;
     case groups::D1::kFlip: {
       state.full_mask = std::byteswap(state.full_mask << 8);
       state.cur_player_mask = std::byteswap(state.cur_player_mask << 8);
@@ -62,7 +62,8 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym
 inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
                                     core::action_mode_t) {
   switch (sym) {
-    case groups::D1::kIdentity: return;
+    case groups::D1::kIdentity:
+      return;
     case groups::D1::kFlip: {
       action = 6 - action;
       return;
@@ -98,7 +99,6 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
-
 
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();

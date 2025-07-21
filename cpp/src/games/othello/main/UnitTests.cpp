@@ -42,15 +42,15 @@ PolicyTensor make_policy(int move) {
 }
 
 const std::string init_state_repr =
-    "   A B C D E F G H\n"
-    " 1| | | | | | | | |\n"
-    " 2| | | | | | | | |\n"
-    " 3| | |.|*|.| | | |\n"
-    " 4| | | |*|*| | | |\n"
-    " 5| | |.|*|0| | | |\n"
-    " 6| | | | | | | | |\n"
-    " 7| | | | | | | | |\n"
-    " 8| | | | | | | | |\n";
+  "   A B C D E F G H\n"
+  " 1| | | | | | | | |\n"
+  " 2| | | | | | | | |\n"
+  " 3| | |.|*|.| | | |\n"
+  " 4| | | |*|*| | | |\n"
+  " 5| | |.|*|0| | | |\n"
+  " 6| | | | | | | | |\n"
+  " 7| | | | | | | | |\n"
+  " 8| | | | | | | | |\n";
 
 std::string get_repr(const State& state) {
   std::ostringstream ss;
@@ -108,15 +108,15 @@ TEST(Symmetry, rot90_clockwise) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | |.| |.| | |\n"
-      " 4| | | |*|*|*| | |\n"
-      " 5| | | |0|*|.| | |\n"
-      " 6| | | | | | | | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | |.| |.| | |\n"
+    " 4| | | |*|*|*| | |\n"
+    " 5| | | |0|*|.| | |\n"
+    " 6| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -140,15 +140,15 @@ TEST(Symmetry, rot180) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | | | | | | |\n"
-      " 4| | | |0|*|.| | |\n"
-      " 5| | | |*|*| | | |\n"
-      " 6| | | |.|*|.| | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 4| | | |0|*|.| | |\n"
+    " 5| | | |*|*| | | |\n"
+    " 6| | | |.|*|.| | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -172,15 +172,15 @@ TEST(Symmetry, rot270_clockwise) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | | | | | | |\n"
-      " 4| | |.|*|0| | | |\n"
-      " 5| | |*|*|*| | | |\n"
-      " 6| | |.| |.| | | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 4| | |.|*|0| | | |\n"
+    " 5| | |*|*|*| | | |\n"
+    " 6| | |.| |.| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -204,15 +204,15 @@ TEST(Symmetry, flip_vertical) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | | | | | | |\n"
-      " 4| | |.|*|0| | | |\n"
-      " 5| | | |*|*| | | |\n"
-      " 6| | |.|*|.| | | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 4| | |.|*|0| | | |\n"
+    " 5| | | |*|*| | | |\n"
+    " 6| | |.|*|.| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -236,15 +236,15 @@ TEST(Symmetry, mirror_horizontal) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | |.|*|.| | |\n"
-      " 4| | | |*|*| | | |\n"
-      " 5| | | |0|*|.| | |\n"
-      " 6| | | | | | | | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | |.|*|.| | |\n"
+    " 4| | | |*|*| | | |\n"
+    " 5| | | |0|*|.| | |\n"
+    " 6| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -268,15 +268,15 @@ TEST(Symmetry, flip_main_diag) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | |.| |.| | | |\n"
-      " 4| | |*|*|*| | | |\n"
-      " 5| | |.|*|0| | | |\n"
-      " 6| | | | | | | | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | |.| |.| | | |\n"
+    " 4| | |*|*|*| | | |\n"
+    " 5| | |.|*|0| | | |\n"
+    " 6| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -300,15 +300,15 @@ TEST(Symmetry, flip_anti_diag) {
 
   std::string repr = get_repr(state);
   std::string expected_repr =
-      "   A B C D E F G H\n"
-      " 1| | | | | | | | |\n"
-      " 2| | | | | | | | |\n"
-      " 3| | | | | | | | |\n"
-      " 4| | | |0|*|.| | |\n"
-      " 5| | | |*|*|*| | |\n"
-      " 6| | | |.| |.| | |\n"
-      " 7| | | | | | | | |\n"
-      " 8| | | | | | | | |\n";
+    "   A B C D E F G H\n"
+    " 1| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 4| | | |0|*|.| | |\n"
+    " 5| | | |*|*|*| | |\n"
+    " 6| | | |.| |.| | |\n"
+    " 7| | | | | | | | |\n"
+    " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
@@ -323,10 +323,6 @@ TEST(Symmetry, flip_anti_diag) {
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-TEST(Symmetry, action_transforms) {
-  core::tests::Common<Game>::gtest_action_transforms();
-}
+TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

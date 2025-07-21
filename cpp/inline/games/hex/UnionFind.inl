@@ -25,7 +25,7 @@ inline void UnionFind::unite(vertex_t a, vertex_t b) {
   b = find(b);
   if (a == b) return;
   // union by rank
-  if (rank_[a] < rank_[b]) std::swap(a,b);
+  if (rank_[a] < rank_[b]) std::swap(a, b);
   parent_[b] = a;
   if (rank_[a] == rank_[b]) ++rank_[a];
 }

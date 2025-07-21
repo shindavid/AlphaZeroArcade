@@ -77,9 +77,7 @@ class Manager {
     SearchRequest(const core::YieldNotificationUnit& u) : notification_unit(u) {}
     SearchRequest() = default;
 
-    core::YieldManager* yield_manager() const {
-      return notification_unit.yield_manager;
-    }
+    core::YieldManager* yield_manager() const { return notification_unit.yield_manager; }
     core::context_id_t context_id() const { return notification_unit.context_id; }
     core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
 
@@ -88,9 +86,9 @@ class Manager {
 
   struct SearchResponse {
     static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
-    static SearchResponse make_yield(int e=0) { return SearchResponse(nullptr, core::kYield, e); }
+    static SearchResponse make_yield(int e = 0) { return SearchResponse(nullptr, core::kYield, e); }
 
-    SearchResponse(const SearchResults* r, core::yield_instruction_t y=core::kContinue, int e=0)
+    SearchResponse(const SearchResults* r, core::yield_instruction_t y = core::kContinue, int e = 0)
         : results(r), yield_instruction(y), extra_enqueue_count(e) {}
 
     const SearchResults* results;
@@ -139,11 +137,7 @@ class Manager {
     const SearchRequest* search_request = nullptr;
   };
 
-  enum execution_state_t : int8_t {
-    kIdle,
-    kInitializingRoot,
-    kInVisitLoop
-  };
+  enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
   // StateMachine is used to track the state of the Manager's execution.
   //
@@ -224,7 +218,7 @@ class Manager {
           NNEvaluationServiceBase* service = nullptr);
 
   Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase* server=nullptr,
+          const ManagerParams& params, core::GameServerBase* server = nullptr,
           NNEvaluationServiceBase* service = nullptr);
 
   ~Manager();

@@ -1,5 +1,4 @@
 #include "util/KeyValueDumper.hpp"
-
 #include "util/LoggingUtil.hpp"
 #include "util/StringUtil.hpp"
 

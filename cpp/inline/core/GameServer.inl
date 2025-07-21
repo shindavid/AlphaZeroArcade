@@ -1,6 +1,5 @@
-#include "core/GameServer.hpp"
-
 #include "core/BasicTypes.hpp"
+#include "core/GameServer.hpp"
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
@@ -14,16 +13,16 @@
 #include "util/SocketUtil.hpp"
 #include "util/StringUtil.hpp"
 
+#include <arpa/inet.h>
 #include <boost/program_options.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-#include <arpa/inet.h>
 #include <format>
 #include <iostream>
-#include <netinet/in.h>
 #include <string>
-#include <sys/socket.h>
 #include <vector>
 
 namespace core {
@@ -108,8 +107,8 @@ GameServer<Game>::SharedData::SharedData(
   } else if (params_.alternating_mode == 2) {
     global_active_player_id_ = 0;
   } else {
-    throw util::CleanException("GameServer::{}(): invalid alternating mode: {}",
-                               __func__, params_.alternating_mode);
+    throw util::CleanException("GameServer::{}(): invalid alternating mode: {}", __func__,
+                               params_.alternating_mode);
   }
 }
 
@@ -228,15 +227,14 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
       }
 
       if (deferred_count_ == pending_queue_count_) {
-        DEBUG_ASSERT(
-          global_active_player_id_ >= 0,
-          "GameServer::{}(): deferred_count_ == pending_queue_count_ ({} == {}) but "
-          "global_active_player_id_ is not set",
-          __func__, deferred_count_, pending_queue_count_);
+        DEBUG_ASSERT(global_active_player_id_ >= 0,
+                     "GameServer::{}(): deferred_count_ == pending_queue_count_ ({} == {}) but "
+                     "global_active_player_id_ is not set",
+                     __func__, deferred_count_, pending_queue_count_);
 
         DEBUG_ASSERT(deferred_queues_[global_active_player_id_].empty(),
-                           "GameServer::{}(): deferred queue for active player {} is not empty",
-                           __func__, global_active_player_id_);
+                     "GameServer::{}(): deferred queue for active player {} is not empty", __func__,
+                     global_active_player_id_);
 
         increment_global_active_player_id();
         queue_.swap(deferred_queues_[global_active_player_id_]);
@@ -268,11 +266,10 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
             item.context, queue_.size(), pending_queue_count_);
 
   DEBUG_ASSERT(global_active_player_id_ < 0 ||
-                       game_slots_[item.slot]->active_player_id() == global_active_player_id_,
-                     "GameServer::{}(): item's active player id ({}) does not match "
-                     "global_active_player_id_ ({})",
-                     __func__, game_slots_[item.slot]->active_player_id(),
-                     global_active_player_id_);
+                 game_slots_[item.slot]->active_player_id() == global_active_player_id_,
+               "GameServer::{}(): item's active player id ({}) does not match "
+               "global_active_player_id_ ({})",
+               __func__, game_slots_[item.slot]->active_player_id(), global_active_player_id_);
 
   return kProceed;
 }
@@ -402,7 +399,7 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
 template <concepts::Game Game>
 typename GameServer<Game>::player_instantiation_array_t
 GameServer<Game>::SharedData::generate_player_order(
-    const player_instantiation_array_t& instantiations) {
+  const player_instantiation_array_t& instantiations) {
   mit::unique_lock lock(mutex_);
   std::next_permutation(random_seat_indices_.begin(),
                         random_seat_indices_.begin() + num_random_seats_);
@@ -484,8 +481,8 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::unpause() {
   LOG_INFO("GameServer: unpausing");
   mit::unique_lock lock(mutex_);
-  RELEASE_ASSERT(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_,
-                       kPaused, __LINE__);
+  RELEASE_ASSERT(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_, kPaused,
+                 __LINE__);
   pause_state_ = kUnpausing;
   lock.unlock();
   cv_.notify_all();
@@ -516,8 +513,8 @@ void GameServer<Game>::SharedData::run_prelude(core::game_thread_id_t id) {
   mit::unique_lock lock(mutex_);
   in_prelude_count_++;
 
-  RELEASE_ASSERT(pause_state_ == kPausing,
-                       "{}(): {} != {} @{}", __func__, pause_state_, kPausing, __LINE__);
+  RELEASE_ASSERT(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_, kPausing,
+                 __LINE__);
   paused_thread_count_++;
   bool notify = paused_thread_count_ == active_thread_count_;
   LOG_INFO("<-- GameServer: thread={} pause={} in_prelude={} active={} notify={} @{}", id,
@@ -569,8 +566,8 @@ void GameServer<Game>::SharedData::state_loop() {
     cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kUnpaused; });
     if (active_thread_count_ == 0) break;
 
-    RELEASE_ASSERT(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_,
-                         kPausing, __LINE__);
+    RELEASE_ASSERT(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_, kPausing,
+                   __LINE__);
 
     LOG_INFO("GameServer: pausing, waiting for threads to be ready for pause...");
     cv_.wait(lock, [&] {
@@ -587,7 +584,7 @@ void GameServer<Game>::SharedData::state_loop() {
     if (active_thread_count_ == 0) break;
 
     RELEASE_ASSERT(pause_state_ == kUnpausing, "{}(): {} != {} @{}", __func__, pause_state_,
-                         kUnpausing, __LINE__);
+                   kUnpausing, __LINE__);
 
     LOG_INFO("GameServer: unpausing, waiting for threads to be ready for unpause...");
     cv_.wait(lock, [&] {
@@ -631,8 +628,8 @@ void GameServer<Game>::SharedData::validate_deferred_count() const {
     deferred_count += queue.size();
   }
   DEBUG_ASSERT(deferred_count == deferred_count_,
-                     "GameServer::{}(): deferred_count_ mismatch: {} != {}", __func__,
-                     deferred_count_, deferred_count);
+               "GameServer::{}(): deferred_count_ mismatch: {} != {}", __func__, deferred_count_,
+               deferred_count);
 }
 
 template <concepts::Game Game>
@@ -646,8 +643,7 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
-    : shared_data_(shared_data),
-      id_(id) {
+    : shared_data_(shared_data), id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -736,7 +732,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
 
     if (!noisy_mode_ && response.action_values) {
       RELEASE_ASSERT(!chance_action_values_,
-                           "Clashing chance-event training info from different players");
+                     "Clashing chance-event training info from different players");
     }
     chance_action_values_ = response.action_values;
   }
@@ -771,8 +767,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
-                                                 StepResult& result) {
+bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state_history_.current(), valid_actions_, notification_unit);
@@ -780,8 +775,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
 
   ActionResponse response = player->get_action_response(request);
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
-                     "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-                     int(response.yield_instruction));
+               "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+               int(response.yield_instruction));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
@@ -827,8 +822,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
-      LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory",
-              game_id_, player->get_name(), active_seat_);
+      LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,
+               player->get_name(), active_seat_);
     }
     handle_terminal(outcome, result);
     return false;
@@ -942,8 +937,7 @@ bool GameServer<Game>::GameSlot::start_game() {
 
 template <concepts::Game Game>
 GameServer<Game>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
-    : shared_data_(shared_data), id_(id) {
-}
+    : shared_data_(shared_data), id_(id) {}
 
 template <concepts::Game Game>
 GameServer<Game>::GameThread::~GameThread() {
@@ -1024,7 +1018,7 @@ GameServer<Game>::GameServer(const Params& params,
     for (const auto& action_str : action_strs) {
       core::action_t action = std::stoi(action_str);
       CLEAN_ASSERT(action >= 0, "Invalid initial action: {} in {}", action_str,
-                         params.initial_actions_str);
+                   params.initial_actions_str);
       initial_actions.push_back(action);
     }
     set_initial_actions(initial_actions);
@@ -1033,8 +1027,8 @@ GameServer<Game>::GameServer(const Params& params,
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {
-  CLEAN_ASSERT(num_registered_players() <= kNumPlayers,
-                     "Invalid number of players registered: {}", num_registered_players());
+  CLEAN_ASSERT(num_registered_players() <= kNumPlayers, "Invalid number of players registered: {}",
+               num_registered_players());
 
   // fill in missing slots with remote players
   int shortage = kNumPlayers - num_registered_players();
@@ -1204,7 +1198,8 @@ std::string GameServer<Game>::get_results_str(const results_map_t& map) {
     else
       draw += count;
   }
-  return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);;
+  return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);
+  ;
 }
 
 }  // namespace core

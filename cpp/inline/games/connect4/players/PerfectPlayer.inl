@@ -1,5 +1,4 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
-
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -27,8 +26,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
 inline PerfectPlayer::PerfectPlayer(OraclePool* oracle_pool, const Params& params)
     : oracle_pool_(oracle_pool), params_(params) {
-  CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 21,
-                     "strength must be in [0, 21]");
+  CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 21, "strength must be in [0, 21]");
 }
 
 inline void PerfectPlayer::start_game() { move_history_.reset(); }

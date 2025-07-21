@@ -1,9 +1,10 @@
-#include <gtest/gtest.h>
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/Random.hpp"
 #include "util/mit/exceptions.hpp"
 #include "util/mit/mit.hpp"
+
+#include <gtest/gtest.h>
 
 #include <vector>
 
@@ -68,8 +69,8 @@ class TensorBuildTest : public ::testing::Test {
       for (int i = 1; i < n; ++i) {
         bool equal = eigen_util::equal(tensors[0], tensors[i]);
         EXPECT_TRUE(equal) << "tensors[0]: \n"
-                          << tensors[0] << "\n"
-                          << "tensors[" << i << "]: " << tensors[i];
+                           << tensors[0] << "\n"
+                           << "tensors[" << i << "]: " << tensors[i];
       }
     } else {
       // If not reseeding, we expect variation
@@ -133,7 +134,7 @@ class MutexDeadlockBug {
 };
 
 class MutexDeadlockTest : public ::testing::Test {
-public:
+ public:
   void run(bool use_main_thread, bool reseed) {
     mit::reset();
     mit::seed(42);
@@ -157,8 +158,8 @@ public:
 
     if (reseed) {
       EXPECT_EQ(throw_count * non_throw_count, 0)
-          << "Expected either all threads to throw or none to throw, but got "
-          << throw_count << " throws and " << non_throw_count << " non-throws.";
+        << "Expected either all threads to throw or none to throw, but got " << throw_count
+        << " throws and " << non_throw_count << " non-throws.";
     } else {
       EXPECT_GT(throw_count, 10);
       EXPECT_GT(non_throw_count, 10);
@@ -200,9 +201,7 @@ class ConditionVariableNotifyBug {
  private:
   void func1() {
     mit::unique_lock lock(mutex_);
-    cv_.wait(lock, [this]() {
-      return notified_;
-    });
+    cv_.wait(lock, [this]() { return notified_; });
   }
 
   void func2() {
@@ -247,8 +246,8 @@ class ConditionVariableNotifyTest : public ::testing::Test {
 
     if (reseed) {
       EXPECT_EQ(throw_count * non_throw_count, 0)
-          << "Expected either all threads to throw or none to throw, but got "
-          << throw_count << " throws and " << non_throw_count << " non-throws.";
+        << "Expected either all threads to throw or none to throw, but got " << throw_count
+        << " throws and " << non_throw_count << " non-throws.";
     } else {
       EXPECT_GT(throw_count, 10);
       EXPECT_GT(non_throw_count, 10);

@@ -1,5 +1,4 @@
 #include "games/blokus/Types.hpp"
-
 #include "util/AnsiCodes.hpp"
 
 #include <format>
@@ -108,9 +107,7 @@ struct BitBoardSliceRange {
 
     bool operator!=(Iterator other) const { return row_ != other.row_ || col_ != other.col_; }
 
-    Location operator*() const {
-      return Location(row_, col_);
-    }
+    Location operator*() const { return Location(row_, col_); }
 
     Iterator& operator++() {
       col_++;
@@ -225,9 +222,7 @@ inline void Location::set(int8_t r, int8_t c) {
 
 inline bool Location::valid() const { return row >= 0 && col >= 0; }
 
-inline std::string Location::to_string() const {
-  return std::format("{}{}", 'A' + col, row + 1);
-}
+inline std::string Location::to_string() const { return std::format("{}{}", 'A' + col, row + 1); }
 
 inline Location Location::from_string(const std::string& s) {
   Location loc(-1, -1);
@@ -251,15 +246,13 @@ inline Location Location::from_string(const std::string& s) {
   return loc;
 }
 
-inline int Location::flatten() const {
-  return row * kBoardDimension + col;
-}
+inline int Location::flatten() const { return row * kBoardDimension + col; }
 
 inline Location Location::unflatten(int k) {
   return {int8_t(k / kBoardDimension), int8_t(k % kBoardDimension)};
 }
 
-template<concepts::BitBoardLike Board>
+template <concepts::BitBoardLike Board>
 inline BitBoard BitBoard::operator|(const Board& other) const {
   BitBoard result;
   int i;
@@ -275,7 +268,7 @@ inline BitBoard BitBoard::operator|(const Board& other) const {
   return result;
 }
 
-template<concepts::BitBoardLike Board>
+template <concepts::BitBoardLike Board>
 inline BitBoard BitBoard::operator&(const Board& other) const {
   BitBoard result;
   int i;
@@ -473,7 +466,7 @@ inline void BoardString::set(Location loc, drawing_t color) {
   colors_[loc.row][loc.col] = color;
 }
 
-template<concepts::BitBoardLike Board>
+template <concepts::BitBoardLike Board>
 inline void BoardString::set(const Board& board, drawing_t color) {
   for (Location loc : board.get_set_locations()) {
     set(loc, color);
@@ -591,7 +584,7 @@ inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location 
   DEBUG_ASSERT(!(top_overflow && bot_overflow));
 
   const uint8_t* base_rows = po.adjacent_row_masks();
-  int n_rows = height + !top_overflow +!bot_overflow;
+  int n_rows = height + !top_overflow + !bot_overflow;
 
   uint32_t rows[n_rows];
   if (left_margin == 0) {
@@ -674,9 +667,7 @@ inline PieceMask& PieceMask::operator&=(const PieceMask& other) {
   return *this;
 }
 
-inline auto PieceMask::get_set_bits() const {
-  return detail::PieceMaskRange(mask_);
-}
+inline auto PieceMask::get_set_bits() const { return detail::PieceMaskRange(mask_); }
 
 inline auto PieceMask::get_unset_bits() const {
   uint32_t unset_bits = ~mask_ & ((1 << kNumPieces) - 1);

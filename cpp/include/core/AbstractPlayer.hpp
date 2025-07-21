@@ -1,12 +1,12 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
+#include "core/TrainingDataWriter.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/Exceptions.hpp"
+
 #include <array>
 #include <string>
-
-#include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
-#include "core/TrainingDataWriter.hpp"
-#include "util/Exceptions.hpp"
 
 namespace core {
 

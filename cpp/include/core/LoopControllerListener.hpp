@@ -9,12 +9,7 @@
 
 namespace core {
 
-enum class LoopControllerInteractionType {
-  kPause,
-  kReloadWeights,
-  kDataRequest,
-  kWorkerReady
-};
+enum class LoopControllerInteractionType { kPause, kReloadWeights, kDataRequest, kWorkerReady };
 
 class LoopControllerClient;
 

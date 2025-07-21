@@ -1,9 +1,8 @@
 #pragma once
 
-#include "generic_players/HumanTuiPlayer.hpp"
-
 #include "games/connect4/Game.hpp"
 #include "games/connect4/players/PerfectPlayer.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
 
 namespace c4 {
 

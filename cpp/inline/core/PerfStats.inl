@@ -1,10 +1,8 @@
 #include "core/PerfStats.hpp"
-
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
 
 namespace core {
-
 
 inline SearchThreadPerfStats& SearchThreadPerfStats::operator+=(
   const SearchThreadPerfStats& other) {
@@ -100,9 +98,7 @@ inline boost::json::object PerfStats::to_json() const {
   return obj;
 }
 
-inline void PerfStats::update(const SearchThreadPerfStats& stats) {
-  search_thread_stats += stats;
-}
+inline void PerfStats::update(const SearchThreadPerfStats& stats) { search_thread_stats += stats; }
 
 inline void PerfStats::update(const NNEvalScheduleLoopPerfStats& stats) {
   nn_eval_schedule_loop_stats += stats;
@@ -126,10 +122,9 @@ inline void PerfStats::calibrate(int num_game_threads) {
   }
 
   // pause time includes reload time. Let's undo that.
-  RELEASE_ASSERT(
-    loop_controller_stats.pause_time_ns >= loop_controller_stats.model_load_time_ns,
-    "pause_time_ns < model_load_time_ns ({} < {})", loop_controller_stats.pause_time_ns,
-    loop_controller_stats.model_load_time_ns);
+  RELEASE_ASSERT(loop_controller_stats.pause_time_ns >= loop_controller_stats.model_load_time_ns,
+                 "pause_time_ns < model_load_time_ns ({} < {})",
+                 loop_controller_stats.pause_time_ns, loop_controller_stats.model_load_time_ns);
   loop_controller_stats.pause_time_ns -= loop_controller_stats.model_load_time_ns;
 }
 
@@ -155,8 +150,7 @@ inline PerfClocker::PerfClocker(int64_t& field) : field_(field) {
 }
 
 // Use this to simultaneously start a new PerfClocker and stop the previous one.
-inline PerfClocker::PerfClocker(PerfClocker& previous, int64_t& field)
-    : field_(field) {
+inline PerfClocker::PerfClocker(PerfClocker& previous, int64_t& field) : field_(field) {
   previous.stop();
   start_time_ = previous.stop_time_;
 }

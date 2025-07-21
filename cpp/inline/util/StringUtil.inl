@@ -1,6 +1,5 @@
-#include "util/StringUtil.hpp"
-
 #include "util/Exceptions.hpp"
+#include "util/StringUtil.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -16,11 +15,11 @@ namespace detail {
  */
 template <typename Str>
 constexpr uint64_t str_hash(const Str& toHash) {
-  uint64_t result = 0xcbf29ce484222325; // FNV offset basis
+  uint64_t result = 0xcbf29ce484222325;  // FNV offset basis
 
   for (char c : toHash) {
     result ^= c;
-    result *= 1099511628211; // FNV prime
+    result *= 1099511628211;  // FNV prime
   }
 
   return result;
@@ -28,9 +27,7 @@ constexpr uint64_t str_hash(const Str& toHash) {
 
 }  // namespace detail
 
-inline constexpr uint64_t str_hash(const char* c) {
-  return detail::str_hash(std::string_view(c));
-}
+inline constexpr uint64_t str_hash(const char* c) { return detail::str_hash(std::string_view(c)); }
 
 inline float atof_safe(const std::string& s) {
   size_t read = 0;
@@ -91,7 +88,7 @@ inline int split(std::vector<std::string>& result, const std::string& s, const c
   return int(token_count);
 }
 
-inline std::vector<std::string> splitlines(const std::string &s) {
+inline std::vector<std::string> splitlines(const std::string& s) {
   std::vector<std::string> result;
   std::string::size_type start = 0;
   std::string::size_type end;
@@ -124,9 +121,9 @@ inline size_t terminal_width(const std::string& str) {
   // accurate solution would require more sophistication and be costlier. So we go with this
   // simpler hack for now.
   static const std::regex unicode_regex(
-    "[\\xC2-\\xDF][\\x80-\\xBF]"        // 2-byte sequence
-    "|[\\xE0-\\xEF][\\x80-\\xBF]{2}"    // 3-byte sequence
-    "|[\\xF0-\\xF4][\\x80-\\xBF]{3}"    // 4-byte sequence
+    "[\\xC2-\\xDF][\\x80-\\xBF]"      // 2-byte sequence
+    "|[\\xE0-\\xEF][\\x80-\\xBF]{2}"  // 3-byte sequence
+    "|[\\xF0-\\xF4][\\x80-\\xBF]{3}"  // 4-byte sequence
   );
   cleaned_str = std::regex_replace(cleaned_str, unicode_regex, "?");
 

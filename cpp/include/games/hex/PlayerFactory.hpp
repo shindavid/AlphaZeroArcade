@@ -2,10 +2,10 @@
 
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
-#include "generic_players/RandomPlayerGenerator.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayerGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace hex {
 

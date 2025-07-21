@@ -1,20 +1,20 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/IOBase.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
+#include "core/concepts/Game.hpp"
+#include "games/GameRulesBase.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
 #include "games/blokus/Types.hpp"
-#include "games/GameRulesBase.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -81,21 +81,24 @@ class Game {
      *
      * Assumes that the last pass_count players have passed.
      */
-    static State load(const std::string& str, int pass_count=0);
+    static State load(const std::string& str, int pass_count = 0);
   };
 
   // TODO: add unplayed-pieces as an auxiliary input.
   struct InputTensorizor {
     // +1 to record the partial move if necessary.
     static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode) + 1;
-    using Tensor =
-        eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
     using MCTSKey = State;
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "core/TrainingDataWriter.hpp"
+#include "core/concepts/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
 
 namespace generic {

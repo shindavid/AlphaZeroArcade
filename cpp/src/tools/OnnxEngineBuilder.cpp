@@ -2,11 +2,11 @@
  * Built by build.py, called from python to build an onnx plan file from an ONNX model.
  */
 
-#include <iostream>
-#include <fstream>
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
+#include <fstream>
+#include <iostream>
 
 using namespace nvinfer1;
 
@@ -21,8 +21,7 @@ class Logger : public ILogger {
 
 int main(int argc, char** argv) {
   if (argc != 4) {
-    std::cerr << "Usage: " << argv[0]
-              << " model.onnx engine.plan maxBatch\n";
+    std::cerr << "Usage: " << argv[0] << " model.onnx engine.plan maxBatch\n";
     return 1;
   }
   const char* onnxFile = argv[1];
@@ -32,9 +31,8 @@ int main(int argc, char** argv) {
   // 1) Builder + network + parser
   auto builder = createInferBuilder(gLogger);
   auto network = builder->createNetworkV2(0);
-  auto parser  = nvonnxparser::createParser(*network, gLogger);
-  if (!parser->parseFromFile(onnxFile,
-        static_cast<int>(ILogger::Severity::kWARNING))) {
+  auto parser = nvonnxparser::createParser(*network, gLogger);
+  if (!parser->parseFromFile(onnxFile, static_cast<int>(ILogger::Severity::kWARNING))) {
     std::cerr << "ERROR: failed to parse ONNX model\n";
     return 1;
   }
@@ -47,16 +45,13 @@ int main(int argc, char** argv) {
   Dims dims = network->getInput(0)->getDimensions();
   // min = maxBatch
   dims.d[0] = maxBatch;
-  profile->setDimensions(network->getInput(0)->getName(),
-                         OptProfileSelector::kMIN, dims);
+  profile->setDimensions(network->getInput(0)->getName(), OptProfileSelector::kMIN, dims);
   // opt = maxBatch
   dims.d[0] = maxBatch;
-  profile->setDimensions(network->getInput(0)->getName(),
-                         OptProfileSelector::kOPT, dims);
+  profile->setDimensions(network->getInput(0)->getName(), OptProfileSelector::kOPT, dims);
   // max = maxBatch
   dims.d[0] = maxBatch;
-  profile->setDimensions(network->getInput(0)->getName(),
-                         OptProfileSelector::kMAX, dims);
+  profile->setDimensions(network->getInput(0)->getName(), OptProfileSelector::kMAX, dims);
   config->addOptimizationProfile(profile);
 
   // 3) Build and serialize engine

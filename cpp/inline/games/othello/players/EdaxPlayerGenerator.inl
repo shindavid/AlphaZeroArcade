@@ -1,5 +1,4 @@
 #include "games/othello/players/EdaxPlayerGenerator.hpp"
-
 #include "util/BoostUtil.hpp"
 
 #include <format>

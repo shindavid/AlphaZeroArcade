@@ -1,7 +1,6 @@
-#include "games/hex/Game.hpp"
-
 #include "core/DefaultCanonicalizer.hpp"
 #include "games/hex/Constants.hpp"
+#include "games/hex/Game.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
@@ -13,9 +12,12 @@ namespace hex {
 
 inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   switch (sym) {
-    case groups::C2::kIdentity: return;
-    case groups::C2::kRot180: return state.rotate();
-    default: throw util::Exception("Unknown group element: {}", sym);
+    case groups::C2::kIdentity:
+      return;
+    case groups::C2::kRot180:
+      return state.rotate();
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -29,21 +31,26 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& policy, group::element_
                                     core::action_mode_t) {
   constexpr int N = Constants::kBoardDim;
   switch (sym) {
-    case groups::C2::kIdentity: return;
-    case groups::C2::kRot180: return eigen_util::rot180<N>(policy);
-    default: throw util::Exception("Unknown group element: {}", sym);
+    case groups::C2::kIdentity:
+      return;
+    case groups::C2::kRot180:
+      return eigen_util::rot180<N>(policy);
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
 inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
                                     core::action_mode_t) {
   switch (sym) {
-    case groups::C2::kIdentity: return;
+    case groups::C2::kIdentity:
+      return;
     case groups::C2::kRot180: {
       action = action == kSwap ? kSwap : (Constants::kNumSquares - 1 - action);
       return;
     }
-    default: throw util::Exception("Unknown group element: {}", sym);
+    default:
+      throw util::Exception("Unknown group element: {}", sym);
   }
 }
 
@@ -63,8 +70,8 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
   int offset = 0;
   for (int i = 0; i < Constants::kBoardDim; ++i) {
     mask_t occupied_mask = core.rows[Constants::kBlack][i] | core.rows[Constants::kWhite][i];
-    mask_t free_mask = ~occupied_mask & ((mask_t(1)<<Constants::kBoardDim)-1);
-    for (; free_mask; free_mask &= free_mask-1) {
+    mask_t free_mask = ~occupied_mask & ((mask_t(1) << Constants::kBoardDim) - 1);
+    for (; free_mask; free_mask &= free_mask - 1) {
       int j = std::countr_zero(free_mask);
       valid_actions[offset + j] = true;
     }
@@ -106,8 +113,8 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
 
 inline std::string Game::IO::player_to_str(core::seat_index_t player) {
   return (player == Constants::kWhite)
-             ? std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("W"), ansi::kReset(""))
-             : std::format("{}{}{}", ansi::kBlue(""), ansi::kCircle("B"), ansi::kReset(""));
+           ? std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("W"), ansi::kReset(""))
+           : std::format("{}{}{}", ansi::kBlue(""), ansi::kCircle("B"), ansi::kReset(""));
 }
 
 template <typename Iter>
