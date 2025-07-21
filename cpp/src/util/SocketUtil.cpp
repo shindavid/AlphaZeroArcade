@@ -12,13 +12,12 @@
 
 namespace io {
 
-Socket::map_t Socket::map_;
-
 Socket* Socket::get_instance(file_descriptor_t fd) {
-  auto it = map_.find(fd);
-  if (it == map_.end()) {
+  static map_t map;
+  auto it = map.find(fd);
+  if (it == map.end()) {
     auto* instance = new Socket(fd);
-    map_[fd] = instance;
+    map[fd] = instance;
     return instance;
   } else {
     return it->second;

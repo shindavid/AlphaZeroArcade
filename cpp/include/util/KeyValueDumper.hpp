@@ -33,9 +33,7 @@ class KeyValueDumper {
   static void flush();
 
  private:
-  static KeyValueDumper* instance();
-
-  static KeyValueDumper* instance_;
+  static KeyValueDumper& instance();
 
   using Pair = std::pair<std::string, std::string>;
   using vec_t = std::vector<Pair>;
@@ -44,3 +42,5 @@ class KeyValueDumper {
 };
 
 }  // namespace util
+
+#include <inline/util/KeyValueDumper.inl>

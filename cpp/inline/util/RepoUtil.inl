@@ -4,16 +4,12 @@
 
 namespace util {
 
-Repo* Repo::instance_ = nullptr;
-
-Repo* Repo::instance() {
-  if (!instance_) {
-    instance_ = new Repo();
-  }
-  return instance_;
+inline Repo& Repo::instance() {
+  static Repo instance;
+  return instance;
 }
 
-boost::filesystem::path Repo::find_root() {
+inline boost::filesystem::path Repo::find_root() {
   boost::filesystem::path cwd = boost::filesystem::current_path();
 
   boost::filesystem::path path = cwd;
@@ -27,7 +23,7 @@ boost::filesystem::path Repo::find_root() {
     break;
   }
 
-  throw Exception("Could not find repo marker %s in any ancestor dir of %s", kMarkerFilename,
+  throw Exception("Could not find repo marker {} in any ancestor dir of {}", kMarkerFilename,
                   cwd.c_str());
 }
 

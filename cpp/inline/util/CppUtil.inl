@@ -76,11 +76,9 @@ std::size_t PODHash<T>::operator()(const T& s) const {
   return hash;
 }
 
-inline TtyMode* TtyMode::instance() {
-  if (!instance_) {
-    instance_ = new TtyMode();
-  }
-  return instance_;
+inline TtyMode& TtyMode::instance() {
+  static TtyMode instance;
+  return instance;
 }
 
 inline TtyMode::TtyMode() {

@@ -349,7 +349,6 @@ class NNEvaluationService
   void pause() override;
   void unpause() override;
 
-  static instance_map_t instance_map_;
   static int instance_count_;
 
   const int instance_id_;

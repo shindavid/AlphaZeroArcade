@@ -151,8 +151,6 @@ class Socket {
   void write_helper(const void* data, int size, const char* error_msg);
   bool read_helper(void* data, int size, const char* error_msg);
 
-  static map_t map_;
-
   mutable mit::mutex write_mutex_;
   mutable mit::mutex read_mutex_;
   const file_descriptor_t fd_;

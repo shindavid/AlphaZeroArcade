@@ -5,9 +5,7 @@
 
 namespace util {
 
-KeyValueDumper* KeyValueDumper::instance_ = nullptr;
-
-void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
+inline void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
   constexpr int N = 1024;
   char value[N];
   va_list ap;
@@ -23,29 +21,27 @@ void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
     throw Exception("KeyValueDumper::add(): char buffer overflow (%d >= %d)", n, N);
   }
 
-  instance()->vec_.emplace_back(std::format("{}:", key), value);
+  instance().vec_.emplace_back(std::format("{}:", key), value);
 }
 
-void KeyValueDumper::flush() {
+inline void KeyValueDumper::flush() {
   int max_key_len = 0;
   int max_value_len = 0;
-  for (const auto& p : instance()->vec_) {
+  for (const auto& p : instance().vec_) {
     max_key_len = std::max(max_key_len, (int)p.first.size());
     max_value_len = std::max(max_value_len, (int)p.second.size());
   }
 
-  for (const auto& p : instance()->vec_) {
+  for (const auto& p : instance().vec_) {
     LOG_INFO("{:<{}} {:>{}}", p.first, max_key_len, p.second, max_value_len);
   }
-  instance()->vec_.clear();
+  instance().vec_.clear();
   std::cout.flush();
 }
 
-KeyValueDumper* KeyValueDumper::instance() {
-  if (instance_ == nullptr) {
-    instance_ = new KeyValueDumper();
-  }
-  return instance_;
+inline KeyValueDumper& KeyValueDumper::instance() {
+  static KeyValueDumper instance;
+  return instance;
 }
 
 }  // namespace util

@@ -14,21 +14,19 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::instance_map_t
-    NNEvaluationService<Game>::instance_map_;
-
-template <core::concepts::Game Game>
 int NNEvaluationService<Game>::instance_count_ = 0;
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>* NNEvaluationService<Game>::create(
     const NNEvaluationServiceParams& params, core::GameServerBase* server) {
-  auto it = instance_map_.find(params.model_filename);
-  if (it == instance_map_.end()) {
+  static instance_map_t instance_map;
+
+  auto it = instance_map.find(params.model_filename);
+  if (it == instance_map.end()) {
     auto instance = new NNEvaluationService(params, server);
 
-    instance_map_[params.model_filename] = instance;
-    if (instance_map_.size() > 1) {
+    instance_map[params.model_filename] = instance;
+    if (instance_map.size() > 1) {
       server->handle_alternating_mode_recommendation();
     }
     return instance;

@@ -5,12 +5,9 @@ add_library(util_core_objs OBJECT
   util/BoostUtil.cpp
   util/CudaUtil.cpp
   util/GTestUtil.cpp
-  util/KeyValueDumper.cpp
   util/LoggingUtil.cpp
   util/Math.cpp
-  util/RepoUtil.cpp
   util/SocketUtil.cpp
-  util/StaticVars.cpp
 )
 set_target_properties(util_core_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(util_core_objs PRIVATE ${COMMON_EXTERNAL_LIBS})

@@ -1,7 +1,8 @@
 #include <util/ScreenUtil.hpp>
 
+#include <util/Exceptions.hpp>
+
 #include <cstdlib>
-#include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -22,25 +23,22 @@ inline int get_screen_width() {
  */
 inline void clearscreen() {
   if (system("clear")) {
-    throw std::exception();
+    throw util::Exception("Failed to clear screen: system() returned non-zero exit status");
   }
 }
 
 inline void ScreenClearer::clear_once() {
-  ScreenClearer* s = instance();
-  if (s->ready_) {
+  if (instance().ready_) {
     clearscreen();
-    s->ready_ = false;
+    instance().ready_ = false;
   }
 }
 
-inline void ScreenClearer::reset() { instance()->ready_ = true; }
+inline void ScreenClearer::reset() { instance().ready_ = true; }
 
-inline ScreenClearer* ScreenClearer::instance() {
-  if (!instance_) {
-    instance_ = new ScreenClearer();
-  }
-  return instance_;
+inline ScreenClearer& ScreenClearer::instance() {
+  static ScreenClearer instance;
+  return instance;
 }
 
 }  // namespace util

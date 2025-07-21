@@ -20,9 +20,8 @@ class ScreenClearer {
   static void reset();
 
  private:
-  static ScreenClearer* instance();
+  static ScreenClearer& instance();
 
-  static ScreenClearer* instance_;
   bool ready_ = true;
 };
 
