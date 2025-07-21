@@ -6,7 +6,7 @@ namespace util {
 
 template <class Key, class Value, class Hasher>
 void LRUCache<Key, Value, Hasher>::set_capacity(size_t capacity) {
-  util::release_assert(empty(), "Cannot set capacity on a non-empty cache");
+  RELEASE_ASSERT(empty(), "Cannot set capacity on a non-empty cache");
   capacity_ = capacity;
   pool_.resize(capacity_);
   free_list_.resize(capacity_);
@@ -22,7 +22,7 @@ Value& LRUCache<Key, Value, Hasher>::insert_if_missing(const Key& key, value_cre
     if (size() >= capacity_) {
       evict();
     }
-    util::release_assert(!free_list_.empty());
+    RELEASE_ASSERT(!free_list_.empty());
     Node* node = free_list_.back();
     free_list_.pop_back();
     node->key = key;
@@ -52,7 +52,7 @@ void LRUCache<Key, Value, Hasher>::clear() {
 
 template <class Key, class Value, class Hasher>
 void LRUCache<Key, Value, Hasher>::evict() {
-  util::release_assert(!list_.empty());
+  RELEASE_ASSERT(!list_.empty());
   Node& node = list_.back();
   eviction_handler_(node.value);
   map_.erase(node.key);

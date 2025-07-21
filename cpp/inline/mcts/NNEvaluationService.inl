@@ -210,7 +210,7 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
     BatchDataSlice& slice = slices[slice_index++];
 
     int m = std::min(n, batch_data->capacity() - batch_data->allocate_count);
-    util::release_assert(m > 0);
+    RELEASE_ASSERT(m > 0);
     n -= m;
 
     slice.batch_data = batch_data;
@@ -330,18 +330,18 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
     // handle_fresh_item() in the hit_cache && eval->pending() case. There is no other way that
     // can_continue can be set to false.
     //
-    // TODO: downgrade some of these release_assert's to debug_assert's.
-    util::release_assert(result.notifying_sequence_id > 0);
+    // TODO: downgrade some of these RELEASE_ASSERT's to DEBUG_ASSERT's.
+    RELEASE_ASSERT(result.notifying_sequence_id > 0);
     if (!register_notification_task(request, result)) {
       // This means that we hit a race condition where the corresponding batch data was evaluated
       // before we could register the notification task. If we blindly added to the notification
       // task without checking for this, the GameServer would end up waiting for a notification that
       // would never arrive.
 
-      util::release_assert(result.stats.cache_misses == 0, "Unexpected cache_misses={}",
+      RELEASE_ASSERT(result.stats.cache_misses == 0, "Unexpected cache_misses={}",
                            result.stats.cache_misses);
       for (auto& item : request.fresh_items()) {
-        util::release_assert(!item.eval()->pending(), "Unexpected pending item");
+        RELEASE_ASSERT(!item.eval()->pending(), "Unexpected pending item");
       }
 
       yield_instruction = core::kContinue;  // not needed but just here for clarity
@@ -490,7 +490,7 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
   int s = m + n;
-  util::debug_assert(n > 0);
+  DEBUG_ASSERT(n > 0);
 
   // Sort the items by hash shard, so that we acquire each shard mutex at most once when iterating.
   SortItem sort_items[m + n];
@@ -542,7 +542,7 @@ void NNEvaluationService<Game>::populate_sort_items(SortItem* sort_items,
                                                     NNEvaluationRequest& request) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
-  util::debug_assert(n > 0);
+  DEBUG_ASSERT(n > 0);
 
   // First, instantiate the SortItem's.
   int s = 0;
@@ -559,7 +559,7 @@ void NNEvaluationService<Game>::populate_sort_items(SortItem* sort_items,
     s++;
   }
 
-  util::debug_assert(s == m + n);
+  DEBUG_ASSERT(s == m + n);
 
   // Now use std::sort() to group by hash shard.
   std::sort(sort_items, sort_items + s);
@@ -571,7 +571,7 @@ bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
                                                   int item_index) {
   core::PerfClocker clocker(result.stats.cache_insert_time_ns);
   RequestItem& item = request.get_fresh_item(item_index);
-  util::release_assert(item.eval() == nullptr);
+  RELEASE_ASSERT(item.eval() == nullptr);
 
   bool hit_cache = true;
   const CacheKey& cache_key = item.cache_key();
@@ -687,7 +687,7 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
     yield_manager_ = unit.yield_manager;
   } else {
     // Verify that there is only one
-    util::debug_assert(yield_manager_ == unit.yield_manager);
+    DEBUG_ASSERT(yield_manager_ == unit.yield_manager);
   }
 
   BatchData* batch_data = result.notifying_batch_data;
@@ -700,8 +700,8 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
               last_evaluated_sequence_id_, seq, unit.slot_context().slot,
               unit.slot_context().context);
 
-    util::release_assert(batch_data, "null batch_data");
-    util::release_assert(batch_data->sequence_id == seq,
+    RELEASE_ASSERT(batch_data, "null batch_data");
+    RELEASE_ASSERT(batch_data->sequence_id == seq,
                          "batch_data->sequence_id:{} != seq:{}", batch_data->sequence_id, seq);
     batch_data->notification_tasks.push_back(unit.slot_context());
     return true;
@@ -782,7 +782,7 @@ void NNEvaluationService<Game>::state_loop() {
     }
 
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
-    util::release_assert(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
+    RELEASE_ASSERT(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
                          system_state_, kPaused);
 
     core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
@@ -807,7 +807,7 @@ void NNEvaluationService<Game>::state_loop() {
     }
 
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
-    util::release_assert(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
+    RELEASE_ASSERT(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
                          system_state_, kUnpaused);
 
     // wait for schedule-loop/drain-loop to exit their preludes
@@ -891,7 +891,7 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
   LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
-  util::release_assert(system_state_ == kPausingScheduleLoop,
+  RELEASE_ASSERT(system_state_ == kPausingScheduleLoop,
                        "Unexpected system_state: {} (expected {})",
                        system_state_, kPausingScheduleLoop);
   system_state_ = kPausingDrainLoop;
@@ -1023,7 +1023,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
-  util::release_assert(batch_data->frozen());
+  RELEASE_ASSERT(batch_data->frozen());
 
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
@@ -1113,7 +1113,7 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
 
   mit::unique_lock lock(main_mutex_);
   yield_manager_->notify(batch_data->notification_tasks);
-  util::release_assert(last_evaluated_sequence_id_ < batch_data->sequence_id);
+  RELEASE_ASSERT(last_evaluated_sequence_id_ < batch_data->sequence_id);
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);
 
@@ -1130,7 +1130,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
   const char* func = __func__;
   LOG_INFO("{}: reloading network weights...", kCls);
-  util::release_assert(system_state_ == kPaused, "{}() called while not paused", func);
+  RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
 
   std::ispanstream stream{std::span<const char>(buf)};
   mit::unique_lock lock(main_mutex_);

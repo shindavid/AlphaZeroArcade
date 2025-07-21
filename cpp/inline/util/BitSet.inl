@@ -92,7 +92,7 @@ int count_on_indices_before(const std::bitset<N>& bitset, int i) {
 template <size_t N>
 int choose_random_on_index(const std::bitset<N>& bitset) {
   int upper = bitset.count();
-  util::release_assert(upper > 0);
+  RELEASE_ASSERT(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
   for (; c; ++p) c -= bitset[p];
@@ -107,7 +107,7 @@ int choose_random_on_index(const std::bitset<N>& bitset) {
 template <size_t N>
 int choose_random_off_index(const std::bitset<N>& bitset) {
   int upper = N - bitset.count();
-  util::release_assert(upper > 0);
+  RELEASE_ASSERT(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
   for (; c; ++p) c -= not bitset[p];

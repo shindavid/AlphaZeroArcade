@@ -290,7 +290,7 @@ const auto& reinterpret_as_array(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 auto& reinterpret_as_array(Tensor& tensor);
 
-// debug_assert()'s that distr is a valid probability distribution
+// DEBUG_ASSERT()'s that distr is a valid probability distribution
 // For release-build's, is a no-op
 template <typename T>
 void debug_assert_is_valid_prob_distr(const T& distr, float eps = 1e-5);

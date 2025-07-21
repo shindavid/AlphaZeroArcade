@@ -228,13 +228,13 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
       }
 
       if (deferred_count_ == pending_queue_count_) {
-        util::debug_assert(
+        DEBUG_ASSERT(
           global_active_player_id_ >= 0,
           "GameServer::{}(): deferred_count_ == pending_queue_count_ ({} == {}) but "
           "global_active_player_id_ is not set",
           __func__, deferred_count_, pending_queue_count_);
 
-        util::debug_assert(deferred_queues_[global_active_player_id_].empty(),
+        DEBUG_ASSERT(deferred_queues_[global_active_player_id_].empty(),
                            "GameServer::{}(): deferred queue for active player {} is not empty",
                            __func__, global_active_player_id_);
 
@@ -259,7 +259,7 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
     return kHandlePause;
   }
 
-  util::debug_assert(!queue_.empty(), "GameServer::{}(): queue should not be empty here", __func__);
+  DEBUG_ASSERT(!queue_.empty(), "GameServer::{}(): queue should not be empty here", __func__);
 
   item = queue_.front();
   queue_.pop();
@@ -267,7 +267,7 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
   LOG_DEBUG("<-- GameServer::{}(): item={}:{} (queue:{} pending:{})", __func__, item.slot,
             item.context, queue_.size(), pending_queue_count_);
 
-  util::debug_assert(global_active_player_id_ < 0 ||
+  DEBUG_ASSERT(global_active_player_id_ < 0 ||
                        game_slots_[item.slot]->active_player_id() == global_active_player_id_,
                      "GameServer::{}(): item's active player id ({}) does not match "
                      "global_active_player_id_ ({})",
@@ -283,7 +283,7 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
   auto& queue = get_queue_to_use(item.slot);
   bool deferred = &queue != &queue_;
   if (request.instruction == kEnqueueNow) {
-    util::release_assert(request.extra_enqueue_count == 0);
+    RELEASE_ASSERT(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
     queue.push(item);
     pending_queue_count_ -= !deferred;
@@ -371,27 +371,27 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
                                                    bool implicit_remote) {
-  util::clean_assert(seat < kNumPlayers, "Invalid seat number {}", seat);
+  CLEAN_ASSERT(seat < kNumPlayers, "Invalid seat number {}", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
-      util::clean_assert(
+      CLEAN_ASSERT(
         params_.port > 0,
         "If specifying fewer than {} --player's, the remaining players are assumed to be remote "
         "players. In this case, --port must be specified, so that the remote players can connect",
         kNumPlayers);
     } else {
-      util::clean_assert(params_.port > 0, "Cannot use remote players without setting --port");
+      CLEAN_ASSERT(params_.port > 0, "Cannot use remote players without setting --port");
     }
 
-    util::clean_assert(seat < 0, "Cannot specify --seat with --type=Remote");
+    CLEAN_ASSERT(seat < 0, "Cannot specify --seat with --type=Remote");
   }
   if (seat >= 0) {
     for (const auto& reg : registrations_) {
-      util::clean_assert(reg.seat != seat, "Double-seated player at seat {}", seat);
+      CLEAN_ASSERT(reg.seat != seat, "Double-seated player at seat {}", seat);
     }
   }
   player_id_t player_id = registrations_.size();
-  util::clean_assert(player_id < kNumPlayers, "Too many players registered (max {})", kNumPlayers);
+  CLEAN_ASSERT(player_id < kNumPlayers, "Too many players registered (max {})", kNumPlayers);
   std::string name = gen->get_name();
   if (name.empty()) {
     gen->set_name(gen->get_default_name());
@@ -484,7 +484,7 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::unpause() {
   LOG_INFO("GameServer: unpausing");
   mit::unique_lock lock(mutex_);
-  util::release_assert(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_,
+  RELEASE_ASSERT(pause_state_ == kPaused, "{}(): {} != {} @{}", __func__, pause_state_,
                        kPaused, __LINE__);
   pause_state_ = kUnpausing;
   lock.unlock();
@@ -516,7 +516,7 @@ void GameServer<Game>::SharedData::run_prelude(core::game_thread_id_t id) {
   mit::unique_lock lock(mutex_);
   in_prelude_count_++;
 
-  util::release_assert(pause_state_ == kPausing,
+  RELEASE_ASSERT(pause_state_ == kPausing,
                        "{}(): {} != {} @{}", __func__, pause_state_, kPausing, __LINE__);
   paused_thread_count_++;
   bool notify = paused_thread_count_ == active_thread_count_;
@@ -569,7 +569,7 @@ void GameServer<Game>::SharedData::state_loop() {
     cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kUnpaused; });
     if (active_thread_count_ == 0) break;
 
-    util::release_assert(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_,
+    RELEASE_ASSERT(pause_state_ == kPausing, "{}(): {} != {} @{}", __func__, pause_state_,
                          kPausing, __LINE__);
 
     LOG_INFO("GameServer: pausing, waiting for threads to be ready for pause...");
@@ -586,7 +586,7 @@ void GameServer<Game>::SharedData::state_loop() {
     cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kPaused; });
     if (active_thread_count_ == 0) break;
 
-    util::release_assert(pause_state_ == kUnpausing, "{}(): {} != {} @{}", __func__, pause_state_,
+    RELEASE_ASSERT(pause_state_ == kUnpausing, "{}(): {} != {} @{}", __func__, pause_state_,
                          kUnpausing, __LINE__);
 
     LOG_INFO("GameServer: unpausing, waiting for threads to be ready for unpause...");
@@ -630,7 +630,7 @@ void GameServer<Game>::SharedData::validate_deferred_count() const {
   for (const auto& queue : deferred_queues_) {
     deferred_count += queue.size();
   }
-  util::debug_assert(deferred_count == deferred_count_,
+  DEBUG_ASSERT(deferred_count == deferred_count_,
                      "GameServer::{}(): deferred_count_ mismatch: {} != {}", __func__,
                      deferred_count_, deferred_count);
 }
@@ -697,7 +697,7 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
-  util::debug_assert(!mid_yield_);
+  DEBUG_ASSERT(!mid_yield_);
 
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
@@ -735,7 +735,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     }
 
     if (!noisy_mode_ && response.action_values) {
-      util::release_assert(!chance_action_values_,
+      RELEASE_ASSERT(!chance_action_values_,
                            "Clashing chance-event training info from different players");
     }
     chance_action_values_ = response.action_values;
@@ -779,7 +779,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   request.play_noisily = noisy_mode_;
 
   ActionResponse response = player->get_action_response(request);
-  util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                      int(response.yield_instruction));
 
@@ -793,7 +793,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
       break;
     }
     case kYield: {
-      util::release_assert(!continue_hit_, "kYield after continue hit!");
+      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
@@ -809,7 +809,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
   }
 
   CriticalSectionCheck check2(in_critical_section_);
-  util::release_assert(!mid_yield_);
+  RELEASE_ASSERT(!mid_yield_);
 
   continue_hit_ = false;
   move_number_++;
@@ -822,7 +822,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context,
 
   // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
   // the server.
-  util::release_assert(valid_actions_[action], "Invalid action: {}", action);
+  RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
@@ -882,7 +882,7 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome, Ste
   game_started_ = false;
 
   EnqueueRequest& request = result.enqueue_request;
-  util::release_assert(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
+  RELEASE_ASSERT(request.instruction == kEnqueueNow && request.extra_enqueue_count == 0);
 
   if (!start_game()) {
     request.instruction = kEnqueueNever;
@@ -986,7 +986,7 @@ void GameServer<Game>::GameThread::run() {
     // wait_for_game_slot_time_ns. In PerfStats::calibrate(), we will undo this double-counting.
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
-    util::release_assert(slot->game_started());
+    RELEASE_ASSERT(slot->game_started());
     StepResult step_result = slot->step(item.context);
     EnqueueRequest& request = step_result.enqueue_request;
 
@@ -1023,7 +1023,7 @@ GameServer<Game>::GameServer(const Params& params,
     std::vector<core::action_t> initial_actions;
     for (const auto& action_str : action_strs) {
       core::action_t action = std::stoi(action_str);
-      util::clean_assert(action >= 0, "Invalid initial action: {} in {}", action_str,
+      CLEAN_ASSERT(action >= 0, "Invalid initial action: {} in {}", action_str,
                          params.initial_actions_str);
       initial_actions.push_back(action);
     }
@@ -1033,7 +1033,7 @@ GameServer<Game>::GameServer(const Params& params,
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {
-  util::clean_assert(num_registered_players() <= kNumPlayers,
+  CLEAN_ASSERT(num_registered_players() <= kNumPlayers,
                      "Invalid number of players registered: {}", num_registered_players());
 
   // fill in missing slots with remote players
@@ -1047,7 +1047,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
   for (int r = 0; r < shared_data_.num_registrations(); ++r) {
     PlayerRegistration& reg = shared_data_.registration_templates()[r];
     if (dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen)) {
-      util::clean_assert(reg.seat < 0, "Cannot specify --seat= when using --type=Remote");
+      CLEAN_ASSERT(reg.seat < 0, "Cannot specify --seat= when using --type=Remote");
       remote_player_registrations.push_back(&reg);
     }
   }
@@ -1055,7 +1055,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
   if (remote_player_registrations.empty()) return;
 
   int port = get_port();
-  util::clean_assert(port > 0, "Invalid port number {}", port);
+  CLEAN_ASSERT(port > 0, "Invalid port number {}", port);
 
   io::Socket* server_socket = io::Socket::create_server_socket(port, kNumPlayers);
 
@@ -1082,7 +1082,7 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
         reg->gen->set_name(registered_name);
       }
       std::string name = reg->gen->get_name();
-      util::clean_assert(!name.empty(), "Unexpected empty name");
+      CLEAN_ASSERT(!name.empty(), "Unexpected empty name");
 
       RemotePlayerProxyGenerator* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg->gen);
       gen->initialize(socket, max_simultaneous_games, reg->player_id);
@@ -1104,7 +1104,7 @@ void GameServer<Game>::setup() {
   Game::static_init();
   wait_for_remote_player_registrations();
   shared_data_.init_random_seat_indices();
-  util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
+  CLEAN_ASSERT(shared_data_.ready_to_start(), "Game not ready to start");
 
   shared_data_.init_slots();
   create_threads();

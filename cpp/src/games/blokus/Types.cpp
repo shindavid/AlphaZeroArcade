@@ -130,9 +130,9 @@ std::string BitBoard::to_string(drawing_t c) const {
 }
 
 piece_orientation_corner_index_t BitBoard::find(Location loc) const {
-  util::debug_assert(get(loc));
-  util::debug_assert(loc.row == 0 || !get(loc.row - 1, loc.col));  // S neighbor not set
-  util::debug_assert(loc.col == 0 || !get(loc.row, loc.col - 1));  // W neighbor not set
+  DEBUG_ASSERT(get(loc));
+  DEBUG_ASSERT(loc.row == 0 || !get(loc.row - 1, loc.col));  // S neighbor not set
+  DEBUG_ASSERT(loc.col == 0 || !get(loc.row, loc.col - 1));  // W neighbor not set
 
   detail::MiniBoard visited(loc);
   detail::MiniBoard queue(loc);
@@ -215,7 +215,7 @@ void BoardString::pretty_print(std::ostream& os) const {
     c += sprintf(buffer + c, "%2d ", row + 1);
     for (int col = 0; col < kBoardDimension; ++col) {
       drawing_t d = colors_[row][col];
-      util::debug_assert(d >= 0 && d < 5, "{}", int(d));
+      DEBUG_ASSERT(d >= 0 && d < 5, "{}", int(d));
       c += snprintf(buffer + c, std::max(N - c, 0), "%s", color_strs[d]);
     }
     c += sprintf(buffer + c, " %2d\n", row + 1);
@@ -227,7 +227,7 @@ void BoardString::pretty_print(std::ostream& os) const {
   }
   c += sprintf(buffer + c, "\n");
 
-  util::release_assert(c < N, "BoardString::pretty_print() overflow ({} < {})", c, N);
+  RELEASE_ASSERT(c < N, "BoardString::pretty_print() overflow ({} < {})", c, N);
   os << buffer;
 }
 

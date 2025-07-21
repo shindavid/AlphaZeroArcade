@@ -12,7 +12,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
 
 bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                               core::action_t last_action, GameResults::Tensor& outcome) {
-  util::release_assert(get_current_player(state) != last_player);  // simple sanity check
+  RELEASE_ASSERT(get_current_player(state) != last_player);  // simple sanity check
 
   bool win = false;
 
@@ -81,7 +81,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
     cx += snprintf(buffer + cx, buf_size - cx, "O: %s\n\n", (*player_names)[kO].c_str());
   }
 
-  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
+  RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
 }
 

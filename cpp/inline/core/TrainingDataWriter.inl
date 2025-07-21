@@ -194,10 +194,10 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
     }
   }
 
-  util::release_assert(n_rows > 0, "TrainingDataWriter: n_rows <= 0 ({})", n_rows);
-  util::release_assert(row_count >= n_rows, "TrainingDataWriter: row_count < n_rows ({} < {})",
+  RELEASE_ASSERT(n_rows > 0, "TrainingDataWriter: n_rows <= 0 ({})", n_rows);
+  RELEASE_ASSERT(row_count >= n_rows, "TrainingDataWriter: row_count < n_rows ({} < {})",
                        row_count, n_rows);
-  util::release_assert(n_games > 0, "TrainingDataWriter: n_games <= 0 ({})", n_games);
+  RELEASE_ASSERT(n_games > 0, "TrainingDataWriter: n_games <= 0 ({})", n_games);
 
   LOG_INFO("TrainingDataWriter: sending batch of {} rows from {} games (of {} total)", row_count,
            n_games, n_total_games);
@@ -262,7 +262,7 @@ void TrainingDataWriter<Game>::send_batch(int n_rows) {
 
     std::ofstream file(filename, std::ios::binary);
     file.write(batch_data_.send_buf.data(), batch_data_.send_buf.size());
-    util::release_assert(file.good(), "TrainingDataWriter: failed to write to file {}", filename);
+    RELEASE_ASSERT(file.good(), "TrainingDataWriter: failed to write to file {}", filename);
     file.close();
 
     msg["no_file"] = true;

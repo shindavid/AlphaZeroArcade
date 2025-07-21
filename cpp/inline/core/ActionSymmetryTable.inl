@@ -48,7 +48,7 @@ void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<Item>& items) 
       action_array[i++] = items[index].action;
     }
   }
-  util::debug_assert(i == num_items);
+  DEBUG_ASSERT(i == num_items);
 
   if (num_items < kMaxNumActions) {
     action_array[num_items] = -1;

@@ -48,7 +48,7 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
 template <concepts::Game Game>
 typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::parse(
     const std::vector<std::string>& player_strs) {
-  util::release_assert(server_ != nullptr,
+  RELEASE_ASSERT(server_ != nullptr,
                        "PlayerFactory::parse() called without a server");
   player_generator_seat_vec_t vec;
 
@@ -61,7 +61,7 @@ typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::p
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      util::clean_assert(seat < Game::Constants::kNumPlayers,
+      CLEAN_ASSERT(seat < Game::Constants::kNumPlayers,
                          "Invalid seat ({}) in --player \"{}\"", seat, player_str);
     }
 
@@ -176,29 +176,29 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
       throw util::Exception("Invalid usage of --copy-from with --type in --player \"{}\"",
                             player_str);
     }
-    util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"{}\"",
+    CLEAN_ASSERT(name_map_.count(copy_from), "Invalid --copy-from in --player \"{}\"",
                        player_str);
     return parse_helper(player_str, name, name_map_.at(copy_from));
   }
 
-  util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"{}\"",
+  CLEAN_ASSERT(!type.empty(), "Must specify --type or --copy-from in --player \"{}\"",
                      player_str);
   if (!name.empty()) {
-    util::clean_assert(!name_map_.count(name), "Duplicate --name \"{}\"", name);
+    CLEAN_ASSERT(!name_map_.count(name), "Duplicate --name \"{}\"", name);
     name_map_[name] = orig_tokens;
   }
   PlayerGenerator* matched_generator = nullptr;
   for (auto* subfactory : subfactories_) {
     auto* generator = subfactory->create(server_);
     if (matches(generator, type)) {
-      util::clean_assert(matched_generator == nullptr, "Type {}: multiple matches", type);
+      CLEAN_ASSERT(matched_generator == nullptr, "Type {}: multiple matches", type);
       matched_generator = generator;
       continue;
     }
     delete generator;
   }
 
-  util::clean_assert(matched_generator != nullptr, "Unknown type in --player \"{}\"", player_str);
+  CLEAN_ASSERT(matched_generator != nullptr, "Unknown type in --player \"{}\"", player_str);
 
   matched_generator->set_name(name);
   matched_generator->parse_args(tokens);

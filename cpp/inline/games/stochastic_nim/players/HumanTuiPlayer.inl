@@ -16,7 +16,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
     if (a == -1) a = i;
     b = i;
   }
-  util::release_assert(a != -1 && b != -1, "No valid actions");
+  RELEASE_ASSERT(a != -1 && b != -1, "No valid actions");
 
   a++;
   b++;

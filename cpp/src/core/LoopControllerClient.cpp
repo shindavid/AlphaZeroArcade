@@ -140,7 +140,7 @@ void LoopControllerClient::recv_handshake() {
   }
 
   std::string type = msg.at("type").as_string().c_str();
-  util::release_assert(type == "handshake-ack", "Expected handshake-ack, got {}", type);
+  RELEASE_ASSERT(type == "handshake-ack", "Expected handshake-ack, got {}", type);
 
   if (msg.as_object().contains("rejection")) {
     std::string rejection = msg.at("rejection").as_string().c_str();
@@ -148,7 +148,7 @@ void LoopControllerClient::recv_handshake() {
   }
 
   int64_t client_id = msg.at("client_id").as_int64();
-  util::release_assert(client_id >= 0, "Invalid client_id {}", client_id);
+  RELEASE_ASSERT(client_id >= 0, "Invalid client_id {}", client_id);
 
   client_id_ = client_id;
 }

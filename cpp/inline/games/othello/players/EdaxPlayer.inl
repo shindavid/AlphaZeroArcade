@@ -23,7 +23,7 @@ inline auto EdaxPlayer::Params::make_options_description() {
 
 inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
     : oracle_pool_(oracle_pool), params_(params) {
-  util::clean_assert(params_.depth >= 0 && params_.depth <= 21,
+  CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21,
                      "edax depth must be in [0, 21]");
 }
 

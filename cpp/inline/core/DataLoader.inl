@@ -108,7 +108,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
   int64_t file_end = n_total_rows;
   generation_t gen = -1;
   for (DataFile* file : files) {
-    util::release_assert(gen == -1 || file->gen() < gen, "DataFileSet::files() bug");
+    RELEASE_ASSERT(gen == -1 || file->gen() < gen, "DataFileSet::files() bug");
     gen = file->gen();
     int64_t num_rows = file->num_rows();
     int64_t file_start = file_end - num_rows;
@@ -128,7 +128,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
     int output_index = sample_index;
     while (sample_index < n_samples && sampled_indices_[sample_index] >= file_start) {
       int64_t local_index = sampled_indices_[sample_index] - file_start;
-      util::release_assert(local_index >= 0 && local_index < num_rows,
+      RELEASE_ASSERT(local_index >= 0 && local_index < num_rows,
                            "SamplingManager::sample() bug at {} [local_index:{} num_rows:{}]",
                            __LINE__, local_index, num_rows);
       local_indices->push_back(local_index);
@@ -284,7 +284,7 @@ template <concepts::Game Game>
 void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
   mit::unique_lock lock(mutex_);
   unload_queue_.push_back(file);
-  util::release_assert(active_file_count_ > 0, "FileManager::{}() bug", __func__);
+  RELEASE_ASSERT(active_file_count_ > 0, "FileManager::{}() bug", __func__);
   active_file_count_--;
   lock.unlock();
   cv_.notify_all();
@@ -303,7 +303,7 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
   if (!work_units.empty()) {
     start_gen = work_units.back().file->gen();
     end_gen = work_units.front().file->gen();
-    util::release_assert(start_gen <= end_gen, "DataFileSet::{}() bug [start:{} end:{}]", __func__,
+    RELEASE_ASSERT(start_gen <= end_gen, "DataFileSet::{}() bug [start:{} end:{}]", __func__,
                          start_gen, end_gen);
   }
 
@@ -327,7 +327,7 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
     trim(start_gen);
   }
 
-  util::release_assert(memory_usage_ == expected_memory_usage,
+  RELEASE_ASSERT(memory_usage_ == expected_memory_usage,
     "DataFileSet::prepare_files() memory-usage-tracking-bug [{} != {}]",
      memory_usage_, expected_memory_usage);
 
@@ -341,7 +341,7 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
 template <concepts::Game Game>
 void DataLoader<Game>::FileManager::restore(int64_t n_total_rows, int n, generation_t* gens,
                                             int* row_counts, int64_t* file_sizes) {
-  util::release_assert(all_files_.empty(), "FileManager::init() bug");
+  RELEASE_ASSERT(all_files_.empty(), "FileManager::init() bug");
 
   for (int i = 0; i < n; ++i) {
     append(gens[i], row_counts[i], file_sizes[i]);
@@ -401,7 +401,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
 
   // Something is available to prefetch
   DataFile* file = load_queue_.front();
-  util::release_assert(!file->is_loaded(), "DataFileSet::prefetch_loop() bug at {}", __LINE__);
+  RELEASE_ASSERT(!file->is_loaded(), "DataFileSet::prefetch_loop() bug at {}", __LINE__);
 
   if (memory_usage_ + file->file_size() <= memory_budget_) {
     // We have sufficient memory
@@ -420,7 +420,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
     return kWait;
   }
 
-  util::release_assert(file->file_size() > memory_budget_, "DataFileSet::prefetch_loop() bug at {}",
+  RELEASE_ASSERT(file->file_size() > memory_budget_, "DataFileSet::prefetch_loop() bug at {}",
                        __LINE__);
 
   // our memory budget is insufficient to load this single file. In this case let's just violate

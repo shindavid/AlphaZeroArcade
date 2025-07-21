@@ -8,7 +8,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
   auto cp = state->core.cur_player;
 
   if (action == kSwap) {
-    util::debug_assert(cp == Constants::kWhite && !state->core.post_swap_phase,
+    DEBUG_ASSERT(cp == Constants::kWhite && !state->core.post_swap_phase,
                        "Swap action can only be applied by White before the swap phase");
 
     core::action_t prev_action = state->core.find_occupied(Constants::kBlack);
@@ -23,7 +23,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     State::Core& core = state->core;
     State::Aux& aux = state->aux;
 
-    util::debug_assert(!(core.rows[cp][row] & (mask_t(1) << col)),
+    DEBUG_ASSERT(!(core.rows[cp][row] & (mask_t(1) << col)),
                        "Cannot place a piece on an already occupied cell");
     core.rows[cp][row] |= (mask_t(1) << col);
 
@@ -135,7 +135,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
     }
   }
 
-  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
+  RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
 }
 

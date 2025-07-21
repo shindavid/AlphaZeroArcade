@@ -13,7 +13,7 @@ OraclePool<OracleT>::~OraclePool() {
 
 template <class OracleT>
 void OraclePool<OracleT>::set_capacity(size_t capacity) {
-  util::release_assert(all_oracles_.empty(), "Cannot change capacity after oracles are created");
+  RELEASE_ASSERT(all_oracles_.empty(), "Cannot change capacity after oracles are created");
   capacity_ = capacity;
   all_oracles_.reserve(capacity);
 }

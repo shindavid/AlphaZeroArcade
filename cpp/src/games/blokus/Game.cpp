@@ -96,7 +96,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
       core.cur_color = (core.cur_color + 1) % kNumColors;
       core.pass_count++;
     } else {
-      util::release_assert(action >= 0 && action < kPass);
+      RELEASE_ASSERT(action >= 0 && action < kPass);
       core.pass_count = 0;
       core.partial_move = Location::unflatten(action);
     }
@@ -108,7 +108,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     BitBoardSlice adjacent_mask = poc.to_adjacent_bitboard_mask(loc);
     BitBoardSlice diagonal_mask = poc.to_diagonal_bitboard_mask(loc);
 
-    util::release_assert(core.pass_count == 0);
+    RELEASE_ASSERT(core.pass_count == 0);
 
     core.occupied_locations[color] |= move_mask;
     aux.played_pieces[color].set(poc.to_piece());
@@ -187,7 +187,7 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
     cx += snprintf(buffer + cx, buf_size - cx, "\n");
   }
 
-  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
+  RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   os << buffer << std::endl;
 }
 
@@ -196,10 +196,10 @@ Game::State Game::IO::load(const std::string& str, int pass_count) {
   Rules::init_state(state);
 
   std::vector<std::string> lines = util::splitlines(str);
-  util::release_assert(lines.size() > 21);
+  RELEASE_ASSERT(lines.size() > 21);
   for (int row = 0; row < kBoardDimension; ++row) {
     const std::string& line = lines[20 - row];
-    util::release_assert(line.size() == 26);
+    RELEASE_ASSERT(line.size() == 26);
     for (int col = 0; col < kBoardDimension; ++col) {
       char c = line[col + 3];
       color_t color = char_to_color(c);

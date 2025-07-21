@@ -379,10 +379,10 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
   bool W_unblocked = (col > 0) && !get(row, col - 1);
 
   int count = int(N_unblocked) + int(E_unblocked) + int(S_unblocked) + int(W_unblocked);
-  util::debug_assert(count <= 2);
+  DEBUG_ASSERT(count <= 2);
 
   if (N_unblocked) {
-    util::debug_assert(!S_unblocked);
+    DEBUG_ASSERT(!S_unblocked);
     if (W_unblocked) {
       return ccNW;
     }
@@ -392,7 +392,7 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
     return ccN;
   }
   if (S_unblocked) {
-    util::debug_assert(!N_unblocked);
+    DEBUG_ASSERT(!N_unblocked);
     if (W_unblocked) {
       return ccSW;
     }
@@ -402,7 +402,7 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
     return ccS;
   }
   if (W_unblocked) {
-    util::debug_assert(!E_unblocked);
+    DEBUG_ASSERT(!E_unblocked);
     return ccW;
   }
   if (E_unblocked) {
@@ -462,14 +462,14 @@ inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_
 }
 
 inline uint32_t BitBoardSlice::get_row(int k) const {
-  util::debug_assert(k >= start_row_ && k < start_row_ + num_rows_);
+  DEBUG_ASSERT(k >= start_row_ && k < start_row_ + num_rows_);
   return rows_[k];
 }
 
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
 inline void BoardString::set(Location loc, drawing_t color) {
-  util::debug_assert(colors_[loc.row][loc.col] == dBlankSpace);
+  DEBUG_ASSERT(colors_[loc.row][loc.col] == dBlankSpace);
   colors_[loc.row][loc.col] = color;
 }
 
@@ -580,15 +580,15 @@ inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location 
   int left_margin = loc.col - offset.col + 1;
   int right_margin = kBoardDimension - loc.col + offset.col - width - 1;
 
-  util::debug_assert(top_margin >= 0);
-  util::debug_assert(bot_margin >= 0);
-  util::debug_assert(left_margin >= 0);
-  util::debug_assert(right_margin >= 0);
+  DEBUG_ASSERT(top_margin >= 0);
+  DEBUG_ASSERT(bot_margin >= 0);
+  DEBUG_ASSERT(left_margin >= 0);
+  DEBUG_ASSERT(right_margin >= 0);
 
   bool top_overflow = top_margin == 0;
   bool bot_overflow = bot_margin == 0;
 
-  util::debug_assert(!(top_overflow && bot_overflow));
+  DEBUG_ASSERT(!(top_overflow && bot_overflow));
 
   const uint8_t* base_rows = po.adjacent_row_masks();
   int n_rows = height + !top_overflow +!bot_overflow;
@@ -620,15 +620,15 @@ inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location 
   int left_margin = loc.col - offset.col + 1;
   int right_margin = kBoardDimension - loc.col + offset.col - width - 1;
 
-  util::debug_assert(top_margin >= 0);
-  util::debug_assert(bot_margin >= 0);
-  util::debug_assert(left_margin >= 0);
-  util::debug_assert(right_margin >= 0);
+  DEBUG_ASSERT(top_margin >= 0);
+  DEBUG_ASSERT(bot_margin >= 0);
+  DEBUG_ASSERT(left_margin >= 0);
+  DEBUG_ASSERT(right_margin >= 0);
 
   bool top_overflow = top_margin == 0;
   bool bot_overflow = bot_margin == 0;
 
-  util::debug_assert(!(top_overflow && bot_overflow));
+  DEBUG_ASSERT(!(top_overflow && bot_overflow));
 
   const uint8_t* base_rows = po.diagonal_row_masks();
   int n_rows = height + !top_overflow + !bot_overflow;

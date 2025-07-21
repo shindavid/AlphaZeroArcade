@@ -97,7 +97,7 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared
     verbose_info_ = new VerboseInfo();
   }
 
-  util::release_assert(shared_data_.get() != nullptr);
+  RELEASE_ASSERT(shared_data_.get() != nullptr);
 }
 
 template <core::concepts::Game Game>
@@ -150,7 +150,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   } else if (response.yield_instruction == core::kDrop) {
     return ActionResponse::drop();
   }
-  util::release_assert(response.yield_instruction == core::kContinue);
+  RELEASE_ASSERT(response.yield_instruction == core::kContinue);
   return get_action_response_helper(response.results, request.valid_actions);
 }
 
@@ -181,7 +181,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
     verbose_info_->initialized = true;
   }
   core::action_t action = eigen_util::sample(modified_policy);
-  util::release_assert(valid_actions[action]);
+  RELEASE_ASSERT(valid_actions[action]);
   return action;
 }
 

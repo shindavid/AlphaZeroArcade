@@ -57,7 +57,7 @@ void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
 template <core::concepts::Game Game>
 bool NNEvaluation<Game>::decrement_ref_count() {
   ref_count_--;
-  util::debug_assert(ref_count_ >= 0, "ref_count_={}", ref_count_);
+  DEBUG_ASSERT(ref_count_ >= 0, "ref_count_={}", ref_count_);
   return ref_count_ == 0;
 }
 
@@ -72,7 +72,7 @@ void NNEvaluation<Game>::clear() {
 template <core::concepts::Game Game>
 void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
                               LocalActionValueArray& action_value) {
-  util::release_assert(initialized_, "NNEvaluation not initialized");
+  RELEASE_ASSERT(initialized_, "NNEvaluation not initialized");
   value = value_;
   policy = dynamic_array_.row(0);
   action_value = dynamic_array_.row(1);

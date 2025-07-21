@@ -126,7 +126,7 @@ inline void PerfStats::calibrate(int num_game_threads) {
   }
 
   // pause time includes reload time. Let's undo that.
-  util::release_assert(
+  RELEASE_ASSERT(
     loop_controller_stats.pause_time_ns >= loop_controller_stats.model_load_time_ns,
     "pause_time_ns < model_load_time_ns ({} < {})", loop_controller_stats.pause_time_ns,
     loop_controller_stats.model_load_time_ns);

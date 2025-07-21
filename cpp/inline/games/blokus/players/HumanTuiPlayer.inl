@@ -170,7 +170,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
                                          const ActionMask& valid_actions) const {
   for (core::action_t action : bitset_util::on_indices(valid_actions)) {
     // std::cout << "DBG action=" << int(action) << std::endl;
-    util::release_assert(action < kPass);
+    RELEASE_ASSERT(action < kPass);
     Location loc = Location::unflatten(action);
     // std::cout << "DBG loc=" << loc.to_string() << std::endl;
 
@@ -178,7 +178,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
     history.update(state);
     Game::Rules::apply(history, action);
     ActionMask valid_actions2 = Game::Rules::get_legal_moves(history);
-    util::release_assert(valid_actions2.any());
+    RELEASE_ASSERT(valid_actions2.any());
     for (core::action_t action2 : bitset_util::on_indices(valid_actions2)) {
       // std::cout << "DBG   action2=" << int(action2) << std::endl;
       PieceOrientationCorner poc = PieceOrientationCorner::from_action(action2);

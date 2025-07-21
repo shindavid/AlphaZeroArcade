@@ -156,7 +156,7 @@ template <core::concepts::Game Game>
 typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest& request) {
   auto context_id = request.context_id();
 
-  util::debug_assert(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
+  DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})",
                      context_id, num_search_threads());
 
   LOG_TRACE("{:>{}}search(): manager={} state={} c={}", "", contexts_[context_id].log_prefix_n(),
@@ -194,7 +194,7 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
   SearchRequest request(notification_unit);
   SearchResponse response = search(request);
   if (response.yield_instruction == core::kYield) return core::kYield;
-  util::release_assert(response.yield_instruction == core::kContinue);
+  RELEASE_ASSERT(response.yield_instruction == core::kContinue);
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
   const auto& stable_data = root->stable_data();
@@ -202,7 +202,7 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
   core::action_mode_t mode = root->action_mode();
   group::element_t sym = root_info_.canonical_sym;
 
-  util::release_assert(Rules::is_chance_mode(mode));
+  RELEASE_ASSERT(Rules::is_chance_mode(mode));
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
@@ -232,7 +232,7 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   context.search_request = &request;
 
   if (state_machine_.state == kIdle) {
-    util::release_assert(context_id == 0);
+    RELEASE_ASSERT(context_id == 0);
     state_machine_.state = kInitializingRoot;
     lock.unlock();
     if (begin_root_initialization(context) == core::kContinue) {
@@ -244,14 +244,14 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   }
 
   if (state_machine_.state == kInitializingRoot) {
-    util::release_assert(context_id == 0);
+    RELEASE_ASSERT(context_id == 0);
     if (resume_root_initialization(context) == core::kYield) {
       return SearchResponse::make_yield();
     }
     extra_enqueue_count = update_state_machine_to_in_visit_loop(context);
   }
 
-  util::release_assert(state_machine_.state == kInVisitLoop);
+  RELEASE_ASSERT(state_machine_.state == kInVisitLoop);
   lock.unlock();
   if (context.mid_search_iteration) {
     if (resume_search_iteration(context) == core::kYield) {
@@ -272,7 +272,7 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   if (yield_instruction == core::kDrop) {
     return SearchResponse::make_drop();
   }
-  util::release_assert(yield_instruction == core::kContinue);
+  RELEASE_ASSERT(yield_instruction == core::kContinue);
   prepare_results();
   return SearchResponse(&results_);
 }
@@ -298,7 +298,7 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context,
                                                                       int extra_enqueue_count) {
   // Assumes state_machine_.mutex is held
-  util::release_assert(context.in_visit_loop);
+  RELEASE_ASSERT(context.in_visit_loop);
   context.in_visit_loop = false;
   state_machine_.in_visit_loop_count--;
   if (state_machine_.in_visit_loop_count == extra_enqueue_count) {
@@ -337,7 +337,7 @@ inline void Manager<Game>::init_root_info(bool add_noise) {
     root_info_.node_index = lookup_table_.alloc_node();
     Node* root = lookup_table_.get_node(root_info_.node_index);
     core::seat_index_t active_seat = Rules::get_current_player(canonical_history.current());
-    util::release_assert(active_seat >= 0 && active_seat < Constants::kNumPlayers);
+    RELEASE_ASSERT(active_seat >= 0 && active_seat < Constants::kNumPlayers);
     root_info_.active_seat = active_seat;
     new (root) Node(&lookup_table_, canonical_history, active_seat);
   }
@@ -407,7 +407,7 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
   Node* node = lookup_table_.get_node(node_index);
 
   context.mid_node_initialization = true;
-  util::release_assert(context.eval_request.num_fresh_items() == 0);
+  RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
 
   bool is_root = (node_index == root_info_.node_index);
   if (!node->is_terminal()) {
@@ -575,7 +575,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Node::kMidExpansion);
       lock.unlock();
 
-      util::debug_assert(edge->child_index >= 0);
+      DEBUG_ASSERT(edge->child_index >= 0);
       Node* child = lookup_table_.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
       int edge_count = edge->E;
@@ -615,7 +615,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  util::release_assert(edge->state == Node::kExpanded,
+  RELEASE_ASSERT(edge->state == Node::kExpanded,
                        "Expected edge state to be kExpanded, but got {}",
                        edge->state);
 
@@ -796,9 +796,9 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
 template <core::concepts::Game Game>
 void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge) {
   // Assumes edge's parent node's mutex is held
-  util::debug_assert(multithreaded());
-  util::debug_assert(edge->expanding_context_id >= 0);
-  util::debug_assert(edge->expanding_context_id != context.id);
+  DEBUG_ASSERT(multithreaded());
+  DEBUG_ASSERT(edge->expanding_context_id >= 0);
+  DEBUG_ASSERT(edge->expanding_context_id != context.id);
 
   core::SlotContext slot_context(context.search_request->game_slot_index(), context.id);
 
@@ -905,7 +905,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     Node* child = lookup_table_.get_node(edge->child_index);
 
     core::seat_index_t parent_active_seat = node->stable_data().active_seat;
-    util::debug_assert(parent_active_seat == context.active_seat);
+    DEBUG_ASSERT(parent_active_seat == context.active_seat);
 
     ValueTensor game_outcome;
     if (Rules::is_terminal(raw_child_state, parent_active_seat,
@@ -943,7 +943,7 @@ void Manager<Game>::virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
   }
 
-  util::release_assert(!context.search_path.empty());
+  RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
   last_node->update_stats([&] {
@@ -973,7 +973,7 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
   }
 
-  util::release_assert(!context.search_path.empty());
+  RELEASE_ASSERT(!context.search_path.empty());
 
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
@@ -996,7 +996,7 @@ inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArra
              fmt::streamed(value.transpose()));
   }
 
-  util::release_assert(!context.search_path.empty());
+  RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
   last_node->update_stats([&] {
@@ -1091,7 +1091,7 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
       cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
     }
 
-    util::release_assert(cur_canonical_sym == leaf_canonical_sym,
+    RELEASE_ASSERT(cur_canonical_sym == leaf_canonical_sym,
                          "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
                          leaf_canonical_sym);
   } else {
@@ -1108,7 +1108,7 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
       IO::print_state(std::cout, context.canonical_history.current());
       std::cout << "Should be:" << std::endl;
       IO::print_state(std::cout, s);
-      util::release_assert(false);
+      RELEASE_ASSERT(false);
     }
   }
 }

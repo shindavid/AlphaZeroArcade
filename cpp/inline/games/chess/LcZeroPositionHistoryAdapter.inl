@@ -20,17 +20,17 @@ inline void LcZeroPositionHistoryAdapter::update(const lczero::Position& state) 
 }
 
 inline void LcZeroPositionHistoryAdapter::undo() {
-  util::debug_assert(!history_.positions_.empty());
+  DEBUG_ASSERT(!history_.positions_.empty());
   history_.Pop();
 }
 
 inline const lczero::Position& LcZeroPositionHistoryAdapter::current() const {
-  util::debug_assert(!history_.positions_.empty());
+  DEBUG_ASSERT(!history_.positions_.empty());
   return history_.positions_.back();
 }
 
 inline lczero::Position& LcZeroPositionHistoryAdapter::current() {
-  util::debug_assert(!history_.positions_.empty());
+  DEBUG_ASSERT(!history_.positions_.empty());
   return history_.positions_.back();
 }
 

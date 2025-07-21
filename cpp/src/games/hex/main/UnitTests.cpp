@@ -306,7 +306,7 @@ TEST(Rules, connections) {
   std::vector<core::action_t> black_moves = {hex::kC10, hex::kC9, hex::kI1, hex::kI2, hex::kI3};
   std::vector<core::action_t> white_moves = {hex::kA2, hex::kB2,  hex::kH10, hex::kI10, hex::kJ10};
 
-  util::release_assert(black_moves.size() == kNumMoves && white_moves.size() == kNumMoves);
+  RELEASE_ASSERT(black_moves.size() == kNumMoves && white_moves.size() == kNumMoves);
 
   for (int i = 0; i < kNumMoves; ++i) {
     EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kBlack);

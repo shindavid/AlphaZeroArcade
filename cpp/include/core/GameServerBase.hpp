@@ -36,11 +36,11 @@ class GameServerBase {
     CriticalSectionCheck(std::atomic<bool>& in_critical_section)
         : in_critical_section_(in_critical_section) {
       bool x = in_critical_section_.exchange(true, std::memory_order_acquire);
-      util::release_assert(!x, "Critical section double-entry detected!");
+      RELEASE_ASSERT(!x, "Critical section double-entry detected!");
     }
     ~CriticalSectionCheck() {
       bool x = in_critical_section_.exchange(false, std::memory_order_acquire);
-      util::release_assert(x, "Critical section double-exit detected!");
+      RELEASE_ASSERT(x, "Critical section double-exit detected!");
     }
 
    private:

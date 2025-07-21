@@ -100,7 +100,7 @@ void Node<Game>::LookupTable::Defragmenter::remap(node_pool_index_t& n) {
   bitset_t processed_nodes(table_->node_pool_.size());
   remap_helper(n, processed_nodes);
   n = node_index_remappings_[n];
-  util::debug_assert(processed_nodes == node_bitset_);
+  DEBUG_ASSERT(processed_nodes == node_bitset_);
 }
 
 template <core::concepts::Game Game>
@@ -230,7 +230,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   // to worry about thread-safety
 
   core::seat_index_t seat = stable_data().active_seat;
-  util::debug_assert(seat >= 0 && seat < kNumPlayers);
+  DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
 
   auto& counts = results.counts;
   auto& action_values = results.action_values;
@@ -273,7 +273,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     }
 
     const auto& stable_data = child->stable_data();
-    util::release_assert(stable_data.VT_valid);
+    RELEASE_ASSERT(stable_data.VT_valid);
     ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
     action_values(action) = VA(seat);
   }
@@ -464,7 +464,7 @@ bool Node<Game>::all_children_edges_initialized() const {
 
 template <core::concepts::Game Game>
 typename Node<Game>::Edge* Node<Game>::get_edge(int i) const {
-  util::debug_assert(first_edge_index_ != -1);
+  DEBUG_ASSERT(first_edge_index_ != -1);
   return lookup_table_->get_edge(first_edge_index_ + i);
 }
 
@@ -477,7 +477,7 @@ Node<Game>* Node<Game>::get_child(const Edge* edge) const {
 template <core::concepts::Game Game>
 void Node<Game>::update_child_expand_count(int n) {
   child_expand_count_ += n;
-  util::debug_assert(child_expand_count_ <= stable_data_.num_valid_actions);
+  DEBUG_ASSERT(child_expand_count_ <= stable_data_.num_valid_actions);
   if (child_expand_count_ < stable_data_.num_valid_actions) return;
 
   // all children have been expanded, check for triviality
@@ -501,16 +501,16 @@ void Node<Game>::validate_state() const {
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
     N += edge->E;
-    util::debug_assert(edge->E >= 0);
+    DEBUG_ASSERT(edge->E >= 0);
   }
 
   const auto stats_copy = stats();  // thread-safe because we hold the mutex
   lock.unlock();
 
-  util::debug_assert(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)this, N,
+  DEBUG_ASSERT(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)this, N,
                      stats_copy.RN, stats_copy.VN);
-  util::debug_assert(stats_copy.RN >= 0);
-  util::debug_assert(stats_copy.VN >= 0);
+  DEBUG_ASSERT(stats_copy.RN >= 0);
+  DEBUG_ASSERT(stats_copy.VN >= 0);
 }
 
 }  // namespace mcts

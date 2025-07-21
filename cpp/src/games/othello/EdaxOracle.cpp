@@ -72,7 +72,7 @@ Edax plays D3
   in_.write(input, len);
 
   int num_hints = deterministic_mode_ ? 1 : 3;
-  util::release_assert(num_hints > 0 && num_hints <= 9);
+  RELEASE_ASSERT(num_hints > 0 && num_hints <= 9);
   char buf[16] = "hint X\n";
   buf[5] = '0' + num_hints;  // set the number of hints
   in_.write(buf, 7);  // "hint X" means "show top X moves"
@@ -165,13 +165,13 @@ book    +1                                          d3
     int move_index = 2;
     bool is_book = false;
     if (n_tokens == 3) {
-      util::release_assert(util::ends_with(tokens_[0], "book"),
+      RELEASE_ASSERT(util::ends_with(tokens_[0], "book"),
                            "EdaxOracle::query: unexpected line [{}]", line);
-      util::release_assert(num_candidates == 0, "EdaxOracle::query: {} candidates [{}]",
+      RELEASE_ASSERT(num_candidates == 0, "EdaxOracle::query: {} candidates [{}]",
                            num_candidates, line);
       is_book = true;
     } else {
-      util::release_assert(n_tokens >= 5, "EdaxOracle::query: got {} tokens [{}]", n_tokens, line);
+      RELEASE_ASSERT(n_tokens >= 5, "EdaxOracle::query: got {} tokens [{}]", n_tokens, line);
 
       int score = std::stoi(tokens_[1]);
 
@@ -197,7 +197,7 @@ book    +1                                          d3
       move_index += std::isdigit(first_char);
     }
 
-    util::release_assert(tokens_[move_index].size() == 2,
+    RELEASE_ASSERT(tokens_[move_index].size() == 2,
                          "EdaxOracle::query: tokens_[{}]=\"{}\" [{}]", move_index,
                          tokens_[move_index], line);
 

@@ -27,7 +27,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
 inline PerfectPlayer::PerfectPlayer(OraclePool* oracle_pool, const Params& params)
     : oracle_pool_(oracle_pool), params_(params) {
-  util::clean_assert(params_.strength >= 0 && params_.strength <= 21,
+  CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 21,
                      "strength must be in [0, 21]");
 }
 

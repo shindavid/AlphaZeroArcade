@@ -15,7 +15,7 @@ void SimpleStateHistory<State, kNumPastStatesNeeded>::initialize(Rules) {
 
 template <typename State, int kNumPastStatesNeeded>
 State& SimpleStateHistory<State, kNumPastStatesNeeded>::extend() {
-  util::debug_assert(!buf_.empty());
+  DEBUG_ASSERT(!buf_.empty());
   update(buf_.back());
   return buf_.back();
 }
@@ -27,19 +27,19 @@ void SimpleStateHistory<State, kNumPastStatesNeeded>::update(const State& state)
 
 template <typename State, int kNumPastStatesNeeded>
 void SimpleStateHistory<State, kNumPastStatesNeeded>::undo() {
-  util::debug_assert(!buf_.empty());
+  DEBUG_ASSERT(!buf_.empty());
   buf_.pop_back();
 }
 
 template <typename State, int kNumPastStatesNeeded>
 const State& SimpleStateHistory<State, kNumPastStatesNeeded>::current() const {
-  util::debug_assert(!buf_.empty());
+  DEBUG_ASSERT(!buf_.empty());
   return buf_.back();
 }
 
 template <typename State, int kNumPastStatesNeeded>
 State& SimpleStateHistory<State, kNumPastStatesNeeded>::current() {
-  util::debug_assert(!buf_.empty());
+  DEBUG_ASSERT(!buf_.empty());
   return buf_.back();
 }
 

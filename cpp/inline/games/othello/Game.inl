@@ -137,7 +137,7 @@ inline bool Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::Gam
   const State& state = *view.final_pos;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   int score_index = kNumCells + get_count(state, cp) - get_count(state, 1 - cp);
-  util::release_assert(score_index >= 0 && score_index <= kNumCells * 2);
+  RELEASE_ASSERT(score_index >= 0 && score_index <= kNumCells * 2);
 
   // PDF
   tensor(0, score_index) = 1;

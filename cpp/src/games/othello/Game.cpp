@@ -118,7 +118,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   }
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
-  util::release_assert(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
+  RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
 }
 
@@ -142,7 +142,7 @@ void Game::IO::write_edax_board_str(char* buf, const State& state) {
   buf[cx++] = ' ';
   buf[cx++] = (state.cur_player == kBlack) ? 'X' : 'O';
   buf[cx++] = '\n';
-  util::debug_assert(cx == 76, "Unexpected error ({} != {})", cx, 76);
+  DEBUG_ASSERT(cx == 76, "Unexpected error ({} != {})", cx, 76);
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state,

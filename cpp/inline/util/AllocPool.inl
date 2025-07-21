@@ -48,7 +48,7 @@ pool_index_t AllocPool<T, N, ThreadSafe>::alloc(int n) {
 
 template <typename T, int N, bool ThreadSafe>
 T& AllocPool<T, N, ThreadSafe>::operator[](pool_index_t i) {
-  debug_assert(i >= 0, "Index out of bounds: %ld", i);
+  DEBUG_ASSERT(i >= 0, "Index out of bounds: {}", i);
   int block_index = detail::get_block_index<N>(i);
   int offset = block_index == 0 ? i : (i - std::bit_floor(uint64_t(i)));
 
@@ -58,7 +58,7 @@ T& AllocPool<T, N, ThreadSafe>::operator[](pool_index_t i) {
 
 template <typename T, int N, bool ThreadSafe>
 const T& AllocPool<T, N, ThreadSafe>::operator[](pool_index_t i) const {
-  debug_assert(i >= 0 && size_t(i) < size_, "Index out of bounds: %ld", i);
+  DEBUG_ASSERT(i >= 0 && size_t(i) < size_, "Index out of bounds: {}", i);
   int block_index = detail::get_block_index<N>(i);
   int offset = block_index == 0 ? i : (i - std::bit_floor(uint64_t(i)));
 
@@ -82,7 +82,7 @@ void AllocPool<T, N, ThreadSafe>::defragment(const boost::dynamic_bitset<>& used
   // static_assert(std::is_trivially_constructible_v<T>);
 
   static_assert(std::is_trivially_destructible_v<T>);
-  util::release_assert(used_indices.size() == size_);
+  RELEASE_ASSERT(used_indices.size() == size_);
 
   uint64_t r = 0;
   uint64_t w = 0;

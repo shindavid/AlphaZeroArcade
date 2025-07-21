@@ -73,7 +73,7 @@ float* NeuralNet<Game>::get_input_ptr(pipeline_index_t index) {
 
 template <concepts::Game Game>
 void NeuralNet<Game>::schedule(pipeline_index_t index) const {
-  util::release_assert(activated(), "NeuralNet<Game>::predict() called while deactivated");
+  RELEASE_ASSERT(activated(), "NeuralNet<Game>::predict() called while deactivated");
   pipelines_[index]->schedule();
 }
 
@@ -118,7 +118,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
-  util::release_assert(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
+  RELEASE_ASSERT(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(cuda_device_id_);
   engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
@@ -127,11 +127,11 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
     engine_->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
   batch_size_ = input_shape.d[0];
 
-  util::release_assert(pipelines_.empty());
+  RELEASE_ASSERT(pipelines_.empty());
 
   {
     mit::unique_lock lock(pipeline_mutex_);
-    util::release_assert(available_pipeline_indices_.empty());
+    RELEASE_ASSERT(available_pipeline_indices_.empty());
     for (int i = 0; i < num_pipelines; ++i) {
       pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));
       available_pipeline_indices_.push_back(i);

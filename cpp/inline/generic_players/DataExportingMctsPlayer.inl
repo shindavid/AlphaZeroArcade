@@ -34,7 +34,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   } else if (response.yield_instruction == core::kDrop) {
     return ActionResponse::drop();
   }
-  util::release_assert(response.yield_instruction == core::kContinue);
+  RELEASE_ASSERT(response.yield_instruction == core::kContinue);
 
   const SearchResults* mcts_results = response.results;
   ActionResponse action_response =

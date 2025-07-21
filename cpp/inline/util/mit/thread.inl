@@ -82,12 +82,12 @@ inline thread_impl::~thread_impl() {
 }
 
 inline void thread_impl::mark_as_blocked_by(condition_variable* cv) {
-  util::release_assert(!blocking_cv && !blocking_mutex);
+  RELEASE_ASSERT(!blocking_cv && !blocking_mutex);
   blocking_cv = cv;
 }
 
 inline void thread_impl::mark_as_blocked_by(mutex* m) {
-  util::release_assert(!blocking_cv && !blocking_mutex);
+  RELEASE_ASSERT(!blocking_cv && !blocking_mutex);
   blocking_mutex = m;
 }
 

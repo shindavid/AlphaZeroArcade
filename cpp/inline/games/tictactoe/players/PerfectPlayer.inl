@@ -23,7 +23,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
 inline PerfectPlayer::PerfectPlayer(const Params& params)
     : params_(params), lookup_map_(make_lookup_map()) {
-  util::clean_assert(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
+  CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(

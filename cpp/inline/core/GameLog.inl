@@ -160,7 +160,7 @@ GameReadLog<Game>::GameReadLog(const char* filename, int game_index,
       metadata_(metadata),
       buffer_(buffer),
       layout_(metadata) {
-  util::release_assert(num_positions() > 0, "Empty game log file {}[{}]", filename, game_index);
+  RELEASE_ASSERT(num_positions() > 0, "Empty game log file {}[{}]", filename, game_index);
 }
 
 template <concepts::Game Game>
@@ -244,12 +244,12 @@ void GameReadLog<Game>::merge_files(const char** input_filenames, int n_input_fi
     out_buffer.insert(out_buffer.end(), game_buffer, game_buffer + metadata.data_size);
   }
 
-  util::release_assert(out_buffer.size() == out_buffer_size, "Size mismatch {} != {}",
+  RELEASE_ASSERT(out_buffer.size() == out_buffer_size, "Size mismatch {} != {}",
                        out_buffer.size(), out_buffer_size);
 
   std::ofstream output_file(output_filename, std::ios::binary);
   output_file.write(out_buffer.data(), out_buffer.size());
-  util::release_assert(output_file.good(), "Failed to write to {}", output_filename);
+  RELEASE_ASSERT(output_file.good(), "Failed to write to {}", output_filename);
   output_file.close();
 
   for (const auto& reader : readers) {
@@ -260,7 +260,7 @@ void GameReadLog<Game>::merge_files(const char** input_filenames, int n_input_fi
 template <concepts::Game Game>
 void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
                              const std::vector<int>& target_indices, float* output_array) const {
-  util::release_assert(row_index >= 0 && row_index < num_sampled_positions(),
+  RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_positions(),
                        "Index {} out of bounds [0, {}) in {}[{}]", row_index,
                        num_sampled_positions(), filename_, game_index_);
 
@@ -372,7 +372,7 @@ void GameReadLog<Game>::load(int row_index, bool apply_symmetry,
 //         Array action_arr(policy.size());
 //         Array policy_arr(policy.size());
 //         Array action_values_arr(action_values_target.size());
-//         util::release_assert(policy.size() == action_values_target.size());
+//         RELEASE_ASSERT(policy.size() == action_values_target.size());
 //         for (action_t a = 0; a < policy.size(); ++a) {
 //           action_arr(a) = a;
 //           policy_arr(a) = policy(a);
@@ -487,7 +487,7 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
 
 template <concepts::Game Game>
 void GameWriteLog<Game>::add_terminal(const State& state, const ValueTensor& outcome) {
-  util::release_assert(!terminal_added_);
+  RELEASE_ASSERT(!terminal_added_);
   terminal_added_ = true;
   final_state_ = state;
   outcome_ = outcome;
@@ -505,7 +505,7 @@ template <concepts::Game Game>
 GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std::vector<char>& buf,
                                                    int client_id) {
   uint32_t start_buf_size = buf.size();
-  util::release_assert(log->terminal_added_);
+  RELEASE_ASSERT(log->terminal_added_);
   int num_entries = log->entries_.size();
 
   mem_offset_t mem_offset = 0;

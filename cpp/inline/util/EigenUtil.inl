@@ -157,7 +157,7 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
 
 template<typename Derived>
 auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix, bool ascending) {
-  util::release_assert(row_ix < array.rows());
+  RELEASE_ASSERT(row_ix < array.rows());
 
   using Column = std::remove_const_t<decltype(array.col(0).eval())>;
   int n = array.cols();
@@ -184,7 +184,7 @@ auto sort_columns(const Eigen::ArrayBase<Derived>& array, int row_ix, bool ascen
 
 template <typename Derived>
 auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascending) {
-  util::release_assert(col_ix < array.cols());
+  RELEASE_ASSERT(col_ix < array.cols());
 
   using Row = std::remove_const_t<decltype(array.row(0).eval())>;
   int n = array.rows();
@@ -491,7 +491,7 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
   int num_rows = array.rows();
   int num_cols = array.cols();
 
-  util::release_assert(num_cols == int(column_names.size()));
+  RELEASE_ASSERT(num_cols == int(column_names.size()));
 
   std::vector<std::vector<std::tuple<std::string, int>>> str_width_pairs;
   std::vector<int> max_widths;
@@ -554,7 +554,7 @@ auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
   const int rows = first.rows();
 
   bool sizes_match = (... && (rest.rows() == rows));
-  util::release_assert(sizes_match, "All arrays must have the same number of rows");
+  RELEASE_ASSERT(sizes_match, "All arrays must have the same number of rows");
 
   using Scalar = Derived0::Scalar;
   constexpr int ColsAtCompileTime = num_arrays;

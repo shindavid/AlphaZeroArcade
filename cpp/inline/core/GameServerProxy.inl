@@ -135,14 +135,14 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   //
   // As of yet, we don't even forward chance-event handling prompts from GameServer to
   // GameServerProxy, so it shouldn't be possible to hit this assert.
-  util::release_assert(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
+  RELEASE_ASSERT(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(history_.current(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
-  util::debug_assert(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                      "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                      int(response.yield_instruction));
 
@@ -155,7 +155,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       break;
     }
     case kYield: {
-      util::release_assert(!continue_hit_, "kYield after continue hit!");
+      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
@@ -198,7 +198,7 @@ GameServerProxy<Game>::SharedData::SharedData(GameServerProxy* server, const Par
     : server_(server),
       params_(params),
       yield_manager_(cv_, mutex_, queue_, dummy_pending_queue_count_) {
-  util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
+  CLEAN_ASSERT(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   LOG_INFO("Connected to the server!");
 }
@@ -215,7 +215,7 @@ void GameServerProxy<Game>::SharedData::register_player(seat_index_t seat, Playe
   // TODO: assert that we are not constructing MCTS-T players, since the MCTS-T implementation
   // implicitly assumes that all MCTS-T agents are running in the same process.
   std::string name = gen->get_name();
-  util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"{}\" size={})",
+  CLEAN_ASSERT(name.size() + 1 < kMaxNameLength, "Player name too long (\"{}\" size={})",
                      name, name.size());
   seat_generators_.emplace_back(seat, gen);
 }
@@ -251,9 +251,9 @@ void GameServerProxy<Game>::SharedData::init_socket() {
     player_id_t player_id = response.player_id;
     std::string name = response.dynamic_size_section.player_name;
 
-    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: {}",
+    CLEAN_ASSERT(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: {}",
                        player_id);
-    util::clean_assert(registered_name.empty() || registered_name == name,
+    CLEAN_ASSERT(registered_name.empty() || registered_name == name,
                        "Unexpected name in response: \"{}\" != \"{}\"", registered_name, name);
 
     gen->set_name(name);
@@ -362,7 +362,7 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::enqueue(SlotContext item, const EnqueueRequest& request) {
   mit::unique_lock lock(mutex_);
   if (request.instruction == kEnqueueNow) {
-    util::release_assert(request.extra_enqueue_count == 0);
+    RELEASE_ASSERT(request.extra_enqueue_count == 0);
     item.context = 0;  // when continuing, we always want to reset the context to 0
     queue_.push(item);
   } else if (request.instruction == kEnqueueLater) {
@@ -449,7 +449,7 @@ void GameServerProxy<Game>::GameThread::run() {
 
     GameSlot* slot = shared_data_.get_game_slot(item.slot);
 
-    util::release_assert(slot->game_started());
+    RELEASE_ASSERT(slot->game_started());
     StepResult result = slot->step(item.context);
     shared_data_.enqueue(item, result.enqueue_request);
   }

@@ -18,7 +18,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
-  util::release_assert(state.current_mode == kPlayerMode);
+  RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
   if (params_.strength == 0) {
     return bitset_util::choose_random_on_index(valid_actions);
@@ -37,7 +37,7 @@ void PerfectStrategy::init_boundary_conditions() {
 }
 
 inline int PerfectStrategy::get_optimal_action(int stones_left) const {
-  util::release_assert((stones_left <= stochastic_nim::kStartingStones) && (stones_left > 0));
+  RELEASE_ASSERT((stones_left <= stochastic_nim::kStartingStones) && (stones_left > 0));
   return P[stones_left] - 1;
 }
 

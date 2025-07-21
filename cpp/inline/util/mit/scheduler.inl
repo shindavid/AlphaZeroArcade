@@ -62,7 +62,7 @@ inline void scheduler::reset() {
 }
 
 inline void scheduler::register_thread(thread_impl* t) {
-  util::release_assert(t->id < 0, "Thread already registered ({})", t->id);
+  RELEASE_ASSERT(t->id < 0, "Thread already registered ({})", t->id);
 
   t->id = thread_id_provider_.get_next_id();
   if (t->id >= (int)all_threads_.size()) {
@@ -76,7 +76,7 @@ inline void scheduler::register_thread(thread_impl* t) {
 }
 
 inline void scheduler::unregister_thread(thread_impl* t) {
-  util::release_assert(t->id >= 0, "Thread not registered ({})", t->id);
+  RELEASE_ASSERT(t->id >= 0, "Thread not registered ({})", t->id);
 
   all_threads_[t->id] = nullptr;  // Clear the thread from the list
   viable_threads_[t->id] = false;
@@ -141,7 +141,7 @@ inline void scheduler::deactivate_thread(thread_impl* t) {
   thread_impl* joiner = t->joiner;
   thread_impl* next_thread = nullptr;
   if (joiner) {
-    util::release_assert(joiner->joinee == t);
+    RELEASE_ASSERT(joiner->joinee == t);
     MIT_LOG("Reactivating thread {}, which was joining {}", joiner->id, t->id);
     joiner->joinee = nullptr;
     t->joiner = nullptr;
@@ -160,7 +160,7 @@ inline void scheduler::deactivate_thread(thread_impl* t) {
         handle_bug_detected_error(e);
       }
       next_thread = get_next_thread();
-      util::release_assert(next_thread, "No viable threads available after bug handling");
+      RELEASE_ASSERT(next_thread, "No viable threads available after bug handling");
     }
   }
   active_thread_ = next_thread;
@@ -181,17 +181,17 @@ inline void scheduler::block_until_has_control(thread_impl* t) {
 }
 
 inline void scheduler::register_mutex(mutex* m) {
-  util::release_assert(m->id_ < 0, "Mutex already registered ({})", m->id_);
+  RELEASE_ASSERT(m->id_ < 0, "Mutex already registered ({})", m->id_);
 
   m->id_ = mutex_id_provider_.get_next_id();
   if (m->id_ >= (int)mutex_block_map_.size()) {
     mutex_block_map_.resize(m->id_ + 1, nullptr);
   }
-  util::release_assert(mutex_block_map_[m->id_] == nullptr);
+  RELEASE_ASSERT(mutex_block_map_[m->id_] == nullptr);
 }
 
 inline void scheduler::unregister_mutex(mutex* m) {
-  util::release_assert(m->id_ >= 0, "Mutex not registered ({})", m->id_);
+  RELEASE_ASSERT(m->id_ >= 0, "Mutex not registered ({})", m->id_);
 
   delete mutex_block_map_[m->id_];
   mutex_block_map_[m->id_] = nullptr;
@@ -211,7 +211,7 @@ inline void scheduler::lock_mutex(mutex* m) {
   }
 
   MIT_LOG("Locking mutex {}", m->id_);
-  util::release_assert(!m->locked_, "Mutex is already locked");
+  RELEASE_ASSERT(!m->locked_, "Mutex is already locked");
   m->locked_ = true;
   yield_control();
 }
@@ -249,17 +249,17 @@ inline void scheduler::mark_as_unlocked(mutex* m) {
 }
 
 inline void scheduler::register_condition_variable(condition_variable* cv) {
-  util::release_assert(cv->id_ < 0, "Condition variable already registered ({})", cv->id_);
+  RELEASE_ASSERT(cv->id_ < 0, "Condition variable already registered ({})", cv->id_);
 
   cv->id_ = cv_id_provider_.get_next_id();
   if (cv->id_ >= (int)cv_block_map_.size()) {
     cv_block_map_.resize(cv->id_ + 1, nullptr);
   }
-  util::release_assert(cv_block_map_[cv->id_] == nullptr);
+  RELEASE_ASSERT(cv_block_map_[cv->id_] == nullptr);
 }
 
 inline void scheduler::unregister_condition_variable(condition_variable* cv) {
-  util::release_assert(cv->id_ >= 0, "Condition variable not registered ({})", cv->id_);
+  RELEASE_ASSERT(cv->id_ >= 0, "Condition variable not registered ({})", cv->id_);
 
   delete cv_block_map_[cv->id_];
   cv_block_map_[cv->id_] = nullptr;
@@ -469,7 +469,7 @@ inline void scheduler::init_main_thread() {
   main_thread_ = new thread(true);
   register_thread(main_thread_->impl_.get());
 
-  util::release_assert(main_thread_->id() == 0,
+  RELEASE_ASSERT(main_thread_->id() == 0,
                        "Main thread should have id() 0, got {}", main_thread_->id());
   active_thread_ = main_thread_->impl_.get();  // Set the main thread as the active thread
 }

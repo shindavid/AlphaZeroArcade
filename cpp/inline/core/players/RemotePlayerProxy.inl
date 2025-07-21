@@ -59,11 +59,11 @@ void RemotePlayerProxy<Game>::PacketDispatcher::add_player(
   game_slot_index_t game_slot_index = player->game_slot_index_;
   player_id_t player_id = player->player_id_;
 
-  util::clean_assert(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id ({})",
+  CLEAN_ASSERT(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id ({})",
                      player_id);
   auto& vec = player_vec_array_[player_id];
 
-  util::clean_assert((int)game_slot_index == (int)vec.size(),
+  CLEAN_ASSERT((int)game_slot_index == (int)vec.size(),
                      "Unexpected game_slot_index ({} != {})", game_slot_index, vec.size());
 
   vec.push_back(player);
@@ -160,7 +160,7 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
 
   action_response_.action = -1;
 
-  util::release_assert(request.notification_unit.context_id == 0,
+  RELEASE_ASSERT(request.notification_unit.context_id == 0,
                        "Unexpected context_id: {}", request.notification_unit.context_id);
 
   Packet<ActionPrompt> packet;

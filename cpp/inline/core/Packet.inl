@@ -19,7 +19,7 @@ void StartGame::load_player_names(PacketT& packet, const std::array<std::string,
 
   char* p = dynamic_size_section.player_names;
   for (const std::string& name : player_names) {
-    util::clean_assert(name.size() <= kMaxNameLength,
+    CLEAN_ASSERT(name.size() <= kMaxNameLength,
                        "StartGame::load_player_names() name too long [\"{}\"] ({} > {})",
                        name, name.size(), kMaxNameLength);
     memcpy(p, name.c_str(), name.size() + 1);
@@ -40,8 +40,8 @@ void StartGame::parse_player_names(std::array<std::string, N>& player_names) con
     player_names[i] = p;
     int n = player_names[i].size();
 
-    util::clean_assert(n > 0, "StartGame::parse_player_names() empty name (i={})", i);
-    util::clean_assert(n <= kMaxNameLength,
+    CLEAN_ASSERT(n > 0, "StartGame::parse_player_names() empty name (i={})", i);
+    CLEAN_ASSERT(n <= kMaxNameLength,
                        "StartGame::parse_player_names() name too long [\"{}\"] (i={}) ({} > {})",
                        p, i, n, kMaxNameLength);
     p += player_names[i].size() + 1;
