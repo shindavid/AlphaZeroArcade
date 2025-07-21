@@ -36,9 +36,7 @@ struct AllDerivedFrom<Base, TypeList<Head, Tails...>> {
 };
 
 template <typename T>
-concept IsTypeList = requires(T t) {
-  []<typename... Ts>(TypeList<Ts...>&) {}(t);
-};
+concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t); };
 
 template <typename T, typename Base>
 concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;

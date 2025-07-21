@@ -8,15 +8,15 @@ namespace core {
 namespace concepts {
 
 template <typename T, typename GameLogView>
-concept TrainingTarget = requires(const GameLogView& view, typename T::Tensor& tensor_ref,
-                                  seat_index_t active_seat) {
-  { util::decay_copy(T::kName) } -> std::same_as<const char*>;
-  requires eigen_util::concepts::FTensor<typename T::Tensor>;
+concept TrainingTarget =
+  requires(const GameLogView& view, typename T::Tensor& tensor_ref, seat_index_t active_seat) {
+    { util::decay_copy(T::kName) } -> std::same_as<const char*>;
+    requires eigen_util::concepts::FTensor<typename T::Tensor>;
 
-  // If we have a valid training target, populates tensor_ref and returns true.
-  // Otherwise, returns false.
-  { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
-};
+    // If we have a valid training target, populates tensor_ref and returns true.
+    // Otherwise, returns false.
+    { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
+  };
 
 }  // namespace concepts
 

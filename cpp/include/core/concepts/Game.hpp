@@ -84,7 +84,7 @@ concept Game = requires {
 
   // Any game-specific one-time static-initialization code should be placed in a static method
   // called static_init().
-  {G::static_init()};
+  { G::static_init() };
 };
 
 template <class G>

@@ -109,7 +109,7 @@ class GameServerTest : public testing::Test {
   };
 
  public:
-  GameServerTest(){};
+  GameServerTest() {};
 
   void SetUp() override {
     util::Random::set_seed(0);

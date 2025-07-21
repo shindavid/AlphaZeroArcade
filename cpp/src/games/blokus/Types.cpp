@@ -193,15 +193,15 @@ void BoardString::pretty_print(std::ostream& os) const {
   int c = 0;
 
   constexpr const char* color_strs[dNumDrawings] = {
-    "  ",                        // dBlankSpace
-    "\033[44m  \033[0m",         // dBlueSpace
-    "\033[43m  \033[0m",         // dYellowSpace
-    "\033[41m  \033[0m",         // dRedSpace
-    "\033[42m  \033[0m",         // dGreenSpace
+    "  ",                         // dBlankSpace
+    "\033[44m  \033[0m",          // dBlueSpace
+    "\033[43m  \033[0m",          // dYellowSpace
+    "\033[41m  \033[0m",          // dRedSpace
+    "\033[42m  \033[0m",          // dGreenSpace
     "\033[47m\033[34m⚫\033[0m",  // dCircle
-    "\033[47m\033[34m+\033[0m",  // dPlus
-    "\033[47m\033[34m*\033[0m",  // dStar
-    "\033[47m\033[34m×\033[0m"   // dTimes
+    "\033[47m\033[34m+\033[0m",   // dPlus
+    "\033[47m\033[34m*\033[0m",   // dStar
+    "\033[47m\033[34m×\033[0m"    // dTimes
   };
 
   c += sprintf(buffer + c, "   ");

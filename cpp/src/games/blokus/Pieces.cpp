@@ -5235,7 +5235,7 @@ const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks] = {
   0b00000110, 0b00000100, 0b00001100,                          // main
   0b00000110, 0b00001001, 0b00001010, 0b00010010, 0b00001100,  // adjacent
   0b00001001, 0b00000000, 0b00010001, 0b00000000, 0b00010010   // diagonal
-};                                                             // kPieceOrientationRowMasks
+};  // kPieceOrientationRowMasks
 
 const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintArraySize] = {
   // O1
@@ -5529,7 +5529,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   294, 296, 297, 302, 305, 307,  // ccSE
   296, 299, 300, 302, 304, 308,  // ccSW
   293, 295, 300, 303, 306, 308   // ccNW
-};                               // kCornerConstraintArray
+};  // kCornerConstraintArray
 
 }  // namespace tables
 }  // namespace blokus

@@ -12,7 +12,7 @@ namespace detail {
  */
 inline auto lazyHasher = [](size_t& cur, auto&&... value) {
   auto lazyCombiner = [&cur](auto&& val) {
-    cur ^= std::hash<std::decay_t<decltype(val)>>{}(val)*0x9e3779b9 + (cur << 6) + (cur >> 2);
+    cur ^= std::hash<std::decay_t<decltype(val)>>{}(val) * 0x9e3779b9 + (cur << 6) + (cur >> 2);
   };
   (lazyCombiner(std::forward<decltype(value)>(value)), ...);
   return cur;

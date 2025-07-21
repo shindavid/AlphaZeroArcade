@@ -11,14 +11,14 @@ namespace concepts {
 
 template <typename GS, typename T>
 concept OperatesOn = requires(util::strict_type_match_t<T&> t, group::element_t sym) {
-  {GS::apply(t, sym)};
+  { GS::apply(t, sym) };
 };
 
 template <typename GS, typename T>
-concept OperatesOnWithActionMode = requires(util::strict_type_match_t<T&> t, group::element_t sym,
-                                            action_mode_t action_mode) {
-  {GS::apply(t, action_mode, sym)};
-};
+concept OperatesOnWithActionMode =
+  requires(util::strict_type_match_t<T&> t, group::element_t sym, action_mode_t action_mode) {
+    { GS::apply(t, action_mode, sym) };
+  };
 
 /*
  * One may optionally provide an addition static function:

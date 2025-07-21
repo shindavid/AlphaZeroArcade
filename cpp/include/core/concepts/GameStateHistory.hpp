@@ -27,7 +27,7 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
   /*
    * Clear the history.
    */
-  {history.clear()};
+  { history.clear() };
 
   /*
    * Initialize the history with the given rules. We pass a Rules instance despite only needing
@@ -35,12 +35,12 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
    * as a template parameter, which would distastefully require the "template" keyword at the
    * call-site).
    */
-  {history.initialize(Rules{})};
+  { history.initialize(Rules{}) };
 
   /*
    * Push back the given state.
    */
-  {history.update(const_state)};
+  { history.update(const_state) };
 
   /*
    * Undo the most recent update() call. Assumes that the history is not empty, and that any two
@@ -51,7 +51,7 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
    *
    * This is used in a very specialized context within MCTS.
    */
-  {history.undo()};
+  { history.undo() };
 
   /*
    * Return a reference to the most recent state in the history. Assumes that the history is not

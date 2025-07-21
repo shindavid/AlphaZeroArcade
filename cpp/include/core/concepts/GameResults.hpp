@@ -21,10 +21,9 @@ namespace concepts {
  *   length Games::Constants::kNumPlayers.
  */
 template <class GR>
-concept GameResults = requires(const typename GR::Tensor& const_tensor_ref,
-                               typename GR::Tensor& tensor_ref,
-                               const typename GR::ValueArray& win_rates,
-                               const eigen_util::PrintArrayFormatMap* fmt_map) {
+concept GameResults = requires(
+  const typename GR::Tensor& const_tensor_ref, typename GR::Tensor& tensor_ref,
+  const typename GR::ValueArray& win_rates, const eigen_util::PrintArrayFormatMap* fmt_map) {
   // The maximum/minimum value that can be present in the ValueArray representation. This is used
   // for provably-winning/losing checks, and also for virtual-loss calculations.
   { util::decay_copy(GR::kMinValue) } -> std::same_as<float>;
@@ -65,17 +64,17 @@ concept GameResults = requires(const typename GR::Tensor& const_tensor_ref,
   /*
    * Modify the tensor representation to reflect a left rotation of the players.
    */
-  {GR::left_rotate(tensor_ref, core::seat_index_t{})};
+  { GR::left_rotate(tensor_ref, core::seat_index_t{}) };
 
   /*
    * Modify the tensor representation to reflect a right rotation of the players.
    */
-  {GR::right_rotate(tensor_ref, core::seat_index_t{})};
+  { GR::right_rotate(tensor_ref, core::seat_index_t{}) };
 
   /*
    * Print the V (from the neural net) and Q (from search updates) side by side.
    */
-  {GR::print_array(const_tensor_ref, win_rates, fmt_map)};
+  { GR::print_array(const_tensor_ref, win_rates, fmt_map) };
 };
 
 }  // namespace concepts

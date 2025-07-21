@@ -61,7 +61,8 @@ struct PODHash {
 template <class T>
 struct strict_type_match_t {
   template <class U>
-  requires(std::same_as<std::decay_t<T>, std::decay_t<U>>) operator U&();
+    requires(std::same_as<std::decay_t<T>, std::decay_t<U>>)
+  operator U&();
 };
 
 template <typename T>

@@ -39,7 +39,7 @@ struct IndexedDispatcher {
       "All return types of f must be the same for each index I.");
 
     // Create a static table of function pointers returning R.
-    using call_type = R (*)(F &&);
+    using call_type = R (*)(F&&);
     static constexpr call_type table[] = {
       [](F&& ff) -> R { return ff(std::integral_constant<int, I>{}); }...};
 
