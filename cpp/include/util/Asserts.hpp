@@ -1,8 +1,9 @@
 #pragma once
 
+#include <util/Exceptions.hpp>
+
 #include <format>
 #include <source_location>
-#include <util/Exception.hpp>
 
 /*
  * A variety of assert functions:

@@ -2,7 +2,7 @@
 
 #include <util/Asserts.hpp>
 #include <util/BoostUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/StringUtil.hpp>
 
 namespace core {

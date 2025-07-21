@@ -3,7 +3,7 @@
 /*
  * Various string utilities
  */
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <cctype>
 #include <cstdarg>

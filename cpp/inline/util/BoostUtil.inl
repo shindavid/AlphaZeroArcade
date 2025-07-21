@@ -1,6 +1,6 @@
 #include <util/BoostUtil.hpp>
 
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/ScreenUtil.hpp>
 
 #include <format>

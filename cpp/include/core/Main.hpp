@@ -7,7 +7,7 @@
 #include <core/LoopControllerClient.hpp>
 #include <core/TrainingDataWriter.hpp>
 #include <util/BoostUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/SocketUtil.hpp>
 
 #include <boost/program_options.hpp>

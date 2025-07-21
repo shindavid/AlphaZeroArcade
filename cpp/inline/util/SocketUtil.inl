@@ -1,6 +1,6 @@
 #include <util/SocketUtil.hpp>
 
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <arpa/inet.h>
 #include <cstring>

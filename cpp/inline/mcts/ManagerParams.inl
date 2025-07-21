@@ -5,7 +5,7 @@
 #include <magic_enum/magic_enum_format.hpp>
 
 #include <util/BoostUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/RepoUtil.hpp>
 
 namespace mcts {

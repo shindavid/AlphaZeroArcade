@@ -2,7 +2,7 @@
 
 #include <core/GameLog.hpp>
 #include <util/Asserts.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/FileUtil.hpp>
 #include <util/IndexedDispatcher.hpp>
 #include <util/Random.hpp>

@@ -3,7 +3,7 @@
 #include <games/hex/Constants.hpp>
 #include <games/hex/MaskReverser.hpp>
 #include <util/CppUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <cstring>
 

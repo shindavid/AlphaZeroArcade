@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/PerfStats.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <boost/json.hpp>
 

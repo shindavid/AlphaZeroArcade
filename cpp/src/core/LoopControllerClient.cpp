@@ -3,7 +3,7 @@
 #include <core/PerfStats.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/LoggingUtil.hpp>
 #include <util/mit/mit.hpp>
 

@@ -1,6 +1,6 @@
 #include <util/FileUtil.hpp>
 
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <cstdio>
 

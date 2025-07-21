@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>

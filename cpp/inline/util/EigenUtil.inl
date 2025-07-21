@@ -1,7 +1,7 @@
 #include <util/EigenUtil.hpp>
 
 #include <util/Asserts.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/Random.hpp>
 
 #include <boost/algorithm/string.hpp>

@@ -2,7 +2,7 @@
 
 #include <core/Constants.hpp>
 #include <core/Packet.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/KeyValueDumper.hpp>
 #include <util/LoggingUtil.hpp>
 

@@ -3,7 +3,7 @@
 #include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 namespace mcts {
 

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/StringUtil.hpp>
 
 namespace math {

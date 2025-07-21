@@ -6,7 +6,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TrainingDataWriter.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 namespace core {
 

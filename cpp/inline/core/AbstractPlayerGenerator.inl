@@ -1,7 +1,7 @@
 #include <core/AbstractPlayerGenerator.hpp>
 
 #include <core/Constants.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 
 #include <cctype>
 

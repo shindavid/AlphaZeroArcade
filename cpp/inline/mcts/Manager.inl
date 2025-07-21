@@ -6,7 +6,7 @@
 #include <mcts/TypeDefs.hpp>
 #include <mcts/UniformNNEvaluationService.hpp>
 #include <util/Asserts.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/LoggingUtil.hpp>
 
 #include <boost/filesystem.hpp>

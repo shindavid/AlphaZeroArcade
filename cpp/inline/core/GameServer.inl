@@ -7,7 +7,7 @@
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/Exception.hpp>
+#include <util/Exceptions.hpp>
 #include <util/KeyValueDumper.hpp>
 #include <util/LoggingUtil.hpp>
 #include <util/Random.hpp>
