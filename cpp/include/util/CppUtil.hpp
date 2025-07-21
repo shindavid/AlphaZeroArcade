@@ -5,6 +5,7 @@
 #include <bitset>
 #include <chrono>
 #include <cstdint>
+#include <initializer_list>
 #include <tuple>
 #include <typeinfo>
 #include <type_traits>
@@ -17,6 +18,18 @@
 
 // constexpr version of BOOST_IS_DEFINED. Returns true if the macro is defined, false otherwise.
 #define IS_DEFINED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
+
+// Macro to "use" any number of args in an unevaluated context.
+//
+// This is useful to avoid unused variable warnings when the usage of a local variable would
+// otherwise be compiled out (for example because it is used only in an assert).
+// NOLINTBEGIN(bugprone-sizeof-expression)
+#define USE_UNEVALUATED(...)   (void)sizeof((__VA_ARGS__, 0))
+// NOLINTEND(bugprone-sizeof-expression)
+
+// random static_assert to suppress unused #include <initializer_list> warning (vscode isn't smart
+// enough to recognize that this is used in the USE_UNEVALUATED macro).
+static_assert(std::initializer_list<int>{}.size() == 0);
 
 namespace util {
 

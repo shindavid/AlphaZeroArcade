@@ -1,38 +1,81 @@
 #pragma once
 
 #include <format>
+#include <source_location>
+#include <util/Exception.hpp>
 
 /*
  * A variety of assert functions:
  *
- * - debug_assert() - throws a util::Exception if the condition is false; enabled only for debug
+ * - DEBUG_ASSERT() - throws a util::Exception if the condition is false; enabled only for debug
  *   builds.
  *
- * - release_assert() - throws a util::Exception if the condition is false; enabled for debug AND
+ * - RELEASE_ASSERT() - throws a util::Exception if the condition is false; enabled for debug AND
  *   release builds.
  *
- * - clean_assert() - throws a util::CleanException if the condition is false; enabled for debug
+ * - CLEAN_ASSERT() - throws a util::CleanException if the condition is false; enabled for debug
  *   AND release builds. See util::CleanException documentation.
  *
- * NOTE: we don't use the standard assert() function because we set the macro NDEBUG in both
- * debug and release builds. This is because a gcc bug causes spurious assert() failures deep in
- * the eigen3 library.
+ * Each variant can be passed a single bool, or a bool followed by a format string and
+ * additional formatting arguments.
+ *
+ * Why don't we use the standard assert() function? There are a few reasons:
+ *
+ * 1. There is a gcc bug that causes spurious assert() failures deep in the eigen3 library. So
+ *    we don't want to enable assert()'s, even in debug builds.
+ *
+ * 2. When disabled, the assert() macro compiles out the arguments, which is undesirable for a
+ *    couple reasons:
+ *
+ *    A. If there is a bug in the arguments, we won't know until we compile with asserts enabled.
+ *    B. If a local variable is declared and then used only in an assert(), the compiler will
+ *       complain that the variable is unused, which is annoying.
+ *
+ * Our *ASSERT() macros overcome these issues, while incurring zero runtime-cost for disabled
+ * *ASSERT()'s. In other words, the arguments are only evaluated if the assertion is enabled.
  */
+
+#define DEBUG_ASSERT(COND, ...)                                                                    \
+  do {                                                                                             \
+    if constexpr (IS_DEFINED(DEBUG_BUILD)) {                                                       \
+      util::detail::assert_impl<util::DebugAssertionError>(#COND, std::source_location::current(), \
+                                                           COND, ##__VA_ARGS__);                   \
+    } else {                                                                                       \
+      USE_UNEVALUATED(COND, ##__VA_ARGS__);                                                        \
+    }                                                                                              \
+  } while (0)
+
+#define RELEASE_ASSERT(COND, ...)                                                                  \
+  do {                                                                                             \
+    util::detail::assert_impl<util::ReleaseAssertionError>(#COND, std::source_location::current(), \
+                                                           COND, ##__VA_ARGS__);                   \
+  } while (0)
+
+#define CLEAN_ASSERT(COND, ...)                                                                  \
+  do {                                                                                           \
+    util::detail::assert_impl<util::CleanAssertionError>(#COND, std::source_location::current(), \
+                                                         COND, ##__VA_ARGS__);                   \
+  } while (0)
+
 namespace util {
+namespace detail {
 
-void debug_assert(bool condition);
-void clean_assert(bool condition);
-void release_assert(bool condition);
+template <typename ExceptionT, typename... Ts>
+inline void assert_impl([[maybe_unused]] const char* cond_str, const std::source_location& loc,
+                        bool cond, const std::format_string<Ts...>& fmt, Ts&&... ts) {
+  if (!cond) {
+    throw ExceptionT("{} failed: {} [{}:{}]", ExceptionT::descr(),
+                     std::format(fmt, std::forward<Ts>(ts)...), loc.file_name(), loc.line());
+  }
+}
 
-template <typename... Ts>
-void debug_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
+template <typename ExceptionT, typename... Ts>
+inline void assert_impl(const char* cond_str, const std::source_location& loc, bool cond) {
+  if (!cond) {
+    throw ExceptionT("{} failed: {} [{}:{}]", ExceptionT::descr(), cond_str, loc.file_name(),
+                     loc.line());
+  }
+}
 
-template <typename... Ts>
-void release_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
-
-template <typename... Ts>
-void clean_assert(bool condition, std::format_string<Ts...> fmt, Ts&&... ts);
-
+}  // namespace detail
 }  // namespace util
-
-#include <inline/util/Asserts.inl>
