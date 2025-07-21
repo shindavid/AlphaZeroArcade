@@ -1,5 +1,6 @@
-#include "games/hex/Constants.hpp"
 #include "games/hex/players/HumanTuiPlayer.hpp"
+
+#include "games/hex/Constants.hpp"
 
 #include <format>
 #include <iostream>

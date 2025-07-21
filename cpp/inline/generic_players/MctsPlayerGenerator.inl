@@ -1,5 +1,6 @@
-#include "core/LoopControllerClient.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
+
+#include "core/LoopControllerClient.hpp"
 #include "mcts/Constants.hpp"
 
 #include <format>

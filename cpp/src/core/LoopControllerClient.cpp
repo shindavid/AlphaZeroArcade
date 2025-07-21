@@ -1,4 +1,5 @@
 #include "core/LoopControllerClient.hpp"
+
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "util/Asserts.hpp"

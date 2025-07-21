@@ -1,4 +1,5 @@
 #include "core/Main.hpp"
+
 #include "util/LoggingUtil.hpp"
 
 #ifdef MIT_TEST_MODE

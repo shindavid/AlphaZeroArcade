@@ -1,5 +1,6 @@
-#include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
+
+#include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Random.hpp"
 

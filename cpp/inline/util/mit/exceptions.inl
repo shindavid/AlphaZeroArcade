@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/mit/exceptions.hpp"
+
 #include "util/mit/scheduler.hpp"
 
 namespace mit {

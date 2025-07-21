@@ -1,4 +1,5 @@
 #include "games/connect4/Game.hpp"
+
 #include "util/AnsiCodes.hpp"
 #include "util/BitSet.hpp"
 #include "util/CppUtil.hpp"

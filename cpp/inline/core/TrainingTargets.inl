@@ -1,5 +1,6 @@
-#include "core/BasicTypes.hpp"
 #include "core/TrainingTargets.hpp"
+
+#include "core/BasicTypes.hpp"
 
 namespace core {
 

@@ -1,4 +1,5 @@
 #include "games/blokus/Types.hpp"
+
 #include "util/Asserts.hpp"
 
 #include <algorithm>

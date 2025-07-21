@@ -1,5 +1,6 @@
-#include "core/DefaultCanonicalizer.hpp"
 #include "games/tictactoe/Game.hpp"
+
+#include "core/DefaultCanonicalizer.hpp"
 
 namespace tictactoe {
 

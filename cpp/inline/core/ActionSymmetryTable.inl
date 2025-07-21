@@ -1,4 +1,5 @@
 #include "core/ActionSymmetryTable.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
 

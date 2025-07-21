@@ -1,5 +1,6 @@
-#include "core/BasicTypes.hpp"
 #include "core/GameServer.hpp"
+
+#include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"

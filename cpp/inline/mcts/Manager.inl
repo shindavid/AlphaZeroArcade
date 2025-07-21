@@ -1,6 +1,7 @@
+#include "mcts/Manager.hpp"
+
 #include "core/BasicTypes.hpp"
 #include "mcts/ActionSelector.hpp"
-#include "mcts/Manager.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/TypeDefs.hpp"
 #include "mcts/UniformNNEvaluationService.hpp"

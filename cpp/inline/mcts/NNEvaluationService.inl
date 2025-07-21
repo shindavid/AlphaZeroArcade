@@ -1,4 +1,5 @@
 #include "mcts/NNEvaluationService.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/KeyValueDumper.hpp"
 #include "util/LoggingUtil.hpp"

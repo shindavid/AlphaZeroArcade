@@ -1,4 +1,5 @@
 #include "mcts/Node.hpp"
+
 #include "util/CppUtil.hpp"
 #include "util/LoggingUtil.hpp"
 

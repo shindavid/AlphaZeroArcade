@@ -1,4 +1,5 @@
 #include "games/blokus/GameState.hpp"
+
 #include "util/CppUtil.hpp"
 
 namespace blokus {

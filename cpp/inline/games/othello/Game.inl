@@ -1,5 +1,6 @@
-#include "core/DefaultCanonicalizer.hpp"
 #include "games/othello/Game.hpp"
+
+#include "core/DefaultCanonicalizer.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/BitMapUtil.hpp"
 #include "util/BitSet.hpp"

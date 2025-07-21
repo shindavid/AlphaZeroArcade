@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/mit/scheduler.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/LoggingUtil.hpp"
@@ -8,7 +10,6 @@
 #include "util/mit/exceptions.hpp"
 #include "util/mit/logging.hpp"
 #include "util/mit/mutex.hpp"
-#include "util/mit/scheduler.hpp"
 #include "util/mit/thread.hpp"
 
 #include <ctime>

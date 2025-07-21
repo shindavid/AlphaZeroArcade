@@ -1,4 +1,5 @@
 #include "games/blokus/Game.hpp"
+
 #include "util/CppUtil.hpp"
 #include "util/StringUtil.hpp"
 

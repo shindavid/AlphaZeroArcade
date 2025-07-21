@@ -1,5 +1,6 @@
-#include "util/BoostUtil.hpp"
 #include "util/LoggingUtil.hpp"
+
+#include "util/BoostUtil.hpp"
 
 #include <boost/program_options.hpp>
 

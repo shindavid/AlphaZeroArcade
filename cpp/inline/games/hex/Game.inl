@@ -1,6 +1,7 @@
+#include "games/hex/Game.hpp"
+
 #include "core/DefaultCanonicalizer.hpp"
 #include "games/hex/Constants.hpp"
-#include "games/hex/Game.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"

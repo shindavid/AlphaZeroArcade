@@ -1,4 +1,5 @@
 #include "core/DataLoader.hpp"
+
 #include "core/GameLog.hpp"
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"

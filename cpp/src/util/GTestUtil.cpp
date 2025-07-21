@@ -1,4 +1,5 @@
 #include "util/GTestUtil.hpp"
+
 #include "util/LoggingUtil.hpp"
 
 #include <boost/program_options.hpp>

@@ -1,4 +1,5 @@
 #include "games/othello/EdaxOracle.hpp"
+
 #include "util/StringUtil.hpp"
 
 #include <format>

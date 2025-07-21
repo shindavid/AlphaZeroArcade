@@ -1,6 +1,7 @@
+#include "core/players/RemotePlayerProxy.hpp"
+
 #include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
-#include "core/players/RemotePlayerProxy.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>

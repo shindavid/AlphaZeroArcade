@@ -1,4 +1,5 @@
 #include "mcts/NNEvaluationRequest.hpp"
+
 #include "util/CppUtil.hpp"
 
 namespace mcts {

@@ -1,5 +1,6 @@
-#include "core/PerfStats.hpp"
 #include "core/TrainingDataWriter.hpp"
+
+#include "core/PerfStats.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"

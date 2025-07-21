@@ -1,5 +1,6 @@
-#include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
+
+#include "util/Asserts.hpp"
 #include "util/Random.hpp"
 
 #include <format>

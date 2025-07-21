@@ -1,4 +1,5 @@
 #include "core/Packet.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
 

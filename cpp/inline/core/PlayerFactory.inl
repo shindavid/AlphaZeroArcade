@@ -1,4 +1,5 @@
 #include "core/PlayerFactory.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"

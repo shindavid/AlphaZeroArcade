@@ -1,5 +1,6 @@
-#include "core/Constants.hpp"
 #include "generic_players/MctsPlayer.hpp"
+
+#include "core/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"

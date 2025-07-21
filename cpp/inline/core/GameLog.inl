@@ -1,4 +1,5 @@
 #include "core/GameLog.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"

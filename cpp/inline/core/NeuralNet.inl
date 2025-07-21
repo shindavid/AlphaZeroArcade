@@ -1,4 +1,5 @@
 #include "core/NeuralNet.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"

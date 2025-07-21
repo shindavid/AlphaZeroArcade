@@ -1,4 +1,5 @@
 #include "games/stochastic_nim/players/HumanTuiPlayer.hpp"
+
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 

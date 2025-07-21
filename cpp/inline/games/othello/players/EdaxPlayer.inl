@@ -1,4 +1,5 @@
 #include "games/othello/players/EdaxPlayer.hpp"
+
 #include "util/BoostUtil.hpp"
 
 namespace othello {

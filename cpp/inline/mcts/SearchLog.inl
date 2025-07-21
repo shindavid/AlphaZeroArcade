@@ -1,4 +1,5 @@
 #include "mcts/SearchLog.hpp"
+
 #include "util/BitSet.hpp"
 
 namespace mcts {
