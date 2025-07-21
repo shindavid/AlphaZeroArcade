@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/YieldManager.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/YieldManager.hpp"
+#include "util/mit/mit.hpp"
 
 namespace core {
 
@@ -45,4 +45,4 @@ class OraclePool {
 
 }  // namespace core
 
-#include <inline/core/OraclePool.inl>
+#include "inline/core/OraclePool.inl"

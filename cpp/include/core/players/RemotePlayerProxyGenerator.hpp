@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/players/RemotePlayerProxy.hpp>
-#include <util/SocketUtil.hpp>
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/players/RemotePlayerProxy.hpp"
+#include "util/SocketUtil.hpp"
 
 #include <string>
 #include <vector>
@@ -38,4 +38,4 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<Game> {
 
 }  // namespace core
 
-#include <inline/core/players/RemotePlayerProxyGenerator.inl>
+#include "inline/core/players/RemotePlayerProxyGenerator.inl"

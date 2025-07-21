@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/concepts/Game.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/concepts/Game.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
 
 #include <string>
 #include <vector>

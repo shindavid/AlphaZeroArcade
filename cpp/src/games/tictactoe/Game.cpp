@@ -1,4 +1,4 @@
-#include <games/tictactoe/Game.hpp>
+#include "games/tictactoe/Game.hpp"
 
 namespace tictactoe {
 

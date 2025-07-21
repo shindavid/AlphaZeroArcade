@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/Constants.hpp>
-#include <util/CppUtil.hpp>
-#include <util/MetaProgramming.hpp>
-#include <util/SocketUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/Constants.hpp"
+#include "util/CppUtil.hpp"
+#include "util/MetaProgramming.hpp"
+#include "util/SocketUtil.hpp"
 
 #include <array>
 #include <concepts>
@@ -232,4 +232,4 @@ class GeneralPacket {
 
 }  // namespace core
 
-#include <inline/core/Packet.inl>
+#include "inline/core/Packet.inl"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lc0/chess/position.h>
+#include "lc0/chess/position.h"
 
 namespace chess {
 
@@ -34,4 +34,4 @@ class LcZeroPositionHistoryAdapter {
 
 }  // namespace chess
 
-#include <inline/games/chess/LcZeroPositionHistoryAdapter.inl>
+#include "inline/games/chess/LcZeroPositionHistoryAdapter.inl"

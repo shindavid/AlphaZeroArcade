@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/GameServerBase.hpp>
+#include "core/GameServerBase.hpp"
 
 namespace core {
 

@@ -1,20 +1,20 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/ConstantsBase.hpp>
-#include <core/GameLog.hpp>
-#include <core/GameTypes.hpp>
-#include <core/IOBase.hpp>
-#include <core/MctsConfigurationBase.hpp>
-#include <core/SimpleStateHistory.hpp>
-#include <core/TrainingTargets.hpp>
-#include <core/WinLossDrawResults.hpp>
-#include <games/tictactoe/Constants.hpp>
-#include <games/GameRulesBase.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/MetaProgramming.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/ConstantsBase.hpp"
+#include "core/GameLog.hpp"
+#include "core/GameTypes.hpp"
+#include "core/IOBase.hpp"
+#include "core/MctsConfigurationBase.hpp"
+#include "core/SimpleStateHistory.hpp"
+#include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawResults.hpp"
+#include "games/tictactoe/Constants.hpp"
+#include "games/GameRulesBase.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -149,4 +149,4 @@ struct hash<tictactoe::Game::State> {
 
 static_assert(core::concepts::Game<tictactoe::Game>);
 
-#include <inline/games/tictactoe/Game.inl>
+#include "inline/games/tictactoe/Game.inl"

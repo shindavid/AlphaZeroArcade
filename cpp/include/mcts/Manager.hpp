@@ -1,20 +1,20 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/Game.hpp>
-#include <mcts/ActionSelector.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/NNEvaluationService.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/SearchParams.hpp>
-#include <mcts/TypeDefs.hpp>
-#include <util/Math.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/Game.hpp"
+#include "mcts/ActionSelector.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/NNEvaluationRequest.hpp"
+#include "mcts/NNEvaluationService.hpp"
+#include "mcts/NNEvaluationServiceBase.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/SearchParams.hpp"
+#include "mcts/TypeDefs.hpp"
+#include "util/Math.hpp"
+#include "util/mit/mit.hpp"
 
 #include <array>
 #include <queue>
@@ -336,4 +336,4 @@ class Manager {
 
 }  // namespace mcts
 
-#include <inline/mcts/Manager.inl>
+#include "inline/mcts/Manager.inl"

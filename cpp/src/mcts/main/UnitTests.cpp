@@ -1,20 +1,20 @@
-#include <core/GameServerBase.hpp>
-#include <core/tests/Common.hpp>
-#include <games/GameTransforms.hpp>
-#include <games/nim/Game.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <mcts/Manager.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/NNEvaluation.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/SearchLog.hpp>
-#include <mcts/SimpleNNEvaluationService.hpp>
-#include <util/BoostUtil.hpp>
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/GTestUtil.hpp>
-#include <util/LoggingUtil.hpp>
+#include "core/GameServerBase.hpp"
+#include "core/tests/Common.hpp"
+#include "games/GameTransforms.hpp"
+#include "games/nim/Game.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "mcts/Manager.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/NNEvaluation.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/SearchLog.hpp"
+#include "mcts/SimpleNNEvaluationService.hpp"
+#include "util/BoostUtil.hpp"
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/GTestUtil.hpp"
+#include "util/LoggingUtil.hpp"
 
 #include <gtest/gtest.h>
 

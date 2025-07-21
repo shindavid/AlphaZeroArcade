@@ -1,4 +1,4 @@
-#include <games/chess/LcZeroPositionHistoryAdapter.hpp>
+#include "games/chess/LcZeroPositionHistoryAdapter.hpp"
 
 namespace chess {
 

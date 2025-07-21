@@ -1,16 +1,16 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/Constants.hpp>
-#include <core/concepts/Game.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/Manager.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/SearchParams.hpp>
-#include <util/CppUtil.hpp>
-#include <util/Math.hpp>
-#include <util/mit/mit.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/Constants.hpp"
+#include "core/concepts/Game.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/Manager.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/SearchParams.hpp"
+#include "util/CppUtil.hpp"
+#include "util/Math.hpp"
+#include "util/mit/mit.hpp"
 
 #include <memory>
 
@@ -126,4 +126,4 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
 }  // namespace generic
 
-#include <inline/generic_players/MctsPlayer.inl>
+#include "inline/generic_players/MctsPlayer.inl"

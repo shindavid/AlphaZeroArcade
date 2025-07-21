@@ -1,13 +1,13 @@
-#include <mcts/Manager.hpp>
+#include "mcts/Manager.hpp"
 
-#include <core/BasicTypes.hpp>
-#include <mcts/ActionSelector.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/TypeDefs.hpp>
-#include <mcts/UniformNNEvaluationService.hpp>
-#include <util/Asserts.hpp>
-#include <util/Exceptions.hpp>
-#include <util/LoggingUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "mcts/ActionSelector.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/TypeDefs.hpp"
+#include "mcts/UniformNNEvaluationService.hpp"
+#include "util/Asserts.hpp"
+#include "util/Exceptions.hpp"
+#include "util/LoggingUtil.hpp"
 
 #include <boost/filesystem.hpp>
 #include <magic_enum/magic_enum.hpp>

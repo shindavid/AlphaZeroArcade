@@ -1,26 +1,26 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/GameServerClient.hpp>
-#include <core/LoopControllerClient.hpp>
-#include <core/LoopControllerListener.hpp>
-#include <core/NeuralNet.hpp>
-#include <core/PerfStats.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/Game.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/NNEvaluation.hpp>
-#include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
-#include <mcts/NNEvaluationServiceParams.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/TypeDefs.hpp>
-#include <util/AllocPool.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/LRUCache.hpp>
-#include <util/RecyclingAllocPool.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/GameServerClient.hpp"
+#include "core/LoopControllerClient.hpp"
+#include "core/LoopControllerListener.hpp"
+#include "core/NeuralNet.hpp"
+#include "core/PerfStats.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/Game.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/NNEvaluation.hpp"
+#include "mcts/NNEvaluationRequest.hpp"
+#include "mcts/NNEvaluationServiceBase.hpp"
+#include "mcts/NNEvaluationServiceParams.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/TypeDefs.hpp"
+#include "util/AllocPool.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/LRUCache.hpp"
+#include "util/RecyclingAllocPool.hpp"
+#include "util/mit/mit.hpp"
 
 #include <deque>
 #include <map>
@@ -387,4 +387,4 @@ class NNEvaluationService
 
 }  // namespace mcts
 
-#include <inline/mcts/NNEvaluationService.inl>
+#include "inline/mcts/NNEvaluationService.inl"

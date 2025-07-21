@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/BitSet.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/BitSet.hpp"
 
 namespace generic {
 

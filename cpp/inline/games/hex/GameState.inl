@@ -1,9 +1,9 @@
-#include <games/hex/GameState.hpp>
+#include "games/hex/GameState.hpp"
 
-#include <games/hex/Constants.hpp>
-#include <games/hex/MaskReverser.hpp>
-#include <util/CppUtil.hpp>
-#include <util/Exceptions.hpp>
+#include "games/hex/Constants.hpp"
+#include "games/hex/MaskReverser.hpp"
+#include "util/CppUtil.hpp"
+#include "util/Exceptions.hpp"
 
 #include <cstring>
 

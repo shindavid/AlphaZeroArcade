@@ -1,7 +1,7 @@
-#include <core/tests/Common.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/players/PerfectPlayer.hpp>
-#include <util/GTestUtil.hpp>
+#include "core/tests/Common.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/players/PerfectPlayer.hpp"
+#include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
 

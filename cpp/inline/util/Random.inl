@@ -1,10 +1,10 @@
 #include <algorithm>
-#include <util/Random.hpp>
+#include "util/Random.hpp"
 
 #include <ctime>
 
-#include <util/BoostUtil.hpp>
-#include <util/CppUtil.hpp>
+#include "util/BoostUtil.hpp"
+#include "util/CppUtil.hpp"
 
 namespace util {
 

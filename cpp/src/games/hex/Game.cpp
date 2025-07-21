@@ -1,4 +1,4 @@
-#include <games/hex/Game.hpp>
+#include "games/hex/Game.hpp"
 
 namespace hex {
 

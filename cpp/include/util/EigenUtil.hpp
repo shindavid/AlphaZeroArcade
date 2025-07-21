@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
+#include "util/CppUtil.hpp"
 
 #include <Eigen/Core>
 #include <EigenRand/EigenRand>
@@ -400,4 +400,4 @@ template <concepts::FTensor Tensor> Tensor zeros();
 
 }  // namespace eigen_util
 
-#include <inline/util/EigenUtil.inl>
+#include "inline/util/EigenUtil.inl"

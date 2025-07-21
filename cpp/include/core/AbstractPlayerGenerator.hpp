@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <ostream>
 #include <string>
@@ -141,4 +141,4 @@ class AbstractPlayerGenerator {
 
 }  // namespace core
 
-#include <inline/core/AbstractPlayerGenerator.inl>
+#include "inline/core/AbstractPlayerGenerator.inl"

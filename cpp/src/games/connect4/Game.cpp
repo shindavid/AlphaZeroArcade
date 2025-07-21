@@ -1,8 +1,8 @@
-#include <games/connect4/Game.hpp>
+#include "games/connect4/Game.hpp"
 
-#include <util/AnsiCodes.hpp>
-#include <util/BitSet.hpp>
-#include <util/CppUtil.hpp>
+#include "util/AnsiCodes.hpp"
+#include "util/BitSet.hpp"
+#include "util/CppUtil.hpp"
 
 #include <boost/lexical_cast.hpp>
 

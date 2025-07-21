@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/PlayerFactory.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <generic_players/MctsPlayerGenerator.hpp>
-#include <generic_players/RandomPlayerGenerator.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <games/tictactoe/players/HumanTuiPlayerGenerator.hpp>
-#include <games/tictactoe/players/PerfectPlayerGenerator.hpp>
+#include "core/PlayerFactory.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/players/HumanTuiPlayerGenerator.hpp"
+#include "games/tictactoe/players/PerfectPlayerGenerator.hpp"
 
 namespace tictactoe {
 

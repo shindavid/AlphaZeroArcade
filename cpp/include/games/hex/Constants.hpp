@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/ConstantsBase.hpp>
-#include <games/hex/Types.hpp>
-#include <util/CppUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/ConstantsBase.hpp"
+#include "games/hex/Types.hpp"
+#include "util/CppUtil.hpp"
 
 namespace hex {
 

@@ -1,11 +1,11 @@
 #pragma once
 
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <games/blokus/Game.hpp>
-#include <games/blokus/players/HumanTuiPlayer.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
+#include "games/blokus/Game.hpp"
+#include "games/blokus/players/HumanTuiPlayer.hpp"
 
 namespace blokus {
 

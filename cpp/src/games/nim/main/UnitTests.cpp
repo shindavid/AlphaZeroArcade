@@ -1,5 +1,5 @@
-#include <games/nim/Game.hpp>
-#include <util/GTestUtil.hpp>
+#include "games/nim/Game.hpp"
+#include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
 

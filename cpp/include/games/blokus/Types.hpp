@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <games/blokus/Constants.hpp>
-#include <util/FiniteGroups.hpp>
+#include "core/BasicTypes.hpp"
+#include "games/blokus/Constants.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <bit>
 #include <bitset>
@@ -319,4 +319,4 @@ extern const piece_orientation_corner_index_t kCornerConstraintArray[kCornerCons
 
 }  // namespace blokus
 
-#include <inline/games/blokus/Types.inl>
+#include "inline/games/blokus/Types.inl"

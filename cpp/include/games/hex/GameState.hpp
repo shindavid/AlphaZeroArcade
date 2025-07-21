@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <games/hex/Constants.hpp>
-#include <games/hex/UnionFind.hpp>
-#include <util/CppUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "games/hex/Constants.hpp"
+#include "games/hex/UnionFind.hpp"
+#include "util/CppUtil.hpp"
 
 namespace hex {
 
@@ -63,4 +63,4 @@ struct hash<hex::GameState> {
 
 }  // namespace std
 
-#include <inline/games/hex/GameState.inl>
+#include "inline/games/hex/GameState.inl"

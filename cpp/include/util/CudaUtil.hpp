@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/Exceptions.hpp>
+#include "util/Exceptions.hpp"
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
@@ -57,4 +57,4 @@ struct std::formatter<nvinfer1::Dims> : std::formatter<std::string> {
   }
 };
 
-#include <inline/util/CudaUtil.inl>
+#include "inline/util/CudaUtil.inl"

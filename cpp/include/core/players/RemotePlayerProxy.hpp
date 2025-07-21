@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/Packet.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/SocketUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/Packet.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/SocketUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <map>
 
@@ -76,4 +76,4 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
 }  // namespace core
 
-#include <inline/core/players/RemotePlayerProxy.inl>
+#include "inline/core/players/RemotePlayerProxy.inl"

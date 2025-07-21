@@ -1,14 +1,14 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/OraclePool.hpp>
-#include <core/PlayerFactory.hpp>
-#include <games/othello/EdaxOracle.hpp>
-#include <games/othello/Game.hpp>
-#include <games/othello/players/EdaxPlayer.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/OraclePool.hpp"
+#include "core/PlayerFactory.hpp"
+#include "games/othello/EdaxOracle.hpp"
+#include "games/othello/Game.hpp"
+#include "games/othello/players/EdaxPlayer.hpp"
 
 #include <string>
 #include <vector>
@@ -56,4 +56,4 @@ class PlayerSubfactory<othello::EdaxPlayerGenerator> : public PlayerSubfactoryBa
 
 }  // namespace core
 
-#include <inline/games/othello/players/EdaxPlayerGenerator.inl>
+#include "inline/games/othello/players/EdaxPlayerGenerator.inl"

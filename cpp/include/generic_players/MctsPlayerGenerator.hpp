@@ -1,15 +1,15 @@
 #pragma once
 
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/PlayerFactory.hpp>
-#include <core/concepts/Game.hpp>
-#include <generic_players/DataExportingMctsPlayer.hpp>
-#include <generic_players/MctsPlayer.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/Manager.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/TypeDefs.hpp>
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/PlayerFactory.hpp"
+#include "core/concepts/Game.hpp"
+#include "generic_players/DataExportingMctsPlayer.hpp"
+#include "generic_players/MctsPlayer.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/Manager.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/TypeDefs.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
@@ -107,4 +107,4 @@ class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>
 
 }  // namespace core
 
-#include <inline/generic_players/MctsPlayerGenerator.inl>
+#include "inline/generic_players/MctsPlayerGenerator.inl"

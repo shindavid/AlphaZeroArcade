@@ -1,8 +1,8 @@
-#include <mcts/NNEvaluationService.hpp>
+#include "mcts/NNEvaluationService.hpp"
 
-#include <util/Asserts.hpp>
-#include <util/KeyValueDumper.hpp>
-#include <util/LoggingUtil.hpp>
+#include "util/Asserts.hpp"
+#include "util/KeyValueDumper.hpp"
+#include "util/LoggingUtil.hpp"
 
 #include <boost/json/src.hpp>
 #include <magic_enum/magic_enum.hpp>

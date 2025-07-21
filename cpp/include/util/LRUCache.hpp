@@ -8,7 +8,7 @@
  *
  * See: https://www.boost.org/doc/libs/1_67_0/boost/compute/detail/lru_cache.hpp
  */
-#include <util/Asserts.hpp>
+#include "util/Asserts.hpp"
 
 #include <boost/intrusive/list.hpp>
 
@@ -88,4 +88,4 @@ class LRUCache {
 
 }  // namespace util
 
-#include <inline/util/LRUCache.inl>
+#include "inline/util/LRUCache.inl"

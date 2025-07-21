@@ -1,7 +1,7 @@
-#include <core/ActionSymmetryTable.hpp>
+#include "core/ActionSymmetryTable.hpp"
 
-#include <util/Asserts.hpp>
-#include <util/CppUtil.hpp>
+#include "util/Asserts.hpp"
+#include "util/CppUtil.hpp"
 
 #include <algorithm>
 #include <cstring>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <games/hex/Constants.hpp>
-#include <games/hex/Types.hpp>
+#include "games/hex/Constants.hpp"
+#include "games/hex/Types.hpp"
 
 namespace hex {
 

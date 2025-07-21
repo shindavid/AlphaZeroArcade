@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <games/tictactoe/players/HumanTuiPlayer.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/players/HumanTuiPlayer.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
 
 namespace tictactoe {
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/EigenUtil.hpp>
-#include <util/MetaProgramming.hpp>
+#include "util/EigenUtil.hpp"
+#include "util/MetaProgramming.hpp"
 
 namespace core {
 
@@ -73,4 +73,4 @@ struct OppPolicyTarget {
 
 }  // namespace core
 
-#include <inline/core/TrainingTargets.inl>
+#include "inline/core/TrainingTargets.inl"

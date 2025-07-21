@@ -1,14 +1,14 @@
 #pragma once
 
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/Packet.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/CppUtil.hpp>
-#include <util/SocketUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/Packet.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/CppUtil.hpp"
+#include "util/SocketUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <string>
 #include <vector>
@@ -213,4 +213,4 @@ class GameServerProxy : public core::GameServerBase {
 
 }  // namespace core
 
-#include <inline/core/GameServerProxy.inl>
+#include "inline/core/GameServerProxy.inl"

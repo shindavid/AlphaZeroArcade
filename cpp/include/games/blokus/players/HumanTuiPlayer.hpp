@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
-#include <games/blokus/Game.hpp>
+#include "core/BasicTypes.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
+#include "games/blokus/Game.hpp"
 
 #include <map>
 #include <vector>
@@ -50,4 +50,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 
 }  // namespace blokus
 
-#include <inline/games/blokus/players/HumanTuiPlayer.inl>
+#include "inline/games/blokus/players/HumanTuiPlayer.inl"

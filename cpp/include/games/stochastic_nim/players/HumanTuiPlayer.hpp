@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
+#include "core/BasicTypes.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
 
 namespace stochastic_nim {
 
@@ -18,4 +18,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 
 }  // namespace stochastic_nim
 
-#include <inline/games/stochastic_nim/players/HumanTuiPlayer.inl>
+#include "inline/games/stochastic_nim/players/HumanTuiPlayer.inl"

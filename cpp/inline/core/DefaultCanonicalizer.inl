@@ -1,4 +1,4 @@
-#include <core/DefaultCanonicalizer.hpp>
+#include "core/DefaultCanonicalizer.hpp"
 
 namespace core {
 

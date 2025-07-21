@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 
 #include <string>
-#include <util/CppUtil.hpp>
+#include "util/CppUtil.hpp"
 
 // The main logging macros are LOG_INFO(), LOG_DEBUG(), LOG_WARN(), and LOG_ERROR().
 //
@@ -64,4 +64,4 @@ struct Logging {
 
 }  // namespace util
 
-#include <inline/util/LoggingUtil.inl>
+#include "inline/util/LoggingUtil.inl"

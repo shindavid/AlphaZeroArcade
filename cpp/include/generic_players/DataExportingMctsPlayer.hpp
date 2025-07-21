@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/TrainingDataWriter.hpp>
-#include <generic_players/MctsPlayer.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/TrainingDataWriter.hpp"
+#include "generic_players/MctsPlayer.hpp"
 
 namespace generic {
 
@@ -58,4 +58,4 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
 
 }  // namespace generic
 
-#include <inline/generic_players/DataExportingMctsPlayer.inl>
+#include "inline/generic_players/DataExportingMctsPlayer.inl"

@@ -1,10 +1,10 @@
-#include <games/chess/Game.hpp>
+#include "games/chess/Game.hpp"
 
-#include <core/DefaultCanonicalizer.hpp>
-#include <util/AnsiCodes.hpp>
-#include <util/BitMapUtil.hpp>
-#include <util/BitSet.hpp>
-#include <util/CppUtil.hpp>
+#include "core/DefaultCanonicalizer.hpp"
+#include "util/AnsiCodes.hpp"
+#include "util/BitMapUtil.hpp"
+#include "util/BitSet.hpp"
+#include "util/CppUtil.hpp"
 
 #include <algorithm>
 #include <bit>

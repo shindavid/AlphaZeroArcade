@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/SearchParams.hpp>
-#include <util/EigenUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/SearchParams.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace mcts {
 
@@ -36,4 +36,4 @@ struct ActionSelector {
 
 }  // namespace mcts
 
-#include <inline/mcts/ActionSelector.inl>
+#include "inline/mcts/ActionSelector.inl"

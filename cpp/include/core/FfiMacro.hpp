@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/GameLog.hpp>
-#include <core/DataLoader.hpp>
+#include "core/GameLog.hpp"
+#include "core/DataLoader.hpp"
 
 #ifdef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must not be defined for game-ffi's");

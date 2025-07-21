@@ -1,6 +1,6 @@
-#include <games/othello/players/EdaxPlayer.hpp>
+#include "games/othello/players/EdaxPlayer.hpp"
 
-#include <util/BoostUtil.hpp>
+#include "util/BoostUtil.hpp"
 
 namespace othello {
 

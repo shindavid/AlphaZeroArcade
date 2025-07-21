@@ -1,17 +1,17 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/LoopControllerListener.hpp>
-#include <core/PerfStats.hpp>
-#include <core/TrainingDataWriter.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/LoopControllerListener.hpp"
+#include "core/PerfStats.hpp"
+#include "core/TrainingDataWriter.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
 #include <third_party/ProgressBar.hpp>
-#include <util/mit/mit.hpp>
+#include "util/mit/mit.hpp"
 
 #include <array>
 #include <atomic>
@@ -431,4 +431,4 @@ class GameServer
 
 }  // namespace core
 
-#include <inline/core/GameServer.inl>
+#include "inline/core/GameServer.inl"

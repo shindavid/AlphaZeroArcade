@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mcts/Constants.hpp>
-#include <util/CppUtil.hpp>
+#include "mcts/Constants.hpp"
+#include "util/CppUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
@@ -25,4 +25,4 @@ struct NNEvaluationServiceParams {
 
 }  // namespace mcts
 
-#include <inline/mcts/NNEvaluationServiceParams.inl>
+#include "inline/mcts/NNEvaluationServiceParams.inl"

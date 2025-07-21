@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
 
 namespace generic {
 
@@ -50,4 +50,4 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
 
 }  // namespace generic
 
-#include <inline/generic_players/HumanTuiPlayer.inl>
+#include "inline/generic_players/HumanTuiPlayer.inl"

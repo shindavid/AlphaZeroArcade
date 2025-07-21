@@ -1,4 +1,4 @@
-#include <core/GameTypes.hpp>
+#include "core/GameTypes.hpp"
 
 namespace core {
 

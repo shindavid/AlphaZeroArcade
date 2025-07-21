@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
-#include <util/EigenUtil.hpp>
-#include <util/GTestUtil.hpp>
-#include <util/Random.hpp>
-#include <util/mit/exceptions.hpp>
-#include <util/mit/mit.hpp>
+#include "util/EigenUtil.hpp"
+#include "util/GTestUtil.hpp"
+#include "util/Random.hpp"
+#include "util/mit/exceptions.hpp"
+#include "util/mit/mit.hpp"
 
 #include <vector>
 

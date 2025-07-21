@@ -3,7 +3,7 @@
 /*
  * Various string utilities
  */
-#include <util/Exceptions.hpp>
+#include "util/Exceptions.hpp"
 
 #include <cctype>
 #include <cstdarg>
@@ -55,4 +55,4 @@ size_t terminal_width(const std::string& str);
 
 }  // namespace util
 
-#include <inline/util/StringUtil.inl>
+#include "inline/util/StringUtil.inl"

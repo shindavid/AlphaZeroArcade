@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/Constants.hpp>
-#include <core/concepts/Game.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/Constants.hpp"
+#include "core/concepts/Game.hpp"
 
 #include <vector>
 
@@ -296,4 +296,4 @@ class GameLogSerializer {
 
 }  // namespace core
 
-#include <inline/core/GameLog.inl>
+#include "inline/core/GameLog.inl"

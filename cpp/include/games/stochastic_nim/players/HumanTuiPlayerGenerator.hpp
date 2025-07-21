@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/players/HumanTuiPlayer.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/players/HumanTuiPlayer.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
 
 namespace stochastic_nim {
 

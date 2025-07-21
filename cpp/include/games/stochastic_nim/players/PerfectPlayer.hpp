@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/stochastic_nim/Constants.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <util/EigenUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/stochastic_nim/Constants.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace stochastic_nim {
 
@@ -56,4 +56,4 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
 
 } // namespace stochastic_nim
 
-#include <inline/games/stochastic_nim/players/PerfectPlayer.inl>
+#include "inline/games/stochastic_nim/players/PerfectPlayer.inl"

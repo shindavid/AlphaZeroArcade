@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <mcts/NNEvaluation.hpp>
-#include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/SimpleNNEvaluationService.hpp>
+#include "core/concepts/Game.hpp"
+#include "mcts/NNEvaluation.hpp"
+#include "mcts/NNEvaluationRequest.hpp"
+#include "mcts/SimpleNNEvaluationService.hpp"
 
 namespace mcts {
 
@@ -26,4 +26,4 @@ class UniformNNEvaluationService : public mcts::SimpleNNEvaluationService<Game> 
 
 }  // namespace mcts
 
-#include <inline/mcts/UniformNNEvaluationService.inl>
+#include "inline/mcts/UniformNNEvaluationService.inl"

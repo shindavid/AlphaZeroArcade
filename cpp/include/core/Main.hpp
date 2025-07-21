@@ -1,14 +1,14 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/GameServer.hpp>
-#include <core/GameServerProxy.hpp>
-#include <core/LoopControllerClient.hpp>
-#include <core/TrainingDataWriter.hpp>
-#include <util/BoostUtil.hpp>
-#include <util/Exceptions.hpp>
-#include <util/SocketUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/GameServer.hpp"
+#include "core/GameServerProxy.hpp"
+#include "core/LoopControllerClient.hpp"
+#include "core/TrainingDataWriter.hpp"
+#include "util/BoostUtil.hpp"
+#include "util/Exceptions.hpp"
+#include "util/SocketUtil.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -36,4 +36,4 @@ struct Main {
   static int main(int ac, char* av[]);
 };
 
-#include <inline/core/Main.inl>
+#include "inline/core/Main.inl"

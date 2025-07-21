@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/PlayerFactory.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <games/blokus/Game.hpp>
-#include <games/blokus/players/HumanTuiPlayerGenerator.hpp>
-#include <generic_players/MctsPlayerGenerator.hpp>
-#include <generic_players/RandomPlayerGenerator.hpp>
+#include "core/PlayerFactory.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "games/blokus/Game.hpp"
+#include "games/blokus/players/HumanTuiPlayerGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace blokus {
 

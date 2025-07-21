@@ -38,4 +38,4 @@ template <typename... UInt64T> void rot270_clockwise(UInt64T&... mask);
 
 }  // namespace bitmap_util
 
-#include <inline/util/BitMapUtil.inl>
+#include "inline/util/BitMapUtil.inl"

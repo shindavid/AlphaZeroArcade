@@ -1,9 +1,9 @@
-#include <mcts/NNEvaluation.hpp>
+#include "mcts/NNEvaluation.hpp"
 
-#include <util/Asserts.hpp>
-#include <util/BitSet.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/Exceptions.hpp>
+#include "util/Asserts.hpp"
+#include "util/BitSet.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/Exceptions.hpp"
 
 namespace mcts {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
-#include <games/hex/Game.hpp>
+#include "core/BasicTypes.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
+#include "games/hex/Game.hpp"
 
 namespace hex {
 
@@ -14,4 +14,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 
 }  // namespace hex
 
-#include <inline/games/hex/players/HumanTuiPlayer.inl>
+#include "inline/games/hex/players/HumanTuiPlayer.inl"

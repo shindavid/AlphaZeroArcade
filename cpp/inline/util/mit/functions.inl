@@ -1,8 +1,8 @@
 #pragma once
 
-#include <util/mit/functions.hpp>
+#include "util/mit/functions.hpp"
 
-#include <util/mit/scheduler.hpp>
+#include "util/mit/scheduler.hpp"
 
 namespace mit {
 

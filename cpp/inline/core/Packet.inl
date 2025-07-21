@@ -1,4 +1,4 @@
-#include <core/Packet.hpp>
+#include "core/Packet.hpp"
 
 #include <sys/socket.h>
 
@@ -6,8 +6,8 @@
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
 
-#include <util/Asserts.hpp>
-#include <util/Exceptions.hpp>
+#include "util/Asserts.hpp"
+#include "util/Exceptions.hpp"
 
 namespace core {
 

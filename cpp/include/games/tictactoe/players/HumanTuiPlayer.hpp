@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayer.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <games/tictactoe/players/PerfectPlayer.hpp>
+#include "core/BasicTypes.hpp"
+#include "generic_players/HumanTuiPlayer.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/players/PerfectPlayer.hpp"
 
 namespace tictactoe {
 
@@ -19,4 +19,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 
 }  // namespace tictactoe
 
-#include <inline/games/tictactoe/players/HumanTuiPlayer.inl>
+#include "inline/games/tictactoe/players/HumanTuiPlayer.inl"

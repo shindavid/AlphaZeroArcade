@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <util/AllocPool.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
+#include "core/BasicTypes.hpp"
+#include "util/AllocPool.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <array>
 #include <vector>
@@ -77,4 +77,4 @@ class ActionSymmetryTable {
 
 }  // namespace core
 
-#include <inline/core/ActionSymmetryTable.inl>
+#include "inline/core/ActionSymmetryTable.inl"

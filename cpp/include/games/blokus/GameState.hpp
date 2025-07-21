@@ -1,7 +1,7 @@
 #pragma once
 
-#include <games/blokus/Constants.hpp>
-#include <games/blokus/Types.hpp>
+#include "games/blokus/Constants.hpp"
+#include "games/blokus/Types.hpp"
 
 #include <cstdint>
 
@@ -69,4 +69,4 @@ struct GameState {
 
 }  // namespace blokus
 
-#include <inline/games/blokus/GameState.inl>
+#include "inline/games/blokus/GameState.inl"

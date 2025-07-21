@@ -1,13 +1,13 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <mcts/NNEvaluation.hpp>
-#include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/NNEvaluationServiceBase.hpp>
-#include <mcts/Node.hpp>
-#include <util/RecyclingAllocPool.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "mcts/NNEvaluation.hpp"
+#include "mcts/NNEvaluationRequest.hpp"
+#include "mcts/NNEvaluationServiceBase.hpp"
+#include "mcts/Node.hpp"
+#include "util/RecyclingAllocPool.hpp"
+#include "util/mit/mit.hpp"
 
 #include <functional>
 
@@ -41,4 +41,4 @@ class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
 
 }  // namespace mcts
 
-#include <inline/mcts/SimpleNNEvaluationService.inl>
+#include "inline/mcts/SimpleNNEvaluationService.inl"

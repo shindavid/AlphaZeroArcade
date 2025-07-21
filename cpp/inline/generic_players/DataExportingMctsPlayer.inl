@@ -1,7 +1,8 @@
-#include <generic_players/DataExportingMctsPlayer.hpp>
 
-#include <core/BasicTypes.hpp>
-#include <util/BitSet.hpp>
+#include "generic_players/DataExportingMctsPlayer.hpp"
+
+#include "core/BasicTypes.hpp"
+#include "util/BitSet.hpp"
 
 namespace generic {
 

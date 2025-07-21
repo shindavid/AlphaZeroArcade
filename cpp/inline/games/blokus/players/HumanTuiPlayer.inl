@@ -1,7 +1,7 @@
-#include <games/blokus/players/HumanTuiPlayer.hpp>
+#include "games/blokus/players/HumanTuiPlayer.hpp"
 
-#include <games/blokus/Constants.hpp>
-#include <util/BitSet.hpp>
+#include "games/blokus/Constants.hpp"
+#include "util/BitSet.hpp"
 
 #include <iostream>
 #include <map>

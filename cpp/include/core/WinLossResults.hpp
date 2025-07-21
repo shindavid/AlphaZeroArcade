@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/GameResults.hpp>
-#include <util/EigenUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/GameResults.hpp"
+#include "util/EigenUtil.hpp"
 
 #include <algorithm>
 

@@ -1,21 +1,21 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/ConstantsBase.hpp>
-#include <core/GameLog.hpp>
-#include <core/GameTypes.hpp>
-#include <core/IOBase.hpp>
-#include <core/MctsConfigurationBase.hpp>
-#include <core/SimpleStateHistory.hpp>
-#include <core/TrainingTargets.hpp>
-#include <core/TrivialSymmetries.hpp>
-#include <core/WinLossResults.hpp>
-#include <games/hex/Constants.hpp>
-#include <games/hex/GameState.hpp>
-#include <games/GameRulesBase.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/MetaProgramming.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/ConstantsBase.hpp"
+#include "core/GameLog.hpp"
+#include "core/GameTypes.hpp"
+#include "core/IOBase.hpp"
+#include "core/MctsConfigurationBase.hpp"
+#include "core/SimpleStateHistory.hpp"
+#include "core/TrainingTargets.hpp"
+#include "core/TrivialSymmetries.hpp"
+#include "core/WinLossResults.hpp"
+#include "games/hex/Constants.hpp"
+#include "games/hex/GameState.hpp"
+#include "games/GameRulesBase.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <string>
 
@@ -104,4 +104,4 @@ struct Game {
 
 static_assert(core::concepts::Game<hex::Game>);
 
-#include <inline/games/hex/Game.inl>
+#include "inline/games/hex/Game.inl"

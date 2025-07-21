@@ -1,4 +1,4 @@
-#include <games/stochastic_nim/players/PerfectPlayer.hpp>
+#include "games/stochastic_nim/players/PerfectPlayer.hpp"
 
 namespace stochastic_nim {
 

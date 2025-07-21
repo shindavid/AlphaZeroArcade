@@ -1,6 +1,6 @@
-#include <games/othello/EdaxOracle.hpp>
+#include "games/othello/EdaxOracle.hpp"
 
-#include <util/StringUtil.hpp>
+#include "util/StringUtil.hpp"
 
 #include <format>
 

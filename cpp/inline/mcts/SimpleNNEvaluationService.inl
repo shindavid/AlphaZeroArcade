@@ -1,4 +1,4 @@
-#include <mcts/SimpleNNEvaluationService.hpp>
+#include "mcts/SimpleNNEvaluationService.hpp"
 
 namespace mcts {
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <util/EigenUtil.hpp>
+#include "core/concepts/Game.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace game_base {
 

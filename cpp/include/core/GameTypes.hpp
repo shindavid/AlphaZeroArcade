@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/ActionSymmetryTable.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/YieldManager.hpp>
-#include <core/concepts/GameConstants.hpp>
-#include <core/concepts/GameResults.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
+#include "core/ActionSymmetryTable.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/YieldManager.hpp"
+#include "core/concepts/GameConstants.hpp"
+#include "core/concepts/GameResults.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
 
@@ -166,4 +166,4 @@ struct GameTypes {
 
 }  // namespace core
 
-#include <inline/core/GameTypes.inl>
+#include "inline/core/GameTypes.inl"

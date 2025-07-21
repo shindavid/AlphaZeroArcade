@@ -1,24 +1,24 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/ConstantsBase.hpp>
-#include <core/GameLog.hpp>
-#include <core/GameTypes.hpp>
-#include <core/MctsConfigurationBase.hpp>
-#include <core/IOBase.hpp>
-#include <core/TrainingTargets.hpp>
-#include <core/TrivialSymmetries.hpp>
-#include <core/WinLossDrawResults.hpp>
-#include <games/chess/Constants.hpp>
-#include <games/chess/LcZeroPositionHistoryAdapter.hpp>
-#include <games/GameRulesBase.hpp>
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/MetaProgramming.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/ConstantsBase.hpp"
+#include "core/GameLog.hpp"
+#include "core/GameTypes.hpp"
+#include "core/MctsConfigurationBase.hpp"
+#include "core/IOBase.hpp"
+#include "core/TrainingTargets.hpp"
+#include "core/TrivialSymmetries.hpp"
+#include "core/WinLossDrawResults.hpp"
+#include "games/chess/Constants.hpp"
+#include "games/chess/LcZeroPositionHistoryAdapter.hpp"
+#include "games/GameRulesBase.hpp"
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/MetaProgramming.hpp"
 
-#include <lc0/chess/position.h>
+#include "lc0/chess/position.h"
 
 #include <boost/functional/hash.hpp>
 
@@ -104,4 +104,4 @@ struct hash<lczero::Position> {
 
 static_assert(core::concepts::Game<chess::Game>);
 
-#include <inline/games/chess/Game.inl>
+#include "inline/games/chess/Game.inl"

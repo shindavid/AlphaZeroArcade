@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
+#include "core/concepts/Game.hpp"
 
 /*
  * This file contains metafunctions that create Game types from other Game types.

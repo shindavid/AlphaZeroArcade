@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/PlayerFactory.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/players/HumanTuiPlayerGenerator.hpp>
-#include <games/stochastic_nim/players/PerfectPlayerGenerator.hpp>
-#include <generic_players/MctsPlayerGenerator.hpp>
-#include <generic_players/RandomPlayerGenerator.hpp>
+#include "core/PlayerFactory.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/players/HumanTuiPlayerGenerator.hpp"
+#include "games/stochastic_nim/players/PerfectPlayerGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace stochastic_nim {
 

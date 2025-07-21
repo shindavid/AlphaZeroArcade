@@ -1,4 +1,4 @@
-#include <games/stochastic_nim/Game.hpp>
+#include "games/stochastic_nim/Game.hpp"
 
 namespace stochastic_nim {
 

@@ -1,6 +1,6 @@
-#include <games/blokus/Game.hpp>
-#include <games/blokus/Types.hpp>
-#include <util/GTestUtil.hpp>
+#include "games/blokus/Game.hpp"
+#include "games/blokus/Types.hpp"
+#include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/connect4/Constants.hpp>
-#include <games/connect4/Game.hpp>
-#include <util/Asserts.hpp>
-#include <util/BoostUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/connect4/Constants.hpp"
+#include "games/connect4/Game.hpp"
+#include "util/Asserts.hpp"
+#include "util/BoostUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
@@ -85,4 +85,4 @@ class PerfectOracle {
 
 }  // namespace c4
 
-#include <inline/games/connect4/PerfectOracle.inl>
+#include "inline/games/connect4/PerfectOracle.inl"

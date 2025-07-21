@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
+#include "util/CppUtil.hpp"
 
 /*
  * ANSI codes.

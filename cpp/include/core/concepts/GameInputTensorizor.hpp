@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
 
 #include <concepts>
 

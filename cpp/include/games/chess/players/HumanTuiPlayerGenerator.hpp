@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/chess/Game.hpp>
-#include <games/chess/players/HumanTuiPlayer.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/chess/Game.hpp"
+#include "games/chess/players/HumanTuiPlayer.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
+#include "util/BoostUtil.hpp"
 
 namespace chess {
 

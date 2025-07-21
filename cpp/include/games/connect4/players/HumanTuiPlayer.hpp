@@ -1,9 +1,9 @@
 #pragma once
 
-#include <generic_players/HumanTuiPlayer.hpp>
+#include "generic_players/HumanTuiPlayer.hpp"
 
-#include <games/connect4/Game.hpp>
-#include <games/connect4/players/PerfectPlayer.hpp>
+#include "games/connect4/Game.hpp"
+#include "games/connect4/players/PerfectPlayer.hpp"
 
 namespace c4 {
 
@@ -28,4 +28,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 
 }  // namespace c4
 
-#include <inline/games/connect4/players/HumanTuiPlayer.inl>
+#include "inline/games/connect4/players/HumanTuiPlayer.inl"

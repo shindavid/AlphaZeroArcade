@@ -1,4 +1,4 @@
-#include <util/LoggingUtil.hpp>
+#include "util/LoggingUtil.hpp"
 
 #include <spdlog/common.h>
 #include <spdlog/spdlog.h>

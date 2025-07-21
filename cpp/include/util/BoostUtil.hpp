@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-#include <util/StringUtil.hpp>
+#include "util/CppUtil.hpp"
+#include "util/StringUtil.hpp"
 
 #include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>
@@ -190,4 +190,4 @@ boost::program_options::variables_map parse_args(const T& desc, Ts&&... ts);
 
 }  // namespace boost_util
 
-#include <inline/util/BoostUtil.inl>
+#include "inline/util/BoostUtil.inl"

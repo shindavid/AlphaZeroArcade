@@ -1,4 +1,4 @@
-#include <util/CudaUtil.hpp>
+#include "util/CudaUtil.hpp"
 
 namespace cuda_util {
 

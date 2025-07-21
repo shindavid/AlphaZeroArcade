@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/LoopControllerListener.hpp>
-#include <core/PerfStats.hpp>
-#include <util/CppUtil.hpp>
-#include <util/SocketUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "core/LoopControllerListener.hpp"
+#include "core/PerfStats.hpp"
+#include "util/CppUtil.hpp"
+#include "util/SocketUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <boost/json.hpp>
 
@@ -126,4 +126,4 @@ class LoopControllerClient : public PerfStatsClient {
 
 }  // namespace core
 
-#include <inline/core/LoopControllerClient.inl>
+#include "inline/core/LoopControllerClient.inl"

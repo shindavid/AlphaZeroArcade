@@ -1,24 +1,24 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/ConstantsBase.hpp>
-#include <core/GameLog.hpp>
-#include <core/GameTypes.hpp>
-#include <core/MctsConfigurationBase.hpp>
-#include <core/IOBase.hpp>
-#include <core/SimpleStateHistory.hpp>
-#include <core/TrainingTargets.hpp>
-#include <core/TrivialSymmetries.hpp>
-#include <core/WinShareResults.hpp>
-#include <games/blokus/Constants.hpp>
-#include <games/blokus/GameState.hpp>
-#include <games/blokus/Types.hpp>
-#include <games/GameRulesBase.hpp>
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/MetaProgramming.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/ConstantsBase.hpp"
+#include "core/GameLog.hpp"
+#include "core/GameTypes.hpp"
+#include "core/MctsConfigurationBase.hpp"
+#include "core/IOBase.hpp"
+#include "core/SimpleStateHistory.hpp"
+#include "core/TrainingTargets.hpp"
+#include "core/TrivialSymmetries.hpp"
+#include "core/WinShareResults.hpp"
+#include "games/blokus/Constants.hpp"
+#include "games/blokus/GameState.hpp"
+#include "games/blokus/Types.hpp"
+#include "games/GameRulesBase.hpp"
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -161,4 +161,4 @@ struct hash<blokus::Game::State> {
 
 static_assert(core::concepts::Game<blokus::Game>);
 
-#include <inline/games/blokus/Game.inl>
+#include "inline/games/blokus/Game.inl"

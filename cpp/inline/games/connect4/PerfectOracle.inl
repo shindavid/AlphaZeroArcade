@@ -1,4 +1,4 @@
-#include <games/connect4/PerfectOracle.hpp>
+#include "games/connect4/PerfectOracle.hpp"
 
 namespace c4 {
 

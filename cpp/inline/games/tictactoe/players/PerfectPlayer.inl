@@ -1,8 +1,8 @@
-#include <games/tictactoe/players/PerfectPlayer.hpp>
+#include "games/tictactoe/players/PerfectPlayer.hpp"
 
-#include <games/tictactoe/PerfectStrategyLookupTable.hpp>
-#include <util/BitSet.hpp>
-#include <util/Random.hpp>
+#include "games/tictactoe/PerfectStrategyLookupTable.hpp"
+#include "util/BitSet.hpp"
+#include "util/Random.hpp"
 
 #include <algorithm>
 #include <bit>

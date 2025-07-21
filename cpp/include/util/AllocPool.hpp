@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "util/CppUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <boost/dynamic_bitset.hpp>
 
@@ -64,4 +64,4 @@ class AllocPool {
 
 }  // namespace util
 
-#include <inline/util/AllocPool.inl>
+#include "inline/util/AllocPool.inl"

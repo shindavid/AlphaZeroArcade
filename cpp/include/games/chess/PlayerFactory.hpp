@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/PlayerFactory.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <generic_players/MctsPlayerGenerator.hpp>
-#include <generic_players/RandomPlayerGenerator.hpp>
+#include "core/PlayerFactory.hpp"
+#include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/RandomPlayerGenerator.hpp"
 
-#include <games/chess/players/HumanTuiPlayerGenerator.hpp>
-#include <games/chess/Game.hpp>
+#include "games/chess/players/HumanTuiPlayerGenerator.hpp"
+#include "games/chess/Game.hpp"
 
 namespace chess {
 

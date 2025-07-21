@@ -1,12 +1,12 @@
-#include <core/tests/Common.hpp>
-#include <games/connect4/Constants.hpp>
-#include <games/connect4/Game.hpp>
-#include <games/connect4/PerfectOracle.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/Node.hpp>
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/GTestUtil.hpp>
+#include "core/tests/Common.hpp"
+#include "games/connect4/Constants.hpp"
+#include "games/connect4/Game.hpp"
+#include "games/connect4/PerfectOracle.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/Node.hpp"
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
 

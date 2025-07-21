@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/tictactoe/Constants.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/tictactoe/Constants.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <map>
 
@@ -46,4 +46,4 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
 
 }  // namespace tictactoe
 
-#include <inline/games/tictactoe/players/PerfectPlayer.inl>
+#include "inline/games/tictactoe/players/PerfectPlayer.inl"

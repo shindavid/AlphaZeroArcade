@@ -1,10 +1,10 @@
-#include <core/GameServerProxy.hpp>
+#include "core/GameServerProxy.hpp"
 
-#include <core/Constants.hpp>
-#include <core/Packet.hpp>
-#include <util/Exceptions.hpp>
-#include <util/KeyValueDumper.hpp>
-#include <util/LoggingUtil.hpp>
+#include "core/Constants.hpp"
+#include "core/Packet.hpp"
+#include "util/Exceptions.hpp"
+#include "util/KeyValueDumper.hpp"
+#include "util/LoggingUtil.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>

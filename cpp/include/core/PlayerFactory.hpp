@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/CppUtil.hpp>
-#include <util/MetaProgramming.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/CppUtil.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -92,4 +92,4 @@ class PlayerFactory {
 
 }  // namespace core
 
-#include <inline/core/PlayerFactory.inl>
+#include "inline/core/PlayerFactory.inl"

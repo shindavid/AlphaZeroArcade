@@ -1,16 +1,16 @@
-#include <core/GameServer.hpp>
-#include <core/PerfStats.hpp>
-#include <core/PlayerFactory.hpp>
-#include <games/GameTransforms.hpp>
-#include <games/nim/Game.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <generic_players/MctsPlayer.hpp>
-#include <generic_players/MctsPlayerGenerator.hpp>
-#include <mcts/SearchLog.hpp>
-#include <util/CppUtil.hpp>
-#include <util/GTestUtil.hpp>
-#include <util/StringUtil.hpp>
+#include "core/GameServer.hpp"
+#include "core/PerfStats.hpp"
+#include "core/PlayerFactory.hpp"
+#include "games/GameTransforms.hpp"
+#include "games/nim/Game.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "generic_players/MctsPlayer.hpp"
+#include "generic_players/MctsPlayerGenerator.hpp"
+#include "mcts/SearchLog.hpp"
+#include "util/CppUtil.hpp"
+#include "util/GTestUtil.hpp"
+#include "util/StringUtil.hpp"
 
 #include <gtest/gtest.h>
 

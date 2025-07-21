@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <mcts/Node.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/concepts/Game.hpp"
+#include "mcts/Node.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <boost/json.hpp>
 
@@ -86,4 +86,4 @@ class SearchLog {
 
 }  // namespace mcts
 
-#include <inline/mcts/SearchLog.inl>
+#include "inline/mcts/SearchLog.inl"

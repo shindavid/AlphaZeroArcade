@@ -1,6 +1,6 @@
-#include <util/ScreenUtil.hpp>
+#include "util/ScreenUtil.hpp"
 
-#include <util/Exceptions.hpp>
+#include "util/Exceptions.hpp"
 
 #include <cstdlib>
 #include <sys/ioctl.h>

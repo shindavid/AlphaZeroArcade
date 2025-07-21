@@ -1,13 +1,13 @@
 #pragma once
 
-#include <core/GameLog.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/LoopControllerClient.hpp>
-#include <core/LoopControllerListener.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/BoostUtil.hpp>
-#include <util/CppUtil.hpp>
-#include <util/mit/mit.hpp>
+#include "core/GameLog.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/LoopControllerClient.hpp"
+#include "core/LoopControllerListener.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/BoostUtil.hpp"
+#include "util/CppUtil.hpp"
+#include "util/mit/mit.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -170,4 +170,4 @@ class TrainingDataWriter
 
 }  // namespace core
 
-#include <inline/core/TrainingDataWriter.inl>
+#include "inline/core/TrainingDataWriter.inl"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "util/mit/mit.hpp"
 
 #include <queue>
 
@@ -42,4 +42,4 @@ struct YieldNotificationUnit {
 
 }  // namespace core
 
-#include <inline/core/YieldManager.inl>
+#include "inline/core/YieldManager.inl"

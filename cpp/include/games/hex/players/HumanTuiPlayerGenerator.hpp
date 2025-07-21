@@ -1,10 +1,10 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <games/hex/Game.hpp>
-#include <games/hex/players/HumanTuiPlayer.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
+#include "games/hex/Game.hpp"
+#include "games/hex/players/HumanTuiPlayer.hpp"
 
 namespace hex {
 

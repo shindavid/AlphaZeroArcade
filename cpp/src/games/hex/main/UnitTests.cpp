@@ -1,10 +1,10 @@
-#include <core/tests/Common.hpp>
-#include <games/hex/Constants.hpp>
-#include <games/hex/Game.hpp>
-#include <games/hex/Types.hpp>
-#include <util/CppUtil.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/GTestUtil.hpp>
+#include "core/tests/Common.hpp"
+#include "games/hex/Constants.hpp"
+#include "games/hex/Game.hpp"
+#include "games/hex/Types.hpp"
+#include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
 

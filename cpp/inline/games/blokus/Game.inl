@@ -1,7 +1,7 @@
-#include <games/blokus/Game.hpp>
+#include "games/blokus/Game.hpp"
 
-#include <util/CppUtil.hpp>
-#include <util/StringUtil.hpp>
+#include "util/CppUtil.hpp"
+#include "util/StringUtil.hpp"
 
 namespace blokus {
 

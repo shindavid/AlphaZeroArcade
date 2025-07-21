@@ -1,8 +1,8 @@
-#include <core/NeuralNet.hpp>
+#include "core/NeuralNet.hpp"
 
-#include <util/Asserts.hpp>
-#include <util/CudaUtil.hpp>
-#include <util/EigenUtil.hpp>
+#include "util/Asserts.hpp"
+#include "util/CudaUtil.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace core {
 

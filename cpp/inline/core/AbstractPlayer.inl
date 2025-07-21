@@ -1,4 +1,4 @@
-#include <core/AbstractPlayer.hpp>
+#include "core/AbstractPlayer.hpp"
 
 namespace core {
 

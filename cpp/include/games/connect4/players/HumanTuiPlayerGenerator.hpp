@@ -1,11 +1,11 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <games/connect4/Game.hpp>
-#include <games/connect4/players/HumanTuiPlayer.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/connect4/Game.hpp"
+#include "games/connect4/players/HumanTuiPlayer.hpp"
+#include "generic_players/HumanTuiPlayerGenerator.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -42,4 +42,4 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
 
 }  // namespace c4
 
-#include <inline/games/connect4/players/HumanTuiPlayerGenerator.inl>
+#include "inline/games/connect4/players/HumanTuiPlayerGenerator.inl"

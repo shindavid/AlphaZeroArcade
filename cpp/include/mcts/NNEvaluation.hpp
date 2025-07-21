@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/AtomicSharedPtr.hpp>
-#include <util/FiniteGroups.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "util/AtomicSharedPtr.hpp"
+#include "util/FiniteGroups.hpp"
 
 namespace mcts {
 
@@ -63,4 +63,4 @@ class NNEvaluation {
 
 }  // namespace mcts
 
-#include <inline/mcts/NNEvaluation.inl>
+#include "inline/mcts/NNEvaluation.inl"

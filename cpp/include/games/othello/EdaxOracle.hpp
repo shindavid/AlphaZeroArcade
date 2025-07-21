@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/BasicTypes.hpp>
-#include <games/othello/Game.hpp>
-#include <util/mit/mit.hpp>
+#include "core/BasicTypes.hpp"
+#include "games/othello/Game.hpp"
+#include "util/mit/mit.hpp"
 
 #include <boost/process.hpp>
 

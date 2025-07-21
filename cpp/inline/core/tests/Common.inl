@@ -1,9 +1,9 @@
-#include <core/tests/Common.hpp>
+#include "core/tests/Common.hpp"
 
-#include <core/BasicTypes.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/FiniteGroups.hpp>
-#include <util/LoggingUtil.hpp>
+#include "core/BasicTypes.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
+#include "util/LoggingUtil.hpp"
 
 #include <gtest/gtest.h>
 

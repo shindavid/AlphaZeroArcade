@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <games/tictactoe/Game.hpp>
-#include <games/tictactoe/players/PerfectPlayer.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/players/PerfectPlayer.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <string>
 #include <vector>

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/OraclePool.hpp>
-#include <games/othello/Constants.hpp>
-#include <games/othello/EdaxOracle.hpp>
-#include <games/othello/Game.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/OraclePool.hpp"
+#include "games/othello/Constants.hpp"
+#include "games/othello/EdaxOracle.hpp"
+#include "games/othello/Game.hpp"
+#include "util/BoostUtil.hpp"
 
 namespace othello {
 
@@ -48,4 +48,4 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
 
 }  // namespace othello
 
-#include <inline/games/othello/players/EdaxPlayer.inl>
+#include "inline/games/othello/players/EdaxPlayer.inl"

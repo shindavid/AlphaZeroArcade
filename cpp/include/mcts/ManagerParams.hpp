@@ -1,9 +1,9 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/NNEvaluationServiceParams.hpp>
-#include <util/CppUtil.hpp>
+#include "core/concepts/Game.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/NNEvaluationServiceParams.hpp"
+#include "util/CppUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
@@ -78,4 +78,4 @@ struct ManagerParams : public NNEvaluationServiceParams {
 
 }  // namespace mcts
 
-#include <inline/mcts/ManagerParams.inl>
+#include "inline/mcts/ManagerParams.inl"

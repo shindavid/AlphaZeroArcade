@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <mcts/Constants.hpp>
-#include <mcts/ManagerParams.hpp>
-#include <mcts/NNEvaluation.hpp>
-#include <mcts/TypeDefs.hpp>
-#include <util/AllocPool.hpp>
-#include <util/mit/mit.hpp>
+#include "core/concepts/Game.hpp"
+#include "mcts/Constants.hpp"
+#include "mcts/ManagerParams.hpp"
+#include "mcts/NNEvaluation.hpp"
+#include "mcts/TypeDefs.hpp"
+#include "util/AllocPool.hpp"
+#include "util/mit/mit.hpp"
 
 #include <cstdint>
 
@@ -281,4 +281,4 @@ class Node {
 
 }  // namespace mcts
 
-#include <inline/mcts/Node.inl>
+#include "inline/mcts/Node.inl"

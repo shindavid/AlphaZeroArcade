@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-#include <util/MetaProgramming.hpp>
+#include "util/CppUtil.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <concepts>
 #include <cstdint>
@@ -88,4 +88,4 @@ struct D4 : public DihedralGroup<4> {
 
 }  // namespace groups
 
-#include <inline/util/FiniteGroups.inl>
+#include "inline/util/FiniteGroups.inl"

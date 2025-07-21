@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mcts/Constants.hpp>
-#include <util/mit/mit.hpp>
+#include "mcts/Constants.hpp"
+#include "util/mit/mit.hpp"
 
 #include <chrono>
 #include <cstdint>

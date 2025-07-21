@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/TrainingTargets.hpp>
+#include "core/TrainingTargets.hpp"
 
 #include <concepts>
 

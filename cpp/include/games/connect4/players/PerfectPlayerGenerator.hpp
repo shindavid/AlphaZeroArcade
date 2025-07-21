@@ -1,13 +1,13 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <core/OraclePool.hpp>
-#include <core/PlayerFactory.hpp>
-#include <games/connect4/PerfectOracle.hpp>
-#include <games/connect4/players/PerfectPlayer.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "core/OraclePool.hpp"
+#include "core/PlayerFactory.hpp"
+#include "games/connect4/PerfectOracle.hpp"
+#include "games/connect4/players/PerfectPlayer.hpp"
 
 #include <string>
 #include <vector>
@@ -55,4 +55,4 @@ class PlayerSubfactory<c4::PerfectPlayerGenerator> : public PlayerSubfactoryBase
 
 }  // namespace core
 
-#include <inline/games/connect4/players/PerfectPlayerGenerator.inl>
+#include "inline/games/connect4/players/PerfectPlayerGenerator.inl"

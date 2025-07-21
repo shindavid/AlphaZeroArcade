@@ -1,12 +1,12 @@
 #pragma once
 
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractPlayerGenerator.hpp>
-#include <core/BasicTypes.hpp>
-#include <core/GameServerBase.hpp>
-#include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/players/PerfectPlayer.hpp>
-#include <util/BoostUtil.hpp>
+#include "core/AbstractPlayer.hpp"
+#include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/GameServerBase.hpp"
+#include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/players/PerfectPlayer.hpp"
+#include "util/BoostUtil.hpp"
 
 #include <string>
 #include <vector>

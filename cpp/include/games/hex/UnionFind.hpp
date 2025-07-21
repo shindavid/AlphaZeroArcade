@@ -1,7 +1,7 @@
 #pragma once
 
-#include <games/hex/Constants.hpp>
-#include <games/hex/Types.hpp>
+#include "games/hex/Constants.hpp"
+#include "games/hex/Types.hpp"
 
 #include <array>
 #include <cstdint>
@@ -38,4 +38,4 @@ struct UnionFind {
 
 }  // namespace hex
 
-#include <inline/games/hex/UnionFind.inl>
+#include "inline/games/hex/UnionFind.inl"

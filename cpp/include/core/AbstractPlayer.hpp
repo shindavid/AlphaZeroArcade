@@ -3,10 +3,10 @@
 #include <array>
 #include <string>
 
-#include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <core/TrainingDataWriter.hpp>
-#include <util/Exceptions.hpp>
+#include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/TrainingDataWriter.hpp"
+#include "util/Exceptions.hpp"
 
 namespace core {
 
@@ -107,4 +107,4 @@ class AbstractPlayer {
 
 }  // namespace core
 
-#include <inline/core/AbstractPlayer.inl>
+#include "inline/core/AbstractPlayer.inl"

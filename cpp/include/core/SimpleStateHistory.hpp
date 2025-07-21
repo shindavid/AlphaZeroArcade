@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/FiniteGroups.hpp>
-#include <util/StaticCircularBuffer.hpp>
+#include "util/FiniteGroups.hpp"
+#include "util/StaticCircularBuffer.hpp"
 
 namespace core {
 
@@ -81,4 +81,4 @@ class SimpleStateHistory {
 
 }  // namespace core
 
-#include <inline/core/SimpleStateHistory.inl>
+#include "inline/core/SimpleStateHistory.inl"

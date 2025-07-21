@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
-#include <core/GameLog.hpp>
-#include <util/mit/mit.hpp>
+#include "core/concepts/Game.hpp"
+#include "core/GameLog.hpp"
+#include "util/mit/mit.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -352,4 +352,4 @@ class DataLoader {
 
 }  // namespace core
 
-#include <inline/core/DataLoader.inl>
+#include "inline/core/DataLoader.inl"

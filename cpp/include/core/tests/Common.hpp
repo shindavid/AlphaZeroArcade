@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/concepts/Game.hpp>
+#include "core/concepts/Game.hpp"
 
 /*
  * This file contains unit-testing code that can be shared by all games.
@@ -28,4 +28,4 @@ int main(int argc, char** argv);
 }  // namespace tests
 }  // namespace core
 
-#include <inline/core/tests/Common.inl>
+#include "inline/core/tests/Common.inl"

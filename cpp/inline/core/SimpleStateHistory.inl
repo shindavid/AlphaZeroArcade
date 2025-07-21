@@ -1,6 +1,6 @@
-#include <core/SimpleStateHistory.hpp>
+#include "core/SimpleStateHistory.hpp"
 
-#include <util/Exceptions.hpp>
+#include "util/Exceptions.hpp"
 
 namespace core {
 
