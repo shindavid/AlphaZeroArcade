@@ -10,9 +10,8 @@
 #include "core/YieldManager.hpp"
 #include "core/concepts/Game.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "third_party/ProgressBar.hpp"
 #include "util/mit/mit.hpp"
-
-#include <third_party/ProgressBar.hpp>
 
 #include <array>
 #include <atomic>
