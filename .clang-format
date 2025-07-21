@@ -12,4 +12,5 @@ IncludeCategories:
   - Regex:           '^<[^/]+>$'
     Priority:        3
 SortIncludes: true
-IncludeIsMainRegex: '([-_a-zA-Z0-9]+)\.(h|hh|hpp|hxx)$'
+IncludeBlocks: Regroup
+IncludeIsMainSourceRegex: '.*\.(inl|cpp)$'
