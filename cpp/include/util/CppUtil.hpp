@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/config/helper_macros.hpp>
+#include <boost/core/demangle.hpp>
+
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -11,10 +14,6 @@
 #include <type_traits>
 #include <unistd.h>
 #include <vector>
-
-#include <boost/config/helper_macros.hpp>
-#include <boost/core/demangle.hpp>
-
 
 // constexpr version of BOOST_IS_DEFINED. Returns true if the macro is defined, false otherwise.
 #define IS_DEFINED(macro) (util::constexpr_is_defined( #macro, BOOST_STRINGIZE(= macro) ))
