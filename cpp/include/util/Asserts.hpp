@@ -38,11 +38,9 @@
 
 #define DEBUG_ASSERT(COND, ...)                                                                    \
   do {                                                                                             \
-    if constexpr (IS_DEFINED(DEBUG_BUILD)) {                                                       \
+    if (IS_DEFINED(DEBUG_BUILD)) {                                                                 \
       util::detail::assert_impl<util::DebugAssertionError>(#COND, std::source_location::current(), \
                                                            COND, ##__VA_ARGS__);                   \
-    } else {                                                                                       \
-      USE_UNEVALUATED(COND, ##__VA_ARGS__);                                                        \
     }                                                                                              \
   } while (0)
 
