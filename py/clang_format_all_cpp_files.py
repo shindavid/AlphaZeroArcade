@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 
-ROOT = os.path.join(os.path.dirname(__file__), '../cpp')
+ROOT = '/workspace/repo/cpp'
 EXTENSIONS = {'.cpp', '.hpp', '.inl'}
 
 
