@@ -1,4 +1,4 @@
-from .base_dir import BenchmarkRecord, Scratch, Workspace
+from .base_dir import Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
@@ -14,10 +14,10 @@ from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
-from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -25,8 +25,7 @@ from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
-from util.aws_util import BUCKET
-from util.py_util import atomic_cp, sha256sum, untar_remote_file_to_local_directory
+from util.py_util import atomic_cp, sha256sum
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
     send_json
 from util.sqlite3_util import DatabaseConnectionPool
@@ -361,16 +360,8 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            if self.params.benchmark_tag is not None:
-                self._make_rundir_from_run()
-            elif self.game_spec.reference_player_family is not None:
-                self._make_rundir_from_reference()
-            else:
-                self._make_rundir_from_record()
-
-
-            benchmark_tag = self._expand_rundir_from_json()
-            logger.info('Using benchmark tag: %s', benchmark_tag)
+            option = BenchmarkOption(self.game_spec.name, self.params.benchmark_tag)
+            benchmark_tag = option.setup_benchmark_rundir()
             self._copy_eval_db(benchmark_tag)
             self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
@@ -387,61 +378,6 @@ class LoopController:
             benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
-
-    def _expand_rundir_from_json(self) -> str:
-        if self.params.benchmark_tag is not None:
-            if self.params.benchmark_tag == self.run_params.tag:
-                return self.run_params.tag
-            record = BenchmarkRecord(tag=self.params.benchmark_tag, game=self.game_spec.name)
-            organizer = self._benchmark_organizer(record.tag)
-            if os.path.isdir(organizer.base_dir):
-                logger.info(f"Skip creating {organizer.base_dir}")
-                return record.tag
-            elif record.data_folder_path() is not None:
-                logger.info(f"{organizer.base_dir} does not exist."
-                            f"Expand from data folder: {record.data_folder_path()}")
-            else:
-                record_on_file = BenchmarkRecord.load(self.game_spec.name)
-                if record is not None and record.tag == record_on_file.tag:
-                    logger.info(f"No data folder for {record}. Tag found record on file.")
-                    record = self._download_from_s3()
-
-        elif self.game_spec.reference_player_family is not None:
-            record = BenchmarkRecord(tag='reference.players')
-        else:
-            record = self._download_from_s3()
-
-        assert record is not None
-
-        self._create_db_from_json(record, benchmark_organizer)
-        if record.tag == 'reference.players':
-            return record.tag
-
-        return record.tag
-
-    def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
-        record = Benchmark.load(self.game_spec.name)
-        if record is None:
-            return None
-
-        organizer = self._benchmark_organizer(record.tag)
-        if os.path.isdir(organizer.base_dir):
-            return record
-
-        tar_path = os.path.join(Workspace.benchmark_data_dir, record.key())
-        if not os.path.exists(tar_path):
-            bucket.DOWNLOAD_FROM_S3(RECORD.KEY(), TAR_PATH)
-
-        if not os.path.isdir(record.data_folder_path()):
-            untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
-            logger.info(f"untar {tar_path}")
-        return record
-
-    def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
-        benchmark_folder_name = DirectoryOrganizer.benchmark_folder(benchmark_tag)
-        run_params = RunParams(self.run_params.game, benchmark_folder_name)
-        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-        return organizer
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
         if not self._benchmark_manager:
