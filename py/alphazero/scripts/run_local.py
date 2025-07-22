@@ -373,6 +373,7 @@ def main():
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
+        option = BenchmarkOption(run_params.game, run_params.tag)
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')
@@ -384,7 +385,7 @@ def main():
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
-            if game_spec.reference_player_family is not None or benchmark_tag is not None:
+            if option.has_valid_benchmark():
                 descs.append('Eval')
                 procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
             else:
