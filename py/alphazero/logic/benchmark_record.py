@@ -6,6 +6,8 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
 from games.game_spec import GameSpec
 from games.index import get_game_spec
+from util.aws_util import BUCKET
+from util.py_util import untar_remote_file_to_local_directory
 
 from dataclasses import dataclass
 import glob
@@ -89,19 +91,24 @@ class BenchmarkData:
 
 
 class BenchmarkOption:
-    def __init__(self, tag: str, game: str):
-        self.tag = tag
+    def __init__(self, game: str, tag: Optional[str] = None):
         self.game = game
+        self.tag = tag
+        self.game_spec: GameSpec = get_game_spec(self.game)
 
     def has_reference_player(self):
-        game_spec: GameSpec = get_game_spec(self.game)
-        return game_spec.reference_player_family is not None
+        return self.game_spec.reference_player_family is not None
 
     def on_record(self) -> Optional[BenchmarkRecord]:
         record: BenchmarkRecord = BenchmarkRecord.load(self.game)
-        if record and record.tag == self.tag:
+        if self.tag:
+            if record and record.tag == self.tag:
+                return record
+            return None
+        elif record:
             return record
-        return None
+        else:
+            return None
 
     def has_run_dir(self) -> bool:
         organizer = DirectoryOrganizer(RunParams(self.game, self.tag), base_dir_root=Workspace)
@@ -117,11 +124,95 @@ class BenchmarkOption:
         organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         return os.path.isdir(organizer.base_dir)
 
-    def has_benchmark_data(self) -> bool:
-        return BenchmarkData.path(self.game, self.tag) is not None
+    def has_benchmark_data(self, utc_key: str = None) -> bool:
+        return BenchmarkData.path(self.game, self.tag, utc_key=utc_key) is not None
 
-    def has_benchmark_tar_file(self) -> bool:
-        return BenchmarkData.tar_path(self.game, self.tag) is not None
+    def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
+        return BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key) is not None
+
+    def has_valid_benchmark(self) -> bool:
+        return self.tag or self.on_record() or self.has_reference_player()
+
+    def setup_benchmark_rundir(self) -> Optional[str]:  # benchmark_tag
+        if self.tag:
+            self.setup_rundir_from_run()
+            return self.tag
+        elif self.has_reference_player():
+            self.setup_rundir_from_reference()
+            return 'reference.player'
+        else:
+            record = self.on_record()
+            if record:
+                self.setup_rundir_from_record(record)
+                return record.tag
+            else:
+                return None
+
+    def setup_rundir_from_record(self, record: BenchmarkRecord):
+        option = BenchmarkOption(record.game, record.tag)
+        option.setup_rundir_from_run(utc_key=record.utc_key)
+
+    def setup_rundir_from_reference(self):
+        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, 'reference.player.benchmark'))
+        self.create_db_from_json(benchmark_organizer, is_reference=True)
+
+    def setup_rundir_from_run(self, utc_key: str = None):
+        if self.has_benchmark_rundir():
+            return
+        elif self.has_benchmark_data(utc_key=utc_key):
+            self.expand_rundir_from_datafolder()
+        elif self.has_benchmark_tar_file():
+            self.untar_datafile()
+            self.expand_rundir_from_datafolder()
+        else:
+            record = self.on_record
+            if record:
+                tar_path = BenchmarkData.path_tar(self.game, self.tag, utc_key=record.utc_key)
+                BUCKET.download_from_s3(record.key(), tar_path)
+                self.untar_datafile(utc_key=record.utc_key)
+                self.expand_rundir_from_datafolder()
+            else:
+                raise Exception()
+
+    def untar_datafile(self, utc_key: str = None):
+        tar_path = BenchmarkData.path_tar(self.game, self.tag, utc_key=utc_key)
+        untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
+        logger.info("untar {tar_path}")
+
+    def expand_rundir_from_datafolder(self, utc_key: str = None):
+        assert self.tag is not None
+        benchmark_folder = DirectoryOrganizer.benchmark_folder(self.tag)
+        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, benchmark_folder))
+        benchmark_organizer.dir_setup(benchmark_tag=self.tag)
+
+        self.create_db_from_json(benchmark_organizer, utc_key=utc_key)
+
+        data_folder = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+        binary = os.path.join(data_folder, 'binary')
+        models = os.path.join(data_folder, 'models')
+        self_play_db = os.path.join(data_folder, 'self_play.db')
+        training_db = os.path.join(data_folder, 'training.db')
+
+        benchmark_folder = DirectoryOrganizer.benchmark_folder(self.tag)
+        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, benchmark_folder))
+
+        shutil.copyfile(binary, benchmark_organizer.binary_filename)
+        shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
+        shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
+        shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
+        logger.info(f"copied binary, models, self_play_db and training_db to"
+                    f"{benchmark_organizer.base_dir}")
+
+    def create_db_from_json(self, benchmark_organizer, is_reference: bool = False,
+                            utc_key: str = None):
+        if is_reference:
+            json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
+        else:
+            data_folder = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+            json_path = os.path.join(data_folder, 'ratings.json')
+        db = RatingDB(benchmark_organizer.benchmark_db_filename)
+        db.load_ratings_from_json(json_path)
+        logger.info(f"created db {db.db_filename} from {json_path}")
 
 
 def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):

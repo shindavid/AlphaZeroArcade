@@ -361,6 +361,14 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
+            if self.params.benchmark_tag is not None:
+                self._make_rundir_from_run()
+            elif self.game_spec.reference_player_family is not None:
+                self._make_rundir_from_reference()
+            else:
+                self._make_rundir_from_record()
+
+
             benchmark_tag = self._expand_rundir_from_json()
             logger.info('Using benchmark tag: %s', benchmark_tag)
             self._copy_eval_db(benchmark_tag)
@@ -405,23 +413,10 @@ class LoopController:
 
         assert record is not None
 
-        benchmark_organizer = self._benchmark_organizer(record.tag)
-        benchmark_organizer.dir_setup(record.tag)
         self._create_db_from_json(record, benchmark_organizer)
         if record.tag == 'reference.players':
             return record.tag
 
-        binary = os.path.join(record.data_folder_path(), 'binary')
-        models = os.path.join(record.data_folder_path(), 'models')
-        self_play_db = os.path.join(record.data_folder_path(), 'self_play.db')
-        training_db = os.path.join(record.data_folder_path(), 'training.db')
-
-        shutil.copyfile(binary, benchmark_organizer.binary_filename)
-        shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
-        shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
-        shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
-        logger.info(f"copied binary, models, self_play_db and training_db to"
-                    f"{benchmark_organizer.base_dir}")
         return record.tag
 
     def _download_from_s3(self) -> Optional[DirectoryOrganizer]:
@@ -435,22 +430,12 @@ class LoopController:
 
         tar_path = os.path.join(Workspace.benchmark_data_dir, record.key())
         if not os.path.exists(tar_path):
-            BUCKET.download_from_s3(record.key(), tar_path)
+            bucket.DOWNLOAD_FROM_S3(RECORD.KEY(), TAR_PATH)
 
         if not os.path.isdir(record.data_folder_path()):
             untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
             logger.info(f"untar {tar_path}")
         return record
-
-    def _create_db_from_json(self, record: BenchmarkRecord, organizer: DirectoryOrganizer):
-        game = self.game_spec.name
-        if record.tag == 'reference.players':
-            json_path = os.path.join(Workspace.ref_dir, f'{game}.json')
-        else:
-            json_path = os.path.join(record.data_folder_path(), 'ratings.json')
-        db = RatingDB(organizer.benchmark_db_filename)
-        db.load_ratings_from_json(json_path)
-        logger.info(f"created db {db.db_filename} from {json_path}")
 
     def _benchmark_organizer(self, benchmark_tag: str) -> DirectoryOrganizer:
         benchmark_folder_name = DirectoryOrganizer.benchmark_folder(benchmark_tag)
