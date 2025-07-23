@@ -130,6 +130,7 @@ class EvalManager(GamingManagerBase):
         )
         super().__init__(controller, manager_config)
 
+        logger.debug(f"init EvalManager with benchmark-tag: {benchmark_tag}")
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}

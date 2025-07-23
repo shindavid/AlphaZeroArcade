@@ -362,8 +362,9 @@ class LoopController:
         if tag not in self._eval_managers:
             option = BenchmarkOption(self.game_spec.name, self.params.benchmark_tag)
             benchmark_tag = option.setup_benchmark_rundir()
-            self._copy_eval_db(benchmark_tag)
-            self._eval_managers[tag] = EvalManager(self, benchmark_tag)
+            benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
+            self._copy_eval_db(benchmark_folder)
+            self._eval_managers[tag] = EvalManager(self, benchmark_folder)
         return self._eval_managers[tag]
 
     def _copy_eval_db(self, benchmark_tag: str):
@@ -371,12 +372,8 @@ class LoopController:
         if os.path.exists(eval_db_file):
             return
 
-        if benchmark_tag == self._organizer.tag:
-            benchmark_organizer = self._organizer
-        else:
-            run_params = RunParams(self.run_params.game, benchmark_tag)
-            benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-
+        run_params = RunParams(self.run_params.game, benchmark_tag)
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
 
     def _get_benchmark_manager(self) -> BenchmarkManager:

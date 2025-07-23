@@ -244,7 +244,6 @@ class BenchmarkManager(GamingManagerBase):
             matches: List[Match] = self._benchmarker.get_next_matches(
                     self.n_iters, self.target_elo_gap, self.n_games,
                     excluded_indices=self.excluded_agent_indices)
-            conn.aux.ready_for_latest_gen = True
 
         if not matches:
             self._update_committee()

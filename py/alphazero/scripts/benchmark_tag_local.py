@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import save_benchmark_data, UTC_FORMAT
+from alphazero.logic.benchmark_record import save_benchmark_data, UTC_FORMAT, BenchmarkRecord, \
+    BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
@@ -10,6 +11,7 @@ from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
+from datetime import datetime, timezone
 import logging
 import os
 import subprocess
@@ -87,8 +89,10 @@ def main():
         return
 
     organizer.freeze_tag()
-    zero_time = datetime(1, 1, 1, tzinfo=timezone.utc).str
-    utc_key =zerotime.strftime(UTC_FORMAT)
+    zero_time = datetime(1, 1, 1, tzinfo=timezone.utc)
+    utc_key = zero_time.strftime(UTC_FORMAT)
+    record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
+    save_benchmark_data(organizer, record)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")

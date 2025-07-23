@@ -186,8 +186,9 @@ class BenchmarkOption:
 
     def expand_rundir_from_datafolder(self, utc_key: str = None):
         assert self.tag is not None
-        benchmark_folder = DirectoryOrganizer.benchmark_folder(self.tag)
-        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, benchmark_folder))
+        benchmark_folder = BenchmarkOption.benchmark_folder(self.tag)
+        run_params = RunParams(self.game, benchmark_folder)
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         benchmark_organizer.dir_setup(benchmark_tag=self.tag)
 
         self.create_db_from_json(benchmark_organizer, utc_key=utc_key)
@@ -197,9 +198,6 @@ class BenchmarkOption:
         models = os.path.join(data_folder, 'models')
         self_play_db = os.path.join(data_folder, 'self_play.db')
         training_db = os.path.join(data_folder, 'training.db')
-
-        benchmark_folder = DirectoryOrganizer.benchmark_folder(self.tag)
-        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, benchmark_folder))
 
         shutil.copyfile(binary, benchmark_organizer.binary_filename)
         shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
@@ -222,7 +220,7 @@ class BenchmarkOption:
 
 def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
     benchmarker = Benchmarker(organizer)
-    path = record.data_folder_path()
+    path = BenchmarkData.path(record.game, record.tag, utc_key=record.utc_key)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
     file = os.path.join(path, 'ratings.json')
