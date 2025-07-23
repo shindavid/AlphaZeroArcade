@@ -67,9 +67,6 @@ class Benchmarker:
             logger.debug("arena has no matches.")
             gen0_agent = self.build_agent(0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
-            if last_gen is None or last_gen < 2:
-                logger.debug(f"last_gen: {last_gen} is None or < 2")
-                return []
             last_gen_agent = self.build_agent(last_gen, n_iters)
             self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
             self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True,

@@ -88,6 +88,7 @@ class BenchmarkData:
     def __init__(self, organizer: DirectoryOrganizer):
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
+        self.tag = organizer.tag
 
         x_df = make_x_df(organizer)
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")

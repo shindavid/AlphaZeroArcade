@@ -330,7 +330,8 @@ class BenchmarkManager(GamingManagerBase):
             'files_required': [f.to_dict() for f in files_required],
             }
         logger.info(f"Benchmarking request ix: {data['ix1']} vs {data['ix2']}, "
-                    f"gen: {data['agent1']['data']['gen']} vs {data['agent2']['data']['gen']}")
+                    f"gen: {data['agent1']['data']['gen']} vs {data['agent2']['data']['gen']}, "
+                    f"n_games: {data['n_games']}")
         return data
 
     def _latest_evaluated_gen(self) -> Generation:
