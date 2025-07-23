@@ -52,6 +52,7 @@ Standard Usage Recipes:
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
@@ -373,7 +374,7 @@ def main():
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
-        option = BenchmarkOption(run_params.game, run_params.tag)
+        option = BenchmarkOption(run_params.game, benchmark_tag)
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')

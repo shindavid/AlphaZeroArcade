@@ -1,6 +1,6 @@
-from alphazero.logic.agent_type import IndexedAgent
+from alphazero.logic.agent_types import IndexedAgent
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
@@ -11,7 +11,7 @@ from util.py_util import untar_remote_file_to_local_directory
 
 from dataclasses import dataclass
 import glob
-import logger
+import logging
 import json
 import os
 import shlex
@@ -20,6 +20,7 @@ import sys
 from typing import Optional
 
 
+logger = logging.getLogger(__name__)
 UTC_FORMAT = '%Y-%m-%d_%H-%M-%S.%f_UTC'
 
 
