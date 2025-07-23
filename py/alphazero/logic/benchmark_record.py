@@ -119,7 +119,7 @@ class BenchmarkOption:
     def benchmark_folder(tag: str):
         return f'{tag}.benchmark'
 
-    def has_benchmark_run_dir(self) -> bool:
+    def has_benchmark_rundir(self) -> bool:
         benchmark_folder = BenchmarkOption.benchmark_folder(self.tag)
         run_params = RunParams(self.game, benchmark_folder)
         organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
@@ -159,21 +159,25 @@ class BenchmarkOption:
 
     def setup_rundir_from_run(self, utc_key: str = None):
         if self.has_benchmark_rundir():
+            logger.debug("benchmark rundir exists.")
             return
         elif self.has_benchmark_data(utc_key=utc_key):
+            logger.debug("benchmark data folder exists.")
             self.expand_rundir_from_datafolder()
         elif self.has_benchmark_tar_file():
+            logger.debug("benchmark tar file exists")
             self.untar_datafile()
             self.expand_rundir_from_datafolder()
         else:
-            record = self.on_record
+            logger.debug("read record")
+            record = self.on_record()
             if record:
-                tar_path = BenchmarkData.path_tar(self.game, self.tag, utc_key=record.utc_key)
+                tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
                 self.untar_datafile(utc_key=record.utc_key)
                 self.expand_rundir_from_datafolder()
             else:
-                raise Exception()
+                raise Exception("no benchmark found when benchmark-tag is specified.")
 
     def untar_datafile(self, utc_key: str = None):
         tar_path = BenchmarkData.path_tar(self.game, self.tag, utc_key=utc_key)
