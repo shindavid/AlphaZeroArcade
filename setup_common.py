@@ -16,7 +16,10 @@ import subprocess
 LOCAL_DOCKER_IMAGE = 'a0a'
 DOCKER_HUB_IMAGE = 'dshin83/alphazeroarcade'
 LATEST_DOCKER_HUB_IMAGE = f'{DOCKER_HUB_IMAGE}:latest'
-MINIMUM_REQUIRED_IMAGE_VERSION = "4.0.1"
+
+# Note: on increases in the first component of the image-version, the pull_docker_image.py script
+# automatically wipes the target/ directory.
+MINIMUM_REQUIRED_IMAGE_VERSION = "11.0.1"
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')

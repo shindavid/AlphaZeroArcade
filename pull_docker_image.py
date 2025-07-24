@@ -5,6 +5,7 @@
 from setup_common import LATEST_DOCKER_HUB_IMAGE, update_env_json
 
 import argparse
+from packaging import version
 from pathlib import Path
 import os
 import pty
@@ -53,6 +54,18 @@ def docker_pull(image):
         raise RuntimeError("Unexpected output from docker pull.")
 
 
+def get_version(image) -> version:
+    """
+    Returns the value of the "version" label of the given docker image, as a packaging.version
+    """
+    cmd = ["docker", "inspect", "--format", "{{.Config.Labels.version}}", image]
+    try:
+        output = subprocess.check_output(cmd, universal_newlines=True).strip()
+        return version.parse(output)
+    except:
+        return version.parse("0.0.0")
+
+
 def blow_away_target_dir():
     repo_root = Path(__file__).parent.resolve()
     target_dir = repo_root / 'target'
@@ -62,7 +75,14 @@ def blow_away_target_dir():
 
 def main():
     args = get_args()
+    prev_version = get_version(args.docker_hub_image)
     docker_pull(args.docker_hub_image)
+    cur_version = get_version(args.docker_hub_image)
+
+    # If major version has changed, blow away the target directory
+    if cur_version.major != prev_version.major:
+        print(f'Major version change detected: {prev_version.major} -> {cur_version.major}')
+        blow_away_target_dir()
 
 
 if __name__ == '__main__':
