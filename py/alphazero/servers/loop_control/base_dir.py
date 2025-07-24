@@ -29,4 +29,4 @@ class Workspace(BaseDir):
 
     @staticmethod
     def ref_rundir(game: str) -> str:
-        return os.path.join(Workspace.output_dir(), game, 'reference.player') 
+        return os.path.join(Workspace.output_dir(), game, 'reference.player')
