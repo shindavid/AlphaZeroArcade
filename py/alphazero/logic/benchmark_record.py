@@ -69,7 +69,7 @@ class BenchmarkData:
             if not os.path.isdir(tag_dir):
                 return None
 
-            folders = os.listdir(tag_dir)
+            folders = [f for f in os.listdir(tag_dir) if os.path.isdir(os.path.join(tag_dir, f))]
             if folders:
                 utc_key = max(folders)
             else:
@@ -85,10 +85,10 @@ class BenchmarkData:
 
             tar_files = glob.glob(os.path.join(tag_dir, '*.tar'))
             if tar_files:
-                utc_key = max(tar_files)
+                utc_key = max(tar_files).split('.')[0]
             else:
                 return None
-        return os.path.join(Workspace.benchmark_data_dir, game, tag, utc_key)
+        return os.path.join(Workspace.benchmark_data_dir, game, tag, f"{utc_key}.tar")
 
 
 class BenchmarkOption:
@@ -126,10 +126,16 @@ class BenchmarkOption:
         return os.path.isdir(organizer.base_dir)
 
     def has_benchmark_data(self, utc_key: str = None) -> bool:
-        return BenchmarkData.path(self.game, self.tag, utc_key=utc_key) is not None
+        path = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+        if not path:
+            return False
+        return os.path.isdir(path)
 
     def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
-        return BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key) is not None
+        tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key)
+        if not tar_path:
+            return False
+        return os.path.exists(tar_path)
 
     def has_valid_benchmark(self) -> bool:
         return self.tag or self.on_record() or self.has_reference_player()
@@ -162,7 +168,7 @@ class BenchmarkOption:
             logger.debug("benchmark rundir exists.")
             return
         elif self.has_benchmark_data(utc_key=utc_key):
-            logger.debug("benchmark data folder exists.")
+            logger.debug(f"benchmark data folder: {BenchmarkData.path(self.game, self.tag, utc_key=utc_key)}")
             self.expand_rundir_from_datafolder()
         elif self.has_benchmark_tar_file():
             logger.debug("benchmark tar file exists")
@@ -174,13 +180,14 @@ class BenchmarkOption:
             if record:
                 tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
+                logger.info(f"File downloaded to {tar_path}")
                 self.untar_datafile(utc_key=record.utc_key)
                 self.expand_rundir_from_datafolder()
             else:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
 
     def untar_datafile(self, utc_key: str = None):
-        tar_path = BenchmarkData.path_tar(self.game, self.tag, utc_key=utc_key)
+        tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key)
         untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
         logger.info("untar {tar_path}")
 
