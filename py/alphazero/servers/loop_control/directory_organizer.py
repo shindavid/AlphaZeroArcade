@@ -55,7 +55,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 # current code, we should increment VERSION.
 #
 # This should be a last resort that we try to avoid, but it's here in case we need it.
-VERSION = 4
+VERSION = 5
 logger = logging.getLogger(__name__)
 
 
