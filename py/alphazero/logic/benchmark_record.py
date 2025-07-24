@@ -155,7 +155,7 @@ class BenchmarkOption:
                 self.setup_rundir_from_record(record)
                 return record.tag
             else:
-                return None
+                raise Exception("Failed to set up a valid benchmark")
 
     def setup_rundir_from_record(self, record: BenchmarkRecord):
         option = BenchmarkOption(record.game, record.tag)
