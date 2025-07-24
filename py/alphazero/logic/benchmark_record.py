@@ -85,10 +85,12 @@ class BenchmarkData:
 
             tar_files = glob.glob(os.path.join(tag_dir, '*.tar'))
             if tar_files:
-                utc_key = max(tar_files).split('.')[0]
+                utc_key = max(tar_files)
             else:
                 return None
-        return os.path.join(Workspace.benchmark_data_dir, game, tag, f"{utc_key}.tar")
+        else:
+            utc_key = utc_key + '.tar'
+        return os.path.join(Workspace.benchmark_data_dir, game, tag, utc_key)
 
 
 class BenchmarkOption:
@@ -168,9 +170,9 @@ class BenchmarkOption:
             logger.debug("benchmark rundir exists.")
             return
         elif self.has_benchmark_data(utc_key=utc_key):
-            logger.debug(f"benchmark data folder: {BenchmarkData.path(self.game, self.tag, utc_key=utc_key)}")
+            logger.debug("benchmark data folder exists")
             self.expand_rundir_from_datafolder()
-        elif self.has_benchmark_tar_file():
+        elif self.has_benchmark_tar_file(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
             self.untar_datafile()
             self.expand_rundir_from_datafolder()
@@ -189,7 +191,7 @@ class BenchmarkOption:
     def untar_datafile(self, utc_key: str = None):
         tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key)
         untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
-        logger.info("untar {tar_path}")
+        logger.info(f"untar {tar_path}")
 
     def expand_rundir_from_datafolder(self, utc_key: str = None):
         assert self.tag is not None
