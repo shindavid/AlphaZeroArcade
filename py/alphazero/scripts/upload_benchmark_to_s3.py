@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-from alphazero.logic.agent_types import IndexedAgent
-from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.logic.benchmark_record import UTC_FORMAT
-from alphazero.logic.rating_db import RatingDB
+from alphazero.logic.benchmark_record import save_benchmark_data, UTC_FORMAT
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import BenchmarkRecord, Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -15,47 +12,9 @@ from datetime import datetime, timezone
 import json
 import logging
 import os
-import shlex
-import shutil
-import sys
 
 
 logger = logging.getLogger(__name__)
-
-
-def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
-    benchmarker = Benchmarker(organizer)
-    path = record.data_folder_path()
-    model_path = os.path.join(path, 'models')
-    os.makedirs(model_path, exist_ok=True)
-    file = os.path.join(path, 'ratings.json')
-    rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
-
-    ix = 0
-    db_id = 1
-    indexed_agents = []
-    ratings = []
-    for i in rating_data.committee:
-        ia: IndexedAgent = rating_data.iagents[i]
-        ia.index = ix
-        ia.db_id = db_id
-        ix += 1
-        db_id += 1
-        indexed_agents.append(ia)
-        ratings.append(rating_data.ratings[i])
-        gen = ia.agent.gen
-        if gen == 0:
-            continue
-        src = organizer.get_model_filename(gen)
-        shutil.copyfile(src, os.path.join(model_path, f'gen-{gen}.pt'))
-
-    indexed_agents, ratings = zip(*sorted(zip(indexed_agents, ratings), key=lambda x: x[1]))
-    cmd = shlex.join(sys.argv)
-    RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
-    shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
-    shutil.copyfile(organizer.self_play_db_filename, os.path.join(path, 'self_play.db'))
-    shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
-    logger.info(f"Created benchmark data folder {path}")
 
 
 def save_benchmark_record(record: BenchmarkRecord):

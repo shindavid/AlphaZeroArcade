@@ -4,6 +4,7 @@ from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, ReferenceAgent, MatchType, \
         MCTSAgent
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils
@@ -380,12 +381,9 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                if agent.tag == self.tag:
-                    benchmark_organizer = self._controller._organizer
-                else:
-                    benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
-                    run_params = RunParams(game, benchmark_folder)
-                    benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                benchmark_folder = BenchmarkOption.benchmark_folder(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
             benchmark_binary_src = self._controller._get_binary_path(
                     benchmark_organizer=benchmark_organizer)
@@ -411,12 +409,9 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                if agent.tag == self.tag:
-                    benchmark_organizer = self._controller._organizer
-                else:
-                    benchmark_folder = DirectoryOrganizer.benchmark_folder(agent.tag)
-                    run_params = RunParams(game, benchmark_folder)
-                    benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                benchmark_folder = BenchmarkOption.benchmark_folder(agent.tag)
+                run_params = RunParams(game, benchmark_folder)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
             scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
