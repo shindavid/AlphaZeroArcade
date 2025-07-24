@@ -9,12 +9,7 @@
 
 #ifdef MIT_TEST_MODE
 
-#include "inline/util/mit/condition_variable.inl"
-#include "inline/util/mit/exceptions.inl"
-#include "inline/util/mit/functions.inl"
-#include "inline/util/mit/mutex.inl"
-#include "inline/util/mit/scheduler.inl"
-#include "inline/util/mit/thread.inl"
+// headers
 #include "util/mit/condition_variable.hpp"
 #include "util/mit/exceptions.hpp"
 #include "util/mit/functions.hpp"
@@ -23,6 +18,14 @@
 #include "util/mit/scheduler.hpp"
 #include "util/mit/thread.hpp"
 #include "util/mit/unique_lock.hpp"
+
+// inlines
+#include "inline/util/mit/condition_variable.inl"
+#include "inline/util/mit/exceptions.inl"
+#include "inline/util/mit/functions.inl"
+#include "inline/util/mit/mutex.inl"
+#include "inline/util/mit/scheduler.inl"
+#include "inline/util/mit/thread.inl"
 
 #else  // MIT_TEST_MODE
 
