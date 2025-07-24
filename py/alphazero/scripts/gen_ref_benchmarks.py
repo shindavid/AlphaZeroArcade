@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-from alphazero.logic.agent_types import AgentRole, ReferenceAgent
+from alphazero.logic.agent_types import AgentRole, MatchType, ReferenceAgent
 from alphazero.logic.arena import Arena
 from alphazero.logic.benchmarker import Benchmarker
-from alphazero.logic.match_runner import Match, MatchType
+from alphazero.logic.match_runner import Match
 from alphazero.logic.rating_db import RatingDB
-from alphazero.servers.loop_control.directory_organizer import REF_DIR
+from alphazero.servers.loop_control.base_dir import Workspace
 from games.game_spec import GameSpec
 import games.index as game_index
 from games.index import ALL_GAME_SPECS
@@ -37,8 +37,8 @@ class ReferenceBenchmarker:
             self.neighborhood_size = 1
 
         self.game_spec = game_spec
-        self.db_filename = os.path.join('/workspace/output', self.game_spec.name,
-                                        'reference.players/databases', 'benchmark.db')
+        self.db_filename = os.path.join(Workspace.ref_rundir(game_spec.name),
+                                        'databases/benchmark.db')
         os.makedirs(os.path.dirname(self.db_filename), exist_ok=True)
         self.db = RatingDB(self.db_filename)
         self.arena = Arena()
@@ -91,7 +91,7 @@ class ReferenceBenchmarker:
             committee_ratings.append(self.arena.ratings[ix])
 
         RatingDB.save_ratings_to_json(committee_iagents, committee_ratings,
-                                      os.path.join(REF_DIR, f'{self.game}.json'), cmd)
+                                      os.path.join(Workspace.ref_dir, f'{self.game}.json'), cmd)
 
     def run(self):
         self.load_from_db()
@@ -109,7 +109,7 @@ class ReferenceBenchmarker:
 
 
 def benchmark_reference_players(args, game_specs: List[GameSpec]):
-    os.makedirs(REF_DIR, exist_ok=True)
+    os.makedirs(Workspace.ref_dir, exist_ok=True)
     for game_spec in game_specs:
         if game_spec.reference_player_family is None:
             logger.info(f'Skipped for game: {game_spec.name}, no reference_player_family')

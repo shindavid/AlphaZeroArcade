@@ -183,7 +183,7 @@ class Plotter:
 
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        if self.benchmark_tag == 'reference.players':
+        if self.benchmark_tag == 'reference.player':
             level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
             initial_level = level_keys[-1] if self.benchmark_elos else None
 
