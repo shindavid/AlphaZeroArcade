@@ -55,7 +55,7 @@ class BenchmarkRecord:
         utc_key = benchmark_record.get("utc_key", None)
         tag = benchmark_record.get("tag", None)
 
-        if utc_key is None or tag is None or hash is None:
+        if utc_key is None or tag is None:
             raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
 
         return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game)
