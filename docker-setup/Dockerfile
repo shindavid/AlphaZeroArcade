@@ -76,6 +76,16 @@ RUN git clone --branch v1.15.2 --depth 1 https://github.com/gabime/spdlog.git &&
     cmake --build . --target install && \
     cd ../.. && rm -rf spdlog
 
+# nvm/Node.js
+
+RUN apt-get install -y nodejs npm
+
+ARG NODE_LINK_VER=0.40.3
+ARG NODE_VER=22
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${NODE_LINK_VER}/install.sh | bash
+RUN . "$HOME/.nvm/nvm.sh" && nvm install ${NODE_VER}
+
 #######################
 # Python dependencies #
 #######################
