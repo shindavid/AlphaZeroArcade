@@ -191,7 +191,7 @@ class DirectoryOrganizer:
         os.makedirs(self.databases_dir, exist_ok=True)
         os.makedirs(self.misc_dir, exist_ok=True)
 
-        if benchmark_tag != 'reference.players':
+        if benchmark_tag != 'reference.player':
             os.makedirs(self.binary_dir, exist_ok=True)
             os.makedirs(self.models_dir, exist_ok=True)
 

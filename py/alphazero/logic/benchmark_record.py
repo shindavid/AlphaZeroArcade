@@ -162,7 +162,9 @@ class BenchmarkOption:
         option.setup_rundir_from_run(utc_key=record.utc_key)
 
     def setup_rundir_from_reference(self):
-        benchmark_organizer = DirectoryOrganizer(RunParams(self.game, 'reference.player.benchmark'))
+        run_params = RunParams(self.game, 'reference.player.benchmark')
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+        benchmark_organizer.dir_setup(benchmark_tag='reference.player')
         self.create_db_from_json(benchmark_organizer, is_reference=True)
 
     def setup_rundir_from_run(self, utc_key: str = None):
@@ -215,8 +217,12 @@ class BenchmarkOption:
         logger.info(f"copied binary, models, self_play_db and training_db to"
                     f"{benchmark_organizer.base_dir}")
 
-    def create_db_from_json(self, benchmark_organizer, is_reference: bool = False,
-                            utc_key: str = None):
+    def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer,
+                            is_reference: bool = False, utc_key: str = None):
+        if os.path.exists(benchmark_organizer.benchmark_db_filename):
+            logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists, skip loading from json")
+            return
+
         if is_reference:
             json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
         else:
