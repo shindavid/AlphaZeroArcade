@@ -50,7 +50,7 @@ class TestIndexSet(unittest.TestCase):
         s.add(3)
         s.add(8)
         rep = repr(s)
-        self.assertEqual(rep, 'IndexSet([np.int64(3), np.int64(8)])')
+        self.assertEqual(rep, 'IndexSet([3, 8])')
 
     def test_array_conversion(self):
         s = IndexSet()
