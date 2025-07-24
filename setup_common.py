@@ -24,6 +24,7 @@ ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')
 REQUIRED_PORTS = [
     5012,  # bokeh
     5013,  # bokeh2 - in case you want to launch two bokeh servers
+    5173,  # vite
     8002,  # flask
     8003,  # flask2 - in case you want to launch two flask servers
     8051,  # dash
