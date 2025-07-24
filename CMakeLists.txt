@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
+set(MAGIC_ENUM_OPT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 include(FetchContent)
 FetchContent_Declare(
   magic_enum
