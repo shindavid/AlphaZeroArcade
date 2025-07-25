@@ -18,6 +18,7 @@ from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
@@ -370,7 +371,10 @@ class LoopController:
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
         benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
         if os.path.exists(eval_db_file):
-            return
+            db = RatingDB(eval_db_file)
+            if not db.is_empty():
+                logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
+                return
 
         run_params = RunParams(self.run_params.game, benchmark_folder)
         benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
