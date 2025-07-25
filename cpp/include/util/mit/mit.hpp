@@ -35,6 +35,7 @@
 #include <thread>
 
 namespace mit {
+
 using condition_variable = std::condition_variable;
 using mutex = std::mutex;
 using thread = std::thread;
@@ -44,10 +45,6 @@ using lock_guard = std::lock_guard<Mutex>;
 
 template <typename Mutex>
 using unique_lock = std::unique_lock<Mutex>;
-
-inline void seed(int) {}
-
-inline void reset() {}
 
 }  // namespace mit
 
