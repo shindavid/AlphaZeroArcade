@@ -10,6 +10,8 @@ import os
 import subprocess
 import sys
 
+import torch
+
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -48,6 +50,9 @@ def get_default_build():
 
 
 def run_cpp_tests(build):
+    n = torch.cuda.device_count()
+    assert n > 0, 'No GPU found. Try exiting and relaunching run_docker.py'
+
     tests_dir = f'target/{build}/bin/tests'
 
     if not os.path.isdir(tests_dir):
