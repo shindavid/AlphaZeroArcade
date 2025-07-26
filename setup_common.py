@@ -79,7 +79,5 @@ def is_version_ok(version_str):
 
 
 def is_subpath(child_path, parent_path):
-    child = Path(child_path).resolve()
-    parent = Path(parent_path).resolve()
-    return parent in child.parents
-
+    p, d = Path(child_path).resolve(), Path(parent_path).resolve()
+    return p.is_relative_to(d)
