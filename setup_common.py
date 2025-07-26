@@ -20,7 +20,7 @@ LATEST_DOCKER_HUB_IMAGE = f'{DOCKER_HUB_IMAGE}:latest'
 
 # Note: on increases in the first component of the image-version, the pull_docker_image.py script
 # automatically wipes the target/ directory.
-MINIMUM_REQUIRED_IMAGE_VERSION = "11.0.1"
+MINIMUM_REQUIRED_IMAGE_VERSION = "12.0.1"
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_JSON_FILENAME = os.path.join(DIR, '.env.json')
