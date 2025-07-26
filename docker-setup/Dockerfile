@@ -18,8 +18,9 @@ RUN apt-get update && \
       sudo gosu curl rsync vim git cmake ninja-build build-essential \
       python3-pip python3-dev python-is-python3 libeigen3-dev libncurses5-dev \
       tmux plocate graphviz graphviz-dev openssh-server ack \
-      gcc-13 g++-13 clang clang-format clang-tidy libgtest-dev sqlite3 gdb \
-      libboost-program-options-dev libboost-filesystem-dev libboost-json-dev && \
+      gcc-13 g++-13 clang clangd clang-format clang-tidy libgtest-dev sqlite3 gdb \
+      libboost-program-options-dev libboost-filesystem-dev libboost-json-dev \
+      libboost-system-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # 3) Build spdlog inline
@@ -52,7 +53,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="11.0.2"
+ARG VERSION="12.0.3"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
