@@ -75,7 +75,7 @@ import argparse
 from dataclasses import dataclass, fields
 import logging
 import os
-from pipes import quote
+import shlex
 import signal
 import subprocess
 import sys
@@ -169,7 +169,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
     logging_params.add_to_cmd(cmd)
     build_params.add_to_cmd(cmd)
 
-    cmd = ' '.join(map(quote, cmd))
+    cmd = shlex.join(cmd)
     logger.info('Launching self-play server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -198,7 +198,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     build_params.add_to_cmd(cmd)
     rating_params.add_to_cmd(cmd, server=True)
 
-    cmd = ' '.join(map(quote, cmd))
+    cmd = shlex.join(cmd)
     logger.info('Launching ratings server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -225,7 +225,7 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     build_params.add_to_cmd(cmd)
     rating_params.add_to_cmd(cmd, server=True)
 
-    cmd = ' '.join(map(quote, cmd))
+    cmd = shlex.join(cmd)
     logger.info('Launching benchmark server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -252,7 +252,7 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     build_params.add_to_cmd(cmd)
     rating_params.add_to_cmd(cmd, server=True)
 
-    cmd = ' '.join(map(quote, cmd))
+    cmd = shlex.join(cmd)
     logger.info('Launching eval server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -304,7 +304,7 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
     rating_params.add_to_cmd(cmd, loop_controller=True)
-    cmd = ' '.join(map(quote, cmd))
+    cmd = shlex.join(cmd)
     logger.info('Launching loop controller: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
