@@ -84,7 +84,7 @@ def run_cpp_tests(build):
             pass_count += 1
 
     if fail_count == 0:
-        print(colored('All c++ tests passed!', 'green'))
+        print(colored(f'All {pass_count} c++ tests passed!', 'green'))
     else:
         print(colored(f'Failed {fail_count} of {fail_count + pass_count} c++ tests!', 'red'))
 
@@ -95,22 +95,33 @@ def run_py_tests():
     """
     tests_dir = 'py/unit_tests'
 
+    pass_count = 0
+    fail_count = 0
+
     # use os.walk to find all python files in the tests directory
     for root, dirs, files in os.walk(tests_dir):
         for file in files:
             if file.endswith('.py') and not file.startswith('__'):
                 # we found a python test file, run it
                 full_file = os.path.join(root, file)
+                print(f'Running: {full_file}')
                 cmd = ['python3', full_file]
-                try:
-                    subprocess.run(cmd, check=True, text=True, capture_output=True)
-                    print(colored(f'SUCCESS: {full_file}', 'green'))
-                except subprocess.CalledProcessError as e:
+                proc = subprocess_util.Popen(cmd)
+                stdout, stderr = proc.communicate()
+                if proc.returncode:
                     print(colored(f'FAILURE in {full_file}!', 'red'))
                     print('stdout:')
-                    print(e.stdout)
+                    print(stdout)
                     print('stderr:')
-                    print(e.stderr)
+                    print(stderr)
+                    fail_count += 1
+                else:
+                    pass_count += 1
+
+    if fail_count == 0:
+        print(colored(f'All {pass_count} python tests passed!', 'green'))
+    else:
+        print(colored(f'Failed {fail_count} of {fail_count + pass_count} python tests!', 'red'))
 
 
 def main():
