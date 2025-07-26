@@ -22,7 +22,7 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 # First-class CUDA support
 project(alphazero LANGUAGES CXX CUDA)
 
-find_package (Eigen3 3.4 REQUIRED NO_MODULE)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)

@@ -34,7 +34,7 @@
       "roles": "benchmark",
       "db_id": 2
     },
-    "rating": 705.7888079297688
+    "rating": 647.0133967338447
   },
   "ReferenceAgent-depth-2": {
     "iagent": {
@@ -52,7 +52,7 @@
       "roles": "benchmark",
       "db_id": 3
     },
-    "rating": 1033.8024166543455
+    "rating": 929.1318064397384
   },
   "ReferenceAgent-depth-3": {
     "iagent": {
@@ -70,7 +70,7 @@
       "roles": "benchmark",
       "db_id": 4
     },
-    "rating": 1363.3832861863757
+    "rating": 1171.0535224615255
   },
   "ReferenceAgent-depth-4": {
     "iagent": {
@@ -88,7 +88,7 @@
       "roles": "benchmark",
       "db_id": 5
     },
-    "rating": 1522.8947836616933
+    "rating": 1341.2186681081294
   },
   "ReferenceAgent-depth-5": {
     "iagent": {
@@ -106,7 +106,25 @@
       "roles": "benchmark",
       "db_id": 6
     },
-    "rating": 1704.338727963137
+    "rating": 1501.7267403817823
+  },
+  "ReferenceAgent-depth-6": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 6,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 6,
+      "roles": "benchmark",
+      "db_id": 7
+    },
+    "rating": 1739.0717944886114
   },
   "ReferenceAgent-depth-7": {
     "iagent": {
@@ -124,7 +142,25 @@
       "roles": "benchmark",
       "db_id": 8
     },
-    "rating": 1978.0849485266674
+    "rating": 1850.2568372658043
+  },
+  "ReferenceAgent-depth-8": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "edax",
+          "strength_param": "--depth",
+          "strength": 8,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 8,
+      "roles": "benchmark",
+      "db_id": 9
+    },
+    "rating": 2012.0191794444145
   },
   "ReferenceAgent-depth-9": {
     "iagent": {
@@ -142,7 +178,7 @@
       "roles": "benchmark",
       "db_id": 10
     },
-    "rating": 2252.461452858843
+    "rating": 2150.2144323135326
   },
   "ReferenceAgent-depth-10": {
     "iagent": {
@@ -160,7 +196,7 @@
       "roles": "benchmark",
       "db_id": 11
     },
-    "rating": 2423.9753049184737
+    "rating": 2275.3601413996553
   },
   "ReferenceAgent-depth-12": {
     "iagent": {
@@ -178,7 +214,7 @@
       "roles": "benchmark",
       "db_id": 13
     },
-    "rating": 2557.370968529248
+    "rating": 2396.1862166015453
   },
   "ReferenceAgent-depth-14": {
     "iagent": {
@@ -196,6 +232,6 @@
       "roles": "benchmark",
       "db_id": 15
     },
-    "rating": 2661.2086363904787
+    "rating": 2514.2717504328602
   }
 }

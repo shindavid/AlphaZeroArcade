@@ -1,11 +1,10 @@
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Set
+from typing import Dict, Optional, Set
 import os
 
 
@@ -35,6 +34,7 @@ class Agent(ABC):
     def tag(self) -> Optional[str]:
         pass
 
+
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
     gen: int = 0
@@ -44,11 +44,14 @@ class MCTSAgent(Agent):
     binary: Optional[str] = None
     model: Optional[str] = None
 
-    def make_player_str(self, run_dir, args=None) -> str:
+    def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
         name_tokens = ['MCTS', str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
         name = '-'.join(name_tokens)
+        if suffix is not None:
+            name += suffix
+
         player_args = {
             '--type': 'MCTS-C',
             '--name': name,
@@ -92,6 +95,7 @@ class MCTSAgent(Agent):
     def level(self) -> int:
         return self.gen
 
+
 @dataclass(frozen=True)
 class ReferenceAgent(Agent):
     type_str: str
@@ -100,10 +104,13 @@ class ReferenceAgent(Agent):
     tag: Optional[str] = None
     binary: Optional[str] = None
 
-    def make_player_str(self, run_dir: str, args=None) -> str:
+    def make_player_str(self, run_dir: str, args=None, suffix: str = None) -> str:
+        name = f'{self.type_str}-{self.strength}'
+        if suffix is not None:
+            name += suffix
+
         player_args = {
-            '--type': self.type_str,
-            '--name': f'{self.type_str}-{self.strength}',
+            '--type': self.type_str, '--name': name,
             f'{self.strength_param}': self.strength,
         }
         return make_args_str(player_args)
@@ -127,6 +134,7 @@ class ReferenceAgent(Agent):
     @property
     def level(self) -> int:
         return self.strength
+
 
 ArenaIndex = int  # index of an agent in an Arena
 AgentDBId = int  # id in agents table of the database

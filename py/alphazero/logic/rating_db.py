@@ -1,7 +1,6 @@
 from alphazero.logic import constants
 from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
-    MCTSAgent, ReferenceAgent
-from alphazero.logic.match_runner import MatchType
+        MatchType, MCTSAgent, ReferenceAgent
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
@@ -120,7 +119,8 @@ class RatingDB:
                 ''')
             for row in c.fetchall():
                 agent_id, rating, is_committee, tag, gen = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag, gen))
+                is_committee = bool(is_committee)
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, is_committee, tag, gen))
 
             c.execute('''
                 SELECT
@@ -136,7 +136,8 @@ class RatingDB:
                 ''')
             for row in c.fetchall():
                 agent_id, rating, is_committee, tag, strength = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, bool(is_committee), tag, strength))
+                is_committee = bool(is_committee)
+                db_agent_ratings.append(DBAgentRating(agent_id, rating, is_committee, tag, strength))
 
         elif role == AgentRole.TEST:
             c.execute('''
@@ -171,16 +172,17 @@ class RatingDB:
 
         return db_agent_ratings
 
-    def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts, type: MatchType):
+    def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts,
+                      type: MatchType):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw, type.value)
-        c.execute('''INSERT INTO matches (agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type)
-                  VALUES (?, ?, ?, ?, ?, ?)''', match_tuple)
+        c.execute('''INSERT INTO matches (agent_id1, agent_id2, agent1_wins, agent2_wins, draws,
+            type) VALUES (?, ?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
     def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
-                      committee: Optional[IndexSet]=None):
+                       committee: Optional[IndexSet] = None):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
@@ -234,7 +236,7 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        agent_roles = AgentRole.to_str(iagent.roles.to_str)
+        agent_roles = AgentRole.to_str(iagent.roles)
         c.execute('''UPDATE agents SET role=? WHERE id=?''', (agent_roles, iagent.db_id))
         conn.commit()
 
@@ -244,9 +246,11 @@ class RatingDB:
         c.execute('SELECT 1 FROM agents LIMIT 1')
         return c.fetchone() is None
 
-    def save_ratings_to_json(self, iagents: List[IndexedAgent], ratings: np.ndarray, file: str, cmd_used: str):
+    @staticmethod
+    def save_ratings_to_json(iagents: List[IndexedAgent], ratings: np.ndarray, file: str,
+                             cmd_used: str):
         data = {}
-        data['cmd_used'] = json.dumps(cmd_used)[1:-1] # Remove quotes around the command string
+        data['cmd_used'] = json.dumps(cmd_used)[1:-1]  # Remove quotes around the command string
         for ia, elo in zip(iagents, ratings):
             data[str(ia.agent)] = {
                 'iagent': ia.to_dict(),

@@ -1,4 +1,4 @@
-from alphazero.logic.ratings import  win_prob
+from alphazero.logic.ratings import win_prob
 
 import numpy as np
 
@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 class EvalUtils:
     @staticmethod
-    def estimate_rating_nearby_gens(gen: int, evaluated_gens: List[int], ratings: List[float]) -> float:
+    def estimate_rating_nearby_gens(gen: int, evaluated_gens: List[int], ratings: List[float])\
+            -> float:
         assert len(evaluated_gens) == len(ratings)
         ratings = np.array(ratings, dtype=float)
         evaluated_gens_arr = np.array(evaluated_gens)
@@ -54,7 +55,7 @@ class EvalUtils:
 
     @staticmethod
     def gen_matches(estimated_rating: float, ixs: List[int], elos: List[float], n_games: int,
-                    top_k: int=5) -> Dict[int, int]:
+                    top_k: int = 5) -> Dict[int, int]:
         """
         The opponent selection algorithm is adapted from KataGo:
         "Accelerating Self-Play Learning in Go" by David J. Wu (Section 5.1).

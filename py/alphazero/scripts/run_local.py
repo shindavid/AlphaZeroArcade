@@ -33,7 +33,8 @@ Standard Usage Recipes:
 1. Start a new training run:
     ./py/alphazero/scripts/run_local.py -g {game} -t {tag}
 
-    Wait for a few generations to be written, and then launch the dashboard in a separate tab to visualize:
+    Wait for a few generations to be written, and then launch the dashboard in a separate tab to
+    visualize:
 
     ./py/alphazero/scripts/launch_dashboard.py -g {game}
 
@@ -51,13 +52,14 @@ Standard Usage Recipes:
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.signaling import register_signal_exception
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
-from alphazero.servers.gaming.server_base import ServerParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
@@ -71,7 +73,6 @@ from util import subprocess_util
 import atexit
 import argparse
 from dataclasses import dataclass, fields
-import json
 import logging
 import os
 from pipes import quote
@@ -110,7 +111,6 @@ class Params:
 
     benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
 
-
     @staticmethod
     def create(args) -> 'Params':
         kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
@@ -128,11 +128,9 @@ class Params:
                            default=defaults.num_cuda_devices_to_use,
                            help='Num cuda devices to use (default: all)')
         group.add_argument('--run-ratings-server', action='store_true',
-                            help='Run the ratings server')
-        group.add_argument('--run-benchmark-server', action='store_true',
-                            help=argparse.SUPPRESS)
-        group.add_argument('--run-eval-server', action='store_true',
-                            help=argparse.SUPPRESS)
+                           help='Run the ratings server')
+        group.add_argument('--run-benchmark-server', action='store_true', help=argparse.SUPPRESS)
+        group.add_argument('--run-eval-server', action='store_true', help=argparse.SUPPRESS)
 
 
 def load_args():
@@ -206,7 +204,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
 
 
 def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
-    params:Params = params_dict['Params']
+    params: Params = params_dict['Params']
     docker_params: DockerParams = params_dict['DockerParams']
     logging_params: LoggingParams = params_dict['LoggingParams']
     build_params: BuildParams = params_dict['BuildParams']
@@ -259,7 +257,8 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str], game_spec: GameSpec):
+def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optional[str],
+                           game_spec: GameSpec):
     params: Params = params_dict['Params']
     run_params: RunParams = params_dict['RunParams']
     game_spec = game_index.get_game_spec(run_params.game)
@@ -310,32 +309,6 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
 
-def load_benchmark_info(game: str):
-    """
-    Load the default benchmark tag for a given game from a JSON file.
-
-    This will read the file:
-        /workspace/output/{game}/benchmark_info.json
-    """
-
-    file_path = os.path.join("/workspace/output", game, "benchmark_info.json")
-
-    if not os.path.exists(file_path):
-        print(f"No benchmark info found for game '{game}'.")
-        return None
-
-    with open(file_path, 'r') as f:
-        benchmark_info = json.load(f)
-
-    return benchmark_info.get("benchmark_tag")
-
-
-def get_benchmark_tag(run_params: RunParams, benchmark_tag: Optional[str]=None) -> Optional[str]:
-    if benchmark_tag is None:
-        benchmark_tag = load_benchmark_info(run_params.game)
-    return benchmark_tag
-
-
 def main():
     args, game_spec = load_args()
 
@@ -364,7 +337,7 @@ def main():
 
     os.chdir(Repo.root())
 
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
     if not organizer.version_check():
         print('The following output directory is outdated:\n')
         print(organizer.base_dir + '\n')
@@ -386,12 +359,6 @@ def main():
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
     benchmark_tag = params.benchmark_tag
-    # NOTE: reference_player_family is treated as a special case from regular MCTS agent runs.
-    # This is not desirable long-term and will need to be refactored to follow the same format as other
-    # agents, which might eventually include agents of external types such as KataGo.
-    if benchmark_tag is None:
-        if game_spec.reference_player_family is None:
-            benchmark_tag = get_benchmark_tag(run_params, params.benchmark_tag)
 
     descs = []
     procs = []
@@ -399,13 +366,15 @@ def main():
         organizer.assert_unlocked()
 
         descs.append('Loop-controller')
-        procs.append(launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec))
+        p = launch_loop_controller(params_dict, loop_controller_gpu, benchmark_tag, game_spec)
+        procs.append(p)
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         if not params.task_mode:
             for self_play_gpu in self_play_gpus:
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
+        option = BenchmarkOption(run_params.game, benchmark_tag)
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')
@@ -417,7 +386,7 @@ def main():
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
-            if game_spec.reference_player_family is not None or benchmark_tag is not None:
+            if option.has_valid_benchmark():
                 descs.append('Eval')
                 procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
             else:
@@ -428,7 +397,8 @@ def main():
             descs.append('Ratings')
             procs.append(launch_ratings_server(params_dict, ratings_gpu))
 
-        atexit.register(subprocess_util.terminate_processes, [procs[descs.index('Loop-controller')]])
+        loop_control_proc = procs[descs.index('Loop-controller')]
+        atexit.register(subprocess_util.terminate_processes, [loop_control_proc])
 
         loop = True
         while loop:
@@ -448,7 +418,7 @@ def main():
                 else:
                     print('*' * 80)
                     logger.info('%s process %s exited with code %s', descr, proc.pid,
-                                 proc.returncode)
+                                proc.returncode)
             time.sleep(1)
 
         if any_subprocess_error:
@@ -465,6 +435,7 @@ def main():
         sys.exit(1)
 
     logger.info('All processes exited cleanly')
+
 
 if __name__ == '__main__':
     main()

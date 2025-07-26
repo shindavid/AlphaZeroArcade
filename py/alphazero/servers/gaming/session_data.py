@@ -4,6 +4,7 @@ from alphazero.logic import constants
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientId, ClientRole, FileToTransfer
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
@@ -98,7 +99,7 @@ class SessionData:
         self.socket.send_json(data)
 
     def recv_handshake(self, role: ClientRole):
-        data = self.socket.recv_json(timeout=1)
+        data = self.socket.recv_json(timeout=60)
         assert data['type'] == 'handshake-ack', data
 
         rejection = data.get('rejection', None)
@@ -116,7 +117,7 @@ class SessionData:
                 self._directory_organizer = DirectoryOrganizer(run_params)
             else:
                 self._directory_organizer = DirectoryOrganizer(run_params,
-                                                               base_dir_root='/workspace')
+                                                               base_dir_root=Workspace)
 
         ssh_pub_key = data['ssh_pub_key']
         ssh_util.add_to_authorized_keys(ssh_pub_key)

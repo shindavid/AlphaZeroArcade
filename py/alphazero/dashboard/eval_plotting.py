@@ -18,8 +18,10 @@ from .x_var_logic import XVarSelector, make_x_df
 
 from alphazero.logic.agent_types import AgentRole
 from alphazero.logic.benchmarker import Benchmarker
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
@@ -27,8 +29,9 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Slider, Span
 from bokeh.layouts import column, row
 import numpy as np
+import os
 import pandas as pd
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 class EvaluationData:
@@ -36,7 +39,7 @@ class EvaluationData:
         self.tag = run_params.tag
         self.benchmark_tag = benchmark_tag
 
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         self.benchmark_elos = {}
         self.df = self.make_df(organizer, benchmark_tag)
 
@@ -83,12 +86,10 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
 
 
 class BenchmarkData:
-    def __init__(self, run_params: RunParams):
-        self.tag = run_params.tag
-
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    def __init__(self, organizer: DirectoryOrganizer):
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
+        self.tag = organizer.tag
 
         x_df = make_x_df(organizer)
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
@@ -131,6 +132,7 @@ class Plotter:
         else:
             self.benchmark_tag = data_list[0].benchmark_tag
 
+        self.benchmark_data = benchmark_data
         self.x_selector = XVarSelector([data.df for data in data_list])
         self.sources: Dict[str, ColumnDataSource] = {}
         self.min_y = 0
@@ -182,7 +184,7 @@ class Plotter:
 
         radio_group = self.x_selector.create_radio_group([plot], list(self.sources.values()))
 
-        if self.benchmark_tag == 'reference.players':
+        if self.benchmark_tag == 'reference.player':
             level_keys = sorted(self.benchmark_elos.keys(), key=lambda x: int(x))
             initial_level = level_keys[-1] if self.benchmark_elos else None
 
@@ -205,18 +207,39 @@ class Plotter:
             )
 
             def update_hline(attr, old, new):
-                new_elo = self.benchmark_elos[new]
+                new_elo = self.benchmark_elos.get(new, None)
                 hline.location = new_elo
 
             slider.on_change("value", update_hline)
             return column(plot, row(radio_group, slider))
 
+        else:
+            benchmark_source = ColumnDataSource(self.benchmark_data.df)
+            plot.scatter(
+                x='x',
+                y='rating',
+                source=benchmark_source,
+                size=8,
+                color='grey',
+                legend_label=self.benchmark_tag,
+                marker='circle'
+            )
+            radio_group = self.x_selector.create_radio_group(
+                [plot], list(self.sources.values()) + [benchmark_source])
+
         return column(plot, radio_group)
+
 
 def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
     data_list = get_eval_data_list(game, benchmark_tag, tags)
     if RunParams.is_valid_tag(benchmark_tag):
-        benchmark_data = BenchmarkData(RunParams(game=game, tag=benchmark_tag))
+        organizer = DirectoryOrganizer(RunParams(game, benchmark_tag), base_dir_root=Workspace)
+        if os.path.exists(organizer.benchmark_db_filename):
+            benchmark_organizer = organizer
+        else:
+            benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
+            benchmark_organizer = DirectoryOrganizer(RunParams(game, benchmark_folder))
+        benchmark_data = BenchmarkData(benchmark_organizer)
     else:
         benchmark_data = None
     plotter = Plotter(data_list, benchmark_data)

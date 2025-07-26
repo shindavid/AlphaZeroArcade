@@ -155,8 +155,8 @@ def main():
     from_params = RunParams(args.game, args.from_tag)
     to_params = RunParams(args.game, args.to_tag)
 
-    from_organizer = DirectoryOrganizer(from_params, base_dir_root='/workspace')
-    to_organizer = DirectoryOrganizer(to_params, base_dir_root='/workspace')
+    from_organizer = DirectoryOrganizer(from_params, base_dir_root=Workspace)
+    to_organizer = DirectoryOrganizer(to_params, base_dir_root=Workspace)
 
     if not os.path.isdir(from_organizer.base_dir):
         raise ValueError(f'From-directory does not exist: {from_organizer.base_dir}')

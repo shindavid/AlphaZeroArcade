@@ -14,6 +14,7 @@ Within the flask app, you would leave out the --show. You may also need one of t
 """
 from .x_var_logic import XVarSelector, make_x_df
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
@@ -33,7 +34,7 @@ def create_training_figure(game: str, tags: List[Tag], head: str):
     head_data_list: List[HeadData] = []
     for tag in tags:
         run_params = RunParams(game, tag)
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
         conn = sqlite3.connect(organizer.training_db_filename)
         head_data = HeadData(conn, tag, head)
@@ -56,7 +57,7 @@ def create_combined_training_figure(game: str, tags: List[Tag]):
     head_data_dict: Dict[Tag, HeadData] = {}
     for tag in tags:
         run_params = RunParams(game, tag)
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
         conn = sqlite3.connect(organizer.training_db_filename)
         head_data = HeadData(conn, tag, None)

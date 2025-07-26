@@ -3,7 +3,7 @@
 # This file should not depend on any repo python files outside of the top-level directory.
 
 from setup_common import MINIMUM_REQUIRED_IMAGE_VERSION, REQUIRED_PORTS, get_env_json, \
-    get_image_label, is_version_ok
+    get_image_label, is_version_ok, is_subpath
 
 import argparse
 import os
@@ -88,12 +88,12 @@ def get_env_vars(args):
 def run_container(args):
     env = get_env_json()
 
-    output_dir = env.get("OUTPUT_DIR", None)
+    mount_dir = env.get("MOUNT_DIR", None)
     docker_image = args.docker_image
     if not docker_image:
         docker_image = env.get("DOCKER_IMAGE", None)
 
-    if not output_dir or not docker_image:
+    if not mount_dir or not docker_image:
         print("Error: Bad environment. Please run setup_wizard.py first.")
         return
 
@@ -101,21 +101,12 @@ def run_container(args):
         if not check_image_version(docker_image):
             return
 
-    output_dir = Path(output_dir)
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
     post_mount_cmds = [
         'mkdir -p ~/scratch',
         ]
-
-    # Check if output_dir is inside REPO_ROOT
-    if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
-        # Handle overlapping mount points
-        relative_output = output_dir.relative_to(REPO_ROOT)
-        symlink_cmd = f"ln -sf /workspace/repo/{relative_output} /workspace/output"
-        post_mount_cmds.extend([symlink_cmd])
-    else:
-        # Separate mounts for REPO_ROOT and output_dir
-        mounts.extend(['-v', f"{output_dir}:/workspace/output"])
+    assert not is_subpath(mount_dir, REPO_ROOT)
+    mounts.extend(['-v', f"{mount_dir}:/workspace/mount"])
 
     ports_strs = []
     for port in REQUIRED_PORTS:

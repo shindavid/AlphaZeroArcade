@@ -4,6 +4,7 @@ Used by launch_dashboard.py to create a ratings plot.
 from .x_var_logic import XVarSelector, make_x_df
 from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 from util import bokeh_util
@@ -32,7 +33,7 @@ def create_ratings_figure(game: str, tags: List[str]):
 
 class RatingData:
     def __init__(self, run_params: RunParams, rating_tag: RatingTag):
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         game_spec = game_index.get_game_spec(run_params.game)
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
@@ -68,7 +69,7 @@ class RatingData:
 
 
 def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
-    organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
     db_filename = organizer.ratings_db_filename
     if not os.path.exists(db_filename):
         return []

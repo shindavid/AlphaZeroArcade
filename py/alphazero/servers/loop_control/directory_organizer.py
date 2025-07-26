@@ -37,7 +37,7 @@ BASE_DIR/  # $OUTPUT_DIR/game/tag/
 """
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
-from util import sqlite3_util
+from alphazero.servers.loop_control.base_dir import BaseDir
 
 from natsort import natsorted
 
@@ -46,7 +46,7 @@ import logging
 import os
 import shutil
 import sqlite3
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 # VERSION is stored in the version_file in the base directory
@@ -91,12 +91,12 @@ class ForkInfo:
             json_dict = json.load(f)
 
         fork_info = ForkInfo(json_dict['forked_base_dir'])
-        fork_info.train_windows = {int(k):v for k, v in json_dict['train_windows'].items()}
+        fork_info.train_windows = {int(k): v for k, v in json_dict['train_windows'].items()}
         return fork_info
 
 
 class DirectoryOrganizer:
-    def __init__(self, args: RunParams, base_dir_root='/home/devuser/scratch'):
+    def __init__(self, args: RunParams, base_dir_root: BaseDir):
         """
         This constructor should not actually do any filesystem reading or writing. It should just
         set data members corresonding to expected filesystem paths.
@@ -106,8 +106,8 @@ class DirectoryOrganizer:
 
         self.args = args
 
-        self.base_dir_root = base_dir_root
-        self.game_dir = os.path.join(base_dir_root, 'output', game)
+        self.base_dir_root = base_dir_root.output_dir()
+        self.game_dir = os.path.join(self.base_dir_root, game)
         self.base_dir = os.path.join(self.game_dir, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
@@ -125,7 +125,6 @@ class DirectoryOrganizer:
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
         self.benchmark_db_filename = os.path.join(self.databases_dir, 'benchmark.db')
 
-        self.benchmark_info_filename = os.path.join(self.game_dir, 'benchmark_info.json')
         self.binary_filename = os.path.join(self.binary_dir, game)
         self.version_filename = os.path.join(self.misc_dir, 'version_file')
         self.lock_filename = os.path.join(self.runtime_dir, 'lock')
@@ -184,20 +183,25 @@ class DirectoryOrganizer:
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def dir_setup(self):
+    def dir_setup(self, benchmark_tag: Optional[str] = None):
         """
         Performs initial setup of the directory structure.
         """
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)
-        os.makedirs(self.eval_db_dir, exist_ok=True)
-        os.makedirs(self.self_play_data_dir, exist_ok=True)
-        os.makedirs(self.models_dir, exist_ok=True)
-        os.makedirs(self.logs_dir, exist_ok=True)
-        os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.misc_dir, exist_ok=True)
-        os.makedirs(self.binary_dir, exist_ok=True)
-        os.makedirs(self.runtime_dir, exist_ok=True)
+
+        if benchmark_tag != 'reference.player':
+            os.makedirs(self.binary_dir, exist_ok=True)
+            os.makedirs(self.models_dir, exist_ok=True)
+
+        if benchmark_tag is None:
+            os.makedirs(self.eval_db_dir, exist_ok=True)
+            os.makedirs(self.self_play_data_dir, exist_ok=True)
+            os.makedirs(self.logs_dir, exist_ok=True)
+            os.makedirs(self.checkpoints_dir, exist_ok=True)
+            os.makedirs(self.misc_dir, exist_ok=True)
+            os.makedirs(self.runtime_dir, exist_ok=True)
 
         if not os.path.isfile(self.version_filename):
             with open(self.version_filename, 'w') as f:
@@ -264,7 +268,7 @@ class DirectoryOrganizer:
         return self.get_any_self_play_data_filename(gen - 1)
 
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
-                            last_model_gen: Optional[Generation]=None):
+                            last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
             assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
             gen = int(filename.split('.')[0].split('-')[1])
@@ -275,7 +279,7 @@ class DirectoryOrganizer:
             shutil.copyfile(src, dst)
 
     def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
-                                 last_model_gen: Optional[Generation]=None):
+                                 last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
             assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
             gen = int(filename.split('.')[0].split('-')[1])
@@ -286,7 +290,7 @@ class DirectoryOrganizer:
             os.symlink(src, dst)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
-                                    last_gen: Optional[Generation]=None):
+                                    last_gen: Optional[Generation] = None):
         if last_gen is None:
             last_gen = self.get_latest_model_generation(default=0)
 
@@ -354,15 +358,6 @@ class DirectoryOrganizer:
 
     def freeze_tag(self):
         with open(self.freeze_filename, 'w') as f:
-            f.write('The existence of this file indicates that this run was benchmarked, and thus that no more models can be trained for this tag.')
+            f.write('The existence of this file indicates that this run was benchmarked, and thus \
+                    that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
-
-    def save_default_benchmark(self):
-        benchmark_info = {
-            "benchmark_tag": self.tag
-        }
-
-        with open(self.benchmark_info_filename, 'w') as f:
-            json.dump(benchmark_info, f, indent=4)
-
-        logger.info(f"Benchmark tag '{self.tag}' saved to {self.benchmark_info_filename}")

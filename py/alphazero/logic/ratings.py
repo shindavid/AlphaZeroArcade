@@ -205,9 +205,16 @@ def estimate_elo_newton(n: np.ndarray, k: np.ndarray, elos: np.ndarray, init: fl
     return np.clip(R_T, lower, upper)
 
 if __name__ == "__main__":
-    elos = np.array([795, 1196, 1701], dtype=float)
-    n    = np.array([7, 2, 2])
-    k    = np.array([2, 0, 0])
+    elos = np.array([2447.18, 2700.87, 2918.89], dtype=float)
+    wins = np.array([177, 42, 59], dtype=float)
+    loses = np.array([95, 26, 77], dtype=float)
+    draws = np.array([76, 20, 0], dtype=float)
+    n = wins + loses + draws
+    k = wins + 0.5 * draws
 
     R_hat = estimate_elo_newton(n, k, elos, init=0.0)
     print(f"MLE Elo for T ≈ {R_hat:.2f}")
+    print(f"win prob of 17 vs 16 = {win_prob(elos[1], elos[0])}")
+    print(f"win prob of 17 vs 18 = {win_prob(elos[1], elos[2])}")
+    print(f"win rate: {k/n}")
+    print(f"n: {n}")

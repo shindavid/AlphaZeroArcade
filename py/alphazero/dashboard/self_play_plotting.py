@@ -4,6 +4,7 @@ Used by launch_dashboard.py to create a self-play plot.
 from .x_var_logic import XVarSelector, make_x_df
 from alphazero.logic import constants
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
@@ -25,7 +26,7 @@ def create_self_play_figure(game: str, tags: List[Tag]):
     data_dict: Dict[Tag, SelfPlayData] = {}
     for tag in tags:
         run_params = RunParams(game, tag)
-        organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
 
         conn = sqlite3.connect(organizer.self_play_db_filename)
         data = SelfPlayData(conn, tag)

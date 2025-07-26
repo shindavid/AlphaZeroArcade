@@ -1,3 +1,4 @@
+from .base_dir import Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
@@ -13,6 +14,7 @@ from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
+from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
@@ -20,7 +22,6 @@ from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
-from alphazero.scripts.gen_ref_benchmarks import REF_DIR
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from shared.rating_params import RatingParams
@@ -84,10 +85,10 @@ class LoopController:
         self._on_ephemeral_local_disk_env = (scratch_fs != workspace_fs) or params.simulate_cloud
 
         if self._on_ephemeral_local_disk_env:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/home/devuser/scratch')
-            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root=Scratch)
+            self._persistent_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         else:
-            self._organizer = DirectoryOrganizer(run_params, base_dir_root='/workspace')
+            self._organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
             self._persistent_organizer = None
 
         self._shutdown_manager = ShutdownManager()
@@ -360,35 +361,26 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            if self.params.benchmark_tag is None and self.game_spec.reference_player_family is not None:
-                #TODO: generate a benchmark-dir folder from the json file if it does not exist
-                # then we can remove the logic of creating a new RatingDB here
-                benchmark_tag = 'reference.players'
-                assert not RunParams.is_valid_tag(benchmark_tag)
-
-                db_file = self.organizer.eval_db_filename(benchmark_tag)
-                if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
-                    db = RatingDB(db_file)
-                    ref_json_file = os.path.join(REF_DIR, f'{self.game_spec.name}.json')
-                    if not os.path.exists(ref_json_file):
-                        raise Exception(f"Reference database file not found: {ref_json_file}")
-                    db.load_ratings_from_json(ref_json_file)
-            else:
-                benchmark_tag = self.params.benchmark_tag
-                db_file = self.organizer.eval_db_filename(benchmark_tag)
-                if not os.path.exists(db_file) or RatingDB(db_file).is_empty():
-                    if self.params.benchmark_tag is None:
-                        raise Exception(
-                            f"Benchmark tag is not set and default benchmark info file not found.\n"
-                            f"Please specify a benchmark tag by using the --benchmark-tag argument\n"
-                            f"Or run the benchmark server with the --set-default-benchmark argument first."
-                        )
-                    benchmark_runparams = RunParams(game=self.run_params.game, tag=self.params.benchmark_tag)
-                    benchmark_organizer = DirectoryOrganizer(benchmark_runparams, base_dir_root='/workspace')
-                    shutil.copy2(benchmark_organizer.benchmark_db_filename, db_file)
-            logger.info('benchmark_tag: %s', benchmark_tag)
+            option = BenchmarkOption(self.game_spec.name, self.params.benchmark_tag)
+            benchmark_tag = option.setup_benchmark_rundir()
+            self._copy_eval_db(benchmark_tag)
             self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
+
+    def _copy_eval_db(self, benchmark_tag: str):
+        eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
+        benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
+        if os.path.exists(eval_db_file):
+            db = RatingDB(eval_db_file)
+            if not db.is_empty():
+                logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
+                return
+
+        run_params = RunParams(self.run_params.game, benchmark_folder)
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+        shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
+        logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
+                     f"to: {eval_db_file}")
 
     def _get_benchmark_manager(self) -> BenchmarkManager:
         if not self._benchmark_manager:
@@ -516,15 +508,12 @@ class LoopController:
         else:
             logger.info('Copying binary file to persistent run dir...')
 
-
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
         atomic_cp(binary_path, target_file)
 
-    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer]=None) -> str:
+    def _get_binary_path(self, benchmark_organizer: Optional[DirectoryOrganizer] = None) -> str:
         use_stored_binary = self.build_params.use_stored_binary
         if not use_stored_binary:
-            assert benchmark_organizer is None, \
-                'benchmark_organizer should not be specified when use_stored_binary is False'
             return self.build_params.get_binary_path(self.game_spec.name)
         else:
             if benchmark_organizer is None:
