@@ -103,8 +103,7 @@ def setup_mount_dir():
 
     env = get_env_json()
     cwd = os.getcwd()
-    parent_dir = os.path.dirname(cwd)
-    default_mount_dir = env.get('MOUNT_DIR', os.path.join(parent_dir, 'mount'))
+    default_mount_dir = env.get('MOUNT_DIR', os.path.expanduser('~/AlphaZeroArcade-mount'))
 
     while True:
         prompt = f'Please enter the location of your mount directory [{default_mount_dir}]: '
