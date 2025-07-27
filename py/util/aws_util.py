@@ -93,8 +93,8 @@ class Bucket:
         return signed_url
 
     def download_from_s3(self, key: str, destination_path: str):
-        signed_url = self.generate_signed_url(key)
-        response = requests.get(signed_url)
+        url = os.path.join(self.cloudfront_url, key)
+        response = requests.get(url)
 
         if response.status_code == 200:
             os.makedirs(os.path.dirname(destination_path), exist_ok=True)
