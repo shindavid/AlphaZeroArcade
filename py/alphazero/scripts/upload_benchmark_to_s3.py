@@ -46,14 +46,15 @@ def main():
     utc_key = datetime.now(timezone.utc).strftime(UTC_FORMAT)
     record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
 
-    organizer = DirectoryOrganizer(RunParams(args.game, args.tag), base_dir_root=Benchmark)
-    if not os.path.isdir(organizer.base_dir):
-        raise FileNotFoundError(f"dir {organizer.base_dir} does not exist.")
-    save_benchmark_dir(organizer)
+    folder = Benchmark.path(record.game, record.tag)
+    if not os.path.isdir(folder):
+        raise FileNotFoundError(f"dir {folder} does not exist.")
+
     if not args.skip_set_as_default:
         save_benchmark_record(record)
-    folder = Benchmark.path(record.game, record.tag)
+
     tar_file = Benchmark.tar_path(record.game, record.tag, utc_key=record.utc_key)
+    os.makedirs(os.path.dirname(tar_file), exist_ok=True)
     tar_and_remotely_copy(folder, tar_file)
     BUCKET.upload_file_to_s3(tar_file, record.key())
 
