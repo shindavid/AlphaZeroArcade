@@ -265,6 +265,8 @@ class EvalManager(GamingManagerBase):
 
     def _load_matches_from_db(self):
         for result in self._db.fetch_match_results():
+            if result.type != MatchType.EVALUATE:
+                continue
             indexed_agent1 = self._agent_lookup_db_id[result.agent_id1]
             indexed_agent2 = self._agent_lookup_db_id[result.agent_id2]
 
