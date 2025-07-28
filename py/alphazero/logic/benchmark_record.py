@@ -65,7 +65,7 @@ class BenchmarkData:
     @staticmethod
     def path(game: str, tag: str, utc_key: str = None) -> Optional[str]:
         if utc_key is None:
-            tag_dir = os.path.join(Workspace.benchmark_data_dir, game, tag)
+            tag_dir = os.path.join(Workspace.benchmark_dir, game, tag)
             if not os.path.isdir(tag_dir):
                 return None
 
@@ -74,12 +74,12 @@ class BenchmarkData:
                 utc_key = max(folders)
             else:
                 return None
-        return os.path.join(Workspace.benchmark_data_dir, game, tag, utc_key)
+        return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
 
     @staticmethod
     def tar_path(game: str, tag: str, utc_key: str = None) -> Optional[str]:
         if utc_key is None:
-            tag_dir = os.path.join(Workspace.benchmark_data_dir, game, tag)
+            tag_dir = os.path.join(Workspace.benchmark_dir, game, tag)
             if not os.path.isdir(tag_dir):
                 return None
 
@@ -90,7 +90,7 @@ class BenchmarkData:
                 return None
         else:
             utc_key = utc_key + '.tar'
-        return os.path.join(Workspace.benchmark_data_dir, game, tag, utc_key)
+        return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
 
 
 class BenchmarkOption:
@@ -238,30 +238,6 @@ def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
     path = BenchmarkData.path(record.game, record.tag, utc_key=record.utc_key)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
-    file = os.path.join(path, 'ratings.json')
-    rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
-
-    ix = 0
-    db_id = 1
-    indexed_agents = []
-    ratings = []
-    for i in rating_data.committee:
-        ia: IndexedAgent = rating_data.iagents[i]
-        ia.index = ix
-        ia.db_id = db_id
-        ix += 1
-        db_id += 1
-        indexed_agents.append(ia)
-        ratings.append(rating_data.ratings[i])
-        gen = ia.agent.gen
-        if gen == 0:
-            continue
-        src = organizer.get_model_filename(gen)
-        shutil.copyfile(src, os.path.join(model_path, f'gen-{gen}.pt'))
-
-    indexed_agents, ratings = zip(*sorted(zip(indexed_agents, ratings), key=lambda x: x[1]))
-    cmd = shlex.join(sys.argv)
-    RatingDB.save_ratings_to_json(indexed_agents, ratings, file, cmd)
     shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
     shutil.copyfile(organizer.self_play_db_filename, os.path.join(path, 'self_play.db'))
     shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))

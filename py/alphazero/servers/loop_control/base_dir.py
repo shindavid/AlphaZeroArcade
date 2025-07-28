@@ -19,7 +19,7 @@ class Scratch(BaseDir):
 
 class Workspace(BaseDir):
     base_dir = '/workspace/mount'
-    benchmark_data_dir = os.path.join(base_dir, 'benchmark_data')
+    benchmark_dir = os.path.join(base_dir, 'benchmarks')
     ref_dir = '/workspace/repo/reference.players'
     aws_dir = os.path.join(base_dir, 'aws')
 
