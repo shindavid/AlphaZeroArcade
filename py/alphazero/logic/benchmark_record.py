@@ -76,22 +76,6 @@ class BenchmarkDir:
                 return None
         return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
 
-    @staticmethod
-    def tar_path(game: str, tag: str, utc_key: str = None) -> Optional[str]:
-        if utc_key is None:
-            tag_dir = os.path.join(Workspace.benchmark_dir, game, tag)
-            if not os.path.isdir(tag_dir):
-                return None
-
-            tar_files = glob.glob(os.path.join(tag_dir, '*.tar'))
-            if tar_files:
-                utc_key = max(tar_files)
-            else:
-                return None
-        else:
-            utc_key = utc_key + '.tar'
-        return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
-
 
 class BenchmarkOption:
     def __init__(self, game: str, tag: Optional[str] = None):
@@ -122,19 +106,10 @@ class BenchmarkOption:
         return f'{tag}.benchmark'
 
     def has_benchmark_rundir(self) -> bool:
-        benchmark_folder = BenchmarkOption.benchmark_folder(self.tag)
-        run_params = RunParams(self.game, benchmark_folder)
-        organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-        return os.path.isdir(organizer.base_dir)
-
-    def has_benchmark_data(self, utc_key: str = None) -> bool:
-        path = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
-        if not path:
-            return False
-        return os.path.isdir(path)
+        return os.path.isdir(Benchmark.path(self.game, self.tag))
 
     def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
-        tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=utc_key)
+        tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
         if not tar_path:
             return False
         return os.path.exists(tar_path)
@@ -171,29 +146,25 @@ class BenchmarkOption:
         if self.has_benchmark_rundir():
             logger.debug("benchmark rundir exists.")
             return
-        elif self.has_benchmark_data(utc_key=utc_key):
-            logger.debug("benchmark data folder exists")
-            self.expand_rundir_from_datafolder()
         elif self.has_benchmark_tar_file(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
-            self.untar_datafile()
-            self.expand_rundir_from_datafolder()
+            self.untar()
         else:
             logger.debug("read record")
             record = self.on_record()
             if record:
-                tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=record.utc_key)
+                tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
                 logger.info(f"File downloaded to {tar_path}")
-                self.untar_datafile(utc_key=record.utc_key)
-                self.expand_rundir_from_datafolder()
+                self.untar(utc_key=record.utc_key)
             else:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
 
-    def untar_datafile(self, utc_key: str = None):
-        tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=utc_key)
-        untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
-        logger.info(f"untar {tar_path}")
+    def untar(self, utc_key: str = None):
+        tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
+        benchmark_path = Benchmark.path(self.game, self.tag)
+        untar_remote_file_to_local_directory(tar_path, benchmark_path)
+        logger.info(f"untar {tar_path} to {Benchmark.path(self.game, self.tag)}")
 
     def expand_rundir_from_datafolder(self, utc_key: str = None):
         assert self.tag is not None
@@ -217,18 +188,13 @@ class BenchmarkOption:
         logger.info(f"copied binary, models, self_play_db and training_db to"
                     f"{benchmark_organizer.base_dir}")
 
-    def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer,
-                            is_reference: bool = False, utc_key: str = None):
-        if os.path.exists(benchmark_organizer.benchmark_db_filename):
+    def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
+        db = RatingDB(benchmark_organizer.benchmark_db_filename)
+        if os.path.exists(db.db_filename) and not db.is_empty():
             logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists, skip loading from json")
             return
 
-        if is_reference:
-            json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
-        else:
-            data_folder = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
-            json_path = os.path.join(data_folder, 'ratings.json')
-        db = RatingDB(benchmark_organizer.benchmark_db_filename)
+        json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
         db.load_ratings_from_json(json_path)
         logger.info(f"created db {db.db_filename} from {json_path}")
 
