@@ -1,4 +1,4 @@
-from .base_dir import Scratch, Workspace
+from .base_dir import Benchmark, Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
@@ -369,15 +369,13 @@ class LoopController:
 
     def _copy_eval_db(self, benchmark_tag: str):
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
-        benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
         if os.path.exists(eval_db_file):
             db = RatingDB(eval_db_file)
             if not db.is_empty():
                 logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
                 return
 
-        run_params = RunParams(self.run_params.game, benchmark_folder)
-        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+        benchmark_organizer = DirectoryOrganizer(self.run_params, base_dir_root=Benchmark)
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
         logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
                      f"to: {eval_db_file}")

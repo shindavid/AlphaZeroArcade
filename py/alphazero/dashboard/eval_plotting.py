@@ -21,7 +21,7 @@ from alphazero.logic.benchmarker import Benchmarker
 from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import Workspace
+from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util import bokeh_util
 
@@ -237,8 +237,8 @@ def create_eval_figure(game: str, benchmark_tag: str, tags: List[str]):
         if os.path.exists(organizer.benchmark_db_filename):
             benchmark_organizer = organizer
         else:
-            benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
-            benchmark_organizer = DirectoryOrganizer(RunParams(game, benchmark_folder))
+            run_params = RunParams(game, benchmark_tag)
+            benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
         benchmark_data = BenchmarkData(benchmark_organizer)
     else:
         benchmark_data = None
