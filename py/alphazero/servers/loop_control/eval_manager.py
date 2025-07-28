@@ -11,7 +11,7 @@ from alphazero.logic.evaluator import EvalUtils
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import Workspace
+from alphazero.servers.loop_control.base_dir import Benchmark
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
     ServerAuxBase, WorkerAux
@@ -381,9 +381,8 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                benchmark_folder = BenchmarkOption.benchmark_folder(agent.tag)
-                run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                run_params = RunParams(game, agent.tag)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
 
             benchmark_binary_src = self._controller._get_binary_path(
                     benchmark_organizer=benchmark_organizer)
@@ -409,9 +408,8 @@ class EvalManager(GamingManagerBase):
         elif role == AgentRole.BENCHMARK:
             benchmark_organizer = None
             if agent.tag:
-                benchmark_folder = BenchmarkOption.benchmark_folder(agent.tag)
-                run_params = RunParams(game, benchmark_folder)
-                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+                run_params = RunParams(game, agent.tag)
+                benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
 
             scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
             model = FileToTransfer.from_src_scratch_path(
