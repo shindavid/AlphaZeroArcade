@@ -7,57 +7,16 @@ The script:
 1.  Re-plays each selected agent *against itself* to stabilise ratings.
 2.  Chooses a **benchmark committee**—agents whose Elo ratings differ by at least
     ``target_elo_gap``—to give a well-spaced difficulty ladder.
-3.  Copies only the data needed for evaluation into a compact, timestamped folder.
+3.  Copies the data needed for evaluation into a benchmark folder:
 
-/workspace/mount/benchmark_data/{game}/{tag}/{timestamp}_UTC
-
-This script will create a folder with timestamp 1-01-01_00-00-00.000000_UTC because it will not be
-uploaded. The uploaded folders will be named with the timestamp of the time of uploading.
-
-1-01-01_00-00-00.000000_UTC/
-    └── models/                 # Only the committee models
-        ├── gen-7.pt
-        ├── gen-14.pt
-        └── …
-    ├── binary
-    ├── ratings.json
-    ├── self_play.db
-    └── training.db
-
-models/ only contains the benchmark committee's model files. The benchmark committee is selected
-with elo gaps greater than the configured target_elo_gap parameter to ensure proper spacing between.
-
-json example
-{
-  "cmd_used": "./py/alphazero/scripts/benchmark_tag_local.py -g hex -t first-run",
-  "MCTSAgent-gen-7": {
-    "iagent": {
-      "agent": {
-        "type": "MCTS",
-        "data": { "gen": 7, "n_iters": 100, "set_temp_zero": true,
-                  "tag": "first-run", "binary": null, "model": null }
-      },
-      "index": 12,
-      "roles": "benchmark",
-      "db_id": 13
-    },
-    "rating": -26.91803106954515
-  },
-  "MCTSAgent-gen-14": {...}
-}
-
-How the folder is used
-
-When loop_controller evaluates a new run, it expands the compact benchmark folder
-into a pseudo-run directory, which contains a subset of folders of a regular run folder:
-/workspace/mount/output/{game}/{tag}.benchmark
+/workspace/mount/benchmark/{game}/{tag}
     ├── bin/hex
     ├── databases/
     │   ├── benchmark.db
     │   ├── self_play.db
     │   └── training.db
     ├── misc/version_file
-    └── models/
+    └── models/ (only the models of committee agents)
         ├── gen-7.pt
         ├── gen-14.pt
         └── ...
