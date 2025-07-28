@@ -30,3 +30,11 @@ class Workspace(BaseDir):
     @staticmethod
     def ref_rundir(game: str) -> str:
         return os.path.join(Workspace.output_dir(), game, 'reference.player')
+
+
+class Benchmark(BaseDir):
+    base_dir = '/workspace/mount'
+
+    @classmethod
+    def output_dir(cls):
+        return os.path.join(cls.base_dir, 'benchmarks')
