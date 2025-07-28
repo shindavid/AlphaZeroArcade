@@ -1,9 +1,9 @@
 from alphazero.logic.agent_types import IndexedAgent
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import Workspace
+from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.aws_util import BUCKET
@@ -234,10 +234,21 @@ class BenchmarkOption:
 
 
 def save_benchmark_dir(organizer: DirectoryOrganizer):
-    path = BenchmarkDir.path(record.game, record.tag, utc_key=record.utc_key)
-    model_path = os.path.join(path, 'models')
-    os.makedirs(model_path, exist_ok=True)
-    shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))
-    shutil.copyfile(organizer.self_play_db_filename, os.path.join(path, 'self_play.db'))
-    shutil.copyfile(organizer.training_db_filename, os.path.join(path, 'training.db'))
-    logger.info(f"Created benchmark data folder {path}")
+    dst_organizer = DirectoryOrganizer(organizer.args, base_dir_root=Benchmark)
+    dst_organizer.dir_setup(benchmark_tag=organizer.args.tag)
+
+    benchmarker = Benchmarker(organizer)
+    rating_data: BenchmarkRatingData = benchmarker.read_ratings_from_db()
+
+    for i in rating_data.committee:
+        ia: IndexedAgent = rating_data.iagents[i]
+        gen = ia.agent.gen
+        if gen == 0:
+            continue
+        src = organizer.get_model_filename(gen)
+        shutil.copyfile(src, dst_organizer.get_model_filename(gen))
+
+    shutil.copyfile(organizer.binary_filename, dst_organizer.binary_filename)
+    shutil.copyfile(organizer.self_play_db_filename, dst_organizer.self_play_db_filename)
+    shutil.copyfile(organizer.training_db_filename, dst_organizer.training_db_filename)
+    logger.info(f"Created benchmark data folder {dst_organizer.base_dir}")
