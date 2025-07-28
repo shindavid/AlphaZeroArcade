@@ -1,6 +1,6 @@
 import logging
 import os
-
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -38,3 +38,23 @@ class Benchmark(BaseDir):
     @classmethod
     def output_dir(cls):
         return os.path.join(cls.base_dir, 'benchmarks')
+    
+    @classmethod
+    def tar_path(cls, game: str, tag: str, utc_key: str = None) -> Optional[str]:
+        if utc_key is None:
+            tag_dir = os.path.join(cls.output_dir(), game, tag)
+            if not os.path.isdir(tag_dir):
+                return None
+
+            tar_files = glob.glob(os.path.join(tag_dir, '*.tar'))
+            if tar_files:
+                utc_key = max(tar_files)
+            else:
+                return None
+        else:
+            utc_key = utc_key + '.tar'
+        return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
+
+    @classmethod
+    def path(cls, game: str, tag: str):
+        return os.path.join(cls.output_dir(), game, tag)
