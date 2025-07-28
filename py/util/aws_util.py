@@ -26,7 +26,6 @@ PROFILE = 'default'
 class Bucket:
     name: str
     cloudfront_url: str
-    key_pair_id: str
 
     def upload_file_to_s3(self, file_path: str, key: str):
         cred = configparser.ConfigParser()
@@ -48,7 +47,7 @@ class Bucket:
         s3.upload_file(file_path, self.name, key)
         logger.info(f"Uploaded '{file_path}' to 's3://{self.name}/{key}'")
 
-    def generate_signed_url(self, key: str, expire_minutes=10):
+    def generate_signed_url(self, key: str, key_pair_id: str, expire_minutes=10):
         full_url = os.path.join(self.cloudfront_url, key)
         parsed_url = urlparse(full_url)
         expire_time = int(time.time()) + expire_minutes * 60
@@ -86,15 +85,15 @@ class Bucket:
         query_params = {
             'Policy': safe_encoded,
             'Signature': signature_encoded,
-            'Key-Pair-Id': self.key_pair_id
+            'Key-Pair-Id': key_pair_id
         }
 
         signed_url = urlunparse(parsed_url._replace(query=urlencode(query_params)))
         return signed_url
 
     def download_from_s3(self, key: str, destination_path: str):
-        signed_url = self.generate_signed_url(key)
-        response = requests.get(signed_url)
+        url = os.path.join(self.cloudfront_url, key)
+        response = requests.get(url)
 
         if response.status_code == 200:
             os.makedirs(os.path.dirname(destination_path), exist_ok=True)
@@ -106,5 +105,5 @@ class Bucket:
 
 
 BUCKET = Bucket(name='alphazeroarcade',
-                cloudfront_url='https://download.alphazeroarcade.io',
-                key_pair_id='KDHZFFYK6PB1L')
+                cloudfront_url='https://download.alphazeroarcade.io')
+
