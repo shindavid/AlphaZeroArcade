@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkDir, BenchmarkRecord, UTC_FORMAT, save_benchmark_data
+from alphazero.logic.benchmark_record import BenchmarkDir, BenchmarkRecord, UTC_FORMAT,\
+    save_benchmark_dir
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -48,7 +49,7 @@ def main():
     organizer = DirectoryOrganizer(RunParams(args.game, args.tag), base_dir_root=Workspace)
     if not os.path.isdir(organizer.base_dir):
         raise FileNotFoundError(f"dir {organizer.base_dir} does not exist.")
-    save_benchmark_data(organizer, record)
+    save_benchmark_dir(organizer, record)
     if not args.skip_set_as_default:
         save_benchmark_record(record)
     folder = BenchmarkDir.path(record.game, record.tag, utc_key=record.utc_key)

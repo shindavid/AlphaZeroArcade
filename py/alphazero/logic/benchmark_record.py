@@ -233,8 +233,7 @@ class BenchmarkOption:
         logger.info(f"created db {db.db_filename} from {json_path}")
 
 
-def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
-    benchmarker = Benchmarker(organizer)
+def save_benchmark_dir(organizer: DirectoryOrganizer):
     path = BenchmarkDir.path(record.game, record.tag, utc_key=record.utc_key)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)

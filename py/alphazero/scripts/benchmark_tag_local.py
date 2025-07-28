@@ -62,7 +62,7 @@ into a pseudo-run directory, which contains a subset of folders of a regular run
         ├── gen-14.pt
         └── ...
 """
-from alphazero.logic.benchmark_record import save_benchmark_data, UTC_FORMAT, BenchmarkRecord, \
+from alphazero.logic.benchmark_record import save_benchmark_dir, UTC_FORMAT, BenchmarkRecord, \
     BenchmarkOption
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
@@ -155,7 +155,7 @@ def main():
     zero_time = datetime(1, 1, 1, tzinfo=timezone.utc)
     utc_key = zero_time.strftime(UTC_FORMAT)
     record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
-    save_benchmark_data(organizer, record)
+    save_benchmark_dir(organizer, record)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
