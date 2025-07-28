@@ -61,7 +61,7 @@ class BenchmarkRecord:
         return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game)
 
 
-class BenchmarkData:
+class BenchmarkDir:
     @staticmethod
     def path(game: str, tag: str, utc_key: str = None) -> Optional[str]:
         if utc_key is None:
@@ -128,13 +128,13 @@ class BenchmarkOption:
         return os.path.isdir(organizer.base_dir)
 
     def has_benchmark_data(self, utc_key: str = None) -> bool:
-        path = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+        path = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
         if not path:
             return False
         return os.path.isdir(path)
 
     def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
-        tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key)
+        tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=utc_key)
         if not tar_path:
             return False
         return os.path.exists(tar_path)
@@ -182,7 +182,7 @@ class BenchmarkOption:
             logger.debug("read record")
             record = self.on_record()
             if record:
-                tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=record.utc_key)
+                tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
                 logger.info(f"File downloaded to {tar_path}")
                 self.untar_datafile(utc_key=record.utc_key)
@@ -191,7 +191,7 @@ class BenchmarkOption:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
 
     def untar_datafile(self, utc_key: str = None):
-        tar_path = BenchmarkData.tar_path(self.game, self.tag, utc_key=utc_key)
+        tar_path = BenchmarkDir.tar_path(self.game, self.tag, utc_key=utc_key)
         untar_remote_file_to_local_directory(tar_path, os.path.dirname(tar_path))
         logger.info(f"untar {tar_path}")
 
@@ -204,7 +204,7 @@ class BenchmarkOption:
 
         self.create_db_from_json(benchmark_organizer, utc_key=utc_key)
 
-        data_folder = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+        data_folder = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
         binary = os.path.join(data_folder, 'binary')
         models = os.path.join(data_folder, 'models')
         self_play_db = os.path.join(data_folder, 'self_play.db')
@@ -226,7 +226,7 @@ class BenchmarkOption:
         if is_reference:
             json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
         else:
-            data_folder = BenchmarkData.path(self.game, self.tag, utc_key=utc_key)
+            data_folder = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
             json_path = os.path.join(data_folder, 'ratings.json')
         db = RatingDB(benchmark_organizer.benchmark_db_filename)
         db.load_ratings_from_json(json_path)
@@ -235,7 +235,7 @@ class BenchmarkOption:
 
 def save_benchmark_data(organizer: DirectoryOrganizer, record: BenchmarkRecord):
     benchmarker = Benchmarker(organizer)
-    path = BenchmarkData.path(record.game, record.tag, utc_key=record.utc_key)
+    path = BenchmarkDir.path(record.game, record.tag, utc_key=record.utc_key)
     model_path = os.path.join(path, 'models')
     os.makedirs(model_path, exist_ok=True)
     shutil.copyfile(organizer.binary_filename, os.path.join(path, 'binary'))

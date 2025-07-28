@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkData, BenchmarkRecord, UTC_FORMAT, save_benchmark_data
+from alphazero.logic.benchmark_record import BenchmarkDir, BenchmarkRecord, UTC_FORMAT, save_benchmark_data
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -51,8 +51,8 @@ def main():
     save_benchmark_data(organizer, record)
     if not args.skip_set_as_default:
         save_benchmark_record(record)
-    folder = BenchmarkData.path(record.game, record.tag, utc_key=record.utc_key)
-    tar_file = BenchmarkData.tar_path(record.game, record.tag, utc_key=record.utc_key)
+    folder = BenchmarkDir.path(record.game, record.tag, utc_key=record.utc_key)
+    tar_file = BenchmarkDir.tar_path(record.game, record.tag, utc_key=record.utc_key)
     tar_and_remotely_copy(folder, tar_file)
     BUCKET.upload_file_to_s3(tar_file, record.key())
 
