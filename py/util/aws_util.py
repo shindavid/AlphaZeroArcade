@@ -105,5 +105,4 @@ class Bucket:
 
 
 BUCKET = Bucket(name='alphazeroarcade',
-                cloudfront_url='https://download.alphazeroarcade.io')
-
+                cloudfront_url='https://d3kfv3vddn03z.cloudfront.net')
