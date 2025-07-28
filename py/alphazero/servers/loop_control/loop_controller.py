@@ -375,7 +375,8 @@ class LoopController:
                 logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
                 return
 
-        benchmark_organizer = DirectoryOrganizer(self.run_params, base_dir_root=Benchmark)
+        run_params = RunParams(self.game_spec.name, benchmark_tag)
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
         logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
                      f"to: {eval_db_file}")
