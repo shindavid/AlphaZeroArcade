@@ -192,6 +192,7 @@ def save_benchmark_dir(organizer: DirectoryOrganizer):
         src = organizer.get_model_filename(gen)
         shutil.copyfile(src, dst_organizer.get_model_filename(gen))
 
+    shutil.copyfile(organizer.benchmark_db_filename, dst_organizer.benchmark_db_filename)
     shutil.copyfile(organizer.binary_filename, dst_organizer.binary_filename)
     shutil.copyfile(organizer.self_play_db_filename, dst_organizer.self_play_db_filename)
     shutil.copyfile(organizer.training_db_filename, dst_organizer.training_db_filename)
