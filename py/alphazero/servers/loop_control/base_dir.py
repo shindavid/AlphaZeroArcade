@@ -39,7 +39,7 @@ class Benchmark(BaseDir):
     @classmethod
     def output_dir(cls):
         return os.path.join(cls.base_dir, 'benchmarks')
-    
+
     @classmethod
     def tar_path(cls, game: str, tag: str, utc_key: str = None) -> Optional[str]:
         if utc_key is None:
@@ -54,7 +54,7 @@ class Benchmark(BaseDir):
                 return None
         else:
             utc_key = utc_key + '.tar'
-        return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
+        return os.path.join(Workspace.tars_dir, game, tag, utc_key)
 
     @classmethod
     def path(cls, game: str, tag: str):
