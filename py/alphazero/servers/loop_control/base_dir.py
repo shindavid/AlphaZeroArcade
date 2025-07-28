@@ -22,6 +22,7 @@ class Workspace(BaseDir):
     benchmark_dir = os.path.join(base_dir, 'benchmarks')
     ref_dir = '/workspace/repo/reference.players'
     aws_dir = os.path.join(base_dir, 'aws')
+    tars_dir = os.path.join(base_dir, 'tars')
 
     @staticmethod
     def benchmark_record_file(game: str) -> str:
@@ -42,7 +43,7 @@ class Benchmark(BaseDir):
     @classmethod
     def tar_path(cls, game: str, tag: str, utc_key: str = None) -> Optional[str]:
         if utc_key is None:
-            tag_dir = os.path.join(cls.output_dir(), game, tag)
+            tag_dir = os.path.join(Workspace.tars_dir, game, tag)
             if not os.path.isdir(tag_dir):
                 return None
 
