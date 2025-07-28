@@ -166,28 +166,6 @@ class BenchmarkOption:
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {Benchmark.path(self.game, self.tag)}")
 
-    def expand_rundir_from_datafolder(self, utc_key: str = None):
-        assert self.tag is not None
-        benchmark_folder = BenchmarkOption.benchmark_folder(self.tag)
-        run_params = RunParams(self.game, benchmark_folder)
-        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-        benchmark_organizer.dir_setup(benchmark_tag=self.tag)
-
-        self.create_db_from_json(benchmark_organizer, utc_key=utc_key)
-
-        data_folder = BenchmarkDir.path(self.game, self.tag, utc_key=utc_key)
-        binary = os.path.join(data_folder, 'binary')
-        models = os.path.join(data_folder, 'models')
-        self_play_db = os.path.join(data_folder, 'self_play.db')
-        training_db = os.path.join(data_folder, 'training.db')
-
-        shutil.copyfile(binary, benchmark_organizer.binary_filename)
-        shutil.copytree(models, benchmark_organizer.models_dir, dirs_exist_ok=True)
-        shutil.copyfile(self_play_db, benchmark_organizer.self_play_db_filename)
-        shutil.copyfile(training_db, benchmark_organizer.training_db_filename)
-        logger.info(f"copied binary, models, self_play_db and training_db to"
-                    f"{benchmark_organizer.base_dir}")
-
     def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
         db = RatingDB(benchmark_organizer.benchmark_db_filename)
         if os.path.exists(db.db_filename) and not db.is_empty():
