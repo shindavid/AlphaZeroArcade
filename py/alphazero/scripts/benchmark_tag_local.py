@@ -152,10 +152,7 @@ def main():
         return
 
     organizer.freeze_tag()
-    zero_time = datetime(1, 1, 1, tzinfo=timezone.utc)
-    utc_key = zero_time.strftime(UTC_FORMAT)
-    record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
-    save_benchmark_dir(organizer, record)
+    save_benchmark_dir(organizer)
 
     eval_cmd = get_eval_cmd(run_params, build_params, rating_params, logging_params, organizer.tag)
     logger.info(f"Running command: {' '.join(eval_cmd)}")
