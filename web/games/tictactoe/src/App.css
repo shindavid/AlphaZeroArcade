@@ -36,3 +36,9 @@
   font-size: 1rem;
   cursor: pointer;
 }
+
+.square.legal-move:hover {
+  background-color: #d0ffd0;
+  border-color: #4caf50;
+  cursor: pointer;
+}

@@ -58,7 +58,7 @@ export default function App() {
         {board.map((v, i) => (
           <button
             key={i}
-            className="square"
+            className={`square${v === null ? ' legal-move' : ''}`}
             onClick={() => handleClick(i)}
           >{v}</button>
         ))}
