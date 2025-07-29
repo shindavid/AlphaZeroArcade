@@ -162,9 +162,9 @@ class BenchmarkOption:
 
     def untar(self, utc_key: str = None):
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
-        benchmark_path = Benchmark.path(self.game, self.tag)
+        benchmark_path = os.path.join(Workspace.benchmark_dir, self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
-        logger.info(f"untar {tar_path} to {Benchmark.path(self.game, self.tag)}")
+        logger.info(f"untar {tar_path} to {benchmark_path}")
 
     def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
         db = RatingDB(benchmark_organizer.benchmark_db_filename)
