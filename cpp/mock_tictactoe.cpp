@@ -40,7 +40,8 @@ class GameState {
     return empties[dist(rng)];
   }
 
-  int get_human_move(tcp::socket& socket) const {
+  // Returns -1 for invalid/no move, -2 for resign
+  int get_human_move(tcp::socket& socket, bool& resigned) const {
     boost::asio::streambuf buf;
     boost::asio::read_until(socket, buf, '\n');
     std::istream is(&buf);
@@ -53,6 +54,9 @@ class GameState {
         int idx = std::stoi(line.substr(pos + 8));
         return idx;
       }
+    } else if (line.find("\"type\":\"resign\"") != std::string::npos) {
+      resigned = true;
+      return -2;
     }
     return -1;
   }
@@ -92,6 +96,9 @@ class GameState {
 
   bool is_human_turn() const { return (xTurn && humanIsX) || (!xTurn && !humanIsX); }
 
+ public:
+  // Returns 'X' if it's X's turn, 'O' if it's O's turn
+  char current_turn() const { return xTurn ? 'X' : 'O'; }
  private:
   std::array<char, 9> board;
   bool xTurn;
@@ -151,12 +158,19 @@ int main(int argc, char* argv[]) {
     state.send_state(socket);
     state.send_seat_assignment(socket);
 
+    bool resigned = false;
     while (true) {  // inner loop: turns within a game
       int move = -1;
       if (!state.is_human_turn()) {
         move = state.get_ai_move();
       } else {
-        move = state.get_human_move(socket);
+        move = state.get_human_move(socket, resigned);
+        if (resigned) {
+          // Human resigned, AI wins
+          char winner = state.current_turn() == 'X' ? 'O' : 'X';
+          send_game_end(socket, winner);
+          break;
+        }
       }
       state.apply_move(move);
       state.send_state(socket);
