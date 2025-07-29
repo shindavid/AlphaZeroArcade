@@ -76,20 +76,30 @@ export default function App() {
     );
   }
 
+  // Always render .status, reserve space for both states
+  // Always render .status, reserve space for both states and for the button
   return (
     <div className="container">
-      {gameEnd ? (
-        <div className="status">
-          {gameEnd.result === 'draw' ? (
-            <>Game over: <b>Draw</b></>
-          ) : (
-            <>Game over: <b>{gameEnd.winner}</b> wins!</>
-          )}
-          <button className="move-button" onClick={handleNewGame} style={{marginLeft:'1em'}}>New Game</button>
-        </div>
-      ) : (
-        <div className="status">Next: {turn}</div>
-      )}
+      <div className="status-bar">
+        {gameEnd ? (
+          <div className="status-row">
+            <span className="status-message">
+              {gameEnd.result === 'draw' ? (
+                <>Game&nbsp;over: <b>Draw</b></>
+              ) : (
+                <>Game&nbsp;over: <b>{gameEnd.winner}</b> wins!</>
+              )}
+            </span>
+            <button className="move-button status-btn" onClick={handleNewGame}>New&nbsp;Game</button>
+          </div>
+        ) : (
+          <div className="status-row status-row-center">
+            <span>Next: {turn}</span>
+            {/* Invisible button to reserve space and keep alignment */}
+            <button className="move-button status-btn status-btn-invisible">New&nbsp;Game</button>
+          </div>
+        )}
+      </div>
       <div className="board">
         {board.map((v, i) => (
           <button
