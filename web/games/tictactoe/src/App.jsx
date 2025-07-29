@@ -109,13 +109,20 @@ export default function App() {
           >{v}</button>
         ))}
       </div>
-      <div style={{ marginTop: '2em' }}>
+      <div className="button-row">
         <button
           className="status-action-btn"
-          onClick={gameEnd ? handleNewGame : handleResign}
-          disabled={loading}
+          onClick={handleResign}
+          disabled={!!gameEnd || loading}
         >
-          {gameEnd ? 'New Game' : 'Resign'}
+          Resign
+        </button>
+        <button
+          className="status-action-btn"
+          onClick={handleNewGame}
+          disabled={!gameEnd || loading}
+        >
+          New Game
         </button>
       </div>
     </div>

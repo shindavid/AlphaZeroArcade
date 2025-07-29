@@ -37,10 +37,34 @@
   background: #f0f0f0;
   cursor: pointer;
   transition: background 0.2s;
-  margin-left: 1em;
+  margin-left: 0;
+}
+
+.button-row {
+  margin-top: 2em;
+  display: flex;
+  gap: 1.5em;
+  justify-content: center;
 }
 .status-action-btn:active {
   background: #e0e0e0;
+}
+
+.status-action-btn:disabled,
+.status-action-btn[disabled] {
+  border-color: #ddd;
+  background: #f7f7f7;
+  color: #aaa;
+  cursor: not-allowed;
+}
+.status-action-btn:disabled:hover,
+.status-action-btn[disabled]:hover,
+.status-action-btn:disabled:focus,
+.status-action-btn[disabled]:focus {
+  border-color: #ddd;
+  background: #f7f7f7;
+  color: #aaa;
+  box-shadow: none;
 }
 .container {
   display: flex;
