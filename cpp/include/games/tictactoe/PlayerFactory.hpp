@@ -5,6 +5,7 @@
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/players/HumanTuiPlayerGenerator.hpp"
 #include "games/tictactoe/players/PerfectPlayerGenerator.hpp"
+#include "games/tictactoe/players/WebPlayerGenerator.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 
@@ -21,6 +22,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
   static player_subfactory_vec_t make_subfactories() {
     return {new core::PlayerSubfactory<tictactoe::HumanTuiPlayerGenerator>(),
             new core::PlayerSubfactory<tictactoe::PerfectPlayerGenerator>(),
+            new core::PlayerSubfactory<tictactoe::WebPlayerGenerator>(),
             new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
