@@ -34,7 +34,7 @@ int get_ai_move(const std::vector<std::string>& board) {
   return empties[dist(rng)];
 }
 
-int get_human_move(tcp::socket& socket, bool& new_game) {
+int get_human_move(tcp::socket& socket) {
   boost::asio::streambuf buf;
   boost::asio::read_until(socket, buf, '\n');
   std::istream is(&buf);
@@ -47,9 +47,6 @@ int get_human_move(tcp::socket& socket, bool& new_game) {
       int idx = std::stoi(line.substr(pos + 8));
       return idx;
     }
-  } else if (line.find("\"type\":\"new_game\"") != std::string::npos) {
-    new_game = true;
-    return -1;
   }
   return -1;
 }
@@ -88,12 +85,40 @@ void send_seat_assignment(tcp::socket& sock, bool humanIsX) {
   boost::asio::write(sock, boost::asio::buffer(ss.str()));
 }
 
+
 void reset_game(std::vector<std::string>& board, bool& xTurn, bool& humanIsX, tcp::socket& socket) {
   for (auto& s : board) s.clear();
   xTurn = true;
   humanIsX = !humanIsX;
   send_state(socket, board, xTurn);
   send_seat_assignment(socket, humanIsX);
+}
+
+void send_game_end(tcp::socket& socket, char winner) {
+  std::ostringstream ss;
+  ss << "{\"type\":\"game_end\",\"payload\":{";
+  if (winner == 'D')
+    ss << "\"result\":\"draw\"}}\n";
+  else
+    ss << "\"result\":\"win\",\"winner\":\"" << winner << "\"}}\n";
+  auto out = ss.str();
+  std::cerr << "[engine] Sending game_end: " << out;
+  boost::asio::write(socket, boost::asio::buffer(out));
+}
+
+void await_new_game_cmd(tcp::socket& socket, std::vector<std::string>& board, bool& xTurn, bool& humanIsX) {
+  while (true) {
+    boost::asio::streambuf buf;
+    boost::asio::read_until(socket, buf, '\n');
+    std::istream is(&buf);
+    std::string line;
+    std::getline(is, line);
+    std::cerr << "[engine] Waiting for new_game, received: " << line << "\n";
+    if (line.find("\"type\":\"new_game\"") != std::string::npos) {
+      reset_game(board, xTurn, humanIsX, socket);
+      break;
+    }
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -120,35 +145,26 @@ int main(int argc, char* argv[]) {
   bool xTurn = true;
   static bool humanIsX = std::uniform_int_distribution<int>(0,1)(rng) == 1;
 
-  send_state(socket, board, xTurn);
-  send_seat_assignment(socket, humanIsX);
-
-  for (;;) {
-    int move = -1;
-    bool new_game = false;
-    bool humanTurn = (xTurn && humanIsX) || (!xTurn && !humanIsX);
-    if (!humanTurn) {
-      move = get_ai_move(board);
-    } else {
-      move = get_human_move(socket, new_game);
-    }
-    if (new_game) {
-      reset_game(board, xTurn, humanIsX, socket);
-      continue;
-    }
-    apply_move(board, xTurn, move);
+  for (;;) { // outer loop: new games
     send_state(socket, board, xTurn);
-    char winner = check_winner(board);
-    if (winner != '_') {
-      std::ostringstream ss;
-      ss << "{\"type\":\"game_end\",\"payload\":{";
-      if (winner == 'D')
-        ss << "\"result\":\"draw\"}}\n";
-      else
-        ss << "\"result\":\"win\",\"winner\":\"" << winner << "\"}}\n";
-      auto out = ss.str();
-      std::cerr << "[engine] Sending game_end: " << out;
-      boost::asio::write(socket, boost::asio::buffer(out));
+    send_seat_assignment(socket, humanIsX);
+
+    while (true) { // inner loop: turns within a game
+      int move = -1;
+      bool humanTurn = (xTurn && humanIsX) || (!xTurn && !humanIsX);
+      if (!humanTurn) {
+        move = get_ai_move(board);
+      } else {
+        move = get_human_move(socket);
+      }
+      apply_move(board, xTurn, move);
+      send_state(socket, board, xTurn);
+      char winner = check_winner(board);
+      if (winner != '_') {
+        send_game_end(socket, winner);
+        break; // break inner loop, wait for new game
+      }
     }
+    await_new_game_cmd(socket, board, xTurn, humanIsX);
   }
 }
