@@ -37,18 +37,14 @@ def launch_bridge(bridge_port, engine_port):
 # Launch the React frontend (Vite dev server)
 # -----------------------------------------------------------------------------
 def launch_frontend(bridge_port):
-    # Write VITE_BRIDGE_PORT into web/.env.development so Vite picks it up
-    envfile = os.path.join('web', '.env.development')
-    with open(envfile, 'w') as f:
-        f.write(f'VITE_BRIDGE_PORT={bridge_port}\n')
-
+    # Clone the environment and inject the Vite‐runtime var
     env = os.environ.copy()
-    # Also set it in the environment in case some setups read it that way
     env['VITE_BRIDGE_PORT'] = str(bridge_port)
 
+    # Spawn Vite directly in the Tic‑Tac‑Toe workspace
     return subprocess.Popen(
-        ['npm', 'run', 'tictactoe'],
-        cwd='web',
+        ['npm', 'run', 'dev'],
+        cwd=os.path.join('web', 'games', 'tictactoe'),
         env=env,
         stdout=open('frontend.log', 'w'),
         stderr=subprocess.STDOUT

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "tictactoe": "npm --workspace=games/tictactoe run dev -- --host 0.0.0.0 --port 5173 --no-clear-screen"
+    "tictactoe": "npm --workspace=games/tictactoe run dev"
   },
   "keywords": [],
   "author": "",
