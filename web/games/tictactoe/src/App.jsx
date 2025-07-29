@@ -76,29 +76,28 @@ export default function App() {
     );
   }
 
-  // Always render .status, reserve space for both states
-  // Always render .status, reserve space for both states and for the button
+  // Dedicated message area and always-visible action button
+  // Fix board shifting: wrap status bar and board in a fixed-height flex column
+  const handleResign = () => {
+    // End the game as a loss for the current player
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'resign' }));
+    // Optionally, setGameEnd({ result: 'win', winner: turn === 'X' ? 'O' : 'X' });
+  };
+
   return (
-    <div className="container">
-      <div className="status-bar">
-        {gameEnd ? (
-          <div className="status-row">
-            <span className="status-message">
-              {gameEnd.result === 'draw' ? (
-                <>Game&nbsp;over: <b>Draw</b></>
-              ) : (
-                <>Game&nbsp;over: <b>{gameEnd.winner}</b> wins!</>
-              )}
-            </span>
-            <button className="move-button status-btn" onClick={handleNewGame}>New&nbsp;Game</button>
-          </div>
-        ) : (
-          <div className="status-row status-row-center">
-            <span>Next: {turn}</span>
-            {/* Invisible button to reserve space and keep alignment */}
-            <button className="move-button status-btn status-btn-invisible">New&nbsp;Game</button>
-          </div>
-        )}
+    <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
+      <div className="status-bar" style={{ marginBottom: '1.5em' }}>
+        <span className="status-message-area">
+          {gameEnd
+            ? (gameEnd.result === 'draw'
+                ? <>Game&nbsp;over:&nbsp;<b>Draw</b></>
+                : <>Game&nbsp;over:&nbsp;<b>{gameEnd.winner} wins</b>!</>
+              )
+            : <>Next: <b>{turn}</b></>
+          }
+        </span>
       </div>
       <div className="board">
         {board.map((v, i) => (
@@ -109,6 +108,15 @@ export default function App() {
             disabled={!!gameEnd || v !== null}
           >{v}</button>
         ))}
+      </div>
+      <div style={{ marginTop: '2em' }}>
+        <button
+          className="status-action-btn"
+          onClick={gameEnd ? handleNewGame : handleResign}
+          disabled={loading}
+        >
+          {gameEnd ? 'New Game' : 'Resign'}
+        </button>
       </div>
     </div>
   );
