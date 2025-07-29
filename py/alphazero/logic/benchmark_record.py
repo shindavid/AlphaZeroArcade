@@ -10,13 +10,10 @@ from util.aws_util import BUCKET
 from util.py_util import untar_remote_file_to_local_directory
 
 from dataclasses import dataclass
-import glob
 import logging
 import json
 import os
-import shlex
 import shutil
-import sys
 from typing import Optional
 
 
@@ -169,7 +166,8 @@ class BenchmarkOption:
     def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
         db = RatingDB(benchmark_organizer.benchmark_db_filename)
         if os.path.exists(db.db_filename) and not db.is_empty():
-            logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists, skip loading from json")
+            logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists."
+                         f"Skip loading from json.")
             return
 
         json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')

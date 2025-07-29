@@ -21,8 +21,7 @@ The script:
         ├── gen-14.pt
         └── ...
 """
-from alphazero.logic.benchmark_record import save_benchmark_dir, UTC_FORMAT, BenchmarkRecord, \
-    BenchmarkOption
+from alphazero.logic.benchmark_record import save_benchmark_dir
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
@@ -33,7 +32,6 @@ from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter
 
 import argparse
-from datetime import datetime, timezone
 import logging
 import os
 import subprocess
