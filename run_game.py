@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-import subprocess
-import socket
-import os
-import time
-import sys
+import argparse
 import contextlib
-from multiprocessing import Process
+import os
+import socket
+import subprocess
+import sys
+import time
+
+def get_args():
+    parser = argparse.ArgumentParser(description="Run the Tic-Tac-Toe game with a C++ engine and Node.js bridge.")
+    parser.add_argument('--rebuild', action='store_true', help="Rebuild the C++ engine before starting")
+    return parser.parse_args()
 
 # -----------------------------------------------------------------------------
 # Utility: find a free TCP port on localhost
@@ -14,6 +19,16 @@ def find_port():
     with contextlib.closing(socket.socket()) as s:
         s.bind(('', 0))
         return s.getsockname()[1]
+
+# -----------------------------------------------------------------------------
+# Build engine
+# -----------------------------------------------------------------------------
+def build_engine():
+    # Ensure the C++ engine is built before running
+    print("Building C++ engine...")
+    cmd = ['g++', 'cpp/mock_tictactoe.cpp', '-O3', '-std=c++23', '-o', 'mock_tictactoe']
+    subprocess.run(cmd, check=True)
+    print("C++ engine built successfully.")
 
 # -----------------------------------------------------------------------------
 # Launch the Node.js WebSocket bridge
@@ -64,8 +79,15 @@ def launch_engine(engine_port):
 # Main orchestration
 # -----------------------------------------------------------------------------
 def main():
+    args = get_args()
+
     bridge_port = find_port()
     engine_port = find_port()
+
+    # 0) Build engine
+    if args.rebuild:
+        build_engine()
+
     print(f"Using bridge port {bridge_port}, engine port {engine_port}")
 
     # 1) Start the engine first so its TCP port is bound
