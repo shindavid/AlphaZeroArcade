@@ -5,6 +5,8 @@ import './App.css';
 export default function App() {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [turn, setTurn] = useState('X');
+  const [loading, setLoading] = useState(true);
+  const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
   const socketRef = useRef(null);
 
   // Must be set by Vite via .env.development
@@ -38,28 +40,63 @@ export default function App() {
         );
         setBoard(arr);
         setTurn(msg.payload.turn);
+        setLoading(false);
+        setGameEnd(null);
+      } else if (msg.type === 'game_end') {
+        setGameEnd(msg.payload);
       }
     };
 
     return () => ws.close();
   }, [port]);
 
+
   const handleClick = i => {
+    if (gameEnd) return;
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (board[i]) return;
     ws.send(JSON.stringify({ type: 'make_move', payload: { index: i } }));
   };
 
+  const handleNewGame = () => {
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'new_game' }));
+    setLoading(true);
+    setGameEnd(null);
+  };
+
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="status">Loading game state...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
-      <div className="status">Next: {turn}</div>
+      {gameEnd ? (
+        <div className="status">
+          {gameEnd.result === 'draw' ? (
+            <>Game over: <b>Draw</b></>
+          ) : (
+            <>Game over: <b>{gameEnd.winner}</b> wins!</>
+          )}
+          <button className="move-button" onClick={handleNewGame} style={{marginLeft:'1em'}}>New Game</button>
+        </div>
+      ) : (
+        <div className="status">Next: {turn}</div>
+      )}
       <div className="board">
         {board.map((v, i) => (
           <button
             key={i}
-            className={`square${v === null ? ' legal-move' : ''}`}
+            className={`square${v === null && !gameEnd ? ' legal-move' : ''}`}
             onClick={() => handleClick(i)}
+            disabled={!!gameEnd || v !== null}
           >{v}</button>
         ))}
       </div>

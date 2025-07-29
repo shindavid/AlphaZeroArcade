@@ -10,7 +10,27 @@
 
 using boost::asio::ip::tcp;
 
+
 static std::mt19937 rng((unsigned)std::time(nullptr));
+
+
+// Check for a winner or draw. Returns 'X', 'O', 'D' (draw), or '_' (ongoing)
+char check_winner(const std::vector<std::string>& board) {
+  const int wins[8][3] = {
+    {0,1,2},{3,4,5},{6,7,8}, // rows
+    {0,3,6},{1,4,7},{2,5,8}, // cols
+    {0,4,8},{2,4,6}          // diags
+  };
+  for (auto& w : wins) {
+    if (!board[w[0]].empty() &&
+        board[w[0]] == board[w[1]] &&
+        board[w[1]] == board[w[2]]) {
+      return board[w[0]][0];
+    }
+  }
+  for (int i = 0; i < 9; ++i) if (board[i].empty()) return '_';
+  return 'D'; // draw
+}
 
 void send_state(tcp::socket& sock, const std::vector<std::string>& board, bool xTurn) {
   // Build a 9‑char board string: 'X', 'O', or '_' for empty
@@ -89,18 +109,42 @@ int main(int argc, char* argv[]) {
           board[idx] = xTurn ? "X" : "O";
           xTurn = !xTurn;
 
-          // opponent move
-          std::vector<int> empties;
-          for (int j = 0; j < 9; ++j)
-            if (board[j].empty()) empties.push_back(j);
-          if (!empties.empty()) {
-            std::uniform_int_distribution<int> dist(0, empties.size() - 1);
-            int c = empties[dist(rng)];
-            board[c] = xTurn ? "X" : "O";
-            xTurn = !xTurn;
+          // Check for win/draw after player move
+          char winner = check_winner(board);
+          if (winner == '_' ) {
+            // opponent move only if game not over
+            std::vector<int> empties;
+            for (int j = 0; j < 9; ++j)
+              if (board[j].empty()) empties.push_back(j);
+            if (!empties.empty()) {
+              std::uniform_int_distribution<int> dist(0, empties.size() - 1);
+              int c = empties[dist(rng)];
+              board[c] = xTurn ? "X" : "O";
+              xTurn = !xTurn;
+              winner = check_winner(board);
+            }
+          }
+
+          send_state(socket, board, xTurn);
+
+          // If game ended, send game_end message
+          if (winner != '_') {
+            std::ostringstream ss;
+            ss << "{\"type\":\"game_end\",\"payload\":{";
+            if (winner == 'D')
+              ss << "\"result\":\"draw\"}}\n";
+            else
+              ss << "\"result\":\"win\",\"winner\":\"" << winner << "\"}}\n";
+            auto out = ss.str();
+            std::cerr << "[engine] Sending game_end: " << out;
+            boost::asio::write(socket, boost::asio::buffer(out));
           }
         }
       }
+    } else if (line.find("\"type\":\"new_game\"") != std::string::npos) {
+      // Reset board and turn
+      for (auto& s : board) s.clear();
+      xTurn = true;
       send_state(socket, board, xTurn);
     }
   }

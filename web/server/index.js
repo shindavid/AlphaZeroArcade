@@ -14,7 +14,9 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
+
 // 1) Spawn and keep a single TCP connection to the engine
+let latestEngineState = null;
 const engineSocket = net.connect(ENGINE_PORT, '127.0.0.1', () => {
   console.log(`Connected to engine on port ${ENGINE_PORT}`);
 });
@@ -22,6 +24,13 @@ engineSocket.on('error', err => console.error('Engine socket error:', err));
 engineSocket.on('data', data => {
   for (let line of data.toString().split('\n').filter(Boolean)) {
     console.log('Engine → Bridge:', line);
+    // cache the latest state_update
+    try {
+      const msg = JSON.parse(line);
+      if (msg.type === 'state_update') {
+        latestEngineState = line;
+      }
+    } catch (e) {}
     // broadcast to all connected WebSocket clients
     for (let client of wss.clients) {
       if (client.readyState === client.OPEN) client.send(line);
@@ -36,6 +45,11 @@ const wss    = new WebSocketServer({ server });
 // 2) Handle WebSocket clients
 wss.on('connection', ws => {
   console.log('➜ New WebSocket client connected');
+
+  // Send the latest engine state to the new client, if available
+  if (latestEngineState) {
+    ws.send(latestEngineState);
+  }
 
   ws.on('message', message => {
     console.log('WS → Bridge:', message.toString());
