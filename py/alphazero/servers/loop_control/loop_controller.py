@@ -369,11 +369,10 @@ class LoopController:
 
     def _copy_eval_db(self, benchmark_tag: str):
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
-        if os.path.exists(eval_db_file):
-            db = RatingDB(eval_db_file)
-            if not db.is_empty():
-                logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
-                return
+        db = RatingDB(eval_db_file)
+        if os.path.exists(db.db_filename) and not db.is_empty():
+            logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
+            return
 
         run_params = RunParams(self.game_spec.name, benchmark_tag)
         benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
