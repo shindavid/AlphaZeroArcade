@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(MAGIC_ENUM_OPT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(MAGIC_ENUM_OPT_BUILD_EXAMPLES   OFF CACHE BOOL "" FORCE)
+set(MAGIC_ENUM_OPT_BUILD_TESTS      OFF CACHE BOOL "" FORCE)
+set(MAGIC_ENUM_OPT_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+set(MAGIC_ENUM_OPT_BUILD_DOCS       OFF CACHE BOOL "" FORCE)
 include(FetchContent)
 FetchContent_Declare(
   magic_enum
@@ -156,6 +159,9 @@ function(add_game)
 
         set(_test_objs ${AG_NAME}_common_objs_test)
         set(_link_objs ${AG_NAME}_common_objs)
+
+        target_link_libraries(${AG_NAME}_common_objs PUBLIC ${COMMON_EXTERNAL_LIBS})
+        target_link_libraries(${AG_NAME}_common_objs_test PUBLIC ${COMMON_EXTERNAL_LIBS})
     else()
         # no common sources → omit object-libs
         set(_test_objs)
