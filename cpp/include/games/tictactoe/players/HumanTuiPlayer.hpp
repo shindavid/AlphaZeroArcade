@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "games/tictactoe/players/PerfectPlayer.hpp"
 #include "generic_players/HumanTuiPlayer.hpp"
 
 namespace tictactoe {

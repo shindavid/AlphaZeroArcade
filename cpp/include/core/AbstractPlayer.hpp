@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/TrainingDataWriter.hpp"
 #include "core/concepts/Game.hpp"
-#include "util/Exceptions.hpp"
 
 #include <array>
 #include <string>
