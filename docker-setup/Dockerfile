@@ -18,10 +18,17 @@ RUN apt-get update && \
       sudo gosu curl rsync vim git cmake ninja-build build-essential \
       python3-pip python3-dev python-is-python3 libeigen3-dev libncurses5-dev \
       tmux plocate graphviz graphviz-dev openssh-server ack \
-      gcc-13 g++-13 clang clangd clang-format clang-tidy libgtest-dev sqlite3 gdb \
+      gcc-13 g++-13 clang-19 clangd-19 clang-format-19 clang-tidy-19 libgtest-dev sqlite3 gdb \
       libboost-program-options-dev libboost-filesystem-dev libboost-json-dev \
       libboost-system-dev && \
     rm -rf /var/lib/apt/lists/*
+
+# register the -19 tools as the system default
+RUN update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-19   100 \
+ && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100 \
+ && update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-19 100 \
+ && update-alternatives --install /usr/bin/clang-tidy  clang-tidy  /usr/bin/clang-tidy-19  100 \
+ && update-alternatives --install /usr/bin/clangd  clangd  /usr/bin/clangd-19  100
 
 # 3) Build spdlog inline
 RUN apt-get update && apt-get install -y --no-install-recommends git cmake build-essential && \
@@ -53,7 +60,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="12.0.3"
+ARG VERSION="13.0.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
