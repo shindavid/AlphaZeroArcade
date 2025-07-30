@@ -1,7 +1,5 @@
 #include "core/TrainingTargets.hpp"
 
-#include "core/BasicTypes.hpp"
-
 namespace core {
 
 template <typename Game>

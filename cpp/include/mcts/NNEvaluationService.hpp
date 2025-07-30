@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
-#include "core/LoopControllerClient.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"

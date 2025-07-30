@@ -4,8 +4,6 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/concepts/Game.hpp"
-#include "util/CppUtil.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/program_options.hpp>
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/Game.hpp"
 #include "mcts/Constants.hpp"
@@ -9,7 +8,6 @@
 #include "mcts/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
-#include "util/StringUtil.hpp"
 
 #include <cstdint>
 #include <span>

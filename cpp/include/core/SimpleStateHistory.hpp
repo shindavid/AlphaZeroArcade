@@ -1,6 +1,5 @@
 #pragma once
 
-#include "util/FiniteGroups.hpp"
 #include "util/StaticCircularBuffer.hpp"
 
 namespace core {

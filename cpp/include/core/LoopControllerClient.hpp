@@ -2,7 +2,6 @@
 
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
-#include "util/CppUtil.hpp"
 #include "util/SocketUtil.hpp"
 #include "util/mit/mit.hpp"
 

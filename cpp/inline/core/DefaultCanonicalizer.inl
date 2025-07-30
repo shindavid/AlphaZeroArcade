@@ -1,5 +1,7 @@
 #include "core/DefaultCanonicalizer.hpp"
 
+#include "util/BitSet.hpp"
+
 namespace core {
 
 template <concepts::Game Game>

@@ -2,7 +2,6 @@
 
 #include "core/concepts/Game.hpp"
 #include "mcts/Node.hpp"
-#include "util/BoostUtil.hpp"
 
 #include <boost/json.hpp>
 

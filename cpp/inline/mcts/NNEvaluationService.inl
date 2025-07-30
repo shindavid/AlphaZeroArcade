@@ -1,5 +1,6 @@
 #include "mcts/NNEvaluationService.hpp"
 
+#include "core/LoopControllerClient.hpp"
 #include "util/Asserts.hpp"
 #include "util/KeyValueDumper.hpp"
 #include "util/LoggingUtil.hpp"

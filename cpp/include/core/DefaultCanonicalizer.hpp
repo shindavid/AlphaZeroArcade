@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "util/BitSet.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>

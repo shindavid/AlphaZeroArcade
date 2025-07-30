@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "mcts/Constants.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/TypeDefs.hpp"

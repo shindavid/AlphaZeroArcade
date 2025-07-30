@@ -2,10 +2,10 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/Game.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/mit/mit.hpp"
 
+#include <Eigen/Core>
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 #include <deque>

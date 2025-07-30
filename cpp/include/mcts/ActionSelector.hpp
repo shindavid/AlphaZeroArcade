@@ -5,7 +5,6 @@
 #include "mcts/ManagerParams.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
-#include "util/EigenUtil.hpp"
 
 namespace mcts {
 
