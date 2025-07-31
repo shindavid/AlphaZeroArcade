@@ -80,10 +80,10 @@ class BenchmarkData:
         self.tag = tag
         self.game_spec: GameSpec = get_game_spec(self.game)
 
-    def has_reference_player(self):
+    def reference_player_exists(self):
         return self.game_spec.reference_player_family is not None
 
-    def on_record(self) -> Optional[BenchmarkRecord]:
+    def load_record(self) -> Optional[BenchmarkRecord]:
         record: BenchmarkRecord = BenchmarkRecord.load(self.game)
         if self.tag:
             if record and record.tag == self.tag:
@@ -93,10 +93,6 @@ class BenchmarkData:
             return record
         else:
             return None
-
-    def has_run_dir(self) -> bool:
-        organizer = DirectoryOrganizer(RunParams(self.game, self.tag), base_dir_root=Workspace)
-        return os.path.isdir(organizer.base_dir)
 
     def rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
@@ -108,17 +104,17 @@ class BenchmarkData:
         return os.path.exists(tar_path)
 
     def valid(self) -> bool:
-        return self.tag or self.on_record() or self.has_reference_player()
+        return self.tag or self.load_record() or self.reference_player_exists()
 
     def setup_rundir(self) -> Optional[str]:  # benchmark_tag
         if self.tag:
             self._setup_rundir_from_run()
             return self.tag
-        elif self.has_reference_player():
+        elif self.reference_player_exists():
             self._setup_rundir_from_reference()
             return 'reference.player'
         else:
-            record = self.on_record()
+            record = self.load_record()
             if record:
                 self._setup_rundir_from_record(record)
                 return record.tag
@@ -144,7 +140,7 @@ class BenchmarkData:
             self._untar()
         else:
             logger.debug("read record")
-            record = self.on_record()
+            record = self.load_record()
             if record:
                 tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
