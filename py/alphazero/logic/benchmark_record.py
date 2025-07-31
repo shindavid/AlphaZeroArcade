@@ -105,7 +105,7 @@ class BenchmarkData:
     def rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
 
-    def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
+    def tar_file_exists(self, utc_key: str = None) -> bool:
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
         if not tar_path:
             return False
@@ -143,7 +143,7 @@ class BenchmarkData:
         if self.rundir_exists():
             logger.debug("benchmark rundir exists.")
             return
-        elif self.has_benchmark_tar_file(utc_key=utc_key):
+        elif self.tar_file_exists(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
             self.untar()
         else:
