@@ -98,10 +98,6 @@ class BenchmarkData:
         organizer = DirectoryOrganizer(RunParams(self.game, self.tag), base_dir_root=Workspace)
         return os.path.isdir(organizer.base_dir)
 
-    @staticmethod
-    def benchmark_folder(tag: str):
-        return f'{tag}.benchmark'
-
     def rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
 
