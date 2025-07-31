@@ -116,36 +116,36 @@ class BenchmarkData:
 
     def setup_rundir(self) -> Optional[str]:  # benchmark_tag
         if self.tag:
-            self.setup_rundir_from_run()
+            self._setup_rundir_from_run()
             return self.tag
         elif self.has_reference_player():
-            self.setup_rundir_from_reference()
+            self._setup_rundir_from_reference()
             return 'reference.player'
         else:
             record = self.on_record()
             if record:
-                self.setup_rundir_from_record(record)
+                self._setup_rundir_from_record(record)
                 return record.tag
             else:
                 raise Exception("Failed to set up a valid benchmark")
 
-    def setup_rundir_from_record(self, record: BenchmarkRecord):
+    def _setup_rundir_from_record(self, record: BenchmarkRecord):
         benchmark_data = BenchmarkData(record.game, record.tag)
-        benchmark_data.setup_rundir_from_run(utc_key=record.utc_key)
+        benchmark_data._setup_rundir_from_run(utc_key=record.utc_key)
 
-    def setup_rundir_from_reference(self):
+    def _setup_rundir_from_reference(self):
         run_params = RunParams(self.game, 'reference.player.benchmark')
         benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         benchmark_organizer.dir_setup(benchmark_tag='reference.player')
-        self.create_db_from_json(benchmark_organizer, is_reference=True)
+        self._create_db_from_json(benchmark_organizer, is_reference=True)
 
-    def setup_rundir_from_run(self, utc_key: str = None):
+    def _setup_rundir_from_run(self, utc_key: str = None):
         if self.rundir_exists():
             logger.debug("benchmark rundir exists.")
             return
         elif self.tar_file_exists(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
-            self.untar()
+            self._untar()
         else:
             logger.debug("read record")
             record = self.on_record()
@@ -153,17 +153,17 @@ class BenchmarkData:
                 tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
                 logger.info(f"File downloaded to {tar_path}")
-                self.untar(utc_key=record.utc_key)
+                self._untar(utc_key=record.utc_key)
             else:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
 
-    def untar(self, utc_key: str = None):
+    def _untar(self, utc_key: str = None):
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
         benchmark_path = os.path.join(Workspace.benchmark_dir, self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {benchmark_path}")
 
-    def create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
+    def _create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
         db = RatingDB(benchmark_organizer.benchmark_db_filename)
         if os.path.exists(db.db_filename) and not db.is_empty():
             logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists."
