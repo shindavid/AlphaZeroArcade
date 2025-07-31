@@ -80,10 +80,36 @@ class BenchmarkData:
         self.tag = tag
         self.game_spec: GameSpec = get_game_spec(self.game)
 
-    def reference_player_exists(self):
-        return self.game_spec.reference_player_family is not None
+    def setup_rundir(self) -> Optional[str]:  # benchmark_tag
+        if self.tag:
+            self._setup_rundir_from_run()
+            return self.tag
+        elif self._reference_player_exists():
+            self._setup_rundir_from_reference()
+            return 'reference.player'
+        else:
+            record = self._load_record()
+            if record:
+                self._setup_rundir_from_record(record)
+                return record.tag
+            else:
+                raise Exception("Failed to set up a valid benchmark")
 
-    def load_record(self) -> Optional[BenchmarkRecord]:
+    def valid(self) -> bool:
+        return self.tag or self._load_record() or self._reference_player_exists()
+
+    def _create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
+        db = RatingDB(benchmark_organizer.benchmark_db_filename)
+        if os.path.exists(db.db_filename) and not db.is_empty():
+            logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists."
+                         f"Skip loading from json.")
+            return
+
+        json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
+        db.load_ratings_from_json(json_path)
+        logger.info(f"created db {db.db_filename} from {json_path}")
+
+    def _load_record(self) -> Optional[BenchmarkRecord]:
         record: BenchmarkRecord = BenchmarkRecord.load(self.game)
         if self.tag:
             if record and record.tag == self.tag:
@@ -94,32 +120,11 @@ class BenchmarkData:
         else:
             return None
 
-    def rundir_exists(self) -> bool:
+    def _reference_player_exists(self):
+        return self.game_spec.reference_player_family is not None
+
+    def _rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
-
-    def tar_file_exists(self, utc_key: str = None) -> bool:
-        tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
-        if not tar_path:
-            return False
-        return os.path.exists(tar_path)
-
-    def valid(self) -> bool:
-        return self.tag or self.load_record() or self.reference_player_exists()
-
-    def setup_rundir(self) -> Optional[str]:  # benchmark_tag
-        if self.tag:
-            self._setup_rundir_from_run()
-            return self.tag
-        elif self.reference_player_exists():
-            self._setup_rundir_from_reference()
-            return 'reference.player'
-        else:
-            record = self.load_record()
-            if record:
-                self._setup_rundir_from_record(record)
-                return record.tag
-            else:
-                raise Exception("Failed to set up a valid benchmark")
 
     def _setup_rundir_from_record(self, record: BenchmarkRecord):
         benchmark_data = BenchmarkData(record.game, record.tag)
@@ -132,15 +137,15 @@ class BenchmarkData:
         self._create_db_from_json(benchmark_organizer, is_reference=True)
 
     def _setup_rundir_from_run(self, utc_key: str = None):
-        if self.rundir_exists():
+        if self._rundir_exists():
             logger.debug("benchmark rundir exists.")
             return
-        elif self.tar_file_exists(utc_key=utc_key):
+        elif self._tar_file_exists(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
             self._untar()
         else:
             logger.debug("read record")
-            record = self.load_record()
+            record = self._load_record()
             if record:
                 tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
                 BUCKET.download_from_s3(record.key(), tar_path)
@@ -149,22 +154,17 @@ class BenchmarkData:
             else:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
 
+    def _tar_file_exists(self, utc_key: str = None) -> bool:
+        tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
+        if not tar_path:
+            return False
+        return os.path.exists(tar_path)
+
     def _untar(self, utc_key: str = None):
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
         benchmark_path = os.path.join(Workspace.benchmark_dir, self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {benchmark_path}")
-
-    def _create_db_from_json(self, benchmark_organizer: DirectoryOrganizer):
-        db = RatingDB(benchmark_organizer.benchmark_db_filename)
-        if os.path.exists(db.db_filename) and not db.is_empty():
-            logger.debug(f"{benchmark_organizer.benchmark_db_filename} exists."
-                         f"Skip loading from json.")
-            return
-
-        json_path = os.path.join(Workspace.ref_dir, f'{self.game}.json')
-        db.load_ratings_from_json(json_path)
-        logger.info(f"created db {db.db_filename} from {json_path}")
 
 
 def save_benchmark_dir(organizer: DirectoryOrganizer):
