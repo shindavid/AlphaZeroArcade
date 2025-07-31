@@ -111,7 +111,7 @@ class BenchmarkData:
             return False
         return os.path.exists(tar_path)
 
-    def has_valid_benchmark(self) -> bool:
+    def valid(self) -> bool:
         return self.tag or self.on_record() or self.has_reference_player()
 
     def setup_benchmark_rundir(self) -> Optional[str]:  # benchmark_tag

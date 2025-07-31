@@ -386,7 +386,7 @@ def main():
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
-            if benchmark_data.has_valid_benchmark():
+            if benchmark_data.valid():
                 descs.append('Eval')
                 procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
             else:
