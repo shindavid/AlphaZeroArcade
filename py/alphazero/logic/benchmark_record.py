@@ -102,7 +102,7 @@ class BenchmarkData:
     def benchmark_folder(tag: str):
         return f'{tag}.benchmark'
 
-    def has_benchmark_rundir(self) -> bool:
+    def rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
 
     def has_benchmark_tar_file(self, utc_key: str = None) -> bool:
@@ -140,7 +140,7 @@ class BenchmarkData:
         self.create_db_from_json(benchmark_organizer, is_reference=True)
 
     def setup_rundir_from_run(self, utc_key: str = None):
-        if self.has_benchmark_rundir():
+        if self.rundir_exists():
             logger.debug("benchmark rundir exists.")
             return
         elif self.has_benchmark_tar_file(utc_key=utc_key):
