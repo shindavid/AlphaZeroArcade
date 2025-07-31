@@ -74,7 +74,7 @@ class BenchmarkDir:
         return os.path.join(Workspace.benchmark_dir, game, tag, utc_key)
 
 
-class BenchmarkOption:
+class BenchmarkData:
     def __init__(self, game: str, tag: Optional[str] = None):
         self.game = game
         self.tag = tag
@@ -130,8 +130,8 @@ class BenchmarkOption:
                 raise Exception("Failed to set up a valid benchmark")
 
     def setup_rundir_from_record(self, record: BenchmarkRecord):
-        option = BenchmarkOption(record.game, record.tag)
-        option.setup_rundir_from_run(utc_key=record.utc_key)
+        benchmark_data = BenchmarkData(record.game, record.tag)
+        benchmark_data.setup_rundir_from_run(utc_key=record.utc_key)
 
     def setup_rundir_from_reference(self):
         run_params = RunParams(self.game, 'reference.player.benchmark')

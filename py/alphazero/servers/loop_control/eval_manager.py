@@ -4,7 +4,6 @@ from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, ReferenceAgent, MatchType, \
         MCTSAgent
-from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.evaluator import EvalUtils

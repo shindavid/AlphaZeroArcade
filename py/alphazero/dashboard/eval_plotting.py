@@ -18,7 +18,6 @@ from .x_var_logic import XVarSelector, make_x_df
 
 from alphazero.logic.agent_types import AgentRole
 from alphazero.logic.benchmarker import Benchmarker
-from alphazero.logic.benchmark_record import BenchmarkOption
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace

@@ -14,7 +14,7 @@ from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
-from alphazero.logic.benchmark_record import BenchmarkOption
+from alphazero.logic.benchmark_record import BenchmarkData
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
@@ -361,8 +361,8 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            option = BenchmarkOption(self.game_spec.name, self.params.benchmark_tag)
-            benchmark_tag = option.setup_benchmark_rundir()
+            benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
+            benchmark_tag = benchmark_data.setup_benchmark_rundir()
             self._copy_eval_db(benchmark_tag)
             self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
