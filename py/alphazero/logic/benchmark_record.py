@@ -114,7 +114,7 @@ class BenchmarkData:
     def valid(self) -> bool:
         return self.tag or self.on_record() or self.has_reference_player()
 
-    def setup_benchmark_rundir(self) -> Optional[str]:  # benchmark_tag
+    def setup_rundir(self) -> Optional[str]:  # benchmark_tag
         if self.tag:
             self.setup_rundir_from_run()
             return self.tag

@@ -362,7 +362,7 @@ class LoopController:
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
             benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
-            benchmark_tag = benchmark_data.setup_benchmark_rundir()
+            benchmark_tag = benchmark_data.setup_rundir()
             self._copy_eval_db(benchmark_tag)
             self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
