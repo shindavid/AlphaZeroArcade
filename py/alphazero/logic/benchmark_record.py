@@ -19,6 +19,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 UTC_FORMAT = '%Y-%m-%d_%H-%M-%S.%f_UTC'
+BenchmarkTag = str
 
 
 @dataclass
@@ -80,7 +81,7 @@ class BenchmarkData:
         self.tag = tag
         self.game_spec: GameSpec = get_game_spec(self.game)
 
-    def setup_rundir(self) -> Optional[str]:  # benchmark_tag
+    def setup_rundir(self) -> BenchmarkTag:
         if self.tag:
             self._setup_rundir_from_run()
             return self.tag
