@@ -260,6 +260,25 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
 
   DEBUG_ASSERT(!queue_.empty(), "GameServer::{}(): queue should not be empty here", __func__);
 
+  // TODO: there is a potential weird race condition on kYield responses. For example, with
+  // WebPlayer, we can have the following sequence:
+  //
+  // 1. WebPlayer::get_action_response() is called, which notifies its response loop and returns
+  //    ActionResponse::yield().
+  // 2. Before the yield is returned, the following events happen:
+  //    A. The response loop is woken up, and the notification unit is notified.
+  //    B. The notification causes the GameSlot to be put back into the GameServer queue.
+  //    C. GameServer::next() is called, which pops that item from the queue.
+  //
+  // This would result in the second next() call "lapping" the first one. I think this would violate
+  // some assumptions in this logic.
+  //
+  // One solution is to add "yield callback" mechanics, but this would complexify the player
+  // interface. I think it would be better to add appropriate checks in the GameServer logic to
+  // detect this situation and handle it gracefully.
+  //
+  // This race condition would be virtually impossible to trigger in practice, but with the mit
+  // library, we should be able to force it during a unit test.
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
