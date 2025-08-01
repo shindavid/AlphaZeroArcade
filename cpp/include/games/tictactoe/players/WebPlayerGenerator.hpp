@@ -7,6 +7,9 @@
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/players/WebPlayer.hpp"
 
+// TODO: Pull out a generic::WebPlayerGenerator base-class that can be used for any game, and have
+// tictactoe::WebPlayerGenerator inherit from it.
+
 namespace tictactoe {
 
 class WebPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::Game> {
