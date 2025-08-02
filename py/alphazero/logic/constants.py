@@ -151,7 +151,7 @@ ARENA_TABLE_CREATE_CMDS = [
             type TEXT
             )""",
 
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (agent_id1, agent_id2)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (agent_id1, agent_id2, type)""",
 
     """CREATE TABLE IF NOT EXISTS benchmark_ratings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

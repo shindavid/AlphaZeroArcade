@@ -90,6 +90,7 @@ def untar_remote_file_to_local_directory(src_tar, dst_dir):
     os.close(fd)
     shutil.copy2(src_tar, local_tar)
     try:
+        os.makedirs(dst_dir, exist_ok=True)
         subprocess.run(["tar", "-xf", local_tar, "-C", dst_dir], check=True)
     finally:
         if os.path.exists(local_tar):

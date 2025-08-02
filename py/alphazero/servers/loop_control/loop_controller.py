@@ -1,4 +1,4 @@
-from .base_dir import Scratch, Workspace
+from .base_dir import Benchmark, Scratch, Workspace
 from .benchmark_manager import BenchmarkManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
@@ -14,7 +14,7 @@ from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 
 from alphazero.logic import constants
-from alphazero.logic.benchmark_record import BenchmarkOption
+from alphazero.logic.benchmark_record import BenchmarkData
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
     EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
@@ -361,23 +361,21 @@ class LoopController:
 
     def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
         if tag not in self._eval_managers:
-            option = BenchmarkOption(self.game_spec.name, self.params.benchmark_tag)
-            benchmark_tag = option.setup_benchmark_rundir()
+            benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
+            benchmark_tag = benchmark_data.setup_rundir()
             self._copy_eval_db(benchmark_tag)
             self._eval_managers[tag] = EvalManager(self, benchmark_tag)
         return self._eval_managers[tag]
 
     def _copy_eval_db(self, benchmark_tag: str):
         eval_db_file = self.organizer.eval_db_filename(benchmark_tag)
-        benchmark_folder = BenchmarkOption.benchmark_folder(benchmark_tag)
-        if os.path.exists(eval_db_file):
-            db = RatingDB(eval_db_file)
-            if not db.is_empty():
-                logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
-                return
+        db = RatingDB(eval_db_file)
+        if os.path.exists(db.db_filename) and not db.is_empty():
+            logger.debug(f"{eval_db_file} already exists and is not empty; skip copying.")
+            return
 
-        run_params = RunParams(self.run_params.game, benchmark_folder)
-        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+        run_params = RunParams(self.game_spec.name, benchmark_tag)
+        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
         shutil.copyfile(benchmark_organizer.benchmark_db_filename, eval_db_file)
         logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
                      f"to: {eval_db_file}")
