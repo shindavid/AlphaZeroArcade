@@ -1,3 +1,25 @@
+"""
+The benchmark directory structure is as follows:
+
+benchmarks/
+├── {game}/
+│   ├── {tag}/
+│   │   ├── bin/{game} (game binary)
+│   │   ├── databases/
+│   │   │   ├── benchmark.db
+│   │   │   ├── self_play.db
+│   │   │   └── training.db
+│   │   ├── misc/version_file
+│   │   └── models/ (only the models of committee agents)
+│   │       ├── gen-2.pt
+│   │       ├── gen-7.pt
+│   │       └── ...
+│   └── ...
+└── ...
+
+A benchmark directory is created by running the script `benchmark_tag_local.py`.
+"""
+
 from alphazero.logic.agent_types import IndexedAgent
 from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
 from alphazero.logic.rating_db import RatingDB

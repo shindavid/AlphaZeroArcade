@@ -9,7 +9,7 @@ The script:
     ``target_elo_gap``—to give a well-spaced difficulty ladder.
 3.  Copies the data needed for evaluation into a benchmark folder:
 
-/workspace/mount/benchmark/{game}/{tag}
+/workspace/mount/benchmarks/{game}/{tag}
     ├── bin/hex
     ├── databases/
     │   ├── benchmark.db

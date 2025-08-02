@@ -2,38 +2,45 @@
 The DirectoryOrganizer class provides structured access to the contents of an alphazero directory.
 Below is a diagram of the directory structure.
 
-BASE_DIR/  # $OUTPUT_DIR/game/tag/
-    version_file
-    checkpoints/
-        gen-1.pt
-        gen-2.pt
-        ...
-    databases/
-        clients.db
-        ratings.db
-        self-play.db
-        training.db
-    logs/
-        loop-controller.log
-        self-play-server/
-            ...
-        self-play-worker/
-            ...
-        ...
-    models/
-        gen-1.pt
-        gen-2.pt
-        ...
-    self-play-data/
-        gen-0/  # uses implicit dummy uniform model
-            client-4/
-                {timestamp}.log
-                ...
-        gen-1/
-            client-5/
-                ...
-            ...
-        ...
+output/
+├── {game}/
+│   ├── {tag}/
+│   │   ├── bin/{game} (game binary)
+│   │   ├── checkpoints/
+│   │   │   ├── gen-1.pt
+│   │   │   ├── gen-2.pt
+│   │   │   └── ...
+│   │   ├── databases/
+│   │   │   ├── evaluation/
+│   │   │   │   ├── {benchmark_tag}.db
+│   │   │   │   └── ...
+│   │   │   ├── benchmark.db
+│   │   │   ├── clients.db
+│   │   │   ├── self-play.db
+│   │   │   └── training.db
+│   │   ├── logs/
+│   │   │   ├── benchmark-server/
+│   │   │   ├── benchmark-worker/
+│   │   │   ├── eval-server/
+│   │   │   ├── eval-worker/
+│   │   │   ├── gen0-self-play-worker/
+│   │   │   ├── self-play-server/
+│   │   │   ├── self-play-worker/
+│   │   │   ├── loop-controller.log
+│   │   ├── misc/version_file
+│   │   ├── models/
+│   │   │   ├── gen-1.pt
+│   │   │   ├── gen-2.pt
+│   │   │   └── ...
+│   │   ├── runtime/
+│   │   │   ├── lock (optional, indicates a running process)
+│   │   │   └── freeze (optional, indicates a frozen run)
+│   │   └── self-play-data/
+│   │   │   ├── gen-1.data
+│   │   │   ├── gen-2.data
+│   │   │   └── ...
+│   └── ...
+└── ...
 """
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
