@@ -4,6 +4,7 @@
 #include "util/LoggingUtil.hpp"
 #include "util/mit/mit.hpp"
 
+#include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 
 namespace tictactoe {
@@ -105,29 +106,38 @@ inline void WebPlayer::end_game(const State& state, const ValueTensor& outcome) 
 
 inline void WebPlayer::launch_bridge() {
   namespace bp = boost::process;
+  namespace bf = boost::filesystem;
 
   bp::environment env = boost::this_process::environment();
   env["BRIDGE_PORT"] = std::to_string(bridge_port_);
   env["ENGINE_PORT"] = std::to_string(engine_port_);
   env["SPAWN_ENGINE"] = "false";
 
-  bridge_process_ = new bp::child("npm start", bp::start_dir = "/workspace/repo/web/server",
-                                  bp::std_out > "/workspace/repo/bridge2.log",
-                                  bp::std_err > "/workspace/repo/bridge2.log", env);
+  bf::path start_dir = "/workspace/repo/web/server";
+  bf::path log_dir = "/home/devuser/scratch/logs/tictactoe";
+  bf::create_directories(log_dir);
+  bf::path log_file = log_dir / "bridge.log";
+
+  bridge_process_ = new bp::child("npm start", bp::start_dir = start_dir, bp::std_out > log_file,
+                                  bp::std_err > log_file, env);
 
   LOG_INFO("Web player launched bridge process on port {}", bridge_port_);
 }
 
 inline void WebPlayer::launch_frontend() {
   namespace bp = boost::process;
+  namespace bf = boost::filesystem;
 
   bp::environment env = boost::this_process::environment();
   env["VITE_BRIDGE_PORT"] = std::to_string(bridge_port_);
 
-  frontend_process_ =
-    new bp::child("npm run dev", bp::start_dir = "/workspace/repo/web/games/tictactoe",
-                  bp::std_out > "/workspace/repo/frontend2log",
-                  bp::std_err > "/workspace/repo/frontend2.log", env);
+  bf::path start_dir = "/workspace/repo/web/games/tictactoe";
+  bf::path log_dir = "/home/devuser/scratch/logs/tictactoe";
+  bf::create_directories(log_dir);
+  bf::path log_file = log_dir / "frontend.log";
+
+  frontend_process_ = new bp::child("npm run dev", bp::start_dir = start_dir,
+                                    bp::std_out > log_file, bp::std_err > log_file, env);
 
   LOG_INFO("Web player launched frontend process");
 }
