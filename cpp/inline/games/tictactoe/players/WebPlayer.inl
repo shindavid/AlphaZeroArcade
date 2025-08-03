@@ -31,6 +31,9 @@ inline void WebPlayer::start_game() {
     launch_bridge();
     launch_frontend();
 
+    std::cout << "Please open the frontend in your browser at:\n\n"
+              << "    http://localhost:5173\n" << std::endl;
+
     first_game_ = false;
     return;
   }
