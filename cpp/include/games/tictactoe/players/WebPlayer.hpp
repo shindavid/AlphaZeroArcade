@@ -54,11 +54,12 @@ class WebPlayer : public core::AbstractPlayer<Game> {
 
   core::YieldNotificationUnit notification_unit_;
   State pending_state_;
+  core::action_t action_ = -1;
   core::seat_index_t pending_seat_;
   bool pending_send_ = false;
-  core::action_t action_ = -1;
   bool first_game_ = true;
   bool ready_for_response_ = false;
+  bool resign_ = false;
   bool connected_ = false;
 };
 

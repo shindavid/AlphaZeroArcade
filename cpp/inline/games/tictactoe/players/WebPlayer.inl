@@ -25,6 +25,11 @@ inline WebPlayer::~WebPlayer() {
 }
 
 inline void WebPlayer::start_game() {
+  action_ = -1;
+  pending_send_ = false;
+  ready_for_response_ = false;
+  resign_ = false;
+
   if (first_game_) {
     // sleep for one second to ensure response_loop() is ready
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -63,6 +68,9 @@ inline void WebPlayer::receive_state_change(core::seat_index_t seat, const State
 }
 
 inline WebPlayer::ActionResponse WebPlayer::get_action_response(const ActionRequest& request) {
+  if (resign_) {
+    return ActionResponse::resign();
+  }
   if (action_ != -1) {
     core::action_t action = action_;
     action_ = -1;
@@ -185,12 +193,12 @@ inline void WebPlayer::response_loop() {
       // TODO: extend Game::IO interface to have a str_to_action() method - that gives us the
       // flexibility to use "index" or "action" in the JSON.
       action_ = idx;
-      notification_unit_.yield_manager->notify(notification_unit_);
     } else if (type == "resign") {
-      throw util::CleanException("TODO: implement resignation");
+      resign_ = true;
     } else {
       throw util::Exception("Unknown message type: {}", type);
     }
+    notification_unit_.yield_manager->notify(notification_unit_);
   }
 }
 

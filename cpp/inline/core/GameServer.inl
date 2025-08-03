@@ -837,10 +837,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                    training_info.action_values_target, training_info.use_for_training);
   }
 
-  // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
-  // the server.
-  RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
-
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
@@ -849,7 +845,24 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     }
     handle_terminal(outcome, result);
     return false;
+  } else if (response.resign_game) {
+    if (kNumPlayers != 2) {
+      throw util::Exception(
+        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players",
+        __func__, player->get_name(), active_seat_, kNumPlayers);
+    }
+    ValueTensor outcome = GameResults::win(!active_seat_);
+    if (params().announce_game_results) {
+      LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
+               player->get_name(), active_seat_);
+    }
+    handle_terminal(outcome, result);
+    return false;
   } else {
+    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
+    // the server.
+    RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
+
     Rules::apply(state_history_, action);
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state_history_.current(), action, &player_names_);
