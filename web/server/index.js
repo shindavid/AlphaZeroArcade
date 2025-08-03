@@ -61,10 +61,7 @@ wss.on('connection', ws => {
   });
 });
 
-// 3) (Optionally) serve static build from React
-app.use(express.static(path.resolve(__dirname, '../games/tictactoe/dist')));
-
-// 4) Start listening
+// 3) Start listening
 server.listen(BRIDGE_PORT, () => {
   console.log(`Bridge listening on ws://0.0.0.0:${BRIDGE_PORT}`);
 });
