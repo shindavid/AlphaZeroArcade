@@ -29,6 +29,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const ValueTensor&) override;
+  bool disable_progress_bar() const override { return true; }
 
  private:
   void launch_bridge();

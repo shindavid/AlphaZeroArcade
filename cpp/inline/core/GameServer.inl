@@ -665,9 +665,11 @@ template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
+  bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     human_tui_indices[p] = instantiations_[p].player->is_human_tui_player();
+    disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
   }
 
   for (int p = 0; p < kNumPlayers; ++p) {
@@ -678,7 +680,7 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
     }
   }
 
-  if (!human_tui_indices.any()) {
+  if (!disable_progress_bar) {
     shared_data_.init_progress_bar();
   }
 }
