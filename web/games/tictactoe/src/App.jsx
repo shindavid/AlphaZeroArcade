@@ -33,8 +33,9 @@ export default function App() {
       catch (err) { return console.error('Bad JSON', err); }
 
       if (msg.type === 'state_update') {
-        // msg.payload.board is a 9‑char string, e.g. "X_O_XO_OX"
-        const str = msg.payload.board;
+        // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
+        // Remove newlines and parse
+        const str = msg.payload.board.replace(/\n/g, '');
         const arr = Array.from(str).map(ch =>
           ch === '_' ? null : ch
         );
