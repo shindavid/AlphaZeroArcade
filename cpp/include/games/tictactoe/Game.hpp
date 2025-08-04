@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -18,10 +17,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <array>
-#include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 
 namespace tictactoe {
@@ -40,6 +36,7 @@ constexpr mask_t make_mask(int a, int b, int c) {
 class Game {
  public:
   struct Constants : public core::ConstantsBase {
+    static constexpr const char* kGameName = "tictactoe";
     using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;

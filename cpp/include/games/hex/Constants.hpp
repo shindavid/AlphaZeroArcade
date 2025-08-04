@@ -163,6 +163,7 @@ constexpr int kK11 = 120;
 constexpr int kSwap = 121;
 
 struct Constants : public core::ConstantsBase {
+  static constexpr const char* kGameName = "hex";
   static constexpr int kBoardDim = 11;
   static constexpr int kNumSquares = kBoardDim * kBoardDim;
   static constexpr int KNumActions = kNumSquares + 1;  // +1 for swap action

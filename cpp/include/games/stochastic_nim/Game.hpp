@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -28,6 +27,7 @@ namespace stochastic_nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
+    static constexpr const char* kGameName = "stochastic_nim";
     using kNumActionsPerMode =
       util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;

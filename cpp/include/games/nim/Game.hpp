@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -27,6 +26,7 @@ namespace nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
+    static constexpr const char* kGameName = "nim";
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;

@@ -1,14 +1,11 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrainingTargets.hpp"
-#include "core/TrivialSymmetries.hpp"
 #include "core/WinLossResults.hpp"
 #include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
