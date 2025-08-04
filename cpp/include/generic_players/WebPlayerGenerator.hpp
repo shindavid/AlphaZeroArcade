@@ -4,16 +4,13 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
-#include "games/tictactoe/Game.hpp"
-#include "games/tictactoe/players/WebPlayer.hpp"
 
-// TODO: Pull out a generic::WebPlayerGenerator base-class that can be used for any game, and have
-// tictactoe::WebPlayerGenerator inherit from it.
+namespace generic {
 
-namespace tictactoe {
-
-class WebPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::Game> {
+template <class WebPlayer>
+class WebPlayerGenerator : public core::AbstractPlayerGenerator<typename WebPlayer::GameClass> {
  public:
+  using Game = WebPlayer::GameClass;
   WebPlayerGenerator(core::GameServerBase*) {}
 
   std::string get_default_name() const override { return "Human"; }
@@ -21,9 +18,9 @@ class WebPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::Game>
   std::string get_description() const override { return "Web player"; }
   int max_simultaneous_games() const override { return 1; }
 
-  core::AbstractPlayer<tictactoe::Game>* generate(core::game_slot_index_t) override {
-    return new tictactoe::WebPlayer();
+  virtual core::AbstractPlayer<Game>* generate(core::game_slot_index_t) override {
+    return new WebPlayer();
   }
 };
 
-}  // namespace tictactoe
+}  // namespace generic

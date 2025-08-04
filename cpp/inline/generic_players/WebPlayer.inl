@@ -1,19 +1,24 @@
-#include "games/tictactoe/players/WebPlayer.hpp"
+#include "generic_players/WebPlayer.hpp"
 
+#include "core/BasicTypes.hpp"
+#include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/StringUtil.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
+#include <string>
 
-namespace tictactoe {
+namespace generic {
 
-inline WebPlayer::WebPlayer() : acceptor_(create_acceptor()), socket_(io_context_) {
+template <core::concepts::Game Game>
+WebPlayer<Game>::WebPlayer() : acceptor_(create_acceptor()), socket_(io_context_) {
   thread_ = mit::thread([this]() { response_loop(); });
 }
 
-inline WebPlayer::~WebPlayer() {
+template <core::concepts::Game Game>
+WebPlayer<Game>::~WebPlayer() {
   if (bridge_process_) {
     bridge_process_->terminate();
     delete bridge_process_;
@@ -24,7 +29,10 @@ inline WebPlayer::~WebPlayer() {
   }
 }
 
-inline void WebPlayer::start_game() {
+template <core::concepts::Game Game>
+void WebPlayer<Game>::start_game() {
+  last_action_ = -1;
+  last_mode_ = 0;
   action_ = -1;
   pending_send_ = false;
   ready_for_response_ = false;
@@ -37,7 +45,8 @@ inline void WebPlayer::start_game() {
     launch_frontend();
 
     std::cout << "Please open the frontend in your browser at:\n\n"
-              << "    http://localhost:5173\n" << std::endl;
+              << "    http://localhost:5173\n"
+              << std::endl;
 
     first_game_ = false;
     return;
@@ -62,12 +71,16 @@ inline void WebPlayer::start_game() {
   }
 }
 
-inline void WebPlayer::receive_state_change(core::seat_index_t seat, const State& state,
-                                            core::action_t action) {
-  send_state(state);
+template <core::concepts::Game Game>
+void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
+                                           core::action_t action) {
+  last_action_ = action;
+  last_mode_ = Game::Rules::get_action_mode(state);
 }
 
-inline WebPlayer::ActionResponse WebPlayer::get_action_response(const ActionRequest& request) {
+template <core::concepts::Game Game>
+typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
   if (resign_) {
     return ActionResponse::resign();
   }
@@ -76,7 +89,7 @@ inline WebPlayer::ActionResponse WebPlayer::get_action_response(const ActionRequ
     action_ = -1;
     return action;
   }
-  send_state(request.state, this->get_my_seat());
+  send_state(request.state, last_action_, last_mode_);
   notification_unit_ = request.notification_unit;
 
   // NOTE: see long comment in GameServer.inl, in the next() method, about a race condition
@@ -89,33 +102,63 @@ inline WebPlayer::ActionResponse WebPlayer::get_action_response(const ActionRequ
   return ActionResponse::yield();
 }
 
-inline void WebPlayer::end_game(const State& state, const ValueTensor& outcome) {
-  auto array = Game::GameResults::to_value_array(outcome);
-
-  core::seat_index_t winner = -1;
-  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    if (array[p] == 1) {
-      winner = p;
-      break;
-    }
-  }
-
+template <core::concepts::Game Game>
+void WebPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
   boost::json::object msg;
   msg["type"] = "game_end";
-  boost::json::object payload;
-  if (winner == -1) {
-    payload["result"] = "draw";
-  } else {
-    payload["result"] = "win";
-    payload["winner"] = IO::player_to_str(winner);
-  }
+  boost::json::object payload = make_state_msg(state, last_action_, last_mode_);
+  payload["msg"] = make_result_msg(state, outcome);
   msg["payload"] = payload;
   std::string out = boost::json::serialize(msg) + "\n";
   RELEASE_ASSERT(connected_);
   boost::asio::write(socket_, boost::asio::buffer(out));
 }
 
-inline void WebPlayer::launch_bridge() {
+template <core::concepts::Game Game>
+std::string WebPlayer<Game>::make_result_msg(const State& state, const ValueTensor& outcome) {
+  constexpr int P = Game::Constants::kNumPlayers;
+
+  auto array = Game::GameResults::to_value_array(outcome);
+
+  std::bitset<P> winners;
+  for (int p = 0; p < P; ++p) {
+    winners[p] = array[p] > 0;
+  }
+
+  if (winners.count() > 1) {
+    if (P == 2) {
+      // In a 2-player game, no need to say the players' names, just say "Draw!"
+      return "Draw!";
+    }
+
+    std::vector<std::string> winner_names;
+    for (int p = 0; p < P; ++p) {
+      if (winners[p]) {
+        winner_names.push_back(IO::player_to_str(p));
+      }
+    }
+
+    return std::format("Draw between {}", util::grammatically_join(winner_names, "and"));
+  } else if (winners.count() == 1) {
+    core::seat_index_t w = bitset_util::choose_random_on_index(winners);
+    return IO::player_to_str(w) + " wins!";
+  } else {
+    throw util::Exception("Game ended with no winners!");
+  }
+}
+
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::make_state_msg(const State& state, core::action_t last_action,
+                                                    core::action_mode_t last_mode) {
+  boost::json::object payload;
+  payload["board"] = IO::compact_state_repr(state);
+  payload["last_action"] = IO::action_to_str(last_action, last_mode);
+  payload["turn"] = IO::player_to_str(this->get_my_seat());
+  return payload;
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::launch_bridge() {
   namespace bp = boost::process;
   namespace bf = boost::filesystem;
 
@@ -125,7 +168,7 @@ inline void WebPlayer::launch_bridge() {
   env["SPAWN_ENGINE"] = "false";
 
   bf::path start_dir = "/workspace/repo/web/server";
-  bf::path log_dir = "/home/devuser/scratch/logs/tictactoe";
+  bf::path log_dir = std::format("/home/devuser/scratch/logs/{}", Game::Constants::kGameName);
   bf::create_directories(log_dir);
   bf::path log_file = log_dir / "bridge.log";
 
@@ -135,15 +178,16 @@ inline void WebPlayer::launch_bridge() {
   LOG_INFO("Web player launched bridge process on port {}", bridge_port_);
 }
 
-inline void WebPlayer::launch_frontend() {
+template <core::concepts::Game Game>
+void WebPlayer<Game>::launch_frontend() {
   namespace bp = boost::process;
   namespace bf = boost::filesystem;
 
   bp::environment env = boost::this_process::environment();
   env["VITE_BRIDGE_PORT"] = std::to_string(bridge_port_);
 
-  bf::path start_dir = "/workspace/repo/web/games/tictactoe";
-  bf::path log_dir = "/home/devuser/scratch/logs/tictactoe";
+  bf::path start_dir = std::format("/workspace/repo/web/games/{}", Game::Constants::kGameName);
+  bf::path log_dir = std::format("/home/devuser/scratch/logs/{}", Game::Constants::kGameName);
   bf::create_directories(log_dir);
   bf::path log_file = log_dir / "frontend.log";
 
@@ -153,7 +197,8 @@ inline void WebPlayer::launch_frontend() {
   LOG_INFO("Web player launched frontend process");
 }
 
-inline void WebPlayer::response_loop() {
+template <core::concepts::Game Game>
+void WebPlayer<Game>::response_loop() {
   LOG_INFO("Web player is waiting for a connection on port {}", engine_port_);
   acceptor_.accept(socket_);
   LOG_INFO("Web player connected to client.");
@@ -170,7 +215,7 @@ inline void WebPlayer::response_loop() {
       mit::unique_lock lock(mutex_);
 
       if (pending_send_) {
-        write_to_socket(pending_state_, pending_seat_);
+        write_to_socket(pending_state_, pending_last_action_, pending_last_mode_);
         pending_send_ = false;
       }
 
@@ -202,35 +247,35 @@ inline void WebPlayer::response_loop() {
   }
 }
 
-// TODO: we cannot send anything to socket_ until after acceptor_.accept() is called in
+// NOTE: we cannot send anything to socket_ until after acceptor_.accept() is called in
 // response_loop(). If we hit this method before that point, we need to store the state, and send it
 // later.
-inline void WebPlayer::send_state(const State& state, core::seat_index_t seat) {
+template <core::concepts::Game Game>
+void WebPlayer<Game>::send_state(const State& state, core::action_t last_action,
+                                 core::action_mode_t last_mode) {
   mit::unique_lock lock(mutex_);
   if (!connected_) {
     pending_send_ = true;
     pending_state_ = state;
-    pending_seat_ = seat;
+    pending_last_action_ = last_action;
+    pending_last_mode_ = last_mode;
     return;
   }
-  write_to_socket(state, seat);
+  write_to_socket(state, last_action, last_mode);
 }
 
-inline void WebPlayer::write_to_socket(const State& state, core::seat_index_t seat) {
+template <core::concepts::Game Game>
+void WebPlayer<Game>::write_to_socket(const State& state, core::action_t last_action,
+                                      core::action_mode_t last_mode) {
   boost::json::object msg;
   msg["type"] = "state_update";
-  boost::json::object payload;
-  payload["board"] = IO::compact_state_repr(state);
-  if (seat >= 0) {
-    payload["turn"] = IO::player_to_str(seat);
-  }
-  msg["payload"] = payload;
+  msg["payload"] = make_state_msg(state, last_action, last_mode);
   std::string out = boost::json::serialize(msg) + "\n";
   boost::asio::write(socket_, boost::asio::buffer(out));
 }
 
-
-inline boost::asio::ip::tcp::acceptor WebPlayer::create_acceptor() {
+template <core::concepts::Game Game>
+boost::asio::ip::tcp::acceptor WebPlayer<Game>::create_acceptor() {
   boost::asio::ip::tcp::acceptor acceptor(io_context_);
   acceptor.open(boost::asio::ip::tcp::v4());
   acceptor.set_option(boost::asio::socket_base::reuse_address(true));
@@ -239,4 +284,4 @@ inline boost::asio::ip::tcp::acceptor WebPlayer::create_acceptor() {
   return acceptor;
 }
 
-}  // namespace tictactoe
+}  // namespace generic

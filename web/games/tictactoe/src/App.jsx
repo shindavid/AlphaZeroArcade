@@ -21,6 +21,15 @@ export default function App() {
     );
   }
 
+  const setBoardHelper = (str) => {
+    // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
+    // Remove newlines and parse
+    const arr = Array.from(str.replace(/\n/g, '')).map(ch =>
+      ch === '_' ? null : ch
+    );
+    setBoard(arr);
+  };
+
   useEffect(() => {
     const ws = new WebSocket(`ws://localhost:${port}`);
     socketRef.current = ws;
@@ -33,24 +42,18 @@ export default function App() {
       catch (err) { return console.error('Bad JSON', err); }
 
       if (msg.type === 'state_update') {
-        // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
-        // Remove newlines and parse
-        const str = msg.payload.board.replace(/\n/g, '');
-        const arr = Array.from(str).map(ch =>
-          ch === '_' ? null : ch
-        );
-        setBoard(arr);
+        setBoardHelper(msg.payload.board);
         setTurn(msg.payload.turn);
         setLoading(false);
         setGameEnd(null);
       } else if (msg.type === 'game_end') {
+        setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
       }
     };
 
     return () => ws.close();
   }, [port]);
-
 
   const handleClick = i => {
     if (gameEnd) return;
@@ -84,7 +87,6 @@ export default function App() {
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'resign' }));
-    // Optionally, setGameEnd({ result: 'win', winner: turn === 'X' ? 'O' : 'X' });
   };
 
   return (
@@ -92,10 +94,7 @@ export default function App() {
       <div className="status-bar" style={{ marginBottom: '1.5em' }}>
         <span className="status-message-area">
           {gameEnd
-            ? (gameEnd.result === 'draw'
-                ? <>Game&nbsp;over:&nbsp;<b>Draw</b></>
-                : <>Game&nbsp;over:&nbsp;<b>{gameEnd.winner} wins</b>!</>
-              )
+            ? gameEnd.msg
             : <>Next: <b>{turn}</b></>
           }
         </span>
