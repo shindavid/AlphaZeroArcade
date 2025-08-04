@@ -1,4 +1,3 @@
-// web/games/tictactoe/src/App.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 
