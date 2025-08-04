@@ -53,6 +53,12 @@ bool ends_with(const std::string& value, const std::string& ending);
  */
 size_t terminal_width(const std::string& str);
 
+// "x and y"
+// "x, y, and z"  (oxford_comma = true)
+// "x, y and z" (oxford_comma = false)
+std::string grammatically_join(const std::vector<std::string>& items,
+                               const std::string& conjunction, bool oxford_comma = true);
+
 }  // namespace util
 
 #include "inline/util/StringUtil.inl"

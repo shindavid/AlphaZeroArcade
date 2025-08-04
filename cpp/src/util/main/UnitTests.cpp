@@ -751,6 +751,14 @@ TEST(StringUtil, terminal_width) {
   EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
 }
 
+TEST(StringUtil, grammatically_join) {
+  EXPECT_EQ(util::grammatically_join({"a"}, "and"), "a");
+  EXPECT_EQ(util::grammatically_join({"a", "b"}, "and"), "a and b");
+  EXPECT_EQ(util::grammatically_join({"a", "b"}, "and", false), "a and b");
+  EXPECT_EQ(util::grammatically_join({"a", "b", "c"}, "or"), "a, b, or c");
+  EXPECT_EQ(util::grammatically_join({"a", "b", "c"}, "or", false), "a, b or c");
+}
+
 TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:0"), 0);
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("0"), 0);
