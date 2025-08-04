@@ -70,7 +70,6 @@ export default function App() {
     setGameEnd(null);
   };
 
-
   if (loading) {
     return (
       <div className="container">
