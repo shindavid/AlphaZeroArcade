@@ -167,7 +167,7 @@ void WebPlayer<Game>::launch_bridge() {
   env["ENGINE_PORT"] = std::to_string(engine_port_);
   env["SPAWN_ENGINE"] = "false";
 
-  bf::path start_dir = "/workspace/repo/web/server";
+  bf::path start_dir = "/workspace/repo/web/bridge";
   bf::path log_dir = std::format("/home/devuser/scratch/logs/{}", Game::Constants::kGameName);
   bf::create_directories(log_dir);
   bf::path log_file = log_dir / "bridge.log";
