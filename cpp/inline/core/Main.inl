@@ -2,48 +2,9 @@
 
 #include "util/LoggingUtil.hpp"
 
-#include <csignal>
-#include <cstdlib>
-#include <unistd.h>
-
 #ifdef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must not be defined for game-exe's");
 #endif
-
-namespace detail {
-
-inline void cleanup_and_die(int signum = 0) {
-  // Send SIGTERM to everyone in our process group (PGID = our PID)
-  killpg(0, SIGTERM);
-
-  // If this was a real signal, re-raise it so core dumps still work:
-  if (signum > 0) {
-    signal(signum, SIG_DFL);
-    raise(signum);
-  }
-  std::exit(signum);
-}
-
-inline void register_handlers() {
-  // Normal exit()
-  std::atexit([](){ cleanup_and_die(0); });
-
-  // C++ terminate() (uncaught exception)
-  std::set_terminate([](){
-    cleanup_and_die(0);
-  });
-
-  // Catch SIGINT, SIGTERM (Ctrl-C, `kill`), SIGABRT
-  for (int sig : {SIGINT, SIGTERM, SIGABRT, SIGSEGV}) {
-    struct sigaction sa{};
-    sa.sa_handler = [](int s){ cleanup_and_die(s); };
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(sig, &sa, nullptr);
-  }
-}
-
-}  // namespace detail
 
 template <typename PlayerFactory>
 auto Main<PlayerFactory>::Args::make_options_description() {
@@ -68,10 +29,6 @@ Main<PlayerFactory>::get_default_game_server_params() {
 template <typename PlayerFactory>
 int Main<PlayerFactory>::main(int ac, char* av[]) {
   try {
-    // Make sure any spawned processes are in the same process group as this one.
-    if (setpgid(0, 0) < 0) perror("setpgid");
-    detail::register_handlers();
-
     namespace po = boost::program_options;
     namespace po2 = boost_util::program_options;
 
