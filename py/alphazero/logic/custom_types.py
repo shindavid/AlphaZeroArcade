@@ -50,7 +50,7 @@ class Domain(Enum):
     TRAINING = 'training'
     SELF_PLAY = 'self-play'
     RATINGS = 'ratings'
-    BENCHMARK = 'benchmark'
+    SELF_EVAL = 'self-eval'
     EVAL = 'eval'
     SLEEPING = 'sleeping'
 

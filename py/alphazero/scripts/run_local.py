@@ -109,7 +109,7 @@ class Params:
     run_benchmark_server: bool = False
     run_eval_server: bool = False
 
-    benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
+    self_eval_until_gen_gap: int = default_loop_controller_params.self_eval_until_gen_gap
 
     @staticmethod
     def create(args) -> 'Params':
@@ -286,8 +286,8 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     else:
         cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.first_run)])
 
-    if default_loop_controller_params.benchmark_until_gen_gap != params.benchmark_until_gen_gap:
-        cmd.extend(['--benchmark-until-gen-gap', str(params.benchmark_until_gen_gap)])
+    if default_loop_controller_params.self_eval_until_gen_gap != params.self_eval_until_gen_gap:
+        cmd.extend(['--self-eval-until-gen-gap', str(params.self_eval_until_gen_gap)])
 
     if params.task_mode:
         cmd.extend(['--task-mode'])

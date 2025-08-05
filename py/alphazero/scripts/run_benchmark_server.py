@@ -9,12 +9,12 @@ new agents, and reports match results back to the controller.
 
 * Relevant Loop Controller Parameters
 
-1. `--benchmark_until_gen_gap`:
+1. `--self_eval_until_gen_gap`:
    The minimum number of generations between the latest evaluated generation and the latest
    trained generation before benchmarking is prioritized.
 
-2. `--n_games_per_benchmark`:
-   The number of games to play in each benchmark match between two agents.
+2. `--n_games_per_self_evaluation`:
+   The number of games to play in each self-evaluation match between two agents.
 
 3. `--target_elo_gap`:
    The maximum allowable Elo gap between two agents in a match (used to determine who needs
