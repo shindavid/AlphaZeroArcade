@@ -1,137 +1,128 @@
-import "./App.css";
-import React, { useState } from "react";
-
-// Inline styles for simplicity
-const styles = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "2rem",
-    fontFamily: "sans-serif",
-  },
-  status: {
-    marginBottom: "1rem",
-    fontSize: "1.5rem",
-  },
-  board: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 100px)",
-    gridGap: "5px",
-  },
-  square: {
-    width: "100px",
-    height: "100px",
-    backgroundColor: "#fff",
-    border: "1px solid #999",
-    fontSize: "2rem",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  button: {
-    marginTop: "1.5rem",
-    padding: "0.5rem 1rem",
-    fontSize: "1rem",
-    cursor: "pointer",
-  },
-};
-
-function Square({ value, onClick }) {
-  return (
-    <button style={styles.square} onClick={onClick}>
-      {value}
-    </button>
-  );
-}
-
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-  for (let [a, b, c] of lines) {
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
-    }
-  }
-  return null;
-}
+import React, { useEffect, useState, useRef } from 'react';
+import './App.css';
 
 export default function App() {
-  const [history, setHistory] = useState([Array(9).fill(null)]);
-  const [step, setStep] = useState(0);
-  const xIsNext = step % 2 === 0;
-  const squares = history[step];
-  const winner = calculateWinner(squares);
+  const [board, setBoard] = useState(Array(9).fill(null));
+  const [turn, setTurn] = useState('X');
+  const [loading, setLoading] = useState(true);
+  const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
+  const socketRef = useRef(null);
 
-  const handleClick = (i) => {
-    const current = history.slice(0, step + 1);
-    const board = current[current.length - 1].slice();
-    if (board[i] || winner) return;
-    board[i] = xIsNext ? "X" : "O";
-    setHistory([...current, board]);
-    setStep(current.length);
-  };
-
-  const jumpTo = (move) => {
-    setStep(move);
-  };
-
-  const moves = history.map((_, move) => {
-    const desc = move ? `Go to move #${move}` : "Go to game start";
+  // Must be set by Vite via .env.development
+  const port = import.meta.env.VITE_BRIDGE_PORT;
+  if (!port) {
+    // render an error in the UI if port isn’t defined
     return (
-      <li key={move}>
-        <button style={styles.button} onClick={() => jumpTo(move)}>
-          {desc}
-        </button>
-      </li>
+      <div style={{ padding: '2rem', color: 'red' }}>
+        ERROR: VITE_BRIDGE_PORT is not defined.<br />
+        Make sure you restarted the dev server after writing web/.env.development
+      </div>
     );
-  });
-
-  let status;
-  if (winner) {
-    status = `Winner: ${winner}`;
-  } else if (step === 9) {
-    status = "Draw";
-  } else {
-    status = `Next player: ${xIsNext ? "X" : "O"}`;
   }
 
+  const setBoardHelper = (str) => {
+    // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
+    // Remove newlines and parse
+    const arr = Array.from(str.replace(/\n/g, '')).map(ch =>
+      ch === '_' ? null : ch
+    );
+    setBoard(arr);
+  };
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:${port}`);
+    socketRef.current = ws;
+
+    ws.onopen = () => console.log(`✅ WS connected to ${port}`);
+    ws.onerror = e => console.error('🔴 WS error', e);
+    ws.onmessage = e => {
+      let msg;
+      try { msg = JSON.parse(e.data) }
+      catch (err) { return console.error('Bad JSON', err); }
+
+      if (msg.type === 'state_update') {
+        setBoardHelper(msg.payload.board);
+        setTurn(msg.payload.turn);
+        setLoading(false);
+        setGameEnd(null);
+      } else if (msg.type === 'game_end') {
+        setBoardHelper(msg.payload.board);
+        setGameEnd(msg.payload);
+      }
+    };
+
+    return () => ws.close();
+  }, [port]);
+
+  const handleClick = i => {
+    if (gameEnd) return;
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (board[i]) return;
+    ws.send(JSON.stringify({ type: 'make_move', payload: { index: i } }));
+  };
+
+  const handleNewGame = () => {
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'new_game' }));
+    setLoading(true);
+    setGameEnd(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="status">Loading game state...</div>
+      </div>
+    );
+  }
+
+  // Dedicated message area and always-visible action button
+  // Fix board shifting: wrap status bar and board in a fixed-height flex column
+  const handleResign = () => {
+    // End the game as a loss for the current player
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'resign' }));
+  };
+
   return (
-    <div className="container">
-      <div className="status">{status}</div>
+    <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
+      <div className="status-bar" style={{ marginBottom: '1.5em' }}>
+        <span className="status-message-area">
+          {gameEnd
+            ? gameEnd.msg
+            : <>Next: <b>{turn}</b></>
+          }
+        </span>
+      </div>
       <div className="board">
-        {squares.map((val, i) => (
+        {board.map((v, i) => (
           <button
             key={i}
-            className="square"
+            className={`square${v === null && !gameEnd ? ' legal-move' : ''}`}
             onClick={() => handleClick(i)}
-          >
-            {val}
-          </button>
+            disabled={!!gameEnd || v !== null}
+          >{v}</button>
         ))}
       </div>
-      <ol>
-        {history.map((_, move) => (
-          <li key={move}>
-            <button
-              className="move-button"
-              onClick={() => jumpTo(move)}
-            >
-              {move ? `Go to move #${move}` : "Go to game start"}
-            </button>
-          </li>
-        ))}
-      </ol>
+      <div className="button-row">
+        <button
+          className="status-action-btn"
+          onClick={handleResign}
+          disabled={!!gameEnd || loading}
+        >
+          Resign
+        </button>
+        <button
+          className="status-action-btn"
+          onClick={handleNewGame}
+          disabled={!gameEnd || loading}
+        >
+          New Game
+        </button>
+      </div>
     </div>
   );
 }

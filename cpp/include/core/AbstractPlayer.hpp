@@ -96,6 +96,9 @@ class AbstractPlayer {
   virtual bool is_human_tui_player() const { return false; }
   virtual void set_facing_human_tui_player() {}
 
+  // Override this to return true if you don't want GameServer to display a progress bar.
+  virtual bool disable_progress_bar() const { return false; }
+
  private:
   std::string name_;
   player_name_array_t player_names_;

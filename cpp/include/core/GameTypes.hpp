@@ -105,12 +105,18 @@ struct GameTypes {
 
     static ActionResponse yield(int e = 0) { return ActionResponse(-1, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
+    static ActionResponse resign() {
+      ActionResponse r;
+      r.resign_game = true;
+      return r;
+    }
 
     TrainingInfo training_info;
     action_t action = -1;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
+    bool resign_game = false;  // If true, the player resigns the game.
   };
 
   struct ChanceEventPreHandleResponse {

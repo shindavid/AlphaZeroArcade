@@ -260,6 +260,25 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
 
   DEBUG_ASSERT(!queue_.empty(), "GameServer::{}(): queue should not be empty here", __func__);
 
+  // TODO: there is a potential weird race condition on kYield responses. For example, with
+  // WebPlayer, we can have the following sequence:
+  //
+  // 1. WebPlayer::get_action_response() is called, which notifies its response loop and returns
+  //    ActionResponse::yield().
+  // 2. Before the yield is returned, the following events happen:
+  //    A. The response loop is woken up, and the notification unit is notified.
+  //    B. The notification causes the GameSlot to be put back into the GameServer queue.
+  //    C. GameServer::next() is called, which pops that item from the queue.
+  //
+  // This would result in the second next() call "lapping" the first one. I think this would violate
+  // some assumptions in this logic.
+  //
+  // One solution is to add "yield callback" mechanics, but this would complexify the player
+  // interface. I think it would be better to add appropriate checks in the GameServer logic to
+  // detect this situation and handle it gracefully.
+  //
+  // This race condition would be virtually impossible to trigger in practice, but with the mit
+  // library, we should be able to force it during a unit test.
   item = queue_.front();
   queue_.pop();
   pending_queue_count_++;
@@ -646,9 +665,11 @@ template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
+  bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     human_tui_indices[p] = instantiations_[p].player->is_human_tui_player();
+    disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
   }
 
   for (int p = 0; p < kNumPlayers; ++p) {
@@ -659,7 +680,7 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
     }
   }
 
-  if (!human_tui_indices.any()) {
+  if (!disable_progress_bar) {
     shared_data_.init_progress_bar();
   }
 }
@@ -816,10 +837,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                    training_info.action_values_target, training_info.use_for_training);
   }
 
-  // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
-  // the server.
-  RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
-
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
@@ -828,7 +845,24 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     }
     handle_terminal(outcome, result);
     return false;
+  } else if (response.resign_game) {
+    if (kNumPlayers != 2) {
+      throw util::Exception(
+        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players",
+        __func__, player->get_name(), active_seat_, kNumPlayers);
+    }
+    ValueTensor outcome = GameResults::win(!active_seat_);
+    if (params().announce_game_results) {
+      LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
+               player->get_name(), active_seat_);
+    }
+    handle_terminal(outcome, result);
+    return false;
   } else {
+    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
+    // the server.
+    RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
+
     Rules::apply(state_history_, action);
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state_history_.current(), action, &player_names_);

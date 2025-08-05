@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -14,7 +13,6 @@
 #include "games/GameRulesBase.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
-#include "games/blokus/Types.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -22,10 +20,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <array>
-#include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 
 namespace blokus {
@@ -33,6 +28,7 @@ namespace blokus {
 class Game {
  public:
   struct Constants : public core::ConstantsBase {
+    static constexpr const char* kGameName = "blokus";
     using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;

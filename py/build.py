@@ -85,6 +85,9 @@ def main():
     # build extra deps unconditionally
     run('cd extra_deps && ./build.py')
 
+    # build npm packages unconditionally
+    run('cd web && npm install')
+
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
 
     macro_defines = args.macro_defines if args.macro_defines else []

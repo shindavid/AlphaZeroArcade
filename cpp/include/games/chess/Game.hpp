@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
-#include "core/GameLog.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -21,16 +20,15 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <array>
 #include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 
 namespace chess {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
+    static constexpr const char* kGameName = "chess";
     using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
     static constexpr int kNumPlayers = chess::kNumPlayers;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;

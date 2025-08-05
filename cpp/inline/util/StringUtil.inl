@@ -131,4 +131,24 @@ inline size_t terminal_width(const std::string& str) {
   return cleaned_str.size();
 }
 
+inline std::string grammatically_join(const std::vector<std::string>& items,
+                                      const std::string& conjunction, bool oxford_comma) {
+  if (items.empty()) return "";
+  if (items.size() == 1) return items[0];
+  if (items.size() == 2) {
+    return items[0] + " " + conjunction + " " + items[1];
+  }
+
+  std::string result;
+  for (size_t i = 0; i < items.size(); ++i) {
+    result += items[i];
+    if (i == items.size() - 2) {
+      result += (oxford_comma ? ", " : " ") + conjunction + " ";
+    } else if (i < items.size() - 1) {
+      result += ", ";
+    }
+  }
+  return result;
+}
+
 }  // namespace util
