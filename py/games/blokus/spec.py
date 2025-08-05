@@ -125,7 +125,7 @@ class BlokusSpec(GameSpec):
             benchmark=100.0,
             ),
         eval_error_threshold=50.0,
-        n_games_per_benchmark=100,
+        n_games_per_self_evaluation=100,
         n_games_per_evaluation=1000,
     )
 

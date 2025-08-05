@@ -21,7 +21,7 @@ A benchmark directory is created by running the script `benchmark_tag_local.py`.
 """
 
 from alphazero.logic.agent_types import IndexedAgent
-from py.alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
+from alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
