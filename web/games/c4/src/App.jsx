@@ -1,17 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 
+// Connect4 board dimensions
+const ROWS = 6;
+const COLS = 7;
+
 export default function App() {
-  const [board, setBoard] = useState(Array(9).fill(null));
+  const [board, setBoard] = useState(Array(ROWS * COLS).fill(null));
   const [turn, setTurn] = useState('X');
   const [loading, setLoading] = useState(true);
   const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
+  const [legalMoves, setLegalMoves] = useState([]); // array of legal column indices
   const socketRef = useRef(null);
 
-  // Must be set by Vite via .env.development
   const port = import.meta.env.VITE_BRIDGE_PORT;
   if (!port) {
-    // render an error in the UI if port isn’t defined
     return (
       <div style={{ padding: '2rem', color: 'red' }}>
         ERROR: VITE_BRIDGE_PORT is not defined.<br />
@@ -20,12 +23,10 @@ export default function App() {
     );
   }
 
+  // Parse board string into 6x7 array
   const setBoardHelper = (str) => {
-    // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
-    // Remove newlines and parse
-    const arr = Array.from(str.replace(/\n/g, '')).map(ch =>
-      ch === '_' ? null : ch
-    );
+    // Expecting 6 lines of 7 chars each, e.g. "_______\n_______\n_______\n_______\n_______\n_______"
+    const arr = str.replace(/\n/g, '').split('').map(ch => (ch === '_' ? null : ch));
     setBoard(arr);
   };
 
@@ -43,23 +44,26 @@ export default function App() {
       if (msg.type === 'state_update') {
         setBoardHelper(msg.payload.board);
         setTurn(msg.payload.turn);
+        setLegalMoves(msg.payload.legal_moves || []);
         setLoading(false);
         setGameEnd(null);
       } else if (msg.type === 'game_end') {
         setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
+        setLegalMoves([]);
       }
     };
 
     return () => ws.close();
   }, [port]);
 
-  const handleClick = i => {
+  // Click a column to make a move
+  const handleColumnClick = col => {
     if (gameEnd) return;
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (board[i]) return;
-    ws.send(JSON.stringify({ type: 'make_move', payload: { index: i } }));
+    if (!legalMoves.includes(col)) return;
+    ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
   };
 
   const handleNewGame = () => {
@@ -78,13 +82,41 @@ export default function App() {
     );
   }
 
-  // Dedicated message area and always-visible action button
-  // Fix board shifting: wrap status bar and board in a fixed-height flex column
   const handleResign = () => {
-    // End the game as a loss for the current player
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'resign' }));
+  };
+
+  // Render the Connect4 board as a 6x7 grid
+  const renderBoard = () => {
+    const grid = [];
+    for (let row = 0; row < ROWS; ++row) {
+      for (let col = 0; col < COLS; ++col) {
+        const idx = row * COLS + col;
+        const cell = board[idx];
+        // Only the top empty cell in a legal column is clickable
+        let isTopEmpty = false;
+        if (!cell && legalMoves.includes(col)) {
+          // Check if this is the lowest empty cell in the column
+          if (row === ROWS - 1 || board[(row + 1) * COLS + col]) {
+            isTopEmpty = true;
+          }
+        }
+        grid.push(
+          <button
+            key={idx}
+            className={`square connect4-cell${isTopEmpty ? ' legal-move' : ''}`}
+            onClick={() => isTopEmpty && handleColumnClick(col)}
+            disabled={!!gameEnd || !isTopEmpty}
+            style={{ background: cell === 'X' ? '#f33' : cell === 'O' ? '#ff0' : '#fff' }}
+          >
+            {cell ? <span className={`disc ${cell === 'X' ? 'disc-x' : 'disc-o'}`}></span> : ''}
+          </button>
+        );
+      }
+    }
+    return grid;
   };
 
   return (
@@ -97,15 +129,8 @@ export default function App() {
           }
         </span>
       </div>
-      <div className="board">
-        {board.map((v, i) => (
-          <button
-            key={i}
-            className={`square${v === null && !gameEnd ? ' legal-move' : ''}`}
-            onClick={() => handleClick(i)}
-            disabled={!!gameEnd || v !== null}
-          >{v}</button>
-        ))}
+      <div className="board connect4-board">
+        {renderBoard()}
       </div>
       <div className="button-row">
         <button
