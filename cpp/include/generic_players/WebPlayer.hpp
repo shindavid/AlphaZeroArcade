@@ -81,13 +81,9 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   boost::process::child* frontend_process_ = nullptr;
 
   core::YieldNotificationUnit notification_unit_;
-  State pending_state_;
-  core::action_t pending_last_action_ = -1;
   core::action_t last_action_ = -1;
-  core::action_mode_t pending_last_mode_ = 0;
   core::action_mode_t last_mode_ = 0;
   core::action_t action_ = -1;
-  bool pending_send_ = false;
   bool first_game_ = true;
   bool ready_for_response_ = false;
   bool resign_ = false;

@@ -1,6 +1,7 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
@@ -34,7 +35,6 @@ void WebPlayer<Game>::start_game() {
   last_action_ = -1;
   last_mode_ = 0;
   action_ = -1;
-  pending_send_ = false;
   ready_for_response_ = false;
   resign_ = false;
 
@@ -47,6 +47,11 @@ void WebPlayer<Game>::start_game() {
     std::cout << "Please open the frontend in your browser at:\n\n"
               << "    http://localhost:5173\n"
               << std::endl;
+
+    {
+      mit::unique_lock lock(mutex_);
+      cv_.wait(lock, [this]() { return connected_; });
+    }
 
     first_game_ = false;
     return;
@@ -211,18 +216,13 @@ void WebPlayer<Game>::response_loop() {
     mit::unique_lock lock(mutex_);
     connected_ = true;
   }
+  cv_.notify_all();
 
   // TODO: wire end_session() to WebPlayer, and use that to break this loop
   // And/or: rely on socket_.is_open()
   while (true) {
     {
       mit::unique_lock lock(mutex_);
-
-      if (pending_send_) {
-        write_to_socket(pending_state_, pending_last_action_, pending_last_mode_);
-        pending_send_ = false;
-      }
-
       cv_.wait(lock, [this]() { return ready_for_response_; });
       ready_for_response_ = false;
     }
@@ -258,13 +258,7 @@ template <core::concepts::Game Game>
 void WebPlayer<Game>::send_state(const State& state, core::action_t last_action,
                                  core::action_mode_t last_mode) {
   mit::unique_lock lock(mutex_);
-  if (!connected_) {
-    pending_send_ = true;
-    pending_state_ = state;
-    pending_last_action_ = last_action;
-    pending_last_mode_ = last_mode;
-    return;
-  }
+  RELEASE_ASSERT(connected_);
   write_to_socket(state, last_action, last_mode);
 }
 
