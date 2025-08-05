@@ -1,5 +1,5 @@
 from .base_dir import Benchmark, Scratch, Workspace
-from .benchmark_manager import SelfEvalManager
+from .self_eval_manager import SelfEvalManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
