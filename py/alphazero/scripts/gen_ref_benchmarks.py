@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from alphazero.logic.agent_types import AgentRole, MatchType, ReferenceAgent
 from alphazero.logic.arena import Arena
-from alphazero.logic.benchmarker import Benchmarker
+from py.alphazero.logic.self_evaluator import SelfEvaluator
 from alphazero.logic.match_runner import Match
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.base_dir import Workspace
@@ -22,7 +22,7 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
-class ReferenceBenchmarker:
+class ReferenceSelfEvaluator:
     def __init__(self, args, game_spec: GameSpec):
         assert game_spec.reference_player_family is not None, \
             f'Game {game_spec.name} does not have a reference player family'
@@ -78,7 +78,7 @@ class ReferenceBenchmarker:
 
     def commit_benchmark_ratings(self):
         self.arena.refresh_ratings()
-        committee = Benchmarker.select_committee(self.arena.ratings, self.min_elo_gap)
+        committee = SelfEvaluator.select_committee(self.arena.ratings, self.min_elo_gap)
         self.db.commit_ratings(self.arena.indexed_agents,
                                self.arena.ratings,
                                committee=committee)
@@ -108,15 +108,15 @@ class ReferenceBenchmarker:
         return self.game_spec.name
 
 
-def benchmark_reference_players(args, game_specs: List[GameSpec]):
+def self_evaluate_reference_players(args, game_specs: List[GameSpec]):
     os.makedirs(Workspace.ref_dir, exist_ok=True)
     for game_spec in game_specs:
         if game_spec.reference_player_family is None:
             logger.info(f'Skipped for game: {game_spec.name}, no reference_player_family')
             continue
         logger.info(f'Benchmarking reference players for game {game_spec.name}')
-        benchmarker = ReferenceBenchmarker(args, game_spec)
-        benchmarker.run()
+        self_evaluator = ReferenceSelfEvaluator(args, game_spec)
+        self_evaluator.run()
         logger.info(f'Finished for game: {game_spec.name}')
 
 
@@ -145,7 +145,7 @@ def main():
         specs = ALL_GAME_SPECS
     else:
         specs = [game_index.get_game_spec(g) for g in args.game.split(',')]
-    benchmark_reference_players(args, specs)
+    self_evaluate_reference_players(args, specs)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import AgentRole, IndexedAgent, Match, MatchType
-from alphazero.logic.benchmarker import Benchmarker, BenchmarkRatingData
+from py.alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
@@ -115,7 +115,7 @@ class SelfEvalManager(GamingManagerBase):
             domain=Domain.BENCHMARK,
             )
         super().__init__(controller, manager_config)
-        self._benchmarker = Benchmarker(self._controller.organizer)
+        self._self_evaluator = SelfEvaluator(self._controller.organizer)
         self._status_dict: dict[int, BenchmarkStatus] = {}  # ix -> EvalStatus
         self.excluded_agent_indices: IndexSet = IndexSet()
         self.evaluated_iagents: List[IndexedAgent] = []
@@ -132,7 +132,7 @@ class SelfEvalManager(GamingManagerBase):
         self._controller.set_domain_priority(self._config.domain, elevate)
 
     def load_past_data(self):
-        benchmark_rating_data: BenchmarkRatingData = self._benchmarker.read_ratings_from_db()
+        benchmark_rating_data: BenchmarkRatingData = self._self_evaluator.read_ratings_from_db()
         self.evaluated_iagents = benchmark_rating_data.iagents
         self.excluded_agent_indices = ~benchmark_rating_data.committee
 
@@ -161,7 +161,7 @@ class SelfEvalManager(GamingManagerBase):
             status_cond.notify_all()
 
     def send_match_request(self, conn):
-        self._benchmarker.refresh_ratings()
+        self._self_evaluator.refresh_ratings()
         self._update_status_with_new_matches(conn)
         ix = conn.aux.ix
         if ix is None:
@@ -172,7 +172,7 @@ class SelfEvalManager(GamingManagerBase):
             logger.info('DONE. No matches available for %s', conn)
             return
 
-        gen = self._benchmarker.indexed_agents[ix].agent.gen
+        gen = self._self_evaluator.indexed_agents[ix].agent.gen
         status_entry = self._status_dict[ix]
         assert status_entry.status != BenchmarkRequestStatus.COMPLETE
         for opponent_ix in status_entry.ix_match_status:
@@ -193,10 +193,10 @@ class SelfEvalManager(GamingManagerBase):
         counts = WinLossDrawCounts.from_json(msg['record'])
         logger.debug('---Received match result for ix1=%s, ix2=%s, counts=%s', ix1, ix2, counts)
 
-        with self._benchmarker.db.db_lock:
-            self._benchmarker._arena.update_match_results(ix1, ix2, counts, MatchType.BENCHMARK,
-                                                          self._benchmarker.db)
-        self._benchmarker.refresh_ratings()
+        with self._self_evaluator.db.db_lock:
+            self._self_evaluator._arena.update_match_results(ix1, ix2, counts, MatchType.BENCHMARK,
+                                                          self._self_evaluator.db)
+        self._self_evaluator.refresh_ratings()
 
         with self._lock:
             status = self._status_dict[ix1]
@@ -210,7 +210,7 @@ class SelfEvalManager(GamingManagerBase):
                 self._status_dict[ix1].owner = None
             conn.aux.ix = None
 
-            matches: List[Match] = self._benchmarker.get_next_matches(
+            matches: List[Match] = self._self_evaluator.get_next_matches(
                     self.n_iters, self.target_elo_gap, self.n_games,
                     excluded_indices=self.excluded_agent_indices)
             if not matches:
@@ -227,17 +227,17 @@ class SelfEvalManager(GamingManagerBase):
             return
         if ready_for_latest_gen:
             latest_gen = self._controller.organizer.get_latest_model_generation()
-            latest_agent = self._benchmarker.build_agent(latest_gen, self.n_iters)
-            latest_iagent = self._benchmarker._arena.add_agent(
-                latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._benchmarker.db)
+            latest_agent = self._self_evaluator.build_agent(latest_gen, self.n_iters)
+            latest_iagent = self._self_evaluator._arena.add_agent(
+                latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._self_evaluator.db)
 
-            matches = self._benchmarker.get_unplayed_matches(
+            matches = self._self_evaluator.get_unplayed_matches(
                     latest_iagent, self.n_iters, excluded_indices=self.excluded_agent_indices)
             ix = latest_iagent.index
             conn.aux.ready_for_latest_gen = False
 
         else:
-            matches: List[Match] = self._benchmarker.get_next_matches(
+            matches: List[Match] = self._self_evaluator.get_next_matches(
                     self.n_iters, self.target_elo_gap, self.n_games,
                     excluded_indices=self.excluded_agent_indices)
 
@@ -246,13 +246,13 @@ class SelfEvalManager(GamingManagerBase):
             conn.aux.ready_for_latest_gen = True
             return
 
-        ix = self._benchmarker.agent_lookup[matches[0].agent1].index
+        ix = self._self_evaluator.agent_lookup[matches[0].agent1].index
 
-        iagent1 = self._benchmarker.indexed_agents[ix]
+        iagent1 = self._self_evaluator.indexed_agents[ix]
         ix_match_status = {}
         for m in matches:
             assert m.agent1 == iagent1.agent
-            iagent2 = self._benchmarker.agent_lookup[m.agent2]
+            iagent2 = self._self_evaluator.agent_lookup[m.agent2]
             ix_match_status[iagent2.index] = MatchStatus(
                 opponent_gen=iagent2.agent.gen,
                 n_games=m.n_games,
@@ -333,25 +333,25 @@ class SelfEvalManager(GamingManagerBase):
 
     def _latest_evaluated_gen(self) -> Generation:
         latest_gen = 0
-        for iagent in self._benchmarker.indexed_agents:
+        for iagent in self._self_evaluator.indexed_agents:
             excluded_agent_not_empty: bool = len(self.excluded_agent_indices) > 0
             if excluded_agent_not_empty and iagent.index in ~self.excluded_agent_indices:
                 latest_gen = max(latest_gen, iagent.agent.gen)
         return latest_gen
 
     def _update_committee(self):
-        if self._benchmarker.has_no_matches():
+        if self._self_evaluator.has_no_matches():
             return
-        self._benchmarker.refresh_ratings()
-        committee: IndexSet = Benchmarker.select_committee(
-                self._benchmarker.ratings, self.target_elo_gap)
+        self._self_evaluator.refresh_ratings()
+        committee: IndexSet = SelfEvaluator.select_committee(
+                self._self_evaluator.ratings, self.target_elo_gap)
         self.excluded_agent_indices = ~committee
-        self.evaluated_iagents = self._benchmarker.indexed_agents
-        with self._benchmarker.db.db_lock:
-            self._benchmarker.db.commit_ratings(
-                    self._benchmarker.indexed_agents, self._benchmarker._arena.ratings,
+        self.evaluated_iagents = self._self_evaluator.indexed_agents
+        with self._self_evaluator.db.db_lock:
+            self._self_evaluator.db.commit_ratings(
+                    self._self_evaluator.indexed_agents, self._self_evaluator._arena.ratings,
                     committee=committee)
-        committee_gens = [self._benchmarker.indexed_agents[i].agent.gen for i in committee]
+        committee_gens = [self._self_evaluator.indexed_agents[i].agent.gen for i in committee]
         logger.info(f"Benchmark committee: {committee_gens}")
 
     def _task_finished(self) -> bool:
@@ -361,7 +361,7 @@ class SelfEvalManager(GamingManagerBase):
         if has_new_gen:
             return False
         else:
-            matches: List[Match] = self._benchmarker.get_next_matches(
+            matches: List[Match] = self._self_evaluator.get_next_matches(
                     self.n_iters, self.target_elo_gap, self.n_games,
                     excluded_indices=self.excluded_agent_indices)
             logger.debug(f"matches: {matches}")
