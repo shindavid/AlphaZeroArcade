@@ -61,7 +61,7 @@ class Domain(Enum):
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
             return Domain.RATINGS
         elif role in (ClientRole.BENCHMARK_SERVER, ClientRole.BENCHMARK_WORKER):
-            return Domain.BENCHMARK
+            return Domain.SELF_EVAL
         elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
             return Domain.EVAL
         else:
