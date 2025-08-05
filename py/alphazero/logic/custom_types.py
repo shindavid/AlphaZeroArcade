@@ -20,10 +20,10 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
-    EVAL_SERVER = 'eval-server'
-    EVAL_WORKER = 'eval-worker'
-    BENCHMARK_SERVER = 'benchmark-server'
-    BENCHMARK_WORKER = 'benchmark-worker'
+    EVAL_VS_BENCHMARK_SERVER = 'eval-vs-benchmark-server'
+    EVAL_VS_BENCHMARK_WORKER = 'eval-vs-benchmark-worker'
+    SELF_EVAL_SERVER = 'self-eval-server'
+    SELF_EVAL_WORKER = 'self-eval-worker'
 
     @staticmethod
     def worker_roles():
@@ -34,7 +34,8 @@ class ClientRole(Enum):
         """
         Returns the logging level for connect/disconnect info for a given client role.
         """
-        if role in (ClientRole.RATINGS_WORKER, ClientRole.BENCHMARK_WORKER, ClientRole.EVAL_WORKER):
+        if role in (ClientRole.RATINGS_WORKER, ClientRole.SELF_EVAL_WORKER,
+                    ClientRole.EVAL_VS_BENCHMARK_WORKER):
             return logging.DEBUG
         else:
             return logging.INFO
