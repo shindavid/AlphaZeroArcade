@@ -17,7 +17,7 @@ If no other runs have been evaluated against the benchmark, only the benchmark's
 from .x_var_logic import XVarSelector, make_x_df
 
 from alphazero.logic.agent_types import AgentRole
-from py.alphazero.logic.self_evaluator import SelfEvaluator
+from alphazero.logic.self_evaluator import SelfEvaluator
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
