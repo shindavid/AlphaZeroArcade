@@ -3,7 +3,7 @@ from .self_eval_manager import SelfEvalManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
-from .eval_manager import EvalVsBenchmarkManager
+from .eval_vs_benchmark_manager import EvalVsBenchmarkManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
