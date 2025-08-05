@@ -157,7 +157,7 @@ class BenchmarkData:
         run_params = RunParams(self.game, 'reference.player.benchmark')
         benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         benchmark_organizer.dir_setup(benchmark_tag='reference.player')
-        self._create_db_from_json(benchmark_organizer, is_reference=True)
+        self._create_db_from_json(benchmark_organizer)
 
     def _setup_rundir_from_run(self, utc_key: str = None):
         if self._rundir_exists():
