@@ -3,7 +3,7 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import AgentRole, IndexedAgent, Match, MatchType
-from py.alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
+from alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts

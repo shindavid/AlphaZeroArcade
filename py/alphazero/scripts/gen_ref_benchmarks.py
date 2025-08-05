@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from alphazero.logic.agent_types import AgentRole, MatchType, ReferenceAgent
 from alphazero.logic.arena import Arena
-from py.alphazero.logic.self_evaluator import SelfEvaluator
+from alphazero.logic.self_evaluator import SelfEvaluator
 from alphazero.logic.match_runner import Match
 from alphazero.logic.rating_db import RatingDB
 from alphazero.servers.loop_control.base_dir import Workspace
