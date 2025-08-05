@@ -1,4 +1,4 @@
-from alphazero.logic.evaluator import EvalUtils
+from alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
 
 import numpy as np
 import unittest
@@ -14,7 +14,7 @@ class TestEvalUtils(unittest.TestCase):
         n_games = 10000
         top_k = 5
 
-        num_matches = EvalUtils.gen_matches(est_rating, ixs, elos, n_games, top_k)
+        num_matches = EvalVsBenchmarkUtils.gen_matches(est_rating, ixs, elos, n_games, top_k)
         pcts = {int(k): float(v / n_games) for k, v in num_matches.items()}
 
         self.assertAlmostEqual(pcts.get(4, -1), 0.13, delta=0.05)

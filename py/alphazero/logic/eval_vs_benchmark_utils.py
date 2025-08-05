@@ -9,7 +9,7 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 
 
-class EvalUtils:
+class EvalVsBenchmarkUtils:
     @staticmethod
     def estimate_rating_nearby_gens(gen: int, evaluated_gens: List[int], ratings: List[float])\
             -> float:
@@ -37,7 +37,7 @@ class EvalUtils:
         if latest_gen not in evaluated_gens:
             return latest_gen
 
-        left_gen, right_gen = EvalUtils.get_biggest_gen_gap(evaluated_gens)
+        left_gen, right_gen = EvalVsBenchmarkUtils.get_biggest_gen_gap(evaluated_gens)
         if left_gen + 1 < right_gen:
             gen = (left_gen + right_gen) // 2
             assert gen not in evaluated_gens
