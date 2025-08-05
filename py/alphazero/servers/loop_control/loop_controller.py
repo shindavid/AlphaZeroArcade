@@ -99,7 +99,7 @@ class LoopController:
         self._self_play_manager = SelfPlayManager(self)
         self._eval_managers: Dict[EvalTag, EvalManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
-        self._benchmark_manager: Optional[SelfEvalManager] = None
+        self._self_eval_manager: Optional[SelfEvalManager] = None
         self._gpu_contention_manager = GpuContentionManager(self)
 
         # OutputDirSyncer must be the LAST constructed sub-manager, to ensure proper shutdown
@@ -239,9 +239,9 @@ class LoopController:
         elif client_role == ClientRole.EVAL_WORKER:
             self._get_eval_manager(conn.rating_tag).add_worker(conn)
         elif client_role == ClientRole.BENCHMARK_SERVER:
-            self._get_benchmark_manager().add_server(conn)
+            self._get_self_eval_manager().add_server(conn)
         elif client_role == ClientRole.BENCHMARK_WORKER:
-            self._get_benchmark_manager().add_worker(conn)
+            self._get_self_eval_manager().add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -278,8 +278,8 @@ class LoopController:
             assert tag is not None  # defensive programming, this indicates a bug
             manager.notify_of_new_model()
 
-        if self._benchmark_manager is not None:
-            self._benchmark_manager.notify_of_new_model()
+        if self._self_eval_manager is not None:
+            self._self_eval_manager.notify_of_new_model()
 
     def handle_new_self_play_data(self, gen: Generation, n_rows: int, file_size: int):
         self._training_manager.notify_of_new_self_play_data(gen, n_rows, file_size)
@@ -380,10 +380,10 @@ class LoopController:
         logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
                      f"to: {eval_db_file}")
 
-    def _get_benchmark_manager(self) -> SelfEvalManager:
-        if not self._benchmark_manager:
-            self._benchmark_manager = SelfEvalManager(self)
-        return self._benchmark_manager
+    def _get_self_eval_manager(self) -> SelfEvalManager:
+        if not self._self_eval_manager:
+            self._self_eval_manager = SelfEvalManager(self)
+        return self._self_eval_manager
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
