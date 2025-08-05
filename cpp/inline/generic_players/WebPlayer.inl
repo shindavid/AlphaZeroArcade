@@ -5,6 +5,7 @@
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/OsUtil.hpp"
 #include "util/StringUtil.hpp"
 
 #include <boost/filesystem.hpp>
@@ -167,6 +168,8 @@ void WebPlayer<Game>::launch_bridge() {
   namespace bp = boost::process;
   namespace bf = boost::filesystem;
 
+  os_util::free_port(bridge_port_);
+
   bp::environment env = boost::this_process::environment();
   env["BRIDGE_PORT"] = std::to_string(bridge_port_);
   env["ENGINE_PORT"] = std::to_string(engine_port_);
@@ -189,6 +192,8 @@ template <core::concepts::Game Game>
 void WebPlayer<Game>::launch_frontend() {
   namespace bp = boost::process;
   namespace bf = boost::filesystem;
+
+  os_util::free_port(vite_port_);
 
   bp::environment env = boost::this_process::environment();
   env["VITE_BRIDGE_PORT"] = std::to_string(bridge_port_);
@@ -274,6 +279,8 @@ void WebPlayer<Game>::write_to_socket(const State& state, core::action_t last_ac
 
 template <core::concepts::Game Game>
 boost::asio::ip::tcp::acceptor WebPlayer<Game>::create_acceptor() {
+  os_util::free_port(engine_port_);
+
   boost::asio::ip::tcp::acceptor acceptor(io_context_);
   acceptor.open(boost::asio::ip::tcp::v4());
   acceptor.set_option(boost::asio::socket_base::reuse_address(true));

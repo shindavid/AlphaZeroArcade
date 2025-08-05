@@ -69,6 +69,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
 
   int engine_port_ = 48040;  // TODO: Make this configurable
   int bridge_port_ = 52528;  // TODO: Make this configurable
+  int vite_port_ = 5173;     // TODO: Make this configurable
 
   boost::asio::io_context io_context_;
   boost::asio::ip::tcp::acceptor acceptor_;
