@@ -1,5 +1,5 @@
 from .base_dir import Benchmark, Scratch, Workspace
-from .benchmark_manager import BenchmarkManager
+from .benchmark_manager import SelfEvalManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
@@ -99,7 +99,7 @@ class LoopController:
         self._self_play_manager = SelfPlayManager(self)
         self._eval_managers: Dict[EvalTag, EvalManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
-        self._benchmark_manager: Optional[BenchmarkManager] = None
+        self._benchmark_manager: Optional[SelfEvalManager] = None
         self._gpu_contention_manager = GpuContentionManager(self)
 
         # OutputDirSyncer must be the LAST constructed sub-manager, to ensure proper shutdown
@@ -380,9 +380,9 @@ class LoopController:
         logger.debug(f"copy db from: {benchmark_organizer.benchmark_db_filename} "
                      f"to: {eval_db_file}")
 
-    def _get_benchmark_manager(self) -> BenchmarkManager:
+    def _get_benchmark_manager(self) -> SelfEvalManager:
         if not self._benchmark_manager:
-            self._benchmark_manager = BenchmarkManager(self)
+            self._benchmark_manager = SelfEvalManager(self)
         return self._benchmark_manager
 
     def _launch_recv_loop_inner(

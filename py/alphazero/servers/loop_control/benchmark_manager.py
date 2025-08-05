@@ -68,9 +68,9 @@ class BenchmarkServerAux(ServerAuxBase):
         return self.ix is not None
 
 
-class BenchmarkManager(GamingManagerBase):
+class SelfEvalManager(GamingManagerBase):
     """
-    BenchmarkManager is responsible for managing the lifecycle of the benchmarking process.
+    SelfEvalManager is responsible for managing the lifecycle of the benchmarking process.
 
     ### Benchmark Cadence & Priority
 
@@ -104,7 +104,7 @@ class BenchmarkManager(GamingManagerBase):
 
     ### Robustness & Continuity
 
-    BenchmarkManager can recover from interruptions. If a benchmark is incomplete, it can resume
+    SelfEvalManager can recover from interruptions. If a benchmark is incomplete, it can resume
     where it left off,
     skipping redundant matches and continuing until the benchmark is complete.
 
