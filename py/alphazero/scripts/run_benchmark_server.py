@@ -24,7 +24,7 @@ new agents, and reports match results back to the controller.
 
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.docker_utils import DockerParams, validate_docker_image
-from alphazero.servers.gaming.benchmark_server import BenchmarkServer
+from alphazero.servers.gaming.self_eval_server import SelfEvalServer
 from alphazero.servers.gaming.server_base import ServerParams
 from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams, configure_logger
@@ -66,7 +66,7 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    server = BenchmarkServer(params, logging_params, build_params, rating_params)
+    server = SelfEvalServer(params, logging_params, build_params, rating_params)
     server.run()
 
 
