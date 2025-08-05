@@ -50,7 +50,14 @@ RUN pip3 install --no-cache-dir \
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs
 
-# 6) Miscellaneous
+# 6) Temporary home for extra dependencies. Putting them here allows us to quickly rebuild the image
+#    without having to rebuild the entire image. Items here should later be moved to the more
+#    appropriate location above.
+RUN apt-get update && \
+    apt-get install -y lsof && \
+    rm -rf /var/lib/apt/lists/*
+
+# 7) Miscellaneous
 ENV PYTHONPATH=/workspace/repo/py
 
 COPY devuser-setup.sh /usr/local/bin/
@@ -60,7 +67,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="13.0.1"
+ARG VERSION="13.1.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
