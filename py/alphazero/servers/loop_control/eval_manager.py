@@ -116,9 +116,9 @@ class EvalServerAux(ServerAuxBase):
         return self.ix is not None
 
 
-class EvalManager(GamingManagerBase):
+class EvalVsBenchmarkManager(GamingManagerBase):
     """
-    A separate EvalManager is created for each rating-tag.
+    A separate EvalVsBenchmarkManager is created for each rating-tag.
     """
     def __init__(self, controller: LoopController, benchmark_tag: str):
         manager_config = ManagerConfig(
@@ -130,7 +130,7 @@ class EvalManager(GamingManagerBase):
         )
         super().__init__(controller, manager_config)
 
-        logger.debug(f"init EvalManager with benchmark-tag: {benchmark_tag}")
+        logger.debug(f"init EvalVsBenchmarkManager with benchmark-tag: {benchmark_tag}")
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}

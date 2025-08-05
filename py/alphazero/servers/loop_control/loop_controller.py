@@ -3,7 +3,7 @@ from .self_eval_manager import SelfEvalManager
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
-from .eval_manager import EvalManager
+from .eval_manager import EvalVsBenchmarkManager
 from .gpu_contention_manager import GpuContentionManager
 from .gpu_contention_table import GpuContentionTable
 from .log_syncer import LogSyncer
@@ -97,7 +97,7 @@ class LoopController:
         self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
-        self._eval_managers: Dict[EvalTag, EvalManager] = {}
+        self._eval_managers: Dict[EvalTag, EvalVsBenchmarkManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._self_eval_manager: Optional[SelfEvalManager] = None
         self._gpu_contention_manager = GpuContentionManager(self)
@@ -359,12 +359,12 @@ class LoopController:
             self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
 
-    def _get_eval_manager(self, tag: EvalTag) -> EvalManager:
+    def _get_eval_manager(self, tag: EvalTag) -> EvalVsBenchmarkManager:
         if tag not in self._eval_managers:
             benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
             benchmark_tag = benchmark_data.setup_rundir()
             self._copy_eval_db(benchmark_tag)
-            self._eval_managers[tag] = EvalManager(self, benchmark_tag)
+            self._eval_managers[tag] = EvalVsBenchmarkManager(self, benchmark_tag)
         return self._eval_managers[tag]
 
     def _copy_eval_db(self, benchmark_tag: str):
