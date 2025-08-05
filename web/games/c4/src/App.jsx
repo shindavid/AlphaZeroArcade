@@ -109,9 +109,30 @@ export default function App() {
             className={`square connect4-cell${isTopEmpty ? ' legal-move' : ''}`}
             onClick={() => isTopEmpty && handleColumnClick(col)}
             disabled={!!gameEnd || !isTopEmpty}
-            style={{ background: cell === 'X' ? '#f33' : cell === 'O' ? '#ff0' : '#fff' }}
+            style={{ background: '#fff', padding: 0 }}
           >
-            {cell ? <span className={`disc ${cell === 'X' ? 'disc-x' : 'disc-o'}`}></span> : ''}
+            {cell === 'R' && (
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <defs>
+                  <radialGradient id="redGrad" cx="50%" cy="35%" r="60%">
+                    <stop offset="0%" stopColor="#ffcccc"/>
+                    <stop offset="100%" stopColor="#c00"/>
+                  </radialGradient>
+                </defs>
+                <circle cx="20" cy="20" r="18" fill="url(#redGrad)" stroke="#a00" strokeWidth="2"/>
+              </svg>
+            )}
+            {cell === 'Y' && (
+              <svg width="40" height="40" viewBox="0 0 40 40">
+                <defs>
+                  <radialGradient id="yellowGrad" cx="50%" cy="35%" r="60%">
+                    <stop offset="0%" stopColor="#ffffcc"/>
+                    <stop offset="100%" stopColor="#fc0"/>
+                  </radialGradient>
+                </defs>
+                <circle cx="20" cy="20" r="18" fill="url(#yellowGrad)" stroke="#cc0" strokeWidth="2"/>
+              </svg>
+            )}
           </button>
         );
       }
