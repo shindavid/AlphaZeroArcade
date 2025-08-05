@@ -43,12 +43,12 @@ export default function App() {
       if (msg.type === 'state_update') {
         setBoardHelper(msg.payload.board);
         setTurn(msg.payload.turn);
-        setLoading(false);
         setGameEnd(null);
       } else if (msg.type === 'game_end') {
         setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
       }
+      setLoading(false);
     };
 
     return () => ws.close();
