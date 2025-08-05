@@ -154,10 +154,11 @@ class BenchmarkData:
         benchmark_data._setup_rundir_from_run(utc_key=record.utc_key)
 
     def _setup_rundir_from_reference(self):
-        run_params = RunParams(self.game, 'reference.player.benchmark')
-        benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-        benchmark_organizer.dir_setup(benchmark_tag='reference.player')
-        self._create_db_from_json(benchmark_organizer)
+        ref_tag = 'reference.player'
+        run_params = RunParams(self.game, ref_tag)
+        dst_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
+        dst_organizer.dir_setup(benchmark_tag=ref_tag)
+        self._create_db_from_json(dst_organizer)
 
     def _setup_rundir_from_run(self, utc_key: str = None):
         if self._rundir_exists():
