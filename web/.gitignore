@@ -1,6 +1,5 @@
 # ignore all workspace node_modules
-node_modules
-games/*/node_modules
+**/node_modules
 
 # you can also add
 dist

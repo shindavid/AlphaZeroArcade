@@ -167,12 +167,14 @@ void WebPlayer<Game>::launch_bridge() {
   env["ENGINE_PORT"] = std::to_string(engine_port_);
   env["SPAWN_ENGINE"] = "false";
 
-  bf::path start_dir = "/workspace/repo/web/bridge";
+  bf::path start_dir = "/workspace/repo/web";
   bf::path log_dir = std::format("/home/devuser/scratch/logs/{}", Game::Constants::kGameName);
   bf::create_directories(log_dir);
   bf::path log_file = log_dir / "bridge.log";
 
-  bridge_process_ = new bp::child("npm start", bp::start_dir = start_dir, bp::std_out > log_file,
+  std::string cmd = "npm run bridge";
+
+  bridge_process_ = new bp::child(cmd, bp::start_dir = start_dir, bp::std_out > log_file,
                                   bp::std_err > log_file, env);
 
   LOG_INFO("Web player launched bridge process on port {}", bridge_port_);
@@ -186,13 +188,15 @@ void WebPlayer<Game>::launch_frontend() {
   bp::environment env = boost::this_process::environment();
   env["VITE_BRIDGE_PORT"] = std::to_string(bridge_port_);
 
-  bf::path start_dir = std::format("/workspace/repo/web/games/{}", Game::Constants::kGameName);
+  bf::path start_dir = "/workspace/repo/web";
   bf::path log_dir = std::format("/home/devuser/scratch/logs/{}", Game::Constants::kGameName);
   bf::create_directories(log_dir);
   bf::path log_file = log_dir / "frontend.log";
 
-  frontend_process_ = new bp::child("npm run dev", bp::start_dir = start_dir,
-                                    bp::std_out > log_file, bp::std_err > log_file, env);
+  std::string cmd = std::format("npm --workspace=games/{} run dev", Game::Constants::kGameName);
+
+  frontend_process_ = new bp::child(cmd, bp::start_dir = start_dir, bp::std_out > log_file,
+                                    bp::std_err > log_file, env);
 
   LOG_INFO("Web player launched frontend process");
 }
