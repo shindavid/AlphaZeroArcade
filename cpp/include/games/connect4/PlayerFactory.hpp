@@ -5,8 +5,10 @@
 #include "games/connect4/Game.hpp"
 #include "games/connect4/players/HumanTuiPlayerGenerator.hpp"
 #include "games/connect4/players/PerfectPlayerGenerator.hpp"
+#include "games/connect4/players/WebPlayer.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
+#include "generic_players/WebPlayerGenerator.hpp"
 
 namespace c4 {
 
@@ -23,6 +25,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
             new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
+            new core::PlayerSubfactory<generic::WebPlayerGenerator<c4::WebPlayer>>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }

@@ -9,6 +9,7 @@
 #include "util/StringUtil.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/json/array.hpp>
 #include <boost/process.hpp>
 #include <string>
 
@@ -95,7 +96,7 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
     action_ = -1;
     return action;
   }
-  send_state(request.state, last_action_, last_mode_);
+  send_state(request, last_action_, last_mode_);
   notification_unit_ = request.notification_unit;
 
   // NOTE: see long comment in GameServer.inl, in the next() method, about a race condition
@@ -112,7 +113,7 @@ template <core::concepts::Game Game>
 void WebPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
   boost::json::object msg;
   msg["type"] = "game_end";
-  boost::json::object payload = make_state_msg(state, last_action_, last_mode_);
+  boost::json::object payload = make_state_msg(state, ActionMask(), last_action_, last_mode_);
   payload["msg"] = make_result_msg(state, outcome);
   msg["payload"] = payload;
   std::string out = boost::json::serialize(msg) + "\n";
@@ -154,12 +155,19 @@ std::string WebPlayer<Game>::make_result_msg(const State& state, const ValueTens
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_state_msg(const State& state, core::action_t last_action,
+boost::json::object WebPlayer<Game>::make_state_msg(const State& state,
+                                                    const ActionMask& legal_moves,
+                                                    core::action_t last_action,
                                                     core::action_mode_t last_mode) {
+  boost::json::array legal_move_indices;
+  for (int i : bitset_util::on_indices(legal_moves)) {
+    legal_move_indices.push_back(i);
+  }
   boost::json::object payload;
   payload["board"] = IO::compact_state_repr(state);
   payload["last_action"] = IO::action_to_str(last_action, last_mode);
   payload["turn"] = IO::player_to_str(this->get_my_seat());
+  payload["legal_moves"] = legal_move_indices;
   return payload;
 }
 
@@ -260,19 +268,19 @@ void WebPlayer<Game>::response_loop() {
 // response_loop(). If we hit this method before that point, we need to store the state, and send it
 // later.
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_state(const State& state, core::action_t last_action,
+void WebPlayer<Game>::send_state(const ActionRequest& request, core::action_t last_action,
                                  core::action_mode_t last_mode) {
   mit::unique_lock lock(mutex_);
   RELEASE_ASSERT(connected_);
-  write_to_socket(state, last_action, last_mode);
+  write_to_socket(request, last_action, last_mode);
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::write_to_socket(const State& state, core::action_t last_action,
+void WebPlayer<Game>::write_to_socket(const ActionRequest& request, core::action_t last_action,
                                       core::action_mode_t last_mode) {
   boost::json::object msg;
   msg["type"] = "state_update";
-  msg["payload"] = make_state_msg(state, last_action, last_mode);
+  msg["payload"] = make_state_msg(request.state, request.valid_actions, last_action, last_mode);
   std::string out = boost::json::serialize(msg) + "\n";
   boost::asio::write(socket_, boost::asio::buffer(out));
 }

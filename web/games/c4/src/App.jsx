@@ -45,13 +45,13 @@ export default function App() {
         setBoardHelper(msg.payload.board);
         setTurn(msg.payload.turn);
         setLegalMoves(msg.payload.legal_moves || []);
-        setLoading(false);
         setGameEnd(null);
       } else if (msg.type === 'game_end') {
         setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
         setLegalMoves([]);
       }
+      setLoading(false);
     };
 
     return () => ws.close();
