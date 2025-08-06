@@ -2,7 +2,7 @@ import './App.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
-export default class App extends GameAppBase {
+export default class TicTacToeApp extends GameAppBase {
   constructor(props) {
     super(props);
     this.state = {

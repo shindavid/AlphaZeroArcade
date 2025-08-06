@@ -10,7 +10,7 @@ const COLS = 7;
 const ANIMATION_INTERVAL = 60; // ms per row drop
 
 
-export default class App extends GameAppBase {
+export default class Connect4App extends GameAppBase {
   constructor(props) {
     super(props);
     this.state = {
