@@ -1,3 +1,20 @@
+/* Animated disc overlay for drop animation */
+.animated-disc {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  z-index: 10;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: top 0.06s linear;
+}
+.animated-disc.red {
+  background-image: url('../images/red.svg');
+}
+.animated-disc.yellow {
+  background-image: url('../images/yellow.svg');
+}
 .status-bar {
   display: flex;
   flex-direction: row;
