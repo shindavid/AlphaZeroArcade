@@ -33,14 +33,14 @@ class RatingParams:
     default_target_elo_gap: DefaultTargetEloGap = field(default_factory=DefaultTargetEloGap)
 
     eval_error_threshold: float = 50.0
-    n_games_per_benchmark: int = 100
+    n_games_per_self_evaluation: int = 100
     n_games_per_evaluation: int = 1000
 
     target_elo_gap: Optional[float] = None
     use_remote_play: bool = False
 
     def __post_init__(self):
-        assert self.n_games_per_benchmark > 0, "Must have >0 games per benchmark"
+        assert self.n_games_per_self_evaluation > 0, "Must have >0 games per benchmark"
         assert self.n_games_per_evaluation > 0, "Must have >0 games per evaluation"
         if self.target_elo_gap is not None:
             assert self.target_elo_gap > 0, "ELO gap must be positive"
@@ -58,7 +58,7 @@ class RatingParams:
               ),
             target_elo_gap=args.target_elo_gap,
             eval_error_threshold=args.eval_error_threshold,
-            n_games_per_benchmark=args.n_games_per_benchmark,
+            n_games_per_self_evaluation=args.n_games_per_self_evaluation,
             n_games_per_evaluation=args.n_games_per_evaluation,
             use_remote_play=args.use_remote_play,
             )
@@ -81,8 +81,8 @@ class RatingParams:
                            help='target elo gap for rating (default: None)')
         group.add_argument('--eval-error-threshold', type=float, default=defaults.eval_error_threshold,
                            help='error threshold for Elo estimation (default: %(default).1f)')
-        group.add_argument('--n-games-per-benchmark', type=int, default=defaults.n_games_per_benchmark,
-                           help='number of games per benchmark (default: %(default)d)')
+        group.add_argument('--n-games-per-self-evaluation', type=int, default=defaults.n_games_per_self_evaluation,
+                           help='number of games per self-evaluation (default: %(default)d)')
         group.add_argument('--n-games-per-evaluation', type=int, default=defaults.n_games_per_evaluation,
                            help='number of games per evaluation (default: %(default)d)')
         group.add_argument('--use-remote-play', action='store_true', default=defaults.use_remote_play,

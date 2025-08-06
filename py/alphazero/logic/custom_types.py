@@ -20,10 +20,10 @@ class ClientRole(Enum):
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
-    EVAL_SERVER = 'eval-server'
-    EVAL_WORKER = 'eval-worker'
-    BENCHMARK_SERVER = 'benchmark-server'
-    BENCHMARK_WORKER = 'benchmark-worker'
+    EVAL_VS_BENCHMARK_SERVER = 'eval-vs-benchmark-server'
+    EVAL_VS_BENCHMARK_WORKER = 'eval-vs-benchmark-worker'
+    SELF_EVAL_SERVER = 'self-eval-server'
+    SELF_EVAL_WORKER = 'self-eval-worker'
 
     @staticmethod
     def worker_roles():
@@ -34,7 +34,8 @@ class ClientRole(Enum):
         """
         Returns the logging level for connect/disconnect info for a given client role.
         """
-        if role in (ClientRole.RATINGS_WORKER, ClientRole.BENCHMARK_WORKER, ClientRole.EVAL_WORKER):
+        if role in (ClientRole.RATINGS_WORKER, ClientRole.SELF_EVAL_WORKER,
+                    ClientRole.EVAL_VS_BENCHMARK_WORKER):
             return logging.DEBUG
         else:
             return logging.INFO
@@ -50,8 +51,8 @@ class Domain(Enum):
     TRAINING = 'training'
     SELF_PLAY = 'self-play'
     RATINGS = 'ratings'
-    BENCHMARK = 'benchmark'
-    EVAL = 'eval'
+    SELF_EVAL = 'self-eval'
+    EVAL_VS_BENCHMARK = 'eval-vs-benchmark'
     SLEEPING = 'sleeping'
 
     @staticmethod
@@ -60,10 +61,10 @@ class Domain(Enum):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
             return Domain.RATINGS
-        elif role in (ClientRole.BENCHMARK_SERVER, ClientRole.BENCHMARK_WORKER):
-            return Domain.BENCHMARK
-        elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
-            return Domain.EVAL
+        elif role in (ClientRole.SELF_EVAL_SERVER, ClientRole.SELF_EVAL_WORKER):
+            return Domain.SELF_EVAL
+        elif role in (ClientRole.EVAL_VS_BENCHMARK_SERVER, ClientRole.EVAL_VS_BENCHMARK_WORKER):
+            return Domain.EVAL_VS_BENCHMARK
         else:
             raise ValueError(f'Unexpected role: {role}')
 

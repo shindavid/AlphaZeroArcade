@@ -13,7 +13,7 @@ class LoopControllerParams:
     target_rating_rate: float = 0.1
 
     benchmark_tag: Optional[str] = None
-    benchmark_until_gen_gap: int = 25
+    self_eval_until_gen_gap: int = 25
 
     ignore_sigint: bool = False
     simulate_cloud: bool = False
@@ -45,9 +45,9 @@ class LoopControllerParams:
                            'self-play/training. (default: %(default).1f)')
         group.add_argument('-b', '--benchmark-tag', default=defaults.benchmark_tag,
                            help='the run tag whose benchmark.db will be used for evaluation.')
-        group.add_argument('--benchmark-until-gen-gap', type=int,
-                            default=defaults.benchmark_until_gen_gap,
-                            help='number of generations to wait for benchmark evaluation '
+        group.add_argument('--self-eval-until-gen-gap', type=int,
+                            default=defaults.self_eval_until_gen_gap,
+                            help='number of generations to wait for self-evaluation '
                             '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)

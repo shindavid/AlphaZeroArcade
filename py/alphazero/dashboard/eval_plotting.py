@@ -17,7 +17,7 @@ If no other runs have been evaluated against the benchmark, only the benchmark's
 from .x_var_logic import XVarSelector, make_x_df
 
 from alphazero.logic.agent_types import AgentRole
-from alphazero.logic.benchmarker import Benchmarker
+from alphazero.logic.self_evaluator import SelfEvaluator
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
@@ -96,8 +96,8 @@ class BenchmarkData:
 
     def make_df(self, organizer: DirectoryOrganizer):
         try:
-            benchmarker = Benchmarker(organizer)
-            benchmark_rating_data = benchmarker.read_ratings_from_db()
+            self_evaluator = SelfEvaluator(organizer)
+            benchmark_rating_data = self_evaluator.read_ratings_from_db()
             ratings = benchmark_rating_data.ratings
             iagents = benchmark_rating_data.iagents
             for ia, rating in zip(iagents, ratings):

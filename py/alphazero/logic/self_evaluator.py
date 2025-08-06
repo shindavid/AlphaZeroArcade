@@ -32,7 +32,7 @@ class BenchmarkRatingData:
     tag: str
 
 
-class Benchmarker:
+class SelfEvaluator:
     """
     Manages a collection of Agents, their pairwise matches, and rating calculations.
     """

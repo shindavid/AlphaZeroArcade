@@ -6,7 +6,7 @@ from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, Referenc
         MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
-from alphazero.logic.evaluator import EvalUtils
+from py.alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
@@ -116,21 +116,21 @@ class EvalServerAux(ServerAuxBase):
         return self.ix is not None
 
 
-class EvalManager(GamingManagerBase):
+class EvalVsBenchmarkManager(GamingManagerBase):
     """
-    A separate EvalManager is created for each rating-tag.
+    A separate EvalVsBenchmarkManager is created for each rating-tag.
     """
     def __init__(self, controller: LoopController, benchmark_tag: str):
         manager_config = ManagerConfig(
             worker_aux_class=WorkerAux,
             server_aux_class=EvalServerAux,
-            server_name='eval-server',
-            worker_name='eval-worker',
-            domain=Domain.EVAL,
+            server_name='eval-vs-benchmark-server',
+            worker_name='eval-vs-benchmark-worker',
+            domain=Domain.EVAL_VS_BENCHMARK,
         )
         super().__init__(controller, manager_config)
 
-        logger.debug(f"init EvalManager with benchmark-tag: {benchmark_tag}")
+        logger.debug(f"init EvalVsBenchmarkManager with benchmark-tag: {benchmark_tag}")
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}
@@ -324,7 +324,7 @@ class EvalManager(GamingManagerBase):
                 continue
             ixs.append(benchmark_ix)
             elos.append(benchmark_elo)
-        return EvalUtils.gen_matches(estimated_rating, ixs, elos, n_games_needed)
+        return EvalVsBenchmarkUtils.gen_matches(estimated_rating, ixs, elos, n_games_needed)
 
     def _gen_match_request_data(self, test_iagent: IndexedAgent, opponent_iagent: IndexedAgent,
                                 next_n_games) -> JsonDict:
@@ -428,7 +428,7 @@ class EvalManager(GamingManagerBase):
 
         latest_gen = self._controller._organizer.get_latest_model_generation()
         actioned_gens = [es.mcts_gen for es in self._eval_status_dict.values() if es.actioned()]
-        gen = EvalUtils.get_next_gen_to_eval(latest_gen, actioned_gens)
+        gen = EvalVsBenchmarkUtils.get_next_gen_to_eval(latest_gen, actioned_gens)
         return gen
 
     def _estimate_rating(self, test_iagent):
@@ -464,7 +464,9 @@ class EvalManager(GamingManagerBase):
 
         if not evaluated_gens:
             return None
-        estimated_rating = EvalUtils.estimate_rating_nearby_gens(gen, evaluated_gens, elos)
+        estimated_rating = EvalVsBenchmarkUtils.estimate_rating_nearby_gens(
+            gen, evaluated_gens, elos)
+
         return estimated_rating
 
     def _update_eval_status(self, test_ix: int, num_matches: Dict[int, int]):

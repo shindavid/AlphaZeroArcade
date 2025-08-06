@@ -25,8 +25,8 @@ Each component has a corresponding launcher script in py/alphazero/scripts/:
 - run_loop_controller.py
 - run_self_play_server.py
 - run_ratings_server.py
-- run_benchmark_server.py
-- run_eval_server.py
+- run_self_eval_server.py
+- run_eval_vs_benchmark_server.py
 
 Standard Usage Recipes:
 
@@ -109,7 +109,7 @@ class Params:
     run_benchmark_server: bool = False
     run_eval_server: bool = False
 
-    benchmark_until_gen_gap: int = default_loop_controller_params.benchmark_until_gen_gap
+    self_eval_until_gen_gap: int = default_loop_controller_params.self_eval_until_gen_gap
 
     @staticmethod
     def create(args) -> 'Params':
@@ -203,7 +203,7 @@ def launch_ratings_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
+def launch_self_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     params: Params = params_dict['Params']
     docker_params: DockerParams = params_dict['DockerParams']
     logging_params: LoggingParams = params_dict['LoggingParams']
@@ -213,7 +213,7 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     cuda_device = f'cuda:{cuda_device}'
 
     cmd = [
-        'py/alphazero/scripts/run_benchmark_server.py',
+        'py/alphazero/scripts/run_self_eval_server.py',
         '--ignore-sigint',
         '--cuda-device', cuda_device,
     ]
@@ -226,11 +226,11 @@ def launch_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     rating_params.add_to_cmd(cmd, server=True)
 
     cmd = shlex.join(cmd)
-    logger.info('Launching benchmark server: %s', cmd)
+    logger.info('Launching self-eval server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
+def launch_eval_vs_benchmark_server(params_dict, cuda_device: int, game_spec: GameSpec):
     params: Params = params_dict['Params']
     docker_params: DockerParams = params_dict['DockerParams']
     logging_params: LoggingParams = params_dict['LoggingParams']
@@ -240,7 +240,7 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     cuda_device = f'cuda:{cuda_device}'
 
     cmd = [
-        'py/alphazero/scripts/run_eval_server.py',
+        'py/alphazero/scripts/run_eval_vs_benchmark_server.py',
         '--ignore-sigint',
         '--cuda-device', cuda_device,
     ]
@@ -253,7 +253,7 @@ def launch_eval_server(params_dict, cuda_device: int, game_spec: GameSpec):
     rating_params.add_to_cmd(cmd, server=True)
 
     cmd = shlex.join(cmd)
-    logger.info('Launching eval server: %s', cmd)
+    logger.info('Launching eval-vs-benchmark server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
@@ -286,8 +286,8 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     else:
         cmd.extend(['--target-elo-gap', str(rating_params.default_target_elo_gap.first_run)])
 
-    if default_loop_controller_params.benchmark_until_gen_gap != params.benchmark_until_gen_gap:
-        cmd.extend(['--benchmark-until-gen-gap', str(params.benchmark_until_gen_gap)])
+    if default_loop_controller_params.self_eval_until_gen_gap != params.self_eval_until_gen_gap:
+        cmd.extend(['--self-eval-until-gen-gap', str(params.self_eval_until_gen_gap)])
 
     if params.task_mode:
         cmd.extend(['--task-mode'])
@@ -378,20 +378,20 @@ def main():
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')
-                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+                procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
             if params.run_eval_server:
                 descs.append('Eval')
-                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+                procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
             if params.run_ratings_server:
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
             if benchmark_data.valid():
                 descs.append('Eval')
-                procs.append(launch_eval_server(params_dict, ratings_gpu, game_spec))
+                procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
             else:
                 descs.append('Benchmark')
-                procs.append(launch_benchmark_server(params_dict, ratings_gpu, game_spec))
+                procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
 
         if params.run_ratings_server and game_spec.reference_player_family is not None:
             descs.append('Ratings')

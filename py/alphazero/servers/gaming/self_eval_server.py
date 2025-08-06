@@ -5,12 +5,12 @@ from shared.rating_params import RatingParams
 from util.logging_util import LoggingParams
 
 
-class BenchmarkServer(ServerBase):
+class SelfEvalServer(ServerBase):
     def __init__(self, params: ServerParams, logging_params: LoggingParams,
                  build_params: BuildParams, rating_params: RatingParams):
         server_config = ServerConfig(
-            server_name='benchmark-server',
-            worker_name='benchmark-worker',
-            server_role=ClientRole.BENCHMARK_SERVER,
-            worker_role=ClientRole.BENCHMARK_WORKER)
+            server_name='self-eval-server',
+            worker_name='self-eval-worker',
+            server_role=ClientRole.SELF_EVAL_SERVER,
+            worker_role=ClientRole.SELF_EVAL_WORKER)
         super().__init__(params, logging_params, build_params, rating_params, server_config)
