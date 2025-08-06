@@ -1,4 +1,4 @@
-import './App.css';
+import './Connect4.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 import { Connect4Animation } from './Connect4Animation';

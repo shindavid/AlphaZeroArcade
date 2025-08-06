@@ -1,4 +1,4 @@
-import './App.css';
+import './TicTacToe.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
