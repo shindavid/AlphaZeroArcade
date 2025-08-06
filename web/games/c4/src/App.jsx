@@ -1,6 +1,7 @@
 import './App.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
+import { Connect4Animation } from './Connect4Animation';
 
 // Connect4 board dimensions
 const ROWS = 6;
@@ -15,110 +16,77 @@ export default class App extends GameAppBase {
     this.state = {
       ...this.state,
       board: Array(ROWS * COLS).fill('_'),
-      legalMoves: [],
       lastAction: null,
-      animating: false,
-      animCol: null,
-      animRow: null,
-      animTargetRow: null,
-      animDisc: null,
-      animSource: null,
+      animation: null, // { col, row, disc, source, targetRow, animRow }
       lastMoveSentCol: null,
     };
-    this.animTimer = null;
+    this.animationHelper = new Connect4Animation();
   }
 
   // Animation helpers
   endAnimation = () => {
-    if (this.animTimer) clearInterval(this.animTimer);
-    this.setState({
-      animating: false,
-      animCol: null,
-      animRow: null,
-      animDisc: null,
-      animSource: null,
-      lastAction: null,
-      animTargetRow: null,
-    });
+    this.animationHelper.end();
+    this.setState({ animation: null });
   };
 
-  startAnimation = ({ col, row, disc, source, onComplete }) => {
-    this.endAnimation();
-    this.setState({
-      animating: true,
-      animCol: col,
-      animRow: 0,
-      animDisc: disc,
-      animSource: source,
-      animTargetRow: source === 'opponent' ? row : null,
-      lastAction: col,
-    });
-    let animationDone = false;
-    this.animTimer = setInterval(() => {
-      this.setState(prev => {
-        if (prev.animRow < row) {
-          return { animRow: prev.animRow + 1 };
+  // Override to animate opponent moves
+  handleStateUpdate(payload) {
+    // Call base class to update state
+    if (super.handleStateUpdate) super.handleStateUpdate(payload);
+    // Animate opponent move if last_action is present and not from player
+    const last = payload.last_action;
+    if (last && last !== '-') {
+      const col = parseInt(last, 10) - 1;
+      if (!isNaN(col) && col >= 0 && col < COLS) {
+        // If this is the player's last move, don't animate again
+        if (this.state.lastMoveSentCol === col) {
+          this.setState({ lastMoveSentCol: null });
         } else {
-          if (!animationDone) {
-            animationDone = true;
-            clearInterval(this.animTimer);
-            this.endAnimation();
-            if (onComplete) onComplete();
+          // Animate opponent's move
+          const b = Array.from(payload.board || '');
+          let disc = null;
+          let row = -1;
+          // Find the row where the new disc landed (first non-empty cell from top)
+          for (let r = 0; r < ROWS; ++r) {
+            const idx = r * COLS + col;
+            if (b[idx] !== '_') {
+              disc = b[idx];
+              row = r;
+              break;
+            }
           }
-          return null;
-        }
-      });
-    }, ANIMATION_INTERVAL);
-  };
-
-  handleMessage(msg) {
-    if (msg.type === 'state_update') {
-      this.setState({
-        board: Array.from(msg.payload.board),
-        turn: msg.payload.turn,
-        legalMoves: msg.payload.legal_moves || [],
-        gameEnd: null,
-      });
-      // Animation logic: check for last_action
-      let last = msg.payload.last_action;
-      if (last && last !== '-') {
-        let col = parseInt(last, 10) - 1;
-        if (!isNaN(col) && col >= 0 && col < COLS) {
-          // If this is the player's last move, don't animate again
-          if (this.state.lastMoveSentCol === col) {
-            this.setState({ lastMoveSentCol: null });
-          } else {
-            // Animate opponent's move
-            let b = Array.from(msg.payload.board || '');
-            let disc = null;
-            let row = -1;
-            // Find the row where the new disc landed (first non-empty cell from top)
-            for (let r = 0; r < ROWS; ++r) {
-              let idx = r * COLS + col;
-              if (b[idx] !== '_') {
-                disc = b[idx];
-                row = r;
-                break;
-              }
-            }
-            if (row !== -1 && disc) {
-              this.startAnimation({ col, row, disc, source: 'opponent' });
-            }
+          if (row !== -1 && disc) {
+            this.startAnimation({ col, row, disc, source: 'opponent' });
           }
         }
       }
-    } else if (msg.type === 'game_end') {
-      this.setState({
-        board: Array.from(msg.payload.board),
-        gameEnd: msg.payload,
-        legalMoves: [],
-      });
-      this.endAnimation();
     }
   }
 
+  startAnimation = ({ col, row, disc, source, onComplete }) => {
+    this.animationHelper.start({
+      col,
+      row,
+      disc,
+      source,
+      onComplete: () => {
+        this.setState({ animation: null });
+        if (onComplete) onComplete();
+      },
+      interval: ANIMATION_INTERVAL,
+      onFrame: (animState) => {
+        this.setState({ animation: { ...animState } });
+      },
+    });
+    this.setState({
+      animation: this.animationHelper.get(),
+      lastAction: col,
+    });
+  };
+
   handleCellClick = (col) => {
-    if (!this.gameActive() || this.state.animating || !this.state.legalMoves.includes(col)) return;
+    if (!this.gameActive() || (this.state.animation && this.state.animation.col !== null)) return;
+
     // Find the lowest empty row in this column
     let row = -1;
     for (let r = ROWS - 1; r >= 0; --r) {
@@ -141,9 +109,34 @@ export default class App extends GameAppBase {
     });
   };
 
-  sendMove(col) {
-    const ws = this.socketRef.current;
-    ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
+  // Helper to determine if a disc should be hidden for animation
+  hideDisc(row, col, cell) {
+    const anim = this.state.animation;
+    if (!anim || anim.col !== col) return false;
+    if (
+      anim.source === 'player' && anim.animRow !== null && row === anim.animRow && cell === anim.disc
+    ) {
+      return true;
+    }
+    if (
+      anim.source === 'opponent' && anim.targetRow !== null && row === anim.targetRow && cell === anim.disc
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  renderAnimatedDisc() {
+    const anim = this.state.animation;
+    if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
+    const left = 18 + 4 + anim.col * 56;
+    const top = 20 + 4 + anim.animRow * 56;
+    return (
+      <div
+        className={`animated-disc ${anim.disc}`}
+        style={{ left, top }}
+      />
+    );
   }
 
   renderBoard() {
@@ -154,22 +147,8 @@ export default class App extends GameAppBase {
         const cell = this.state.board[idx];
         const isLegal = this.state.legalMoves.includes(col);
         let cellClass = "";
-        // During animation, render the cell as empty (no disc) if it's the animated target
-        let hideDisc = false;
-        if (this.state.animating && this.state.animCol === col) {
-          if (
-            this.state.animSource === 'player' && this.state.animRow !== null && row === this.state.animRow && cell === this.state.animDisc
-          ) {
-            hideDisc = true;
-          } else if (
-            this.state.animSource === 'opponent' && this.state.animTargetRow !== null && row === this.state.animTargetRow && cell === this.state.animDisc
-          ) {
-            hideDisc = true;
-          }
-        }
-        if (!hideDisc) {
-          if (cell === "R") cellClass = "red";
-          else if (cell === "Y") cellClass = "yellow";
+        if (!this.hideDisc(row, col, cell)) {
+          if (cell === "R" || cell === "Y") cellClass = cell;
         }
         grid.push(
           <div
@@ -183,54 +162,10 @@ export default class App extends GameAppBase {
         );
       }
     }
-    return grid;
-  }
-
-  renderAnimatedDisc() {
-    if (!this.state.animating || this.state.animCol === null || this.state.animRow === null || !this.state.animDisc) return null;
-    const left = 18 + 4 + this.state.animCol * 56;
-    const top = 20 + 4 + this.state.animRow * 56;
-    const discClass = this.state.animDisc === 'R' ? 'red' : 'yellow';
-    return (
-      <div
-        className={`animated-disc ${discClass}`}
-        style={{ left, top }}
-      />
-    );
-  }
-
-  render() {
-    return (
-      <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-        <div className="status-bar" style={{ marginBottom: '1.5em' }}>
-          <span className="status-message-area">
-            {this.state.gameEnd
-              ? this.state.gameEnd.msg
-              : <>Next: <b>{this.state.turn}</b></>
-            }
-          </span>
-        </div>
-        <div className="board connect4-board" style={{ position: 'relative' }}>
-          {this.renderBoard()}
-          {this.renderAnimatedDisc()}
-        </div>
-        <div className="button-row">
-          <button
-            className="status-action-btn"
-            onClick={this.handleResign}
-            disabled={!!this.state.gameEnd || this.state.loading}
-          >
-            Resign
-          </button>
-          <button
-            className="status-action-btn"
-            onClick={this.handleNewGame}
-            disabled={!this.state.gameEnd || this.state.loading}
-          >
-            New Game
-          </button>
-        </div>
-      </div>
-    );
+    // The board container must have the grid class for CSS to apply
+    return <div className="connect4-board" style={{ position: 'relative' }}>
+      {grid}
+      {this.renderAnimatedDisc()}
+    </div>;
   }
 }

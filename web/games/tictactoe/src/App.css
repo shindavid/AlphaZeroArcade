@@ -1,70 +1,4 @@
-.status-bar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 1.5em;
-  gap: 2.5em;
-}
 
-.status-message-area {
-  min-width: 11em;
-  min-height: 2.5em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 500;
-  text-align: center;
-  background: none;
-  border: none;
-  border-radius: 0;
-  box-sizing: border-box;
-  letter-spacing: 0.01em;
-  padding: 0 0.5em;
-  color: #222;
-}
-
-.status-action-btn {
-  min-width: 7em;
-  min-height: 2.5em;
-  font-size: 1.2rem;
-  font-weight: 500;
-  border-radius: 0.5em;
-  border: 1px solid #bbb;
-  background: #f0f0f0;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-left: 0;
-}
-
-.button-row {
-  margin-top: 2em;
-  display: flex;
-  gap: 1.5em;
-  justify-content: center;
-}
-.status-action-btn:active {
-  background: #e0e0e0;
-}
-
-.status-action-btn:disabled,
-.status-action-btn[disabled] {
-  border-color: #ddd;
-  background: #f7f7f7;
-  color: #aaa;
-  cursor: not-allowed;
-}
-.status-action-btn:disabled:hover,
-.status-action-btn[disabled]:hover,
-.status-action-btn:disabled:focus,
-.status-action-btn[disabled]:focus {
-  border-color: #ddd;
-  background: #f7f7f7;
-  color: #aaa;
-  box-shadow: none;
-}
 .container {
   display: flex;
   flex-direction: column;
@@ -74,8 +8,6 @@
   min-height: 600px;
   justify-content: flex-start;
 }
-
-
 
 .board {
   display: grid;

@@ -10,6 +10,7 @@ export class GameAppBase extends React.Component {
       gameEnd: null,
       turn: null,
       board: null,
+      legalMoves: [],
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -37,17 +38,28 @@ export class GameAppBase extends React.Component {
   // To be overridden by subclass
   handleMessage(msg) {
     if (msg.type === 'state_update') {
-      this.setState({
-        board: Array.from(msg.payload.board),
-        turn: msg.payload.turn,
-        gameEnd: null,
-      });
+      this.handleStateUpdate(msg.payload);
     } else if (msg.type === 'game_end') {
-      this.setState({
-        board: Array.from(msg.payload.board),
-        gameEnd: msg.payload,
-      });
+      this.handleGameEnd(msg.payload);
+    } else {
+      console.warn('Unhandled message type:', msg.type);
     }
+  }
+
+  handleStateUpdate(payload) {
+    this.setState({
+      board: Array.from(payload.board),
+      turn: payload.turn,
+      gameEnd: null,
+      legalMoves: payload.legal_moves || [],
+    });
+  }
+
+  handleGameEnd(payload) {
+    this.setState({
+      board: Array.from(payload.board),
+      gameEnd: payload,
+    });
   }
 
   gameActive() {
