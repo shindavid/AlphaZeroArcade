@@ -37,6 +37,47 @@ export default function App() {
     setBoard(Array.from(str));
   };
 
+  // Animation helpers
+  const endAnimation = () => {
+    if (animTimer.current) clearInterval(animTimer.current);
+    setAnimating(false);
+    setAnimCol(null);
+    setAnimRow(null);
+    setAnimDisc(null);
+    setAnimSource(null);
+    setLastAction(null);
+    setAnimTargetRow(null);
+  };
+
+  // onComplete is an optional callback
+  const startAnimation = ({ col, row, disc, source, onComplete }) => {
+    endAnimation(); // clear any previous animation
+    setAnimating(true);
+    setAnimCol(col);
+    setAnimRow(0);
+    setAnimDisc(disc);
+    setAnimSource(source);
+    if (source === 'opponent') setAnimTargetRow(row);
+    else setAnimTargetRow(null);
+    setLastAction(col);
+    let animationDone = false;
+    animTimer.current = setInterval(() => {
+      setAnimRow(prev => {
+        if (prev < row) {
+          return prev + 1;
+        } else {
+          if (!animationDone) {
+            animationDone = true;
+            clearInterval(animTimer.current);
+            endAnimation();
+            if (onComplete) onComplete();
+          }
+          return prev;
+        }
+      });
+    }, ANIMATION_INTERVAL);
+  };
+
   useEffect(() => {
     const ws = new WebSocket(`ws://localhost:${port}`);
     socketRef.current = ws;
@@ -76,35 +117,7 @@ export default function App() {
                 }
               }
               if (row !== -1 && disc) {
-                setAnimating(true);
-                setAnimCol(col);
-                setAnimRow(0);
-                setAnimTargetRow(row);
-                setAnimDisc(disc);
-                setAnimSource('opponent');
-                setLastAction(col);
-                if (animTimer.current) clearInterval(animTimer.current);
-                let animationDone = false;
-                animTimer.current = setInterval(() => {
-                  setAnimRow(prev => {
-                    if (prev < row) {
-                      return prev + 1;
-                    } else {
-                      if (!animationDone) {
-                        animationDone = true;
-                        clearInterval(animTimer.current);
-                        setAnimating(false);
-                        setAnimCol(null);
-                        setAnimRow(null);
-                        setAnimDisc(null);
-                        setAnimSource(null);
-                        setLastAction(null);
-                        setAnimTargetRow(null);
-                      }
-                      return prev;
-                    }
-                  });
-                }, ANIMATION_INTERVAL);
+                startAnimation({ col, row, disc, source: 'opponent' });
               }
             }
           }
@@ -113,11 +126,7 @@ export default function App() {
         setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
         setLegalMoves([]);
-        setAnimating(false);
-        setAnimCol(null);
-        setAnimRow(null);
-        setAnimDisc(null);
-        setLastAction(null);
+        endAnimation();
       }
       setLoading(false);
     };
@@ -146,52 +155,24 @@ export default function App() {
     }
 
     const disc = turn === 'R' ? 'R' : 'Y';
-    setAnimating(true);
-    setAnimCol(col);
-    setAnimRow(0);
-    setAnimDisc(disc);
-    setAnimSource('player');
-    setLastAction(col);
     setLastMoveSentCol(col);
-    // Block input and animate drop
-    if (animTimer.current) clearInterval(animTimer.current);
-    // Guard: prevent double interval and double callback
-    if (animTimer.current) clearInterval(animTimer.current);
-    let animationDone = false;
-    animTimer.current = setInterval(() => {
-      setAnimRow(prev => {
-        if (prev < row) {
-          return prev + 1;
-        } else {
-          if (!animationDone) {
-            animationDone = true;
-            clearInterval(animTimer.current);
-            setAnimating(false);
-            setAnimCol(null);
-            setAnimRow(null);
-            setAnimDisc(null);
-            setAnimSource(null);
-            setLastAction(null);
-            // After animation, send move to backend
-            const ws = socketRef.current;
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
-            }
-          }
-          return prev;
+    startAnimation({
+      col,
+      row,
+      disc,
+      source: 'player',
+      onComplete: () => {
+        // After animation, send move to backend
+        const ws = socketRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
         }
-      });
-    }, ANIMATION_INTERVAL);
+      }
+    });
   };
 
   const handleNewGame = () => {
-    // Reset animation state and clear timer
-    if (animTimer.current) clearInterval(animTimer.current);
-    setAnimating(false);
-    setAnimCol(null);
-    setAnimRow(null);
-    setAnimDisc(null);
-    setLastAction(null);
+    endAnimation();
     // Send new game request to backend
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
