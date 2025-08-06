@@ -1,6 +1,7 @@
 #include "util/GTestUtil.hpp"
 
 #include "util/LoggingUtil.hpp"
+#include "util/Rendering.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -50,6 +51,6 @@ int launch_gtest(int argc, char** argv) {
 
   po::variables_map vm = po2::parse_args(desc, argc, argv);
   util::Logging::init(log_params);
-  util::set_tty_mode(false);
+  util::Rendering::set(util::Rendering::kText);
   return RUN_ALL_TESTS();
 }

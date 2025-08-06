@@ -1,6 +1,7 @@
 #include "games/blokus/Types.hpp"
 
 #include "util/Asserts.hpp"
+#include "util/Rendering.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -184,7 +185,7 @@ void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
 }
 
 void BoardString::pretty_print(std::ostream& os) const {
-  if (!util::tty_mode()) {
+  if (util::Rendering::mode() == util::Rendering::kText) {
     print(os);
     return;
   }

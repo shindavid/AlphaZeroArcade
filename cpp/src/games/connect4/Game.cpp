@@ -1,8 +1,7 @@
 #include "games/connect4/Game.hpp"
 
 #include "util/AnsiCodes.hpp"
-#include "util/BitSet.hpp"
-#include "util/CppUtil.hpp"
+#include "util/Rendering.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -65,7 +64,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   char buffer[buf_size];
   int cx = 0;
 
-  if (!util::tty_mode() && last_action > -1) {
+  if (util::Rendering::mode() == util::Rendering::kText && last_action > -1) {
     std::string s(2 * last_action + 1, ' ');
     cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
@@ -88,6 +87,27 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
   RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
+}
+
+boost::json::value Game::IO::state_to_json(const State& state) {
+  // 6 lines of 7 char's each, each char is in {'R', 'Y', '_'}
+  core::seat_index_t cp = Rules::get_current_player(state);
+  char cur_color = cp == kRed ? 'R' : 'Y';
+  char opp_color = cp == kRed ? 'Y' : 'R';
+
+  char buf[7 * 6 + 1];
+  int c = 0;
+  for (int row = kNumRows - 1; row >= 0; --row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      int index = _to_bit_index(row, col);
+      bool occupied = (1UL << index) & state.full_mask;
+      bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
+
+      buf[c++] = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : '_';
+    }
+  }
+  buf[c] = '\0';
+  return boost::json::value(std::string(buf));
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {

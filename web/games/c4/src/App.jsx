@@ -4,13 +4,23 @@ import './App.css';
 // Connect4 board dimensions
 const ROWS = 6;
 const COLS = 7;
+const ANIMATION_INTERVAL = 60; // ms per row drop
 
 export default function App() {
-  const [board, setBoard] = useState(Array(ROWS * COLS).fill(null));
+  const [board, setBoard] = useState(Array(ROWS * COLS).fill('_'));
   const [turn, setTurn] = useState('X');
   const [loading, setLoading] = useState(true);
   const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
   const [legalMoves, setLegalMoves] = useState([]); // array of legal column indices
+  const [lastAction, setLastAction] = useState(null); // 1-indexed column from backend, or null
+  const [animating, setAnimating] = useState(false);
+  const [animCol, setAnimCol] = useState(null);
+  const [animRow, setAnimRow] = useState(null);
+  const [animTargetRow, setAnimTargetRow] = useState(null); // for opponent animation
+  const [animDisc, setAnimDisc] = useState(null); // 'R' or 'Y'
+  const [animSource, setAnimSource] = useState(null); // 'player' or 'opponent'
+  const [lastMoveSentCol, setLastMoveSentCol] = useState(null); // track last move sent by player
+  const animTimer = useRef(null);
   const socketRef = useRef(null);
 
   const port = import.meta.env.VITE_BRIDGE_PORT;
@@ -23,11 +33,49 @@ export default function App() {
     );
   }
 
-  // Parse board string into 6x7 array
   const setBoardHelper = (str) => {
-    // Expecting 6 lines of 7 chars each, e.g. "_______\n_______\n_______\n_______\n_______\n_______"
-    const arr = str.replace(/\n/g, '').split('').map(ch => (ch === '_' ? null : ch));
-    setBoard(arr);
+    setBoard(Array.from(str));
+  };
+
+  // Animation helpers
+  const endAnimation = () => {
+    if (animTimer.current) clearInterval(animTimer.current);
+    setAnimating(false);
+    setAnimCol(null);
+    setAnimRow(null);
+    setAnimDisc(null);
+    setAnimSource(null);
+    setLastAction(null);
+    setAnimTargetRow(null);
+  };
+
+  // onComplete is an optional callback
+  const startAnimation = ({ col, row, disc, source, onComplete }) => {
+    endAnimation(); // clear any previous animation
+    setAnimating(true);
+    setAnimCol(col);
+    setAnimRow(0);
+    setAnimDisc(disc);
+    setAnimSource(source);
+    if (source === 'opponent') setAnimTargetRow(row);
+    else setAnimTargetRow(null);
+    setLastAction(col);
+    let animationDone = false;
+    animTimer.current = setInterval(() => {
+      setAnimRow(prev => {
+        if (prev < row) {
+          return prev + 1;
+        } else {
+          if (!animationDone) {
+            animationDone = true;
+            clearInterval(animTimer.current);
+            endAnimation();
+            if (onComplete) onComplete();
+          }
+          return prev;
+        }
+      });
+    }, ANIMATION_INTERVAL);
   };
 
   useEffect(() => {
@@ -45,28 +93,87 @@ export default function App() {
         setBoardHelper(msg.payload.board);
         setTurn(msg.payload.turn);
         setLegalMoves(msg.payload.legal_moves || []);
-        setLoading(false);
         setGameEnd(null);
+        // Animation logic: check for last_action
+        let last = msg.payload.last_action;
+        if (last && last !== '-') {
+          let col = parseInt(last, 10) - 1;
+          if (!isNaN(col) && col >= 0 && col < COLS) {
+            // If this is the player's last move, don't animate again
+            if (lastMoveSentCol === col) {
+              setLastMoveSentCol(null); // clear after backend confirms
+            } else {
+              // Animate opponent's move
+              let b = Array.from(msg.payload.board || '');
+              let disc = null;
+              let row = -1;
+              // Find the row where the new disc landed (first non-empty cell from top)
+              for (let r = 0; r < ROWS; ++r) {
+                let idx = r * COLS + col;
+                if (b[idx] !== '_') {
+                  disc = b[idx];
+                  row = r;
+                  break;
+                }
+              }
+              if (row !== -1 && disc) {
+                startAnimation({ col, row, disc, source: 'opponent' });
+              }
+            }
+          }
+        }
       } else if (msg.type === 'game_end') {
         setBoardHelper(msg.payload.board);
         setGameEnd(msg.payload);
         setLegalMoves([]);
+        endAnimation();
       }
+      setLoading(false);
     };
 
-    return () => ws.close();
+    return () => {
+      ws.close();
+      if (animTimer.current) clearInterval(animTimer.current);
+    };
   }, [port]);
 
   // Click a column to make a move
   const handleColumnClick = col => {
-    if (gameEnd) return;
-    const ws = socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (!legalMoves.includes(col)) return;
-    ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
+    if (gameEnd || animating) {
+      return;
+    }
+    if (!legalMoves.includes(col)) {
+      return;
+    }
+    // Find the lowest empty row in this column
+    let row = -1;
+    for (let r = ROWS - 1; r >= 0; --r) {
+      if (board[r * COLS + col] === '_') {
+        row = r;
+        break;
+      }
+    }
+
+    const disc = turn === 'R' ? 'R' : 'Y';
+    setLastMoveSentCol(col);
+    startAnimation({
+      col,
+      row,
+      disc,
+      source: 'player',
+      onComplete: () => {
+        // After animation, send move to backend
+        const ws = socketRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
+        }
+      }
+    });
   };
 
   const handleNewGame = () => {
+    endAnimation();
+    // Send new game request to backend
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'new_game' }));
@@ -95,49 +202,54 @@ export default function App() {
       for (let col = 0; col < COLS; ++col) {
         const idx = row * COLS + col;
         const cell = board[idx];
-        // Only the top empty cell in a legal column is clickable
-        let isTopEmpty = false;
-        if (!cell && legalMoves.includes(col)) {
-          // Check if this is the lowest empty cell in the column
-          if (row === ROWS - 1 || board[(row + 1) * COLS + col]) {
-            isTopEmpty = true;
+        const isLegal = legalMoves.includes(col);
+        let cellClass = "";
+        // During animation, render the cell as empty (no disc) if it's the animated target
+        let hideDisc = false;
+        if (animating && animCol === col) {
+          if (
+            animSource === 'player' && animRow !== null && row === animRow && cell === animDisc
+          ) {
+            hideDisc = true;
+          } else if (
+            animSource === 'opponent' && animTargetRow !== null && row === animTargetRow && cell === animDisc
+          ) {
+            hideDisc = true;
           }
         }
+        if (!hideDisc) {
+          if (cell === "R") cellClass = "red";
+          else if (cell === "Y") cellClass = "yellow";
+        }
         grid.push(
-          <button
+          <div
             key={idx}
-            className={`square connect4-cell${isTopEmpty ? ' legal-move' : ''}`}
-            onClick={() => isTopEmpty && handleColumnClick(col)}
-            disabled={!!gameEnd || !isTopEmpty}
-            style={{ background: '#fff', padding: 0 }}
-          >
-            {cell === 'R' && (
-              <svg width="40" height="40" viewBox="0 0 40 40">
-                <defs>
-                  <radialGradient id="redGrad" cx="50%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#ffcccc"/>
-                    <stop offset="100%" stopColor="#c00"/>
-                  </radialGradient>
-                </defs>
-                <circle cx="20" cy="20" r="18" fill="url(#redGrad)" stroke="#a00" strokeWidth="2"/>
-              </svg>
-            )}
-            {cell === 'Y' && (
-              <svg width="40" height="40" viewBox="0 0 40 40">
-                <defs>
-                  <radialGradient id="yellowGrad" cx="50%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#ffffcc"/>
-                    <stop offset="100%" stopColor="#fc0"/>
-                  </radialGradient>
-                </defs>
-                <circle cx="20" cy="20" r="18" fill="url(#yellowGrad)" stroke="#cc0" strokeWidth="2"/>
-              </svg>
-            )}
-          </button>
+            className={`connect4-cell${cellClass ? ' ' + cellClass : ''}`}
+            onClick={isLegal ? () => handleColumnClick(col) : undefined}
+            role={isLegal ? "button" : undefined}
+            tabIndex={isLegal ? 0 : -1}
+            aria-label={isLegal ? `Play in column ${col + 1}` : undefined}
+          />
         );
       }
     }
     return grid;
+  };
+
+  // Render the animated disc overlay
+  const renderAnimatedDisc = () => {
+    if (!animating || animCol === null || animRow === null || !animDisc) return null;
+    // Calculate position: use same cell size as CSS (56px), plus board padding and border
+    // .connect4-board: padding: 20px 18px 16px 18px; border: 4px solid
+    const left = 18 + 4 + animCol * 56;
+    const top = 20 + 4 + animRow * 56;
+    const discClass = animDisc === 'R' ? 'red' : 'yellow';
+    return (
+      <div
+        className={`animated-disc ${discClass}`}
+        style={{ left, top }}
+      />
+    );
   };
 
   return (
@@ -150,8 +262,9 @@ export default function App() {
           }
         </span>
       </div>
-      <div className="board connect4-board">
+      <div className="board connect4-board" style={{ position: 'relative' }}>
         {renderBoard()}
+        {renderAnimatedDisc()}
       </div>
       <div className="button-row">
         <button

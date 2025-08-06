@@ -1,3 +1,20 @@
+/* Animated disc overlay for drop animation */
+.animated-disc {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  z-index: 10;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: top 0.06s linear;
+}
+.animated-disc.red {
+  background-image: url('../images/red.svg');
+}
+.animated-disc.yellow {
+  background-image: url('../images/yellow.svg');
+}
 .status-bar {
   display: flex;
   flex-direction: row;
@@ -14,7 +31,7 @@
   display: grid;
   grid-template-columns: repeat(7, 56px);
   grid-template-rows: repeat(6, 56px);
-  gap: 8px;
+  gap: 0;
   margin: 0 auto 2em auto;
   background: #1877c9;
   border-radius: 24px;
@@ -24,12 +41,11 @@
   position: relative;
 }
 
+
 .connect4-cell {
   width: 56px;
   height: 56px;
   border: none;
-  background: #fff;
-  border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   cursor: pointer;
   transition: box-shadow 0.2s, background 0.2s;
@@ -39,23 +55,32 @@
   outline: none;
   padding: 0;
   position: relative;
+  background: #fff;
+  background-size: cover;
+  background-position: center;
+}
+.connect4-cell {
+  background-image: url('../images/board.svg');
 }
 
-.connect4-cell.legal-move {
-  box-shadow: 0 0 0 4px #4af, 0 2px 8px rgba(0,0,0,0.10);
-  background: #e6f2ff;
-  z-index: 1;
+.connect4-cell.red {
+  background-image: url('../images/red.svg'), url('../images/board.svg');
+  background-size: cover, cover;
+  background-position: center, center;
 }
+.connect4-cell.yellow {
+  background-image: url('../images/yellow.svg'), url('../images/board.svg');
+  background-size: cover, cover;
+  background-position: center, center;
+}
+
 
 .connect4-cell:disabled {
   cursor: default;
   opacity: 0.7;
 }
 
-/* SVG disc drop shadow */
-.connect4-cell svg circle {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));
-}
+
 
 /* Container and status bar tweaks */
 .container {
@@ -105,40 +130,4 @@
   font-family: sans-serif;
   min-height: 600px;
   justify-content: flex-start;
-}
-
-
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(3, 100px);
-  grid-gap: 5px;
-  margin-bottom: 0.5em;
-  min-height: 315px;
-}
-
-.square {
-  width: 100px;
-  height: 100px;
-  background-color: #fff;
-  border: 1px solid #999;
-  font-size: 2rem;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.move-button {
-  margin-top: 0;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.square.legal-move:hover {
-  background-color: #d0ffd0;
-  border-color: #4caf50;
-  cursor: pointer;
 }

@@ -1,8 +1,7 @@
 #include "games/othello/Game.hpp"
 
 #include "util/AnsiCodes.hpp"
-#include "util/BitSet.hpp"
-#include "util/CppUtil.hpp"
+#include "util/Rendering.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -87,7 +86,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   char buffer[buf_size];
   int cx = 0;
 
-  if (!util::tty_mode() && display_last_action) {
+  if (util::Rendering::mode() == util::Rendering::kText && display_last_action) {
     std::string s(2 * blink_col + 3, ' ');
     cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
@@ -154,7 +153,7 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   int cx = 0;
 
   char prefix = ' ';
-  if (!util::tty_mode() && blink_column >= 0) {
+  if (util::Rendering::mode() == util::Rendering::kText && blink_column >= 0) {
     prefix = 'x';
   }
   cx += snprintf(buf + cx, n - cx, "%c%d", prefix, (int)(row + 1));

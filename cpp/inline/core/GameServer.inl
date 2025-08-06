@@ -11,6 +11,7 @@
 #include "util/KeyValueDumper.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/Random.hpp"
+#include "util/Rendering.hpp"
 #include "util/SocketUtil.hpp"
 #include "util/StringUtil.hpp"
 
@@ -176,7 +177,8 @@ void GameServer<Game>::SharedData::init_progress_bar() {
   mit::lock_guard<mit::mutex> guard(mutex_);
   if (bar_) return;
 
-  if (params_.display_progress_bar && params_.num_games > 0 && util::tty_mode()) {
+  if (params_.display_progress_bar && params_.num_games > 0 &&
+      util::Rendering::mode() == util::Rendering::kTerminal) {
     bar_ = new progressbar(params_.num_games + 1);  // + 1 for first update
     bar_->update();                                 // so that progress-bar displays immediately
   }

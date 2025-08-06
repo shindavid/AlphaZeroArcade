@@ -14,6 +14,7 @@ template <core::concepts::Game Game>
 class WebPlayer : public core::AbstractPlayer<Game> {
  public:
   using GameClass = Game;
+  using GameTypes = Game::Types;
   using base_t = core::AbstractPlayer<Game>;
   using IO = Game::IO;
   using State = Game::State;
@@ -21,6 +22,8 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
+
+  static_assert(core::concepts::WebGameIO<IO, GameTypes>, "IO must satisfy WebGameIO");
 
   WebPlayer();
   ~WebPlayer();
@@ -43,7 +46,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   // By default, constructs a dict via:
   //
   // {
-  //   "board": IO::compact_state_repr(state),
+  //   "board": IO::state_to_json(state),
   //   "last_action": IO::action_to_str(last_action, last_mode),
   //   "turn": IO::player_to_str(seat)
   // }
@@ -53,16 +56,17 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   // TODO: when playing against an MCTS player, this is where we should add MCTS stats for
   // visualization in the frontend. This too should have reasonable defaults built into this
   // base class.
-  virtual boost::json::object make_state_msg(const State& state, core::action_t last_action,
+  virtual boost::json::object make_state_msg(const State& state, const ActionMask& legal_moves,
+                                             core::action_t last_action,
                                              core::action_mode_t last_mode);
 
  private:
-  void send_state(const State& state, core::action_t last_action, core::action_mode_t last_mode);
+  void send_state(const ActionRequest&, core::action_t last_action, core::action_mode_t last_mode);
 
   void launch_bridge();
   void launch_frontend();
   void response_loop();
-  void write_to_socket(const State& state, core::action_t last_action,
+  void write_to_socket(const ActionRequest&, core::action_t last_action,
                        core::action_mode_t last_mode);
 
   boost::asio::ip::tcp::acceptor create_acceptor();

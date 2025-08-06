@@ -2,8 +2,9 @@
 
 #include "core/BasicTypes.hpp"
 
+#include <boost/json/value.hpp>
+
 #include <concepts>
-#include <sstream>
 #include <string>
 
 namespace core {
@@ -18,10 +19,18 @@ concept GameIO = requires(std::ostream& ss, const GameTypes::State& state,
   { GI::print_state(ss, state, core::action_t{}, player_name_array_ptr) };
   { GI::print_state(ss, state, core::action_t{}) };
   { GI::print_state(ss, state) };
+
   // compact_state_repr is used in testing and debugging
   // SearchLog requires Game to have implemented state_repr in IO
   // Some MCTS tests require this to be implemented
   { GI::compact_state_repr(state) } -> std::same_as<std::string>;
+};
+
+// WebGameIO is a concept that requires GameIO to be implemented, and also requires
+// a GI:: state_to_json() method that returns a boost::json::value.
+template <typename GI, typename GameTypes>
+concept WebGameIO = GameIO<GI, GameTypes> && requires(GI, const GameTypes::State& state) {
+  { GI::state_to_json(state) } -> std::same_as<boost::json::value>;
 };
 
 }  // namespace concepts
