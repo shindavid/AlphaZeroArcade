@@ -2,10 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 import '../../shared/shared.css';
 import { PortError, Loading, StatusBar, ActionButtons } from '../../shared/SharedUI';
+import { handleResign as sharedHandleResign, handleNewGame as sharedHandleNewGame } from '../../shared/handlers';
 
 export default function App() {
   const [board, setBoard] = useState(Array(9).fill('_'));
-  const [turn, setTurn] = useState('X');
+  const [turn, setTurn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
   const socketRef = useRef(null);
@@ -54,11 +55,7 @@ export default function App() {
   };
 
   const handleNewGame = () => {
-    const ws = socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'new_game' }));
-    setLoading(true);
-    setGameEnd(null);
+    sharedHandleNewGame(socketRef, setLoading, setGameEnd);
   };
 
   if (loading) {
@@ -68,9 +65,7 @@ export default function App() {
   // Dedicated message area and always-visible action button
   // Fix board shifting: wrap status bar and board in a fixed-height flex column
   const handleResign = () => {
-    const ws = socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'resign' }));
+    sharedHandleResign(socketRef);
   };
 
   return (

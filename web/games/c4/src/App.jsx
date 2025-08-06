@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 import '../../shared/shared.css';
 import { PortError, Loading, StatusBar, ActionButtons } from '../../shared/SharedUI';
+import { handleResign as sharedHandleResign, handleNewGame as sharedHandleNewGame } from '../../shared/handlers';
 
 // Connect4 board dimensions
 const ROWS = 6;
@@ -10,7 +11,7 @@ const ANIMATION_INTERVAL = 60; // ms per row drop
 
 export default function App() {
   const [board, setBoard] = useState(Array(ROWS * COLS).fill('_'));
-  const [turn, setTurn] = useState('X');
+  const [turn, setTurn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
   const [legalMoves, setLegalMoves] = useState([]); // array of legal column indices
@@ -169,13 +170,7 @@ export default function App() {
   };
 
   const handleNewGame = () => {
-    endAnimation();
-    // Send new game request to backend
-    const ws = socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'new_game' }));
-    setLoading(true);
-    setGameEnd(null);
+    sharedHandleNewGame(socketRef, setLoading, setGameEnd, endAnimation);
   };
 
   if (loading) {
@@ -183,9 +178,7 @@ export default function App() {
   }
 
   const handleResign = () => {
-    const ws = socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'resign' }));
+    sharedHandleResign(socketRef);
   };
 
   // Render the Connect4 board as a 6x7 grid
