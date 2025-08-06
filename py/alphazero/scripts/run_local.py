@@ -253,7 +253,7 @@ def launch_eval_vs_benchmark_server(params_dict, cuda_device: int, game_spec: Ga
     rating_params.add_to_cmd(cmd, server=True)
 
     cmd = shlex.join(cmd)
-    logger.info('Launching eval server: %s', cmd)
+    logger.info('Launching eval-vs-benchmark server: %s', cmd)
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 

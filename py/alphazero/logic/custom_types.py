@@ -52,7 +52,7 @@ class Domain(Enum):
     SELF_PLAY = 'self-play'
     RATINGS = 'ratings'
     SELF_EVAL = 'self-eval'
-    EVAL = 'eval'
+    EVAL_VS_BENCHMARK = 'eval-vs-benchmark'
     SLEEPING = 'sleeping'
 
     @staticmethod
@@ -61,10 +61,10 @@ class Domain(Enum):
             return Domain.SELF_PLAY
         elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
             return Domain.RATINGS
-        elif role in (ClientRole.BENCHMARK_SERVER, ClientRole.BENCHMARK_WORKER):
+        elif role in (ClientRole.SELF_EVAL_SERVER, ClientRole.SELF_EVAL_WORKER):
             return Domain.SELF_EVAL
-        elif role in (ClientRole.EVAL_SERVER, ClientRole.EVAL_WORKER):
-            return Domain.EVAL
+        elif role in (ClientRole.EVAL_VS_BENCHMARK_SERVER, ClientRole.EVAL_VS_BENCHMARK_WORKER):
+            return Domain.EVAL_VS_BENCHMARK
         else:
             raise ValueError(f'Unexpected role: {role}')
 

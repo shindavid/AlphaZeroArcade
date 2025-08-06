@@ -234,13 +234,13 @@ class LoopController:
             self._get_ratings_manager(conn.rating_tag).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
             self._get_ratings_manager(conn.rating_tag).add_worker(conn)
-        elif client_role == ClientRole.EVAL_SERVER:
+        elif client_role == ClientRole.EVAL_VS_BENCHMARK_SERVER:
             self._get_eval_manager(conn.rating_tag).add_server(conn)
-        elif client_role == ClientRole.EVAL_WORKER:
+        elif client_role == ClientRole.EVAL_VS_BENCHMARK_WORKER:
             self._get_eval_manager(conn.rating_tag).add_worker(conn)
-        elif client_role == ClientRole.BENCHMARK_SERVER:
+        elif client_role == ClientRole.SELF_EVAL_SERVER:
             self._get_self_eval_manager().add_server(conn)
-        elif client_role == ClientRole.BENCHMARK_WORKER:
+        elif client_role == ClientRole.SELF_EVAL_WORKER:
             self._get_self_eval_manager().add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')

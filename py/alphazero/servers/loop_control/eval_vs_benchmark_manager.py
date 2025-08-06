@@ -124,9 +124,9 @@ class EvalVsBenchmarkManager(GamingManagerBase):
         manager_config = ManagerConfig(
             worker_aux_class=WorkerAux,
             server_aux_class=EvalServerAux,
-            server_name='eval-server',
-            worker_name='eval-worker',
-            domain=Domain.EVAL,
+            server_name='eval-vs-benchmark-server',
+            worker_name='eval-vs-benchmark-worker',
+            domain=Domain.EVAL_VS_BENCHMARK,
         )
         super().__init__(controller, manager_config)
 
