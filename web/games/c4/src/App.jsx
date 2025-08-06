@@ -44,7 +44,6 @@ export default function App() {
     ws.onopen = () => console.log(`✅ WS connected to ${port}`);
     ws.onerror = e => console.error('🔴 WS error', e);
     ws.onmessage = e => {
-      console.log('WebSocket message received:', e.data);
       let msg;
       try { msg = JSON.parse(e.data) }
       catch (err) { return console.error('Bad JSON', err); }
@@ -65,22 +64,17 @@ export default function App() {
             } else {
               // Animate opponent's move
               let b = Array.from(msg.payload.board || '');
-              // Debug: print board array and col
-              console.log('[ANIMATE OPPONENT] board:', b, 'col:', col);
-              console.log('[ANIMATE OPPONENT] TEST ROWS:', ROWS);
               let disc = null;
               let row = -1;
               // Find the row where the new disc landed (first non-empty cell from top)
               for (let r = 0; r < ROWS; ++r) {
                 let idx = r * COLS + col;
-                console.log('[ANIMATE OPPONENT] idx:', idx, 'r:', r, 'b[idx]:', b[idx]);
                 if (b[idx] !== '_') {
                   disc = b[idx];
                   row = r;
                   break;
                 }
               }
-              console.log('[ANIMATE OPPONENT] found disc:', disc, 'at row:', row);
               if (row !== -1 && disc) {
                 setAnimating(true);
                 setAnimCol(col);
@@ -136,13 +130,10 @@ export default function App() {
 
   // Click a column to make a move
   const handleColumnClick = col => {
-    console.log('handleColumnClick called for col', col);
     if (gameEnd || animating) {
-      console.log('Blocked: gameEnd or animating');
       return;
     }
     if (!legalMoves.includes(col)) {
-      console.log('Blocked: not a legal move');
       return;
     }
     // Find the lowest empty row in this column
@@ -153,14 +144,8 @@ export default function App() {
         break;
       }
     }
-    console.log('Computed drop row:', row);
-    if (row === -1) {
-      console.log('Blocked: column full');
-      return; // column full
-    }
-    // Assume player's disc is 'R' if turn is 'R', else 'Y'
+
     const disc = turn === 'R' ? 'R' : 'Y';
-    console.log('Starting animation: col', col, 'row', row, 'disc', disc);
     setAnimating(true);
     setAnimCol(col);
     setAnimRow(0);
@@ -188,10 +173,8 @@ export default function App() {
             setAnimSource(null);
             setLastAction(null);
             // After animation, send move to backend
-            console.log('Animation complete, sending move to backend:', col);
             const ws = socketRef.current;
             if (ws && ws.readyState === WebSocket.OPEN) {
-              console.log('[SEND] make_move', col);
               ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
             }
           }
@@ -212,7 +195,6 @@ export default function App() {
     // Send new game request to backend
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    console.log('[SEND] new_game');
     ws.send(JSON.stringify({ type: 'new_game' }));
     setLoading(true);
     setGameEnd(null);
@@ -229,7 +211,6 @@ export default function App() {
   const handleResign = () => {
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    console.log('[SEND] resign');
     ws.send(JSON.stringify({ type: 'resign' }));
   };
 
