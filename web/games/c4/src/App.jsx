@@ -95,45 +95,25 @@ export default function App() {
       for (let col = 0; col < COLS; ++col) {
         const idx = row * COLS + col;
         const cell = board[idx];
-        // Only the top empty cell in a legal column is clickable
-        let isTopEmpty = false;
-        if (!cell && legalMoves.includes(col)) {
-          // Check if this is the lowest empty cell in the column
-          if (row === ROWS - 1 || board[(row + 1) * COLS + col]) {
-            isTopEmpty = true;
-          }
-        }
+        const isLegal = legalMoves.includes(col);
+        let cellClass = "empty";
+        if (cell === "R") cellClass = "red";
+        else if (cell === "Y") cellClass = "yellow";
+        const handleClick = () => {
+          if (!isLegal || gameEnd) return;
+          const ws = socketRef.current;
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
+        };
         grid.push(
-          <button
+          <div
             key={idx}
-            className={`square connect4-cell${isTopEmpty ? ' legal-move' : ''}`}
-            onClick={() => isTopEmpty && handleColumnClick(col)}
-            disabled={!!gameEnd || !isTopEmpty}
-            style={{ background: '#fff', padding: 0 }}
-          >
-            {cell === 'R' && (
-              <svg width="40" height="40" viewBox="0 0 40 40">
-                <defs>
-                  <radialGradient id="redGrad" cx="50%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#ffcccc"/>
-                    <stop offset="100%" stopColor="#c00"/>
-                  </radialGradient>
-                </defs>
-                <circle cx="20" cy="20" r="18" fill="url(#redGrad)" stroke="#a00" strokeWidth="2"/>
-              </svg>
-            )}
-            {cell === 'Y' && (
-              <svg width="40" height="40" viewBox="0 0 40 40">
-                <defs>
-                  <radialGradient id="yellowGrad" cx="50%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#ffffcc"/>
-                    <stop offset="100%" stopColor="#fc0"/>
-                  </radialGradient>
-                </defs>
-                <circle cx="20" cy="20" r="18" fill="url(#yellowGrad)" stroke="#cc0" strokeWidth="2"/>
-              </svg>
-            )}
-          </button>
+            className={`connect4-cell ${cellClass}${isLegal ? " legal-move" : ""}`}
+            onClick={isLegal ? handleClick : undefined}
+            role={isLegal ? "button" : undefined}
+            tabIndex={isLegal ? 0 : -1}
+            aria-label={isLegal ? `Play in column ${col + 1}` : undefined}
+          />
         );
       }
     }

@@ -90,6 +90,27 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
+std::string Game::IO::compact_state_repr(const State& state) {
+  // 6 lines joined by '\n' of 7 char's each, each char is in {'R', 'Y', '_'}
+  core::seat_index_t cp = Rules::get_current_player(state);
+  char cur_color = cp == kRed ? 'R' : 'Y';
+  char opp_color = cp == kRed ? 'Y' : 'R';
+
+  std::string repr;
+  for (int row = kNumRows - 1; row >= 0; --row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      int index = _to_bit_index(row, col);
+      bool occupied = (1UL << index) & state.full_mask;
+      bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
+
+      char c = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : '_';
+      repr += c;
+    }
+    repr += '\n';
+  }
+  return repr;
+}
+
 int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
