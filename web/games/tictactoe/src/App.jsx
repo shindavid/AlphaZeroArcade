@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
+import '../../shared/shared.css';
+import { PortError, Loading, StatusBar, ActionButtons } from '../../shared/SharedUI';
 
 export default function App() {
-  const [board, setBoard] = useState(Array(9).fill(null));
+  const [board, setBoard] = useState(Array(9).fill('_'));
   const [turn, setTurn] = useState('X');
   const [loading, setLoading] = useState(true);
   const [gameEnd, setGameEnd] = useState(null); // { result: 'win'|'draw', winner: 'X'|'O' }
@@ -11,13 +13,7 @@ export default function App() {
   // Must be set by Vite via .env.development
   const port = import.meta.env.VITE_BRIDGE_PORT;
   if (!port) {
-    // render an error in the UI if port isn’t defined
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        ERROR: VITE_BRIDGE_PORT is not defined.<br />
-        Make sure you restarted the dev server after writing web/.env.development
-      </div>
-    );
+    return <PortError port={port} />;
   }
 
   const setBoardHelper = (str) => {
@@ -53,7 +49,7 @@ export default function App() {
     if (gameEnd) return;
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (board[i]) return;
+    if (board[i] !== '_') return;
     ws.send(JSON.stringify({ type: 'make_move', payload: { index: i } }));
   };
 
@@ -66,17 +62,12 @@ export default function App() {
   };
 
   if (loading) {
-    return (
-      <div className="container">
-        <div className="status">Loading game state...</div>
-      </div>
-    );
+    return <Loading />;
   }
 
   // Dedicated message area and always-visible action button
   // Fix board shifting: wrap status bar and board in a fixed-height flex column
   const handleResign = () => {
-    // End the game as a loss for the current player
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'resign' }));
@@ -84,14 +75,7 @@ export default function App() {
 
   return (
     <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-      <div className="status-bar" style={{ marginBottom: '1.5em' }}>
-        <span className="status-message-area">
-          {gameEnd
-            ? gameEnd.msg
-            : <>Next: <b>{turn}</b></>
-          }
-        </span>
-      </div>
+      <StatusBar gameEnd={gameEnd} turn={turn} />
       <div className="board">
         {board.map((v, i) => (
           <button
@@ -102,22 +86,12 @@ export default function App() {
           >{v === '_' ? '' : v}</button>
         ))}
       </div>
-      <div className="button-row">
-        <button
-          className="status-action-btn"
-          onClick={handleResign}
-          disabled={!!gameEnd || loading}
-        >
-          Resign
-        </button>
-        <button
-          className="status-action-btn"
-          onClick={handleNewGame}
-          disabled={!gameEnd || loading}
-        >
-          New Game
-        </button>
-      </div>
+      <ActionButtons
+        onResign={handleResign}
+        onNewGame={handleNewGame}
+        gameEnd={gameEnd}
+        loading={loading}
+      />
     </div>
   );
 }

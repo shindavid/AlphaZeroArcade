@@ -1,0 +1,37 @@
+.status-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 1.5em;
+  gap: 2.5em;
+  font-size: 1.2rem;
+  color: #1256a3;
+}
+
+.button-row {
+  display: flex;
+  gap: 1em;
+  margin-top: 1.5em;
+}
+
+.status-action-btn {
+  background: #1877c9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6em 1.4em;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.status-action-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.status-action-btn:not(:disabled):hover {
+  background: #1256a3;
+}

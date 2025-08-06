@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
+import '../../shared/shared.css';
+import { PortError, Loading, StatusBar, ActionButtons } from '../../shared/SharedUI';
 
 // Connect4 board dimensions
 const ROWS = 6;
@@ -25,12 +27,7 @@ export default function App() {
 
   const port = import.meta.env.VITE_BRIDGE_PORT;
   if (!port) {
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        ERROR: VITE_BRIDGE_PORT is not defined.<br />
-        Make sure you restarted the dev server after writing web/.env.development
-      </div>
-    );
+    return <PortError port={port} />;
   }
 
   const setBoardHelper = (str) => {
@@ -182,11 +179,7 @@ export default function App() {
   };
 
   if (loading) {
-    return (
-      <div className="container">
-        <div className="status">Loading game state...</div>
-      </div>
-    );
+    return <Loading />;
   }
 
   const handleResign = () => {
@@ -254,34 +247,17 @@ export default function App() {
 
   return (
     <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-      <div className="status-bar" style={{ marginBottom: '1.5em' }}>
-        <span className="status-message-area">
-          {gameEnd
-            ? gameEnd.msg
-            : <>Next: <b>{turn}</b></>
-          }
-        </span>
-      </div>
+      <StatusBar gameEnd={gameEnd} turn={turn} />
       <div className="board connect4-board" style={{ position: 'relative' }}>
         {renderBoard()}
         {renderAnimatedDisc()}
       </div>
-      <div className="button-row">
-        <button
-          className="status-action-btn"
-          onClick={handleResign}
-          disabled={!!gameEnd || loading}
-        >
-          Resign
-        </button>
-        <button
-          className="status-action-btn"
-          onClick={handleNewGame}
-          disabled={!gameEnd || loading}
-        >
-          New Game
-        </button>
-      </div>
+      <ActionButtons
+        onResign={handleResign}
+        onNewGame={handleNewGame}
+        gameEnd={gameEnd}
+        loading={loading}
+      />
     </div>
   );
 }
