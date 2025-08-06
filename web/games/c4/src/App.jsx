@@ -93,7 +93,7 @@ export default function App() {
         const idx = row * COLS + col;
         const cell = board[idx];
         const isLegal = legalMoves.includes(col);
-        let cellClass = "empty";
+        let cellClass = "";
         if (cell === "R") cellClass = "red";
         else if (cell === "Y") cellClass = "yellow";
         grid.push(

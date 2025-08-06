@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: repeat(7, 56px);
   grid-template-rows: repeat(6, 56px);
-  gap: 8px;
+  gap: 0;
   margin: 0 auto 2em auto;
   background: #1877c9;
   border-radius: 24px;
@@ -29,7 +29,6 @@
   width: 56px;
   height: 56px;
   border: none;
-  border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   cursor: pointer;
   transition: box-shadow 0.2s, background 0.2s;
@@ -43,15 +42,19 @@
   background-size: cover;
   background-position: center;
 }
-
-.connect4-cell.empty {
+.connect4-cell {
   background-image: url('../images/board.svg');
 }
+
 .connect4-cell.red {
-  background-image: url('../images/red.svg');
+  background-image: url('../images/red.svg'), url('../images/board.svg');
+  background-size: cover, cover;
+  background-position: center, center;
 }
 .connect4-cell.yellow {
-  background-image: url('../images/yellow.svg');
+  background-image: url('../images/yellow.svg'), url('../images/board.svg');
+  background-size: cover, cover;
+  background-position: center, center;
 }
 
 
