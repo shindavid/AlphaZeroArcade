@@ -89,7 +89,7 @@ struct Game {
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
 
-    static std::string compact_state_repr(const State& state);
+    static boost::json::value state_to_json(const State& state);
 
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);

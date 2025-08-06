@@ -21,12 +21,7 @@ export default function App() {
   }
 
   const setBoardHelper = (str) => {
-    // msg.payload.board is a string with newlines, e.g. "XO_\n_OX\nXO_"
-    // Remove newlines and parse
-    const arr = Array.from(str.replace(/\n/g, '')).map(ch =>
-      ch === '_' ? null : ch
-    );
-    setBoard(arr);
+    setBoard(Array.from(str));
   };
 
   useEffect(() => {
@@ -101,10 +96,10 @@ export default function App() {
         {board.map((v, i) => (
           <button
             key={i}
-            className={`square${v === null && !gameEnd ? ' legal-move' : ''}`}
+            className={`square${v === '_' && !gameEnd ? ' legal-move' : ''}`}
             onClick={() => handleClick(i)}
-            disabled={!!gameEnd || v !== null}
-          >{v}</button>
+            disabled={!!gameEnd || v !== '_'}
+          >{v === '_' ? '' : v}</button>
         ))}
       </div>
       <div className="button-row">

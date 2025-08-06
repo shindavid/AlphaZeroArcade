@@ -23,11 +23,8 @@ export default function App() {
     );
   }
 
-  // Parse board string into 6x7 array
   const setBoardHelper = (str) => {
-    // Expecting 6 lines of 7 chars each, e.g. "_______\n_______\n_______\n_______\n_______\n_______"
-    const arr = str.replace(/\n/g, '').split('').map(ch => (ch === '_' ? null : ch));
-    setBoard(arr);
+    setBoard(Array.from(str));
   };
 
   useEffect(() => {
@@ -99,17 +96,11 @@ export default function App() {
         let cellClass = "empty";
         if (cell === "R") cellClass = "red";
         else if (cell === "Y") cellClass = "yellow";
-        const handleClick = () => {
-          if (!isLegal || gameEnd) return;
-          const ws = socketRef.current;
-          if (!ws || ws.readyState !== WebSocket.OPEN) return;
-          ws.send(JSON.stringify({ type: 'make_move', payload: { index: col } }));
-        };
         grid.push(
           <div
             key={idx}
             className={`connect4-cell ${cellClass}${isLegal ? " legal-move" : ""}`}
-            onClick={isLegal ? handleClick : undefined}
+            onClick={isLegal ? () => handleColumnClick(col) : undefined}
             role={isLegal ? "button" : undefined}
             tabIndex={isLegal ? 0 : -1}
             aria-label={isLegal ? `Play in column ${col + 1}` : undefined}

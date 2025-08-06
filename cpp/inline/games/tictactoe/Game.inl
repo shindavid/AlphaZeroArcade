@@ -238,4 +238,18 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   return std::string(buf);
 }
 
+inline boost::json::value Game::IO::state_to_json(const State& state) {
+  char buf[10];
+  const char* syms = "_XO";
+
+  int c = 0;
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      buf[c++] = syms[_get_player_at(state, row, col) + 1];
+    }
+  }
+  buf[c] = '\0';
+  return boost::json::value(std::string(buf));
+}
+
 }  // namespace tictactoe

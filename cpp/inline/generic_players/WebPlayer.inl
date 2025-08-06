@@ -6,6 +6,7 @@
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"
+#include "util/Rendering.hpp"
 #include "util/StringUtil.hpp"
 
 #include <boost/filesystem.hpp>
@@ -111,6 +112,8 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
   boost::json::object msg;
   msg["type"] = "game_end";
   boost::json::object payload = make_state_msg(state, ActionMask(), last_action_, last_mode_);
@@ -164,7 +167,7 @@ boost::json::object WebPlayer<Game>::make_state_msg(const State& state,
     legal_move_indices.push_back(i);
   }
   boost::json::object payload;
-  payload["board"] = IO::compact_state_repr(state);
+  payload["board"] = IO::state_to_json(state);
   payload["last_action"] = IO::action_to_str(last_action, last_mode);
   payload["turn"] = IO::player_to_str(this->get_my_seat());
   payload["legal_moves"] = legal_move_indices;
@@ -278,6 +281,8 @@ void WebPlayer<Game>::send_state(const ActionRequest& request, core::action_t la
 template <core::concepts::Game Game>
 void WebPlayer<Game>::write_to_socket(const ActionRequest& request, core::action_t last_action,
                                       core::action_mode_t last_mode) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
   boost::json::object msg;
   msg["type"] = "state_update";
   msg["payload"] = make_state_msg(request.state, request.valid_actions, last_action, last_mode);

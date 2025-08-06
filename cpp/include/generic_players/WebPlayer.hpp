@@ -14,6 +14,7 @@ template <core::concepts::Game Game>
 class WebPlayer : public core::AbstractPlayer<Game> {
  public:
   using GameClass = Game;
+  using GameTypes = Game::Types;
   using base_t = core::AbstractPlayer<Game>;
   using IO = Game::IO;
   using State = Game::State;
@@ -21,6 +22,8 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
+
+  static_assert(core::concepts::WebGameIO<IO, GameTypes>, "IO must satisfy WebGameIO");
 
   WebPlayer();
   ~WebPlayer();
@@ -43,7 +46,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   // By default, constructs a dict via:
   //
   // {
-  //   "board": IO::compact_state_repr(state),
+  //   "board": IO::state_to_json(state),
   //   "last_action": IO::action_to_str(last_action, last_mode),
   //   "turn": IO::player_to_str(seat)
   // }
