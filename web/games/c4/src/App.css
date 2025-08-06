@@ -54,11 +54,6 @@
   background-image: url('../images/yellow.svg');
 }
 
-.connect4-cell.legal-move {
-  box-shadow: 0 0 0 4px #4af, 0 2px 8px rgba(0,0,0,0.10);
-  z-index: 1;
-}
-
 
 .connect4-cell:disabled {
   cursor: default;

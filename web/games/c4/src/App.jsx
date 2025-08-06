@@ -99,7 +99,7 @@ export default function App() {
         grid.push(
           <div
             key={idx}
-            className={`connect4-cell ${cellClass}${isLegal ? " legal-move" : ""}`}
+            className={`connect4-cell ${cellClass}`}
             onClick={isLegal ? () => handleColumnClick(col) : undefined}
             role={isLegal ? "button" : undefined}
             tabIndex={isLegal ? 0 : -1}
