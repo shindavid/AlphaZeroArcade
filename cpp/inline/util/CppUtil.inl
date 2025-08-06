@@ -76,13 +76,6 @@ std::size_t PODHash<T>::operator()(const T& s) const {
   return hash;
 }
 
-inline TtyMode& TtyMode::instance() {
-  static TtyMode instance;
-  return instance;
-}
-
-inline TtyMode::TtyMode() { mode_ = isatty(STDOUT_FILENO); }
-
 template <typename TimePoint>
 int64_t ns_since_epoch(const TimePoint& t) {
   return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();

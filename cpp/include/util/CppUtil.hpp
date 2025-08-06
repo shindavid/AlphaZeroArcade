@@ -74,28 +74,6 @@ std::string get_typename(const T& t) {
   return get_typename<T>();
 }
 
-class TtyMode {
- public:
-  static TtyMode& instance();
-  bool get_mode() const { return mode_; }
-  void set_mode(bool x) { mode_ = x; }
-
- private:
-  TtyMode();
-
-  bool mode_;
-};
-
-/*
- * Returns true if the output is a terminal, false otherwise.
- *
- * This is useful for determining whether to print color codes.
- *
- * https://stackoverflow.com/a/5157076/543913
- */
-inline bool tty_mode() { return TtyMode::instance().get_mode(); }
-inline void set_tty_mode(bool x) { TtyMode::instance().set_mode(x); }
-
 int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
 int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }
 int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }

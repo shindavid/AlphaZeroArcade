@@ -1,8 +1,7 @@
 #include "games/connect4/Game.hpp"
 
 #include "util/AnsiCodes.hpp"
-#include "util/BitSet.hpp"
-#include "util/CppUtil.hpp"
+#include "util/Rendering.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -65,7 +64,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   char buffer[buf_size];
   int cx = 0;
 
-  if (!util::tty_mode() && last_action > -1) {
+  if (util::Rendering::mode() == util::Rendering::kText && last_action > -1) {
     std::string s(2 * last_action + 1, ' ');
     cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
