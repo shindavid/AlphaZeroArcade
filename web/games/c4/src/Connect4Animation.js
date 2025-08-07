@@ -1,16 +1,17 @@
 export class Connect4Animation {
   constructor() {
     this.timer = null;
-    this.state = null; // { col, row, disc, targetRow, animRow, onComplete }
+    this.state = null; // { col, row, disc, source, targetRow, animRow, onComplete }
   }
 
-  start({ col, row, disc, onComplete, interval = 60, onFrame }) {
+  start({ col, row, disc, source, onComplete, interval = 60, onFrame }) {
     this.end();
     this.state = {
       col,
       row,
       disc,
-      targetRow: row,
+      source,
+      targetRow: source === 'opponent' ? row : null,
       animRow: 0,
       onComplete,
     };

@@ -6,7 +6,6 @@
 #include "util/mit/mit.hpp"
 
 #include <boost/asio.hpp>
-#include <boost/json.hpp>
 #include <boost/process.hpp>
 
 namespace generic {
@@ -36,42 +35,11 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   bool disable_progress_bar() const override { return true; }
 
  protected:
-  // Optional: override this to provide a game-specific start_game message.
-  // By default, it returns something like:
-  //
-  // {
-  //   "board": IO::state_to_json(state),
-  //   "my_seat": "X",
-  //   "seat_assignments": ["X", "O"],
-  //   "player_names": ["MCTS-C", "Human"],
-  // }
-  virtual boost::json::object make_start_game_msg();
-
   // Optional: override this to provide a game-specific result message.
-  // By default, it returns,
-  //
-  // {
-  //   "msg": M
-  // }
-  //
-  // where M is a string like "Player X wins!" or "Draw!".
-  //
+  // By default, it returns a string like "Player X wins!" or "Draw!"
   // In a game like go, it could be specialized to return "Black wins by 5.5 points".
   // In a game like chess, it could return "Draw due to threefold repetition".
-  virtual boost::json::object make_result_msg(const State& state, const ValueTensor& outcome);
-
-  // Optional: override this to provide a game-specific action request msg.
-  // By default, it returns something like:
-  //
-  // {
-  //   "legal_moves": [0, 3, 4],
-  // }
-  //
-  // The moves are by index.
-  //
-  // For games with more complex actions, we likely want to override this so that the frontend
-  // does not need to know the action->index mapping.
-  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions);
+  virtual std::string make_result_msg(const State& state, const ValueTensor& outcome);
 
   // Construct json object that the frontend can use to display the state.
   //
@@ -88,20 +56,18 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   // TODO: when playing against an MCTS player, this is where we should add MCTS stats for
   // visualization in the frontend. This too should have reasonable defaults built into this
   // base class.
-  virtual boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
-                                                    core::action_t last_action,
-                                                    core::action_mode_t last_mode);
+  virtual boost::json::object make_state_msg(const State& state, const ActionMask& legal_moves,
+                                             core::action_t last_action,
+                                             core::action_mode_t last_mode);
 
  private:
-  void send_start_game();
-  void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action = -1,
-                  core::action_mode_t last_mode = 0);
-  void send_action_request(const ActionMask& valid_actions);
+  void send_state(const ActionRequest&, core::action_t last_action, core::action_mode_t last_mode);
 
-  void send_msg(const boost::json::object& msg);
   void launch_bridge();
   void launch_frontend();
   void response_loop();
+  void write_to_socket(const ActionRequest&, core::action_t last_action,
+                       core::action_mode_t last_mode);
 
   boost::asio::ip::tcp::acceptor create_acceptor();
 
@@ -120,11 +86,13 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   boost::process::child* frontend_process_ = nullptr;
 
   core::YieldNotificationUnit notification_unit_;
+  core::action_t last_action_ = -1;
+  core::action_mode_t last_mode_ = 0;
   core::action_t action_ = -1;
   bool first_game_ = true;
+  bool ready_for_response_ = false;
   bool resign_ = false;
-  bool bridge_connected_ = false;
-  bool ready_for_new_game_ = false;
+  bool connected_ = false;
 };
 
 }  // namespace generic

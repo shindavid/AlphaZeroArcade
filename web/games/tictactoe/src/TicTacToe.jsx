@@ -7,7 +7,7 @@ export default class TicTacToeApp extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: null,
+      board: Array(9).fill('_'),
     };
   }
 
@@ -23,7 +23,7 @@ export default class TicTacToeApp extends GameAppBase {
   renderBoard() {
     return (
       <div className="board">
-        {this.state.board.map((value, cell) => {
+        {this.state.board && this.state.board.map((value, cell) => {
           const empty = this.isEmpty(cell);
           return (
             <button

@@ -7,14 +7,10 @@ export class GameAppBase extends React.Component {
     super(props);
     this.state = {
       loading: true,
+      gameEnd: null,
+      turn: null,
       board: null,
-      lastTurn: null,
-      lastAction: null,
       legalMoves: [],
-      seatAssignments: null,
-      playerNames: null,
-      resultCodes: null,
-      mySeat: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -24,15 +20,8 @@ export class GameAppBase extends React.Component {
     if (!this.port) return;
     const ws = new WebSocket(`ws://localhost:${this.port}`);
     this.socketRef.current = ws;
-    ws.onopen = () => {
-      console.log(`✅ WS connected to ${this.port}`);
-      this.setState({ loading: false, wsClosed: false });
-    };
+    ws.onopen = () => console.log(`✅ WS connected to ${this.port}`);
     ws.onerror = e => console.error('🔴 WS error', e);
-    ws.onclose = e => {
-      console.warn('WebSocket closed:', e);
-      this.setState({ wsClosed: true, loading: false });
-    };
     ws.onmessage = e => {
       let msg;
       try { msg = JSON.parse(e.data) }
@@ -46,13 +35,10 @@ export class GameAppBase extends React.Component {
     if (this.socketRef.current) this.socketRef.current.close();
   }
 
+  // To be overridden by subclass
   handleMessage(msg) {
-    if (msg.type === 'start_game') {
-      this.handleStartGame(msg.payload);
-    } else if (msg.type === 'state_update') {
+    if (msg.type === 'state_update') {
       this.handleStateUpdate(msg.payload);
-    } else if (msg.type === 'action_request') {
-      this.handleActionRequest(msg.payload);
     } else if (msg.type === 'game_end') {
       this.handleGameEnd(msg.payload);
     } else {
@@ -60,75 +46,46 @@ export class GameAppBase extends React.Component {
     }
   }
 
-  handleStartGame(payload) {
-    this.setState({
-      loading: false,
-      board: Array.from(payload.board),
-      lastTurn: null,
-      lastAction: null,
-      seatAssignments: Array.from(payload.seat_assignments),
-      playerNames: Array.from(payload.player_names),
-      resultCodes: null,
-      mySeat: payload.my_seat,
-    });
-  }
-
   handleStateUpdate(payload) {
     this.setState({
       board: Array.from(payload.board),
-      lastTurn: payload.seat,
-      lastAction: payload.last_action,
-    });
-  }
-
-  handleActionRequest(payload) {
-    this.setState({
-      legalMoves: payload.legal_moves,
+      turn: payload.turn,
+      gameEnd: null,
+      legalMoves: payload.legal_moves || [],
     });
   }
 
   handleGameEnd(payload) {
     this.setState({
-      resultCodes: payload.result_codes,
+      board: Array.from(payload.board),
+      gameEnd: payload,
     });
   }
 
   gameActive() {
-    if (this.state.resultCodes) return false;
+    if (this.state.gameEnd) return false;
     const ws = this.socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     return true;
   }
 
   sendMove(action_index) {
-    this.setState({
-      legalMoves: [],
-    });
-    this.sendMsg({ type: 'make_move', payload: { index: action_index } })
-  }
-
-  sendMsg(msg) {
     const ws = this.socketRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify(msg));
+    ws.send(JSON.stringify({ type: 'make_move', payload: { index: action_index } }));
   }
 
   handleResign = () => {
-    this.setState({
-      legalMoves: [],
-    });
-    this.sendMsg({ type: 'resign' });
-  }
+    const ws = this.socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'resign' }));
+  };
 
   handleNewGame = () => {
-    this.sendMsg({ type: 'new_game' });
-    this.setState({ loading: true, resultCodes: null });
-  }
-
-  seatToHtml = (seat) => {
-    // Default implementation, can be overridden by subclasses
-    return seat;
-  }
+    const ws = this.socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'new_game' }));
+    this.setState({ loading: true, gameEnd: null });
+  };
 
   // To be implemented by subclass
   renderBoard() {
@@ -137,32 +94,15 @@ export class GameAppBase extends React.Component {
 
   render() {
     if (!this.port) return <PortError port={this.port} />;
-    if (this.state.wsClosed) {
-      return <div className="container" style={{ color: 'red', padding: '2em', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>Connection to backend lost.</div>
-        <div style={{ marginTop: '1em' }}>Please restart the backend and reload the page.</div>
-      </div>;
-    }
     if (this.state.loading) return <Loading />;
-
-    let resultCodes = this.state.resultCodes;
-    let playerNames = this.state.playerNames;
-    let seatAssignments = this.state.seatAssignments;
-
-    let midGame = resultCodes === null;
-    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
     return (
       <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-        <StatusBar
-          resultCodes={resultCodes}
-          playerNames={playerNames}
-          seatAssignments={seatAssignmentsHtml}
-        />
+        <StatusBar gameEnd={this.state.gameEnd} turn={this.state.turn} />
         {this.renderBoard()}
         <ActionButtons
           onResign={this.handleResign}
           onNewGame={this.handleNewGame}
-          midGame={midGame}
+          gameEnd={this.state.gameEnd}
           loading={this.state.loading}
         />
       </div>

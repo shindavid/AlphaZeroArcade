@@ -15,57 +15,60 @@ export default class Connect4App extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: null,
-      colHeights: null,
-      animation: null, // { col, row, disc, targetRow, animRow }
-      skipNextAnimation: false,
+      board: Array(ROWS * COLS).fill('_'),
+      lastAction: null,
+      animation: null, // { col, row, disc, source, targetRow, animRow }
+      lastMoveSentCol: null,
     };
     this.animationHelper = new Connect4Animation();
   }
 
-  // Override for colorful icons
-  seatToHtml = (seat) => {
-    if (seat === "R") {
-      return `<span class='connect4-seat-icon connect4-seat-R'></span>`;
-    }
-    if (seat === "Y") {
-      return `<span class='connect4-seat-icon connect4-seat-Y'></span>`;
-    }
-    return seat;
-  }
+  // Animation helpers
+  endAnimation = () => {
+    this.animationHelper.end();
+    this.setState({ animation: null });
+  };
 
-  // Override for animations
+  // Override to animate opponent moves
   handleStateUpdate(payload) {
-    super.handleStateUpdate(payload);
-
-    this.setState({
-      colHeights: payload.col_heights,
-    });
-
-    if (this.state.skipNextAnimation) {
-      this.setState({ skipNextAnimation: false });
-      return;
-    }
-
-    const col = payload.last_col;
-    if (col >= 0) {
-      let row = ROWS - payload.col_heights[col];
-      let disc = payload.board[row * COLS + col];
-
-      this.setState({
-        animation: this.animationHelper.get(),
-        lastAction: col,
-      });
-
-      this.startAnimation({ col, row, disc });
+    // Call base class to update state
+    if (super.handleStateUpdate) super.handleStateUpdate(payload);
+    // Animate opponent move if last_action is present and not from player
+    const last = payload.last_action;
+    if (last && last !== '-') {
+      const col = parseInt(last, 10) - 1;
+      if (!isNaN(col) && col >= 0 && col < COLS) {
+        // If this is the player's last move, don't animate again
+        if (this.state.lastMoveSentCol === col) {
+          this.setState({ lastMoveSentCol: null });
+        } else {
+          // Animate opponent's move
+          const b = Array.from(payload.board || '');
+          let disc = null;
+          let row = -1;
+          // Find the row where the new disc landed (first non-empty cell from top)
+          for (let r = 0; r < ROWS; ++r) {
+            const idx = r * COLS + col;
+            if (b[idx] !== '_') {
+              disc = b[idx];
+              row = r;
+              break;
+            }
+          }
+          if (row !== -1 && disc) {
+            this.startAnimation({ col, row, disc, source: 'opponent' });
+          }
+        }
+      }
     }
   }
 
-  startAnimation = ({ col, row, disc, onComplete }) => {
+  startAnimation = ({ col, row, disc, source, onComplete }) => {
     this.animationHelper.start({
       col,
       row,
       disc,
+      source,
       onComplete: () => {
         this.setState({ animation: null });
         if (onComplete) onComplete();
@@ -75,24 +78,31 @@ export default class Connect4App extends GameAppBase {
         this.setState({ animation: { ...animState } });
       },
     });
-  };
-
-  endAnimation = () => {
-    this.animationHelper.end();
-    this.setState({ animation: null });
+    this.setState({
+      animation: this.animationHelper.get(),
+      lastAction: col,
+    });
   };
 
   handleCellClick = (col) => {
     if (!this.gameActive() || (this.state.animation && this.state.animation.col !== null)) return;
 
-    let row = ROWS - this.state.colHeights[col] - 1;
-
-    const disc = this.state.mySeat;
-    this.setState({ skipNextAnimation: true });
+    // Find the lowest empty row in this column
+    let row = -1;
+    for (let r = ROWS - 1; r >= 0; --r) {
+      if (this.state.board[r * COLS + col] === '_') {
+        row = r;
+        break;
+      }
+    }
+    if (row === -1) return;
+    const disc = this.state.turn === 'R' ? 'R' : 'Y';
+    this.setState({ lastMoveSentCol: col });
     this.startAnimation({
       col,
       row,
       disc,
+      source: 'player',
       onComplete: () => {
         this.sendMove(col);
       }
@@ -100,23 +110,31 @@ export default class Connect4App extends GameAppBase {
   };
 
   // Helper to determine if a disc should be hidden for animation
-  hideDisc(row, col) {
+  hideDisc(row, col, cell) {
     const anim = this.state.animation;
     if (!anim || anim.col !== col) return false;
-    return anim.targetRow !== anim.animRow && row === anim.targetRow;
+    if (
+      anim.source === 'player' && anim.animRow !== null && row === anim.animRow && cell === anim.disc
+    ) {
+      return true;
+    }
+    if (
+      anim.source === 'opponent' && anim.targetRow !== null && row === anim.targetRow && cell === anim.disc
+    ) {
+      return true;
+    }
+    return false;
   }
 
   renderAnimatedDisc() {
     const anim = this.state.animation;
     if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
+    const left = 18 + 4 + anim.col * 56;
+    const top = 20 + 4 + anim.animRow * 56;
     return (
       <div
         className={`animated-disc ${anim.disc}`}
-        style={{
-          gridRow: anim.animRow + 1,
-          gridColumn: anim.col + 1,
-          position: 'absolute',
-        }}
+        style={{ left, top }}
       />
     );
   }
@@ -129,7 +147,7 @@ export default class Connect4App extends GameAppBase {
         const cell = this.state.board[idx];
         const isLegal = this.state.legalMoves.includes(col);
         let cellClass = "";
-        if (!this.hideDisc(row, col)) {
+        if (!this.hideDisc(row, col, cell)) {
           if (cell === "R" || cell === "Y") cellClass = cell;
         }
         grid.push(
