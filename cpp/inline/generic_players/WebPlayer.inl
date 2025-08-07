@@ -279,6 +279,7 @@ void WebPlayer<Game>::response_loop() {
       // This will likely be important for games with more complex actions, like Blokus or chess,
       // as otherwise the frontend would need the complex action->int mappings.
       action_ = idx;
+      notification_unit_.yield_manager->notify(notification_unit_);
     } else if (type == "new_game") {
       mit::unique_lock lock(mutex_);
       ready_for_new_game_ = true;
@@ -286,10 +287,10 @@ void WebPlayer<Game>::response_loop() {
       cv_.notify_all();
     } else if (type == "resign") {
       resign_ = true;
+      notification_unit_.yield_manager->notify(notification_unit_);
     } else {
       throw util::Exception("Unknown message type: {}", type);
     }
-    notification_unit_.yield_manager->notify(notification_unit_);
   }
 }
 
