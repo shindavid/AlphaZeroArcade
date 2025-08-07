@@ -1,4 +1,3 @@
-import React from 'react';
 import './shared.css';
 
 export function PortError({port}) {
@@ -38,7 +37,7 @@ export function StatusBar({gameEnd, playerNames, seatAssignments}) {
         <div style={{ marginTop: '0.5em', textAlign: 'left' }}>
           {seatAssignments.map((seat, i) => (
             <div key={seat + i}>
-              {seat}: <span dangerouslySetInnerHTML={{ __html: escapeHtml(playerNames[i]) }} />
+              <span dangerouslySetInnerHTML={{ __html: seat }} />: <span dangerouslySetInnerHTML={{ __html: escapeHtml(playerNames[i]) }} />
             </div>
           ))}
         </div>

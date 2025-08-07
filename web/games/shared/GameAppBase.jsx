@@ -39,7 +39,6 @@ export class GameAppBase extends React.Component {
     if (this.socketRef.current) this.socketRef.current.close();
   }
 
-  // To be overridden by subclass
   handleMessage(msg) {
     if (msg.type === 'start_game') {
       this.handleStartGame(msg.payload);
@@ -112,12 +111,17 @@ export class GameAppBase extends React.Component {
       legalMoves: [],
     });
     this.sendMsg({ type: 'resign' });
-  };
+  }
 
   handleNewGame = () => {
     this.sendMsg({ type: 'new_game' });
     this.setState({ loading: true, gameEnd: null });
-  };
+  }
+
+  seatToHtml = (seat) => {
+    // Default implementation, can be overridden by subclasses
+    return seat;
+  }
 
   // To be implemented by subclass
   renderBoard() {
@@ -131,9 +135,14 @@ export class GameAppBase extends React.Component {
     let gameEnd = this.state.gameEnd;
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
+    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
     return (
       <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-        <StatusBar gameEnd={gameEnd} playerNames={playerNames} seatAssignments={seatAssignments} />
+        <StatusBar
+          gameEnd={gameEnd}
+          playerNames={playerNames}
+          seatAssignments={seatAssignmentsHtml}
+        />
         {this.renderBoard()}
         <ActionButtons
           onResign={this.handleResign}

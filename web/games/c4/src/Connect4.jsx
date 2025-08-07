@@ -22,6 +22,16 @@ export default class Connect4App extends GameAppBase {
     this.animationHelper = new Connect4Animation();
   }
 
+  seatToHtml = (seat) => {
+    if (seat === "R") {
+      return `<span class='connect4-seat-icon connect4-seat-R'></span>`;
+    }
+    if (seat === "Y") {
+      return `<span class='connect4-seat-icon connect4-seat-Y'></span>`;
+    }
+    return seat;
+  }
+
   // Animation helpers
   endAnimation = () => {
     this.animationHelper.end();

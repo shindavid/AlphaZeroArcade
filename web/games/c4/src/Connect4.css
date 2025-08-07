@@ -1,3 +1,19 @@
+/* Inline seat icons for status bar */
+.connect4-seat-icon {
+  display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  vertical-align: middle;
+  background-size: cover;
+  background-position: center;
+  margin-right: 0.3em;
+}
+.connect4-seat-R {
+  background-image: url('../images/red.svg');
+}
+.connect4-seat-Y {
+  background-image: url('../images/yellow.svg');
+}
 /* Animated disc overlay for drop animation */
 .animated-disc {
   position: absolute;
