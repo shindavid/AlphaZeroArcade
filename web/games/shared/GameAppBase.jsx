@@ -7,13 +7,13 @@ export class GameAppBase extends React.Component {
     super(props);
     this.state = {
       loading: true,
-      gameEnd: null,
       board: null,
       lastTurn: null,
       lastAction: null,
       legalMoves: [],
       seatAssignments: null,
       playerNames: null,
+      resultCodes: null,
       mySeat: null,
     };
     this.socketRef = React.createRef();
@@ -57,11 +57,11 @@ export class GameAppBase extends React.Component {
     this.setState({
       loading: false,
       board: Array.from(payload.board),
-      gameEnd: null,
       lastTurn: null,
       lastAction: null,
       seatAssignments: Array.from(payload.seat_assignments),
       playerNames: Array.from(payload.player_names),
+      resultCodes: null,
       mySeat: payload.my_seat,
     });
   }
@@ -82,12 +82,12 @@ export class GameAppBase extends React.Component {
 
   handleGameEnd(payload) {
     this.setState({
-      gameEnd: payload,
+      resultCodes: payload.result_codes,
     });
   }
 
   gameActive() {
-    if (this.state.gameEnd) return false;
+    if (this.state.resultCodes) return false;
     const ws = this.socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     return true;
@@ -115,7 +115,7 @@ export class GameAppBase extends React.Component {
 
   handleNewGame = () => {
     this.sendMsg({ type: 'new_game' });
-    this.setState({ loading: true, gameEnd: null });
+    this.setState({ loading: true, resultCodes: null });
   }
 
   seatToHtml = (seat) => {
@@ -132,14 +132,16 @@ export class GameAppBase extends React.Component {
     if (!this.port) return <PortError port={this.port} />;
     if (this.state.loading) return <Loading />;
 
-    let gameEnd = this.state.gameEnd;
+    let resultCodes = this.state.resultCodes;
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
+
+    let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
     return (
       <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
         <StatusBar
-          gameEnd={gameEnd}
+          resultCodes={resultCodes}
           playerNames={playerNames}
           seatAssignments={seatAssignmentsHtml}
         />
@@ -147,7 +149,7 @@ export class GameAppBase extends React.Component {
         <ActionButtons
           onResign={this.handleResign}
           onNewGame={this.handleNewGame}
-          gameEnd={this.state.gameEnd}
+          midGame={midGame}
           loading={this.state.loading}
         />
       </div>

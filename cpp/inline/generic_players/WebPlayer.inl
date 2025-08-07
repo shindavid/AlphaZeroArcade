@@ -134,32 +134,18 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
 
   auto array = Game::GameResults::to_value_array(outcome);
 
-  std::bitset<P> winners;
+  char result_codes[P+1];
   for (int p = 0; p < P; ++p) {
-    winners[p] = array[p] > 0;
-  }
-
-  if (winners.count() > 1) {
-    if (P == 2) {
-      // In a 2-player game, no need to say the players' names, just say "Draw!"
-      payload["msg"] = "Draw!";
+    if (array[p] == 1) {
+      result_codes[p] = 'W';  // Win
+    } else if (array[p] == 0) {
+      result_codes[p] = 'L';  // Loss
     } else {
-      std::vector<std::string> winner_names;
-      for (int p = 0; p < P; ++p) {
-        if (winners[p]) {
-          winner_names.push_back(IO::player_to_str(p));
-        }
-      }
-
-      auto msg = std::format("Draw between {}", util::grammatically_join(winner_names, "and"));
-      payload["msg"] = msg;
+      result_codes[p] = 'D';  // Draw
     }
-  } else if (winners.count() == 1) {
-    core::seat_index_t w = bitset_util::choose_random_on_index(winners);
-    payload["msg"] = IO::player_to_str(w) + " wins!";
-  } else {
-    throw util::Exception("Game ended with no winners!");
   }
+  result_codes[P] = '\0';  // Null-terminate the string
+  payload["result_codes"] = std::string(result_codes);
 
   return payload;
 }
@@ -268,7 +254,6 @@ void WebPlayer<Game>::response_loop() {
     auto parsed = boost::json::parse(line);
     const auto& obj = parsed.as_object();
     std::string type = obj.at("type").as_string().c_str();
-    LOG_INFO("Web player received message: {}", line);
     if (type == "make_move") {
       const auto& payload = obj.at("payload").as_object();
       int idx = payload.at("index").as_int64();
