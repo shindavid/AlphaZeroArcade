@@ -245,36 +245,36 @@ void WebPlayer<Game>::response_loop() {
   cv_.notify_all();
 
   while (bridge_connected_) {
-    // TODO: put try-catch here to gracefully handle bridge disconnect or similar
-    boost::asio::streambuf buf;
-    boost::asio::read_until(socket_, buf, '\n');
-    std::istream is(&buf);
-    std::string line;
-    std::getline(is, line);
-    auto parsed = boost::json::parse(line);
-    const auto& obj = parsed.as_object();
-    std::string type = obj.at("type").as_string().c_str();
-    if (type == "make_move") {
-      const auto& payload = obj.at("payload").as_object();
-      int idx = payload.at("index").as_int64();
-
-      // TODO: extend Game::IO interface to have a str_to_action() method - that gives us the
-      // flexibility to use "index" or "action" in the JSON.
-      //
-      // This will likely be important for games with more complex actions, like Blokus or chess,
-      // as otherwise the frontend would need the complex action->int mappings.
-      action_ = idx;
-      notification_unit_.yield_manager->notify(notification_unit_);
-    } else if (type == "new_game") {
-      mit::unique_lock lock(mutex_);
-      ready_for_new_game_ = true;
-      lock.unlock();
+    try {
+      boost::asio::streambuf buf;
+      boost::asio::read_until(socket_, buf, '\n');
+      std::istream is(&buf);
+      std::string line;
+      std::getline(is, line);
+      auto parsed = boost::json::parse(line);
+      const auto& obj = parsed.as_object();
+      std::string type = obj.at("type").as_string().c_str();
+      if (type == "make_move") {
+        const auto& payload = obj.at("payload").as_object();
+        int idx = payload.at("index").as_int64();
+        action_ = idx;
+        notification_unit_.yield_manager->notify(notification_unit_);
+      } else if (type == "new_game") {
+        mit::unique_lock lock(mutex_);
+        ready_for_new_game_ = true;
+        lock.unlock();
+        cv_.notify_all();
+      } else if (type == "resign") {
+        resign_ = true;
+        notification_unit_.yield_manager->notify(notification_unit_);
+      } else {
+        throw util::Exception("Unknown message type: {}", type);
+      }
+    } catch (const std::exception& ex) {
+      LOG_INFO("WebPlayer: connection closed or error: {}", ex.what());
+      bridge_connected_ = false;
       cv_.notify_all();
-    } else if (type == "resign") {
-      resign_ = true;
-      notification_unit_.yield_manager->notify(notification_unit_);
-    } else {
-      throw util::Exception("Unknown message type: {}", type);
+      break;
     }
   }
 }
