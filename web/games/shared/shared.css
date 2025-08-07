@@ -1,3 +1,21 @@
+/* Result text for StatusBar */
+.result-text {
+  display: inline-block;
+  width: 70px;
+  min-width: 70px;
+  text-align: right;
+  margin-right: 8px;
+  font-weight: bold;
+  font-size: 1em;
+  letter-spacing: 1px;
+  vertical-align: middle;
+}
+.result-text.winner {
+  color: #FFD700;
+}
+.result-text.draw {
+  color: #1E90FF;
+}
 /* Shared status message area for all games */
 .status-message-area {
   min-width: 11em;

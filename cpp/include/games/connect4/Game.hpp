@@ -51,6 +51,7 @@ struct Game {
   struct State {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
+    int num_empty_cells(column_t col) const;
 
     mask_t full_mask;        // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
