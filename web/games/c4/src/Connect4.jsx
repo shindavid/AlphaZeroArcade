@@ -15,7 +15,7 @@ export default class Connect4App extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: null,
+      board: "_".repeat(ROWS * COLS),
       colHeights: null,
       animation: null, // { col, row, disc, targetRow, animRow }
       skipNextAnimation: false,

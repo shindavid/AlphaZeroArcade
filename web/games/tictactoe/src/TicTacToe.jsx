@@ -7,7 +7,7 @@ export default class TicTacToeApp extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: null,
+      board: "_".repeat(9),
     };
   }
 
