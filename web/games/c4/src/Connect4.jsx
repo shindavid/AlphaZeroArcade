@@ -114,12 +114,15 @@ export default class Connect4App extends GameAppBase {
   renderAnimatedDisc() {
     const anim = this.state.animation;
     if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
-    const left = 18 + 4 + anim.col * 56;
-    const top = 20 + 4 + anim.animRow * 56;
+    // Use grid positioning
     return (
       <div
         className={`animated-disc ${anim.disc}`}
-        style={{ left, top }}
+        style={{
+          gridRow: anim.animRow + 1,
+          gridColumn: anim.col + 1,
+          position: 'absolute',
+        }}
       />
     );
   }

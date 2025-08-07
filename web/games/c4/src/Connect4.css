@@ -16,7 +16,6 @@
 }
 /* Animated disc overlay for drop animation */
 .animated-disc {
-  position: absolute;
   width: 56px;
   height: 56px;
   z-index: 10;
@@ -24,6 +23,8 @@
   background-size: cover;
   background-position: center;
   transition: top 0.06s linear;
+  display: grid;
+  /* gridRow and gridColumn will be set inline */
 }
 .animated-disc.R {
   background-image: url('../images/red.svg');
