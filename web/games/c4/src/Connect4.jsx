@@ -33,8 +33,6 @@ export default class Connect4App extends GameAppBase {
     // Call base class to update state
     if (super.handleStateUpdate) super.handleStateUpdate(payload);
 
-    console.log('Handling state update:', payload, "skip: ", this.state.skipNextAnimation);
-
     if (this.state.skipNextAnimation) {
       this.setState({ skipNextAnimation: false });
       return;
@@ -45,6 +43,12 @@ export default class Connect4App extends GameAppBase {
     if (row >= 0) {
       const b = Array.from(payload.board || '');
       let disc = b[row * COLS + col];
+
+      this.setState({
+        animation: this.animationHelper.get(),
+        lastAction: col,
+      });
+
       this.startAnimation({ col, row, disc });
     }
   }
@@ -63,10 +67,6 @@ export default class Connect4App extends GameAppBase {
         this.setState({ animation: { ...animState } });
       },
     });
-    this.setState({
-      animation: this.animationHelper.get(),
-      lastAction: col,
-    });
   };
 
   handleCellClick = (col) => {
@@ -84,7 +84,6 @@ export default class Connect4App extends GameAppBase {
     if (row === -1) return;
 
     const disc = this.state.mySeat;
-    console.log('Clicking cell:', col, 'row:', row, 'disc:', disc);
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -99,14 +98,12 @@ export default class Connect4App extends GameAppBase {
   // Helper to determine if a disc should be hidden for animation
   hideDisc(row, col) {
     const anim = this.state.animation;
-    console.log('Checking if disc should be hidden:', row, col, 'anim:', anim);
     if (!anim || anim.col !== col) return false;
-    return anim.targetRow !== anim.row && row === anim.targetRow;
+    return anim.targetRow !== anim.animRow && row === anim.targetRow;
   }
 
   renderAnimatedDisc() {
     const anim = this.state.animation;
-    console.log('Rendering animated disc:', anim);
     if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
     const left = 18 + 4 + anim.col * 56;
     const top = 20 + 4 + anim.animRow * 56;

@@ -55,7 +55,6 @@ export class GameAppBase extends React.Component {
   }
 
   handleStartGame(payload) {
-    console.log('Game started:', payload);
     this.setState({
       loading: false,
       board: Array.from(payload.board),
