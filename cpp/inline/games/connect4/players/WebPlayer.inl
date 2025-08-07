@@ -1,5 +1,7 @@
 #include "games/connect4/players/WebPlayer.hpp"
 
+#include "games/connect4/Constants.hpp"
+
 namespace c4 {
 
 inline boost::json::object WebPlayer::make_state_update_msg(core::seat_index_t seat,
@@ -8,8 +10,12 @@ inline boost::json::object WebPlayer::make_state_update_msg(core::seat_index_t s
                                                             core::action_mode_t last_mode) {
   boost::json::object msg = base_t::make_state_update_msg(seat, state, last_action, last_mode);
 
-  // Add the row of the last action to the message.
-  msg["last_row"] = last_action >= 0 ? state.num_empty_cells(last_action) : -1;
+  boost::json::array col_heights;
+  for (int col = 0; col < kNumColumns; ++col) {
+    col_heights.push_back(kNumRows - state.num_empty_cells(col));
+  }
+  msg["col_heights"] = col_heights;
+  msg["last_col"] = last_action;
   return msg;
 }
 

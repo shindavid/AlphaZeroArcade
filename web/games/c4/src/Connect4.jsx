@@ -16,12 +16,14 @@ export default class Connect4App extends GameAppBase {
     this.state = {
       ...this.state,
       board: null,
+      colHeights: null,
       animation: null, // { col, row, disc, targetRow, animRow }
       skipNextAnimation: false,
     };
     this.animationHelper = new Connect4Animation();
   }
 
+  // Override for colorful icons
   seatToHtml = (seat) => {
     if (seat === "R") {
       return `<span class='connect4-seat-icon connect4-seat-R'></span>`;
@@ -32,25 +34,22 @@ export default class Connect4App extends GameAppBase {
     return seat;
   }
 
-  // Animation helpers
-  endAnimation = () => {
-    this.animationHelper.end();
-    this.setState({ animation: null });
-  };
-
-  // Override to animate opponent moves
+  // Override for animations
   handleStateUpdate(payload) {
-    // Call base class to update state
-    if (super.handleStateUpdate) super.handleStateUpdate(payload);
+    super.handleStateUpdate(payload);
+
+    this.setState({
+      colHeights: payload.col_heights,
+    });
 
     if (this.state.skipNextAnimation) {
       this.setState({ skipNextAnimation: false });
       return;
     }
 
-    const col = parseInt(payload.last_action) - 1;  // Convert to 0-based index
-    let row = payload.last_row;
-    if (row >= 0) {
+    const col = payload.last_col;
+    if (col >= 0) {
+      let row = ROWS - payload.col_heights[col];
       let disc = payload.board[row * COLS + col];
 
       this.setState({
@@ -78,19 +77,15 @@ export default class Connect4App extends GameAppBase {
     });
   };
 
+  endAnimation = () => {
+    this.animationHelper.end();
+    this.setState({ animation: null });
+  };
+
   handleCellClick = (col) => {
     if (!this.gameActive() || (this.state.animation && this.state.animation.col !== null)) return;
 
-    // TODO: get this row info from the backend
-    // Find the lowest empty row in this column
-    let row = -1;
-    for (let r = ROWS - 1; r >= 0; --r) {
-      if (this.state.board[r * COLS + col] === '_') {
-        row = r;
-        break;
-      }
-    }
-    if (row === -1) return;
+    let row = ROWS - this.state.colHeights[col] - 1;
 
     const disc = this.state.mySeat;
     this.setState({ skipNextAnimation: true });
@@ -114,7 +109,6 @@ export default class Connect4App extends GameAppBase {
   renderAnimatedDisc() {
     const anim = this.state.animation;
     if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
-    // Use grid positioning
     return (
       <div
         className={`animated-disc ${anim.disc}`}
