@@ -1,7 +1,6 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
@@ -31,19 +30,23 @@ WebPlayer<Game>::~WebPlayer() {
     frontend_process_->terminate();
     delete frontend_process_;
   }
+
+  {
+    mit::unique_lock lock(mutex_);
+    bridge_connected_ = false;
+    cv_.notify_all();
+  }
+  if (thread_.joinable()) {
+    thread_.join();
+  }
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::start_game() {
-  last_action_ = -1;
-  last_mode_ = 0;
   action_ = -1;
-  ready_for_response_ = false;
   resign_ = false;
 
   if (first_game_) {
-    // sleep for one second to ensure response_loop() is ready
-    std::this_thread::sleep_for(std::chrono::seconds(1));
     launch_bridge();
     launch_frontend();
 
@@ -53,37 +56,24 @@ void WebPlayer<Game>::start_game() {
 
     {
       mit::unique_lock lock(mutex_);
-      cv_.wait(lock, [this]() { return connected_; });
+      cv_.wait(lock, [this]() { return bridge_connected_; });
     }
 
     first_game_ = false;
-    return;
+  } else {
+    mit::unique_lock lock(mutex_);
+    cv_.wait(lock, [this]() { return ready_for_new_game_; });
+    ready_for_new_game_ = false;
   }
-
-  // Wait for player to click "Start Game" in the frontend
-  while (true) {
-    RELEASE_ASSERT(connected_);
-    boost::asio::streambuf buf;
-    boost::asio::read_until(socket_, buf, '\n');
-    std::istream is(&buf);
-    std::string line;
-    std::getline(is, line);
-    auto parsed = boost::json::parse(line);
-    const auto& obj = parsed.as_object();
-    std::string type = obj.at("type").as_string().c_str();
-    if (type == "new_game") {
-      break;
-    } else {
-      throw util::Exception("Expected 'new_game' type, got: {}", type);
-    }
-  }
+  send_start_game();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
                                            core::action_t action) {
-  last_action_ = action;
-  last_mode_ = Game::Rules::get_action_mode(state);
+  // TODO: I think getting mode from state is not right. This callback should really receive
+  // the action_mode as a separate argument.
+  send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
 }
 
 template <core::concepts::Game Game>
@@ -97,35 +87,49 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
     action_ = -1;
     return action;
   }
-  send_state(request, last_action_, last_mode_);
+  send_action_request(request.valid_actions);
   notification_unit_ = request.notification_unit;
 
   // NOTE: see long comment in GameServer.inl, in the next() method, about a race condition
   // consideration about this.
-  mit::unique_lock lock(mutex_);
-  ready_for_response_ = true;
-  lock.unlock();
-  cv_.notify_all();
-
   return ActionResponse::yield();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
-  util::Rendering::Guard guard(util::Rendering::kText);
-
   boost::json::object msg;
   msg["type"] = "game_end";
-  boost::json::object payload = make_state_msg(state, ActionMask(), last_action_, last_mode_);
-  payload["msg"] = make_result_msg(state, outcome);
-  msg["payload"] = payload;
-  std::string out = boost::json::serialize(msg) + "\n";
-  RELEASE_ASSERT(connected_);
-  boost::asio::write(socket_, boost::asio::buffer(out));
+  msg["payload"] = make_result_msg(state, outcome);
+  send_msg(msg);
 }
 
 template <core::concepts::Game Game>
-std::string WebPlayer<Game>::make_result_msg(const State& state, const ValueTensor& outcome) {
+boost::json::object WebPlayer<Game>::make_start_game_msg() {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  State state;
+  Game::Rules::init_state(state);
+
+  boost::json::object payload;
+  payload["board"] = IO::state_to_json(state);
+  auto seat_assignments = boost::json::array();
+  auto player_names = boost::json::array();
+  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+    seat_assignments.push_back(boost::json::value(IO::player_to_str(p)));
+    player_names.push_back(boost::json::value(this->get_player_names()[p]));
+  }
+  payload["my_seat"] = IO::player_to_str(this->get_my_seat());
+  payload["seat_assignments"] = seat_assignments;
+  payload["player_names"] = player_names;
+  return payload;
+}
+
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
+                                                     const ValueTensor& outcome) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object payload;
   constexpr int P = Game::Constants::kNumPlayers;
 
   auto array = Game::GameResults::to_value_array(outcome);
@@ -138,40 +142,60 @@ std::string WebPlayer<Game>::make_result_msg(const State& state, const ValueTens
   if (winners.count() > 1) {
     if (P == 2) {
       // In a 2-player game, no need to say the players' names, just say "Draw!"
-      return "Draw!";
-    }
-
-    std::vector<std::string> winner_names;
-    for (int p = 0; p < P; ++p) {
-      if (winners[p]) {
-        winner_names.push_back(IO::player_to_str(p));
+      payload["msg"] = "Draw!";
+    } else {
+      std::vector<std::string> winner_names;
+      for (int p = 0; p < P; ++p) {
+        if (winners[p]) {
+          winner_names.push_back(IO::player_to_str(p));
+        }
       }
-    }
 
-    return std::format("Draw between {}", util::grammatically_join(winner_names, "and"));
+      auto msg = std::format("Draw between {}", util::grammatically_join(winner_names, "and"));
+      payload["msg"] = msg;
+    }
   } else if (winners.count() == 1) {
     core::seat_index_t w = bitset_util::choose_random_on_index(winners);
-    return IO::player_to_str(w) + " wins!";
+    payload["msg"] = IO::player_to_str(w) + " wins!";
   } else {
     throw util::Exception("Game ended with no winners!");
   }
+
+  return payload;
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_state_msg(const State& state,
-                                                    const ActionMask& legal_moves,
-                                                    core::action_t last_action,
-                                                    core::action_mode_t last_mode) {
+boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
   boost::json::array legal_move_indices;
-  for (int i : bitset_util::on_indices(legal_moves)) {
+  for (int i : bitset_util::on_indices(valid_actions)) {
     legal_move_indices.push_back(i);
   }
+
   boost::json::object payload;
-  payload["board"] = IO::state_to_json(state);
-  payload["last_action"] = IO::action_to_str(last_action, last_mode);
-  payload["turn"] = IO::player_to_str(this->get_my_seat());
   payload["legal_moves"] = legal_move_indices;
   return payload;
+}
+
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::make_state_update_msg(core::seat_index_t seat,
+                                                           const State& state,
+                                                           core::action_t last_action,
+                                                           core::action_mode_t last_mode) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object payload;
+  payload["board"] = IO::state_to_json(state);
+  payload["seat"] = IO::player_to_str(seat);
+  payload["last_action"] = IO::action_to_str(last_action, last_mode);
+  return payload;
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::send_msg(const boost::json::object& msg) {
+  std::string out = boost::json::serialize(msg) + "\n";
+  boost::asio::write(socket_, boost::asio::buffer(out));
 }
 
 template <core::concepts::Game Game>
@@ -230,19 +254,12 @@ void WebPlayer<Game>::response_loop() {
 
   {
     mit::unique_lock lock(mutex_);
-    connected_ = true;
+    bridge_connected_ = true;
   }
   cv_.notify_all();
 
-  // TODO: wire end_session() to WebPlayer, and use that to break this loop
-  // And/or: rely on socket_.is_open()
-  while (true) {
-    {
-      mit::unique_lock lock(mutex_);
-      cv_.wait(lock, [this]() { return ready_for_response_; });
-      ready_for_response_ = false;
-    }
-
+  while (bridge_connected_) {
+    // TODO: put try-catch here to gracefully handle bridge disconnect or similar
     boost::asio::streambuf buf;
     boost::asio::read_until(socket_, buf, '\n');
     std::istream is(&buf);
@@ -251,13 +268,22 @@ void WebPlayer<Game>::response_loop() {
     auto parsed = boost::json::parse(line);
     const auto& obj = parsed.as_object();
     std::string type = obj.at("type").as_string().c_str();
+    LOG_INFO("Web player received message: {}", line);
     if (type == "make_move") {
       const auto& payload = obj.at("payload").as_object();
       int idx = payload.at("index").as_int64();
 
       // TODO: extend Game::IO interface to have a str_to_action() method - that gives us the
       // flexibility to use "index" or "action" in the JSON.
+      //
+      // This will likely be important for games with more complex actions, like Blokus or chess,
+      // as otherwise the frontend would need the complex action->int mappings.
       action_ = idx;
+    } else if (type == "new_game") {
+      mit::unique_lock lock(mutex_);
+      ready_for_new_game_ = true;
+      lock.unlock();
+      cv_.notify_all();
     } else if (type == "resign") {
       resign_ = true;
     } else {
@@ -267,27 +293,34 @@ void WebPlayer<Game>::response_loop() {
   }
 }
 
-// NOTE: we cannot send anything to socket_ until after acceptor_.accept() is called in
-// response_loop(). If we hit this method before that point, we need to store the state, and send it
-// later.
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_state(const ActionRequest& request, core::action_t last_action,
-                                 core::action_mode_t last_mode) {
-  mit::unique_lock lock(mutex_);
-  RELEASE_ASSERT(connected_);
-  write_to_socket(request, last_action, last_mode);
+void WebPlayer<Game>::send_start_game() {
+  boost::json::object msg;
+  msg["type"] = "start_game";
+  msg["payload"] = make_start_game_msg();
+
+  send_msg(msg);
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::write_to_socket(const ActionRequest& request, core::action_t last_action,
-                                      core::action_mode_t last_mode) {
+void WebPlayer<Game>::send_state_update(core::seat_index_t seat, const State& state,
+                                        core::action_t last_action, core::action_mode_t last_mode) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object msg;
   msg["type"] = "state_update";
-  msg["payload"] = make_state_msg(request.state, request.valid_actions, last_action, last_mode);
-  std::string out = boost::json::serialize(msg) + "\n";
-  boost::asio::write(socket_, boost::asio::buffer(out));
+  msg["payload"] = make_state_update_msg(seat, state, last_action, last_mode);
+
+  send_msg(msg);
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions) {
+  boost::json::object msg;
+  msg["type"] = "action_request";
+  msg["payload"] = make_action_request_msg(valid_actions);
+
+  send_msg(msg);
 }
 
 template <core::concepts::Game Game>

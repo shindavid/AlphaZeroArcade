@@ -1,9 +1,6 @@
 #include "games/connect4/Game.hpp"
 
 #include "core/DefaultCanonicalizer.hpp"
-#include "util/AnsiCodes.hpp"
-#include "util/BitSet.hpp"
-#include "util/CppUtil.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -15,6 +12,10 @@ inline size_t Game::State::hash() const {
   auto tuple = std::make_tuple(full_mask, cur_player_mask);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
+}
+
+inline int Game::State::num_empty_cells(column_t col) const {
+  return kNumRows - std::popcount(full_mask & _column_mask(col));
 }
 
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
