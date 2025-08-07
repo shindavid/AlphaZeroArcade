@@ -48,16 +48,19 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   virtual boost::json::object make_start_game_msg();
 
   // Optional: override this to provide a game-specific result message.
-  // By default, it returns,
+  // By default, it returns something like:
   //
   // {
-  //   "msg": M
+  //   "result_codes": "WL"
   // }
   //
-  // where M is a string like "Player X wins!" or "Draw!".
+  // The result code string is a sequence of characters, one for each player:
+  // 'W' for win, 'L' for loss, 'D' for draw.
   //
-  // In a game like go, it could be specialized to return "Black wins by 5.5 points".
-  // In a game like chess, it could return "Draw due to threefold repetition".
+  // In a game like go, we might specialize by adding the margin of victory.
+  //
+  // In a game like chess, we might specialize by adding detail about why the game ended (e.g.,
+  // stalemate, threefold repetition, etc.).
   virtual boost::json::object make_result_msg(const State& state, const ValueTensor& outcome);
 
   // Optional: override this to provide a game-specific action request msg.
@@ -80,7 +83,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   // {
   //   "board": IO::state_to_json(state),
   //   "last_action": IO::action_to_str(last_action, last_mode),
-  //   "turn": IO::player_to_str(seat)
+  //   "seat": IO::player_to_str(seat)
   // }
   //
   // Can be overridden to add more fields, or change the representation.
