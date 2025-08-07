@@ -18,15 +18,31 @@ export function Loading() {
   );
 }
 
-export function StatusBar({gameEnd, turn}) {
+// Simple HTML escape utility
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function StatusBar({gameEnd, playerNames, seatAssignments}) {
   return (
     <div className="status-bar" style={{ marginBottom: '1.5em' }}>
       <span className="status-message-area">
-        {gameEnd
-          ? gameEnd.msg
-          : <>Next: <b>{turn}</b></>
-        }
+        {gameEnd ? gameEnd.msg : ""}
       </span>
+      {playerNames && seatAssignments && (
+        <div style={{ marginTop: '0.5em', textAlign: 'left' }}>
+          {seatAssignments.map((seat, i) => (
+            <div key={seat + i}>
+              {seat}: <span dangerouslySetInnerHTML={{ __html: escapeHtml(playerNames[i]) }} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
