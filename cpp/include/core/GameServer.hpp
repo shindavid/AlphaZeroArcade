@@ -11,7 +11,7 @@
 #include "core/concepts/Game.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "third_party/ProgressBar.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <array>
 #include <atomic>

@@ -8,7 +8,7 @@
 #include "core/concepts/Game.hpp"
 #include "util/CppUtil.hpp"
 #include "util/SocketUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <string>
 #include <vector>

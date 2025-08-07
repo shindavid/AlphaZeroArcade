@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/othello/Game.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/process.hpp>
 

@@ -7,7 +7,7 @@
 #include "mcts/NNEvaluationServiceBase.hpp"
 #include "mcts/Node.hpp"
 #include "util/RecyclingAllocPool.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <functional>
 

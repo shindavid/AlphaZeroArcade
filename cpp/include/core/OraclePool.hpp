@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/YieldManager.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace core {
 

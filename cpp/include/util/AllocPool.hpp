@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/CppUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/dynamic_bitset.hpp>
 

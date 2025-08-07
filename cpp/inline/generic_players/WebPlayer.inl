@@ -6,7 +6,6 @@
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"
 #include "util/Rendering.hpp"
-#include "util/StringUtil.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/json/array.hpp>

@@ -6,7 +6,7 @@
 #include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
 #include <vector>

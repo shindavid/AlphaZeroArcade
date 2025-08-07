@@ -10,7 +10,7 @@
 #include "mcts/SearchParams.hpp"
 #include "util/CppUtil.hpp"
 #include "util/Math.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
 

@@ -6,7 +6,7 @@
 #include "util/FileUtil.hpp"
 #include "util/IndexedDispatcher.hpp"
 #include "util/Random.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/filesystem.hpp>
 

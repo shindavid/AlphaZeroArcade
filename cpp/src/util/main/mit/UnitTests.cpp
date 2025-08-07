@@ -2,7 +2,7 @@
 #include "util/GTestUtil.hpp"
 #include "util/Random.hpp"
 #include "util/mit/exceptions.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <gtest/gtest.h>
 

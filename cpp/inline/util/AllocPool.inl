@@ -1,7 +1,7 @@
 #include "util/AllocPool.hpp"
 
 #include "util/Asserts.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <type_traits>
 

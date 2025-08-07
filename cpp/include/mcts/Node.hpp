@@ -5,7 +5,7 @@
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/TypeDefs.hpp"
 #include "util/AllocPool.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
 

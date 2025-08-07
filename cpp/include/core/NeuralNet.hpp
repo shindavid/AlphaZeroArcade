@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/LoggingUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <Eigen/Core>
 #include <NvInfer.h>

@@ -4,7 +4,7 @@
 #include "core/GameServerBase.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/concepts/Game.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
 #include <cstdint>

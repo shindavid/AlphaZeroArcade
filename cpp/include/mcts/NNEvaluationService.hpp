@@ -19,7 +19,7 @@
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
 #include "util/RecyclingAllocPool.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <deque>
 #include <map>

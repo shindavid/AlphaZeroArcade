@@ -3,7 +3,7 @@
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "util/SocketUtil.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/json.hpp>
 

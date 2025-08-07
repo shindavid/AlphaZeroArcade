@@ -2,7 +2,7 @@
 
 #include "core/GameLog.hpp"
 #include "core/concepts/Game.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
 #include <cstdio>

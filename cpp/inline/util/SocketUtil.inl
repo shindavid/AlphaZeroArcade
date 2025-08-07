@@ -1,7 +1,7 @@
 #include "util/SocketUtil.hpp"
 
 #include "util/Exceptions.hpp"
-#include "util/mit/mit.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
