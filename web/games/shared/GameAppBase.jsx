@@ -24,8 +24,15 @@ export class GameAppBase extends React.Component {
     if (!this.port) return;
     const ws = new WebSocket(`ws://localhost:${this.port}`);
     this.socketRef.current = ws;
-    ws.onopen = () => console.log(`✅ WS connected to ${this.port}`);
+    ws.onopen = () => {
+      console.log(`✅ WS connected to ${this.port}`);
+      this.setState({ loading: false, wsClosed: false });
+    };
     ws.onerror = e => console.error('🔴 WS error', e);
+    ws.onclose = e => {
+      console.warn('WebSocket closed:', e);
+      this.setState({ wsClosed: true, loading: false });
+    };
     ws.onmessage = e => {
       let msg;
       try { msg = JSON.parse(e.data) }
@@ -130,6 +137,12 @@ export class GameAppBase extends React.Component {
 
   render() {
     if (!this.port) return <PortError port={this.port} />;
+    if (this.state.wsClosed) {
+      return <div className="container" style={{ color: 'red', padding: '2em', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>Connection to backend lost.</div>
+        <div style={{ marginTop: '1em' }}>Please restart the backend and reload the page.</div>
+      </div>;
+    }
     if (this.state.loading) return <Loading />;
 
     let resultCodes = this.state.resultCodes;
