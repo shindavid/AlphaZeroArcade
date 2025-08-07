@@ -15,7 +15,7 @@ export default class Connect4App extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: Array(ROWS * COLS).fill('_'),
+      board: null,
       animation: null, // { col, row, disc, targetRow, animRow }
       skipNextAnimation: false,
     };
@@ -51,8 +51,7 @@ export default class Connect4App extends GameAppBase {
     const col = parseInt(payload.last_action) - 1;  // Convert to 0-based index
     let row = payload.last_row;
     if (row >= 0) {
-      const b = Array.from(payload.board || '');
-      let disc = b[row * COLS + col];
+      let disc = payload.board[row * COLS + col];
 
       this.setState({
         animation: this.animationHelper.get(),
