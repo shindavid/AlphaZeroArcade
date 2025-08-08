@@ -77,10 +77,3 @@
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   pointer-events: auto;
 }
-.hex-swap-btn[disabled] {
-  background: #eee;
-  color: #888;
-  cursor: not-allowed;
-  box-shadow: none;
-  pointer-events: none;
-}
