@@ -55,3 +55,32 @@
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+
+/* Swap button styles */
+.hex-board-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.hex-swap-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 8px 18px;
+  font-size: 18px;
+  background: #ffe;
+  color: #222;
+  border: 2px solid #888;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #ccc;
+  z-index: 10;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  pointer-events: auto;
+}
+.hex-swap-btn[disabled] {
+  background: #eee;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}

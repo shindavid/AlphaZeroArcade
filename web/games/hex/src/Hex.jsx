@@ -129,7 +129,7 @@ export default class HexApp extends GameAppBase {
     const swapBtnY = HEX_SIZE * 1.5 * (N - 2) + HEX_SIZE; // 2nd row
 
     return (
-      <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div className="hex-board-wrapper">
         <svg
           className="hex-board"
           viewBox={viewBox}
@@ -139,21 +139,10 @@ export default class HexApp extends GameAppBase {
           {hexes}
         </svg>
         <button
+          className="hex-swap-btn"
           style={{
-            position: 'absolute',
             left: swapBtnX,
             top: swapBtnY,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
-            padding: '8px 18px',
-            fontSize: '18px',
-            background: swapEnabled ? '#ffe' : '#eee',
-            color: swapEnabled ? '#222' : '#888',
-            border: '2px solid #888',
-            borderRadius: '8px',
-            cursor: swapEnabled ? 'pointer' : 'not-allowed',
-            boxShadow: swapEnabled ? '0 2px 8px #ccc' : 'none',
-            pointerEvents: swapEnabled ? 'auto' : 'none',
           }}
           disabled={!swapEnabled}
           onClick={swapEnabled ? () => this.sendMove(SWAP_MOVE) : undefined}
