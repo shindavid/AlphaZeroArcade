@@ -23,19 +23,6 @@ export default class HexApp extends GameAppBase {
 
     if (board === null) return null;
 
-    // SVG points for a hex centered at (cx, cy)
-    function hexPoints(cx, cy, size) {
-      const points = [];
-      for (let i = 0; i < 6; ++i) {
-        const angle = Math.PI / 3 * i + Math.PI / 6;
-        points.push([
-          cx + size * Math.cos(angle),
-          cy + size * Math.sin(angle)
-        ]);
-      }
-      return points.map(p => p.join(",")).join(" ");
-    }
-
     const N = BOARD_SIZE;
     // SVG rendering
     const hexes = [];
@@ -67,16 +54,10 @@ export default class HexApp extends GameAppBase {
 
         // Helper to determine border color for each segment
         function borderColor(k) {
-          // k: 0=top-left, 1=top-right, 2=right, 3=bottom-right, 4=bottom-left, 5=left
-          // North edge: row==0, k==0 or k==1
           if (row === 0 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
-          // South edge: row==N-1, k==4 or k==5
           if (row === N - 1 && (k === 4 || k === 3)) return 'var(--hex-red, #e44)';
-          // West edge: col==0, k==5 or k==0
           if (col === 0 && (k === 2 || k === 3)) return 'var(--hex-blue, #24f)';
-          // East edge: col==N-1, k==2 or k==3
           if (col === N-1 && (k === 0 || k === 5)) return 'var(--hex-blue, #24f)';
-          // Otherwise black
           return '#000';
         }
 
