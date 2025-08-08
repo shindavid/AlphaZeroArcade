@@ -157,7 +157,6 @@ export default class Connect4App extends GameAppBase {
         );
       }
     }
-    // The board container must have the grid class for CSS to apply
     return <div className="board" style={{ position: 'relative' }}>
       {grid}
       {this.renderAnimatedDisc()}
