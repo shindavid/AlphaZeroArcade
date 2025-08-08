@@ -73,6 +73,7 @@ export default class HexApp extends GameAppBase {
   renderCell = (row, col) => {
     let board = this.state.board;
     let legalMoves = this.state.legalMoves;
+    let mySeat = this.state.mySeat;
 
     const cell = row * B + col;
     const color = board[cell];
@@ -93,6 +94,12 @@ export default class HexApp extends GameAppBase {
       ]);
     }
 
+    // Determine hover class
+    let hoverClass = "";
+    if (isLegal) {
+      hoverClass = mySeat === "R" ? " hex-hover-red" : " hex-hover-blue";
+    }
+
     return (
       <g key={cell}>
         <polygon
@@ -100,7 +107,7 @@ export default class HexApp extends GameAppBase {
             "hex-cell" +
             (color === "R" ? " hex-red" : "") +
             (color === "B" ? " hex-blue" : "") +
-            (isLegal ? " hex-legal" : "")
+            (isLegal ? hoverClass : "")
           }
           points={corners.map(p => p.join(",")).join(" ")}
           onClick={isLegal ? () => this.sendMove(cell) : undefined}

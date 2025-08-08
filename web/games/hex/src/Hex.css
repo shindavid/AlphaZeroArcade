@@ -20,6 +20,13 @@
   fill: var(--hex-blue, #24f);
 }
 
+.hex-cell.hex-hover-red:hover {
+  fill: #ffd6e6;
+}
+.hex-cell.hex-hover-blue:hover {
+  fill: #d6e6ff;
+}
+
 .hex-disc-red {
   fill: var(--hex-red, #e44);
   stroke: #a00;
