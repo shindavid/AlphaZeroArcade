@@ -85,9 +85,9 @@ export default class GAMEUPPERApp extends GameAppBase {
 }
 '''
 
-GAME_CSS = '''// Auto-generated via: LAUNCHCMD
+GAME_CSS = '''/* Auto-generated via: LAUNCHCMD */
 
-// TODO: add css elements for GAMEUPPER
+/* TODO: add css elements for GAMEUPPER */
 '''
 
 VITE_CONFIG_JS = '''// Auto-generated via: LAUNCHCMD
