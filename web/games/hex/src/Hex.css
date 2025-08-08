@@ -76,4 +76,9 @@
   z-index: 10;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   pointer-events: auto;
+  background-image: url('../public/arrows.png');
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  background-size: 28px 28px;
+  padding-left: 44px;
 }
