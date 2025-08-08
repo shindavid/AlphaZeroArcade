@@ -4,6 +4,10 @@ import './Hex.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
+const BOARD_SIZE = 11;
+const HEX_SIZE = 30; // px, controls overall scale
+const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
+
 export default class HexApp extends GameAppBase {
   constructor(props) {
     super(props);
@@ -14,15 +18,10 @@ export default class HexApp extends GameAppBase {
   }
 
   renderBoard() {
-    const N = 11;
-    const HEX_SIZE = 30; // px, controls overall scale
-    const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
-    const HEX_HEIGHT = 2 * HEX_SIZE;
-    const board = this.state.board;
-    const legalMoves = this.state.legalMoves || [];
+    let board = this.state.board;
+    let legalMoves = this.state.legalMoves;
 
-    // Helper to get board index for (row, col)
-    const idx = (row, col) => row * N + col;
+    if (board === null) return null;
 
     // SVG points for a hex centered at (cx, cy)
     function hexPoints(cx, cy, size) {
@@ -37,11 +36,12 @@ export default class HexApp extends GameAppBase {
       return points.map(p => p.join(",")).join(" ");
     }
 
+    const N = BOARD_SIZE;
     // SVG rendering
     const hexes = [];
     for (let row = 0; row < N; ++row) {
       for (let col = 0; col < N; ++col) {
-        const i = idx(row, col);
+        const i = row * N + col;
         const cell = board[i];
         // Hex center coordinates
         const cx = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * row / 2;
@@ -80,35 +80,6 @@ export default class HexApp extends GameAppBase {
           </g>
         );
       }
-    }
-
-    // Axes labels
-    const colLabels = [];
-    for (let col = 0; col < N; ++col) {
-      const label = String.fromCharCode(97 + col); // a, b, c, ...
-      const x = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * 0.5 * col;
-      colLabels.push(
-        <text
-          key={"col" + col}
-          x={x}
-          y={HEX_SIZE * 0.5}
-          className="hex-label"
-          textAnchor="middle"
-        >{label}</text>
-      );
-    }
-    const rowLabels = [];
-    for (let row = 0; row < N; ++row) {
-      const y = HEX_SIZE * 1.5 * row + HEX_SIZE + 5;
-      rowLabels.push(
-        <text
-          key={"row" + row}
-          x={HEX_WIDTH * 0.2}
-          y={y}
-          className="hex-label"
-          textAnchor="end"
-        >{row + 1}</text>
-      );
     }
 
     // Board outline (red/blue borders)
@@ -158,9 +129,6 @@ export default class HexApp extends GameAppBase {
           points={outlineBlue.map(p => p.join(",")).join(" ")}
           fill="none"
         />
-        {/* Axes labels */}
-        {colLabels}
-        {rowLabels}
         {/* Hex cells */}
         {hexes}
       </svg>
