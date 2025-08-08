@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import '../../shared/styles/shared.css'
 import TicTacToeApp from './TicTacToe.jsx'
 
 createRoot(document.getElementById('root')).render(
