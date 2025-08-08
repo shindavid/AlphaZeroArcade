@@ -14,8 +14,8 @@
   transition: filter 0.2s;
 }
 .hex-cell.hex-legal {
-  filter: drop-shadow(0 0 6px #ff0);
-  z-index: 2;
+  /* filter: drop-shadow(0 0 6px #ff0); */
+  /* z-index: 2; */
 }
 .hex-cell.hex-red {
   fill: var(--hex-red, #e44);

@@ -39,13 +39,13 @@ export default class HexApp extends GameAppBase {
     const N = BOARD_SIZE;
     // SVG rendering
     const hexes = [];
-    for (let row = 0; row < N; ++row) {
+    for (let row = N - 1; row >= 0; --row) {
       for (let col = 0; col < N; ++col) {
         const i = row * N + col;
         const cell = board[i];
         // Hex center coordinates
         const cx = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * row / 2;
-        const cy = HEX_SIZE * 1.5 * row + HEX_SIZE;
+        const cy = HEX_SIZE * 1.5 * (N - 1 - row) + HEX_SIZE;
 
         // Cell color
         let fill = "#fff";
@@ -69,13 +69,13 @@ export default class HexApp extends GameAppBase {
         function borderColor(k) {
           // k: 0=top-left, 1=top-right, 2=right, 3=bottom-right, 4=bottom-left, 5=left
           // North edge: row==0, k==0 or k==1
-          if (row === N - 1 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
+          if (row === 0 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
           // South edge: row==N-1, k==4 or k==5
-          if (row === 0 && (k === 4 || k === 5)) return 'var(--hex-red, #e44)';
+          if (row === N - 1 && (k === 4 || k === 3)) return 'var(--hex-red, #e44)';
           // West edge: col==0, k==5 or k==0
-          if (col === 0 && (k === 5 || k === 0)) return 'var(--hex-blue, #24f)';
+          if (col === 0 && (k === 2 || k === 3)) return 'var(--hex-blue, #24f)';
           // East edge: col==N-1, k==2 or k==3
-          if (col === N-1 && (k === 2 || k === 3)) return 'var(--hex-blue, #24f)';
+          if (col === N-1 && (k === 0 || k === 5)) return 'var(--hex-blue, #24f)';
           // Otherwise black
           return '#000';
         }
@@ -133,8 +133,8 @@ export default class HexApp extends GameAppBase {
     // Bottommost hex center: row=N-1 => cy1
     const minY = HEX_SIZE;
     const maxY = HEX_SIZE * 1.5 * (N - 1) + HEX_SIZE;
-    // Add hex radius to all sides
-    const pad = HEX_SIZE;
+    // Add extra padding to all sides
+    const pad = HEX_SIZE * 3;
     const width = maxX - minX + pad * 2;
     const height = maxY - minY + pad * 2;
     const viewBox = `${minX - pad} ${minY - pad} ${width} ${height}`;
