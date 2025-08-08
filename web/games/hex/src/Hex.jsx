@@ -55,8 +55,34 @@ export default class HexApp extends GameAppBase {
         // Legal move highlight
         const isLegal = legalMoves.includes(i) && this.gameActive();
 
+        // Compute hex corners
+        const corners = [];
+        for (let k = 0; k < 6; ++k) {
+          const angle = Math.PI / 3 * k + Math.PI / 6;
+          corners.push([
+            cx + HEX_SIZE * Math.cos(angle),
+            cy + HEX_SIZE * Math.sin(angle)
+          ]);
+        }
+
+        // Helper to determine border color for each segment
+        function borderColor(k) {
+          // k: 0=top-left, 1=top-right, 2=right, 3=bottom-right, 4=bottom-left, 5=left
+          // North edge: row==0, k==0 or k==1
+          if (row === N - 1 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
+          // South edge: row==N-1, k==4 or k==5
+          if (row === 0 && (k === 4 || k === 5)) return 'var(--hex-red, #e44)';
+          // West edge: col==0, k==5 or k==0
+          if (col === 0 && (k === 5 || k === 0)) return 'var(--hex-blue, #24f)';
+          // East edge: col==N-1, k==2 or k==3
+          if (col === N-1 && (k === 2 || k === 3)) return 'var(--hex-blue, #24f)';
+          // Otherwise black
+          return '#000';
+        }
+
         hexes.push(
           <g key={i}>
+            {/* Fill polygon, no stroke */}
             <polygon
               className={
                 "hex-cell" +
@@ -64,10 +90,26 @@ export default class HexApp extends GameAppBase {
                 (cell === "B" ? " hex-blue" : "") +
                 (isLegal ? " hex-legal" : "")
               }
-              points={hexPoints(cx, cy, HEX_SIZE)}
+              points={corners.map(p => p.join(",")).join(" ")}
               onClick={isLegal ? () => this.sendMove(i) : undefined}
               style={{ pointerEvents: isLegal ? "auto" : "none" }}
             />
+            {/* Draw 6 border lines manually, colored by position */}
+            {corners.map((p, k) => {
+              const p2 = corners[(k + 1) % 6];
+              return (
+                <line
+                  key={"border" + k}
+                  x1={p[0]}
+                  y1={p[1]}
+                  x2={p2[0]}
+                  y2={p2[1]}
+                  className="hex-border"
+                  stroke={borderColor(k)}
+                  strokeWidth={2}
+                />
+              );
+            })}
             {/* Optionally, add a disc for R/B */}
             {cell === "R" || cell === "B" ? (
               <circle
@@ -82,54 +124,28 @@ export default class HexApp extends GameAppBase {
       }
     }
 
-    // Board outline (red/blue borders)
-    // For simplicity, just draw two polylines for the borders
-    const outlineRed = [];
-    for (let col = 0; col < N; ++col) {
-      const cx = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * col / 2;
-      const cy = HEX_SIZE;
-      outlineRed.push([cx, cy]);
-    }
-    for (let row = 1; row < N; ++row) {
-      const cx = HEX_WIDTH * (N - 1) + HEX_WIDTH / 2 + HEX_WIDTH * row / 2;
-      const cy = HEX_SIZE * 1.5 * row + HEX_SIZE;
-      outlineRed.push([cx, cy]);
-    }
-    const outlineBlue = [];
-    for (let row = 0; row < N; ++row) {
-      const cx = HEX_WIDTH / 2 + HEX_WIDTH * row / 2;
-      const cy = HEX_SIZE * 1.5 * row + HEX_SIZE;
-      outlineBlue.push([cx, cy]);
-    }
-    for (let col = 1; col < N; ++col) {
-      const cx = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * (N - 1) / 2;
-      const cy = HEX_SIZE * 1.5 * (N - 1) + HEX_SIZE;
-      outlineBlue.push([cx, cy]);
-    }
-
-    // SVG viewBox size
-    const width = HEX_WIDTH * N + HEX_WIDTH;
-    const height = HEX_SIZE * 1.5 * N + HEX_SIZE * 2;
+    // Calculate bounding box for hex grid
+    // Leftmost hex center: col=0, row=0 => cx0
+    // Rightmost hex center: col=N-1, row=N-1 => cx1
+    const minX = HEX_WIDTH / 2;
+    const maxX = HEX_WIDTH * (N - 1) + HEX_WIDTH / 2 + HEX_WIDTH * (N - 1) / 2;
+    // Topmost hex center: row=0 => cy0
+    // Bottommost hex center: row=N-1 => cy1
+    const minY = HEX_SIZE;
+    const maxY = HEX_SIZE * 1.5 * (N - 1) + HEX_SIZE;
+    // Add hex radius to all sides
+    const pad = HEX_SIZE;
+    const width = maxX - minX + pad * 2;
+    const height = maxY - minY + pad * 2;
+    const viewBox = `${minX - pad} ${minY - pad} ${width} ${height}`;
 
     return (
       <svg
         className="hex-board"
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={viewBox}
         width={width}
         height={height}
       >
-        {/* Board outline */}
-        <polyline
-          className="hex-outline-red"
-          points={outlineRed.map(p => p.join(",")).join(" ")}
-          fill="none"
-        />
-        <polyline
-          className="hex-outline-blue"
-          points={outlineBlue.map(p => p.join(",")).join(" ")}
-          fill="none"
-        />
-        {/* Hex cells */}
         {hexes}
       </svg>
     );
