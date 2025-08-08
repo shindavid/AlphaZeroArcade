@@ -36,6 +36,23 @@ export default class HexApp extends GameAppBase {
     };
   }
 
+  // Override for colorful icons
+  seatToHtml = (seat) => {
+    const color = seat === "R" ? "#e44" : seat === "B" ? "#24f" : "#888";
+    return (
+      <span className="hex-seat-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <polygon
+            points="9,1 16,5.5 16,12.5 9,16 2,12.5 2,5.5"
+            fill={color}
+            stroke="#333"
+            strokeWidth="1"
+          />
+        </svg>
+      </span>
+    );
+  }
+
   getBorderType = (row, col, dir) => {
     let south = row === 0;
     let north = row === B - 1;

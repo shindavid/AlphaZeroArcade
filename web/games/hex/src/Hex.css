@@ -85,3 +85,15 @@
   background-size: 28px 28px;
   padding-left: 44px;
 }
+
+.hex-seat-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+}
+
+.hex-seat-icon svg {
+  display: block;
+}

@@ -26,10 +26,10 @@ export default class Connect4App extends GameAppBase {
   // Override for colorful icons
   seatToHtml = (seat) => {
     if (seat === "R") {
-      return `<span class='connect4-seat-icon connect4-seat-R'></span>`;
+      return <span className="connect4-seat-icon connect4-seat-R" />;
     }
     if (seat === "Y") {
-      return `<span class='connect4-seat-icon connect4-seat-Y'></span>`;
+      return <span className="connect4-seat-icon connect4-seat-Y" />;
     }
     return seat;
   }

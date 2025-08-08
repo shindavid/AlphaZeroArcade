@@ -28,16 +28,6 @@ function escapeHtml(str) {
 }
 
 export function StatusBar({resultCodes, playerNames, seatAssignments}) {
-  // resultCodes will either be null, or a string of length N, where N is the length of playerNames
-  // and seatAssignments.
-  //
-  // If resultCodes is null, it means the game is still ongoing.
-  //
-  // If resultCodes is a string, it contains the result codes for each player. These are either
-  // 'W' for win, 'L' for loss, or 'D' for draw.
-  //
-  // For the W and D codes, we display "Winner!" or "Draw!" next to the player name.
-  // ...existing code...
   // Helper to render result text in fixed-width area
   function renderResultText(code) {
     if (code === "W") {
@@ -54,11 +44,11 @@ export function StatusBar({resultCodes, playerNames, seatAssignments}) {
       {playerNames && seatAssignments && (
         <div style={{ marginTop: '0.5em', textAlign: 'left' }}>
           {seatAssignments.map((seat, i) => {
-            let resultCode = resultCodes && typeof resultCodes === "string" && resultCodes.length === playerNames.length ? resultCodes[i] : null;
+            let resultCode = resultCodes ? resultCodes[i] : null;
             return (
-              <div key={seat + i} style={{ display: 'flex', alignItems: 'center' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
                 {renderResultText(resultCode)}
-                <span style={{ marginLeft: 8 }} dangerouslySetInnerHTML={{ __html: seat }} />: <span dangerouslySetInnerHTML={{ __html: escapeHtml(playerNames[i]) }} />
+                <span style={{ marginLeft: 8 }}>{seat}</span>: <span>{playerNames[i]}</span>
               </div>
             );
           })}
