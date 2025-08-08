@@ -7,7 +7,7 @@
 }
 
 .hex-cell {
-  stroke: #888;
+  stroke: #000;
   stroke-width: 2px;
   fill: #fff;
   cursor: pointer;
@@ -15,7 +15,6 @@
 }
 .hex-cell.hex-legal {
   filter: drop-shadow(0 0 6px #ff0);
-  stroke: #ff0;
   z-index: 2;
 }
 .hex-cell.hex-red {
