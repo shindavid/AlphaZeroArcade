@@ -7,6 +7,7 @@ import { GameAppBase } from '../../shared/GameAppBase';
 const BOARD_SIZE = 11;
 const HEX_SIZE = 30; // px, controls overall scale
 const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
+const SWAP_MOVE = BOARD_SIZE * BOARD_SIZE;
 
 export default class HexApp extends GameAppBase {
   constructor(props) {
@@ -52,7 +53,8 @@ export default class HexApp extends GameAppBase {
           ]);
         }
 
-        // Helper to determine border color for each segment
+        // Helper to determine border color for each segment. We want a red border on the
+        // north/south edges, and a blue border on the west/east edges.
         function borderColor(k) {
           if (row === 0 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
           if (row === N - 1 && (k === 4 || k === 3)) return 'var(--hex-red, #e44)';
@@ -120,15 +122,45 @@ export default class HexApp extends GameAppBase {
     const height = maxY - minY + pad * 2;
     const viewBox = `${minX - pad} ${minY - pad} ${width} ${height}`;
 
+    // Swap button logic
+    const swapEnabled = legalMoves.includes(SWAP_MOVE);
+    // Position for swap button: right of board, aligned with 2nd row
+    const swapBtnX = maxX + HEX_SIZE * 1.5; // right of board, with padding
+    const swapBtnY = HEX_SIZE * 1.5 * (N - 2) + HEX_SIZE; // 2nd row
+
     return (
-      <svg
-        className="hex-board"
-        viewBox={viewBox}
-        width={width}
-        height={height}
-      >
-        {hexes}
-      </svg>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <svg
+          className="hex-board"
+          viewBox={viewBox}
+          width={width}
+          height={height}
+        >
+          {hexes}
+        </svg>
+        <button
+          style={{
+            position: 'absolute',
+            left: swapBtnX,
+            top: swapBtnY,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10,
+            padding: '8px 18px',
+            fontSize: '18px',
+            background: swapEnabled ? '#ffe' : '#eee',
+            color: swapEnabled ? '#222' : '#888',
+            border: '2px solid #888',
+            borderRadius: '8px',
+            cursor: swapEnabled ? 'pointer' : 'not-allowed',
+            boxShadow: swapEnabled ? '0 2px 8px #ccc' : 'none',
+            pointerEvents: swapEnabled ? 'auto' : 'none',
+          }}
+          disabled={!swapEnabled}
+          onClick={swapEnabled ? () => this.sendMove(SWAP_MOVE) : undefined}
+        >
+          Swap
+        </button>
+      </div>
     );
   }
 }
