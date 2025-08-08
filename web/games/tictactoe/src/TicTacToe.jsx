@@ -15,12 +15,9 @@ export default class TicTacToeApp extends GameAppBase {
     return this.state.board[cell] === '_';
   }
 
-  isLegalMove = (cell) => {
-    return this.gameActive() && this.isEmpty(cell);
-  }
-
   handleCellClick = (cell) => {
-    if (!this.isLegalMove(cell)) return;
+    if (!this.gameActive()) return;
+    if (!this.isEmpty(cell)) return;
     this.sendMove(cell);
   };
 
@@ -30,7 +27,7 @@ export default class TicTacToeApp extends GameAppBase {
       <div className="board">
         {this.state.board.map((value, cell) => {
           const empty = this.isEmpty(cell);
-          const legal = this.isLegalMove(cell);
+          const legal = empty && this.gameActive();
           return (
             <button
               key={cell}

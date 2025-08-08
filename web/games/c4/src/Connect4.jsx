@@ -35,6 +35,15 @@ export default class Connect4App extends GameAppBase {
   }
 
   // Override for animations
+  handleStartGame(payload) {
+    super.handleStartGame(payload);
+
+    this.setState({
+      colHeights: payload.col_heights,
+    });
+  }
+
+  // Override for animations
   handleStateUpdate(payload) {
     super.handleStateUpdate(payload);
 
@@ -128,7 +137,7 @@ export default class Connect4App extends GameAppBase {
       for (let col = 0; col < COLS; ++col) {
         const idx = row * COLS + col;
         const cell = this.state.board[idx];
-        const isLegal = this.state.legalMoves.includes(col);
+        const isLegal = this.gameActive() && this.state.legalMoves.includes(col);
         let cellClass = "";
         if (!this.hideDisc(row, col)) {
           if (cell === "R" || cell === "Y") cellClass = cell;
