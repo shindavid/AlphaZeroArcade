@@ -7,7 +7,7 @@ export default class TicTacToeApp extends GameAppBase {
     super(props);
     this.state = {
       ...this.state,
-      board: "_".repeat(9),
+      board: null,
     };
   }
 
@@ -15,22 +15,28 @@ export default class TicTacToeApp extends GameAppBase {
     return this.state.board[cell] === '_';
   }
 
+  isLegalMove = (cell) => {
+    return this.gameActive() && this.isEmpty(cell);
+  }
+
   handleCellClick = (cell) => {
-    if (!this.gameActive() || !this.isEmpty(cell)) return;
+    if (!this.isLegalMove(cell)) return;
     this.sendMove(cell);
   };
 
   renderBoard() {
+    if (!this.state.board) return null;
     return (
       <div className="board">
         {this.state.board.map((value, cell) => {
           const empty = this.isEmpty(cell);
+          const legal = this.isLegalMove(cell);
           return (
             <button
               key={cell}
-              className={`square${empty && !this.state.gameEnd ? ' legal-move' : ''}`}
+              className={`square${legal && !this.state.gameEnd ? ' legal-move' : ''}`}
               onClick={() => this.handleCellClick(cell)}
-              disabled={!!this.state.gameEnd || !empty}
+              disabled={!!this.state.gameEnd || !legal}
             >{empty ? '' : value}</button>
           );
         })}
