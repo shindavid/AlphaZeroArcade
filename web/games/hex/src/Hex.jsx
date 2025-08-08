@@ -36,16 +36,38 @@ export default class HexApp extends GameAppBase {
     };
   }
 
-  getBorderStroke = (row, col, dir) => {
+  getBorderType = (row, col, dir) => {
     let south = row === 0;
     let north = row === B - 1;
     let west = col === 0;
     let east = col === B - 1;
-    if (south && (dir === HEX_SE || dir === HEX_SW)) return 'var(--hex-red, #e44)';
-    if (north && (dir === HEX_NW || dir === HEX_NE)) return 'var(--hex-red, #e44)';
-    if (west && (dir === HEX_NW || dir === HEX_W)) return 'var(--hex-blue, #24f)';
-    if (east && (dir === HEX_SE || dir === HEX_E)) return 'var(--hex-blue, #24f)';
-    return '#000';
+    if (south && (dir === HEX_SE || dir === HEX_SW)) return 'red';
+    if (north && (dir === HEX_NW || dir === HEX_NE)) return 'red';
+    if (west && (dir === HEX_NW || dir === HEX_W)) return 'blue';
+    if (east && (dir === HEX_SE || dir === HEX_E)) return 'blue';
+    return 'black';
+  }
+
+  borderTypeToStroke = (type) => {
+    switch (type) {
+      case 'red':
+        return 'var(--hex-red, #e44)';
+      case 'blue':
+        return 'var(--hex-blue, #24f)';
+      default:
+        return '#000';
+    }
+  }
+
+  borderTypeToStrokeWidth = (type) => {
+    switch (type) {
+      case 'red':
+        return 4;
+      case 'blue':
+        return 4;
+      default:
+        return 1;
+    }
   }
 
   renderCell = (row, col) => {
@@ -87,7 +109,9 @@ export default class HexApp extends GameAppBase {
         {/* Draw 6 border lines manually, colored by position */}
         {corners.map((p, dir) => {
           const p2 = corners[(dir + 1) % 6];
-          let stroke = this.getBorderStroke(row, col, dir);
+          let borderType = this.getBorderType(row, col, dir);
+          let stroke = this.borderTypeToStroke(borderType);
+          let strokeWidth = this.borderTypeToStrokeWidth(borderType);
           return (
             <line
               key={"border" + dir}
@@ -97,7 +121,7 @@ export default class HexApp extends GameAppBase {
               y2={p2[1]}
               className="hex-border"
               stroke={stroke}
-              strokeWidth={2}
+              strokeWidth={strokeWidth}
             />
           );
         })}
