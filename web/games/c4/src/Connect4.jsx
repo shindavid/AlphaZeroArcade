@@ -26,10 +26,10 @@ export default class Connect4App extends GameAppBase {
   // Override for colorful icons
   seatToHtml = (seat) => {
     if (seat === "R") {
-      return <span className="connect4-seat-icon connect4-seat-R" />;
+      return <span className="seat-icon seat-R" />;
     }
     if (seat === "Y") {
-      return <span className="connect4-seat-icon connect4-seat-Y" />;
+      return <span className="seat-icon seat-Y" />;
     }
     return seat;
   }
@@ -145,7 +145,7 @@ export default class Connect4App extends GameAppBase {
         grid.push(
           <div
             key={idx}
-            className={`connect4-cell${cellClass ? ' ' + cellClass : ''}`}
+            className={`cell${cellClass ? ' ' + cellClass : ''}`}
             onClick={isLegal ? () => this.handleCellClick(col) : undefined}
             role={isLegal ? "button" : undefined}
             tabIndex={isLegal ? 0 : -1}
@@ -155,7 +155,7 @@ export default class Connect4App extends GameAppBase {
       }
     }
     // The board container must have the grid class for CSS to apply
-    return <div className="connect4-board" style={{ position: 'relative' }}>
+    return <div className="board" style={{ position: 'relative' }}>
       {grid}
       {this.renderAnimatedDisc()}
     </div>;

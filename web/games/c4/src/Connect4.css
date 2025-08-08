@@ -1,5 +1,5 @@
 /* Inline seat icons for status bar */
-.connect4-seat-icon {
+.seat-icon {
   display: inline-block;
   width: 1.5em;
   height: 1.5em;
@@ -8,10 +8,10 @@
   background-position: center;
   margin-right: 0.3em;
 }
-.connect4-seat-R {
+.seat-R {
   background-image: url('../images/red.svg');
 }
-.connect4-seat-Y {
+.seat-Y {
   background-image: url('../images/yellow.svg');
 }
 /* Animated disc overlay for drop animation */
@@ -34,7 +34,7 @@
 }
 
 /* Connect4 board styling */
-.connect4-board {
+.board {
   display: grid;
   grid-template-columns: repeat(7, 56px);
   grid-template-rows: repeat(6, 56px);
@@ -49,7 +49,7 @@
 }
 
 
-.connect4-cell {
+.cell {
   width: 56px;
   height: 56px;
   border: none;
@@ -68,12 +68,12 @@
   background-image: url('../images/board.svg');
 }
 
-.connect4-cell.R {
+.cell.R {
   background-image: url('../images/red.svg'), url('../images/board.svg');
   background-size: cover, cover;
   background-position: center, center;
 }
-.connect4-cell.Y {
+.cell.Y {
   background-image: url('../images/yellow.svg'), url('../images/board.svg');
   background-size: cover, cover;
   background-position: center, center;
