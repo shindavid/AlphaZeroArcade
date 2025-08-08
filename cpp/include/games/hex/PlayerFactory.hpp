@@ -4,8 +4,10 @@
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayerGenerator.hpp"
+#include "games/hex/players/WebPlayer.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
+#include "generic_players/WebPlayerGenerator.hpp"
 
 namespace hex {
 
@@ -21,6 +23,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
     return {new core::PlayerSubfactory<hex::HumanTuiPlayerGenerator>(),
             new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>(),
+            new core::PlayerSubfactory<generic::WebPlayerGenerator<hex::WebPlayer>>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }
