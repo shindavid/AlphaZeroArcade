@@ -51,9 +51,9 @@ export default class HexApp extends GameAppBase {
   borderTypeToStroke = (type) => {
     switch (type) {
       case 'red':
-        return 'var(--hex-red, #e44)';
+        return '#b2182b'; // darker red for border
       case 'blue':
-        return 'var(--hex-blue, #24f)';
+        return '#2255a5'; // darker blue for border
       default:
         return '#000';
     }
