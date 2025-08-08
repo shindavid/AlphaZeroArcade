@@ -1,0 +1,99 @@
+/* Auto-generated via: ./py/tools/make_scaffold_for_web_game.py -g Hex -o */
+
+.hex-board {
+  display: block;
+  margin: 0 auto;
+  background: #f8f8f8;
+}
+
+.hex-cell {
+  stroke: #000;
+  stroke-width: 2px;
+  fill: #fff;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+.hex-cell.hex-red {
+  fill: var(--hex-red, #e44);
+}
+.hex-cell.hex-blue {
+  fill: var(--hex-blue, #24f);
+}
+
+.hex-cell.hex-hover-red:hover {
+  fill: #ffd6e6;
+}
+.hex-cell.hex-hover-blue:hover {
+  fill: #d6e6ff;
+}
+
+.hex-disc-red {
+  fill: var(--hex-red, #e44);
+  stroke: #a00;
+  stroke-width: 2px;
+}
+.hex-disc-blue {
+  fill: var(--hex-blue, #24f);
+  stroke: #04a;
+  stroke-width: 2px;
+}
+
+.hex-outline-red {
+  stroke: var(--hex-red, #e44);
+  stroke-width: 5px;
+  fill: none;
+}
+.hex-outline-blue {
+  stroke: var(--hex-blue, #24f);
+  stroke-width: 5px;
+  fill: none;
+}
+
+.hex-label {
+  font-family: sans-serif;
+  font-size: 18px;
+  fill: #333;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Swap button styles */
+.hex-board-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.hex-swap-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 8px 18px;
+  font-size: 18px;
+  background: #ffe;
+  color: #222;
+  border: 2px solid #888;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #ccc;
+  z-index: 10;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  pointer-events: auto;
+  background-image: url('../public/arrows.png');
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  background-size: 28px 28px;
+  padding-left: 44px;
+}
+
+.hex-seat-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+}
+
+.hex-seat-icon svg {
+  display: block;
+}

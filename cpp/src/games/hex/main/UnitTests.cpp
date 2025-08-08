@@ -1,8 +1,6 @@
-#include "core/tests/Common.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/Types.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -51,15 +49,15 @@ PolicyTensor make_policy(int move1, int move2) {
 const std::string init_state_repr =
   "               A B C D E F G H I J K\n"
   "          11 / / / / / / / / / / / / 11\n"
-  "         10 / / /W/ / / / / / / / / 10\n"
+  "         10 / / /B/ / / / / / / / / 10\n"
   "         9 / / / / / / / / / / / /  9\n"
   "        8 / / / / / / / / / / / /  8\n"
   "       7 / / / / / / / / / / / /  7\n"
   "      6 / / / / / / / / / / / /  6\n"
   "     5 / / / / / / / / / / / /  5\n"
   "    4 / / / / / / / / / / / /  4\n"
-  "   3 /B/ / / / / / / / / / /  3\n"
-  "  2 /B/ / / / / / / / / / /  2\n"
+  "   3 /R/ / / / / / / / / / /  3\n"
+  "  2 /R/ / / / / / / / / / /  2\n"
   " 1 / / / / / / / / / / / /  1\n"
   "   A B C D E F G H I J K\n\n";
 
@@ -183,15 +181,15 @@ TEST(Symmetry, rotate) {
   std::string expected_repr =
     "               A B C D E F G H I J K\n"
     "          11 / / / / / / / / / / / / 11\n"
-    "         10 / / / / / / / / / / /B/ 10\n"
-    "         9 / / / / / / / / / / /B/  9\n"
+    "         10 / / / / / / / / / / /R/ 10\n"
+    "         9 / / / / / / / / / / /R/  9\n"
     "        8 / / / / / / / / / / / /  8\n"
     "       7 / / / / / / / / / / / /  7\n"
     "      6 / / / / / / / / / / / /  6\n"
     "     5 / / / / / / / / / / / /  5\n"
     "    4 / / / / / / / / / / / /  4\n"
     "   3 / / / / / / / / / / / /  3\n"
-    "  2 / / / / / / / / /W/ / /  2\n"
+    "  2 / / / / / / / / /B/ / /  2\n"
     " 1 / / / / / / / / / / / /  1\n"
     "   A B C D E F G H I J K\n\n";
 
@@ -241,7 +239,7 @@ TEST(Rules, swap_start) {
     "    4 / / / / / / / / / / / /  4\n"
     "   3 / / / / / / / / / / / /  3\n"
     "  2 / / / / / / / / / / / /  2\n"
-    " 1 / / /B/ / / / / / / / /  1\n"
+    " 1 / / /R/ / / / / / / / /  1\n"
     "   A B C D E F G H I J K\n\n";
 
   EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
@@ -264,7 +262,7 @@ TEST(Rules, swap_start) {
     "      6 / / / / / / / / / / / /  6\n"
     "     5 / / / / / / / / / / / /  5\n"
     "    4 / / / / / / / / / / / /  4\n"
-    "   3 /W/ / / / / / / / / / /  3\n"
+    "   3 /B/ / / / / / / / / / /  3\n"
     "  2 / / / / / / / / / / / /  2\n"
     " 1 / / / / / / / / / / / /  1\n"
     "   A B C D E F G H I J K\n\n";
@@ -301,37 +299,37 @@ TEST(Rules, connections) {
   GameResults::Tensor outcome;
 
   constexpr int kNumMoves = 5;
-  std::vector<core::action_t> black_moves = {hex::kC10, hex::kC9, hex::kI1, hex::kI2, hex::kI3};
-  std::vector<core::action_t> white_moves = {hex::kA2, hex::kB2, hex::kH10, hex::kI10, hex::kJ10};
+  std::vector<core::action_t> red_moves = {hex::kC10, hex::kC9, hex::kI1, hex::kI2, hex::kI3};
+  std::vector<core::action_t> blue_moves = {hex::kA2, hex::kB2, hex::kH10, hex::kI10, hex::kJ10};
 
-  RELEASE_ASSERT(black_moves.size() == kNumMoves && white_moves.size() == kNumMoves);
+  RELEASE_ASSERT(red_moves.size() == kNumMoves && blue_moves.size() == kNumMoves);
 
   for (int i = 0; i < kNumMoves; ++i) {
-    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kBlack);
-    EXPECT_TRUE(Rules::get_legal_moves(history.current())[black_moves[i]]);
-    Rules::apply(history, black_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kBlack, black_moves[i], outcome));
+    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kRed);
+    EXPECT_TRUE(Rules::get_legal_moves(history.current())[red_moves[i]]);
+    Rules::apply(history, red_moves[i]);
+    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kRed, red_moves[i], outcome));
 
-    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kWhite);
-    EXPECT_TRUE(Rules::get_legal_moves(history.current())[white_moves[i]]);
-    Rules::apply(history, white_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kWhite, white_moves[i], outcome));
+    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kBlue);
+    EXPECT_TRUE(Rules::get_legal_moves(history.current())[blue_moves[i]]);
+    Rules::apply(history, blue_moves[i]);
+    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kBlue, blue_moves[i], outcome));
   }
 
-  const auto& UF_black = history.current().aux.union_find[Constants::kBlack];
-  const auto& UF_white = history.current().aux.union_find[Constants::kWhite];
+  const auto& UF_red = history.current().aux.union_find[Constants::kRed];
+  const auto& UF_blue = history.current().aux.union_find[Constants::kBlue];
 
   using map_t = std::map<vertex_t, std::vector<vertex_t>>;
-  map_t black_parent;
-  map_t white_parent;
+  map_t red_parent;
+  map_t blue_parent;
 
   for (vertex_t v = 0; v < UnionFind::kNumVertices; ++v) {
-    black_parent[UF_black.parent(v)].push_back(v);
-    white_parent[UF_white.parent(v)].push_back(v);
+    red_parent[UF_red.parent(v)].push_back(v);
+    blue_parent[UF_blue.parent(v)].push_back(v);
   }
 
-  // iterate over black_parent:
-  for (const auto& [parent, children] : black_parent) {
+  // iterate over red_parent:
+  for (const auto& [parent, children] : red_parent) {
     if (parent == hex::kC10 || parent == hex::kC9) {
       EXPECT_EQ(children.size(), 2);
       EXPECT_TRUE(std::count(children.begin(), children.end(), hex::kC10) > 0);
@@ -349,8 +347,8 @@ TEST(Rules, connections) {
     }
   }
 
-  // iterate over white_parent:
-  for (const auto& [parent, children] : white_parent) {
+  // iterate over blue_parent:
+  for (const auto& [parent, children] : blue_parent) {
     if (parent == hex::kA2 || parent == hex::kB2 || parent == UnionFind::kVirtualVertex1) {
       EXPECT_EQ(children.size(), 3);
       EXPECT_TRUE(std::count(children.begin(), children.end(), hex::kA2) > 0);
@@ -369,19 +367,19 @@ TEST(Rules, connections) {
 
   Symmetries::apply(history, groups::C2::kRot180);
 
-  const auto& UF_black2 = history.current().aux.union_find[Constants::kBlack];
-  const auto& UF_white2 = history.current().aux.union_find[Constants::kWhite];
+  const auto& UF_red2 = history.current().aux.union_find[Constants::kRed];
+  const auto& UF_blue2 = history.current().aux.union_find[Constants::kBlue];
 
-  map_t black_parent2;
-  map_t white_parent2;
+  map_t red_parent2;
+  map_t blue_parent2;
 
   for (vertex_t v = 0; v < UnionFind::kNumVertices; ++v) {
-    black_parent2[UF_black2.find(v)].push_back(v);
-    white_parent2[UF_white2.find(v)].push_back(v);
+    red_parent2[UF_red2.find(v)].push_back(v);
+    blue_parent2[UF_blue2.find(v)].push_back(v);
   }
 
-  // iterate over black_parent2:
-  for (const auto& [parent, children] : black_parent2) {
+  // iterate over red_parent2:
+  for (const auto& [parent, children] : red_parent2) {
     if (parent == hex::kI2 || parent == hex::kI3) {
       EXPECT_EQ(children.size(), 2);
       EXPECT_TRUE(std::count(children.begin(), children.end(), hex::kI2) > 0);
@@ -399,8 +397,8 @@ TEST(Rules, connections) {
     }
   }
 
-  // iterate over white_parent2:
-  for (const auto& [parent, children] : white_parent2) {
+  // iterate over blue_parent2:
+  for (const auto& [parent, children] : blue_parent2) {
     if (parent == hex::kK10 || parent == hex::kJ10 || parent == UnionFind::kVirtualVertex2) {
       EXPECT_EQ(children.size(), 3);
       EXPECT_TRUE(std::count(children.begin(), children.end(), hex::kK10) > 0);
@@ -441,8 +439,8 @@ TEST(Rules, terminal) {
     } else {
       // Last move should be terminal
       EXPECT_TRUE(Rules::is_terminal(history.current(), i % 2, move, outcome));
-      EXPECT_EQ(outcome[Constants::kBlack], 0);
-      EXPECT_EQ(outcome[Constants::kWhite], 1);
+      EXPECT_EQ(outcome[Constants::kRed], 0);
+      EXPECT_EQ(outcome[Constants::kBlue], 1);
     }
   }
 }

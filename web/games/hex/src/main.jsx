@@ -1,10 +1,12 @@
+// Auto-generated via: ./py/tools/make_scaffold_for_web_game.py -g Hex -o
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../../shared/shared.css'
-import Connect4App from './Connect4.jsx'
+import HexApp from './Hex.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Connect4App />
+    <HexApp />
   </StrictMode>,
 )

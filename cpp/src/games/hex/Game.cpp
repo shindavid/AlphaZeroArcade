@@ -1,4 +1,5 @@
 #include "games/hex/Game.hpp"
+#include <boost/json/object.hpp>
 
 namespace hex {
 
@@ -8,10 +9,10 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
   auto cp = state->core.cur_player;
 
   if (action == kSwap) {
-    DEBUG_ASSERT(cp == Constants::kWhite && !state->core.post_swap_phase,
-                 "Swap action can only be applied by White before the swap phase");
+    DEBUG_ASSERT(cp == Constants::kBlue && !state->core.post_swap_phase,
+                 "Swap action can only be applied by Blue before the swap phase");
 
-    core::action_t prev_action = state->core.find_occupied(Constants::kBlack);
+    core::action_t prev_action = state->core.find_occupied(Constants::kRed);
     history.initialize(Rules{});
     state = &history.extend();
     state->core.cur_player = Constants::kSecondPlayer;
@@ -70,13 +71,13 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
       U.unite(action, to_vertex(nr, nc));
     }
 
-    if (cp == Constants::kBlack) {  // black connects N to S
+    if (cp == Constants::kRed) {  // red connects N to S
       if (row == 0) {
         U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (row == B - 1) {
         U.unite(action, hex::UnionFind::kVirtualVertex2);
       }
-    } else {  // white connects W to E
+    } else {  // blue connects W to E
       if (col == 0) {
         U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (col == B - 1) {
@@ -85,7 +86,7 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     }
   }
 
-  state->core.post_swap_phase |= (cp == Constants::kWhite);
+  state->core.post_swap_phase |= (cp == Constants::kBlue);
   state->core.cur_player = 1 - cp;
 }
 
@@ -122,11 +123,11 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   int cx = 0;
 
   cx += snprintf(buffer + cx, buf_size - cx, "               %sA B C D E F G H I J K%s\n",
-                 ansi::kBlue(""), ansi::kReset(""));
+                 ansi::kRed(""), ansi::kReset(""));
   for (int row = B - 1; row >= 0; --row) {
     cx += print_row(buffer + cx, buf_size - cx, state, row, row == blink_row ? blink_col : -1);
   }
-  cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n", ansi::kBlue(""),
+  cx += snprintf(buffer + cx, buf_size - cx, "   %sA B C D E F G H I J K%s\n", ansi::kRed(""),
                  ansi::kReset(""));
 
   if (player_names) {
@@ -141,6 +142,24 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
+boost::json::value Game::IO::state_to_json(const State& state) {
+  char buf[Constants::kNumSquares + 1];
+  int cx = 0;
+  for (int row = 0; row < Constants::kBoardDim; ++row) {
+    for (int col = 0; col < Constants::kBoardDim; ++col) {
+      if (state.core.rows[Constants::kRed][row] & (mask_t(1) << col)) {
+        buf[cx++] = 'R';
+      } else if (state.core.rows[Constants::kBlue][row] & (mask_t(1) << col)) {
+        buf[cx++] = 'B';
+      } else {
+        buf[cx++] = ' ';
+      }
+    }
+  }
+  buf[cx] = '\0';
+  return boost::json::value(std::string(buf));
+}
+
 int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink_column) {
   int cx = 0;
 
@@ -149,24 +168,24 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
     buf[cx] = ' ';
     cx += cx < n;
   }
-  cx += snprintf(buf + cx, n - cx, "%s%2d%s /", ansi::kWhite(""), row + 1, ansi::kReset(""));
+  cx += snprintf(buf + cx, n - cx, "%s%2d%s /", ansi::kBlue(""), row + 1, ansi::kReset(""));
 
   mask_t row_masks[Constants::kNumPlayers];
-  row_masks[Constants::kBlack] = state.core.rows[Constants::kBlack][row];
-  row_masks[Constants::kWhite] = state.core.rows[Constants::kWhite][row];
+  row_masks[Constants::kRed] = state.core.rows[Constants::kRed][row];
+  row_masks[Constants::kBlue] = state.core.rows[Constants::kBlue][row];
 
   for (int col = 0; col < Constants::kBoardDim; ++col) {
     const char* a = "";
     const char* b = "";
     const char* c = " ";
     const char* d = "";
-    if (row_masks[Constants::kBlack] & (mask_t(1) << col)) {
+    if (row_masks[Constants::kRed] & (mask_t(1) << col)) {
+      b = ansi::kRed("");
+      c = ansi::kCircle("R");
+      d = ansi::kReset("");
+    } else if (row_masks[Constants::kBlue] & (mask_t(1) << col)) {
       b = ansi::kBlue("");
       c = ansi::kCircle("B");
-      d = ansi::kReset("");
-    } else if (row_masks[Constants::kWhite] & (mask_t(1) << col)) {
-      b = ansi::kWhite("");
-      c = ansi::kCircle("W");
       d = ansi::kReset("");
     }
     if (col == blink_column) {
@@ -176,7 +195,7 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
     cx += snprintf(buf + cx, n - cx, "%s%s%s%s/", a, b, c, d);
   }
 
-  cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kWhite(""), row + 1, ansi::kReset(""));
+  cx += snprintf(buf + cx, n - cx, "%s%3d%s\n", ansi::kBlue(""), row + 1, ansi::kReset(""));
   return cx;
 }
 
