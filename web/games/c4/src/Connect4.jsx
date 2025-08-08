@@ -138,14 +138,17 @@ export default class Connect4App extends GameAppBase {
         const idx = row * COLS + col;
         const cell = this.state.board[idx];
         const isLegal = this.gameActive() && this.state.legalMoves.includes(col);
-        let cellClass = "";
+        let cellClass = "cell";
         if (!this.hideDisc(row, col)) {
-          if (cell === "R" || cell === "Y") cellClass = cell;
+          if (cell === "R" || cell === "Y") cellClass += ' ' + cell;
+        }
+        if (isLegal) {
+          cellClass += ' legal-move';
         }
         grid.push(
           <div
             key={idx}
-            className={`cell${cellClass ? ' ' + cellClass : ''}`}
+            className={cellClass}
             onClick={isLegal ? () => this.handleCellClick(col) : undefined}
             role={isLegal ? "button" : undefined}
             tabIndex={isLegal ? 0 : -1}

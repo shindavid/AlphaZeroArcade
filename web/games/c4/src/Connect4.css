@@ -54,7 +54,7 @@
   height: 56px;
   border: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  cursor: pointer;
+  cursor: default;
   transition: box-shadow 0.2s, background 0.2s;
   display: flex;
   align-items: center;
@@ -66,6 +66,9 @@
   background-size: cover;
   background-position: center;
   background-image: url('../images/board.svg');
+}
+.cell.legal-move {
+  cursor: pointer;
 }
 
 .cell.R {

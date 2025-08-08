@@ -31,7 +31,7 @@ export default class TicTacToeApp extends GameAppBase {
           return (
             <button
               key={cell}
-              className={`square${legal && !this.state.gameEnd ? ' legal-move' : ''}`}
+              className={`square${legal ? ' legal-move' : ''}`}
               onClick={() => this.handleCellClick(cell)}
               disabled={!!this.state.gameEnd || !legal}
             >{empty ? '' : value}</button>
