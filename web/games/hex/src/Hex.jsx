@@ -5,9 +5,27 @@ import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
 const BOARD_SIZE = 11;
-const HEX_SIZE = 30; // px, controls overall scale
-const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;
-const SWAP_MOVE = BOARD_SIZE * BOARD_SIZE;
+const B = BOARD_SIZE;  // alias for convenience
+const SWAP_MOVE = B * B;
+
+const HEX_SIZE_PX = 30;
+const HEX_WIDTH_PX = Math.sqrt(3) * HEX_SIZE_PX;
+
+const MIN_X = HEX_WIDTH_PX / 2;
+const MAX_X = HEX_WIDTH_PX * (B - 1) + HEX_WIDTH_PX / 2 + HEX_WIDTH_PX * (B - 1) / 2;
+const MIN_Y = HEX_SIZE_PX;
+const MAX_Y = HEX_SIZE_PX * 1.5 * (B - 1) + HEX_SIZE_PX;
+const PADDING = HEX_SIZE_PX * 3;
+const WIDTH = MAX_X - MIN_X + PADDING * 2;
+const HEIGHT = MAX_Y - MIN_Y + PADDING * 2;
+const VIEW_BOX = `${MIN_X - PADDING} ${MIN_Y - PADDING} ${WIDTH} ${HEIGHT}`;
+
+const HEX_SE = 0;
+const HEX_SW = 1;
+const HEX_W = 2;
+const HEX_NW = 3;
+const HEX_NE = 4;
+const HEX_E = 5;
 
 export default class HexApp extends GameAppBase {
   constructor(props) {
@@ -18,138 +36,119 @@ export default class HexApp extends GameAppBase {
     };
   }
 
+  getBorderStroke = (row, col, dir) => {
+    let south = row === 0;
+    let north = row === B - 1;
+    let west = col === 0;
+    let east = col === B - 1;
+    if (south && (dir === HEX_SE || dir === HEX_SW)) return 'var(--hex-red, #e44)';
+    if (north && (dir === HEX_NW || dir === HEX_NE)) return 'var(--hex-red, #e44)';
+    if (west && (dir === HEX_NW || dir === HEX_W)) return 'var(--hex-blue, #24f)';
+    if (east && (dir === HEX_SE || dir === HEX_E)) return 'var(--hex-blue, #24f)';
+    return '#000';
+  }
+
+  renderCell = (row, col) => {
+    let board = this.state.board;
+    let legalMoves = this.state.legalMoves;
+
+    const i = row * B + col;
+    const cell = board[i];
+
+    // Hex center coordinates
+    const cx = HEX_WIDTH_PX * col + HEX_WIDTH_PX / 2 + HEX_WIDTH_PX * row / 2;
+    const cy = HEX_SIZE_PX * 1.5 * (B - 1 - row) + HEX_SIZE_PX;
+
+    const isLegal = legalMoves.includes(i) && this.gameActive();
+
+    // Compute hex corners
+    const corners = [];
+    for (let k = 0; k < 6; ++k) {
+      const angle = Math.PI / 3 * k + Math.PI / 6;
+      corners.push([
+        cx + HEX_SIZE_PX * Math.cos(angle),
+        cy + HEX_SIZE_PX * Math.sin(angle)
+      ]);
+    }
+
+    return (
+      <g key={i}>
+        <polygon
+          className={
+            "hex-cell" +
+            (cell === "R" ? " hex-red" : "") +
+            (cell === "B" ? " hex-blue" : "") +
+            (isLegal ? " hex-legal" : "")
+          }
+          points={corners.map(p => p.join(",")).join(" ")}
+          onClick={isLegal ? () => this.sendMove(i) : undefined}
+          style={{ pointerEvents: isLegal ? "auto" : "none" }}
+        />
+        {/* Draw 6 border lines manually, colored by position */}
+        {corners.map((p, dir) => {
+          const p2 = corners[(dir + 1) % 6];
+          let stroke = this.getBorderStroke(row, col, dir);
+          return (
+            <line
+              key={"border" + dir}
+              x1={p[0]}
+              y1={p[1]}
+              x2={p2[0]}
+              y2={p2[1]}
+              className="hex-border"
+              stroke={stroke}
+              strokeWidth={2}
+            />
+          );
+        })}
+      </g>
+    );
+  }
+
+  renderSwapButton = () => {
+    const swapBtnX = MAX_X + HEX_SIZE_PX * 1.5;
+    const swapBtnY = HEX_SIZE_PX * 1.5 * (B - 2) + HEX_SIZE_PX;
+
+    return (
+      <button
+        className="hex-swap-btn"
+        style={{
+          left: swapBtnX,
+          top: swapBtnY,
+        }}
+        onClick={() => this.sendMove(SWAP_MOVE)}
+      >
+        Swap
+      </button>
+    );
+  }
+
   renderBoard() {
     let board = this.state.board;
     let legalMoves = this.state.legalMoves;
 
     if (board === null) return null;
 
-    const N = BOARD_SIZE;
-    // SVG rendering
     const hexes = [];
-    for (let row = N - 1; row >= 0; --row) {
-      for (let col = 0; col < N; ++col) {
-        const i = row * N + col;
-        const cell = board[i];
-        // Hex center coordinates
-        const cx = HEX_WIDTH * col + HEX_WIDTH / 2 + HEX_WIDTH * row / 2;
-        const cy = HEX_SIZE * 1.5 * (N - 1 - row) + HEX_SIZE;
-
-        // Cell color
-        let fill = "#fff";
-        if (cell === "R") fill = "var(--hex-red, #e44)";
-        if (cell === "B") fill = "var(--hex-blue, #24f)";
-
-        // Legal move highlight
-        const isLegal = legalMoves.includes(i) && this.gameActive();
-
-        // Compute hex corners
-        const corners = [];
-        for (let k = 0; k < 6; ++k) {
-          const angle = Math.PI / 3 * k + Math.PI / 6;
-          corners.push([
-            cx + HEX_SIZE * Math.cos(angle),
-            cy + HEX_SIZE * Math.sin(angle)
-          ]);
-        }
-
-        // Helper to determine border color for each segment. We want a red border on the
-        // north/south edges, and a blue border on the west/east edges.
-        function borderColor(k) {
-          if (row === 0 && (k === 0 || k === 1)) return 'var(--hex-red, #e44)';
-          if (row === N - 1 && (k === 4 || k === 3)) return 'var(--hex-red, #e44)';
-          if (col === 0 && (k === 2 || k === 3)) return 'var(--hex-blue, #24f)';
-          if (col === N-1 && (k === 0 || k === 5)) return 'var(--hex-blue, #24f)';
-          return '#000';
-        }
-
-        hexes.push(
-          <g key={i}>
-            {/* Fill polygon, no stroke */}
-            <polygon
-              className={
-                "hex-cell" +
-                (cell === "R" ? " hex-red" : "") +
-                (cell === "B" ? " hex-blue" : "") +
-                (isLegal ? " hex-legal" : "")
-              }
-              points={corners.map(p => p.join(",")).join(" ")}
-              onClick={isLegal ? () => this.sendMove(i) : undefined}
-              style={{ pointerEvents: isLegal ? "auto" : "none" }}
-            />
-            {/* Draw 6 border lines manually, colored by position */}
-            {corners.map((p, k) => {
-              const p2 = corners[(k + 1) % 6];
-              return (
-                <line
-                  key={"border" + k}
-                  x1={p[0]}
-                  y1={p[1]}
-                  x2={p2[0]}
-                  y2={p2[1]}
-                  className="hex-border"
-                  stroke={borderColor(k)}
-                  strokeWidth={2}
-                />
-              );
-            })}
-            {/* Optionally, add a disc for R/B */}
-            {cell === "R" || cell === "B" ? (
-              <circle
-                className={cell === "R" ? "hex-disc-red" : "hex-disc-blue"}
-                cx={cx}
-                cy={cy}
-                r={HEX_SIZE * 0.5}
-              />
-            ) : null}
-          </g>
-        );
+    for (let row = B - 1; row >= 0; --row) {
+      for (let col = 0; col < B; ++col) {
+        hexes.push(this.renderCell(row, col));
       }
     }
 
-    // Calculate bounding box for hex grid
-    // Leftmost hex center: col=0, row=0 => cx0
-    // Rightmost hex center: col=N-1, row=N-1 => cx1
-    const minX = HEX_WIDTH / 2;
-    const maxX = HEX_WIDTH * (N - 1) + HEX_WIDTH / 2 + HEX_WIDTH * (N - 1) / 2;
-    // Topmost hex center: row=0 => cy0
-    // Bottommost hex center: row=N-1 => cy1
-    const minY = HEX_SIZE;
-    const maxY = HEX_SIZE * 1.5 * (N - 1) + HEX_SIZE;
-    // Add extra padding to all sides
-    const pad = HEX_SIZE * 3;
-    const width = maxX - minX + pad * 2;
-    const height = maxY - minY + pad * 2;
-    const viewBox = `${minX - pad} ${minY - pad} ${width} ${height}`;
-
     // Swap button logic
     const swapEnabled = legalMoves.includes(SWAP_MOVE);
-    // Position for swap button: right of board, aligned with 2nd row
-    const swapBtnX = maxX + HEX_SIZE * 1.5; // right of board, with padding
-    const swapBtnY = HEX_SIZE * 1.5 * (N - 2) + HEX_SIZE; // 2nd row
-
     return (
       <div className="hex-board-wrapper">
         <svg
           className="hex-board"
-          viewBox={viewBox}
-          width={width}
-          height={height}
+          viewBox={VIEW_BOX}
+          width={WIDTH}
+          height={HEIGHT}
         >
           {hexes}
         </svg>
-        {swapEnabled && (
-          <button
-            className="hex-swap-btn"
-            style={{
-              left: swapBtnX,
-              top: swapBtnY,
-            }}
-            onClick={() => this.sendMove(SWAP_MOVE)}
-          >
-            Swap
-          </button>
-        )}
+        {swapEnabled && this.renderSwapButton()}
       </div>
     );
   }
