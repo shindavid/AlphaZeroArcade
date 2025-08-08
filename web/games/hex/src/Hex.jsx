@@ -74,14 +74,14 @@ export default class HexApp extends GameAppBase {
     let board = this.state.board;
     let legalMoves = this.state.legalMoves;
 
-    const i = row * B + col;
-    const cell = board[i];
+    const cell = row * B + col;
+    const color = board[cell];
 
     // Hex center coordinates
     const cx = HEX_WIDTH_PX * col + HEX_WIDTH_PX / 2 + HEX_WIDTH_PX * row / 2;
     const cy = HEX_SIZE_PX * 1.5 * (B - 1 - row) + HEX_SIZE_PX;
 
-    const isLegal = legalMoves.includes(i) && this.gameActive();
+    const isLegal = legalMoves.includes(cell) && this.gameActive();
 
     // Compute hex corners
     const corners = [];
@@ -94,16 +94,16 @@ export default class HexApp extends GameAppBase {
     }
 
     return (
-      <g key={i}>
+      <g key={cell}>
         <polygon
           className={
             "hex-cell" +
-            (cell === "R" ? " hex-red" : "") +
-            (cell === "B" ? " hex-blue" : "") +
+            (color === "R" ? " hex-red" : "") +
+            (color === "B" ? " hex-blue" : "") +
             (isLegal ? " hex-legal" : "")
           }
           points={corners.map(p => p.join(",")).join(" ")}
-          onClick={isLegal ? () => this.sendMove(i) : undefined}
+          onClick={isLegal ? () => this.sendMove(cell) : undefined}
           style={{ pointerEvents: isLegal ? "auto" : "none" }}
         />
         {/* Draw 6 border lines manually, colored by position */}
