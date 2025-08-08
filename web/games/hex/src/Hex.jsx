@@ -138,17 +138,18 @@ export default class HexApp extends GameAppBase {
         >
           {hexes}
         </svg>
-        <button
-          className="hex-swap-btn"
-          style={{
-            left: swapBtnX,
-            top: swapBtnY,
-          }}
-          disabled={!swapEnabled}
-          onClick={swapEnabled ? () => this.sendMove(SWAP_MOVE) : undefined}
-        >
-          Swap
-        </button>
+        {swapEnabled && (
+          <button
+            className="hex-swap-btn"
+            style={{
+              left: swapBtnX,
+              top: swapBtnY,
+            }}
+            onClick={() => this.sendMove(SWAP_MOVE)}
+          >
+            Swap
+          </button>
+        )}
       </div>
     );
   }
