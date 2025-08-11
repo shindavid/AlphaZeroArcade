@@ -9,21 +9,7 @@ The script:
     ``target_elo_gap``—to give a well-spaced difficulty ladder.
 3.  Copies the data needed for evaluation into a benchmark folder:
 
-/workspace/mount/benchmarks/{game}/{tag}
-    ├── bin/{game}
-    ├── databases/
-    │   ├── benchmark.db
-    │   ├── self_play.db
-    │   └── training.db
-    ├── misc/version_file
-    ├── models/ (only the models of committee agents)
-    │   ├── gen-7.onnx
-    │   ├── gen-14.onnx
-    │   └── ...
-    ├── timing_caches/
-    |   ├── sm_7.9_trt25.06_cuda12.9.cache
-    |   ├── sm_8.0_trt25.06_cuda12.9.cache
-    │   └── ...
+See benchmark_record.py docstring for directory structure details.
 """
 from alphazero.logic.benchmark_record import save_benchmark_dir
 from alphazero.logic.build_params import BuildParams
