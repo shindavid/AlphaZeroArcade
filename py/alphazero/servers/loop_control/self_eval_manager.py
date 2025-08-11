@@ -283,7 +283,7 @@ class SelfEvalManager(GamingManagerBase):
         if gen > 0:
             model1 = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'benchmark-models/{tag}/gen-{gen}.pt',
+                scratch_path=f'benchmark-models/{tag}/gen-{gen}.onnx',
                 asset_path_mode='scratch'
             )
             files_required.append(model1)
@@ -292,7 +292,7 @@ class SelfEvalManager(GamingManagerBase):
         if opponent_gen > 0:
             model2 = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(opponent_gen),
-                scratch_path=f'benchmark-models/{tag}/gen-{opponent_gen}.pt',
+                scratch_path=f'benchmark-models/{tag}/gen-{opponent_gen}.onnx',
                 asset_path_mode='scratch'
             )
             files_required.append(model2)
