@@ -1,8 +1,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/GameTypes.hpp"
 #include "core/concepts/Game.hpp"
-#include "core/tests/Common.hpp"
 #include "games/GameTransforms.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
@@ -12,7 +10,7 @@
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
-#include "util/LoggingUtil.hpp"
+#include "util/RepoUtil.hpp"
 
 #include <gtest/gtest.h>
 

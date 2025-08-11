@@ -1,8 +1,6 @@
 #include "mcts/NNEvaluationServiceParams.hpp"
 
 #include "util/BoostUtil.hpp"
-#include "util/Exceptions.hpp"
-#include "util/RepoUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
