@@ -18,15 +18,17 @@ AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unforma
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
-from util.repo_util import Repo
 from util.torch_util import Shape
 
+import onnx
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 import copy
 from dataclasses import dataclass, field
+import hashlib
+import io
 import logging
 import math
 import os
@@ -652,6 +654,14 @@ class Model(nn.Module):
 
         self.validate()
 
+        self._architecture_hash = None
+
+    @property
+    def architecture_hash(self):
+        if self._architecture_hash is not None:
+            self._architecture_hash = hashlib.md5(str(self).encode()).hexdigest()
+        return self._architecture_hash
+
     @property
     def shape_info_dict(self) -> ShapeInfoDict:
         return self.config.shape_info_dict
@@ -767,16 +777,27 @@ class Model(nn.Module):
         example_shape = (batch_size, *self.shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
-        # export to a temp ONNX file
-        with open(filename, 'wb') as f:
-            torch.onnx.export(
-                clone, example_input, filename,
-                export_params=True,
-                opset_version=16,
-                input_names=input_names,
-                output_names=output_names,
-                dynamic_axes=dynamic_axes,
-            )
+        signature = self.architecture_hash
+
+        # 3) Export to a temporary in-memory buffer
+        buf = io.BytesIO()
+        torch.onnx.export(
+            clone, example_input, buf,
+            export_params=True,
+            opset_version=16,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes=dynamic_axes,
+            do_constant_folding=True,
+        )
+
+        # 4) Add metadata
+        model = onnx.load_from_string(buf.getvalue())
+        kv = model.metadata_props.add()
+        kv.key = 'model-architecture-signature'
+        kv.value = signature
+
+        onnx.save(model, filename)
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
