@@ -30,8 +30,6 @@ from dataclasses import dataclass, field
 import logging
 import math
 import os
-import subprocess
-import tempfile
 from typing import Any, Callable, Dict, List, Optional
 
 
@@ -747,11 +745,9 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
-    def save_model(self, filename: str, batch_size: int):
+    def save_model(self, filename: str):
         """
-        Saves this network to disk, from which it can be loaded either by c++ or by python. Does
-        this by first exporting the model to ONNX, and then shelling out to a custom binary that
-        converts the ONNX to a TensorRT engine.
+        Saves this network to disk in ONNX format.
         """
         output_dir = os.path.split(filename)[0]
         if output_dir:
@@ -767,25 +763,20 @@ class Model(nn.Module):
         dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
 
         # 2) make an example‐input and ONNX‐export it
+        batch_size = 1
         example_shape = (batch_size, *self.shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
         # export to a temp ONNX file
-        with tempfile.NamedTemporaryFile(suffix=".onnx") as onnx_f:
-            onnx_path = onnx_f.name
-
+        with open(filename, 'wb') as f:
             torch.onnx.export(
-                clone, example_input, onnx_path,
+                clone, example_input, filename,
                 export_params=True,
                 opset_version=16,
                 input_names=input_names,
                 output_names=output_names,
                 dynamic_axes=dynamic_axes,
             )
-
-            build_bin = Model._get_onnx_engine_builder_binary()
-            cmd = [build_bin, onnx_path, filename, str(batch_size)]
-            subprocess.run(cmd, capture_output=True, check=True)
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
@@ -807,19 +798,3 @@ class Model(nn.Module):
             'model.state_dict': self.state_dict(),
             'model.config': self.config,
         })
-
-    @staticmethod
-    def _get_onnx_engine_builder_binary() -> str:
-        build_bin_paths = [
-            os.path.join(Repo.root(), "target/Release/bin/tools/onnx_engine_builder"),
-            os.path.join(Repo.root(), "target/Debug/bin/tools/onnx_engine_builder"),
-        ]
-        existent_build_bins = [p for p in build_bin_paths if os.path.isfile(p)]
-        if not existent_build_bins:
-            logger.error("Could not find onnx_engine_builder in any of the following paths:")
-            for p in build_bin_paths:
-                logger.error(f"  {p}")
-            logger.error("Please build it first by running ./build.py [-t tools]")
-            raise Exception("onnx_engine_builder not found")
-
-        return existent_build_bins[0]  # use the first found one
