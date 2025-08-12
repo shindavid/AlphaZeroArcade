@@ -35,15 +35,9 @@ output/
 │   │   ├── runtime/
 │   │   │   ├── lock (optional, indicates a running process)
 │   │   │   └── freeze (optional, indicates a frozen run)
-│   │   ├── self-play-data/
-│   │   │   ├── gen-1.data
-│   │   │   ├── gen-2.data
-│   │   │   └── ...
-│   |   └── timing_caches/
-│   │       ├── e7980f02e07c42bbaaeb0a80a64c51bd  # model architecture hash
-│   │       |   ├── sm_7.9_trt25.06_cuda12.9.cache
-│   │       |   ├── sm_8.0_trt25.06_cuda12.9.cache
-│   │       │   └── ...
+│   │   └── self-play-data/
+│   │       ├── gen-1.data
+│   │       ├── gen-2.data
 │   │       └── ...
 │   └── ...
 └── ...

@@ -10,16 +10,10 @@ benchmarks/
 │   │   │   ├── self_play.db
 │   │   │   └── training.db
 │   │   ├── misc/version_file
-│   │   ├── models/ (only the models of committee agents)
-|   │   |   ├── gen-7.onnx
-|   │   |   ├── gen-14.onnx
-|   │   |   └── ...
-|   │   └── timing_caches/
-│   │       ├── e7980f02e07c42bbaaeb0a80a64c51bd  # model architecture hash
-│   │       |   ├── sm_7.9_trt25.06_cuda12.9.cache
-│   │       |   ├── sm_8.0_trt25.06_cuda12.9.cache
-│   │       │   └── ...
-│   │       └── ...
+│   │   └── models/ (only the models of committee agents)
+|   │       ├── gen-7.onnx
+|   │       ├── gen-14.onnx
+|   │       └── ...
 |   └── ...
 └── ...
 
