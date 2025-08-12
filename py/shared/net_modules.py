@@ -654,13 +654,15 @@ class Model(nn.Module):
 
         self.validate()
 
-        self._architecture_hash = None
+        self._model_architecture_signature = None
 
-    @property
-    def architecture_hash(self):
-        if self._architecture_hash is not None:
-            self._architecture_hash = hashlib.md5(str(self).encode()).hexdigest()
-        return self._architecture_hash
+    def get_model_architecture_signature(self, clone: 'Model'):
+        # We compute the signature from the *clone*, not from *self*, because self still has the
+        # auxiliary heads, while clone has them stripped. We don't need to include the auxiliary
+        # heads in the signature.
+        if self._model_architecture_signature is not None:
+            self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
+        return self._model_architecture_signature
 
     @property
     def shape_info_dict(self) -> ShapeInfoDict:
@@ -777,7 +779,7 @@ class Model(nn.Module):
         example_shape = (batch_size, *self.shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
-        signature = self.architecture_hash
+        signature = self.get_model_architecture_signature(clone)
 
         # 3) Export to a temporary in-memory buffer
         buf = io.BytesIO()
