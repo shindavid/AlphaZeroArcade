@@ -29,6 +29,32 @@ find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(Protobuf REQUIRED)
+
+set(ONNX_FOUND FALSE)
+
+# 1) If someone provided ONNXConfig.cmake (custom build), use it
+find_package(ONNX QUIET)
+if(ONNX_FOUND)
+  message(STATUS "Found ONNX via ONNXConfig.cmake")
+else()
+  # 2) Manual find: headers + library
+  find_path(ONNX_INCLUDE_DIR onnx/onnx_pb.h
+    PATHS /usr/include /usr/local/include
+  )
+  find_library(ONNX_LIBRARY NAMES onnx
+    PATHS /usr/lib/x86_64-linux-gnu /usr/local/lib
+  )
+  if(ONNX_INCLUDE_DIR AND ONNX_LIBRARY)
+    set(ONNX_FOUND TRUE)
+    message(STATUS "Found ONNX headers at ${ONNX_INCLUDE_DIR}")
+    message(STATUS "Found ONNX library at ${ONNX_LIBRARY}")
+  endif()
+endif()
+
+if(NOT ONNX_FOUND)
+  message(FATAL_ERROR "ONNX headers/lib not found. Install libonnx-dev or build ONNX from source.")
+endif()
 
 find_package(CUDAToolkit REQUIRED)
 
@@ -108,7 +134,16 @@ endfunction()
 
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
 link_directories(/usr/local/cuda/lib64)
-set(COMMON_EXTERNAL_LIBS ${Boost_LIBRARIES} cupti spdlog::spdlog CUDA::cudart ${TENSORRT_LIBS})
+set(COMMON_EXTERNAL_LIBS
+    ${Boost_LIBRARIES}
+    cupti
+    spdlog::spdlog
+    CUDA::cudart
+    ${TENSORRT_LIBS}
+    onnx
+    protobuf::libprotobuf
+    )
+
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 # Function to add a game with common sources, main file, unit-test file and shared file
