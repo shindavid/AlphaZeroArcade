@@ -727,36 +727,6 @@ class Model(nn.Module):
         for target in self.loss_weights:
             assert target in targets, f'Missing target {target}'
 
-    @classmethod
-    def load_model(cls, filename: str, device = 'cuda', verbose: bool = False,
-                   eval_mode: bool = True,
-                   set_grad_enabled: Optional[bool] = None) -> torch.jit.ScriptModule:
-        """
-        Loads a model previously saved to disk via save(). This uses torch.jit.load(), which
-        returns a torch.jit.ScriptModule, which looks/feels/sounds like nn.Module, but is not
-        exactly the same thing.
-
-        If set_grad_enabled is None (default), then calls torch.set_grad_enabled(False) if
-        eval_mode is True. Note that this mutates torch's global state.
-        """
-        if verbose:
-            print(f'Loading model from {filename}')
-
-        net = torch.jit.load(filename)
-        net.to(device)
-        set_grad_enabled = not eval_mode if set_grad_enabled is None else set_grad_enabled
-        if set_grad_enabled:
-            torch.set_grad_enabled(False)
-
-        if eval_mode:
-            net.eval()
-        else:
-            net.train()
-
-        if verbose:
-            print(f'Model successfully loaded!')
-        return net
-
     def save_model(self, filename: str):
         """
         Saves this network to disk in ONNX format.

@@ -279,7 +279,7 @@ class TrainingManager:
             self._update_window()
             if self._set_checkpoint():
                 checkpoint_set = True
-                self._save_model(table, gen, self._net, self._controller.game_spec.batch_size)
+                self._save_model(gen, self._net, self._controller.game_spec.batch_size)
                 self._record_stats(gen)
             else:
                 assert subgen is not None, 'Unexpected bug'
@@ -400,7 +400,7 @@ class TrainingManager:
             conn.commit()
             cursor.close()
 
-    def _save_model(self, table: GpuContentionTable, gen: Generation, net: Model, batch_size: int):
+    def _save_model(self, gen: Generation, net: Model, batch_size: int):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
         model_filename = organizer.get_model_filename(gen)
