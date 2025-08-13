@@ -6,6 +6,7 @@
 #include "util/Math.hpp"
 #include "util/Random.hpp"
 #include "util/StringUtil.hpp"
+#include "util/TensorRtUtil.hpp"
 
 #include <Eigen/Core>
 #include <gtest/gtest.h>
@@ -759,6 +760,14 @@ TEST(StringUtil, grammatically_join) {
   EXPECT_EQ(util::grammatically_join({"a", "b", "c"}, "or", false), "a, b or c");
 }
 
+TEST(StringUtil, parse_bytes) {
+  EXPECT_EQ(util::parse_bytes("256MiB"), 256ull << 20);
+  EXPECT_EQ(util::parse_bytes("256MB"), 256ull * 1000 * 1000);
+  EXPECT_EQ(util::parse_bytes("1GiB"), 1ull << 30);
+  EXPECT_EQ(util::parse_bytes("1.5GiB"), 1.5 * (1ull << 30));
+  EXPECT_EQ(util::parse_bytes("1073741824"), 1073741824ull);
+}
+
 TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:0"), 0);
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("0"), 0);
@@ -781,6 +790,19 @@ TEST(math, splitmix64) {
     double pct = counts[i] * 1.0 / N;
     EXPECT_NEAR(pct, 1.0 / num_buckets, 0.01);
   }
+}
+
+TEST(TensorRtUtil, parse_precision) {
+  EXPECT_EQ(trt_util::parse_precision("FP16"), trt_util::Precision::kFP16);
+  EXPECT_EQ(trt_util::parse_precision("FP32"), trt_util::Precision::kFP32);
+  EXPECT_EQ(trt_util::parse_precision("INT8"), trt_util::Precision::kINT8);
+
+  EXPECT_THROW(trt_util::parse_precision("FP64"), util::CleanException);
+}
+
+TEST(TensorRtUtil, get_version_tag) {
+  const char* version_tag = trt_util::get_version_tag();
+  EXPECT_STREQ(version_tag, "10.11.0");
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

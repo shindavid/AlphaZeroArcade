@@ -1,6 +1,23 @@
 #include "util/CudaUtil.hpp"
 
+#include "util/Exceptions.hpp"
+
 namespace cuda_util {
+
+inline const char* get_sm_tag() {
+  static std::string sm_tag;
+
+  if (sm_tag.empty()) {
+    int dev = 0;
+    cudaGetDevice(&dev);
+    cudaDeviceProp p{};
+    cudaGetDeviceProperties(&p, dev);
+
+    sm_tag = std::format("{}.{}", p.major, p.minor);
+  }
+
+  return sm_tag.c_str();
+}
 
 inline int cuda_device_to_ordinal(const std::string& cuda_device) {
   auto pos = cuda_device.find(':');

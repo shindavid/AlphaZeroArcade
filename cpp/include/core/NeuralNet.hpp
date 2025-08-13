@@ -3,16 +3,26 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <Eigen/Core>
 #include <NvInfer.h>
+#include <NvInferRuntime.h>
+#include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
 #include <deque>
 #include <spanstream>
 #include <vector>
 
 namespace core {
+
+struct NeuralNetParams {
+  int cuda_device_id;
+  int batch_size;
+  uint64_t workspace_size_in_bytes;
+  trt_util::Precision precision;
+};
 
 /*
  * A thin wrapper around a TensorRT engine.
@@ -40,12 +50,13 @@ class NeuralNet {
   using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
   using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
 
-  NeuralNet(int cuda_device_id);
+  NeuralNet(const NeuralNetParams& params);
   ~NeuralNet();
 
-  int batch_size() const { return batch_size_; }
-  void load_weights(const char* filename);
-  void load_weights(std::ispanstream& stream);
+  int batch_size() const { return params_.batch_size; }
+
+  template<typename T>
+  void load_weights(T&& onnx_data);
 
   pipeline_index_t get_pipeline_assignment();
   float* get_input_ptr(pipeline_index_t);
@@ -64,7 +75,7 @@ class NeuralNet {
   // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
   bool activate(int num_pipelines);
 
-  bool loaded() const { return !plan_data_.empty(); }
+  bool loaded() const { return !onnx_bytes_.empty(); }
   bool activated() const { return engine_; }
 
  private:
@@ -95,19 +106,31 @@ class NeuralNet {
     DynamicActionValueTensorMap action_values;
   };
 
+  void init_refitter();
+  void refit_engine_plan();
+  void build_engine_plan_from_scratch();
+  void save_plan_bytes();
+  void write_plan_to_disk(const boost::filesystem::path& cache_path);
+  void set_model_architecture_signature();
+  void load_data(std::vector<char>& dst, const char* filename);
+  void load_data(std::vector<char>& dst, std::ispanstream& bytes);
+
   Logger logger_;
   nvinfer1::IRuntime* const runtime_;
   nvinfer1::ICudaEngine* engine_ = nullptr;
+  nvinfer1::IRefitter* refitter_ = nullptr;
+  nvonnxparser::IParserRefitter* parser_refitter_ = nullptr;
+  std::vector<char> onnx_bytes_;
+  std::vector<char> plan_data_;
+  std::string model_architecture_signature_;
 
   std::vector<Pipeline*> pipelines_;
   std::deque<pipeline_index_t> available_pipeline_indices_;
-  std::vector<char> plan_data_;
 
   mutable mit::mutex pipeline_mutex_;
   mit::condition_variable pipeline_cv_;
 
-  int batch_size_ = 0;
-  const int cuda_device_id_;
+  const NeuralNetParams params_;
 };
 
 }  // namespace core

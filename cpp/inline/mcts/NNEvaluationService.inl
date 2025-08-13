@@ -14,6 +14,22 @@
 
 namespace mcts {
 
+namespace detail {
+
+inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParams& params) {
+  core::NeuralNetParams neural_net_params;
+
+  neural_net_params.cuda_device_id = cuda_util::cuda_device_to_ordinal(params.cuda_device);
+  neural_net_params.batch_size = params.batch_size;
+  neural_net_params.workspace_size_in_bytes = params.engine_build_workspace_size_in_bytes;
+  neural_net_params.precision =
+      trt_util::parse_precision(params.engine_build_precision.c_str());
+
+  return neural_net_params;
+}
+
+}  // namespace detail
+
 template <core::concepts::Game Game>
 int NNEvaluationService<Game>::instance_count_ = 0;
 
@@ -96,7 +112,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),
-      net_(cuda_util::cuda_device_to_ordinal(params_.cuda_device)),
+      net_(detail::to_neural_net_params(params)),
       batch_data_slice_allocator_(perf_stats_),
       server_(server) {
   if (!params.model_filename.empty()) {
@@ -477,10 +493,10 @@ void NNEvaluationService<Game>::activate_net() {
   if (net_.activated()) return;
 
   net_.activate(params_.num_pipelines);
-  batch_data_slice_allocator_.set_batch_size_limit(net_.batch_size());
+  batch_data_slice_allocator_.set_batch_size_limit(params_.batch_size);
 
   LOG_DEBUG("NNEvaluationService: activated NeuralNet with {} pipelines (batch-size: {})",
-            params_.num_pipelines, net_.batch_size());
+            params_.num_pipelines, params_.batch_size);
 }
 
 template <core::concepts::Game Game>

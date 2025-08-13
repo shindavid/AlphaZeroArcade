@@ -1,13 +1,13 @@
 #pragma once
 
-#include "util/Exceptions.hpp"
-
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 #include <format>
 #include <string>
 
 namespace cuda_util {
+
+const char* get_sm_tag();  // "7.9"
 
 void dump_memory_info();
 

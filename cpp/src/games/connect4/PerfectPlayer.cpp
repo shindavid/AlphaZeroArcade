@@ -1,10 +1,8 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
 
 #include "util/BitSet.hpp"
-#include "util/BoostUtil.hpp"
-#include "util/Exceptions.hpp"
-#include "util/RepoUtil.hpp"
-#include "util/StringUtil.hpp"
+
+#include <iostream>
 
 namespace c4 {
 

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bit>
 #include <format>
+#include <iostream>
 
 namespace blokus {
 
