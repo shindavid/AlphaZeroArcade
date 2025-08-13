@@ -163,7 +163,6 @@ class BenchmarkData:
     def _setup_rundir_from_run(self, utc_key: str = None):
         if self._rundir_exists():
             logger.debug("benchmark rundir exists.")
-            return
         elif self._tar_file_exists(utc_key=utc_key):
             logger.debug("benchmark tar file exists")
             self._untar()
