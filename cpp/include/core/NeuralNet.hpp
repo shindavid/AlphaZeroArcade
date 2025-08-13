@@ -75,8 +75,8 @@ class NeuralNet {
   // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
   bool activate(int num_pipelines);
 
-  bool loaded() const { return !onnx_bytes_.empty(); }
-  bool activated() const { return engine_; }
+  bool loaded() const { return !plan_data_.empty(); }
+  bool activated() const { return activated_; }
 
  private:
   // simple logger
@@ -120,6 +120,7 @@ class NeuralNet {
   nvinfer1::ICudaEngine* engine_ = nullptr;
   nvinfer1::IRefitter* refitter_ = nullptr;
   nvonnxparser::IParserRefitter* parser_refitter_ = nullptr;
+  bool activated_ = false;
   std::vector<char> onnx_bytes_;
   std::vector<char> plan_data_;
   std::string model_architecture_signature_;

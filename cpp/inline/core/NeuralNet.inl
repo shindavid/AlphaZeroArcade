@@ -63,7 +63,7 @@ void NeuralNet<Game>::load_weights(T&& onnx_data) {
     // This indicates that we don't have an existing model already loaded with a matching model
     // architecture signature (MAS). Let's look in the filesystem cache for a compatible model.
     if (boost::filesystem::exists(cache_path)) {
-      LOG_INFO("Found cached engine plan with matching MAS at {}", cache_path.string());
+      LOG_INFO("Found cached engine plan at {}", cache_path.string());
       load_data(plan_data_, cache_path.string().c_str());
       engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
       refit = true;
@@ -120,6 +120,7 @@ void NeuralNet<Game>::deactivate() {
 
   LOG_DEBUG("Deactivating NeuralNet...");
 
+  activated_ = false;
   for (Pipeline* pipeline : pipelines_) {
     delete pipeline;
   }
@@ -139,6 +140,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
+  activated_ = true;
   RELEASE_ASSERT(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(params_.cuda_device_id);
