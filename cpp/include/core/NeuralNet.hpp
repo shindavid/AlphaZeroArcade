@@ -24,11 +24,55 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
+class NeuralNetBase {
+ public:
+  NeuralNetBase(const NeuralNetParams& params);
+  ~NeuralNetBase();
+
+  template <typename T>
+  void load_weights(T&& onnx_data);
+
+  bool loaded() const { return !plan_data_.empty(); }
+
+ protected:
+  // simple logger
+  class Logger : public nvinfer1::ILogger {
+   public:
+    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
+      if (severity <= Severity::kWARNING) {
+        LOG_WARN("[TRT] {}", msg);
+      }
+    }
+  };
+
+  void set_model_architecture_signature();
+  void load_data(std::vector<char>& dst, const char* filename);
+  void load_data(std::vector<char>& dst, std::ispanstream& bytes);
+
+  void init_engine_from_plan_data();
+  void init_refitter();
+  void refit_engine_plan();
+  void build_engine_plan_from_scratch();
+  void save_plan_bytes();
+  void write_plan_to_disk(const boost::filesystem::path& cache_path);
+
+  Logger logger_;
+  nvinfer1::IRuntime* const runtime_;
+  nvinfer1::ICudaEngine* engine_ = nullptr;
+  nvinfer1::IRefitter* refitter_ = nullptr;
+  nvonnxparser::IParserRefitter* parser_refitter_ = nullptr;
+  std::vector<char> onnx_bytes_;
+  std::vector<char> plan_data_;
+  std::string model_architecture_signature_;
+
+  const NeuralNetParams params_;
+};
+
 /*
  * A thin wrapper around a TensorRT engine.
  */
 template <concepts::Game Game>
-class NeuralNet {
+class NeuralNet : public NeuralNetBase {
  public:
   using InputShape = Game::InputTensorizor::Tensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
@@ -50,13 +94,8 @@ class NeuralNet {
   using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
   using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
 
-  NeuralNet(const NeuralNetParams& params);
+  using NeuralNetBase::NeuralNetBase;
   ~NeuralNet();
-
-  int batch_size() const { return params_.batch_size; }
-
-  template<typename T>
-  void load_weights(T&& onnx_data);
 
   pipeline_index_t get_pipeline_assignment();
   float* get_input_ptr(pipeline_index_t);
@@ -75,20 +114,9 @@ class NeuralNet {
   // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
   bool activate(int num_pipelines);
 
-  bool loaded() const { return !plan_data_.empty(); }
   bool activated() const { return activated_; }
 
  private:
-  // simple logger
-  class Logger : public nvinfer1::ILogger {
-   public:
-    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
-      if (severity <= Severity::kWARNING) {
-        LOG_WARN("[TRT] {}", msg);
-      }
-    }
-  };
-
   struct Pipeline {
     Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape, int batch_size);
     ~Pipeline();
@@ -106,33 +134,13 @@ class NeuralNet {
     DynamicActionValueTensorMap action_values;
   };
 
-  void init_engine_from_plan_data();
-  void init_refitter();
-  void refit_engine_plan();
-  void build_engine_plan_from_scratch();
-  void save_plan_bytes();
-  void write_plan_to_disk(const boost::filesystem::path& cache_path);
-  void set_model_architecture_signature();
-  void load_data(std::vector<char>& dst, const char* filename);
-  void load_data(std::vector<char>& dst, std::ispanstream& bytes);
-
-  Logger logger_;
-  nvinfer1::IRuntime* const runtime_;
-  nvinfer1::ICudaEngine* engine_ = nullptr;
-  nvinfer1::IRefitter* refitter_ = nullptr;
-  nvonnxparser::IParserRefitter* parser_refitter_ = nullptr;
-  bool activated_ = false;
-  std::vector<char> onnx_bytes_;
-  std::vector<char> plan_data_;
-  std::string model_architecture_signature_;
-
   std::vector<Pipeline*> pipelines_;
   std::deque<pipeline_index_t> available_pipeline_indices_;
 
+  bool activated_ = false;
+
   mutable mit::mutex pipeline_mutex_;
   mit::condition_variable pipeline_cv_;
-
-  const NeuralNetParams params_;
 };
 
 }  // namespace core
