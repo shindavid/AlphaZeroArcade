@@ -240,7 +240,7 @@ TEST_F(TicTacToeTest, uniform_search) {
 TEST_F(TicTacToeTest, multi_threaded_uniform_search) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions,
-              "test_models/tictactoe_mini.plan");
+              "test_models/tictactoe_mini.onnx");
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
