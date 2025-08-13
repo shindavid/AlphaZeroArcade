@@ -7,12 +7,14 @@
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <Eigen/Core>
+
 #include <NvInfer.h>
 #include <NvInferRuntime.h>
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
 #include <deque>
 #include <spanstream>
+#include <string>
 #include <vector>
 
 namespace core {
@@ -24,6 +26,7 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
+// Base class for NeuralNet<Game>
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
