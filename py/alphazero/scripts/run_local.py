@@ -358,7 +358,8 @@ def main():
     register_signal_exception(signal.SIGINT, KeyboardInterrupt,
                               echo_action=lambda: logger.info('Ignoring repeat Ctrl-C'))
 
-    benchmark_tag = params.benchmark_tag
+    benchmark_data = BenchmarkData(run_params.game, params.benchmark_tag)
+    benchmark_tag = benchmark_data.setup_rundir()
 
     descs = []
     procs = []
@@ -374,19 +375,18 @@ def main():
                 descs.append('Self-play')
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
-        benchmark_data = BenchmarkData(run_params.game, benchmark_tag)
         if params.task_mode:
             if params.run_benchmark_server:
                 descs.append('Benchmark')
                 procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
-            if params.run_eval_server:
+            if params.run_eval_server and benchmark_data.rundir_version_match():
                 descs.append('Eval')
                 procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
             if params.run_ratings_server:
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
         else:
-            if benchmark_data.valid():
+            if benchmark_data.valid() and benchmark_data.rundir_version_match():
                 descs.append('Eval')
                 procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
             else:

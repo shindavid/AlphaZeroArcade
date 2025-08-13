@@ -106,17 +106,20 @@ class BenchmarkData:
     def setup_rundir(self) -> BenchmarkTag:
         if self.tag:
             self._setup_rundir_from_run()
-            return self.tag
+            tag = self.tag
         elif self._reference_player_exists():
             self._setup_rundir_from_reference()
-            return 'reference.player'
+            tag = 'reference.player'
         else:
             record = self._load_record()
             if record:
                 self._setup_rundir_from_record(record)
-                return record.tag
+                tag = record.tag
             else:
                 raise Exception("Failed to set up a valid benchmark")
+
+        self.tag = tag
+        return tag
 
     def valid(self) -> bool:
         return self.tag or self._load_record() or self._reference_player_exists()
@@ -149,7 +152,7 @@ class BenchmarkData:
     def _rundir_exists(self) -> bool:
         return os.path.isdir(Benchmark.path(self.game, self.tag))
 
-    def _rundir_version_match(self) -> bool:
+    def rundir_version_match(self) -> bool:
         organizer = DirectoryOrganizer(RunParams(self.game, self.tag), base_dir_root=Benchmark)
         return organizer.version_check()
 
@@ -180,10 +183,6 @@ class BenchmarkData:
                 self._untar(utc_key=record.utc_key)
             else:
                 raise Exception("no benchmark found when benchmark-tag is specified.")
-
-        if not self._rundir_version_match():
-            raise Exception(f"Benchmark folder {Benchmark.path(self.game, self.tag)} version "
-                            f"mismatch.")
 
     def _tar_file_exists(self, utc_key: str = None) -> bool:
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
