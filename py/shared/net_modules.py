@@ -660,7 +660,7 @@ class Model(nn.Module):
         # We compute the signature from the *clone*, not from *self*, because self still has the
         # auxiliary heads, while clone has them stripped. We don't need to include the auxiliary
         # heads in the signature.
-        if self._model_architecture_signature is not None:
+        if self._model_architecture_signature is None:
             self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
         return self._model_architecture_signature
 

@@ -41,18 +41,6 @@ class GameSpec(abc.ABC):
         pass
 
     @property
-    def batch_size(self) -> int:
-        """
-        NN eval batch size to use in c++ runtime.
-
-        This in general will be dependent on the hardware. Setting it too high can cause significant
-        slowdown in c++, as the NeuralNet pipelining becomes less effective.
-
-        TODO: this should be auto-configured via an on-the-fly experiment on each machine.
-        """
-        return 256
-
-    @property
     def num_players(self) -> int:
         """
         The number of players in the game.
