@@ -106,6 +106,7 @@ class NeuralNet {
     DynamicActionValueTensorMap action_values;
   };
 
+  void init_engine_from_plan_data();
   void init_refitter();
   void refit_engine_plan();
   void build_engine_plan_from_scratch();

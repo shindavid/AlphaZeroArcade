@@ -65,12 +65,15 @@ void NeuralNet<Game>::load_weights(T&& onnx_data) {
     if (boost::filesystem::exists(cache_path)) {
       LOG_INFO("Found cached engine plan at {}", cache_path.string());
       load_data(plan_data_, cache_path.string().c_str());
-      engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
+      init_engine_from_plan_data();
       refit = true;
     }
   }
 
   if (refit) {
+    if (!engine_) {
+      init_engine_from_plan_data();
+    }
     refit_engine_plan();
     save_plan_bytes();
   } else {
@@ -130,7 +133,11 @@ void NeuralNet<Game>::deactivate() {
     available_pipeline_indices_.clear();
   }
 
+  delete parser_refitter_;
+  delete refitter_;
   delete engine_;
+  parser_refitter_ = nullptr;
+  refitter_ = nullptr;
   engine_ = nullptr;
 }
 
@@ -144,7 +151,9 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
   RELEASE_ASSERT(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(params_.cuda_device_id);
-  engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
+  if (!engine_) {
+    init_engine_from_plan_data();
+  }
 
   nvinfer1::Dims input_shape =
     engine_->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
@@ -226,6 +235,11 @@ void NeuralNet<Game>::Pipeline::load(float** policy_data, float** value_data,
   *policy_data = policy.data();
   *value_data = value.data();
   *action_values_data = action_values.data();
+}
+
+template <concepts::Game Game>
+void NeuralNet<Game>::init_engine_from_plan_data() {
+  engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
 }
 
 template <concepts::Game Game>
