@@ -24,7 +24,7 @@ from alphazero.logic.agent_types import IndexedAgent
 from alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
+from alphazero.servers.loop_control.base_dir import Benchmark, Workspace, VERSION
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
@@ -54,13 +54,13 @@ class BenchmarkRecord:
         return {'utc_key': self.utc_key, 'tag': self.tag}
 
     def key(self):
-        return os.path.join(self.game, self.tag, f"{self.utc_key}.tar")
+        return os.path.join(str(VERSION), self.game, self.tag, f"{self.utc_key}.tar")
 
     @staticmethod
     def load(game: str) -> Optional['BenchmarkRecord']:
         """
         This will read the file:
-            /workspace/repo/benchmark_records/{game}.json
+            /workspace/repo/benchmark_records/v{version}/{game}.json
         """
 
         file_path = Workspace.benchmark_record_file(game)
@@ -186,7 +186,7 @@ class BenchmarkData:
 
     def _untar(self, utc_key: str = None):
         tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=utc_key)
-        benchmark_path = os.path.join(Workspace.benchmark_dir, self.game)
+        benchmark_path = Benchmark.game_dir(self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {benchmark_path}")
 
