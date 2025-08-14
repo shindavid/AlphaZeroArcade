@@ -33,6 +33,3 @@ add_test(
   TEST util/main/mit/UnitTests.cpp
   EXTRA_LIBS util_lib_test
 )
-
-# 6) pull in tools/*
-add_subdirectory(tools)
