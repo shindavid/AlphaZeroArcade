@@ -949,6 +949,12 @@ bool GameServer<Game>::GameSlot::start_game() {
   }
   game_started_ = true;
 
+  move_number_ = 0;
+  action_mode_ = -1;
+  active_seat_ = -1;
+  noisy_mode_ = false;
+  mid_yield_ = false;
+
   state_history_.initialize(Rules{});
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
@@ -958,11 +964,6 @@ bool GameServer<Game>::GameSlot::start_game() {
     }
   }
 
-  move_number_ = 0;
-  action_mode_ = -1;
-  active_seat_ = -1;
-  noisy_mode_ = false;
-  mid_yield_ = false;
   pre_step();
 
   if (params().print_game_states) {
