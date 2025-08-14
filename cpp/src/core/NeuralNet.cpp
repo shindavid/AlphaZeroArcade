@@ -9,14 +9,8 @@
 namespace core {
 
 NeuralNetBase::NeuralNetBase(const NeuralNetParams& params)
-    : runtime_(nvinfer1::createInferRuntime(logger_)),
-      params_(params) {}
-
-NeuralNetBase::~NeuralNetBase() {
-  delete parser_refitter_;
-  delete refitter_;
-  delete engine_;
-  delete runtime_;
+    : params_(params) {
+  runtime_.reset(nvinfer1::createInferRuntime(logger_));
 }
 
 void NeuralNetBase::set_model_architecture_signature() {
@@ -47,33 +41,32 @@ void NeuralNetBase::load_data(std::vector<char>& dst, std::ispanstream& bytes) {
 }
 
 void NeuralNetBase::init_engine_from_plan_data() {
-  engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
+  engine_.reset(runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size()));
 }
-
-void NeuralNetBase::init_refitter() {
-  if (parser_refitter_) return;
-
-  refitter_ = nvinfer1::createInferRefitter(*engine_, logger_);
-  parser_refitter_ = nvonnxparser::createParserRefitter(*refitter_, logger_);
-}
-
 void NeuralNetBase::refit_engine_plan() {
   // TODO: in the event of an exception, consider gracefully failing over to a fresh engine
   // build. We throw an exception for now because we want to understand if/why failures happen.
 
-  init_refitter();
-
   auto t1 = std::chrono::steady_clock::now();
-  if (!parser_refitter_->refitFromBytes(onnx_bytes_.data(), onnx_bytes_.size())) {
+  std::unique_ptr<nvinfer1::IRefitter> refitter(nvinfer1::createInferRefitter(*engine_, logger_));
+  std::unique_ptr<nvonnxparser::IParserRefitter> parser_refitter(
+      nvonnxparser::createParserRefitter(*refitter, logger_));
+
+  auto t2 = std::chrono::steady_clock::now();
+  if (!parser_refitter->refitFromBytes(onnx_bytes_.data(), onnx_bytes_.size())) {
     throw util::Exception("Failed to refit parser from bytes: {}",
-                          parser_refitter_->getError(0)->desc());
+                          parser_refitter->getError(0)->desc());
   }
-  if (!refitter_->refitCudaEngine()) {
+  if (!refitter->refitCudaEngine()) {
     throw util::Exception("Failed to refit CUDA engine");
   }
-  auto t2 = std::chrono::steady_clock::now();
-  auto refit_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-  LOG_INFO("Refit TensorRT engine in {} ms", refit_time_ms);
+  auto t3 = std::chrono::steady_clock::now();
+
+  auto t12 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+  auto t23 = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
+
+  LOG_INFO("TensorRT Engine refitting prep-time: {} ms", t12);
+  LOG_INFO("TensorRT Engine refitting main-time: {} ms", t23);
 }
 
 void NeuralNetBase::build_engine_plan_from_scratch() {
@@ -108,14 +101,14 @@ void NeuralNetBase::build_engine_plan_from_scratch() {
   cfg->addOptimizationProfile(prof);
 
   auto t2 = std::chrono::steady_clock::now();
-  engine_ = builder->buildEngineWithConfig(*net_def, *cfg);
+  engine_.reset(builder->buildEngineWithConfig(*net_def, *cfg));
   auto t3 = std::chrono::steady_clock::now();
 
   auto t12 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
   auto t23 = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
 
   LOG_INFO("TensorRT Engine building prep-time: {} ms", t12);
-  LOG_INFO("TensorRT Engine building time: {} ms", t23);
+  LOG_INFO("TensorRT Engine building main-time: {} ms", t23);
 }
 
 void NeuralNetBase::save_plan_bytes() {

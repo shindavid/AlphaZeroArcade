@@ -123,12 +123,7 @@ void NeuralNet<Game>::deactivate() {
     available_pipeline_indices_.clear();
   }
 
-  delete parser_refitter_;
-  delete refitter_;
-  delete engine_;
-  parser_refitter_ = nullptr;
-  refitter_ = nullptr;
-  engine_ = nullptr;
+  engine_.reset();
 }
 
 template <concepts::Game Game>
@@ -154,7 +149,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
     mit::unique_lock lock(pipeline_mutex_);
     RELEASE_ASSERT(available_pipeline_indices_.empty());
     for (int i = 0; i < num_pipelines; ++i) {
-      pipelines_.push_back(new Pipeline(engine_, input_shape, params_.batch_size));
+      pipelines_.push_back(new Pipeline(engine_.get(), input_shape, params_.batch_size));
       available_pipeline_indices_.push_back(i);
     }
   }

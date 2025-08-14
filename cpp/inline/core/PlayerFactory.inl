@@ -5,6 +5,8 @@
 #include "util/Exceptions.hpp"
 #include "util/StringUtil.hpp"
 
+#include <iostream>
+
 namespace core {
 
 template <concepts::Game Game>
@@ -42,6 +44,13 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
       types.insert(type);
     }
     delete generator;
+  }
+}
+
+template <concepts::Game Game>
+PlayerFactory<Game>::~PlayerFactory() {
+  for (auto* subfactory : subfactories_) {
+    delete subfactory;
   }
 }
 

@@ -1,8 +1,6 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "mcts/ActionSelector.hpp"
-#include "mcts/Node.hpp"
 #include "mcts/TypeDefs.hpp"
 #include "mcts/UniformNNEvaluationService.hpp"
 #include "util/Asserts.hpp"
@@ -71,6 +69,7 @@ inline Manager<Game>::~Manager() {
   clear();
 
   nn_eval_service_->disconnect();
+  delete nn_eval_service_;  // TODO: use smart pointer instead
 }
 
 template <core::concepts::Game Game>

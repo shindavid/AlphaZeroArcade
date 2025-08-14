@@ -72,6 +72,7 @@ class PlayerFactory {
    * details printed only if the associated type is passed via --player "--type=..."
    */
   PlayerFactory(const player_subfactory_vec_t& subfactories);
+  ~PlayerFactory();
 
   void set_server(GameServerBase* server) { server_ = server; }
   player_generator_seat_vec_t parse(const std::vector<std::string>& player_strs);

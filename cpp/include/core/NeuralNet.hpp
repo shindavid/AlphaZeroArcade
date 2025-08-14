@@ -30,7 +30,6 @@ struct NeuralNetParams {
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
-  ~NeuralNetBase();
 
   template <typename T>
   void load_weights(T&& onnx_data);
@@ -53,17 +52,15 @@ class NeuralNetBase {
   void load_data(std::vector<char>& dst, std::ispanstream& bytes);
 
   void init_engine_from_plan_data();
-  void init_refitter();
   void refit_engine_plan();
   void build_engine_plan_from_scratch();
   void save_plan_bytes();
   void write_plan_to_disk(const boost::filesystem::path& cache_path);
 
   Logger logger_;
-  nvinfer1::IRuntime* const runtime_;
-  nvinfer1::ICudaEngine* engine_ = nullptr;
-  nvinfer1::IRefitter* refitter_ = nullptr;
-  nvonnxparser::IParserRefitter* parser_refitter_ = nullptr;
+  std::unique_ptr<nvinfer1::IRuntime> runtime_;
+  std::unique_ptr<nvinfer1::ICudaEngine> engine_;
+
   std::vector<char> onnx_bytes_;
   std::vector<char> plan_data_;
   std::string model_architecture_signature_;
