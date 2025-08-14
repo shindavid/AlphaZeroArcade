@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkDir, BenchmarkRecord, UTC_FORMAT,\
-    save_benchmark_dir
+from alphazero.logic.benchmark_record import BenchmarkRecord, UTC_FORMAT
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.aws_util import BUCKET
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter, tar_and_remotely_copy
