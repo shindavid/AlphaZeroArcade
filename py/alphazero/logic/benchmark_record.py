@@ -139,6 +139,11 @@ class BenchmarkData:
 
     def _load_record(self) -> Optional[BenchmarkRecord]:
         record: BenchmarkRecord = BenchmarkRecord.load(self.game)
+        if not record.version_matches():
+            logger.warning(f"Benchmark record version mismatch: record version"
+                           f"{record.version} != code version {VERSION}.")
+            return None
+
         if self.tag:
             if record and record.tag == self.tag:
                 return record
