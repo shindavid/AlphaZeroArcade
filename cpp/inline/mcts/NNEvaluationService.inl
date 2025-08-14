@@ -145,6 +145,11 @@ void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
 }
 
 template <core::concepts::Game Game>
+NNEvaluationService<Game>::ShardData::~ShardData() {
+  eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
+}
+
+template <core::concepts::Game Game>
 void NNEvaluationService<Game>::ShardData::init(int cache_size) {
   eval_cache.set_capacity(cache_size);
   eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });

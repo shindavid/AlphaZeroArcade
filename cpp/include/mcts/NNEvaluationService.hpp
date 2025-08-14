@@ -22,7 +22,6 @@
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <deque>
-#include <map>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -280,6 +279,7 @@ class NNEvaluationService
   // We relieve this contention by splitting the cache into kNumHashShards shards, and using a
   // different mutex for each shard.
   struct ShardData {
+    ~ShardData();
     void init(int cache_size);
     void decrement_ref_count(NNEvaluation* eval);
 
