@@ -52,14 +52,6 @@ def main():
     if not docker_params.skip_image_version_check:
         validate_docker_image()
 
-    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
-    if not organizer.version_check():
-        print('The following output directory is outdated:\n')
-        print(organizer.base_dir + '\n')
-        print('As a result, you cannot resume a run from this directory.')
-        print('Please try again with a new tag.')
-        return
-
     server = LoopController(params, training_params, run_params, build_params, rating_params)
     log_filename = os.path.join(server.organizer.logs_dir, 'loop-controller.log')
 

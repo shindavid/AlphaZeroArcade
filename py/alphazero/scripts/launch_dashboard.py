@@ -84,25 +84,13 @@ if not all_tags:
     raise ValueError(f'No directories found in {game_dir}')
 
 usable_tags = []
-skipped_tags = []
 for tag in all_tags:
     if RunParams.is_valid_tag(tag):
         rp = RunParams(run_params.game, tag)
     else:
         continue
     directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
-    if directory_organizer.version_check():
-        usable_tags.append(tag)
-    else:
-        skipped_tags.append(tag)
-
-if skipped_tags:
-    print('The following tags were skipped because of a version mismatch:')
-    for tag in skipped_tags:
-        print(f'  {tag}')
-    print('')
-    print('This means that those output dirs were created with an outdated version of the code.')
-    print('Consider removing them.')
+    usable_tags.append(tag)
 
 if all_tags and not usable_tags:
     print('All output directories are outdated. Exiting...')
@@ -133,7 +121,6 @@ for tag in usable_tags:
 
 if run_params.tag:
     tags = run_params.tag.split(',')
-    outdated_tags = []
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
@@ -142,16 +129,6 @@ if run_params.tag:
             raise ValueError(f'Directory does not exist: {path}')
         rp = RunParams(run_params.game, tag)
         directory_organizer = DirectoryOrganizer(rp, base_dir_root=Workspace)
-        if not directory_organizer.version_check():
-            outdated_tags.append(tag)
-    if outdated_tags:
-        print(f'ERROR: The following tags for {run_params.game} are outdated:')
-        for tag in outdated_tags:
-            print(f'  {tag}')
-        print('')
-        print('This means that the output dir was created with an outdated version of the code.')
-        print('Please remove the outdated tags and try again.')
-        sys.exit(0)
 else:
     tags = usable_tags
 

@@ -55,14 +55,6 @@ import shutil
 import sqlite3
 from typing import Callable, Dict, List, Optional, Tuple
 
-
-# VERSION is stored in the version_file in the base directory
-#
-# Any time we make any changes that cause existing output/ directories to be incompatible with the
-# current code, we should increment VERSION.
-#
-# This should be a last resort that we try to avoid, but it's here in case we need it.
-VERSION = 5
 logger = logging.getLogger(__name__)
 
 
@@ -165,28 +157,6 @@ class DirectoryOrganizer:
     def eval_db_filename(self, benchmark_tag: str) -> str:
         return os.path.join(self.eval_db_dir, f'{benchmark_tag}.db')
 
-    def version_check(self):
-        """
-        Checks that the version file matches VERSION. A nonexistent misc/ directory indicates that
-        the dir hasn't been setup yet, which is a passing check. But if the misc/ directory exists
-        while the version file doesn't, that is a failing check.
-
-        Returns True if the check passes, and False if it fails.
-        """
-        if not os.path.exists(self.misc_dir):
-            return True
-
-        if os.path.isfile(self.version_filename):
-            try:
-                with open(self.version_filename, 'r') as f:
-                    version = int(f.read())
-                    if version == VERSION:
-                        return True
-            except:
-                pass
-
-        return False
-
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
@@ -209,10 +179,6 @@ class DirectoryOrganizer:
             os.makedirs(self.checkpoints_dir, exist_ok=True)
             os.makedirs(self.misc_dir, exist_ok=True)
             os.makedirs(self.runtime_dir, exist_ok=True)
-
-        if not os.path.isfile(self.version_filename):
-            with open(self.version_filename, 'w') as f:
-                f.write(str(VERSION))
 
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.pt')

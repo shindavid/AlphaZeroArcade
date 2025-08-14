@@ -21,12 +21,18 @@ Specifies the base directory structure.
     │   └── ...
     └── ...
 """
+from alphazero.logic.custom_types import Version
 
 import glob
 import logging
 import os
 from typing import Optional
 
+"""
+Any time we make any changes that cause existing mount/output/ or mount/benchmarks/ directories to
+be incompatible with the current code, we should increment VERSION.
+"""
+VERSION = Version(num=5)
 logger = logging.getLogger(__name__)
 
 
@@ -42,12 +48,15 @@ class Scratch(BaseDir):
     base_dir = '/home/devuser/scratch'
 
 
-class Workspace(BaseDir):
-    base_dir = '/workspace/mount'
-    benchmark_dir = os.path.join(base_dir, 'benchmarks')
+class Mount(BaseDir):
+    base_dir = f'/workspace/mount/{VERSION}'
+
+
+class Workspace(Mount):
+    benchmark_dir = os.path.join(Mount.base_dir, 'benchmarks')
     ref_dir = '/workspace/repo/reference.players'
-    aws_dir = os.path.join(base_dir, 'aws')
-    tars_dir = os.path.join(base_dir, 'tars')
+    aws_dir = '/workspace/mount/aws'
+    tars_dir = os.path.join(Mount.base_dir, 'tars')
 
     @staticmethod
     def benchmark_record_file(game: str) -> str:
@@ -58,9 +67,7 @@ class Workspace(BaseDir):
         return os.path.join(Workspace.output_dir(), game, 'reference.player')
 
 
-class Benchmark(BaseDir):
-    base_dir = '/workspace/mount'
-
+class Benchmark(Mount):
     @classmethod
     def output_dir(cls):
         return os.path.join(cls.base_dir, 'benchmarks')
@@ -82,5 +89,9 @@ class Benchmark(BaseDir):
         return os.path.join(Workspace.tars_dir, game, tag, utc_key)
 
     @classmethod
+    def game_dir(cls, game: str):
+        return os.path.join(cls.output_dir(), game)
+
+    @classmethod
     def path(cls, game: str, tag: str):
-        return os.path.join(cls.output_dir(), game, tag)
+        return os.path.join(Benchmark.game_dir(game), tag)
