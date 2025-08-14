@@ -21,6 +21,9 @@ class Version:
     def __str__(self):
         return f'v{self.num}'
 
+    def __repr__(self):
+        return f'v{self.num}'
+
 
 class ClientRole(Enum):
     SELF_PLAY_SERVER = 'self-play-server'
