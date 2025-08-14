@@ -766,8 +766,10 @@ void NNEvaluationService<Game>::schedule_loop() {
     LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
+  mit::unique_lock lock(main_mutex_);
   system_state_ = kShuttingDownDrainLoop;
   in_schedule_loop_prelude_ = false;
+  lock.unlock();
   cv_main_.notify_all();
 }
 
@@ -786,8 +788,10 @@ void NNEvaluationService<Game>::drain_loop() {
     LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
+  mit::unique_lock lock(main_mutex_);
   system_state_ = kShutDownComplete;
   in_drain_loop_prelude_ = false;
+  lock.unlock();
   cv_main_.notify_all();
 }
 
