@@ -2,6 +2,7 @@
 add_library(util_core_objs OBJECT
   core/GameServerBase.cpp
   core/LoopControllerClient.cpp
+  core/NeuralNet.cpp
   util/BoostUtil.cpp
   util/CudaUtil.cpp
   util/GTestUtil.cpp
@@ -32,6 +33,3 @@ add_test(
   TEST util/main/mit/UnitTests.cpp
   EXTRA_LIBS util_lib_test
 )
-
-# 6) pull in tools/*
-add_subdirectory(tools)

@@ -18,20 +18,20 @@ AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unforma
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
-from util.repo_util import Repo
 from util.torch_util import Shape
 
+import onnx
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 import copy
 from dataclasses import dataclass, field
+import hashlib
+import io
 import logging
 import math
 import os
-import subprocess
-import tempfile
 from typing import Any, Callable, Dict, List, Optional
 
 
@@ -654,6 +654,16 @@ class Model(nn.Module):
 
         self.validate()
 
+        self._model_architecture_signature = None
+
+    def get_model_architecture_signature(self, clone: 'Model'):
+        # We compute the signature from the *clone*, not from *self*, because self still has the
+        # auxiliary heads, while clone has them stripped. We don't need to include the auxiliary
+        # heads in the signature.
+        if self._model_architecture_signature is None:
+            self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
+        return self._model_architecture_signature
+
     @property
     def shape_info_dict(self) -> ShapeInfoDict:
         return self.config.shape_info_dict
@@ -717,41 +727,9 @@ class Model(nn.Module):
         for target in self.loss_weights:
             assert target in targets, f'Missing target {target}'
 
-    @classmethod
-    def load_model(cls, filename: str, device = 'cuda', verbose: bool = False,
-                   eval_mode: bool = True,
-                   set_grad_enabled: Optional[bool] = None) -> torch.jit.ScriptModule:
+    def save_model(self, filename: str):
         """
-        Loads a model previously saved to disk via save(). This uses torch.jit.load(), which
-        returns a torch.jit.ScriptModule, which looks/feels/sounds like nn.Module, but is not
-        exactly the same thing.
-
-        If set_grad_enabled is None (default), then calls torch.set_grad_enabled(False) if
-        eval_mode is True. Note that this mutates torch's global state.
-        """
-        if verbose:
-            print(f'Loading model from {filename}')
-
-        net = torch.jit.load(filename)
-        net.to(device)
-        set_grad_enabled = not eval_mode if set_grad_enabled is None else set_grad_enabled
-        if set_grad_enabled:
-            torch.set_grad_enabled(False)
-
-        if eval_mode:
-            net.eval()
-        else:
-            net.train()
-
-        if verbose:
-            print(f'Model successfully loaded!')
-        return net
-
-    def save_model(self, filename: str, batch_size: int):
-        """
-        Saves this network to disk, from which it can be loaded either by c++ or by python. Does
-        this by first exporting the model to ONNX, and then shelling out to a custom binary that
-        converts the ONNX to a TensorRT engine.
+        Saves this network to disk in ONNX format.
         """
         output_dir = os.path.split(filename)[0]
         if output_dir:
@@ -767,25 +745,31 @@ class Model(nn.Module):
         dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
 
         # 2) make an example‐input and ONNX‐export it
+        batch_size = 1
         example_shape = (batch_size, *self.shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
-        # export to a temp ONNX file
-        with tempfile.NamedTemporaryFile(suffix=".onnx") as onnx_f:
-            onnx_path = onnx_f.name
+        signature = self.get_model_architecture_signature(clone)
 
-            torch.onnx.export(
-                clone, example_input, onnx_path,
-                export_params=True,
-                opset_version=16,
-                input_names=input_names,
-                output_names=output_names,
-                dynamic_axes=dynamic_axes,
-            )
+        # 3) Export to a temporary in-memory buffer
+        buf = io.BytesIO()
+        torch.onnx.export(
+            clone, example_input, buf,
+            export_params=True,
+            opset_version=16,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes=dynamic_axes,
+            do_constant_folding=True,
+        )
 
-            build_bin = Model._get_onnx_engine_builder_binary()
-            cmd = [build_bin, onnx_path, filename, str(batch_size)]
-            subprocess.run(cmd, capture_output=True, check=True)
+        # 4) Add metadata
+        model = onnx.load_from_string(buf.getvalue())
+        kv = model.metadata_props.add()
+        kv.key = 'model-architecture-signature'
+        kv.value = signature
+
+        onnx.save(model, filename)
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
@@ -807,19 +791,3 @@ class Model(nn.Module):
             'model.state_dict': self.state_dict(),
             'model.config': self.config,
         })
-
-    @staticmethod
-    def _get_onnx_engine_builder_binary() -> str:
-        build_bin_paths = [
-            os.path.join(Repo.root(), "target/Release/bin/tools/onnx_engine_builder"),
-            os.path.join(Repo.root(), "target/Debug/bin/tools/onnx_engine_builder"),
-        ]
-        existent_build_bins = [p for p in build_bin_paths if os.path.isfile(p)]
-        if not existent_build_bins:
-            logger.error("Could not find onnx_engine_builder in any of the following paths:")
-            for p in build_bin_paths:
-                logger.error(f"  {p}")
-            logger.error("Please build it first by running ./build.py [-t tools]")
-            raise Exception("onnx_engine_builder not found")
-
-        return existent_build_bins[0]  # use the first found one

@@ -3,7 +3,6 @@
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Exceptions.hpp"
 
 namespace mcts {
 
@@ -56,8 +55,11 @@ void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
 
 template <core::concepts::Game Game>
 bool NNEvaluation<Game>::decrement_ref_count() {
+  // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
+  // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
+  // safety during that phase of the program. If for some reason that changes, we will need to
+  // use std::atomic
   ref_count_--;
-  DEBUG_ASSERT(ref_count_ >= 0, "ref_count_={}", ref_count_);
   return ref_count_ == 0;
 }
 

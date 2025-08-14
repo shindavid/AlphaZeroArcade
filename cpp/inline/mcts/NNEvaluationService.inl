@@ -14,79 +14,24 @@
 
 namespace mcts {
 
+namespace detail {
+
+inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParams& params) {
+  core::NeuralNetParams neural_net_params;
+
+  neural_net_params.cuda_device_id = cuda_util::cuda_device_to_ordinal(params.cuda_device);
+  neural_net_params.batch_size = params.batch_size;
+  neural_net_params.workspace_size_in_bytes = params.engine_build_workspace_size_in_bytes;
+  neural_net_params.precision =
+      trt_util::parse_precision(params.engine_build_precision.c_str());
+
+  return neural_net_params;
+}
+
+}  // namespace detail
+
 template <core::concepts::Game Game>
 int NNEvaluationService<Game>::instance_count_ = 0;
-
-template <core::concepts::Game Game>
-NNEvaluationService<Game>* NNEvaluationService<Game>::create(
-  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
-  static instance_map_t instance_map;
-
-  auto it = instance_map.find(params.model_filename);
-  if (it == instance_map.end()) {
-    auto instance = new NNEvaluationService(params, server);
-
-    instance_map[params.model_filename] = instance;
-    if (instance_map.size() > 1) {
-      server->handle_alternating_mode_recommendation();
-    }
-    return instance;
-  }
-  NNEvaluationService* instance = it->second;
-  if (instance->params_ != params) {
-    throw util::CleanException("Conflicting NNEvaluationService::create() calls");
-  }
-  return instance;
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::connect() {
-  mit::unique_lock lock(main_mutex_);
-  bool first_connect = (num_connections_ == 0);
-  num_connections_++;
-
-  if (first_connect) {
-    schedule_thread_ = mit::thread([&] { this->schedule_loop(); });
-    drain_thread_ = mit::thread([&] { this->drain_loop(); });
-    state_thread_ = mit::thread([&] { this->state_loop(); });
-  }
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::disconnect() {
-  mit::unique_lock lock(main_mutex_);
-  num_connections_--;
-  lock.unlock();
-  cv_main_.notify_all();
-
-  for (auto* thread : {&schedule_thread_, &drain_thread_, &state_thread_}) {
-    if (thread->joinable()) {
-      thread->join();
-    }
-  }
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
-  BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
-  if (id > notifying_sequence_id) {
-    notifying_batch_data = batch_data;
-    notifying_sequence_id = id;
-  }
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::ShardData::init(int cache_size) {
-  eval_cache.set_capacity(cache_size);
-  eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
-}
-
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eval) {
-  if (eval->decrement_ref_count()) {
-    eval_pool.free(eval);
-  }
-}
 
 template <core::concepts::Game Game>
 inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
@@ -96,7 +41,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
       instance_id_(instance_count_++),
       params_(params),
       num_game_threads_(server->num_game_threads()),
-      net_(cuda_util::cuda_device_to_ordinal(params_.cuda_device)),
+      net_(detail::to_neural_net_params(params)),
       batch_data_slice_allocator_(perf_stats_),
       server_(server) {
   if (!params.model_filename.empty()) {
@@ -117,6 +62,105 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
         "MCTS player configured without --model-filename/-m and without "
         "--no-model, but --loop-controller-* options not specified");
     }
+  }
+}
+
+template <core::concepts::Game Game>
+NNEvaluationService<Game>::~NNEvaluationService() {
+  disconnect();
+}
+
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::sptr NNEvaluationService<Game>::create(
+  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
+  // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
+  // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
+  //
+  // If we instead used shared_ptr, then even after all clients have disconnected, we would still
+  // have a reference to the shared_ptr in instance_map. This means the NNEvaluationService would
+  // not self-destruct until the static destruction phase of the program. Empirically, this is
+  // too late, as some cuda objects have already wound down at that point, leading to a segfault in
+  // the NNEvaluationService destructor.
+  //
+  // If we are sloppy and simply use raw pointers, permitting a memory leak, we get a complaining
+  // error print from within the TensorRT library as the program exits. This print seems benign,
+  // but I think it is better to suppress it.
+  //
+  // Arguably, a more proper approach is to construct an explicit Factory object that holds this
+  // map as a non-static data member, with shared_ptr instead of weak_ptr. That Factory would get
+  // destroyed before the static destruction phase of the program, and all will be good. I started
+  // down this path, but things got complicated, so I'm doing this more fragile way for now.
+  using map_t = std::map<std::string, weak_ptr>;
+  static map_t instance_map;
+
+  auto& weak_ptr = instance_map[params.model_filename];
+  if (auto shared_ptr = weak_ptr.lock()) {
+    if (shared_ptr->params_ != params) {
+      throw util::CleanException("Conflicting NNEvaluationService::create() calls");
+    }
+    return shared_ptr;
+  }
+  auto shared_ptr = std::make_shared<NNEvaluationService>(params, server);
+  weak_ptr = shared_ptr;
+  return shared_ptr;
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::connect() {
+  mit::unique_lock lock(main_mutex_);
+  bool first_connect = (num_connections_ == 0);
+  num_connections_++;
+
+  if (first_connect) {
+    schedule_thread_ = mit::thread([&] { this->schedule_loop(); });
+    drain_thread_ = mit::thread([&] { this->drain_loop(); });
+    state_thread_ = mit::thread([&] { this->state_loop(); });
+  }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::disconnect() {
+  mit::unique_lock lock(main_mutex_);
+  num_connections_--;
+  if (num_connections_ > 0) {
+    return;  // still connected, nothing to do
+  }
+  lock.unlock();
+  cv_main_.notify_all();
+
+  for (auto* thread : {&schedule_thread_, &drain_thread_, &state_thread_}) {
+    if (thread->joinable()) {
+      thread->join();
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
+  BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
+  if (id > notifying_sequence_id) {
+    notifying_batch_data = batch_data;
+    notifying_sequence_id = id;
+  }
+}
+
+template <core::concepts::Game Game>
+NNEvaluationService<Game>::ShardData::~ShardData() {
+  // If we don't clear the eviction handler here, we encounter race conditions during the
+  // destruction of the eval_cache. Sometimes, those race conditions lead to a segfault.
+  eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::ShardData::init(int cache_size) {
+  eval_cache.set_capacity(cache_size);
+  eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
+}
+
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eval) {
+  if (eval->decrement_ref_count()) {
+    eval_pool.free(eval);
   }
 }
 
@@ -300,11 +344,6 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
 }
 
 template <core::concepts::Game Game>
-NNEvaluationService<Game>::~NNEvaluationService() {
-  disconnect();
-}
-
-template <core::concepts::Game Game>
 core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
   if (request.num_fresh_items() == 0) {
     return core::kContinue;
@@ -477,10 +516,10 @@ void NNEvaluationService<Game>::activate_net() {
   if (net_.activated()) return;
 
   net_.activate(params_.num_pipelines);
-  batch_data_slice_allocator_.set_batch_size_limit(net_.batch_size());
+  batch_data_slice_allocator_.set_batch_size_limit(params_.batch_size);
 
   LOG_DEBUG("NNEvaluationService: activated NeuralNet with {} pipelines (batch-size: {})",
-            params_.num_pipelines, net_.batch_size());
+            params_.num_pipelines, params_.batch_size);
 }
 
 template <core::concepts::Game Game>
@@ -729,8 +768,10 @@ void NNEvaluationService<Game>::schedule_loop() {
     LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
+  mit::unique_lock lock(main_mutex_);
   system_state_ = kShuttingDownDrainLoop;
   in_schedule_loop_prelude_ = false;
+  lock.unlock();
   cv_main_.notify_all();
 }
 
@@ -749,8 +790,10 @@ void NNEvaluationService<Game>::drain_loop() {
     LOG_DEBUG("{}::{}() caught ShutDownException, exiting...", kCls, __func__);
   }
 
+  mit::unique_lock lock(main_mutex_);
   system_state_ = kShutDownComplete;
   in_drain_loop_prelude_ = false;
+  lock.unlock();
   cv_main_.notify_all();
 }
 

@@ -29,16 +29,16 @@ output/
 │   │   │   ├── loop-controller.log
 │   │   ├── misc/version_file
 │   │   ├── models/
-│   │   │   ├── gen-1.pt
-│   │   │   ├── gen-2.pt
+│   │   │   ├── gen-1.onnx
+│   │   │   ├── gen-2.onnx
 │   │   │   └── ...
 │   │   ├── runtime/
 │   │   │   ├── lock (optional, indicates a running process)
 │   │   │   └── freeze (optional, indicates a frozen run)
 │   │   └── self-play-data/
-│   │   │   ├── gen-1.data
-│   │   │   ├── gen-2.data
-│   │   │   └── ...
+│   │       ├── gen-1.data
+│   │       ├── gen-2.data
+│   │       └── ...
 │   └── ...
 └── ...
 """
@@ -181,7 +181,7 @@ class DirectoryOrganizer:
             os.makedirs(self.runtime_dir, exist_ok=True)
 
     def get_model_filename(self, gen: Generation) -> str:
-        return os.path.join(self.models_dir, f'gen-{gen}.pt')
+        return os.path.join(self.models_dir, f'gen-{gen}.onnx')
 
     def get_checkpoint_filename(self, gen: Generation) -> str:
         return os.path.join(self.checkpoints_dir, f'gen-{gen}.pt')

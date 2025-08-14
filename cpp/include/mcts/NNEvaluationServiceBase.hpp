@@ -5,6 +5,8 @@
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
 
+#include <memory>
+
 namespace mcts {
 
 /*
@@ -20,6 +22,7 @@ class NNEvaluationServiceBase {
  public:
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}
 

@@ -1,8 +1,6 @@
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"
-#include "core/PlayerFactory.hpp"
 #include "games/GameTransforms.hpp"
-#include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
@@ -10,6 +8,7 @@
 #include "mcts/SearchLog.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
+#include "util/RepoUtil.hpp"
 #include "util/StringUtil.hpp"
 
 #include <gtest/gtest.h>
@@ -241,7 +240,7 @@ TEST_F(TicTacToeTest, uniform_search) {
 TEST_F(TicTacToeTest, multi_threaded_uniform_search) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions,
-              "test_models/tictactoe_mini.plan");
+              "test_models/tictactoe_mini.onnx");
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

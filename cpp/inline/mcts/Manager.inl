@@ -1,8 +1,6 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "mcts/ActionSelector.hpp"
-#include "mcts/Node.hpp"
 #include "mcts/TypeDefs.hpp"
 #include "mcts/UniformNNEvaluationService.hpp"
 #include "util/Asserts.hpp"
@@ -21,7 +19,7 @@ int Manager<Game>::next_instance_id_ = 0;
 template <core::concepts::Game Game>
 Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
                        mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-                       core::GameServerBase* server, NNEvaluationServiceBase* service)
+                       core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
@@ -40,7 +38,7 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
   } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params, server);
   } else if (params.model_filename.empty()) {
-    nn_eval_service_ = new UniformNNEvaluationService<Game>();
+    nn_eval_service_ = std::make_shared<UniformNNEvaluationService<Game>>();
   } else {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
@@ -56,20 +54,19 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
 
 template <core::concepts::Game Game>
 Manager<Game>::Manager(const ManagerParams& params, core::GameServerBase* server,
-                       NNEvaluationServiceBase* service)
+                       NNEvaluationServiceBase_sptr service)
     : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
               server, service) {}
 
 template <core::concepts::Game Game>
 Manager<Game>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
                        const ManagerParams& params, core::GameServerBase* server,
-                       NNEvaluationServiceBase* service)
+                       NNEvaluationServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {
   clear();
-
   nn_eval_service_->disconnect();
 }
 

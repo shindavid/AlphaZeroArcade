@@ -143,7 +143,7 @@ class RatingsManager(GamingManagerBase):
         if rating_data.mcts_gen > 0:
             model_file = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(rating_data.mcts_gen),
-                scratch_path=f'eval-models/{tag}/gen-{rating_data.mcts_gen}.pt',
+                scratch_path=f'eval-models/{tag}/gen-{rating_data.mcts_gen}.onnx',
                 asset_path_mode='scratch')
             files_required.append(model_file)
 

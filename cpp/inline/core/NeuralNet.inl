@@ -3,6 +3,9 @@
 #include "util/Asserts.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include <onnx/onnx_pb.h>
+
+#include <NvInfer.h>
 
 namespace core {
 
@@ -21,9 +24,45 @@ auto make_arr(int batch_size) {
 
 }  // namespace detail
 
-template <concepts::Game Game>
-NeuralNet<Game>::NeuralNet(int cuda_device_id)
-    : runtime_(nvinfer1::createInferRuntime(logger_)), cuda_device_id_(cuda_device_id) {}
+// NeuralNetBase
+
+template <typename T>
+void NeuralNetBase::load_weights(T&& onnx_data) {
+  cuda_util::set_device(params_.cuda_device_id);
+  load_data(onnx_bytes_, std::forward<T>(onnx_data));
+
+  std::string cur_signature = model_architecture_signature_;
+  set_model_architecture_signature();
+  boost::filesystem::path cache_path =
+    trt_util::get_engine_plan_cache_path(model_architecture_signature_, params_.precision,
+                                         params_.workspace_size_in_bytes, params_.batch_size);
+
+  bool refit = cur_signature == model_architecture_signature_;
+  if (!refit) {
+    // This indicates that we don't have an existing model already loaded with a matching model
+    // architecture signature (MAS). Let's look in the filesystem cache for a compatible model.
+    if (boost::filesystem::exists(cache_path)) {
+      LOG_INFO("Found cached engine plan at {}", cache_path.string());
+      load_data(plan_data_, cache_path.string().c_str());
+      init_engine_from_plan_data();
+      refit = true;
+    }
+  }
+
+  if (refit) {
+    if (!engine_) {
+      init_engine_from_plan_data();
+    }
+    refit_engine_plan();
+    save_plan_bytes();
+  } else {
+    build_engine_plan_from_scratch();
+    save_plan_bytes();
+    write_plan_to_disk(cache_path);
+  }
+}
+
+// NeuralNet<Game>
 
 template <concepts::Game Game>
 NeuralNet<Game>::~NeuralNet() {
@@ -32,27 +71,6 @@ NeuralNet<Game>::~NeuralNet() {
   for (Pipeline* pipeline : pipelines_) {
     delete pipeline;
   }
-  delete engine_;
-  delete runtime_;
-}
-
-template <concepts::Game Game>
-void NeuralNet<Game>::load_weights(const char* filename) {
-  plan_data_.clear();
-
-  std::ifstream f(filename, std::ios::binary | std::ios::ate);
-  size_t sz = f.tellg();
-  f.seekg(0);
-  plan_data_.resize(sz);
-  f.read(plan_data_.data(), sz);
-}
-
-template <concepts::Game Game>
-void NeuralNet<Game>::load_weights(std::ispanstream& stream) {
-  plan_data_.clear();
-  plan_data_.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-
-  if (!activated()) return;
 }
 
 template <concepts::Game Game>
@@ -95,6 +113,7 @@ void NeuralNet<Game>::deactivate() {
 
   LOG_DEBUG("Deactivating NeuralNet...");
 
+  activated_ = false;
   for (Pipeline* pipeline : pipelines_) {
     delete pipeline;
   }
@@ -104,10 +123,7 @@ void NeuralNet<Game>::deactivate() {
     available_pipeline_indices_.clear();
   }
 
-  delete engine_;
-  engine_ = nullptr;
-
-  batch_size_ = 0;
+  engine_.reset();
 }
 
 template <concepts::Game Game>
@@ -116,14 +132,16 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
+  activated_ = true;
   RELEASE_ASSERT(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
 
-  cuda_util::set_device(cuda_device_id_);
-  engine_ = runtime_->deserializeCudaEngine(plan_data_.data(), plan_data_.size());
+  cuda_util::set_device(params_.cuda_device_id);
+  if (!engine_) {
+    init_engine_from_plan_data();
+  }
 
   nvinfer1::Dims input_shape =
     engine_->getProfileShape("input", 0, nvinfer1::OptProfileSelector::kOPT);
-  batch_size_ = input_shape.d[0];
 
   RELEASE_ASSERT(pipelines_.empty());
 
@@ -131,7 +149,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
     mit::unique_lock lock(pipeline_mutex_);
     RELEASE_ASSERT(available_pipeline_indices_.empty());
     for (int i = 0; i < num_pipelines; ++i) {
-      pipelines_.push_back(new Pipeline(engine_, input_shape, batch_size_));
+      pipelines_.push_back(new Pipeline(engine_.get(), input_shape, params_.batch_size));
       available_pipeline_indices_.push_back(i);
     }
   }

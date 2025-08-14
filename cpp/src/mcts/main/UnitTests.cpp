@@ -1,5 +1,4 @@
 #include "core/GameServerBase.hpp"
-#include "core/tests/Common.hpp"
 #include "games/GameTransforms.hpp"
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
@@ -12,9 +11,8 @@
 #include "mcts/SimpleNNEvaluationService.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
-#include "util/LoggingUtil.hpp"
+#include "util/RepoUtil.hpp"
 
 #include <gtest/gtest.h>
 
@@ -101,6 +99,7 @@ class ManagerTest : public testing::Test {
   using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
+  using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchRequest = Manager::SearchRequest;
   using SearchResult = Game::Types::SearchResults;
@@ -122,7 +121,7 @@ class ManagerTest : public testing::Test {
 
   void SetUp() override { util::Random::set_seed(0); }
 
-  void init_manager(Service* service = nullptr) {
+  void init_manager(Service_sptr service = nullptr) {
     core::GameServerBase* server = nullptr;
     manager_ = new Manager(manager_params_, server, service);
     search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
@@ -154,7 +153,7 @@ class ManagerTest : public testing::Test {
   ManagerParams& get_manager_params() { return manager_params_; }
 
   void test_search(const std::string& testname, int num_search,
-                   const std::vector<core::action_t>& initial_actions, Service* service) {
+                   const std::vector<core::action_t>& initial_actions, Service_sptr service) {
     init_manager(service);
     start_manager(initial_actions);
     const SearchResult* result = search(num_search);
@@ -205,18 +204,22 @@ TEST_F(NimManagerTest, uniform_search) {
 }
 
 TEST_F(NimManagerTest, smart_search) {
-  MockNNEvaluationService mock_service(true);
+  std::shared_ptr<MockNNEvaluationService> mock_service =
+    std::make_shared<MockNNEvaluationService>(true);
+
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_smart_service", 10, initial_actions, &mock_service);
+  test_search("nim_smart_service", 10, initial_actions, mock_service);
 }
 
 TEST_F(NimManagerTest, dumb_search) {
-  MockNNEvaluationService mock_service(false);
+  std::shared_ptr<MockNNEvaluationService> mock_service =
+    std::make_shared<MockNNEvaluationService>(false);
+
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
 
-  test_search("nim_dumb_service", 10, initial_actions, &mock_service);
+  test_search("nim_dumb_service", 10, initial_actions, mock_service);
 }
 
 TEST_F(NimManagerTest, 20_searches_from_scratch) { test_search("nim_uniform", 20, {}, nullptr); }

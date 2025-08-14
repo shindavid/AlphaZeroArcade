@@ -124,7 +124,7 @@ if run_params.tag:
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
-        path = os.path.join('/workspace/output', run_params.game, tag)
+        path = os.path.join(Workspace.base_dir, 'output', run_params.game, tag)
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
         rp = RunParams(run_params.game, tag)

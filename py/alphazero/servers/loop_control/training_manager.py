@@ -279,7 +279,7 @@ class TrainingManager:
             self._update_window()
             if self._set_checkpoint():
                 checkpoint_set = True
-                self._save_model(table, gen, self._net, self._controller.game_spec.batch_size)
+                self._save_model(gen, self._net)
                 self._record_stats(gen)
             else:
                 assert subgen is not None, 'Unexpected bug'
@@ -400,7 +400,7 @@ class TrainingManager:
             conn.commit()
             cursor.close()
 
-    def _save_model(self, table: GpuContentionTable, gen: Generation, net: Model, batch_size: int):
+    def _save_model(self, gen: Generation, net: Model):
         organizer = self._controller.organizer
         checkpoint_filename = organizer.get_checkpoint_filename(gen)
         model_filename = organizer.get_model_filename(gen)
@@ -410,18 +410,8 @@ class TrainingManager:
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
 
-        # NOTE: this save_model() call is expensive, and does not use the GPU. However, it does
-        # use all available CPU cores, which is why we keep the TRAINING lock held, as long as
-        # locking all other tables on the same machine.
-        for table2 in self._controller.get_other_gpu_lock_tables(table):
-            table2.acquire_lock(Domain.TRAINING)
         logger.debug('Calling save_model()...')
-        t1 = time.time()
-        net.save_model(tmp_model_filename, batch_size)
-        t2 = time.time()
-        logger.info('TensorRT build time: %10.3f seconds', t2 - t1)
-        for table2 in self._controller.get_other_gpu_lock_tables(table):
-            table2.release_lock(Domain.TRAINING)
+        net.save_model(tmp_model_filename)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

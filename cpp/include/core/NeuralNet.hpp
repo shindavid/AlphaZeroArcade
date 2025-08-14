@@ -3,22 +3,76 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <Eigen/Core>
+
 #include <NvInfer.h>
+#include <NvInferRuntime.h>
+#include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
 #include <deque>
 #include <spanstream>
+#include <string>
 #include <vector>
 
 namespace core {
+
+struct NeuralNetParams {
+  int cuda_device_id;
+  int batch_size;
+  uint64_t workspace_size_in_bytes;
+  trt_util::Precision precision;
+};
+
+// Base class for NeuralNet<Game>
+class NeuralNetBase {
+ public:
+  NeuralNetBase(const NeuralNetParams& params);
+
+  template <typename T>
+  void load_weights(T&& onnx_data);
+
+  bool loaded() const { return !plan_data_.empty(); }
+
+ protected:
+  // simple logger
+  class Logger : public nvinfer1::ILogger {
+   public:
+    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
+      if (severity <= Severity::kWARNING) {
+        LOG_WARN("[TRT] {}", msg);
+      }
+    }
+  };
+
+  void set_model_architecture_signature();
+  void load_data(std::vector<char>& dst, const char* filename);
+  void load_data(std::vector<char>& dst, std::ispanstream& bytes);
+
+  void init_engine_from_plan_data();
+  void refit_engine_plan();
+  void build_engine_plan_from_scratch();
+  void save_plan_bytes();
+  void write_plan_to_disk(const boost::filesystem::path& cache_path);
+
+  Logger logger_;
+  std::unique_ptr<nvinfer1::IRuntime> runtime_;
+  std::unique_ptr<nvinfer1::ICudaEngine> engine_;
+
+  std::vector<char> onnx_bytes_;
+  std::vector<char> plan_data_;
+  std::string model_architecture_signature_;
+
+  const NeuralNetParams params_;
+};
 
 /*
  * A thin wrapper around a TensorRT engine.
  */
 template <concepts::Game Game>
-class NeuralNet {
+class NeuralNet : public NeuralNetBase {
  public:
   using InputShape = Game::InputTensorizor::Tensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
@@ -40,12 +94,8 @@ class NeuralNet {
   using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
   using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
 
-  NeuralNet(int cuda_device_id);
+  using NeuralNetBase::NeuralNetBase;
   ~NeuralNet();
-
-  int batch_size() const { return batch_size_; }
-  void load_weights(const char* filename);
-  void load_weights(std::ispanstream& stream);
 
   pipeline_index_t get_pipeline_assignment();
   float* get_input_ptr(pipeline_index_t);
@@ -64,20 +114,9 @@ class NeuralNet {
   // Must be called by the thread doing the {get_pipeline_assignment(), schedule()} calls.
   bool activate(int num_pipelines);
 
-  bool loaded() const { return !plan_data_.empty(); }
-  bool activated() const { return engine_; }
+  bool activated() const { return activated_; }
 
  private:
-  // simple logger
-  class Logger : public nvinfer1::ILogger {
-   public:
-    void log(Severity severity, nvinfer1::AsciiChar const* msg) noexcept override {
-      if (severity <= Severity::kWARNING) {
-        LOG_WARN("[TRT] {}", msg);
-      }
-    }
-  };
-
   struct Pipeline {
     Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape, int batch_size);
     ~Pipeline();
@@ -95,19 +134,13 @@ class NeuralNet {
     DynamicActionValueTensorMap action_values;
   };
 
-  Logger logger_;
-  nvinfer1::IRuntime* const runtime_;
-  nvinfer1::ICudaEngine* engine_ = nullptr;
-
   std::vector<Pipeline*> pipelines_;
   std::deque<pipeline_index_t> available_pipeline_indices_;
-  std::vector<char> plan_data_;
+
+  bool activated_ = false;
 
   mutable mit::mutex pipeline_mutex_;
   mit::condition_variable pipeline_cv_;
-
-  int batch_size_ = 0;
-  const int cuda_device_id_;
 };
 
 }  // namespace core

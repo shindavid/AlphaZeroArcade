@@ -1,8 +1,6 @@
 #include "mcts/NNEvaluationServiceParams.hpp"
 
 #include "util/BoostUtil.hpp"
-#include "util/Exceptions.hpp"
-#include "util/RepoUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
@@ -30,7 +28,16 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       po::value<int>(&num_pipelines)->default_value(num_pipelines),
       "number of nn eval pipelines to use")
     .template add_hidden_option<"cache-size">(
-      po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size");
+      po::value<size_t>(&cache_size)->default_value(cache_size), "nn eval thread cache size")
+    .template add_option<"batch-size", 'b'>(po::value<int>(&batch_size)->default_value(batch_size),
+                                            "batch size for nn evals")
+    .template add_hidden_option<"engine-build-workspace-size-in-bytes">(
+      po::value<size_t>(&engine_build_workspace_size_in_bytes)
+        ->default_value(engine_build_workspace_size_in_bytes),
+      "workspace size when building the TensorRT engine from an onnx file")
+    .template add_hidden_option<"engine-build-precision">(
+      po::value<std::string>(&engine_build_precision)->default_value(engine_build_precision),
+      "precision to use when building the TensorRT engine from an onnx file");
 }
 
 }  // namespace mcts

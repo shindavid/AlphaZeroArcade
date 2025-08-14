@@ -5,6 +5,7 @@
 #include "util/EigenUtil.hpp"
 
 #include <algorithm>
+#include <iostream>
 
 namespace core {
 

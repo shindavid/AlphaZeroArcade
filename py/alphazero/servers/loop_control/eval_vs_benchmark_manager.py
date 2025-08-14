@@ -403,7 +403,7 @@ class EvalVsBenchmarkManager(GamingManagerBase):
         if role == AgentRole.TEST:
             model = FileToTransfer.from_src_scratch_path(
                 source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'eval-models/{agent.tag}/gen-{gen}.pt',
+                scratch_path=f'eval-models/{agent.tag}/gen-{gen}.onnx',
                 asset_path_mode='scratch'
             )
         elif role == AgentRole.BENCHMARK:
@@ -412,7 +412,7 @@ class EvalVsBenchmarkManager(GamingManagerBase):
                 run_params = RunParams(game, agent.tag)
                 benchmark_organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
 
-            scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.pt'
+            scratch_path = f'benchmark-models/{agent.tag}/gen-{gen}.onnx'
             model = FileToTransfer.from_src_scratch_path(
                 source_path=benchmark_organizer.get_model_filename(gen),
                 scratch_path=scratch_path,

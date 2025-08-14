@@ -1,11 +1,7 @@
 #include "util/StringUtil.hpp"
 
-#include "util/Exceptions.hpp"
-
 #include <algorithm>
-#include <iostream>
 #include <regex>
-#include <sstream>
 
 namespace util {
 
@@ -149,6 +145,42 @@ inline std::string grammatically_join(const std::vector<std::string>& items,
     }
   }
   return result;
+}
+
+inline uint64_t parse_bytes(const std::string& str) {
+  std::string num;
+  std::string suf;
+
+  bool has_decimal = false;
+
+  for (char c : str) {
+    bool decimal = c == '.';
+    has_decimal |= decimal;
+    if (std::isdigit(c) || decimal) {
+      num.push_back(c);
+    } else {
+      suf.push_back(std::tolower(c));
+    }
+  }
+
+  uint64_t mul = 1;
+  if (suf == "kb" || suf == "kib")
+    mul = 1ull << 10;
+  else if (suf == "mb")
+    mul = 1000ull * 1000;
+  else if (suf == "mib")
+    mul = 1ull << 20;
+  else if (suf == "gb")
+    mul = 1000ull * 1000 * 1000;
+  else if (suf == "gib")
+    mul = 1ull << 30;
+
+  if (has_decimal) {
+    double val = std::stod(num);
+    return (uint64_t)(val * mul);
+  } else {
+    return std::stoull(num) * mul;
+  }
 }
 
 }  // namespace util

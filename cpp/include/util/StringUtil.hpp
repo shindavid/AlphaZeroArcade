@@ -3,8 +3,6 @@
 /*
  * Various string utilities
  */
-#include "util/Exceptions.hpp"
-
 #include <cctype>
 #include <cstdarg>
 #include <cstdint>
@@ -58,6 +56,8 @@ size_t terminal_width(const std::string& str);
 // "x, y and z" (oxford_comma = false)
 std::string grammatically_join(const std::vector<std::string>& items,
                                const std::string& conjunction, bool oxford_comma = true);
+
+uint64_t parse_bytes(const std::string& str);  // supports 256MiB / 256MB / 1GiB / 1073741824
 
 }  // namespace util
 
