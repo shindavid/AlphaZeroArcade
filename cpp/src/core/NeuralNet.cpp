@@ -52,7 +52,6 @@ void NeuralNetBase::refit_engine_plan() {
   std::unique_ptr<nvonnxparser::IParserRefitter> parser_refitter(
       nvonnxparser::createParserRefitter(*refitter, logger_));
 
-  auto t2 = std::chrono::steady_clock::now();
   if (!parser_refitter->refitFromBytes(onnx_bytes_.data(), onnx_bytes_.size())) {
     throw util::Exception("Failed to refit parser from bytes: {}",
                           parser_refitter->getError(0)->desc());
@@ -60,13 +59,11 @@ void NeuralNetBase::refit_engine_plan() {
   if (!refitter->refitCudaEngine()) {
     throw util::Exception("Failed to refit CUDA engine");
   }
-  auto t3 = std::chrono::steady_clock::now();
+  auto t2 = std::chrono::steady_clock::now();
 
   auto t12 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-  auto t23 = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
 
-  LOG_INFO("TensorRT Engine refitting prep-time: {} ms", t12);
-  LOG_INFO("TensorRT Engine refitting main-time: {} ms", t23);
+  LOG_INFO("TensorRT Engine refitting time: {} ms", t12);
 }
 
 void NeuralNetBase::build_engine_plan_from_scratch() {
