@@ -146,6 +146,8 @@ void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
 
 template <core::concepts::Game Game>
 NNEvaluationService<Game>::ShardData::~ShardData() {
+  // If we don't clear the eviction handler here, we encounter race conditions during the
+  // destruction of the eval_cache. Sometimes, those race conditions lead to a segfault.
   eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
 }
 
