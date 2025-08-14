@@ -34,25 +34,75 @@ template <core::concepts::Game Game>
 int NNEvaluationService<Game>::instance_count_ = 0;
 
 template <core::concepts::Game Game>
-NNEvaluationService<Game>* NNEvaluationService<Game>::create(
-  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
-  static instance_map_t instance_map;
+inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
+                                                      core::GameServerBase* server)
+    : core::PerfStatsClient(),
+      core::GameServerClient(server),
+      instance_id_(instance_count_++),
+      params_(params),
+      num_game_threads_(server->num_game_threads()),
+      net_(detail::to_neural_net_params(params)),
+      batch_data_slice_allocator_(perf_stats_),
+      server_(server) {
+  if (!params.model_filename.empty()) {
+    net_.load_weights(params.model_filename.c_str());
+    activate_net();
+  }
 
-  auto it = instance_map.find(params.model_filename);
-  if (it == instance_map.end()) {
-    auto instance = new NNEvaluationService(params, server);
+  for (int i = 0; i < kNumHashShards; i++) {
+    shard_datas_[i].init(params_.cache_size / kNumHashShards);
+  }
 
-    instance_map[params.model_filename] = instance;
-    if (instance_map.size() > 1) {
-      server->handle_alternating_mode_recommendation();
+  initial_weights_loaded_ = net_.loaded();
+  if (core::LoopControllerClient::initialized()) {
+    core::LoopControllerClient::get()->add_listener(this);
+  } else {
+    if (!net_.loaded()) {
+      throw util::CleanException(
+        "MCTS player configured without --model-filename/-m and without "
+        "--no-model, but --loop-controller-* options not specified");
     }
-    return instance;
   }
-  NNEvaluationService* instance = it->second;
-  if (instance->params_ != params) {
-    throw util::CleanException("Conflicting NNEvaluationService::create() calls");
+}
+
+template <core::concepts::Game Game>
+NNEvaluationService<Game>::~NNEvaluationService() {
+  disconnect();
+}
+
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::sptr NNEvaluationService<Game>::create(
+  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
+  // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
+  // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
+  //
+  // If we instead used shared_ptr, then even after all clients have disconnected, we would still
+  // have a reference to the shared_ptr in instance_map. This means the NNEvaluationService would
+  // not self-destruct until the static destruction phase of the program. Empirically, this is
+  // too late, as some cuda objects have already wound down at that point, leading to a segfault in
+  // the NNEvaluationService destructor.
+  //
+  // If we are sloppy and simply use raw pointers, permitting a memory leak, we get a complaining
+  // error print from within the TensorRT library as the program exits. This print seems benign,
+  // but I think it is better to suppress it.
+  //
+  // Arguably, a more proper approach is to construct an explicit Factory object that holds this
+  // map as a non-static data member, with shared_ptr instead of weak_ptr. That Factory would get
+  // destroyed before the static destruction phase of the program, and all will be good. I started
+  // down this path, but things got complicated, so I'm doing this more fragile way for now.
+  using map_t = std::map<std::string, weak_ptr>;
+  static map_t instance_map;
+
+  auto& weak_ptr = instance_map[params.model_filename];
+  if (auto shared_ptr = weak_ptr.lock()) {
+    if (shared_ptr->params_ != params) {
+      throw util::CleanException("Conflicting NNEvaluationService::create() calls");
+    }
+    return shared_ptr;
   }
-  return instance;
+  auto shared_ptr = std::make_shared<NNEvaluationService>(params, server);
+  weak_ptr = shared_ptr;
+  return shared_ptr;
 }
 
 template <core::concepts::Game Game>
@@ -101,38 +151,6 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eval) {
   if (eval->decrement_ref_count()) {
     eval_pool.free(eval);
-  }
-}
-
-template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
-                                                      core::GameServerBase* server)
-    : core::PerfStatsClient(),
-      core::GameServerClient(server),
-      instance_id_(instance_count_++),
-      params_(params),
-      num_game_threads_(server->num_game_threads()),
-      net_(detail::to_neural_net_params(params)),
-      batch_data_slice_allocator_(perf_stats_),
-      server_(server) {
-  if (!params.model_filename.empty()) {
-    net_.load_weights(params.model_filename.c_str());
-    activate_net();
-  }
-
-  for (int i = 0; i < kNumHashShards; i++) {
-    shard_datas_[i].init(params_.cache_size / kNumHashShards);
-  }
-
-  initial_weights_loaded_ = net_.loaded();
-  if (core::LoopControllerClient::initialized()) {
-    core::LoopControllerClient::get()->add_listener(this);
-  } else {
-    if (!net_.loaded()) {
-      throw util::CleanException(
-        "MCTS player configured without --model-filename/-m and without "
-        "--no-model, but --loop-controller-* options not specified");
-    }
   }
 }
 
@@ -313,11 +331,6 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
   batch_data->sequence_id = next_batch_data_sequence_id_++;
   pending_batch_datas_.push_back(batch_data);
   return batch_data;
-}
-
-template <core::concepts::Game Game>
-NNEvaluationService<Game>::~NNEvaluationService() {
-  disconnect();
 }
 
 template <core::concepts::Game Game>

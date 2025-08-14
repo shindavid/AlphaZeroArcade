@@ -23,6 +23,7 @@
 
 #include <deque>
 #include <map>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -60,6 +61,9 @@ class NNEvaluationService
  public:
   static constexpr const char* kCls = "NNEvaluationService";
 
+  using sptr = std::shared_ptr<NNEvaluationService>;
+  using weak_ptr = std::weak_ptr<NNEvaluationService>;
+
   using NeuralNet = core::NeuralNet<Game>;
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
@@ -86,7 +90,6 @@ class NNEvaluationService
   using InputTensorizor = Game::InputTensorizor;
 
   using RequestItem = NNEvaluationRequest::Item;
-  using instance_map_t = std::map<std::string, NNEvaluationService*>;
 
   using CacheKey = NNEvaluationRequest::CacheKey;
   using CacheKeyHasher = NNEvaluationRequest::CacheKeyHasher;
@@ -110,13 +113,16 @@ class NNEvaluationService
     kShutDownComplete
   };
 
+  NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*);
+  ~NNEvaluationService();
+
   /*
    * Constructs an evaluation service and returns it.
    *
    * If another service with the same model_filename has already been create()'d, then returns that.
    * In this case, validates that the parameters match the existing service.
    */
-  static NNEvaluationService* create(const NNEvaluationServiceParams&, core::GameServerBase*);
+  static sptr create(const NNEvaluationServiceParams&, core::GameServerBase*);
 
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -299,9 +305,6 @@ class NNEvaluationService
     core::pipeline_index_t pipeline_index;
   };
   using load_queue_t = std::queue<LoadQueueItem>;
-
-  NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*);
-  ~NNEvaluationService();
 
   std::string dump_key(const char* descr);
 

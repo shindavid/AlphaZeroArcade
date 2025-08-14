@@ -34,6 +34,7 @@ class Manager {
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Game>;
+  using NNEvaluationServiceBase_sptr = NNEvaluationServiceBase::sptr;
   using Node = mcts::Node<Game>;
   using LookupTable = Node::LookupTable;
   using LocalPolicyArray = Node::LocalPolicyArray;
@@ -215,11 +216,11 @@ class Manager {
    * the Manager will create a separate single-element mutex-pool for each.
    */
   Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
-          NNEvaluationServiceBase* service = nullptr);
+          NNEvaluationServiceBase_sptr service = nullptr);
 
   Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
           const ManagerParams& params, core::GameServerBase* server = nullptr,
-          NNEvaluationServiceBase* service = nullptr);
+          NNEvaluationServiceBase_sptr service = nullptr);
 
   ~Manager();
 
@@ -248,7 +249,7 @@ class Manager {
   using context_id_queue_t = std::queue<core::context_id_t>;
 
   Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase*, NNEvaluationServiceBase* service);
+          const ManagerParams& params, core::GameServerBase*, NNEvaluationServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
 
@@ -319,7 +320,7 @@ class Manager {
   context_vec_t contexts_;
   StateMachine state_machine_;
   mutex_vec_sptr_t context_mutex_pool_;
-  NNEvaluationServiceBase* nn_eval_service_ = nullptr;
+  NNEvaluationServiceBase_sptr nn_eval_service_;
 
   SearchParams search_params_;
   SearchResults results_;
