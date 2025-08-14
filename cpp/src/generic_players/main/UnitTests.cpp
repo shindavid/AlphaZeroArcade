@@ -42,6 +42,7 @@ class MctsPlayerTest : public ::testing::Test {
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
   using Service = mcts::NNEvaluationServiceBase<Game>;
+  using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 
  public:
@@ -56,7 +57,7 @@ class MctsPlayerTest : public ::testing::Test {
     return params;
   }
 
-  void init(Service* service) {
+  void init(Service_sptr service) {
     core::GameServerBase* server = nullptr;
     auto shared_player_data =
       std::make_shared<MctsPlayerSharedData>(manager_params_, server, service);
@@ -82,7 +83,7 @@ class MctsPlayerTest : public ::testing::Test {
 
   void test_get_action_policy(const std::string& testname,
                               const std::vector<core::action_t>& initial_actions = {},
-                              Service* service = nullptr) {
+                              Service_sptr service = nullptr) {
     init(service);
     start_manager(initial_actions);
 
