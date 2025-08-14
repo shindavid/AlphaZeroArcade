@@ -51,7 +51,7 @@ class BenchmarkRecord:
     game: Optional[str] = None
 
     def to_dict(self):
-        return {'utc_key': self.utc_key, 'tag': self.tag}
+        return {'utc_key': self.utc_key, 'tag': self.tag, 'version': str(VERSION)}
 
     def key(self):
         return os.path.join(str(VERSION), self.game, self.tag, f"{self.utc_key}.tar")

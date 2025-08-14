@@ -28,6 +28,10 @@ import logging
 import os
 from typing import Optional
 
+"""
+Any time we make any changes that cause existing mount/output/ or mount/benchmarks/ directories to
+be incompatible with the current code, we should increment VERSION.
+"""
 VERSION = Version(num=5)
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ class Workspace(Mount):
 
     @staticmethod
     def benchmark_record_file(game: str) -> str:
-        return os.path.join('/workspace/repo/benchmark_records', str(VERSION), f'{game}.json')
+        return os.path.join('/workspace/repo/benchmark_records', f'{game}.json')
 
     @staticmethod
     def ref_rundir(game: str) -> str:
