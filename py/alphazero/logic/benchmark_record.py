@@ -82,6 +82,8 @@ class BenchmarkRecord:
 
         return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game)
 
+    def version_matches(self) -> bool:
+        return self.version == VERSION
 
 class BenchmarkDir:
     @staticmethod
