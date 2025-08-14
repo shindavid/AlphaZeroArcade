@@ -122,6 +122,9 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::disconnect() {
   mit::unique_lock lock(main_mutex_);
   num_connections_--;
+  if (num_connections_ > 0) {
+    return;  // still connected, nothing to do
+  }
   lock.unlock();
   cv_main_.notify_all();
 
