@@ -21,6 +21,7 @@ A benchmark directory is created by running the script `benchmark_tag_local.py`.
 """
 
 from alphazero.logic.agent_types import IndexedAgent
+from alphazero.logic.custom_types import Version
 from alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
@@ -49,12 +50,13 @@ class BenchmarkRecord:
     utc_key: Optional[str] = None
     tag: Optional[str] = None
     game: Optional[str] = None
+    version: Version = VERSION
 
     def to_dict(self):
-        return {'utc_key': self.utc_key, 'tag': self.tag, 'version': str(VERSION)}
+        return {'utc_key': self.utc_key, 'tag': self.tag, 'version': str(self.version)}
 
     def key(self):
-        return os.path.join(str(VERSION), self.game, self.tag, f"{self.utc_key}.tar")
+        return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
 
     @staticmethod
     def load(game: str) -> Optional['BenchmarkRecord']:

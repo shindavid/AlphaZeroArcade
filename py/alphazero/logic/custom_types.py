@@ -15,7 +15,7 @@ RatingTag = str
 EvalTag = str
 
 
-@dataclass
+@dataclass(frozen=True)
 class Version:
     num: int
     def __str__(self):
