@@ -15,6 +15,13 @@ RatingTag = str
 EvalTag = str
 
 
+@dataclass
+class Version:
+    num: int
+    def __str__(self):
+        return f'v{self.num}'
+
+
 class ClientRole(Enum):
     SELF_PLAY_SERVER = 'self-play-server'
     SELF_PLAY_WORKER = 'self-play-worker'
