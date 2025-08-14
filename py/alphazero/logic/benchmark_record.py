@@ -53,7 +53,7 @@ class BenchmarkRecord:
     version: Version = VERSION
 
     def to_dict(self):
-        return {'utc_key': self.utc_key, 'tag': self.tag, 'version': str(self.version)}
+        return {'utc_key': self.utc_key, 'tag': self.tag, 'version': self.version.num}
 
     def key(self):
         return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
@@ -74,13 +74,14 @@ class BenchmarkRecord:
         with open(file_path, 'r') as f:
             benchmark_record = json.load(f)
 
-        utc_key = benchmark_record.get("utc_key", None)
-        tag = benchmark_record.get("tag", None)
+        utc_key = benchmark_record["utc_key"]
+        tag = benchmark_record["tag"]
+        version = Version(num=benchmark_record["version"])
 
         if utc_key is None or tag is None:
             raise ValueError(f"Invalid benchmark info file format for game '{game}': {file_path}")
 
-        return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game)
+        return BenchmarkRecord(utc_key=utc_key, tag=tag, game=game, version=version)
 
     def version_matches(self) -> bool:
         return self.version == VERSION
