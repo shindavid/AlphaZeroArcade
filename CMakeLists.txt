@@ -25,6 +25,11 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 # First-class CUDA support
 project(alphazero LANGUAGES CXX CUDA)
 
+option(ADD_DEBUG_SYMBOLS "Add -g to release builds" OFF)
+if(ADD_DEBUG_SYMBOLS)
+  add_compile_options($<$<CONFIG:Release>:-g>)
+endif()
+
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 find_package(GTest REQUIRED)

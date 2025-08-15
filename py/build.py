@@ -113,14 +113,12 @@ def main():
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
+        f'-DADD_DEBUG_SYMBOLS={"ON" if args.add_debug_symbols else "OFF"}',
     ]
     if debug:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
     else:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Release')
-
-    if args.add_debug_symbols:
-        cmake_cmd_tokens.append('-DADD_DEBUG_SYMBOLS=1')
 
     cmake_cmd = ' '.join(cmake_cmd_tokens)
     run(cmake_cmd)
