@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Usage: ./binary_dump_game_log.py <game_log_path>
+# Usage: ./py/tools/binary_dump_game_log.py <game_log_path>
 #
 # This is equivalent to running:
 #
