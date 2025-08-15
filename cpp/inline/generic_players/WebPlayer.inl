@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/json/array.hpp>
 #include <boost/process.hpp>
+
 #include <string>
 
 namespace generic {
@@ -133,7 +134,7 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
 
   auto array = Game::GameResults::to_value_array(outcome);
 
-  char result_codes[P+1];
+  char result_codes[P + 1];
   for (int p = 0; p < P; ++p) {
     if (array[p] == 1) {
       result_codes[p] = 'W';  // Win

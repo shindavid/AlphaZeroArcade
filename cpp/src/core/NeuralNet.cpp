@@ -8,8 +8,7 @@
 
 namespace core {
 
-NeuralNetBase::NeuralNetBase(const NeuralNetParams& params)
-    : params_(params) {
+NeuralNetBase::NeuralNetBase(const NeuralNetParams& params) : params_(params) {
   runtime_.reset(nvinfer1::createInferRuntime(logger_));
 }
 
@@ -50,7 +49,7 @@ void NeuralNetBase::refit_engine_plan() {
   auto t1 = std::chrono::steady_clock::now();
   std::unique_ptr<nvinfer1::IRefitter> refitter(nvinfer1::createInferRefitter(*engine_, logger_));
   std::unique_ptr<nvonnxparser::IParserRefitter> parser_refitter(
-      nvonnxparser::createParserRefitter(*refitter, logger_));
+    nvonnxparser::createParserRefitter(*refitter, logger_));
 
   if (!parser_refitter->refitFromBytes(onnx_bytes_.data(), onnx_bytes_.size())) {
     throw util::Exception("Failed to refit parser from bytes: {}",

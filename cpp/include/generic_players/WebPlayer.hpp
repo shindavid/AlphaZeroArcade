@@ -97,8 +97,8 @@ class WebPlayer : public core::AbstractPlayer<Game> {
 
  private:
   void send_start_game();
-  void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action = -1,
-                  core::action_mode_t last_mode = 0);
+  void send_state_update(core::seat_index_t seat, const State& state,
+                         core::action_t last_action = -1, core::action_mode_t last_mode = 0);
   void send_action_request(const ActionMask& valid_actions);
 
   void send_msg(const boost::json::object& msg);

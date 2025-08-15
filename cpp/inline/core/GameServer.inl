@@ -850,8 +850,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   } else if (response.resign_game) {
     if (kNumPlayers != 2) {
       throw util::Exception(
-        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players",
-        __func__, player->get_name(), active_seat_, kNumPlayers);
+        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
+        player->get_name(), active_seat_, kNumPlayers);
     }
     ValueTensor outcome = GameResults::win(!active_seat_);
     if (params().announce_game_results) {

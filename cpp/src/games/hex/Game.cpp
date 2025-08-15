@@ -1,4 +1,5 @@
 #include "games/hex/Game.hpp"
+
 #include <boost/json/object.hpp>
 
 namespace hex {

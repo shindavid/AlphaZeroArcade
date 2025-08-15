@@ -22,8 +22,7 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
   neural_net_params.cuda_device_id = cuda_util::cuda_device_to_ordinal(params.cuda_device);
   neural_net_params.batch_size = params.batch_size;
   neural_net_params.workspace_size_in_bytes = params.engine_build_workspace_size_in_bytes;
-  neural_net_params.precision =
-      trt_util::parse_precision(params.engine_build_precision.c_str());
+  neural_net_params.precision = trt_util::parse_precision(params.engine_build_precision.c_str());
 
   return neural_net_params;
 }

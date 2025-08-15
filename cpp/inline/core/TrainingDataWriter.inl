@@ -1,6 +1,6 @@
 #include "core/TrainingDataWriter.hpp"
 
-#include <core/LoopControllerClient.hpp>
+#include "core/LoopControllerClient.hpp"
 #include "core/PerfStats.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"

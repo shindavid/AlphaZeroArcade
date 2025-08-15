@@ -8,15 +8,11 @@ inline Rendering::Guard::Guard(Mode mode) { push(mode); }
 
 inline Rendering::Guard::~Guard() { pop(); }
 
-inline Rendering::Mode Rendering::mode() {
-  return instance().mode_stack_.back();
-}
+inline Rendering::Mode Rendering::mode() { return instance().mode_stack_.back(); }
 
 inline void Rendering::set(Mode mode) { instance().mode_stack_.front() = mode; }
 
-inline void Rendering::push(Mode mode) {
-  instance().mode_stack_.push_back(mode);
-}
+inline void Rendering::push(Mode mode) { instance().mode_stack_.push_back(mode); }
 
 inline void Rendering::pop() {
   if (instance().mode_stack_.size() <= 1) {

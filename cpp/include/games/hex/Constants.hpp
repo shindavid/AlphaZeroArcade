@@ -172,7 +172,7 @@ struct Constants : public core::ConstantsBase {
   static constexpr int kNumPlayers = 2;
   static constexpr int kMaxBranchingFactor = KNumActions;
 
-  static constexpr core::seat_index_t kRed = 0;  // connects N to S
+  static constexpr core::seat_index_t kRed = 0;   // connects N to S
   static constexpr core::seat_index_t kBlue = 1;  // connects W to E
 
   static constexpr core::seat_index_t kFirstPlayer = kRed;

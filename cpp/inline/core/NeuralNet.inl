@@ -3,6 +3,7 @@
 #include "util/Asserts.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"
+
 #include <onnx/onnx_pb.h>
 
 #include <NvInfer.h>
