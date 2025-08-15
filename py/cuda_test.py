@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+"""
+Simple script that tests some torch CUDA functionality and does some timing benchmarking.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
