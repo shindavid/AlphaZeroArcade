@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkRecord, UTC_FORMAT
+from alphazero.logic.benchmark_record import BenchmarkRecord, save_benchmark_record, UTC_FORMAT
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
 from util.aws_util import BUCKET
@@ -14,17 +14,6 @@ import os
 
 
 logger = logging.getLogger(__name__)
-
-
-def save_benchmark_record(record: BenchmarkRecord):
-    benchmark_info = record.to_dict()
-    benchmark_record_file = Workspace.benchmark_record_file(record.game)
-
-    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
-    with open(benchmark_record_file, 'w') as f:
-        json.dump(benchmark_info, f, indent=4)
-
-    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
 
 
 def load_args():

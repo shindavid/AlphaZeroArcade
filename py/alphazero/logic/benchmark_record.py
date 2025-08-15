@@ -221,3 +221,14 @@ def save_benchmark_dir(organizer: DirectoryOrganizer):
     shutil.copyfile(organizer.self_play_db_filename, dst_organizer.self_play_db_filename)
     shutil.copyfile(organizer.training_db_filename, dst_organizer.training_db_filename)
     logger.info(f"Created benchmark data folder {dst_organizer.base_dir}")
+
+
+def save_benchmark_record(record: BenchmarkRecord):
+    benchmark_info = record.to_dict()
+    benchmark_record_file = Workspace.benchmark_record_file(record.game)
+
+    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
+    with open(benchmark_record_file, 'w') as f:
+        json.dump(benchmark_info, f, indent=4)
+
+    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
