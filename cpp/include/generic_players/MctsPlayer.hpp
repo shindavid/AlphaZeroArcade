@@ -8,7 +8,6 @@
 #include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/SearchParams.hpp"
-#include "util/CppUtil.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

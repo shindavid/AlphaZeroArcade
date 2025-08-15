@@ -1,7 +1,5 @@
 #include "mcts/ActionSelector.hpp"
 
-#include <bitset>
-
 namespace mcts {
 
 template <core::concepts::Game Game>
