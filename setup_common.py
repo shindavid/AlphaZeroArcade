@@ -82,3 +82,8 @@ def is_version_ok(version_str):
 def is_subpath(child_path, parent_path):
     p, d = Path(child_path).resolve(), Path(parent_path).resolve()
     return p.is_relative_to(d)
+
+
+def in_docker_container() -> bool:
+    return 'DOCKER_IMAGE_VERSION' in os.environ
+

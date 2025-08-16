@@ -5,8 +5,7 @@
 # This script builds a local Docker image based on the contents of the docker-setup/ directory.
 # Currently, this is only intended to be run by user dshin.
 
-from py.alphazero.logic.docker_utils import in_docker_container
-from setup_common import LOCAL_DOCKER_IMAGE
+from setup_common import in_docker_container, LOCAL_DOCKER_IMAGE
 
 import argparse
 import os

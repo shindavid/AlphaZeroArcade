@@ -56,7 +56,3 @@ def validate_docker_image():
         print('Alternatively, rerun this command with the --skip-image-version-check flag.')
         print('')
         sys.exit(1)
-
-
-def in_docker_container() -> bool:
-    return 'DOCKER_IMAGE_VERSION' in os.environ
