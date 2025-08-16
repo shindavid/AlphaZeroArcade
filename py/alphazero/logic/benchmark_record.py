@@ -209,6 +209,7 @@ class BenchmarkData:
 
 
 def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
+    container_id = None
     try:
         os.makedirs(os.path.dirname(tar_path), exist_ok=True)
         pull_cmd = ['docker', 'pull', record.docker_image_ref()]
@@ -283,6 +284,7 @@ def build_single_file_docker_image(filename: str, record: BenchmarkRecord):
                     tag="{record.tag}" \\
                     utc_key="{record.utc_key}" \\
                     sha256="{sha256}"
+                CMD ["true"]
                 """)
 
         build_cmd = ["docker", "build", "-t", image_ref, str(tmpdir)]
