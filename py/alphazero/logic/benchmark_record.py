@@ -29,7 +29,6 @@ from alphazero.servers.loop_control.base_dir import Benchmark, Workspace, VERSIO
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.aws_util import BUCKET
 from util.py_util import sha256sum, untar_remote_file_to_local_directory
 
 from dataclasses import dataclass
@@ -269,7 +268,7 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
     artifact_file = os.path.join(tmpdir, 'artifact.tar')
     dockerfile = os.path.join(tmpdir, 'Dockerfile')
     image_ref = record.docker_image_ref()
-    digest = sha256sum(filename)
+    sha256 = sha256sum(filename)
 
     try:
         shutil.copy2(filename, artifact_file)
@@ -283,16 +282,24 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
                     game="{record.game}" \\
                     tag="{record.tag}" \\
                     utc_key="{record.utc_key}" \\
-                    sha256="{digest}" \\
+                    sha256="{sha256}"
                 """)
 
         build_cmd = ["docker", "build", "-t", image_ref, str(tmpdir)]
         subprocess.run(build_cmd, check=True)
         logger.info(f'built image: {image_ref}')
 
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def upload_image(record: BenchmarkRecord):
+    try:
+        image_ref = record.docker_image_ref()
         upload_cmd = ["docker", "push", image_ref]
         subprocess.run(upload_cmd, check=True)
         logger.info(f'uploaded image: {image_ref}')
 
     finally:
-        shutil.rmtree(tmpdir)
+        rm_cmd = ["docker", "image", "rm", image_ref]
+        subprocess.run(rm_cmd, check=True)
