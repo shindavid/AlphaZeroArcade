@@ -106,7 +106,9 @@ def run_container(args):
         'mkdir -p ~/scratch',
         ]
     assert not is_subpath(mount_dir, REPO_ROOT)
-    mounts.extend(['-v', f"{mount_dir}:/workspace/mount"])
+    mounts.extend(['-v', f"{mount_dir}:/workspace/mount",
+                   '-v', '/var/run/docker.sock:/var/run/docker.sock',
+                   '-v', f"{os.path.expanduser('~')}/.docker:/docker-credentials"])
 
     ports_strs = []
     for port in REQUIRED_PORTS:
@@ -122,6 +124,7 @@ def run_container(args):
         "-e", f"HOST_GID={group_id}",
         "-e", "USERNAME=devuser",
         "-e", "PLATFORM=native",
+        "-e", "DOCKER_CONFIG=/docker-credentials",
     ] + ports_strs + mounts + [
         docker_image
     ]
