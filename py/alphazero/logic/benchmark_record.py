@@ -295,5 +295,4 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
         logger.info(f'uploaded image: {image_ref}')
 
     finally:
-        pass
-    #shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir)
