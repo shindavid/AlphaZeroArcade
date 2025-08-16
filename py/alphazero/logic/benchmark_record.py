@@ -61,6 +61,9 @@ class BenchmarkRecord:
     def key(self):
         return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
 
+    def docker_tag(self):
+        return f'{self.version}.{self.game}.{self.tag}.{self.utc_key}'
+
     @staticmethod
     def load(game: str) -> Optional['BenchmarkRecord']:
         """
@@ -88,6 +91,7 @@ class BenchmarkRecord:
 
     def version_matches(self) -> bool:
         return self.version == VERSION
+
 
 class BenchmarkDir:
     @staticmethod
@@ -241,29 +245,31 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
     tmpdir = Path(tempfile.mkdtemp(prefix="a0a_tar_image_"))
     artifact_file = os.path.join(tmpdir, 'artifact.tar')
     dockerfile = os.path.join(tmpdir, 'Dockerfile')
-    image_ref = f'dshin83/alphazeroarcade-benchmarks:{record.version}.{record.game}.{record.tag}.{record.utc_key}'
+    image_ref = f'dshin83/alphazeroarcade-benchmarks:{record.docker_tag()}'
     digest = sha256sum(filename)
 
-    # try:
-    shutil.copy2(filename, artifact_file)
+    try:
+        shutil.copy2(filename, artifact_file)
 
-    with open(dockerfile, 'w', encoding="utf-8") as f:
-        f.write(f"""\
-            FROM scratch
-            ADD artifact.tar /payload/artifact.tar
-            LABEL kind="tar" \\
-                version="{record.version}" \\
-                game="{record.game}" \\
-                tag="{record.tag}" \\
-                utc_key="{record.utc_key}" \\
-                sha256="{digest}" \\
-            """)
+        with open(dockerfile, 'w', encoding="utf-8") as f:
+            f.write(f"""\
+                FROM scratch
+                ADD artifact.tar /payload/artifact.tar
+                LABEL kind="tar" \\
+                    version="{record.version}" \\
+                    game="{record.game}" \\
+                    tag="{record.tag}" \\
+                    utc_key="{record.utc_key}" \\
+                    sha256="{digest}" \\
+                """)
 
-    logger.info(f"Docker image reference: {image_ref}")
-    cmd = ["docker", "build", "-t", image_ref, str(tmpdir)]
-    subprocess.run(cmd, check=True)
-    logger.info(f'built image: {image_ref}')
+        build_cmd = ["docker", "build", "-t", image_ref, str(tmpdir)]
+        subprocess.run(build_cmd, check=True)
+        logger.info(f'built image: {image_ref}')
 
-    # finally:
-    #     # shutil.rmtree(tmpdir)
-    #     return image_ref
+        upload_cmd = ["docker", "push", image_ref]
+        subprocess.run(upload_cmd, check=True)
+        logger.info(f'uploaded image: {image_ref}')
+
+    finally:
+        shutil.rmtree(tmpdir)
