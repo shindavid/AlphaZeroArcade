@@ -1,13 +1,29 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkRecord, build_one_file_docker_image, UTC_FORMAT
+"""
+This script packages and uploads a benchmark to Docker Hub.
+
+Workflow:
+1. Validate that the benchmark folder for the given game and tag exists.
+2. Archive (tar) the benchmark folder into a single tar file.
+3. Build a minimal Docker image that contains only this tar file at /payload/artifact.tar, with
+   metadata labels such as version, game, tag, utc_key, and sha256.
+4. Push the resulting image to Docker Hub under a tag derived from the benchmark parameters.
+5. Save the benchmark record locally only after the image has been successfully uploaded.
+
+Notes:
+  - Uploading the same tar file multiple times does not duplicate storage in Docker Hub;
+    identical content will be stored once and referenced by multiple tags if necessary.
+"""
+
+from alphazero.logic.benchmark_record import BenchmarkRecord, build_single_file_docker_image, \
+        save_benchmark_record, upload_image, UTC_FORMAT
 from alphazero.logic.run_params import RunParams
-from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
+from alphazero.servers.loop_control.base_dir import Benchmark
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter, tar_and_remotely_copy
 
 import argparse
 from datetime import datetime, timezone
-import json
 import logging
 import os
 
@@ -15,23 +31,10 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def save_benchmark_record(record: BenchmarkRecord):
-    benchmark_info = record.to_dict()
-    benchmark_record_file = Workspace.benchmark_record_file(record.game)
-
-    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
-    with open(benchmark_record_file, 'w') as f:
-        json.dump(benchmark_info, f, indent=4)
-
-    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
-
-
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
     LoggingParams.add_args(parser)
-    parser.add_argument('--skip-set-as-default', action='store_true',
-                        help='Skip setting the benchmark as default.')
     return parser.parse_args()
 
 
@@ -47,13 +50,12 @@ def main():
     if not os.path.isdir(folder):
         raise FileNotFoundError(f"dir {folder} does not exist.")
 
-    if not args.skip_set_as_default:
-        save_benchmark_record(record)
-
     tar_file = Benchmark.tar_path(record.game, record.tag, utc_key=record.utc_key)
     os.makedirs(os.path.dirname(tar_file), exist_ok=True)
     tar_and_remotely_copy(folder, tar_file)
-    img = build_one_file_docker_image(tar_file, record)
+    build_single_file_docker_image(tar_file, record)
+    upload_image(record)
+    save_benchmark_record(record)
 
 
 if __name__ == '__main__':
