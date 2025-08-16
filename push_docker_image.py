@@ -6,6 +6,7 @@
 # in as the username in the Docker Hub image name. Currently, this is only intended to be run by
 # user dshin.
 
+from py.alphazero.logic.docker_utils import in_docker_container
 from setup_common import get_image_label, DOCKER_HUB_IMAGE, LOCAL_DOCKER_IMAGE
 
 import argparse
@@ -66,4 +67,5 @@ def main():
 
 
 if __name__ == '__main__':
+    assert not in_docker_container(), "This script should not be run inside a0a docker container!"
     main()
