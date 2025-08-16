@@ -50,5 +50,35 @@ cat << 'EOF' > /root/.vscode-server/data/Machine/settings.json
 }
 EOF
 
+DOCKER_SOCK=/var/run/docker.sock
+if [ -S "$DOCKER_SOCK" ]; then
+  DOCKER_GID="$(stat -c '%g' "$DOCKER_SOCK")"
+  echo "[entrypoint] docker.sock gid=$DOCKER_GID"
+
+  # Ensure a group exists with that numeric gid
+  SOCK_GRP="$(getent group "$DOCKER_GID" | cut -d: -f1)"
+  if [ -z "$SOCK_GRP" ]; then
+    SOCK_GRP=docker
+    if getent group "$SOCK_GRP" >/dev/null; then
+      SOCK_GRP=dockersock
+    fi
+    echo "[entrypoint] creating group '$SOCK_GRP' (gid=$DOCKER_GID)"
+    groupadd -g "$DOCKER_GID" "$SOCK_GRP"
+  else
+    echo "[entrypoint] using existing group '$SOCK_GRP' for gid=$DOCKER_GID"
+  fi
+
+  # Add the user (idempotent)
+  if ! id -nG "$USERNAME" | tr ' ' '\n' | grep -qx "$SOCK_GRP"; then
+    echo "[entrypoint] adding $USERNAME to '$SOCK_GRP'"
+    usermod -aG "$SOCK_GRP" "$USERNAME"
+  else
+    echo "[entrypoint] $USERNAME already in '$SOCK_GRP'"
+  fi
+
+  echo "[entrypoint] groups($USERNAME) now: $(id -nG "$USERNAME" 2>/dev/null || true)"
+fi
+
+
 gosu "$USERNAME" /usr/local/bin/devuser-setup.sh
 exec gosu "$USERNAME" "$@"
