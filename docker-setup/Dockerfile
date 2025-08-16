@@ -54,7 +54,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 #    without having to rebuild the entire image. Items here should later be moved to the more
 #    appropriate location above.
 RUN apt-get update && \
-    apt-get install -y lsof libonnx-dev libprotobuf-dev protobuf-compiler docker && \
+    apt-get install -y lsof libonnx-dev libprotobuf-dev protobuf-compiler docker.io && \
     rm -rf /var/lib/apt/lists/*
 
 # 7) Miscellaneous
