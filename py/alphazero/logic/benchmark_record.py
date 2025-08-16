@@ -46,6 +46,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 UTC_FORMAT = '%Y-%m-%d_%H-%M-%S.%f_UTC'
 BenchmarkTag = str
+DOCKER_REPO = 'dshin83/alphazeroarcade-benchmarks'
 
 
 @dataclass
@@ -61,8 +62,8 @@ class BenchmarkRecord:
     def key(self):
         return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
 
-    def docker_tag(self):
-        return f'{self.version}.{self.game}.{self.tag}.{self.utc_key}'
+    def docker_image_ref(self):
+        return f'{DOCKER_REPO}:{self.version}.{self.game}.{self.tag}.{self.utc_key}'
 
     @staticmethod
     def load(game: str) -> Optional['BenchmarkRecord']:
@@ -189,7 +190,7 @@ class BenchmarkData:
             record = self._load_record()
             if record:
                 tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
-                BUCKET.download_from_s3(record.key(), tar_path)
+                download_tar_from_docker(record, tar_path)
                 logger.info(f"File downloaded to {tar_path}")
                 self._untar(utc_key=record.utc_key)
             else:
@@ -206,6 +207,28 @@ class BenchmarkData:
         benchmark_path = Benchmark.game_dir(self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {benchmark_path}")
+
+
+def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
+    try:
+        os.makedirs(os.path.dirname(tar_path), exist_ok=True)
+        pull_cmd = ['docker', 'pull', record.docker_image_ref()]
+        subprocess.run(pull_cmd, check=True)
+
+        create_cmd = ['docker', 'create', record.docker_image_ref(), 'true']
+        result = subprocess.run(create_cmd, check=True, capture_output=True, text=True)
+        container_id = result.stdout.strip()
+
+        copy_cmd = ['docker', 'cp', f'{container_id}:/payload/artifact.tar', tar_path]
+        subprocess.run(copy_cmd, check=True)
+        logger.info(f"✅ File downloaded to: {tar_path}")
+
+    except:
+        logger.error(f"❌ Failed to download: {record.docker_image_ref()}")
+
+    finally:
+        rm_cmd = ['docker', 'rm', container_id]
+        subprocess.run(rm_cmd, check=True)
 
 
 def save_benchmark_dir(organizer: DirectoryOrganizer):
@@ -245,7 +268,7 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
     tmpdir = Path(tempfile.mkdtemp(prefix="a0a_tar_image_"))
     artifact_file = os.path.join(tmpdir, 'artifact.tar')
     dockerfile = os.path.join(tmpdir, 'Dockerfile')
-    image_ref = f'dshin83/alphazeroarcade-benchmarks:{record.docker_tag()}'
+    image_ref = record.docker_image_ref()
     digest = sha256sum(filename)
 
     try:
@@ -254,7 +277,7 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
         with open(dockerfile, 'w', encoding="utf-8") as f:
             f.write(f"""\
                 FROM scratch
-                ADD artifact.tar /payload/artifact.tar
+                COPY artifact.tar /payload/artifact.tar
                 LABEL kind="tar" \\
                     version="{record.version}" \\
                     game="{record.game}" \\
@@ -272,4 +295,5 @@ def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
         logger.info(f'uploaded image: {image_ref}')
 
     finally:
-        shutil.rmtree(tmpdir)
+        pass
+    #shutil.rmtree(tmpdir)
