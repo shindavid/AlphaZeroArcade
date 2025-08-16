@@ -263,7 +263,7 @@ def save_benchmark_record(record: BenchmarkRecord):
     logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
 
 
-def build_one_file_docker_image(filename: str, record: BenchmarkRecord):
+def build_single_file_docker_image(filename: str, record: BenchmarkRecord):
     tmpdir = Path(tempfile.mkdtemp(prefix="a0a_tar_image_"))
     artifact_file = os.path.join(tmpdir, 'artifact.tar')
     dockerfile = os.path.join(tmpdir, 'Dockerfile')
