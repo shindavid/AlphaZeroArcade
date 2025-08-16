@@ -215,7 +215,7 @@ def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
         pull_cmd = ['docker', 'pull', record.docker_image_ref()]
         subprocess.run(pull_cmd, check=True)
 
-        create_cmd = ['docker', 'create', record.docker_image_ref(), 'true']
+        create_cmd = ['docker', 'create', record.docker_image_ref()]
         result = subprocess.run(create_cmd, check=True, capture_output=True, text=True)
         container_id = result.stdout.strip()
 
