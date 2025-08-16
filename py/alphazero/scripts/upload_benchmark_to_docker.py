@@ -4,11 +4,11 @@ This script packages and uploads a benchmark to Docker Hub.
 
 Workflow:
 1. Validate that the benchmark folder for the given game and tag exists.
-2. Archive (tar) the benchmark folder into a single tar file.
+2. Archive (tar) the benchmark folder into a tar file.
 3. Build a minimal Docker image that contains only this tar file at /payload/artifact.tar, with
    metadata labels such as version, game, tag, utc_key, and sha256.
-4. Push the resulting image to Docker Hub under a tag derived from the benchmark parameters.
-5. Save the benchmark record locally only after the image has been successfully uploaded.
+4. Push the resulting image to Docker Hub under tag {version}.{game}.{tag}.{utc}.
+5. Save the benchmark record in /workspace/repo/benchmark_records/{game}.json.
 
 Notes:
   - Uploading the same tar file multiple times does not duplicate storage in Docker Hub;
