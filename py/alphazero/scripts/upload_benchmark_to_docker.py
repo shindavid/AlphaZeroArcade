@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-from alphazero.logic.benchmark_record import BenchmarkRecord, UTC_FORMAT
+from alphazero.logic.benchmark_record import BenchmarkRecord, build_one_file_docker_image, UTC_FORMAT
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Benchmark, Workspace
-from util.aws_util import BUCKET
 from util.logging_util import LoggingParams, configure_logger
 from util.py_util import CustomHelpFormatter, tar_and_remotely_copy
 
@@ -54,7 +53,7 @@ def main():
     tar_file = Benchmark.tar_path(record.game, record.tag, utc_key=record.utc_key)
     os.makedirs(os.path.dirname(tar_file), exist_ok=True)
     tar_and_remotely_copy(folder, tar_file)
-    BUCKET.upload_file_to_s3(tar_file, record.key())
+    img = build_one_file_docker_image(tar_file, record)
 
 
 if __name__ == '__main__':
