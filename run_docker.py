@@ -106,6 +106,9 @@ def run_container(args):
         'mkdir -p ~/scratch',
         ]
     assert not is_subpath(mount_dir, REPO_ROOT)
+
+    # Note: If the source path on the host does not exist,
+    # Docker will automatically create an empty directory and mount it into the container.
     mounts.extend(['-v', f"{mount_dir}:/workspace/mount",
                    '-v', '/var/run/docker.sock:/var/run/docker.sock',
                    '-v', f"{os.path.expanduser('~')}/.docker:/docker-credentials"])
@@ -124,7 +127,7 @@ def run_container(args):
         "-e", f"HOST_GID={group_id}",
         "-e", "USERNAME=devuser",
         "-e", "PLATFORM=native",
-        "-e", "DOCKER_CONFIG=/docker-credentials",
+        "-e", "DOCKER_CONFIG=/docker-credentials", # Path where Docker looks for login credentials (overrides default ~/.docker)
     ] + ports_strs + mounts + [
         docker_image
     ]
