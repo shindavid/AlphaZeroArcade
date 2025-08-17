@@ -224,7 +224,7 @@ def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
         logger.info(f"✅ File downloaded to: {tar_path}")
 
     except:
-        logger.error(f"❌ Failed to download: {record.docker_image_ref()}")
+        raise Exception(f"❌ Failed to download: {record.docker_image_ref()}")
 
     finally:
         rm_cmd = ['docker', 'rm', container_id]
@@ -295,13 +295,30 @@ def build_single_file_docker_image(filename: str, record: BenchmarkRecord):
         shutil.rmtree(tmpdir)
 
 
-def upload_image(record: BenchmarkRecord):
-    try:
-        image_ref = record.docker_image_ref()
-        upload_cmd = ["docker", "push", image_ref]
-        subprocess.run(upload_cmd, check=True)
-        logger.info(f'uploaded image: {image_ref}')
+def docker_config_exists_and_nonempty() -> bool:
+    config_file = Path(os.environ['DOCKER_CONFIG']) / 'config.json'
+    return config_file.is_file() and config_file.stat().st_size > 0
 
-    finally:
-        rm_cmd = ["docker", "image", "rm", image_ref]
-        subprocess.run(rm_cmd, check=True)
+
+def upload_image(record: BenchmarkRecord):
+    if not docker_config_exists_and_nonempty():
+        raise Exception("❌ Docker credentials missing. "
+                        "Please run 'docker login' on the host machine, "
+                        "restart your container, and try again.")
+
+    image_ref = record.docker_image_ref()
+    upload_cmd = ["docker", "push", image_ref]
+
+    result = subprocess.run(upload_cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(
+            f"❌ Failed to upload: {image_ref}\n"
+            f"Hint: You may not have access to the repo {DOCKER_REPO}.\n"
+            f"Contact dshin@alphazeroarcade.io if you need collaborator access.\n\n"
+            f"Docker cmd complained:\n{result.stderr.strip()}"
+        )
+
+    logger.info(f'✅ Uploaded image: {image_ref}')
+
+    subprocess.run(["docker", "image", "rm", image_ref], check=False)
