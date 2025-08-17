@@ -1,5 +1,6 @@
 #include "mcts/SearchLog.hpp"
 
+#include "mcts/Edge.hpp"
 #include "util/BitSet.hpp"
 
 namespace mcts {
@@ -51,7 +52,6 @@ inline std::string SearchLog<Game>::last_graph_json_str() {
 template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
-  using Edge = mcts::Node<Game>::Edge;
   using Node = mcts::Node<Game>;
   auto map = lookup_table_->map();
 

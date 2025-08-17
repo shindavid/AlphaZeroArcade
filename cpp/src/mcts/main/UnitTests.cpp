@@ -9,6 +9,7 @@
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/SimpleNNEvaluationService.hpp"
+#include "mcts/TypeDefs.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -93,10 +94,7 @@ class ManagerTest : public testing::Test {
   using Node = mcts::Node<Game>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
-  using Edge = mcts::Node<Game>::Edge;
   using LookupTable = mcts::Node<Game>::LookupTable;
-  using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
-  using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;
@@ -145,7 +143,7 @@ class ManagerTest : public testing::Test {
     return manager_->search(request).results;
   }
 
-  Node* get_node_by_index(node_pool_index_t index) {
+  Node* get_node_by_index(mcts::node_pool_index_t index) {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
 

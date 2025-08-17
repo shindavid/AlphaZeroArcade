@@ -6,6 +6,7 @@
 #include "core/concepts/Game.hpp"
 #include "mcts/ActionSelector.hpp"
 #include "mcts/Constants.hpp"
+#include "mcts/Edge.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
 #include "mcts/NNEvaluationService.hpp"
@@ -38,9 +39,6 @@ class Manager {
   using Node = mcts::Node<Game>;
   using LookupTable = Node::LookupTable;
   using LocalPolicyArray = Node::LocalPolicyArray;
-  using node_pool_index_t = Node::node_pool_index_t;
-  using Edge = Node::Edge;
-  using expansion_state_t = Node::expansion_state_t;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 

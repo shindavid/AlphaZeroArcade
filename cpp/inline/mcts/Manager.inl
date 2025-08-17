@@ -531,12 +531,12 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
   context.search_path.back().edge = edge;
   context.applied_action = false;
   context.inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
-  if (edge->state != Node::kExpanded) {
+  if (edge->state != kExpanded) {
     // reread state under mutex in case of race-condition
     mit::unique_lock lock(node->mutex());
 
-    if (edge->state == Node::kNotExpanded) {
-      set_edge_state(context, edge, Node::kMidExpansion);
+    if (edge->state == kNotExpanded) {
+      set_edge_state(context, edge, kMidExpansion);
       lock.unlock();
 
       // reorient edge->action into raw-orientation
@@ -565,11 +565,11 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
-    } else if (edge->state == Node::kMidExpansion) {
+    } else if (edge->state == kMidExpansion) {
       add_pending_notification(context, edge);
       return core::kYield;
-    } else if (edge->state == Node::kPreExpanded) {
-      set_edge_state(context, edge, Node::kMidExpansion);
+    } else if (edge->state == kPreExpanded) {
+      set_edge_state(context, edge, kMidExpansion);
       lock.unlock();
 
       DEBUG_ASSERT(edge->child_index >= 0);
@@ -584,7 +584,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       lock.lock();
-      set_edge_state(context, edge, Node::kExpanded);
+      set_edge_state(context, edge, kExpanded);
       context.visit_node = nullptr;
       context.mid_visit = false;
       return core::kContinue;
@@ -612,7 +612,7 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  RELEASE_ASSERT(edge->state == Node::kExpanded, "Expected edge state to be kExpanded, but got {}",
+  RELEASE_ASSERT(edge->state == kExpanded, "Expected edge state to be kExpanded, but got {}",
                  edge->state);
 
   Node* child = node->get_child(edge);
@@ -782,7 +782,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
 
   mit::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
-  set_edge_state(context, edge, Node::kExpanded);
+  set_edge_state(context, edge, kExpanded);
   lock.unlock();
 
   context.mid_expansion = false;
@@ -807,14 +807,14 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
 template <core::concepts::Game Game>
 void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
-  if (state == Node::kPreExpanded) {
+  if (state == kPreExpanded) {
     // Makes no assumptions about mutexes
     edge->state = state;
-  } else if (state == Node::kMidExpansion) {
+  } else if (state == kMidExpansion) {
     // Assumes edge's parent node's mutex is held
     edge->state = state;
     edge->expanding_context_id = context.id;
-  } else if (state == Node::kExpanded) {
+  } else if (state == kExpanded) {
     // Assumes edge's parent node's mutex is held
     mit::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
     mit::unique_lock lock(mutex);
@@ -885,7 +885,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     Rules::apply(canonical_history, reoriented_action);
 
     expand_count++;
-    set_edge_state(context, edge, Node::kPreExpanded);
+    set_edge_state(context, edge, kPreExpanded);
 
     MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
     node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
