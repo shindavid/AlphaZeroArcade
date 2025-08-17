@@ -62,6 +62,10 @@ class BenchmarkRecord:
         return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
 
     def docker_image_ref(self):
+        """
+        `RunParams.is_valid_tag()` disallows periods in tag names. We intentionally use periods
+        here as delimiters between components (version, game, tag, utc_key) to form an image tag.
+        """
         return f'{DOCKER_REPO}:{self.version}.{self.game}.{self.tag}.{self.utc_key}'
 
     @staticmethod
