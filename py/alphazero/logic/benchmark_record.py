@@ -29,20 +29,23 @@ from alphazero.servers.loop_control.base_dir import Benchmark, Workspace, VERSIO
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.aws_util import BUCKET
-from util.py_util import untar_remote_file_to_local_directory
+from util.py_util import sha256sum, untar_remote_file_to_local_directory
 
 from dataclasses import dataclass
 import logging
 import json
 import os
+from pathlib import Path
 import shutil
+import subprocess
+import tempfile
 from typing import Optional
 
 
 logger = logging.getLogger(__name__)
 UTC_FORMAT = '%Y-%m-%d_%H-%M-%S.%f_UTC'
 BenchmarkTag = str
+DOCKER_REPO = 'dshin83/alphazeroarcade-benchmarks'
 
 
 @dataclass
@@ -57,6 +60,13 @@ class BenchmarkRecord:
 
     def key(self):
         return os.path.join(str(self.version), self.game, self.tag, f"{self.utc_key}.tar")
+
+    def docker_image_ref(self):
+        """
+        `RunParams.is_valid_tag()` disallows periods in tag names. We intentionally use periods
+        here as delimiters between components (version, game, tag, utc_key) to form an image tag.
+        """
+        return f'{DOCKER_REPO}:{self.version}.{self.game}.{self.tag}.{self.utc_key}'
 
     @staticmethod
     def load(game: str) -> Optional['BenchmarkRecord']:
@@ -85,6 +95,7 @@ class BenchmarkRecord:
 
     def version_matches(self) -> bool:
         return self.version == VERSION
+
 
 class BenchmarkDir:
     @staticmethod
@@ -182,7 +193,7 @@ class BenchmarkData:
             record = self._load_record()
             if record:
                 tar_path = Benchmark.tar_path(self.game, self.tag, utc_key=record.utc_key)
-                BUCKET.download_from_s3(record.key(), tar_path)
+                download_tar_from_docker(record, tar_path)
                 logger.info(f"File downloaded to {tar_path}")
                 self._untar(utc_key=record.utc_key)
             else:
@@ -199,6 +210,29 @@ class BenchmarkData:
         benchmark_path = Benchmark.game_dir(self.game)
         untar_remote_file_to_local_directory(tar_path, benchmark_path)
         logger.info(f"untar {tar_path} to {benchmark_path}")
+
+
+def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
+    container_id = None
+    try:
+        os.makedirs(os.path.dirname(tar_path), exist_ok=True)
+        pull_cmd = ['docker', 'pull', record.docker_image_ref()]
+        subprocess.run(pull_cmd, check=True)
+
+        create_cmd = ['docker', 'create', record.docker_image_ref()]
+        result = subprocess.run(create_cmd, check=True, capture_output=True, text=True)
+        container_id = result.stdout.strip()
+
+        copy_cmd = ['docker', 'cp', f'{container_id}:/payload/artifact.tar', tar_path]
+        subprocess.run(copy_cmd, check=True)
+        logger.info(f"✅ File downloaded to: {tar_path}")
+
+    except:
+        raise Exception(f"❌ Failed to download: {record.docker_image_ref()}")
+
+    finally:
+        rm_cmd = ['docker', 'rm', container_id]
+        subprocess.run(rm_cmd, check=True)
 
 
 def save_benchmark_dir(organizer: DirectoryOrganizer):
@@ -221,3 +255,74 @@ def save_benchmark_dir(organizer: DirectoryOrganizer):
     shutil.copyfile(organizer.self_play_db_filename, dst_organizer.self_play_db_filename)
     shutil.copyfile(organizer.training_db_filename, dst_organizer.training_db_filename)
     logger.info(f"Created benchmark data folder {dst_organizer.base_dir}")
+
+
+def save_benchmark_record(record: BenchmarkRecord):
+    benchmark_info = record.to_dict()
+    benchmark_record_file = Workspace.benchmark_record_file(record.game)
+
+    os.makedirs(os.path.dirname(benchmark_record_file), exist_ok=True)
+    with open(benchmark_record_file, 'w') as f:
+        json.dump(benchmark_info, f, indent=4)
+
+    logger.info(f"Benchmark tag '{record.tag}' saved to {benchmark_record_file}")
+
+
+def build_single_file_docker_image(filename: str, record: BenchmarkRecord):
+    tmpdir = Path(tempfile.mkdtemp(prefix="a0a_tar_image_"))
+    artifact_file = os.path.join(tmpdir, 'artifact.tar')
+    dockerfile = os.path.join(tmpdir, 'Dockerfile')
+    image_ref = record.docker_image_ref()
+    sha256 = sha256sum(filename)
+
+    try:
+        shutil.copy2(filename, artifact_file)
+
+        with open(dockerfile, 'w', encoding="utf-8") as f:
+            f.write(f"""\
+                FROM scratch
+                COPY artifact.tar /payload/artifact.tar
+                LABEL kind="tar" \\
+                    version="{record.version}" \\
+                    game="{record.game}" \\
+                    tag="{record.tag}" \\
+                    utc_key="{record.utc_key}" \\
+                    sha256="{sha256}"
+                CMD ["true"]
+                """)
+
+        build_cmd = ["docker", "build", "-t", image_ref, str(tmpdir)]
+        subprocess.run(build_cmd, check=True)
+        logger.info(f'built image: {image_ref}')
+
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def docker_config_exists_and_nonempty() -> bool:
+    config_file = Path(os.environ['DOCKER_CONFIG']) / 'config.json'
+    return config_file.is_file() and config_file.stat().st_size > 0
+
+
+def upload_image(record: BenchmarkRecord):
+    if not docker_config_exists_and_nonempty():
+        raise Exception("❌ Docker credentials missing. "
+                        "Please run 'docker login' on the host machine, "
+                        "restart your container, and try again.")
+
+    image_ref = record.docker_image_ref()
+    upload_cmd = ["docker", "push", image_ref]
+
+    result = subprocess.run(upload_cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(
+            f"❌ Failed to upload: {image_ref}\n"
+            f"Hint: You may not have access to the repo {DOCKER_REPO}.\n"
+            f"Contact dshin@alphazeroarcade.io if you need collaborator access.\n\n"
+            f"Docker cmd complained:\n{result.stderr.strip()}"
+        )
+
+    logger.info(f'✅ Uploaded image: {image_ref}')
+
+    subprocess.run(["docker", "image", "rm", image_ref], check=False)

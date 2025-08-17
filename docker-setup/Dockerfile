@@ -67,7 +67,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="14.2.1"
+ARG VERSION="14.3.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
