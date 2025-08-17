@@ -50,6 +50,32 @@ cat << 'EOF' > /root/.vscode-server/data/Machine/settings.json
 }
 EOF
 
+: <<'DOC'
+This block ensures that the non-root user inside the container (e.g. $USERNAME)
+has permission to talk to the host's Docker daemon via the mounted
+/var/run/docker.sock socket.
+
+Background:
+  - On the host, the docker.sock file is by default owned by root:docker and
+    has permissions srw-rw---- (socket, group-readable/writable).
+  - The Docker socket gives access by numeric group ID (GID), not by the group name “docker.”
+    When we mount docker.sock into a container, the numeric GID may not match any group defined
+    inside the container. This script fixes that by creating (or reusing) a group with the same GID
+    and adding your user to it.
+
+What this code does:
+  1. Reads the GID of /var/run/docker.sock on the host.
+  2. Checks if a group with that GID already exists inside the container.
+     - If yes, reuse it.
+     - If not, create a new group (name 'docker' if available, otherwise
+       'dockersock') with that GID.
+  3. Adds the $USERNAME account to that group (idempotent check).
+
+Effect:
+  After this block runs, $USERNAME inside the container can access /var/run/docker.sock
+  and run `docker` commands against the host daemon without requiring root privileges.
+DOC
+
 DOCKER_SOCK=/var/run/docker.sock
 if [ -S "$DOCKER_SOCK" ]; then
   DOCKER_GID="$(stat -c '%g' "$DOCKER_SOCK")"
