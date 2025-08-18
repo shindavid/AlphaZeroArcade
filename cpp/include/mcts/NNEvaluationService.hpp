@@ -14,7 +14,7 @@
 #include "mcts/NNEvaluationServiceBase.hpp"
 #include "mcts/NNEvaluationServiceParams.hpp"
 #include "mcts/Node.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -291,7 +291,7 @@ class NNEvaluationService
   // Convenience struct to sort the items in the request by hash shard.
   struct SortItem {
     auto operator<=>(const SortItem& other) const = default;
-    hash_shard_t shard;
+    search::hash_shard_t shard;
     bool fresh;
     int16_t item_index;
   };

@@ -63,7 +63,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   bool provably_losing = parent_stats.provably_losing[seat];
 
   for (int i = 0; i < this->stable_data().num_valid_actions; i++) {
-    const Edge* edge = this->get_edge(i);
+    const search::Edge* edge = this->get_edge(i);
     core::action_t action = edge->action;
 
     int count = edge->E;
@@ -114,7 +114,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
   if (this->stable_data_.is_chance_node) {
     for (int i = 0; i < this->stable_data_.num_valid_actions; i++) {
-      const Edge* edge = this->get_edge(i);
+      const search::Edge* edge = this->get_edge(i);
       const Node* child = this->get_child(edge);
 
       if (!child) {
@@ -146,7 +146,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
     bool skipped = false;
     for (int i = 0; i < this->stable_data().num_valid_actions; i++) {
-      const Edge* edge = this->get_edge(i);
+      const search::Edge* edge = this->get_edge(i);
       const Node* child = this->get_child(edge);
       if (!child) {
         skipped = true;
@@ -225,7 +225,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   // No need to worry about thread-safety when modifying edges or stats below, since no other
   // threads can access this node until after load_eval() returns
   for (int i = 0; i < n; ++i) {
-    Edge* edge = this->get_edge(i);
+    search::Edge* edge = this->get_edge(i);
     edge->base_prob = P_raw[i];
     edge->adjusted_base_prob = P_adjusted[i];
     edge->child_V_estimate = child_V[i];

@@ -1,8 +1,8 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "mcts/TypeDefs.hpp"
 #include "mcts/UniformNNEvaluationService.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
@@ -17,8 +17,8 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
-                       mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+Manager<Game>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
+                       search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                        core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
     : params_(params),
       pondering_search_params_(
@@ -55,13 +55,13 @@ Manager<Game>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
 template <core::concepts::Game Game>
 Manager<Game>::Manager(const ManagerParams& params, core::GameServerBase* server,
                        NNEvaluationServiceBase_sptr service)
-    : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
-              server, service) {}
+    : Manager(true, std::make_shared<search::mutex_vec_t>(1),
+              std::make_shared<search::mutex_vec_t>(1), params, server, service) {}
 
 template <core::concepts::Game Game>
-Manager<Game>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
-                       const ManagerParams& params, core::GameServerBase* server,
-                       NNEvaluationServiceBase_sptr service)
+Manager<Game>::Manager(search::mutex_vec_sptr_t& node_mutex_pool,
+                       search::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
+                       core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <core::concepts::Game Game>
@@ -134,7 +134,7 @@ void Manager<Game>::update(core::action_t action) {
   root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 
   root_softmax_temperature_.step();
-  node_pool_index_t root_index = root_info_.node_index;
+  search::node_pool_index_t root_index = root_info_.node_index;
   if (root_index < 0) return;
 
   core::action_t transformed_action = action;
@@ -206,7 +206,7 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
     auto* edge = root->get_edge(i);
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
-    node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
+    search::node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
     if (child_node_index < 0) {
       action_values(action) = edge->child_V_estimate;
     } else {
@@ -365,7 +365,7 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
     IO::print_state(std::cout, state);
   }
 
-  node_pool_index_t root_index = root_info_.node_index;
+  search::node_pool_index_t root_index = root_info_.node_index;
   Node* root = lookup_table_.get_node(root_index);
   if (root->is_terminal()) return core::kContinue;
 
@@ -400,7 +400,7 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.initialization_index;
+  search::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table_.get_node(node_index);
 
   context.mid_node_initialization = true;
@@ -440,7 +440,7 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.initialization_index;
+  search::node_pool_index_t node_index = context.initialization_index;
 
   Node* node = lookup_table_.get_node(node_index);
   bool is_root = (node_index == root_info_.node_index);
@@ -454,7 +454,7 @@ core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContex
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
-      Edge* edge = node->get_edge(i);
+      search::Edge* edge = node->get_edge(i);
       core::action_t action = edge->action;
       edge->base_prob = chance_dist(action);
     }
@@ -526,17 +526,17 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
     child_index = get_best_child_index(context);
   }
 
-  Edge* edge = node->get_edge(child_index);
+  search::Edge* edge = node->get_edge(child_index);
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_action = false;
   context.inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
-  if (edge->state != kExpanded) {
+  if (edge->state != search::kExpanded) {
     // reread state under mutex in case of race-condition
     mit::unique_lock lock(node->mutex());
 
-    if (edge->state == kNotExpanded) {
-      set_edge_state(context, edge, kMidExpansion);
+    if (edge->state == search::kNotExpanded) {
+      set_edge_state(context, edge, search::kMidExpansion);
       lock.unlock();
 
       // reorient edge->action into raw-orientation
@@ -565,11 +565,11 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
-    } else if (edge->state == kMidExpansion) {
+    } else if (edge->state == search::kMidExpansion) {
       add_pending_notification(context, edge);
       return core::kYield;
-    } else if (edge->state == kPreExpanded) {
-      set_edge_state(context, edge, kMidExpansion);
+    } else if (edge->state == search::kPreExpanded) {
+      set_edge_state(context, edge, search::kMidExpansion);
       lock.unlock();
 
       DEBUG_ASSERT(edge->child_index >= 0);
@@ -584,7 +584,7 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
       }
 
       lock.lock();
-      set_edge_state(context, edge, kExpanded);
+      set_edge_state(context, edge, search::kExpanded);
       context.visit_node = nullptr;
       context.mid_visit = false;
       return core::kContinue;
@@ -598,7 +598,7 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
-  Edge* edge = context.visit_edge;
+  search::Edge* edge = context.visit_edge;
 
   if (context.mid_expansion) {
     if (resume_expansion(context) == core::kYield) return core::kYield;
@@ -612,8 +612,8 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  RELEASE_ASSERT(edge->state == kExpanded, "Expected edge state to be kExpanded, but got {}",
-                 edge->state);
+  RELEASE_ASSERT(edge->state == search::kExpanded,
+                 "Expected edge state to be kExpanded, but got {}", edge->state);
 
   Node* child = node->get_child(edge);
   if (child) {
@@ -654,7 +654,7 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
 
   StateHistory* history = context.initialization_history;
   Node* parent = context.visit_node;
-  Edge* edge = context.visit_edge;
+  search::Edge* edge = context.visit_edge;
 
   MCTSKey mcts_key = InputTensorizor::mcts_key(*history);
 
@@ -708,8 +708,8 @@ template <core::concepts::Game Game>
 core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  node_pool_index_t child_index = context.initialization_index;
-  Edge* edge = context.visit_edge;
+  search::node_pool_index_t child_index = context.initialization_index;
+  search::Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
   if (context.mid_node_initialization) {
@@ -717,7 +717,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
   }
 
   if (context.expanded_new_node) {
-    node_pool_index_t inserted_child_index = context.inserted_node_index;
+    search::node_pool_index_t inserted_child_index = context.inserted_node_index;
     Node* child = lookup_table_.get_node(child_index);
     bool terminal = child->is_terminal();
     bool do_virtual = !terminal && multithreaded();
@@ -782,7 +782,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
 
   mit::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
-  set_edge_state(context, edge, kExpanded);
+  set_edge_state(context, edge, search::kExpanded);
   lock.unlock();
 
   context.mid_expansion = false;
@@ -790,7 +790,7 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge) {
+void Manager<Game>::add_pending_notification(SearchContext& context, search::Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
   DEBUG_ASSERT(edge->expanding_context_id >= 0);
@@ -805,16 +805,17 @@ void Manager<Game>::add_pending_notification(SearchContext& context, Edge* edge)
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
+void Manager<Game>::set_edge_state(SearchContext& context, search::Edge* edge,
+                                   search::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
-  if (state == kPreExpanded) {
+  if (state == search::kPreExpanded) {
     // Makes no assumptions about mutexes
     edge->state = state;
-  } else if (state == kMidExpansion) {
+  } else if (state == search::kMidExpansion) {
     // Assumes edge's parent node's mutex is held
     edge->state = state;
     edge->expanding_context_id = context.id;
-  } else if (state == kExpanded) {
+  } else if (state == search::kExpanded) {
     // Assumes edge's parent node's mutex is held
     mit::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
     mit::unique_lock lock(mutex);
@@ -826,7 +827,7 @@ void Manager<Game>::set_edge_state(SearchContext& context, Edge* edge, expansion
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
+void Manager<Game>::transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const {
   if (index == root_info_.node_index) {
     if (search_params_.full_search) {
       if (params_.dirichlet_mult) {
@@ -855,7 +856,7 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
   for (int e = 0; e < n_actions; e++) {
-    Edge* edge = node->get_edge(e);
+    search::Edge* edge = node->get_edge(e);
     if (edge->child_index >= 0) continue;
 
     // reorient edge->action into raw-orientation
@@ -885,10 +886,10 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
     Rules::apply(canonical_history, reoriented_action);
 
     expand_count++;
-    set_edge_state(context, edge, kPreExpanded);
+    set_edge_state(context, edge, search::kPreExpanded);
 
     MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
-    node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
+    search::node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
       canonical_history.undo();
@@ -945,7 +946,7 @@ void Manager<Game>::virtual_backprop(SearchContext& context) {
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
+    search::Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -970,7 +971,7 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
 
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
+    search::Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1000,7 +1001,7 @@ inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArra
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
+    search::Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1031,7 +1032,7 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
+    search::Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1053,7 +1054,7 @@ void Manager<Game>::short_circuit_backprop(SearchContext& context) {
   }
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
+    search::Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1076,7 +1077,7 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
     group::element_t cur_canonical_sym = root_info_.canonical_sym;
     group::element_t leaf_canonical_sym = context.canonical_sym;
     for (const Visitation& visitation : context.search_path) {
-      Edge* edge = visitation.edge;
+      search::Edge* edge = visitation.edge;
       core::action_mode_t mode = visitation.node->action_mode();
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
@@ -1334,7 +1335,7 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
   items.reserve(stable_data.num_valid_actions);
 
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    Edge* edge = root->get_edge(e);
+    search::Edge* edge = root->get_edge(e);
     if (edge->child_index < 0) continue;
     items.emplace_back(edge->child_index, actions[e]);
   }
@@ -1371,7 +1372,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {
-    Edge* edge = root->get_edge(i);
+    search::Edge* edge = root->get_edge(i);
     if (mE(i) == 0) {
       results_.policy_target(edge->action) = 0;
       continue;

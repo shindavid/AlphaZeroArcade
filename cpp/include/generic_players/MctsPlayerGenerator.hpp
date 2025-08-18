@@ -9,7 +9,7 @@
 #include "mcts/Constants.hpp"
 #include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
@@ -69,8 +69,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   MctsManagerParams manager_params_;
   MctsPlayerParams mcts_player_params_;
   shared_data_map_t& shared_data_cache_;
-  mcts::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
-  mcts::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
+  search::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
+  search::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
 template <core::concepts::Game Game>

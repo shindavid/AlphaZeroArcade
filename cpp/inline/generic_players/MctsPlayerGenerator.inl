@@ -86,10 +86,10 @@ MctsPlayerGeneratorBase<Game, PlayerT, Mode>::generate_shared_data() {
     return std::make_shared<SharedData>(manager_params_, server_);
   } else {
     if (!common_node_mutex_pool_.get()) {
-      common_node_mutex_pool_ = std::make_shared<mcts::mutex_vec_t>(kDefaultMutexPoolSize);
+      common_node_mutex_pool_ = std::make_shared<search::mutex_vec_t>(kDefaultMutexPoolSize);
     }
     if (!common_context_mutex_pool_.get()) {
-      common_context_mutex_pool_ = std::make_shared<mcts::mutex_vec_t>(kDefaultMutexPoolSize);
+      common_context_mutex_pool_ = std::make_shared<search::mutex_vec_t>(kDefaultMutexPoolSize);
     }
     return std::make_shared<SharedData>(common_node_mutex_pool_, common_context_mutex_pool_,
                                         manager_params_, server_);

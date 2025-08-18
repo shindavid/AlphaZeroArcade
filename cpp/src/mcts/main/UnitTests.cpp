@@ -9,7 +9,7 @@
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/SimpleNNEvaluationService.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -102,7 +102,7 @@ class ManagerTest : public testing::Test {
   using SearchRequest = Manager::SearchRequest;
   using SearchResult = Game::Types::SearchResults;
 
-  static_assert(Node::kStoreStates, "state-storage required for search-log tests");
+  static_assert(search::kStoreStates<Game>, "state-storage required for search-log tests");
 
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}
@@ -143,7 +143,7 @@ class ManagerTest : public testing::Test {
     return manager_->search(request).results;
   }
 
-  Node* get_node_by_index(mcts::node_pool_index_t index) {
+  Node* get_node_by_index(search::node_pool_index_t index) {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
 

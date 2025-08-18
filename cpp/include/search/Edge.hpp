@@ -1,14 +1,14 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 
-namespace mcts {
+namespace search {
 
 /*
-  * An Edge corresponds to an action that can be taken from this node.
-  */
+ * An Edge corresponds to an action that can be taken from this node.
+ */
 struct Edge {
   node_pool_index_t child_index = -1;
   core::action_t action = -1;
@@ -24,4 +24,4 @@ struct Edge {
   expansion_state_t state = kNotExpanded;
 };
 
-}  // namespace mcts
+}  // namespace search

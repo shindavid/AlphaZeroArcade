@@ -3,7 +3,7 @@
 #include "core/concepts/Game.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
-#include "mcts/NodeBase.hpp"
+#include "search/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace mcts {
@@ -21,7 +21,7 @@ namespace mcts {
  * achieved in a high-performance manner through mutexes and condition variables.
  */
 template <core::concepts::Game Game>
-class Node : public NodeBase<Game, Node<Game>> {
+class Node : public search::NodeBase<Game, Node<Game>> {
  public:
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
@@ -36,7 +36,7 @@ class Node : public NodeBase<Game, Node<Game>> {
   using SearchResults = Game::Types::SearchResults;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using NodeBase = mcts::NodeBase<Game, Node<Game>>;
+  using NodeBase = search::NodeBase<Game, Node<Game>>;
   using StableData = NodeBase::StableData;
 
   // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some

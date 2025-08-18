@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace mcts {
+namespace search {
 
 using hash_shard_t = int8_t;
 
@@ -27,4 +27,4 @@ enum expansion_state_t : int8_t {
   kExpanded
 };
 
-}  // namespace mcts
+}  // namespace search

@@ -5,7 +5,7 @@
 #include "mcts/Constants.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/Node.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -49,7 +49,7 @@ class NNEvaluationRequest {
     uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
     EvalKey eval_key;
     group::element_t sym;
-    hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
+    search::hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
   };
 
   struct CacheKeyHasher {
@@ -98,7 +98,7 @@ class NNEvaluationRequest {
     Node* node() const { return node_; }
     NNEvaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
-    hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
+    search::hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 

@@ -6,14 +6,14 @@
 #include "core/concepts/Game.hpp"
 #include "mcts/ActionSelector.hpp"
 #include "mcts/Constants.hpp"
-#include "mcts/Edge.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
 #include "mcts/NNEvaluationService.hpp"
 #include "mcts/NNEvaluationServiceBase.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "search/Edge.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -68,7 +68,7 @@ class Manager {
 
   struct Visitation {
     Node* node;
-    Edge* edge;  // emanates from node, possibly nullptr
+    search::Edge* edge;  // emanates from node, possibly nullptr
   };
   using search_path_t = std::vector<Visitation>;
 
@@ -117,13 +117,13 @@ class Manager {
 
     // node-initialization yield info
     StateHistory* initialization_history;
-    node_pool_index_t initialization_index = -1;
-    node_pool_index_t inserted_node_index = -1;
+    search::node_pool_index_t initialization_index = -1;
+    search::node_pool_index_t inserted_node_index = -1;
     bool expanded_new_node = false;
 
     // visit yield info
     Node* visit_node;
-    Edge* visit_edge;
+    search::Edge* visit_edge;
     StateHistory* history;
     group::element_t inv_canonical_sym;
     bool applied_action = false;
@@ -199,7 +199,7 @@ class Manager {
     StateHistoryArray history_array;
 
     group::element_t canonical_sym = -1;
-    node_pool_index_t node_index = -1;
+    search::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;
   };
@@ -216,7 +216,7 @@ class Manager {
   Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
           NNEvaluationServiceBase_sptr service = nullptr);
 
-  Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+  Manager(search::mutex_vec_sptr_t& node_mutex_pool, search::mutex_vec_sptr_t& context_mutex_pool,
           const ManagerParams& params, core::GameServerBase* server = nullptr,
           NNEvaluationServiceBase_sptr service = nullptr);
 
@@ -246,8 +246,9 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase*, NNEvaluationServiceBase_sptr service);
+  Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
+          search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+          core::GameServerBase*, NNEvaluationServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
 
@@ -278,9 +279,9 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
-  void add_pending_notification(SearchContext&, Edge*);
-  void set_edge_state(SearchContext&, Edge*, expansion_state_t);
-  void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
+  void add_pending_notification(SearchContext&, search::Edge*);
+  void set_edge_state(SearchContext&, search::Edge*, search::expansion_state_t);
+  void transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
   void virtual_backprop(SearchContext& context);
@@ -317,7 +318,7 @@ class Manager {
 
   context_vec_t contexts_;
   StateMachine state_machine_;
-  mutex_vec_sptr_t context_mutex_pool_;
+  search::mutex_vec_sptr_t context_mutex_pool_;
   NNEvaluationServiceBase_sptr nn_eval_service_;
 
   SearchParams search_params_;
