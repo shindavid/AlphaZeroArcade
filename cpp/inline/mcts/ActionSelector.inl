@@ -1,7 +1,5 @@
 #include "mcts/ActionSelector.hpp"
 
-#include "search/Edge.hpp"
-
 namespace mcts {
 
 template <typename Traits>
@@ -34,7 +32,7 @@ inline ActionSelector<Traits>::ActionSelector(const ManagerParams& params,
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    search::Edge* edge = node->get_edge(i);
+    Edge* edge = node->get_edge(i);
     P(i) = edge->adjusted_base_prob;
     E(i) = edge->E;
 

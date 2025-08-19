@@ -9,9 +9,7 @@
 #include "mcts/NNEvaluationRequest.hpp"
 #include "mcts/NNEvaluationService.hpp"
 #include "mcts/NNEvaluationServiceBase.hpp"
-#include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
-#include "search/Edge.hpp"
 #include "search/LookupTable.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Math.hpp"
@@ -31,13 +29,14 @@ namespace mcts {
 template <typename Traits>
 class Manager {
  public:
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
   using ManagerParams = mcts::ManagerParams<Traits>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
   using NNEvaluationService = mcts::NNEvaluationService<Traits>;
   using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Traits>;
   using NNEvaluationServiceBase_sptr = NNEvaluationServiceBase::sptr;
-  using Node = mcts::Node<Traits>;
   using LookupTable = search::LookupTable<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
@@ -69,7 +68,7 @@ class Manager {
 
   struct Visitation {
     Node* node;
-    search::Edge* edge;  // emanates from node, possibly nullptr
+    Edge* edge;  // emanates from node, possibly nullptr
   };
   using search_path_t = std::vector<Visitation>;
 
@@ -124,7 +123,7 @@ class Manager {
 
     // visit yield info
     Node* visit_node;
-    search::Edge* visit_edge;
+    Edge* visit_edge;
     StateHistory* history;
     group::element_t inv_canonical_sym;
     bool applied_action = false;
@@ -280,8 +279,8 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
-  void add_pending_notification(SearchContext&, search::Edge*);
-  void set_edge_state(SearchContext&, search::Edge*, search::expansion_state_t);
+  void add_pending_notification(SearchContext&, Edge*);
+  void set_edge_state(SearchContext&, Edge*, search::expansion_state_t);
   void transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);

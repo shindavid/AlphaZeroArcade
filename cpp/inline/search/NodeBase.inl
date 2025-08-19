@@ -12,7 +12,7 @@ NodeBase<Traits>::NodeBase(LookupTable* lookup_table, Ts&&... args)
       mutex_id_(lookup_table->get_random_mutex_id()) {}
 
 template <typename Traits>
-Edge* NodeBase<Traits>::get_edge(int i) const {
+typename Traits::Edge* NodeBase<Traits>::get_edge(int i) const {
   DEBUG_ASSERT(this->first_edge_index_ != -1);
   return lookup_table_->get_edge(this->first_edge_index_ + i);
 }

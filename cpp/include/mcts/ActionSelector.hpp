@@ -2,16 +2,16 @@
 
 #include "core/BasicTypes.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
 
 namespace mcts {
 
 template <typename Traits>
 struct ActionSelector {
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
   using ManagerParams = mcts::ManagerParams<Traits>;
-  using Node = mcts::Node<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;

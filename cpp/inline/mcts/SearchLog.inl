@@ -1,7 +1,7 @@
 #include "mcts/SearchLog.hpp"
 
-#include "search/Edge.hpp"
 #include "util/BitSet.hpp"
+#include "util/BoostUtil.hpp"
 
 namespace mcts {
 
@@ -51,8 +51,6 @@ inline std::string SearchLog<Traits>::last_graph_json_str() {
 
 template <typename Traits>
 void SearchLog<Traits>::build_graph(Graph& graph) {
-  using State = Game::State;
-  using Node = mcts::Node<Traits>;
   auto map = lookup_table_->map();
 
   for (auto [key, node_ix] : *map) {
@@ -62,7 +60,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
     graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
                    stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
-      search::Edge* edge = node->get_edge(i);
+      Edge* edge = node->get_edge(i);
 
       if (edge->child_index == -1) {
         continue;

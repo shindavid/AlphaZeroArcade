@@ -1,18 +1,22 @@
 #pragma once
 
-#include "mcts/Node.hpp"
+#include "core/BasicTypes.hpp"
 
 #include <boost/json.hpp>
 
 #include <string>
+#include <vector>
 
 namespace mcts {
 
 template <typename Traits>
 class SearchLog {
  protected:
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using LookupTable = Node<Traits>::LookupTable;
+  using State = Game::State;
+  using LookupTable = Node::LookupTable;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;

@@ -456,7 +456,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
-      search::Edge* edge = node->get_edge(i);
+      Edge* edge = node->get_edge(i);
       core::action_t action = edge->action;
       edge->base_prob = chance_dist(action);
     }
@@ -528,7 +528,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
     child_index = get_best_child_index(context);
   }
 
-  search::Edge* edge = node->get_edge(child_index);
+  Edge* edge = node->get_edge(child_index);
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_action = false;
@@ -600,7 +600,7 @@ template <typename Traits>
 core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
-  search::Edge* edge = context.visit_edge;
+  Edge* edge = context.visit_edge;
 
   if (context.mid_expansion) {
     if (resume_expansion(context) == core::kYield) return core::kYield;
@@ -656,7 +656,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
 
   StateHistory* history = context.initialization_history;
   Node* parent = context.visit_node;
-  search::Edge* edge = context.visit_edge;
+  Edge* edge = context.visit_edge;
 
   MCTSKey mcts_key = InputTensorizor::mcts_key(*history);
 
@@ -711,7 +711,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   search::node_pool_index_t child_index = context.initialization_index;
-  search::Edge* edge = context.visit_edge;
+  Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
   if (context.mid_node_initialization) {
@@ -792,7 +792,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 }
 
 template <typename Traits>
-void Manager<Traits>::add_pending_notification(SearchContext& context, search::Edge* edge) {
+void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
   DEBUG_ASSERT(edge->expanding_context_id >= 0);
@@ -807,7 +807,7 @@ void Manager<Traits>::add_pending_notification(SearchContext& context, search::E
 }
 
 template <typename Traits>
-void Manager<Traits>::set_edge_state(SearchContext& context, search::Edge* edge,
+void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
                                      search::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == search::kPreExpanded) {
@@ -858,7 +858,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
   for (int e = 0; e < n_actions; e++) {
-    search::Edge* edge = node->get_edge(e);
+    Edge* edge = node->get_edge(e);
     if (edge->child_index >= 0) continue;
 
     // reorient edge->action into raw-orientation
@@ -948,7 +948,7 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    search::Edge* edge = context.search_path[i].edge;
+    Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -973,7 +973,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
 
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
-    search::Edge* edge = context.search_path[i].edge;
+    Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1003,7 +1003,7 @@ inline void Manager<Traits>::pure_backprop(SearchContext& context, const ValueAr
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    search::Edge* edge = context.search_path[i].edge;
+    Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1034,7 +1034,7 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
   });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    search::Edge* edge = context.search_path[i].edge;
+    Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1056,7 +1056,7 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
   }
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    search::Edge* edge = context.search_path[i].edge;
+    Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
@@ -1079,7 +1079,7 @@ void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
     group::element_t cur_canonical_sym = root_info_.canonical_sym;
     group::element_t leaf_canonical_sym = context.canonical_sym;
     for (const Visitation& visitation : context.search_path) {
-      search::Edge* edge = visitation.edge;
+      Edge* edge = visitation.edge;
       core::action_mode_t mode = visitation.node->action_mode();
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
@@ -1337,7 +1337,7 @@ inline void Manager<Traits>::load_action_symmetries(Node* root, core::action_t* 
   items.reserve(stable_data.num_valid_actions);
 
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    search::Edge* edge = root->get_edge(e);
+    Edge* edge = root->get_edge(e);
     if (edge->child_index < 0) continue;
     items.emplace_back(edge->child_index, actions[e]);
   }
@@ -1374,7 +1374,7 @@ void Manager<Traits>::prune_policy_target(const SearchParams& search_params,
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {
-    search::Edge* edge = root->get_edge(i);
+    Edge* edge = root->get_edge(i);
     if (mE(i) == 0) {
       results_.policy_target(edge->action) = 0;
       continue;

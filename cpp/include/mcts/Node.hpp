@@ -22,6 +22,7 @@ namespace mcts {
 template <typename Traits>
 class Node : public search::NodeBase<Traits> {
  public:
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

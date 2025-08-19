@@ -1,9 +1,7 @@
 #pragma once
 
-#include "search/Edge.hpp"
 #include "search/NodeBaseCore.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/Traits.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -13,6 +11,7 @@ template <typename Traits>
 class LookupTable {
  public:
   using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using NodeBaseCore = search::NodeBaseCore<Traits>;

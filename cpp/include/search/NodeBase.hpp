@@ -1,6 +1,5 @@
 #pragma once
 
-#include "search/Edge.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NodeBaseCore.hpp"
 #include "search/TypeDefs.hpp"
@@ -17,6 +16,7 @@ class NodeBase : public NodeBaseCore<Traits> {
  public:
   using NodeBaseCore = search::NodeBaseCore<Traits>;
   using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using Game = Traits::Game;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
