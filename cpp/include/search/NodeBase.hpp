@@ -1,11 +1,9 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "search/Edge.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NodeBaseCore.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/Traits.hpp"
 
 namespace search {
 

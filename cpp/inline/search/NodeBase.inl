@@ -7,7 +7,9 @@ namespace search {
 template <typename Traits>
 template <typename... Ts>
 NodeBase<Traits>::NodeBase(LookupTable* lookup_table, Ts&&... args)
-    : NodeBaseCore(std::forward<Ts>(args)...), lookup_table_(lookup_table) {}
+    : NodeBaseCore(std::forward<Ts>(args)...),
+      lookup_table_(lookup_table),
+      mutex_id_(lookup_table->get_random_mutex_id()) {}
 
 template <typename Traits>
 Edge* NodeBase<Traits>::get_edge(int i) const {
