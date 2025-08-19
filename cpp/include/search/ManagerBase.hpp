@@ -1,7 +1,5 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
-
 namespace search {
 
 template <typename Traits>
