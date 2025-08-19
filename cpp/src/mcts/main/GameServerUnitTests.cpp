@@ -23,11 +23,14 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 template <core::concepts::Game Game>
 class GameServerTest : public testing::Test {
  protected:
+  using Traits = mcts::Traits<Game>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
-  using SearchResponse = mcts::Manager<Game>::SearchResponse;
+  using Manager = mcts::Manager<Traits>;
+  using SearchResponse = Manager::SearchResponse;
   using SearchResults = Game::Types::SearchResults;
+  using SearchLog = mcts::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:
   //
@@ -55,7 +58,7 @@ class GameServerTest : public testing::Test {
 
       if (!test->search_log_) {
         auto manager = this->get_manager();
-        test->search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
+        test->search_log_ = new SearchLog(manager->lookup_table());
         manager->set_post_visit_func([&] { test_->search_log_->update(); });
       }
     }
@@ -186,7 +189,7 @@ class GameServerTest : public testing::Test {
   friend class TestPlayer;
   TestPlayerSubfactory* subfactory_;
   GameServer* server_;
-  mcts::SearchLog<Game>* search_log_ = nullptr;
+  SearchLog* search_log_ = nullptr;
   std::stringstream ss_result_;
   bool is_recorded_ = false;
 };

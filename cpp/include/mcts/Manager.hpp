@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/Game.hpp"
 #include "mcts/ActionSelector.hpp"
 #include "mcts/Constants.hpp"
 #include "mcts/ManagerParams.hpp"
@@ -13,6 +12,7 @@
 #include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
 #include "search/Edge.hpp"
+#include "search/LookupTable.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -28,16 +28,17 @@ namespace mcts {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <core::concepts::Game Game>
+template <typename Traits>
 class Manager {
  public:
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
-  using NNEvaluationService = mcts::NNEvaluationService<Game>;
-  using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Game>;
+  using Game = Traits::Game;
+  using ManagerParams = mcts::ManagerParams<Traits>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
+  using NNEvaluationService = mcts::NNEvaluationService<Traits>;
+  using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Traits>;
   using NNEvaluationServiceBase_sptr = NNEvaluationServiceBase::sptr;
-  using Node = mcts::Node<Game>;
-  using LookupTable = Node::LookupTable;
+  using Node = mcts::Node<Traits>;
+  using LookupTable = search::LookupTable<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -45,7 +46,7 @@ class Manager {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  using ActionSelector = mcts::ActionSelector<Game>;
+  using ActionSelector = mcts::ActionSelector<Traits>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = Game::Types::ActionRequest;
   using GameResults = Game::GameResults;

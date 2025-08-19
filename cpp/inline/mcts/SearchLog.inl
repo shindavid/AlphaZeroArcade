@@ -5,8 +5,8 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::LogNode::to_json() const {
+template <typename Traits>
+inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
   boost::json::object node_json;
   node_json["index"] = index;
   node_json["N"] = N;
@@ -24,8 +24,8 @@ inline boost::json::object SearchLog<Game>::LogNode::to_json() const {
   return node_json;
 }
 
-template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::LogEdge::to_json() const {
+template <typename Traits>
+inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
   boost::json::object edge_json;
   edge_json["index"] = index;
   edge_json["from"] = from;
@@ -35,24 +35,24 @@ inline boost::json::object SearchLog<Game>::LogEdge::to_json() const {
   return edge_json;
 }
 
-template <core::concepts::Game Game>
-inline std::string SearchLog<Game>::json_str() {
+template <typename Traits>
+inline std::string SearchLog<Traits>::json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, combine_json());
   return ss.str();
 };
 
-template <core::concepts::Game Game>
-inline std::string SearchLog<Game>::last_graph_json_str() {
+template <typename Traits>
+inline std::string SearchLog<Traits>::last_graph_json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, graphs_.back().graph_repr());
   return ss.str();
 };
 
-template <core::concepts::Game Game>
-void SearchLog<Game>::build_graph(Graph& graph) {
+template <typename Traits>
+void SearchLog<Traits>::build_graph(Graph& graph) {
   using State = Game::State;
-  using Node = mcts::Node<Game>;
+  using Node = mcts::Node<Traits>;
   auto map = lookup_table_->map();
 
   for (auto [key, node_ix] : *map) {
@@ -74,16 +74,16 @@ void SearchLog<Game>::build_graph(Graph& graph) {
   }
 }
 
-template <core::concepts::Game Game>
-inline void SearchLog<Game>::update() {
+template <typename Traits>
+inline void SearchLog<Traits>::update() {
   Graph graph;
   build_graph(graph);
   graph.sort_by_index();
   add_graph(graph);
 }
 
-template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::combine_json() {
+template <typename Traits>
+inline boost::json::object SearchLog<Traits>::combine_json() {
   boost::json::array graphs_array;
   for (const auto& graph : graphs_) {
     graphs_array.push_back(graph.graph_repr());
@@ -96,8 +96,8 @@ inline boost::json::object SearchLog<Game>::combine_json() {
   return log_json;
 }
 
-template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
+template <typename Traits>
+inline boost::json::object SearchLog<Traits>::Graph::graph_repr() const {
   boost::json::object graph_json;
 
   // Nodes

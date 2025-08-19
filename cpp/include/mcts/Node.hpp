@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "search/NodeBase.hpp"
@@ -9,7 +8,7 @@
 namespace mcts {
 
 /*
- * A Node consists of n=3 main data member:
+ * A Node consists of n=3 main data members:
  *
  * StableData: write-once data that is fixed for the lifetime of the node
  * Stats: values that get updated throughout MCTS via backpropagation
@@ -20,15 +19,15 @@ namespace mcts {
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
  */
-template <core::concepts::Game Game>
-class Node : public search::NodeBase<Game, Node<Game>> {
+template <typename Traits>
+class Node : public search::NodeBase<Traits> {
  public:
+  using Game = Traits::Game;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using GameT = Game;
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using ManagerParams = mcts::ManagerParams<Traits>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
@@ -36,7 +35,7 @@ class Node : public search::NodeBase<Game, Node<Game>> {
   using SearchResults = Game::Types::SearchResults;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using NodeBase = search::NodeBase<Game, Node<Game>>;
+  using NodeBase = search::NodeBase<Traits>;
   using StableData = NodeBase::StableData;
 
   // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some

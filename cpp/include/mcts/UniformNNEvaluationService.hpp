@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
 #include "mcts/SimpleNNEvaluationService.hpp"
@@ -14,11 +13,11 @@ namespace mcts {
  * support generation-0 self-play scenarios where a neural network model is not yet available.
  * The service assigns uniform probabilities to all valid actions.
  */
-template <core::concepts::Game Game>
-class UniformNNEvaluationService : public mcts::SimpleNNEvaluationService<Game> {
+template <typename Traits>
+class UniformNNEvaluationService : public mcts::SimpleNNEvaluationService<Traits> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Game>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

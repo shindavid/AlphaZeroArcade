@@ -9,6 +9,8 @@
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/SimpleNNEvaluationService.hpp"
+#include "mcts/Traits.hpp"
+#include "search/LookupTable.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
@@ -31,9 +33,10 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
+class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<mcts::Traits<Nim>> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Nim>;
+  using Traits = mcts::Traits<Nim>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -89,18 +92,20 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
 template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
-  using Manager = mcts::Manager<Game>;
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using Node = mcts::Node<Game>;
+  using Traits = mcts::Traits<Game>;
+  using Manager = mcts::Manager<Traits>;
+  using ManagerParams = mcts::ManagerParams<Traits>;
+  using Node = mcts::Node<Traits>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
-  using LookupTable = mcts::Node<Game>::LookupTable;
+  using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = mcts::NNEvaluationServiceBase<Game>;
+  using Service = mcts::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchRequest = Manager::SearchRequest;
   using SearchResult = Game::Types::SearchResults;
+  using SearchLog = mcts::SearchLog<Traits>;
 
   static_assert(search::kStoreStates<Game>, "state-storage required for search-log tests");
 
@@ -122,7 +127,7 @@ class ManagerTest : public testing::Test {
   void init_manager(Service_sptr service = nullptr) {
     core::GameServerBase* server = nullptr;
     manager_ = new Manager(manager_params_, server, service);
-    search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
+    search_log_ = new SearchLog(manager_->lookup_table());
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
@@ -147,7 +152,7 @@ class ManagerTest : public testing::Test {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
 
-  mcts::SearchLog<Game>* get_search_log() { return search_log_; }
+  SearchLog* get_search_log() { return search_log_; }
   ManagerParams& get_manager_params() { return manager_params_; }
 
   void test_search(const std::string& testname, int num_search,
@@ -191,7 +196,7 @@ class ManagerTest : public testing::Test {
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
-  mcts::SearchLog<Game>* search_log_ = nullptr;
+  SearchLog* search_log_ = nullptr;
 };
 
 using NimManagerTest = ManagerTest<Nim>;

@@ -1,12 +1,11 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include <NvInfer.h>
 #include <NvInferRuntime.h>
@@ -26,7 +25,7 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
-// Base class for NeuralNet<Game>
+// Base class for NeuralNet<Traits>
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
@@ -71,9 +70,10 @@ class NeuralNetBase {
 /*
  * A thin wrapper around a TensorRT engine.
  */
-template <concepts::Game Game>
+template <typename Traits>
 class NeuralNet : public NeuralNetBase {
  public:
+  using Game = Traits::Game;
   using InputShape = Game::InputTensorizor::Tensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
   using ValueShape = Game::Types::ValueShape;

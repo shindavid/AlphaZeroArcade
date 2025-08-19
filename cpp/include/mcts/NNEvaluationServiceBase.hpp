@@ -17,11 +17,11 @@ namespace mcts {
  * place of new/delete. Doing so makes use of an underlying object pool and recycles
  * NNEvaluation objects.
  */
-template <core::concepts::Game Game>
+template <typename Traits>
 class NNEvaluationServiceBase {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Game>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

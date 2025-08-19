@@ -4,26 +4,26 @@
 
 namespace search {
 
-template <core::concepts::Game Game, typename Derived>
+template <typename Traits>
 template <typename... Ts>
-NodeBase<Game, Derived>::NodeBase(LookupTable* lookup_table, Ts&&... args)
+NodeBase<Traits>::NodeBase(LookupTable* lookup_table, Ts&&... args)
     : NodeBaseCore(std::forward<Ts>(args)...), lookup_table_(lookup_table) {}
 
-template <core::concepts::Game Game, typename Derived>
-Edge* NodeBase<Game, Derived>::get_edge(int i) const {
+template <typename Traits>
+Edge* NodeBase<Traits>::get_edge(int i) const {
   DEBUG_ASSERT(this->first_edge_index_ != -1);
   return lookup_table_->get_edge(this->first_edge_index_ + i);
 }
 
-template <core::concepts::Game Game, typename Derived>
-Derived* NodeBase<Game, Derived>::get_child(const Edge* edge) const {
+template <typename Traits>
+typename Traits::Node* NodeBase<Traits>::get_child(const Edge* edge) const {
   if (edge->child_index < 0) return nullptr;
   return this->lookup_table_->get_node(edge->child_index);
 }
 
 // NOTE: this can be switched to use binary search if we'd like
-template <core::concepts::Game Game, typename Derived>
-node_pool_index_t NodeBase<Game, Derived>::lookup_child_by_action(core::action_t action) const {
+template <typename Traits>
+node_pool_index_t NodeBase<Traits>::lookup_child_by_action(core::action_t action) const {
   int i = 0;
   for (core::action_t a : bitset_util::on_indices(this->stable_data_.valid_action_mask)) {
     if (a == action) {
@@ -34,8 +34,8 @@ node_pool_index_t NodeBase<Game, Derived>::lookup_child_by_action(core::action_t
   return -1;
 }
 
-template <core::concepts::Game Game, typename Derived>
-void NodeBase<Game, Derived>::update_child_expand_count(int n) {
+template <typename Traits>
+void NodeBase<Traits>::update_child_expand_count(int n) {
   child_expand_count_ += n;
   DEBUG_ASSERT(child_expand_count_ <= this->stable_data_.num_valid_actions);
   if (child_expand_count_ < this->stable_data_.num_valid_actions) return;
@@ -50,8 +50,8 @@ void NodeBase<Game, Derived>::update_child_expand_count(int n) {
   trivial_ = true;
 }
 
-template <core::concepts::Game Game, typename Derived>
-bool NodeBase<Game, Derived>::all_children_edges_initialized() const {
+template <typename Traits>
+bool NodeBase<Traits>::all_children_edges_initialized() const {
   if (this->stable_data_.num_valid_actions == 0) return true;
   if (this->first_edge_index_ == -1) return false;
   for (int j = 0; j < this->stable_data_.num_valid_actions; ++j) {
@@ -60,8 +60,8 @@ bool NodeBase<Game, Derived>::all_children_edges_initialized() const {
   return true;
 }
 
-template <core::concepts::Game Game, typename Derived>
-void NodeBase<Game, Derived>::initialize_edges() {
+template <typename Traits>
+void NodeBase<Traits>::initialize_edges() {
   int n_edges = this->stable_data_.num_valid_actions;
   if (n_edges == 0) return;
   this->first_edge_index_ = lookup_table_->alloc_edges(n_edges);

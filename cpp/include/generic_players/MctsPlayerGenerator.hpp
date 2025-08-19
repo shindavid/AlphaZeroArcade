@@ -9,6 +9,7 @@
 #include "mcts/Constants.hpp"
 #include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
+#include "mcts/Traits.hpp"
 #include "search/TypeDefs.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
@@ -25,8 +26,9 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using MctsManagerParams = mcts::ManagerParams<Game>;
-  using MctsManager = mcts::Manager<Game>;
+  using Traits = mcts::Traits<Game>;
+  using MctsManagerParams = mcts::ManagerParams<Traits>;
+  using MctsManager = mcts::Manager<Traits>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = BaseMctsPlayer::Params;
   using SharedData = BaseMctsPlayer::SharedData;

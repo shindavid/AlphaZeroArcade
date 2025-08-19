@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "mcts/Node.hpp"
 
 #include <boost/json.hpp>
@@ -9,10 +8,11 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
+template <typename Traits>
 class SearchLog {
  protected:
-  using LookupTable = Node<Game>::LookupTable;
+  using Game = Traits::Game;
+  using LookupTable = Node<Traits>::LookupTable;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;

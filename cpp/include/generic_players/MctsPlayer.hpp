@@ -8,6 +8,7 @@
 #include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/SearchParams.hpp"
+#include "mcts/Traits.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -43,8 +44,9 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using MctsManager = mcts::Manager<Game>;
-  using MctsManagerParams = mcts::ManagerParams<Game>;
+  using Traits = mcts::Traits<Game>;
+  using MctsManager = mcts::Manager<Traits>;
+  using MctsManagerParams = mcts::ManagerParams<Traits>;
   using MctsSearchParams = mcts::SearchParams;
   using SearchResults = Game::Types::SearchResults;
   using SearchRequest = MctsManager::SearchRequest;

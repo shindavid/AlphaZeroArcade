@@ -13,13 +13,13 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-int Manager<Game>::next_instance_id_ = 0;
+template <typename Traits>
+int Manager<Traits>::next_instance_id_ = 0;
 
-template <core::concepts::Game Game>
-Manager<Game>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
-                       search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-                       core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
+template <typename Traits>
+Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
+                         search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+                         core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
@@ -38,7 +38,7 @@ Manager<Game>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
   } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params, server);
   } else if (params.model_filename.empty()) {
-    nn_eval_service_ = std::make_shared<UniformNNEvaluationService<Game>>();
+    nn_eval_service_ = std::make_shared<UniformNNEvaluationService<Traits>>();
   } else {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
@@ -52,26 +52,26 @@ Manager<Game>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
   }
 }
 
-template <core::concepts::Game Game>
-Manager<Game>::Manager(const ManagerParams& params, core::GameServerBase* server,
-                       NNEvaluationServiceBase_sptr service)
+template <typename Traits>
+Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
+                         NNEvaluationServiceBase_sptr service)
     : Manager(true, std::make_shared<search::mutex_vec_t>(1),
               std::make_shared<search::mutex_vec_t>(1), params, server, service) {}
 
-template <core::concepts::Game Game>
-Manager<Game>::Manager(search::mutex_vec_sptr_t& node_mutex_pool,
-                       search::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
-                       core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
+template <typename Traits>
+Manager<Traits>::Manager(search::mutex_vec_sptr_t& node_mutex_pool,
+                         search::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
+                         core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
-template <core::concepts::Game Game>
-inline Manager<Game>::~Manager() {
+template <typename Traits>
+inline Manager<Traits>::~Manager() {
   clear();
   nn_eval_service_->disconnect();
 }
 
-template <core::concepts::Game Game>
-inline void Manager<Game>::start() {
+template <typename Traits>
+inline void Manager<Traits>::start() {
   clear();
 
   if (!connected_) {
@@ -80,8 +80,8 @@ inline void Manager<Game>::start() {
   }
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::clear() {
+template <typename Traits>
+void Manager<Traits>::clear() {
   root_softmax_temperature_.reset();
   lookup_table_.clear();
   root_info_.node_index = -1;
@@ -96,13 +96,14 @@ void Manager<Game>::clear() {
   root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::receive_state_change(core::seat_index_t, const State&, core::action_t action) {
+template <typename Traits>
+void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
+                                           core::action_t action) {
   update(action);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::update(core::action_t action) {
+template <typename Traits>
+void Manager<Traits>::update(core::action_t action) {
   group::element_t root_sym = root_info_.canonical_sym;
 
   core::action_mode_t mode =
@@ -144,13 +145,13 @@ void Manager<Game>::update(core::action_t action) {
   root_info_.node_index = root->lookup_child_by_action(transformed_action);  // tree reuse
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::set_search_params(const SearchParams& params) {
+template <typename Traits>
+void Manager<Traits>::set_search_params(const SearchParams& params) {
   search_params_ = params;
 }
 
-template <core::concepts::Game Game>
-typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest& request) {
+template <typename Traits>
+typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchRequest& request) {
   auto context_id = request.context_id();
 
   DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})", context_id,
@@ -171,8 +172,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search(const SearchRequest
 /*
  * Here, we do a skimmed-down version of Manager::search()
  */
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::load_root_action_values(
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::load_root_action_values(
   const core::YieldNotificationUnit& notification_unit, ActionValueTensor& action_values) {
   if (!mid_load_root_action_values_) {
     action_values.setZero();
@@ -220,8 +221,9 @@ core::yield_instruction_t Manager<Game>::load_root_action_values(
   return core::kContinue;
 }
 
-template <core::concepts::Game Game>
-typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const SearchRequest& request) {
+template <typename Traits>
+typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
+  const SearchRequest& request) {
   mit::unique_lock lock(state_machine_.mutex);
   auto context_id = request.context_id();
   SearchContext& context = contexts_[context_id];
@@ -274,8 +276,8 @@ typename Manager<Game>::SearchResponse Manager<Game>::search_helper(const Search
   return SearchResponse(&results_);
 }
 
-template <core::concepts::Game Game>
-int Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context) {
+template <typename Traits>
+int Manager<Traits>::update_state_machine_to_in_visit_loop(SearchContext& context) {
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return 0;
 
@@ -291,9 +293,9 @@ int Manager<Game>::update_state_machine_to_in_visit_loop(SearchContext& context)
   return state_machine_.in_visit_loop_count - 1;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchContext& context,
-                                                                      int extra_enqueue_count) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::mark_as_done_with_visit_loop(SearchContext& context,
+                                                                        int extra_enqueue_count) {
   // Assumes state_machine_.mutex is held
   RELEASE_ASSERT(context.in_visit_loop);
   context.in_visit_loop = false;
@@ -315,8 +317,8 @@ core::yield_instruction_t Manager<Game>::mark_as_done_with_visit_loop(SearchCont
   return core::kDrop;
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::init_context(core::context_id_t i) {
+template <typename Traits>
+void Manager<Traits>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
 
@@ -326,8 +328,8 @@ void Manager<Game>::init_context(core::context_id_t i) {
   }
 }
 
-template <core::concepts::Game Game>
-inline void Manager<Game>::init_root_info(bool add_noise) {
+template <typename Traits>
+inline void Manager<Traits>::init_root_info(bool add_noise) {
   root_info_.add_noise = add_noise;
   if (root_info_.node_index < 0 || add_noise) {
     const StateHistory& canonical_history = root_info_.history_array[root_info_.canonical_sym];
@@ -347,15 +349,15 @@ inline void Manager<Game>::init_root_info(bool add_noise) {
   }
 }
 
-template <core::concepts::Game Game>
-bool Manager<Game>::more_search_iterations_needed(Node* root) {
+template <typename Traits>
+bool Manager<Traits>::more_search_iterations_needed(Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   if (!search_params_.ponder && root->trivial()) return false;
   return root->stats().total_count() <= search_params_.tree_size_limit;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
   init_root_info(add_noise);
@@ -390,14 +392,14 @@ core::yield_instruction_t Manager<Game>::begin_root_initialization(SearchContext
   return begin_node_initialization(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::resume_root_initialization(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::resume_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   return resume_node_initialization(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
   search::node_pool_index_t node_index = context.initialization_index;
@@ -436,8 +438,8 @@ core::yield_instruction_t Manager<Game>::begin_node_initialization(SearchContext
   return resume_node_initialization(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   StateHistory* history = context.initialization_history;
   search::node_pool_index_t node_index = context.initialization_index;
@@ -467,8 +469,8 @@ core::yield_instruction_t Manager<Game>::resume_node_initialization(SearchContex
   return core::kContinue;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* root = lookup_table_.get_node(root_info_.node_index);
   context.canonical_sym = root_info_.canonical_sym;
@@ -482,8 +484,8 @@ core::yield_instruction_t Manager<Game>::begin_search_iteration(SearchContext& c
   return resume_search_iteration(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
@@ -503,8 +505,8 @@ core::yield_instruction_t Manager<Game>::resume_search_iteration(SearchContext& 
   return core::kContinue;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   print_visit_info(context);
@@ -594,8 +596,8 @@ core::yield_instruction_t Manager<Game>::begin_visit(SearchContext& context) {
   return resume_visit(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   search::Edge* edge = context.visit_edge;
@@ -646,8 +648,8 @@ core::yield_instruction_t Manager<Game>::resume_visit(SearchContext& context) {
   return core::kContinue;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   context.mid_expansion = true;
@@ -704,8 +706,8 @@ core::yield_instruction_t Manager<Game>::begin_expansion(SearchContext& context)
   return resume_expansion(context);
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context) {
+template <typename Traits>
+core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   search::node_pool_index_t child_index = context.initialization_index;
@@ -789,8 +791,8 @@ core::yield_instruction_t Manager<Game>::resume_expansion(SearchContext& context
   return core::kContinue;
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::add_pending_notification(SearchContext& context, search::Edge* edge) {
+template <typename Traits>
+void Manager<Traits>::add_pending_notification(SearchContext& context, search::Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
   DEBUG_ASSERT(edge->expanding_context_id >= 0);
@@ -804,9 +806,9 @@ void Manager<Game>::add_pending_notification(SearchContext& context, search::Edg
   notifying_context.pending_notifications.push_back(slot_context);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::set_edge_state(SearchContext& context, search::Edge* edge,
-                                   search::expansion_state_t state) {
+template <typename Traits>
+void Manager<Traits>::set_edge_state(SearchContext& context, search::Edge* edge,
+                                     search::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == search::kPreExpanded) {
     // Makes no assumptions about mutexes
@@ -826,8 +828,8 @@ void Manager<Game>::set_edge_state(SearchContext& context, search::Edge* edge,
   }
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const {
+template <typename Traits>
+void Manager<Traits>::transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const {
   if (index == root_info_.node_index) {
     if (search_params_.full_search) {
       if (params_.dirichlet_mult) {
@@ -839,16 +841,16 @@ void Manager<Game>::transform_policy(search::node_pool_index_t index, LocalPolic
   }
 }
 
-template <core::concepts::Game Game>
-inline void Manager<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
+template <typename Traits>
+inline void Manager<Traits>::add_dirichlet_noise(LocalPolicyArray& P) const {
   int n = P.rows();
   double alpha = params_.dirichlet_alpha_factor / sqrt(n);
   LocalPolicyArray noise = dirichlet_gen_.template generate<LocalPolicyArray>(rng_, alpha, n);
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
+template <typename Traits>
+void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
 
@@ -931,8 +933,8 @@ void Manager<Game>::expand_all_children(SearchContext& context, Node* node) {
   node->update_child_expand_count(expand_count);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::virtual_backprop(SearchContext& context) {
+template <typename Traits>
+void Manager<Traits>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
@@ -958,8 +960,8 @@ void Manager<Game>::virtual_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
+template <typename Traits>
+void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
 
@@ -983,8 +985,8 @@ void Manager<Game>::undo_virtual_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <core::concepts::Game Game>
-inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArray& value) {
+template <typename Traits>
+inline void Manager<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, search_path_str(context),
@@ -1013,8 +1015,8 @@ inline void Manager<Game>::pure_backprop(SearchContext& context, const ValueArra
   validate_search_path(context);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual) {
+template <typename Traits>
+void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   auto value = GameResults::to_value_array(last_node->stable_data().VT);
 
@@ -1046,8 +1048,8 @@ void Manager<Game>::standard_backprop(SearchContext& context, bool undo_virtual)
   validate_search_path(context);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::short_circuit_backprop(SearchContext& context) {
+template <typename Traits>
+void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (mcts::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
@@ -1066,12 +1068,12 @@ void Manager<Game>::short_circuit_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
+template <typename Traits>
+void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.canonical_history = context.raw_history;
 
-  if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
+  if constexpr (core::concepts::RequiresMctsDoublePass<Traits>) {
     using Group = SymmetryGroup;
     context.canonical_history = root_info_.history_array[context.canonical_sym];
     group::element_t cur_canonical_sym = root_info_.canonical_sym;
@@ -1108,8 +1110,8 @@ void Manager<Game>::calc_canonical_state_data(SearchContext& context) {
   }
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::print_visit_info(const SearchContext& context) {
+template <typename Traits>
+void Manager<Traits>::print_visit_info(const SearchContext& context) {
   if (mcts::kEnableSearchDebug) {
     Node* node = context.visit_node;
     LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), search_path_str(context),
@@ -1117,8 +1119,8 @@ void Manager<Game>::print_visit_info(const SearchContext& context) {
   }
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::validate_search_path(const SearchContext& context) const {
+template <typename Traits>
+void Manager<Traits>::validate_search_path(const SearchContext& context) const {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
 
   int N = context.search_path.size();
@@ -1127,8 +1129,8 @@ void Manager<Game>::validate_search_path(const SearchContext& context) const {
   }
 }
 
-template <core::concepts::Game Game>
-int Manager<Game>::get_best_child_index(const SearchContext& context) {
+template <typename Traits>
+int Manager<Traits>::get_best_child_index(const SearchContext& context) {
   Node* node = context.visit_node;
   bool is_root = (node == lookup_table_.get_node(root_info_.node_index));
   ActionSelector action_selector(params_, search_params_, node, is_root);
@@ -1163,8 +1165,8 @@ int Manager<Game>::get_best_child_index(const SearchContext& context) {
   return argmax_index;
 }
 
-template <core::concepts::Game Game>
-int Manager<Game>::sample_chance_child_index(const SearchContext& context) {
+template <typename Traits>
+int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_actions;
   float chance_dist[n];
@@ -1174,8 +1176,8 @@ int Manager<Game>::sample_chance_child_index(const SearchContext& context) {
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
-template <core::concepts::Game Game>
-std::string Manager<Game>::search_path_str(const SearchContext& context) const {
+template <typename Traits>
+std::string Manager<Traits>::search_path_str(const SearchContext& context) const {
   group::element_t cur_sym = SymmetryGroup::inverse(root_info_.canonical_sym);
   std::string delim = IO::action_delimiter();
   std::vector<std::string> vec;
@@ -1190,10 +1192,10 @@ std::string Manager<Game>::search_path_str(const SearchContext& context) const {
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::print_action_selection_details(const SearchContext& context,
-                                                   const ActionSelector& selector,
-                                                   int argmax_index) const {
+template <typename Traits>
+void Manager<Traits>::print_action_selection_details(const SearchContext& context,
+                                                     const ActionSelector& selector,
+                                                     int argmax_index) const {
   Node* node = context.visit_node;
   if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
@@ -1278,8 +1280,8 @@ void Manager<Game>::print_action_selection_details(const SearchContext& context,
   }
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::prepare_results() {
+template <typename Traits>
+void Manager<Traits>::prepare_results() {
   lookup_table_.defragment(root_info_.node_index);
   Node* root = lookup_table_.get_node(root_info_.node_index);
   const auto& stable_data = root->stable_data();
@@ -1326,8 +1328,8 @@ void Manager<Game>::prepare_results() {
   results_.action_mode = mode;
 }
 
-template <core::concepts::Game Game>
-inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* actions) {
+template <typename Traits>
+inline void Manager<Traits>::load_action_symmetries(Node* root, core::action_t* actions) {
   const auto& stable_data = root->stable_data();
 
   using Item = ActionSymmetryTable::Item;
@@ -1343,9 +1345,9 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
   results_.action_symmetry_table.load(items);
 }
 
-template <core::concepts::Game Game>
-void Manager<Game>::prune_policy_target(const SearchParams& search_params,
-                                        group::element_t inv_sym) {
+template <typename Traits>
+void Manager<Traits>::prune_policy_target(const SearchParams& search_params,
+                                          group::element_t inv_sym) {
   if (params_.no_model) return;
 
   Node* root = lookup_table_.get_node(root_info_.node_index);

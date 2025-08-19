@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/YieldManager.hpp"
-#include "core/concepts/Game.hpp"
 #include "mcts/Constants.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/Node.hpp"
@@ -23,15 +22,16 @@ namespace mcts {
 // request is long-lived, because of sensitivities around the reference-counting of NNEvaluation
 // objects. The request will hold onto old NNEvaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <core::concepts::Game Game>
+template <typename Traits>
 class NNEvaluationRequest {
  public:
+  using Game = Traits::Game;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using Node = mcts::Node<Game>;
+  using Node = mcts::Node<Traits>;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

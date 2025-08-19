@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "mcts/Constants.hpp"
 #include "mcts/NNEvaluationServiceParams.hpp"
 
@@ -13,8 +12,10 @@ namespace mcts {
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
-template <core::concepts::Game Game>
+template <typename Traits>
 struct ManagerParams : public NNEvaluationServiceParams {
+  using Game = Traits::Game;
+
   ManagerParams(mcts::Mode);
 
   auto make_options_description();

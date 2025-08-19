@@ -29,11 +29,11 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
 
 }  // namespace detail
 
-template <core::concepts::Game Game>
-int NNEvaluationService<Game>::instance_count_ = 0;
+template <typename Traits>
+int NNEvaluationService<Traits>::instance_count_ = 0;
 
-template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceParams& params,
+template <typename Traits>
+inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServiceParams& params,
                                                       core::GameServerBase* server)
     : core::PerfStatsClient(),
       core::GameServerClient(server),
@@ -64,13 +64,13 @@ inline NNEvaluationService<Game>::NNEvaluationService(const NNEvaluationServiceP
   }
 }
 
-template <core::concepts::Game Game>
-NNEvaluationService<Game>::~NNEvaluationService() {
+template <typename Traits>
+NNEvaluationService<Traits>::~NNEvaluationService() {
   disconnect();
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::sptr NNEvaluationService<Game>::create(
+template <typename Traits>
+typename NNEvaluationService<Traits>::sptr NNEvaluationService<Traits>::create(
   const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
   // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
@@ -104,8 +104,8 @@ typename NNEvaluationService<Game>::sptr NNEvaluationService<Game>::create(
   return shared_ptr;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::connect() {
+template <typename Traits>
+void NNEvaluationService<Traits>::connect() {
   mit::unique_lock lock(main_mutex_);
   bool first_connect = (num_connections_ == 0);
   num_connections_++;
@@ -117,8 +117,8 @@ void NNEvaluationService<Game>::connect() {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::disconnect() {
+template <typename Traits>
+void NNEvaluationService<Traits>::disconnect() {
   mit::unique_lock lock(main_mutex_);
   num_connections_--;
   if (num_connections_ > 0) {
@@ -134,8 +134,8 @@ void NNEvaluationService<Game>::disconnect() {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
+template <typename Traits>
+void NNEvaluationService<Traits>::CacheLookupResult::update_notification_info(
   BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
   if (id > notifying_sequence_id) {
     notifying_batch_data = batch_data;
@@ -143,33 +143,33 @@ void NNEvaluationService<Game>::CacheLookupResult::update_notification_info(
   }
 }
 
-template <core::concepts::Game Game>
-NNEvaluationService<Game>::ShardData::~ShardData() {
+template <typename Traits>
+NNEvaluationService<Traits>::ShardData::~ShardData() {
   // If we don't clear the eviction handler here, we encounter race conditions during the
   // destruction of the eval_cache. Sometimes, those race conditions lead to a segfault.
   eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::ShardData::init(int cache_size) {
+template <typename Traits>
+void NNEvaluationService<Traits>::ShardData::init(int cache_size) {
   eval_cache.set_capacity(cache_size);
   eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::ShardData::decrement_ref_count(NNEvaluation* eval) {
+template <typename Traits>
+void NNEvaluationService<Traits>::ShardData::decrement_ref_count(NNEvaluation* eval) {
   if (eval->decrement_ref_count()) {
     eval_pool.free(eval);
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchData::set_capacity(int capacity) {
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchData::set_capacity(int capacity) {
   tensor_groups.resize(capacity);
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows, NeuralNet& net,
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchData::copy_input_to(int num_rows, NeuralNet& net,
                                                          core::pipeline_index_t pipeline_index) {
   float* input_ptr = net.get_input_ptr(pipeline_index);
   constexpr size_t input_size = InputShape::total_size;
@@ -181,8 +181,8 @@ void NNEvaluationService<Game>::BatchData::copy_input_to(int num_rows, NeuralNet
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchData::load(const float* policy_batch_data,
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchData::load(const float* policy_batch_data,
                                                 const float* value_batch_data,
                                                 const float* action_values_batch_data) {
   const float* policy_data = policy_batch_data;
@@ -211,8 +211,8 @@ void NNEvaluationService<Game>::BatchData::load(const float* policy_batch_data,
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchData::clear() {
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchData::clear() {
   sequence_id = 0;
   allocate_count = 0;
   write_count = 0;
@@ -220,15 +220,15 @@ void NNEvaluationService<Game>::BatchData::clear() {
   notification_tasks.clear();
 }
 
-template <core::concepts::Game Game>
-NNEvaluationService<Game>::BatchDataSliceAllocator::BatchDataSliceAllocator(
+template <typename Traits>
+NNEvaluationService<Traits>::BatchDataSliceAllocator::BatchDataSliceAllocator(
   core::PerfStats& perf_stats)
     : perf_stats_(perf_stats) {
   add_batch_data();
 }
 
-template <core::concepts::Game Game>
-NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
+template <typename Traits>
+NNEvaluationService<Traits>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
   while (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -240,8 +240,8 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
                                                                          int n,
                                                                          mit::mutex& main_mutex) {
   mit::unique_lock lock(main_mutex);
@@ -267,15 +267,15 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::allocate_slices(BatchDa
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
   LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::freeze_first() {
   if (pending_batch_datas_.empty()) return;
   BatchData* batch_data = pending_batch_datas_.front();
   if (batch_data->allocate_count == 0) return;
@@ -290,18 +290,18 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::freeze_first() {
   }
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+template <typename Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
   if (!pending_batch_datas_.empty()) {
     return pending_batch_datas_.front();
   }
   return nullptr;
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
+template <typename Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
   if (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -313,8 +313,8 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::pop_first_pending_batch_data
   return nullptr;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
+template <typename Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
   batch_size_limit_ = limit;
   for (auto& batch_data : batch_data_reserve_) {
     batch_data->set_capacity(limit);
@@ -324,9 +324,9 @@ void NNEvaluationService<Game>::BatchDataSliceAllocator::set_batch_size_limit(in
   }
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::BatchData*
-NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
+template <typename Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::add_batch_data() {
   // Assumes mutex_ is locked
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
@@ -342,8 +342,8 @@ NNEvaluationService<Game>::BatchDataSliceAllocator::add_batch_data() {
   return batch_data;
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
+template <typename Traits>
+core::yield_instruction_t NNEvaluationService<Traits>::evaluate(NNEvaluationRequest& request) {
   if (request.num_fresh_items() == 0) {
     return core::kContinue;
   }
@@ -411,8 +411,8 @@ core::yield_instruction_t NNEvaluationService<Game>::evaluate(NNEvaluationReques
   return yield_instruction;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::end_session() {
+template <typename Traits>
+void NNEvaluationService<Traits>::end_session() {
   if (session_ended_) return;
 
   core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
@@ -484,8 +484,8 @@ void NNEvaluationService<Game>::end_session() {
   session_ended_ = true;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
+template <typename Traits>
+void NNEvaluationService<Traits>::update_perf_stats(core::PerfStats& perf_stats) {
   mit::unique_lock lock(perf_stats_mutex_);
   core::PerfStats perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::PerfStats();
@@ -494,8 +494,8 @@ void NNEvaluationService<Game>::update_perf_stats(core::PerfStats& perf_stats) {
   perf_stats += perf_stats_copy;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::handle_force_progress() {
+template <typename Traits>
+void NNEvaluationService<Traits>::handle_force_progress() {
   mit::unique_lock lock(main_mutex_);
   LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
@@ -505,13 +505,13 @@ void NNEvaluationService<Game>::handle_force_progress() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-std::string NNEvaluationService<Game>::dump_key(const char* descr) {
+template <typename Traits>
+std::string NNEvaluationService<Traits>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::activate_net() {
+template <typename Traits>
+void NNEvaluationService<Traits>::activate_net() {
   if (net_.activated()) return;
 
   net_.activate(params_.num_pipelines);
@@ -521,8 +521,8 @@ void NNEvaluationService<Game>::activate_net() {
             params_.num_pipelines, params_.batch_size);
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
+template <typename Traits>
+void NNEvaluationService<Traits>::check_cache(NNEvaluationRequest& request,
                                             CacheLookupResult& result) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -574,8 +574,8 @@ void NNEvaluationService<Game>::check_cache(NNEvaluationRequest& request,
   request.clear_stale_items();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::populate_sort_items(SortItem* sort_items,
+template <typename Traits>
+void NNEvaluationService<Traits>::populate_sort_items(SortItem* sort_items,
                                                     NNEvaluationRequest& request) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -602,8 +602,8 @@ void NNEvaluationService<Game>::populate_sort_items(SortItem* sort_items,
   std::sort(sort_items, sort_items + s);
 }
 
-template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
+template <typename Traits>
+bool NNEvaluationService<Traits>::handle_fresh_item(NNEvaluationRequest& request,
                                                   CacheLookupResult& result, ShardData& shard,
                                                   int item_index) {
   core::PerfClocker clocker(result.stats.cache_insert_time_ns);
@@ -640,8 +640,8 @@ bool NNEvaluationService<Game>::handle_fresh_item(NNEvaluationRequest& request,
   return false;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
+template <typename Traits>
+void NNEvaluationService<Traits>::write_miss_infos(NNEvaluationRequest& request,
                                                  CacheLookupResult& result,
                                                  int& miss_info_write_index,
                                                  int misses_for_this_shard) {
@@ -680,8 +680,8 @@ void NNEvaluationService<Game>::write_miss_infos(NNEvaluationRequest& request,
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchData* batch_data,
+template <typename Traits>
+void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchData* batch_data,
                                                int row) {
   const CacheKey& cache_key = item.cache_key();
 
@@ -713,8 +713,8 @@ void NNEvaluationService<Game>::write_to_batch(const RequestItem& item, BatchDat
   group.active_seat = active_seat;
 }
 
-template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationRequest& request,
+template <typename Traits>
+bool NNEvaluationService<Traits>::register_notification_task(const NNEvaluationRequest& request,
                                                            const CacheLookupResult& result) {
   // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
   // There should only ever be one yield_manager_ for the entire process. We do it here to
@@ -750,8 +750,8 @@ bool NNEvaluationService<Game>::register_notification_task(const NNEvaluationReq
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::schedule_loop() {
+template <typename Traits>
+void NNEvaluationService<Traits>::schedule_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
@@ -774,8 +774,8 @@ void NNEvaluationService<Game>::schedule_loop() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::drain_loop() {
+template <typename Traits>
+void NNEvaluationService<Traits>::drain_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       drain_loop_prelude();
@@ -796,8 +796,8 @@ void NNEvaluationService<Game>::drain_loop() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::state_loop() {
+template <typename Traits>
+void NNEvaluationService<Traits>::state_loop() {
   const char* func = __func__;
   mit::unique_lock lock(main_mutex_);
   while (true) {
@@ -889,8 +889,8 @@ void NNEvaluationService<Game>::state_loop() {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
+template <typename Traits>
+void NNEvaluationService<Traits>::load_initial_weights_if_necessary() {
   if (ready_) return;
 
   auto client = core::LoopControllerClient::get();
@@ -921,8 +921,8 @@ void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::schedule_loop_prelude() {
+template <typename Traits>
+void NNEvaluationService<Traits>::schedule_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
@@ -971,8 +971,8 @@ void NNEvaluationService<Game>::schedule_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::drain_loop_prelude() {
+template <typename Traits>
+void NNEvaluationService<Traits>::drain_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
@@ -1016,8 +1016,8 @@ void NNEvaluationService<Game>::drain_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_next_batch_data(
+template <typename Traits>
+typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::get_next_batch_data(
   core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   mit::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
@@ -1059,8 +1059,8 @@ typename NNEvaluationService<Game>::BatchData* NNEvaluationService<Game>::get_ne
   return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::schedule_batch(
+template <typename Traits>
+void NNEvaluationService<Traits>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
   RELEASE_ASSERT(batch_data->frozen());
@@ -1095,8 +1095,8 @@ void NNEvaluationService<Game>::schedule_batch(
   perf_stats_.update(schedule_loop_stats);
 }
 
-template <core::concepts::Game Game>
-bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
+template <typename Traits>
+bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
   if (mcts::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
@@ -1132,8 +1132,8 @@ bool NNEvaluationService<Game>::load_queue_item(LoadQueueItem& item) {
   return true;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
+template <typename Traits>
+void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   const char* func = __func__;
   BatchData* batch_data = item.batch_data;
   core::pipeline_index_t pipeline_index = item.pipeline_index;
@@ -1166,8 +1166,8 @@ void NNEvaluationService<Game>::drain_batch(const LoadQueueItem& item) {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
+template <typename Traits>
+void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
   const char* func = __func__;
   LOG_INFO("{}: reloading network weights...", kCls);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
@@ -1190,8 +1190,8 @@ void NNEvaluationService<Game>::reload_weights(const std::vector<char>& buf) {
   }
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::pause() {
+template <typename Traits>
+void NNEvaluationService<Traits>::pause() {
   const char* func = __func__;
   LOG_INFO("{}::{}()", kCls, func);
   mit::unique_lock lock(main_mutex_);
@@ -1200,8 +1200,8 @@ void NNEvaluationService<Game>::pause() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationService<Game>::unpause() {
+template <typename Traits>
+void NNEvaluationService<Traits>::unpause() {
   const char* func = __func__;
   LOG_INFO("{}::{}() [state:{}]", kCls, func, system_state_);
   mit::unique_lock lock(main_mutex_);

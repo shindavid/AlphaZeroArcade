@@ -4,8 +4,8 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
+template <typename Traits>
+void Node<Traits>::Stats::init_q(const ValueArray& value, bool pure) {
   Q = value;
   Q_sq = value * value;
   if (pure) {
@@ -18,11 +18,11 @@ void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
   eigen_util::debug_assert_is_valid_prob_distr(Q);
 }
 
-template <core::concepts::Game Game>
-void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
-                                             const player_bitset_t& all_actions_provably_losing,
-                                             int num_expanded_children, bool cp_has_winning_move,
-                                             const StableData& sdata) {
+template <typename Traits>
+void Node<Traits>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
+                                               const player_bitset_t& all_actions_provably_losing,
+                                               int num_expanded_children, bool cp_has_winning_move,
+                                               const StableData& sdata) {
   int num_valid_actions = sdata.num_valid_actions;
   core::seat_index_t seat = sdata.active_seat;
 
@@ -38,9 +38,9 @@ void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_
   }
 }
 
-template <core::concepts::Game Game>
-void Node<Game>::write_results(const ManagerParams& params, group::element_t inv_sym,
-                               SearchResults& results) const {
+template <typename Traits>
+void Node<Traits>::write_results(const ManagerParams& params, group::element_t inv_sym,
+                                 SearchResults& results) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -94,9 +94,9 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   }
 }
 
-template <core::concepts::Game Game>
+template <typename Traits>
 template <typename MutexProtectedFunc>
-void Node<Game>::update_stats(MutexProtectedFunc func) {
+void Node<Traits>::update_stats(MutexProtectedFunc func) {
   mit::unique_lock lock(this->mutex());
   func();
   lock.unlock();
@@ -196,8 +196,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   }
 }
 
-template <core::concepts::Game Game>
-typename Node<Game>::Stats Node<Game>::stats_safe() const {
+template <typename Traits>
+typename Node<Traits>::Stats Node<Traits>::stats_safe() const {
   // NOTE[dshin]: I attempted a version of this that attempted a lock-free read, resorting to a
   // the mutex only when a set dirty-bit was found on the copied stats. Contrary to my expectations,
   // this was slightly but clearly slower than the current version. I don't really understand why
@@ -206,9 +206,9 @@ typename Node<Game>::Stats Node<Game>::stats_safe() const {
   return stats_;
 }
 
-template <core::concepts::Game Game>
+template <typename Traits>
 template <typename PolicyTransformFunc>
-void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
+void Node<Traits>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = this->stable_data_.num_valid_actions;
   ValueTensor VT;
 
@@ -238,8 +238,8 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   eigen_util::debug_assert_is_valid_prob_distr(VA);
 }
 
-template <core::concepts::Game Game>
-void Node<Game>::validate_state() const {
+template <typename Traits>
+void Node<Traits>::validate_state() const {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (this->is_terminal()) return;
 

@@ -4,8 +4,8 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
+template <typename Traits>
+inline ActionSelector<Traits>::ActionSelector(const ManagerParams& params,
                                             const SearchParams& search_params, const Node* node,
                                             bool is_root)
     : seat(node->stable_data().active_seat),

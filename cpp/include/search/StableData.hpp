@@ -1,15 +1,16 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "search/StableDataBase.hpp"
+#include "search/concepts/Traits.hpp"
 
 namespace search {
 
-// StableData consists of data members of search::NodeBase<Game> whose values do not change once the
-// node is created. The StableData member of search::NodeBase<Game> is const in spirit, but because
-// we have some Node-copying in LookupTable, we cannot make it truly const.
-template <core::concepts::Game Game>
-struct StableData : public StableDataBaseImpl<Game> {
+// StableData consists of data members of search::NodeBase<Traits> whose values do not change once
+// the node is created. The StableData member of search::NodeBase<Traits> is const in spirit, but
+// because we have some Node-copying in LookupTable, we cannot make it truly const.
+template <typename Traits>
+struct StableData : public StableDataBaseImpl<typename Traits::Game> {
+  using Game = Traits::Game;
   using Base = StableDataBaseImpl<Game>;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;

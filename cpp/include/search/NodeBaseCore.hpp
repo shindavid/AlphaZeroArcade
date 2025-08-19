@@ -1,27 +1,27 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "search/StableData.hpp"
 #include "search/TypeDefs.hpp"
+#include "search/concepts/Traits.hpp"
 
 namespace search {
 
 // Object hierarchy:
 //
-// search::NodeBaseCore<Game, Derived>
-// └── search::NodeBase<Game, Derived>
-//     ├── mcts::Node<Game>
-//     └── bayesian_mcts::Node<Game>
+// search::NodeBaseCore<Traits>
+// └── search::NodeBase<Traits>
+//     ├── mcts::Node<Traits::Game>
+//     └── bayesian_mcts::Node<Traits::Game>
 //
 // NodeBase holds members that are common to all node types.
 //
 // NodeBaseCore is pulled out of NodeBase in order to break a circular dependency between
 // NodeBase and LookupTable.
 
-template <core::concepts::Game Game, typename Derived>
+template <typename Traits>
 class NodeBaseCore {
  public:
-  using StableData = search::StableData<Game>;
+  using StableData = search::StableData<Traits>;
 
   template <typename... Ts>
   NodeBaseCore(Ts&&... args) : stable_data_(std::forward<Ts>(args)...) {}

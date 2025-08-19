@@ -1,20 +1,21 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "search/Edge.hpp"
 #include "search/NodeBaseCore.hpp"
 #include "search/TypeDefs.hpp"
+#include "search/concepts/Traits.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <core::concepts::Game Game, typename Derived>
+template <typename Traits>
 class LookupTable {
  public:
-  using NodeDerived = Derived;
+  using Node = Traits::Node;
+  using Game = Traits::Game;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
-  using NodeBaseCore = search::NodeBaseCore<Game, Derived>;
+  using NodeBaseCore = search::NodeBaseCore<Traits>;
 
   class Defragmenter {
    public:
@@ -60,8 +61,8 @@ class LookupTable {
 
   node_pool_index_t alloc_node() { return node_pool_.alloc(1); }
   edge_pool_index_t alloc_edges(int k) { return edge_pool_.alloc(k); }
-  const NodeDerived* get_node(node_pool_index_t index) const { return &node_pool_[index]; }
-  NodeDerived* get_node(node_pool_index_t index) { return &node_pool_[index]; }
+  const Node* get_node(node_pool_index_t index) const { return &node_pool_[index]; }
+  Node* get_node(node_pool_index_t index) { return &node_pool_[index]; }
   const Edge* get_edge(edge_pool_index_t index) const { return &edge_pool_[index]; }
   Edge* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
 
@@ -75,7 +76,7 @@ class LookupTable {
   friend class Defragmenter;
   map_t map_;
   util::AllocPool<Edge> edge_pool_;
-  util::AllocPool<NodeDerived> node_pool_;
+  util::AllocPool<Node> node_pool_;
   mutex_vec_sptr_t mutex_pool_;
   const int mutex_pool_size_;
   mutable mit::mutex map_mutex_;

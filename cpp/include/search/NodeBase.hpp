@@ -5,6 +5,7 @@
 #include "search/LookupTable.hpp"
 #include "search/NodeBaseCore.hpp"
 #include "search/TypeDefs.hpp"
+#include "search/concepts/Traits.hpp"
 
 namespace search {
 
@@ -13,15 +14,16 @@ namespace search {
 // It consists of data and methods that are shared across all different search-frameworks
 // (e.g., MCTS and Bayesian-MCTS)
 
-template <core::concepts::Game Game, typename Derived>
-class NodeBase : public NodeBaseCore<Game, Derived> {
+template <typename Traits>
+class NodeBase : public NodeBaseCore<Traits> {
  public:
-  using NodeBaseCore = search::NodeBaseCore<Game, Derived>;
-  using NodeDerived = Derived;
+  using NodeBaseCore = search::NodeBaseCore<Traits>;
+  using Node = Traits::Node;
+  using Game = Traits::Game;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
-  using LookupTable = search::LookupTable<Game, NodeDerived>;
+  using LookupTable = search::LookupTable<Traits>;
 
   template <typename... Ts>
   NodeBase(LookupTable*, Ts&&... args);
@@ -31,7 +33,7 @@ class NodeBase : public NodeBaseCore<Game, Derived> {
   void initialize_edges();
 
   Edge* get_edge(int i) const;
-  NodeDerived* get_child(const Edge* edge) const;
+  Node* get_child(const Edge* edge) const;
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
   void update_child_expand_count(int n = 1);
   bool all_children_edges_initialized() const;

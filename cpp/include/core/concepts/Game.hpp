@@ -1,8 +1,6 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "core/GameTypes.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/concepts/GameConstants.hpp"
 #include "core/concepts/GameIO.hpp"
 #include "core/concepts/GameInputTensorizor.hpp"
@@ -11,12 +9,7 @@
 #include "core/concepts/GameStateHistory.hpp"
 #include "core/concepts/GameSymmetries.hpp"
 #include "core/concepts/GameTrainingTargets.hpp"
-#include "util/CppUtil.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
-
-#include <Eigen/Core>
 
 #include <concepts>
 

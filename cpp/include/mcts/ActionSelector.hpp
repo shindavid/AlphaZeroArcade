@@ -1,17 +1,17 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchParams.hpp"
 
 namespace mcts {
 
-template <core::concepts::Game Game>
+template <typename Traits>
 struct ActionSelector {
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using Node = mcts::Node<Game>;
+  using Game = Traits::Game;
+  using ManagerParams = mcts::ManagerParams<Traits>;
+  using Node = mcts::Node<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;

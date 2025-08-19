@@ -7,7 +7,6 @@
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/Game.hpp"
 #include "mcts/Constants.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
@@ -49,9 +48,9 @@ namespace mcts {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <core::concepts::Game Game>
+template <typename Traits>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<Game>,
+    : public NNEvaluationServiceBase<Traits>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -63,12 +62,13 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using NeuralNet = core::NeuralNet<Game>;
-  using Node = mcts::Node<Game>;
-  using NNEvaluation = mcts::NNEvaluation<Game>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
+  using NeuralNet = core::NeuralNet<Traits>;
+  using Node = mcts::Node<Traits>;
+  using NNEvaluation = mcts::NNEvaluation<Traits>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
+  using Game = Traits::Game;
   using ActionMask = Game::Types::ActionMask;
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;

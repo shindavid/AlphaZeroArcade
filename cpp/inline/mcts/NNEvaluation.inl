@@ -6,8 +6,8 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-void NNEvaluation<Game>::init(PolicyTensor& policy, ValueTensor& value,
+template <typename Traits>
+void NNEvaluation<Traits>::init(PolicyTensor& policy, ValueTensor& value,
                               ActionValueTensor& action_values, const ActionMask& valid_actions,
                               group::element_t sym, core::seat_index_t active_seat,
                               core::action_mode_t mode) {
@@ -39,8 +39,8 @@ void NNEvaluation<Game>::init(PolicyTensor& policy, ValueTensor& value,
   initialized_ = true;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
+template <typename Traits>
+void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
   dynamic_array_.resize(2, valid_actions.count());
 
   float policy_entry = 1.0 / valid_actions.count();
@@ -53,8 +53,8 @@ void NNEvaluation<Game>::uniform_init(const ActionMask& valid_actions) {
   initialized_ = true;
 }
 
-template <core::concepts::Game Game>
-bool NNEvaluation<Game>::decrement_ref_count() {
+template <typename Traits>
+bool NNEvaluation<Traits>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
   // safety during that phase of the program. If for some reason that changes, we will need to
@@ -63,16 +63,16 @@ bool NNEvaluation<Game>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluation<Game>::clear() {
+template <typename Traits>
+void NNEvaluation<Traits>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
   initialized_ = false;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
+template <typename Traits>
+void NNEvaluation<Traits>::load(ValueTensor& value, LocalPolicyArray& policy,
                               LocalActionValueArray& action_value) {
   RELEASE_ASSERT(initialized_, "NNEvaluation not initialized");
   value = value_;
