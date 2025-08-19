@@ -2,7 +2,6 @@
 
 #include "search/StableData.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/Traits.hpp"
 
 namespace search {
 

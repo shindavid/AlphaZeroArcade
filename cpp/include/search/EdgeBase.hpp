@@ -6,7 +6,6 @@
 
 namespace search {
 
-template <typename Derived>
 struct EdgeBase {
   node_pool_index_t child_index = -1;
   core::action_t action = -1;

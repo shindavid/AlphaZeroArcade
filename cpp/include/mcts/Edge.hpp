@@ -7,7 +7,7 @@ namespace mcts {
 /*
  * An Edge corresponds to an action that can be taken from this node.
  */
-struct Edge : public search::EdgeBase<Edge> {
+struct Edge : public search::EdgeBase {
   int E = 0;            // real or virtual count
   float base_prob = 0;  // used for both raw policy prior and chance node probability
 

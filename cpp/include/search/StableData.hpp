@@ -1,7 +1,6 @@
 #pragma once
 
 #include "search/StableDataBase.hpp"
-#include "search/concepts/Traits.hpp"
 
 namespace search {
 
