@@ -6,8 +6,8 @@ namespace mcts {
 
 template <typename Traits>
 inline ActionSelector<Traits>::ActionSelector(const ManagerParams& params,
-                                            const SearchParams& search_params, const Node* node,
-                                            bool is_root)
+                                              const SearchParams& search_params, const Node* node,
+                                              bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_actions),
       Q(P.rows()),

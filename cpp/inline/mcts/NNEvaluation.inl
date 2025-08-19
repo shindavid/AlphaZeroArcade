@@ -8,9 +8,9 @@ namespace mcts {
 
 template <typename Traits>
 void NNEvaluation<Traits>::init(PolicyTensor& policy, ValueTensor& value,
-                              ActionValueTensor& action_values, const ActionMask& valid_actions,
-                              group::element_t sym, core::seat_index_t active_seat,
-                              core::action_mode_t mode) {
+                                ActionValueTensor& action_values, const ActionMask& valid_actions,
+                                group::element_t sym, core::seat_index_t active_seat,
+                                core::action_mode_t mode) {
   dynamic_array_.resize(2, valid_actions.count());
 
   // value prediction is from current-player's POV, so rotate it
@@ -73,7 +73,7 @@ void NNEvaluation<Traits>::clear() {
 
 template <typename Traits>
 void NNEvaluation<Traits>::load(ValueTensor& value, LocalPolicyArray& policy,
-                              LocalActionValueArray& action_value) {
+                                LocalActionValueArray& action_value) {
   RELEASE_ASSERT(initialized_, "NNEvaluation not initialized");
   value = value_;
   policy = dynamic_array_.row(0);

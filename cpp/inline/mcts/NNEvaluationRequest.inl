@@ -6,7 +6,7 @@ namespace mcts {
 
 template <typename Traits>
 NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const State& state,
-                                      group::element_t sym, bool incorporate_sym_into_cache_key)
+                                        group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
       history_(&history),
@@ -16,7 +16,7 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const
 
 template <typename Traits>
 NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
-                                      bool incorporate_sym_into_cache_key)
+                                        bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
       history_(&history),
