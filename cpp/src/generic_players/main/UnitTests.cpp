@@ -8,6 +8,7 @@
 #include "mcts/ManagerParams.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/Traits.hpp"
+#include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -34,11 +35,10 @@ class MctsPlayerTest : public ::testing::Test {
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
-  using SearchResults = Game::Types::SearchResults;
+  using SearchResults = Traits::SearchResults;
   using SearchLog = mcts::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
-  using SearchRequest = Manager::SearchRequest;
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
@@ -95,7 +95,7 @@ class MctsPlayerTest : public ::testing::Test {
 
     ActionRequest request(state_history.current(), valid_actions);
     mcts_player_->init_search_mode(request);
-    SearchRequest search_request;
+    search::SearchRequest search_request;
     const SearchResults* search_results =
       mcts_player_->get_manager()->search(search_request).results;
 

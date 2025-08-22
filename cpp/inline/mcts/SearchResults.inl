@@ -1,11 +1,11 @@
-#include "core/GameTypes.hpp"
+#include "mcts/SearchResults.hpp"
 
-namespace core {
+#include "util/EigenUtil.hpp"
 
-template <concepts::GameConstants GameConstants, typename State, concepts::GameResults GameResults,
-          group::concepts::FiniteGroup SymmetryGroup>
-inline boost::json::object
-GameTypes<GameConstants, State, GameResults, SymmetryGroup>::SearchResults::to_json() const {
+namespace mcts {
+
+template <typename Traits>
+boost::json::object SearchResults<Traits>::to_json() const {
   boost::json::object results_json;
   results_json["valid_actions"] = valid_actions.to_string();
   results_json["counts"] = eigen_util::to_json(counts);
@@ -22,4 +22,4 @@ GameTypes<GameConstants, State, GameResults, SymmetryGroup>::SearchResults::to_j
   return results_json;
 }
 
-}  // namespace core
+}  // namespace mcts

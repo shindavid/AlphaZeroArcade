@@ -11,6 +11,7 @@
 #include "mcts/SimpleNNEvaluationService.hpp"
 #include "mcts/Traits.hpp"
 #include "search/LookupTable.hpp"
+#include "search/SearchRequest.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
@@ -103,8 +104,7 @@ class ManagerTest : public testing::Test {
   using Service = mcts::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
-  using SearchRequest = Manager::SearchRequest;
-  using SearchResult = Game::Types::SearchResults;
+  using SearchResults = Traits::SearchResults;
   using SearchLog = mcts::SearchLog<Traits>;
 
   static_assert(search::kStoreStates<Game>, "state-storage required for search-log tests");
@@ -141,10 +141,10 @@ class ManagerTest : public testing::Test {
 
   ManagerParams& manager_params() { return manager_params_; }
 
-  const SearchResult* search(int num_searches = 0) {
+  const SearchResults* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
-    SearchRequest request;
+    search::SearchRequest request;
     return manager_->search(request).results;
   }
 
@@ -159,7 +159,7 @@ class ManagerTest : public testing::Test {
                    const std::vector<core::action_t>& initial_actions, Service_sptr service) {
     init_manager(service);
     start_manager(initial_actions);
-    const SearchResult* result = search(num_search);
+    const SearchResults* result = search(num_search);
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
 

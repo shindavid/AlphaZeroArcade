@@ -2,6 +2,7 @@
 #include "generic_players/DataExportingMctsPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "search/SearchRequest.hpp"
 
 namespace generic {
 
@@ -26,7 +27,7 @@ DataExportingMctsPlayer<Game>::get_action_response(const ActionRequest& request)
   }
   lock.unlock();
 
-  SearchRequest search_request(request.notification_unit);
+  search::SearchRequest search_request(request.notification_unit);
   SearchResponse response = this->get_manager()->search(search_request);
 
   if (response.yield_instruction == core::kYield) {

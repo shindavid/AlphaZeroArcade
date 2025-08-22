@@ -6,6 +6,7 @@
 #include "generic_players/MctsPlayer.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "mcts/SearchLog.hpp"
+#include "mcts/SearchResults.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -29,7 +30,7 @@ class GameServerTest : public testing::Test {
   using action_vec_t = GameServer::action_vec_t;
   using Manager = mcts::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = Game::Types::SearchResults;
+  using SearchResults = mcts::SearchResults<Traits>;
   using SearchLog = mcts::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:

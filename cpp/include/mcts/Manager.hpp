@@ -4,19 +4,21 @@
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
 #include "mcts/ActionSelector.hpp"
-#include "mcts/Constants.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
-#include "mcts/NNEvaluationService.hpp"
-#include "mcts/NNEvaluationServiceBase.hpp"
 #include "mcts/SearchParams.hpp"
+#include "mcts/SearchResults.hpp"
 #include "search/LookupTable.hpp"
+#include "search/SearchContext.hpp"
+#include "search/SearchRequest.hpp"
+#include "search/SearchResponse.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <array>
+#include <memory>
 #include <queue>
+#include <string>
 #include <vector>
 
 namespace mcts {
@@ -32,11 +34,16 @@ class Manager {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using ManagerParams = mcts::ManagerParams<Traits>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
-  using NNEvaluationService = mcts::NNEvaluationService<Traits>;
-  using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Traits>;
-  using NNEvaluationServiceBase_sptr = NNEvaluationServiceBase::sptr;
+  using ManagerParams = Traits::ManagerParams;
+  using Algorithms = Traits::Algorithms;
+  using EvalRequest = Traits::EvalRequest;
+  using EvalResponse = Traits::EvalResponse;
+  using EvalServiceBase = Traits::EvalServiceBase;
+  using EvalServiceFactory = Traits::EvalServiceFactory;
+  using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Visitation = TraitsTypes::Visitation;
+
   using LookupTable = search::LookupTable<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
@@ -45,6 +52,8 @@ class Manager {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
+  using SearchResponse = search::SearchResponse<Traits>;
+  using SearchContext = search::SearchContext<Traits>;
   using ActionSelector = mcts::ActionSelector<Traits>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = Game::Types::ActionRequest;
@@ -56,7 +65,7 @@ class Manager {
   using Constants = Game::Constants;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using SearchResults = Game::Types::SearchResults;
+  using SearchResults = mcts::SearchResults<Traits>;
   using InputTensorizor = Game::InputTensorizor;
   using MCTSKey = InputTensorizor::MCTSKey;
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
@@ -65,76 +74,6 @@ class Manager {
   using ValueArray = Game::Types::ValueArray;
 
   using post_visit_func_t = std::function<void()>;
-
-  struct Visitation {
-    Node* node;
-    Edge* edge;  // emanates from node, possibly nullptr
-  };
-  using search_path_t = std::vector<Visitation>;
-
-  struct SearchRequest {
-    SearchRequest(const core::YieldNotificationUnit& u) : notification_unit(u) {}
-    SearchRequest() = default;
-
-    core::YieldManager* yield_manager() const { return notification_unit.yield_manager; }
-    core::context_id_t context_id() const { return notification_unit.context_id; }
-    core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
-
-    core::YieldNotificationUnit notification_unit;
-  };
-
-  struct SearchResponse {
-    static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
-    static SearchResponse make_yield(int e = 0) { return SearchResponse(nullptr, core::kYield, e); }
-
-    SearchResponse(const SearchResults* r, core::yield_instruction_t y = core::kContinue, int e = 0)
-        : results(r), yield_instruction(y), extra_enqueue_count(e) {}
-
-    const SearchResults* results;
-    core::yield_instruction_t yield_instruction;
-    int extra_enqueue_count;
-  };
-
-  struct SearchContext {
-    int log_prefix_n() const { return kThreadWhitespaceLength * id; }
-
-    core::context_id_t id;
-
-    search_path_t search_path;
-
-    NNEvaluationRequest eval_request;
-    StateHistory canonical_history;
-    StateHistoryArray root_history_array;
-    StateHistory raw_history;
-    core::seat_index_t active_seat;
-    group::element_t canonical_sym;
-
-    bool mid_expansion = false;
-    bool mid_visit = false;
-    bool mid_search_iteration = false;
-    bool mid_node_initialization = false;
-    bool in_visit_loop = false;
-
-    // node-initialization yield info
-    StateHistory* initialization_history;
-    search::node_pool_index_t initialization_index = -1;
-    search::node_pool_index_t inserted_node_index = -1;
-    bool expanded_new_node = false;
-
-    // visit yield info
-    Node* visit_node;
-    Edge* visit_edge;
-    StateHistory* history;
-    group::element_t inv_canonical_sym;
-    bool applied_action = false;
-
-    // For kYield responses
-    core::slot_context_vec_t pending_notifications;
-    int pending_notifications_mutex_id = 0;
-
-    // For convenience
-    const SearchRequest* search_request = nullptr;
-  };
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
@@ -214,11 +153,11 @@ class Manager {
    * the Manager will create a separate single-element mutex-pool for each.
    */
   Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
-          NNEvaluationServiceBase_sptr service = nullptr);
+          EvalServiceBase_sptr service = nullptr);
 
   Manager(search::mutex_vec_sptr_t& node_mutex_pool, search::mutex_vec_sptr_t& context_mutex_pool,
           const ManagerParams& params, core::GameServerBase* server = nullptr,
-          NNEvaluationServiceBase_sptr service = nullptr);
+          EvalServiceBase_sptr service = nullptr);
 
   ~Manager();
 
@@ -232,7 +171,7 @@ class Manager {
   void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
-  SearchResponse search(const SearchRequest& request);
+  SearchResponse search(const search::SearchRequest& request);
   core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
                                                     ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &lookup_table_; }
@@ -248,9 +187,9 @@ class Manager {
 
   Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
           search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-          core::GameServerBase*, NNEvaluationServiceBase_sptr service);
+          core::GameServerBase*, EvalServiceBase_sptr service);
 
-  SearchResponse search_helper(const SearchRequest& request);
+  SearchResponse search_helper(const search::SearchRequest& request);
 
   // Assumes state_matchine_.mutex is held
   //
@@ -319,7 +258,7 @@ class Manager {
   context_vec_t contexts_;
   StateMachine state_machine_;
   search::mutex_vec_sptr_t context_mutex_pool_;
-  NNEvaluationServiceBase_sptr nn_eval_service_;
+  EvalServiceBase_sptr nn_eval_service_;
 
   SearchParams search_params_;
   SearchResults results_;

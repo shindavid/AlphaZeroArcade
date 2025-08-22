@@ -8,7 +8,9 @@
 #include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/SearchParams.hpp"
+#include "mcts/SearchResults.hpp"
 #include "mcts/Traits.hpp"
+#include "search/SearchResponse.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -48,9 +50,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using MctsManager = mcts::Manager<Traits>;
   using MctsManagerParams = mcts::ManagerParams<Traits>;
   using MctsSearchParams = mcts::SearchParams;
-  using SearchResults = Game::Types::SearchResults;
-  using SearchRequest = MctsManager::SearchRequest;
-  using SearchResponse = MctsManager::SearchResponse;
+  using SearchResults = mcts::SearchResults<Traits>;
+  using SearchResponse = search::SearchResponse<Traits>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
   using State = Game::State;

@@ -131,30 +131,6 @@ struct GameTypes {
   };
 
   /*
-   * Return type for an MCTS search.
-   *
-   * This is declared here so that we can properly declare the function signature for the
-   * Game::IO::print_mcts_results() function for each specific Game.
-   */
-  struct SearchResults {
-    ActionMask valid_actions;
-    PolicyTensor counts;
-    PolicyTensor policy_target;
-    PolicyTensor policy_prior;
-    PolicyTensor Q;
-    PolicyTensor Q_sq;
-    ActionValueTensor action_values;
-    ValueArray win_rates;
-    ValueTensor value_prior;
-    ActionSymmetryTable action_symmetry_table;
-    core::action_mode_t action_mode;
-    bool trivial;  // all actions are symmetrically equivalent
-    bool provably_lost = false;
-
-    boost::json::object to_json() const;
-  };
-
-  /*
    * A (symmetry-adjusted) view of a specific position in a game log.
    *
    * This is declared here so that we can properly declare the function signature for the
@@ -172,5 +148,3 @@ struct GameTypes {
 };
 
 }  // namespace core
-
-#include "inline/core/GameTypes.inl"

@@ -2,6 +2,7 @@
 
 #include "mcts/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
+#include "mcts/SearchResults.hpp"
 #include "search/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -33,7 +34,7 @@ class Node : public search::NodeBase<Traits> {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = Game::Types::ValueTensor;
-  using SearchResults = Game::Types::SearchResults;
+  using SearchResults = mcts::SearchResults<Traits>;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   using NodeBase = search::NodeBase<Traits>;

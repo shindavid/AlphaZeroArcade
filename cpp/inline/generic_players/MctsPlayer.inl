@@ -1,6 +1,7 @@
 #include "generic_players/MctsPlayer.hpp"
 
 #include "core/Constants.hpp"
+#include "search/SearchRequest.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
@@ -138,7 +139,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   init_search_mode(request);
   lock.unlock();
 
-  SearchRequest search_request(request.notification_unit);
+  search::SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
 
   if (response.yield_instruction == core::kYield) {

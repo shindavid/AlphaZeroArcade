@@ -1,15 +1,17 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "mcts/UniformNNEvaluationService.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Asserts.hpp"
+#include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 
 #include <boost/filesystem.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
+
+#include <iostream>
 
 namespace mcts {
 
@@ -19,7 +21,7 @@ int Manager<Traits>::next_instance_id_ = 0;
 template <typename Traits>
 Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
                          search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-                         core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
+                         core::GameServerBase* server, EvalServiceBase_sptr service)
     : params_(params),
       pondering_search_params_(
         SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
@@ -35,12 +37,8 @@ Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
 
   if (service) {
     nn_eval_service_ = service;
-  } else if (!params.no_model) {
-    nn_eval_service_ = NNEvaluationService::create(params, server);
-  } else if (params.model_filename.empty()) {
-    nn_eval_service_ = std::make_shared<UniformNNEvaluationService<Traits>>();
   } else {
-    throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
+    nn_eval_service_ = EvalServiceFactory::create(params, server);
   }
 
   if (params.enable_pondering) {
@@ -54,14 +52,14 @@ Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
 
 template <typename Traits>
 Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
-                         NNEvaluationServiceBase_sptr service)
+                         EvalServiceBase_sptr service)
     : Manager(true, std::make_shared<search::mutex_vec_t>(1),
               std::make_shared<search::mutex_vec_t>(1), params, server, service) {}
 
 template <typename Traits>
 Manager<Traits>::Manager(search::mutex_vec_sptr_t& node_mutex_pool,
                          search::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
-                         core::GameServerBase* server, NNEvaluationServiceBase_sptr service)
+                         core::GameServerBase* server, EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <typename Traits>
@@ -151,7 +149,8 @@ void Manager<Traits>::set_search_params(const SearchParams& params) {
 }
 
 template <typename Traits>
-typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchRequest& request) {
+typename Manager<Traits>::SearchResponse Manager<Traits>::search(
+  const search::SearchRequest& request) {
   auto context_id = request.context_id();
 
   DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})", context_id,
@@ -189,7 +188,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     mid_load_root_action_values_ = true;
   }
 
-  SearchRequest request(notification_unit);
+  search::SearchRequest request(notification_unit);
   SearchResponse response = search(request);
   if (response.yield_instruction == core::kYield) return core::kYield;
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
@@ -223,7 +222,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
 
 template <typename Traits>
 typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
-  const SearchRequest& request) {
+  const search::SearchRequest& request) {
   mit::unique_lock lock(state_machine_.mutex);
   auto context_id = request.context_id();
   SearchContext& context = contexts_[context_id];
@@ -425,7 +424,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       expand_all_children(context, node);
     }
 
-    const SearchRequest& search_request = *context.search_request;
+    const search::SearchRequest& search_request = *context.search_request;
     context.eval_request.set_notification_task_info(search_request.notification_unit);
 
     if (mcts::kEnableSearchDebug) {
