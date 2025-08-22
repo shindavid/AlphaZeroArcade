@@ -154,6 +154,15 @@ void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
 }
 
 template <typename Traits>
+bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
+                                                       const Node* root) {
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  const search::SearchParams& search_params = general_context.search_params;
+  if (!search_params.ponder && root->trivial()) return false;
+  return root->stats().total_count() <= search_params.tree_size_limit;
+}
+
+template <typename Traits>
 void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
                                         search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;

@@ -244,7 +244,7 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
   }
 
   Node* root = lookup_table()->get_node(root_info()->node_index);
-  while (more_search_iterations_needed(root)) {
+  while (Algorithms::more_search_iterations_needed(general_context_, root)) {
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
     }
@@ -312,14 +312,6 @@ void Manager<Traits>::init_context(core::context_id_t i) {
   if (n > 1) {
     context.pending_notifications_mutex_id = util::Random::uniform_sample(0, n);
   }
-}
-
-template <typename Traits>
-bool Manager<Traits>::more_search_iterations_needed(Node* root) {
-  // root->stats() usage here is not thread-safe but this race-condition is benign
-  const search::SearchParams& search_params = general_context_.search_params;
-  if (!search_params.ponder && root->trivial()) return false;
-  return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
 template <typename Traits>
@@ -565,9 +557,14 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       DEBUG_ASSERT(edge->child_index >= 0);
       Node* child = lookup_table.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
+
+      // TODO: put below into Algorithms
       int edge_count = edge->E;
       int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
-      if (edge_count < child_count) {
+      bool should_short_circuit = edge_count < child_count;
+      // end TODO
+
+      if (should_short_circuit) {
         Algorithms::short_circuit_backprop(context);
       } else {
         Algorithms::standard_backprop(context, false);
@@ -608,9 +605,14 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
   Node* child = node->get_child(edge);
   if (child) {
     context.search_path.emplace_back(child, nullptr);
+
+    // TODO: put below into Algorithms
     int edge_count = edge->E;
     int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
-    if (edge_count < child_count) {
+    bool should_short_circuit = edge_count < child_count;
+    // end TODO
+
+    if (should_short_circuit) {
       Algorithms::short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
@@ -1000,6 +1002,7 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
+// TODO: move prepare_results() into Algorithms
 template <typename Traits>
 void Manager<Traits>::prepare_results() {
   RootInfo& root_info = general_context_.root_info;

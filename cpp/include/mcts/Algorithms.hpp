@@ -43,6 +43,7 @@ class Algorithms {
   static void standard_backprop(SearchContext& context, bool undo_virtual);
   static void short_circuit_backprop(SearchContext& context);
 
+  static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
   static int get_best_child_index(const SearchContext& context);
 
