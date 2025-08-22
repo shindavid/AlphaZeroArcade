@@ -2,9 +2,11 @@
 
 #include "util/CppUtil.hpp"
 
+#include <cstdint>
+
 namespace mcts {
 
-enum Mode { kCompetitive, kTraining };
+enum Mode : int8_t { kCompetitive, kTraining };
 
 constexpr int kThreadWhitespaceLength = 50;  // for debug printing alignment
 constexpr bool kEnableSearchDebug = IS_DEFINED(MCTS_DEBUG);

@@ -1,6 +1,7 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Asserts.hpp"
@@ -161,7 +162,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   const core::YieldNotificationUnit& notification_unit, ActionValueTensor& action_values) {
   if (!mid_load_root_action_values_) {
     action_values.setZero();
-    init_root_info(false);
+    Algorithms::init_root_info(general_context_, search::kToLoadRootActionValues);
 
     // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
     // which will expand all the root's children.
@@ -314,30 +315,6 @@ void Manager<Traits>::init_context(core::context_id_t i) {
 }
 
 template <typename Traits>
-inline void Manager<Traits>::init_root_info(bool add_noise) {
-  RootInfo& root_info = general_context_.root_info;
-  LookupTable* lookup_table = &general_context_.lookup_table;
-
-  root_info.add_noise = add_noise;
-  if (root_info.node_index < 0 || add_noise) {
-    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
-    root_info.node_index = lookup_table->alloc_node();
-    Node* root = lookup_table->get_node(root_info.node_index);
-    core::seat_index_t active_seat = Rules::get_current_player(canonical_history.current());
-    RELEASE_ASSERT(active_seat >= 0 && active_seat < Constants::kNumPlayers);
-    root_info.active_seat = active_seat;
-    new (root) Node(lookup_table, canonical_history, active_seat);
-  }
-
-  Node* root2 = lookup_table->get_node(root_info.node_index);
-
-  // thread-safe since single-threaded here
-  if (root2->stats().RN == 0) {
-    root2->stats().RN = 1;
-  }
-}
-
-template <typename Traits>
 bool Manager<Traits>::more_search_iterations_needed(Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context_.search_params;
@@ -348,13 +325,10 @@ bool Manager<Traits>::more_search_iterations_needed(Node* root) {
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const search::SearchParams& search_params = general_context_.search_params;
   RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& params = general_context_.manager_params;
 
-  bool add_noise = search_params.full_search && params.dirichlet_mult > 0;
-  init_root_info(add_noise);
+  Algorithms::init_root_info(general_context_, search::kForStandardSearch);
 
   if (mcts::kEnableSearchDebug) {
     const auto& state = root_info.history_array[group::kIdentity].current();

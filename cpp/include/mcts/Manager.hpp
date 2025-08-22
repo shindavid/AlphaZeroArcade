@@ -202,7 +202,6 @@ class Manager {
                                                          int extra_enqueue_count);
 
   void init_context(core::context_id_t);
-  void init_root_info(bool add_noise);
   bool more_search_iterations_needed(Node* root);
   core::yield_instruction_t begin_root_initialization(SearchContext&);
   core::yield_instruction_t resume_root_initialization(SearchContext&);

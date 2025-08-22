@@ -1,8 +1,10 @@
 #include "mcts/Algorithms.hpp"
 
 #include "mcts/Constants.hpp"
+#include "search/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
 
@@ -149,6 +151,49 @@ void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
     });
   }
   validate_search_path(context);
+}
+
+template <typename Traits>
+void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
+                                        search::RootInitPurpose purpose) {
+  const ManagerParams& manager_params = general_context.manager_params;
+  const search::SearchParams& search_params = general_context.search_params;
+
+  bool add_noise = false;
+  switch (purpose) {
+    case search::kForStandardSearch: {
+      add_noise = search_params.full_search && manager_params.dirichlet_mult > 0;
+      break;
+    }
+    case search::kToLoadRootActionValues: {
+      add_noise = false;
+      break;
+    }
+    default: {
+      throw util::Exception("Unknown purpose {}", purpose);
+    }
+  }
+
+  RootInfo& root_info = general_context.root_info;
+  LookupTable* lookup_table = &general_context.lookup_table;
+
+  root_info.add_noise = add_noise;
+  if (root_info.node_index < 0 || add_noise) {
+    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
+    root_info.node_index = lookup_table->alloc_node();
+    Node* root = lookup_table->get_node(root_info.node_index);
+    core::seat_index_t active_seat = Game::Rules::get_current_player(canonical_history.current());
+    RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
+    root_info.active_seat = active_seat;
+    new (root) Node(lookup_table, canonical_history, active_seat);
+  }
+
+  Node* root2 = lookup_table->get_node(root_info.node_index);
+
+  // thread-safe since single-threaded here
+  if (root2->stats().RN == 0) {
+    root2->stats().RN = 1;
+  }
 }
 
 template <typename Traits>
