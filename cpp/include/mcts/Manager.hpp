@@ -223,11 +223,6 @@ class Manager {
   void transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
-  void virtual_backprop(SearchContext& context);
-  void undo_virtual_backprop(SearchContext& context);
-  void pure_backprop(SearchContext& context, const ValueArray& value);
-  void standard_backprop(SearchContext& context, bool undo_virtual);
-  void short_circuit_backprop(SearchContext& context);
   void calc_canonical_state_data(SearchContext& context);
   void print_visit_info(const SearchContext& context);
   void validate_search_path(const SearchContext& context) const;

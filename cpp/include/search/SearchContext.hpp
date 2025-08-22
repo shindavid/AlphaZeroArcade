@@ -34,7 +34,8 @@ struct SearchContext {
   StateHistoryArray root_history_array;
   StateHistory raw_history;
   core::seat_index_t active_seat;
-  group::element_t canonical_sym;
+  group::element_t root_canonical_sym;
+  group::element_t leaf_canonical_sym;
 
   bool mid_expansion = false;
   bool mid_visit = false;

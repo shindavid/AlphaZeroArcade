@@ -378,9 +378,10 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
-  StateHistory& history = root_info_.history_array[context.canonical_sym];
+  StateHistory& history = root_info_.history_array[context.leaf_canonical_sym];
 
-  context.canonical_sym = root_info_.canonical_sym;
+  context.root_canonical_sym = root_info_.canonical_sym;
+  context.leaf_canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
   context.active_seat = root_info_.active_seat;
   context.root_history_array = root_info_.history_array;
@@ -472,7 +473,9 @@ template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* root = lookup_table_.get_node(root_info_.node_index);
-  context.canonical_sym = root_info_.canonical_sym;
+
+  context.root_canonical_sym = root_info_.canonical_sym;
+  context.leaf_canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
   context.active_seat = root_info_.active_seat;
   context.search_path.clear();
@@ -496,7 +499,8 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
   root->validate_state();
-  context.canonical_sym = root_info_.canonical_sym;
+  context.root_canonical_sym = root_info_.canonical_sym;
+  context.leaf_canonical_sym = root_info_.canonical_sym;
   context.raw_history = root_info_.history_array[group::kIdentity];
   context.active_seat = root_info_.active_seat;
   if (post_visit_func_) post_visit_func_();
@@ -514,7 +518,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    pure_backprop(context, GameResults::to_value_array(stable_data.VT));
+    Algorithms::pure_backprop(context, GameResults::to_value_array(stable_data.VT));
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -531,7 +535,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_action = false;
-  context.inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
+  context.inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
   if (edge->state != search::kExpanded) {
     // reread state under mutex in case of race-condition
     mit::unique_lock lock(node->mutex());
@@ -551,7 +555,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       group::element_t new_sym = Symmetries::get_canonical_symmetry(context.raw_history.current());
       edge->sym = SymmetryGroup::compose(new_sym, context.inv_canonical_sym);
 
-      context.canonical_sym = new_sym;
+      context.leaf_canonical_sym = new_sym;
 
       core::action_mode_t child_mode = Rules::get_action_mode(context.raw_history.current());
       if (!Rules::is_chance_mode(child_mode)) {
@@ -560,7 +564,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       context.applied_action = true;
 
       context.initialization_history = &context.raw_history;
-      if (context.canonical_sym != group::kIdentity) {
+      if (context.leaf_canonical_sym != group::kIdentity) {
         calc_canonical_state_data(context);
         context.initialization_history = &context.canonical_history;
       }
@@ -579,9 +583,9 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       int edge_count = edge->E;
       int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
       if (edge_count < child_count) {
-        short_circuit_backprop(context);
+        Algorithms::short_circuit_backprop(context);
       } else {
-        standard_backprop(context, false);
+        Algorithms::standard_backprop(context, false);
       }
 
       lock.lock();
@@ -622,7 +626,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     int edge_count = edge->E;
     int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
     if (edge_count < child_count) {
-      short_circuit_backprop(context);
+      Algorithms::short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
       LOG_TRACE("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
@@ -639,7 +643,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     if (!Rules::is_chance_mode(child_mode)) {
       context.active_seat = Rules::get_current_player(context.raw_history.current());
     }
-    context.canonical_sym = SymmetryGroup::compose(edge->sym, context.canonical_sym);
+    context.leaf_canonical_sym = SymmetryGroup::compose(edge->sym, context.leaf_canonical_sym);
   }
   context.visit_node = child;
   context.mid_visit = false;
@@ -696,7 +700,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     child->initialize_edges();
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
-      virtual_backprop(context);
+      Algorithms::virtual_backprop(context);
     }
 
     context.initialization_history = history;
@@ -733,15 +737,15 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       // when the lookup_table is defragmented.
       context.search_path.pop_back();
       if (do_virtual) {
-        undo_virtual_backprop(context);
+        Algorithms::undo_virtual_backprop(context);
       }
       context.expanded_new_node = false;
       child_index = edge->child_index;
     } else {
       if (terminal) {
-        pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
+        Algorithms::pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
       } else {
-        standard_backprop(context, do_virtual);
+        Algorithms::standard_backprop(context, do_virtual);
       }
     }
   }
@@ -851,7 +855,7 @@ inline void Manager<Traits>::add_dirichlet_noise(LocalPolicyArray& P) const {
 template <typename Traits>
 void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.canonical_sym);
+  group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
 
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
@@ -933,150 +937,15 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 }
 
 template <typename Traits>
-void Manager<Traits>::virtual_backprop(SearchContext& context) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
-  }
-
-  RELEASE_ASSERT(!context.search_path.empty());
-  Node* last_node = context.search_path.back().node;
-
-  last_node->update_stats([&] {
-    last_node->stats().VN++;  // thread-safe because executed under mutex
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
-      edge->E++;
-      node->stats().VN++;  // thread-safe because executed under mutex
-    });
-  }
-  validate_search_path(context);
-}
-
-template <typename Traits>
-void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
-  // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
-  // modified in between the two calls.
-
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
-  }
-
-  RELEASE_ASSERT(!context.search_path.empty());
-
-  for (int i = context.search_path.size() - 1; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
-      edge->E--;
-      node->stats().VN--;  // thread-safe because executed under mutex
-    });
-  }
-  validate_search_path(context);
-}
-
-template <typename Traits>
-inline void Manager<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, search_path_str(context),
-             fmt::streamed(value.transpose()));
-  }
-
-  RELEASE_ASSERT(!context.search_path.empty());
-  Node* last_node = context.search_path.back().node;
-
-  last_node->update_stats([&] {
-    auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    stats.init_q(value, true);
-    stats.RN++;
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
-      edge->E++;
-      node->stats().RN++;  // thread-safe because executed under mutex
-    });
-  }
-  validate_search_path(context);
-}
-
-template <typename Traits>
-void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
-  Node* last_node = context.search_path.back().node;
-  auto value = GameResults::to_value_array(last_node->stable_data().VT);
-
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, search_path_str(context),
-             fmt::streamed(value.transpose()));
-  }
-
-  last_node->update_stats([&] {
-    auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    stats.init_q(value, false);
-    stats.RN++;
-    stats.VN -= undo_virtual;
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
-      edge->E += !undo_virtual;
-      auto& stats = node->stats();  // thread-safe because executed under mutex
-      stats.RN++;
-      stats.VN -= undo_virtual;
-    });
-  }
-  validate_search_path(context);
-}
-
-template <typename Traits>
-void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, search_path_str(context));
-  }
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
-      edge->E++;
-      node->stats().RN++;  // thread-safe because executed under mutex
-    });
-  }
-  validate_search_path(context);
-}
-
-template <typename Traits>
 void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   context.canonical_history = context.raw_history;
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Traits>) {
     using Group = SymmetryGroup;
-    context.canonical_history = root_info_.history_array[context.canonical_sym];
+    context.canonical_history = root_info_.history_array[context.leaf_canonical_sym];
     group::element_t cur_canonical_sym = root_info_.canonical_sym;
-    group::element_t leaf_canonical_sym = context.canonical_sym;
+    group::element_t leaf_canonical_sym = context.leaf_canonical_sym;
     for (const Visitation& visitation : context.search_path) {
       Edge* edge = visitation.edge;
       core::action_mode_t mode = visitation.node->action_mode();
@@ -1091,7 +960,7 @@ void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
                    "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
                    leaf_canonical_sym);
   } else {
-    Symmetries::apply(context.canonical_history, context.canonical_sym);
+    Symmetries::apply(context.canonical_history, context.leaf_canonical_sym);
   }
 
   if (IS_DEFINED(DEBUG_BUILD)) {
@@ -1099,7 +968,7 @@ void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
     Symmetries::apply(s, Symmetries::get_canonical_symmetry(s));
     if (s != context.canonical_history.current()) {
       std::cout << "ERROR! Bad Canonicalization!" << std::endl;
-      std::cout << "canonical_sym_: " << int(context.canonical_sym) << std::endl;
+      std::cout << "canonical_sym_: " << int(context.leaf_canonical_sym) << std::endl;
       std::cout << "canonical_history.current():" << std::endl;
       IO::print_state(std::cout, context.canonical_history.current());
       std::cout << "Should be:" << std::endl;
@@ -1248,7 +1117,7 @@ void Manager<Traits>::print_action_selection_details(const SearchContext& contex
     argmax.setZero();
     argmax(argmax_index) = 1;
 
-    group::element_t inv_sym = SymmetryGroup::inverse(context.canonical_sym);
+    group::element_t inv_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
     for (int e = 0; e < n_actions; ++e) {
       auto edge = node->get_edge(e);
       core::action_t action = edge->action;
