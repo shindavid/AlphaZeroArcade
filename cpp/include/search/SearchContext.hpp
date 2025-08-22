@@ -3,30 +3,38 @@
 #include "core/BasicTypes.hpp"
 
 #include "search/Constants.hpp"
+#include "search/GeneralContext.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
+
+#include <string>
 
 namespace search {
 
 template <typename Traits>
 struct SearchContext {
   int log_prefix_n() const { return kThreadWhitespaceLength * id; }
+  std::string search_path_str() const;  // slow, for debugging
 
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using EvalRequest = Traits::EvalRequest;
 
+  using GeneralContext = search::GeneralContext<Traits>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
+  using Visitation = TraitsTypes::Visitation;
   using search_path_t = TraitsTypes::search_path_t;
 
   using StateHistory = Game::StateHistory;
+  using SymmetryGroup = Game::SymmetryGroup;
 
   core::context_id_t id;
 
+  GeneralContext* general_context = nullptr;
   search_path_t search_path;
 
   EvalRequest eval_request;
@@ -65,3 +73,5 @@ struct SearchContext {
 };
 
 }  // namespace search
+
+#include "inline/search/SearchContext.inl"

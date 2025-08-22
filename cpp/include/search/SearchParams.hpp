@@ -1,6 +1,6 @@
 #pragma once
 
-namespace mcts {
+namespace search {
 
 /*
  * SearchParams pertain to a single call to mcts::Manager::search(). Even given a single
@@ -18,4 +18,4 @@ struct SearchParams {
   bool ponder = false;
 };
 
-}  // namespace mcts
+}  // namespace search

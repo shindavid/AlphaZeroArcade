@@ -4,10 +4,11 @@
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
 #include "mcts/ActionSelector.hpp"
-#include "mcts/SearchParams.hpp"
 #include "mcts/SearchResults.hpp"
+#include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
+#include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
@@ -44,7 +45,6 @@ class Manager {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
 
-  using LookupTable = search::LookupTable<Traits>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -52,8 +52,12 @@ class Manager {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  using SearchResponse = search::SearchResponse<Traits>;
+  using GeneralContext = search::GeneralContext<Traits>;
+  using RootInfo = GeneralContext::RootInfo;
+  using LookupTable = search::LookupTable<Traits>;
   using SearchContext = search::SearchContext<Traits>;
+  using SearchResponse = search::SearchResponse<Traits>;
+
   using ActionSelector = mcts::ActionSelector<Traits>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = Game::Types::ActionRequest;
@@ -134,15 +138,6 @@ class Manager {
     execution_state_t state = kIdle;
   };
 
-  struct RootInfo {
-    StateHistoryArray history_array;
-
-    group::element_t canonical_sym = -1;
-    search::node_pool_index_t node_index = -1;
-    core::seat_index_t active_seat = -1;
-    bool add_noise = false;
-  };
-
   /*
    * Construct a Manager object.
    *
@@ -161,7 +156,7 @@ class Manager {
 
   ~Manager();
 
-  const ManagerParams& params() const { return params_; }
+  const ManagerParams& params() const { return general_context_.manager_params; }
   int num_search_threads() const { return params().num_search_threads; }
   bool multithreaded() const { return num_search_threads() > 1; }
 
@@ -170,12 +165,14 @@ class Manager {
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
   void update(core::action_t);
 
-  void set_search_params(const SearchParams& search_params);
+  void set_search_params(const search::SearchParams& search_params);
   SearchResponse search(const search::SearchRequest& request);
   core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
                                                     ActionValueTensor& action_values);
-  const LookupTable* lookup_table() const { return &lookup_table_; }
-  const RootInfo* root_info() const { return &root_info_; }
+  const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
+  const RootInfo* root_info() const { return &general_context_.root_info; }
+  LookupTable* lookup_table() { return &general_context_.lookup_table; }
+  RootInfo* root_info() { return &general_context_.root_info; }
 
   void end_session() { nn_eval_service_->end_session(); }
 
@@ -225,29 +222,22 @@ class Manager {
   void expand_all_children(SearchContext& context, Node* node);
   void calc_canonical_state_data(SearchContext& context);
   void print_visit_info(const SearchContext& context);
-  void validate_search_path(const SearchContext& context) const;
-  int get_best_child_index(const SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
-  std::string search_path_str(const SearchContext& context) const;  // slow, for debugging
-  void print_action_selection_details(const SearchContext& context, const ActionSelector& selector,
-                                      int argmax_index) const;
 
   void prepare_results();
 
   void load_action_symmetries(Node* root, core::action_t* actions);
-  void prune_policy_target(const SearchParams&, group::element_t inv_sym);
+  void prune_policy_target(group::element_t inv_sym);
 
   static int next_instance_id_;
 
-  const ManagerParams params_;
-  const SearchParams pondering_search_params_;
   const int manager_id_ = -1;
 
-  LookupTable lookup_table_;
+  GeneralContext general_context_;
+
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   math::ExponentialDecay root_softmax_temperature_;
   mutable Eigen::Rand::P8_mt19937_64 rng_;
-  RootInfo root_info_;
   post_visit_func_t post_visit_func_;
 
   context_vec_t contexts_;
@@ -255,7 +245,6 @@ class Manager {
   search::mutex_vec_sptr_t context_mutex_pool_;
   EvalServiceBase_sptr nn_eval_service_;
 
-  SearchParams search_params_;
   SearchResults results_;
 
   bool mid_load_root_action_values_ = false;

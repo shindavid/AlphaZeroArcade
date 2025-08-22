@@ -1,6 +1,7 @@
 #include "mcts/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "search/SearchParams.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
@@ -22,16 +23,13 @@ template <typename Traits>
 Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
                          search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                          core::GameServerBase* server, EvalServiceBase_sptr service)
-    : params_(params),
-      pondering_search_params_(
-        SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
-      manager_id_(next_instance_id_++),
-      lookup_table_(node_mutex_pool),
+    : manager_id_(next_instance_id_++),
+      general_context_(params, node_mutex_pool),
       root_softmax_temperature_(params.starting_root_softmax_temperature,
                                 params.ending_root_softmax_temperature,
                                 params.root_softmax_temperature_half_life),
       context_mutex_pool_(context_mutex_pool) {
-  if (params_.enable_pondering) {
+  if (params.enable_pondering) {
     throw util::CleanException("Pondering mode temporarily unsupported");
   }
 
@@ -41,9 +39,6 @@ Manager<Traits>::Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
     nn_eval_service_ = EvalServiceFactory::create(params, server);
   }
 
-  if (params.enable_pondering) {
-    throw util::CleanException("pondering mode temporarily unsupported");
-  }
   contexts_.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     init_context(i);
@@ -81,17 +76,7 @@ inline void Manager<Traits>::start() {
 template <typename Traits>
 void Manager<Traits>::clear() {
   root_softmax_temperature_.reset();
-  lookup_table_.clear();
-  root_info_.node_index = -1;
-
-  for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    root_info_.history_array[sym].initialize(Rules{});
-    State& state = root_info_.history_array[sym].current();
-    Symmetries::apply(state, sym);
-  }
-
-  const State& raw_state = root_info_.history_array[group::kIdentity].current();
-  root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
+  general_context_.clear();
 }
 
 template <typename Traits>
@@ -102,10 +87,10 @@ void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
 
 template <typename Traits>
 void Manager<Traits>::update(core::action_t action) {
-  group::element_t root_sym = root_info_.canonical_sym;
+  group::element_t root_sym = root_info()->canonical_sym;
 
   core::action_mode_t mode =
-    Rules::get_action_mode(root_info_.history_array[group::kIdentity].current());
+    Rules::get_action_mode(root_info()->history_array[group::kIdentity].current());
 
   // TODO: this logic is currently not quite right. It assumes that the symmetry-set is constant,
   // which is not true for games like chess where the symmetries of the game is dependent on the
@@ -126,26 +111,26 @@ void Manager<Traits>::update(core::action_t action) {
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
-    Rules::apply(root_info_.history_array[sym], transformed_action);
+    Rules::apply(root_info()->history_array[sym], transformed_action);
   }
 
-  const State& raw_state = root_info_.history_array[group::kIdentity].current();
-  root_info_.canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
+  const State& raw_state = root_info()->history_array[group::kIdentity].current();
+  root_info()->canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 
   root_softmax_temperature_.step();
-  search::node_pool_index_t root_index = root_info_.node_index;
+  search::node_pool_index_t root_index = root_info()->node_index;
   if (root_index < 0) return;
 
   core::action_t transformed_action = action;
   Symmetries::apply(transformed_action, root_sym, mode);
 
-  Node* root = lookup_table_.get_node(root_index);
-  root_info_.node_index = root->lookup_child_by_action(transformed_action);  // tree reuse
+  Node* root = lookup_table()->get_node(root_index);
+  root_info()->node_index = root->lookup_child_by_action(transformed_action);  // tree reuse
 }
 
 template <typename Traits>
-void Manager<Traits>::set_search_params(const SearchParams& params) {
-  search_params_ = params;
+void Manager<Traits>::set_search_params(const search::SearchParams& params) {
+  general_context_.search_params = params;
 }
 
 template <typename Traits>
@@ -183,8 +168,8 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     constexpr int tree_size_limit = 0;
     constexpr bool full_search = true;
     constexpr bool ponder = false;
-    SearchParams params{tree_size_limit, full_search, ponder};
-    search_params_ = params;
+    search::SearchParams params{tree_size_limit, full_search, ponder};
+    general_context_.search_params = params;
     mid_load_root_action_values_ = true;
   }
 
@@ -193,11 +178,11 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   if (response.yield_instruction == core::kYield) return core::kYield;
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
 
-  Node* root = lookup_table_.get_node(root_info_.node_index);
+  Node* root = lookup_table()->get_node(root_info()->node_index);
   const auto& stable_data = root->stable_data();
 
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info_.canonical_sym;
+  group::element_t sym = root_info()->canonical_sym;
 
   RELEASE_ASSERT(Rules::is_chance_mode(mode));
 
@@ -210,7 +195,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     if (child_node_index < 0) {
       action_values(action) = edge->child_V_estimate;
     } else {
-      Node* child = lookup_table_.get_node(child_node_index);
+      Node* child = lookup_table()->get_node(child_node_index);
       action_values(action) = child->stable_data().VT(stable_data.active_seat);
     }
     i++;
@@ -257,7 +242,7 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
     }
   }
 
-  Node* root = lookup_table_.get_node(root_info_.node_index);
+  Node* root = lookup_table()->get_node(root_info()->node_index);
   while (more_search_iterations_needed(root)) {
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
@@ -320,6 +305,7 @@ template <typename Traits>
 void Manager<Traits>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
+  context.general_context = &general_context_;
 
   int n = context_mutex_pool_->size();
   if (n > 1) {
@@ -329,18 +315,21 @@ void Manager<Traits>::init_context(core::context_id_t i) {
 
 template <typename Traits>
 inline void Manager<Traits>::init_root_info(bool add_noise) {
-  root_info_.add_noise = add_noise;
-  if (root_info_.node_index < 0 || add_noise) {
-    const StateHistory& canonical_history = root_info_.history_array[root_info_.canonical_sym];
-    root_info_.node_index = lookup_table_.alloc_node();
-    Node* root = lookup_table_.get_node(root_info_.node_index);
+  RootInfo& root_info = general_context_.root_info;
+  LookupTable* lookup_table = &general_context_.lookup_table;
+
+  root_info.add_noise = add_noise;
+  if (root_info.node_index < 0 || add_noise) {
+    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
+    root_info.node_index = lookup_table->alloc_node();
+    Node* root = lookup_table->get_node(root_info.node_index);
     core::seat_index_t active_seat = Rules::get_current_player(canonical_history.current());
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Constants::kNumPlayers);
-    root_info_.active_seat = active_seat;
-    new (root) Node(&lookup_table_, canonical_history, active_seat);
+    root_info.active_seat = active_seat;
+    new (root) Node(lookup_table, canonical_history, active_seat);
   }
 
-  Node* root2 = lookup_table_.get_node(root_info_.node_index);
+  Node* root2 = lookup_table->get_node(root_info.node_index);
 
   // thread-safe since single-threaded here
   if (root2->stats().RN == 0) {
@@ -351,23 +340,29 @@ inline void Manager<Traits>::init_root_info(bool add_noise) {
 template <typename Traits>
 bool Manager<Traits>::more_search_iterations_needed(Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
-  if (!search_params_.ponder && root->trivial()) return false;
-  return root->stats().total_count() <= search_params_.tree_size_limit;
+  const search::SearchParams& search_params = general_context_.search_params;
+  if (!search_params.ponder && root->trivial()) return false;
+  return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  bool add_noise = search_params_.full_search && params_.dirichlet_mult > 0;
+  const search::SearchParams& search_params = general_context_.search_params;
+  RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+  const ManagerParams& params = general_context_.manager_params;
+
+  bool add_noise = search_params.full_search && params.dirichlet_mult > 0;
   init_root_info(add_noise);
 
   if (mcts::kEnableSearchDebug) {
-    const auto& state = root_info_.history_array[group::kIdentity].current();
+    const auto& state = root_info.history_array[group::kIdentity].current();
     IO::print_state(std::cout, state);
   }
 
-  search::node_pool_index_t root_index = root_info_.node_index;
-  Node* root = lookup_table_.get_node(root_index);
+  search::node_pool_index_t root_index = root_info.node_index;
+  Node* root = lookup_table.get_node(root_index);
   if (root->is_terminal()) return core::kContinue;
 
   if (!root->edges_initialized()) {
@@ -378,13 +373,13 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
-  StateHistory& history = root_info_.history_array[context.leaf_canonical_sym];
+  StateHistory& history = root_info.history_array[context.leaf_canonical_sym];
 
-  context.root_canonical_sym = root_info_.canonical_sym;
-  context.leaf_canonical_sym = root_info_.canonical_sym;
-  context.raw_history = root_info_.history_array[group::kIdentity];
-  context.active_seat = root_info_.active_seat;
-  context.root_history_array = root_info_.history_array;
+  context.root_canonical_sym = root_info.canonical_sym;
+  context.leaf_canonical_sym = root_info.canonical_sym;
+  context.raw_history = root_info.history_array[group::kIdentity];
+  context.active_seat = root_info.active_seat;
+  context.root_history_array = root_info.history_array;
 
   context.canonical_history = history;
   context.initialization_history = &context.canonical_history;
@@ -401,24 +396,29 @@ core::yield_instruction_t Manager<Traits>::resume_root_initialization(SearchCont
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  const search::SearchParams& search_params = general_context_.search_params;
+  const RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+  const ManagerParams& manager_params = general_context_.manager_params;
+
   StateHistory* history = context.initialization_history;
   search::node_pool_index_t node_index = context.initialization_index;
-  Node* node = lookup_table_.get_node(node_index);
+  Node* node = lookup_table.get_node(node_index);
 
   context.mid_node_initialization = true;
   RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
 
-  bool is_root = (node_index == root_info_.node_index);
+  bool is_root = (node_index == root_info.node_index);
   if (!node->is_terminal()) {
     bool eval_all_children =
-      params_.force_evaluate_all_root_children && is_root && search_params_.full_search;
+      manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().VT_valid) {
       group::element_t sym = group::kIdentity;
-      if (params_.apply_random_symmetries) {
+      if (manager_params.apply_random_symmetries) {
         sym = bitset_util::choose_random_on_index(Symmetries::get_mask(history->current()));
       }
-      bool incorporate = params_.incorporate_sym_into_cache_key;
+      bool incorporate = manager_params.incorporate_sym_into_cache_key;
       context.eval_request.emplace_back(node, *history, sym, incorporate);
     }
     if (eval_all_children) {
@@ -441,11 +441,14 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  const RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+
   StateHistory* history = context.initialization_history;
   search::node_pool_index_t node_index = context.initialization_index;
 
-  Node* node = lookup_table_.get_node(node_index);
-  bool is_root = (node_index == root_info_.node_index);
+  Node* node = lookup_table.get_node(node_index);
+  bool is_root = (node_index == root_info.node_index);
 
   for (auto& item : context.eval_request.fresh_items()) {
     item.node()->load_eval(item.eval(),
@@ -464,7 +467,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
 
   auto mcts_key = InputTensorizor::mcts_key(*history);
   bool overwrite = is_root;
-  context.inserted_node_index = lookup_table_.insert_node(mcts_key, node_index, overwrite);
+  context.inserted_node_index = lookup_table.insert_node(mcts_key, node_index, overwrite);
   context.mid_node_initialization = false;
   return core::kContinue;
 }
@@ -472,12 +475,15 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  Node* root = lookup_table_.get_node(root_info_.node_index);
+  const RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
 
-  context.root_canonical_sym = root_info_.canonical_sym;
-  context.leaf_canonical_sym = root_info_.canonical_sym;
-  context.raw_history = root_info_.history_array[group::kIdentity];
-  context.active_seat = root_info_.active_seat;
+  Node* root = lookup_table.get_node(root_info.node_index);
+
+  context.root_canonical_sym = root_info.canonical_sym;
+  context.leaf_canonical_sym = root_info.canonical_sym;
+  context.raw_history = root_info.history_array[group::kIdentity];
+  context.active_seat = root_info.active_seat;
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
   context.visit_node = root;
@@ -489,6 +495,9 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  const RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
   }
@@ -497,12 +506,12 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
-  Node* root = lookup_table_.get_node(root_info_.node_index);
+  Node* root = lookup_table.get_node(root_info.node_index);
   root->validate_state();
-  context.root_canonical_sym = root_info_.canonical_sym;
-  context.leaf_canonical_sym = root_info_.canonical_sym;
-  context.raw_history = root_info_.history_array[group::kIdentity];
-  context.active_seat = root_info_.active_seat;
+  context.root_canonical_sym = root_info.canonical_sym;
+  context.leaf_canonical_sym = root_info.canonical_sym;
+  context.raw_history = root_info.history_array[group::kIdentity];
+  context.active_seat = root_info.active_seat;
   if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
   return core::kContinue;
@@ -511,6 +520,8 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
 template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  LookupTable& lookup_table = general_context_.lookup_table;
+
   Node* node = context.visit_node;
   print_visit_info(context);
   context.mid_visit = true;
@@ -528,7 +539,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   if (stable_data.is_chance_node) {
     child_index = sample_chance_child_index(context);
   } else {
-    child_index = get_best_child_index(context);
+    child_index = Algorithms::get_best_child_index(context);
   }
 
   Edge* edge = node->get_edge(child_index);
@@ -578,7 +589,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       lock.unlock();
 
       DEBUG_ASSERT(edge->child_index >= 0);
-      Node* child = lookup_table_.get_node(edge->child_index);
+      Node* child = lookup_table.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
       int edge_count = edge->E;
       int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
@@ -655,6 +666,8 @@ template <typename Traits>
 core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
+  LookupTable& lookup_table = general_context_.lookup_table;
+
   context.mid_expansion = true;
 
   StateHistory* history = context.initialization_history;
@@ -676,12 +689,12 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   //
   // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
   // keeps the first resume_node_initialization() and "unwinds" the second one.
-  context.initialization_index = lookup_table_.lookup_node(mcts_key);
+  context.initialization_index = lookup_table.lookup_node(mcts_key);
 
   context.expanded_new_node = context.initialization_index < 0;
   if (context.expanded_new_node) {
-    context.initialization_index = lookup_table_.alloc_node();
-    Node* child = lookup_table_.get_node(context.initialization_index);
+    context.initialization_index = lookup_table.alloc_node();
+    Node* child = lookup_table.get_node(context.initialization_index);
 
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
@@ -691,9 +704,9 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
                                        last_action, game_outcome);
 
     if (terminal) {
-      new (child) Node(&lookup_table_, *history, game_outcome);
+      new (child) Node(&lookup_table, *history, game_outcome);
     } else {
-      new (child) Node(&lookup_table_, *history, context.active_seat);
+      new (child) Node(&lookup_table, *history, context.active_seat);
     }
 
     context.search_path.emplace_back(child, nullptr);
@@ -713,6 +726,8 @@ template <typename Traits>
 core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
+  LookupTable& lookup_table = general_context_.lookup_table;
+
   search::node_pool_index_t child_index = context.initialization_index;
   Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
@@ -723,7 +738,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   if (context.expanded_new_node) {
     search::node_pool_index_t inserted_child_index = context.inserted_node_index;
-    Node* child = lookup_table_.get_node(child_index);
+    Node* child = lookup_table.get_node(child_index);
     bool terminal = child->is_terminal();
     bool do_virtual = !terminal && multithreaded();
 
@@ -833,9 +848,13 @@ void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
 
 template <typename Traits>
 void Manager<Traits>::transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const {
-  if (index == root_info_.node_index) {
-    if (search_params_.full_search) {
-      if (params_.dirichlet_mult) {
+  const search::SearchParams& search_params = general_context_.search_params;
+  const RootInfo& root_info = general_context_.root_info;
+  const ManagerParams& manager_params = general_context_.manager_params;
+
+  if (index == root_info.node_index) {
+    if (search_params.full_search) {
+      if (manager_params.dirichlet_mult) {
         add_dirichlet_noise(P);
       }
       P = P.pow(1.0 / root_softmax_temperature_.value());
@@ -846,15 +865,21 @@ void Manager<Traits>::transform_policy(search::node_pool_index_t index, LocalPol
 
 template <typename Traits>
 inline void Manager<Traits>::add_dirichlet_noise(LocalPolicyArray& P) const {
+  const ManagerParams& manager_params = general_context_.manager_params;
+
   int n = P.rows();
-  double alpha = params_.dirichlet_alpha_factor / sqrt(n);
+  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
   LocalPolicyArray noise = dirichlet_gen_.template generate<LocalPolicyArray>(rng_, alpha, n);
-  P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
+  P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
 }
 
 template <typename Traits>
 void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+
+  LookupTable& lookup_table = general_context_.lookup_table;
+  const ManagerParams& manager_params = general_context_.manager_params;
+
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
 
   // Evaluate every child of the root node
@@ -894,7 +919,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     set_edge_state(context, edge, search::kPreExpanded);
 
     MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
-    search::node_pool_index_t child_index = lookup_table_.lookup_node(mcts_key);
+    search::node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
       canonical_history.undo();
@@ -902,21 +927,21 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
       continue;
     }
 
-    edge->child_index = lookup_table_.alloc_node();
-    Node* child = lookup_table_.get_node(edge->child_index);
+    edge->child_index = lookup_table.alloc_node();
+    Node* child = lookup_table.get_node(edge->child_index);
 
     core::seat_index_t parent_active_seat = node->stable_data().active_seat;
     DEBUG_ASSERT(parent_active_seat == context.active_seat);
 
     ValueTensor game_outcome;
     if (Rules::is_terminal(raw_child_state, parent_active_seat, raw_edge_action, game_outcome)) {
-      new (child) Node(&lookup_table_, canonical_history, game_outcome);
+      new (child) Node(&lookup_table, canonical_history, game_outcome);
     } else {
-      new (child) Node(&lookup_table_, canonical_history, child_active_seat);
+      new (child) Node(&lookup_table, canonical_history, child_active_seat);
     }
     child->initialize_edges();
     bool overwrite = false;
-    lookup_table_.insert_node(mcts_key, edge->child_index, overwrite);
+    lookup_table.insert_node(mcts_key, edge->child_index, overwrite);
 
     State canonical_child_state = canonical_history.current();
     canonical_history.undo();
@@ -925,10 +950,10 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     if (child->is_terminal()) continue;
 
     group::element_t sym = group::kIdentity;
-    if (params_.apply_random_symmetries) {
+    if (manager_params.apply_random_symmetries) {
       sym = bitset_util::choose_random_on_index(Symmetries::get_mask(canonical_child_state));
     }
-    bool incorporate = params_.incorporate_sym_into_cache_key;
+    bool incorporate = manager_params.incorporate_sym_into_cache_key;
     context.eval_request.emplace_back(child, canonical_history, canonical_child_state, sym,
                                       incorporate);
   }
@@ -939,12 +964,15 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 template <typename Traits>
 void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+
+  const RootInfo& root_info = general_context_.root_info;
+
   context.canonical_history = context.raw_history;
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Traits>) {
     using Group = SymmetryGroup;
-    context.canonical_history = root_info_.history_array[context.leaf_canonical_sym];
-    group::element_t cur_canonical_sym = root_info_.canonical_sym;
+    context.canonical_history = root_info.history_array[context.leaf_canonical_sym];
+    group::element_t cur_canonical_sym = root_info.canonical_sym;
     group::element_t leaf_canonical_sym = context.leaf_canonical_sym;
     for (const Visitation& visitation : context.search_path) {
       Edge* edge = visitation.edge;
@@ -982,55 +1010,9 @@ template <typename Traits>
 void Manager<Traits>::print_visit_info(const SearchContext& context) {
   if (mcts::kEnableSearchDebug) {
     Node* node = context.visit_node;
-    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), search_path_str(context),
+    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
              node->stable_data().active_seat);
   }
-}
-
-template <typename Traits>
-void Manager<Traits>::validate_search_path(const SearchContext& context) const {
-  if (!IS_DEFINED(DEBUG_BUILD)) return;
-
-  int N = context.search_path.size();
-  for (int i = N - 1; i >= 0; --i) {
-    context.search_path[i].node->validate_state();
-  }
-}
-
-template <typename Traits>
-int Manager<Traits>::get_best_child_index(const SearchContext& context) {
-  Node* node = context.visit_node;
-  bool is_root = (node == lookup_table_.get_node(root_info_.node_index));
-  ActionSelector action_selector(params_, search_params_, node, is_root);
-
-  using PVec = LocalPolicyArray;
-
-  const PVec& P = action_selector.P;
-  const PVec& mE = action_selector.mE;
-  PVec& PUCT = action_selector.PUCT;
-
-  int argmax_index;
-
-  if (search_params_.tree_size_limit == 1) {
-    // net-only, use P
-    P.maxCoeff(&argmax_index);
-  } else {
-    bool force_playouts = params_.forced_playouts && is_root && search_params_.full_search &&
-                          params_.dirichlet_mult > 0;
-
-    if (force_playouts) {
-      PVec n_forced = (P * params_.k_forced * mE.sum()).sqrt();
-      auto F1 = (mE < n_forced).template cast<float>();
-      auto F2 = (mE > 0).template cast<float>();
-      auto F = F1 * F2;
-      PUCT = PUCT * (1 - F) + F * 1e+6;
-    }
-
-    PUCT.maxCoeff(&argmax_index);
-  }
-
-  print_action_selection_details(context, action_selector, argmax_index);
-  return argmax_index;
 }
 
 template <typename Traits>
@@ -1045,118 +1027,18 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
 }
 
 template <typename Traits>
-std::string Manager<Traits>::search_path_str(const SearchContext& context) const {
-  group::element_t cur_sym = SymmetryGroup::inverse(root_info_.canonical_sym);
-  std::string delim = IO::action_delimiter();
-  std::vector<std::string> vec;
-  for (const Visitation& visitation : context.search_path) {
-    if (!visitation.edge) continue;
-    core::action_mode_t mode = visitation.node->action_mode();
-    core::action_t action = visitation.edge->action;
-    Symmetries::apply(action, cur_sym, mode);
-    cur_sym = SymmetryGroup::compose(cur_sym, SymmetryGroup::inverse(visitation.edge->sym));
-    vec.push_back(IO::action_to_str(action, mode));
-  }
-  return std::format("[{}]", boost::algorithm::join(vec, delim));
-}
-
-template <typename Traits>
-void Manager<Traits>::print_action_selection_details(const SearchContext& context,
-                                                     const ActionSelector& selector,
-                                                     int argmax_index) const {
-  Node* node = context.visit_node;
-  if (mcts::kEnableSearchDebug) {
-    std::ostringstream ss;
-    ss << std::format("{:>{}}", "", context.log_prefix_n());
-
-    core::seat_index_t seat = node->stable_data().active_seat;
-
-    int n_actions = node->stable_data().num_valid_actions;
-
-    ValueArray players;
-    ValueArray nQ = node->stats().Q;
-    ValueArray CP;
-    for (int p = 0; p < kNumPlayers; ++p) {
-      players(p) = p;
-      CP(p) = p == seat;
-    }
-
-    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
-    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
-
-    eigen_util::PrintArrayFormatMap fmt_map1{
-      {"Seat", [&](float x) { return std::to_string(int(x)); }},
-      {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
-    };
-
-    std::stringstream ss1;
-    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-    std::string line_break =
-      std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
-
-    for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << line_break;
-    }
-
-    const LocalPolicyArray& P = selector.P;
-    const LocalPolicyArray& Q = selector.Q;
-    const LocalPolicyArray& FPU = selector.FPU;
-    const LocalPolicyArray& PW = selector.PW;
-    const LocalPolicyArray& PL = selector.PL;
-    const LocalPolicyArray& E = selector.E;
-    const LocalPolicyArray& mE = selector.mE;
-    const LocalPolicyArray& RN = selector.RN;
-    const LocalPolicyArray& VN = selector.VN;
-    const LocalPolicyArray& PUCT = selector.PUCT;
-
-    LocalPolicyArray actions(n_actions);
-    LocalPolicyArray child_addr(n_actions);
-    LocalPolicyArray argmax(n_actions);
-    child_addr.setConstant(-1);
-    argmax.setZero();
-    argmax(argmax_index) = 1;
-
-    group::element_t inv_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
-    for (int e = 0; e < n_actions; ++e) {
-      auto edge = node->get_edge(e);
-      core::action_t action = edge->action;
-      Symmetries::apply(action, inv_sym, node->action_mode());
-      actions(e) = action;
-      child_addr(e) = edge->child_index;
-    }
-
-    static std::vector<std::string> action_columns = {
-      "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
-    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-      actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
-
-    eigen_util::PrintArrayFormatMap fmt_map2{
-      {"action", [&](float x) { return IO::action_to_str(x, node->action_mode()); }},
-      {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
-      {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
-    };
-
-    std::stringstream ss2;
-    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
-
-    for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << line_break;
-    }
-
-    LOG_INFO(ss.str());
-  }
-}
-
-template <typename Traits>
 void Manager<Traits>::prepare_results() {
-  lookup_table_.defragment(root_info_.node_index);
-  Node* root = lookup_table_.get_node(root_info_.node_index);
+  RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+  const ManagerParams& manager_params = general_context_.manager_params;
+
+  lookup_table.defragment(root_info.node_index);
+  Node* root = lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();  // thread-safe since single-threaded here
 
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info_.canonical_sym;
+  group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = SymmetryGroup::inverse(sym);
 
   results_.valid_actions.reset();
@@ -1177,12 +1059,12 @@ void Manager<Traits>::prepare_results() {
   }
 
   load_action_symmetries(root, &actions[0]);
-  root->write_results(params_, inv_sym, results_);
+  root->write_results(manager_params, inv_sym, results_);
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.active_seat];
   results_.trivial = root->trivial();
-  if (params_.forced_playouts && root_info_.add_noise) {
-    prune_policy_target(search_params_, inv_sym);
+  if (manager_params.forced_playouts && root_info.add_noise) {
+    prune_policy_target(inv_sym);
   }
 
   Symmetries::apply(results_.counts, inv_sym, mode);
@@ -1214,12 +1096,16 @@ inline void Manager<Traits>::load_action_symmetries(Node* root, core::action_t* 
 }
 
 template <typename Traits>
-void Manager<Traits>::prune_policy_target(const SearchParams& search_params,
-                                          group::element_t inv_sym) {
-  if (params_.no_model) return;
+void Manager<Traits>::prune_policy_target(group::element_t inv_sym) {
+  const search::SearchParams& search_params = general_context_.search_params;
+  const RootInfo& root_info = general_context_.root_info;
+  LookupTable& lookup_table = general_context_.lookup_table;
+  const ManagerParams& manager_params = general_context_.manager_params;
 
-  Node* root = lookup_table_.get_node(root_info_.node_index);
-  ActionSelector action_selector(params_, search_params, root, true);
+  if (manager_params.no_model) return;
+
+  Node* root = lookup_table.get_node(root_info.node_index);
+  ActionSelector action_selector(manager_params, search_params, root, true);
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;
@@ -1230,7 +1116,7 @@ void Manager<Traits>::prune_policy_target(const SearchParams& search_params,
   const auto& PUCT = action_selector.PUCT;
 
   auto mE_sum = mE.sum();
-  auto n_forced = (P * params_.k_forced * mE_sum).sqrt();
+  auto n_forced = (P * manager_params.k_forced * mE_sum).sqrt();
 
   int mE_max_index;
   auto mE_max = mE.maxCoeff(&mE_max_index);
@@ -1238,7 +1124,7 @@ void Manager<Traits>::prune_policy_target(const SearchParams& search_params,
   auto PUCT_max = PUCT(mE_max_index);
   auto sqrt_mE = sqrt(mE_sum + ActionSelector::eps);
 
-  LocalPolicyArray mE_floor = params_.cPUCT * P * sqrt_mE / (PUCT_max - 2 * Q) - 1;
+  LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / (PUCT_max - 2 * Q) - 1;
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {

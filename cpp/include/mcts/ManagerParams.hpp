@@ -2,6 +2,7 @@
 
 #include "mcts/Constants.hpp"
 #include "mcts/NNEvaluationServiceParams.hpp"
+#include "search/SearchParams.hpp"
 
 #include <boost/filesystem.hpp>
 
@@ -17,6 +18,10 @@ struct ManagerParams : public NNEvaluationServiceParams {
   using Game = Traits::Game;
 
   ManagerParams(mcts::Mode);
+
+  search::SearchParams pondering_search_params() const {
+    return search::SearchParams::make_pondering_params(pondering_tree_size_limit);
+  }
 
   auto make_options_description();
   bool operator==(const ManagerParams& other) const = default;

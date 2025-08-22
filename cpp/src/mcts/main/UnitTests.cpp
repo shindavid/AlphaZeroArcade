@@ -11,6 +11,7 @@
 #include "mcts/SimpleNNEvaluationService.hpp"
 #include "mcts/Traits.hpp"
 #include "search/LookupTable.hpp"
+#include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TypeDefs.hpp"
 #include "util/BoostUtil.hpp"
@@ -142,7 +143,7 @@ class ManagerTest : public testing::Test {
   ManagerParams& manager_params() { return manager_params_; }
 
   const SearchResults* search(int num_searches = 0) {
-    mcts::SearchParams search_params(num_searches, true);
+    search::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
     search::SearchRequest request;
     return manager_->search(request).results;
