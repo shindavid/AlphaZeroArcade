@@ -3,8 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
-#include "mcts/ActionSelector.hpp"
-#include "mcts/SearchResults.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
@@ -34,6 +32,7 @@ class Manager {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using Algorithms = Traits::Algorithms;
   using EvalRequest = Traits::EvalRequest;
@@ -57,7 +56,6 @@ class Manager {
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<Traits>;
 
-  using ActionSelector = mcts::ActionSelector<Traits>;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = Game::Types::ActionRequest;
   using GameResults = Game::GameResults;
@@ -68,7 +66,6 @@ class Manager {
   using Constants = Game::Constants;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using SearchResults = mcts::SearchResults<Traits>;
   using InputTensorizor = Game::InputTensorizor;
   using MCTSKey = InputTensorizor::MCTSKey;
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
@@ -218,12 +215,8 @@ class Manager {
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
   void calc_canonical_state_data(SearchContext& context);
-  void print_visit_info(const SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
 
-  void prepare_results();
-
-  void load_action_symmetries(Node* root, core::action_t* actions);
   void prune_policy_target(group::element_t inv_sym);
 
   static int next_instance_id_;

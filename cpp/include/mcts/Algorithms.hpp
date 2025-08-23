@@ -15,6 +15,7 @@ class Algorithms {
   using Game = Traits::Game;
   using Node = Traits::Node;
   using Edge = Traits::Edge;
+  using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using LookupTable = search::LookupTable<Traits>;
   using TraitsTypes = search::TraitsTypes<Traits>;
@@ -34,6 +35,7 @@ class Algorithms {
 
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ValueArray = Game::Types::ValueArray;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
@@ -43,11 +45,17 @@ class Algorithms {
   static void standard_backprop(SearchContext& context, bool undo_virtual);
   static void short_circuit_backprop(SearchContext& context);
 
+  static bool should_short_circuit(const Edge* edge, const Node* child);
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
   static int get_best_child_index(const SearchContext& context);
 
+  static void to_results(const GeneralContext&, SearchResults&);
+  static void print_visit_info(const SearchContext&);
+
  private:
+  static void load_action_symmetries(const Node* root, core::action_t* actions, SearchResults&);
+  static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void validate_search_path(const SearchContext& context);
   static void print_action_selection_details(const SearchContext& context,
                                              const ActionSelector& selector, int argmax_index);
