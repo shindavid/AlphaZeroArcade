@@ -49,13 +49,13 @@ Manager<Traits>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
 template <typename Traits>
 Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
                          EvalServiceBase_sptr service)
-    : Manager(true, std::make_shared<mutex_vec_t>(1),
-              std::make_shared<mutex_vec_t>(1), params, server, service) {}
+    : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
+              server, service) {}
 
 template <typename Traits>
-Manager<Traits>::Manager(mutex_vec_sptr_t& node_mutex_pool,
-                         mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
-                         core::GameServerBase* server, EvalServiceBase_sptr service)
+Manager<Traits>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+                         const ManagerParams& params, core::GameServerBase* server,
+                         EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <typename Traits>
@@ -135,8 +135,7 @@ void Manager<Traits>::set_search_params(const SearchParams& params) {
 }
 
 template <typename Traits>
-typename Manager<Traits>::SearchResponse Manager<Traits>::search(
-  const SearchRequest& request) {
+typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchRequest& request) {
   auto context_id = request.context_id();
 
   DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})", context_id,
@@ -589,8 +588,8 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  RELEASE_ASSERT(edge->state == kExpanded,
-                 "Expected edge state to be kExpanded, but got {}", edge->state);
+  RELEASE_ASSERT(edge->state == kExpanded, "Expected edge state to be kExpanded, but got {}",
+                 edge->state);
 
   Node* child = node->get_child(edge);
   if (child) {
@@ -785,8 +784,7 @@ void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edg
 }
 
 template <typename Traits>
-void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
-                                     expansion_state_t state) {
+void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == kPreExpanded) {
     // Makes no assumptions about mutexes

@@ -3,13 +3,13 @@
 #include "core/concepts/Game.hpp"
 #include "mcts/Algorithms.hpp"
 #include "mcts/Edge.hpp"
-#include "search/ManagerParams.hpp"
+#include "mcts/Node.hpp"
+#include "mcts/SearchResults.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"
-#include "mcts/Node.hpp"
-#include "mcts/SearchResults.hpp"
+#include "search/ManagerParams.hpp"
 #include "search/concepts/Traits.hpp"
 
 namespace mcts {

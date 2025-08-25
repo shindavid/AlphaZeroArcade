@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "search/concepts/Node.hpp"
 #include "search/concepts/Edge.hpp"
+#include "search/concepts/Node.hpp"
 
 namespace search {
 namespace concepts {

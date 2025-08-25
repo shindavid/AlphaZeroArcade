@@ -4,8 +4,7 @@ namespace search {
 namespace concepts {
 
 template <class A, class Traits>
-concept Algorithms = requires {
-  };
+concept Algorithms = requires {};
 
 }  // namespace concepts
 }  // namespace search

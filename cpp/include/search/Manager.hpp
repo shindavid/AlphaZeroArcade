@@ -178,9 +178,8 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
-          mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-          core::GameServerBase*, EvalServiceBase_sptr service);
+  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
+          const ManagerParams& params, core::GameServerBase*, EvalServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
 

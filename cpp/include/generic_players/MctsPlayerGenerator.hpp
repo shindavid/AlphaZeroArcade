@@ -6,10 +6,10 @@
 #include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
+#include "mcts/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/ManagerParams.hpp"
-#include "mcts/Traits.hpp"
 #include "search/TypeDefs.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>

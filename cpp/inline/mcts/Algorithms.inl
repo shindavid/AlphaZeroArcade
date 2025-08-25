@@ -1,7 +1,6 @@
 #include "mcts/Algorithms.hpp"
 
 #include "search/Constants.hpp"
-#include "search/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
@@ -262,8 +261,7 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 }
 
 template <typename Traits>
-void Algorithms<Traits>::to_results(const GeneralContext& general_context,
-                                    SearchResults& results) {
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
   const ManagerParams& manager_params = general_context.manager_params;

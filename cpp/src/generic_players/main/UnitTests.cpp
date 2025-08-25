@@ -4,10 +4,10 @@
 #include "games/GameTransforms.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "search/Manager.hpp"
-#include "search/ManagerParams.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/Traits.hpp"
+#include "search/Manager.hpp"
+#include "search/ManagerParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -48,7 +48,8 @@ class MctsPlayerTest : public ::testing::Test {
   using Rules = Game::Rules;
 
  public:
-  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetitive) {
+  MctsPlayerTest()
+      : manager_params_(create_manager_params()), player_params_(search::kCompetitive) {
     player_params_.num_fast_iters = 10;
     player_params_.num_full_iters = 20;
   }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchRequest.hpp"

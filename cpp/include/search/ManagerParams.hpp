@@ -1,7 +1,7 @@
 #pragma once
 
-#include "search/Constants.hpp"
 #include "nnet/NNEvaluationServiceParams.hpp"
+#include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 
 #include <boost/filesystem.hpp>

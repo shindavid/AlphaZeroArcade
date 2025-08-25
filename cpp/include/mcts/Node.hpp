@@ -1,8 +1,8 @@
 #pragma once
 
-#include "search/ManagerParams.hpp"
-#include "nnet/NNEvaluation.hpp"
 #include "mcts/SearchResults.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "search/ManagerParams.hpp"
 #include "search/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
