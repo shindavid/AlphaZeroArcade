@@ -261,6 +261,14 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 }
 
 template <typename Traits>
+void Algorithms<Traits>::load_evaluations(SearchContext& context) {
+  for (auto& item : context.eval_request.fresh_items()) {
+    item.node()->load_eval(item.eval(),
+                           [&](LocalPolicyArray& P) { transform_policy(context, P); });
+  }
+}
+
+template <typename Traits>
 void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -286,7 +294,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     actions[i] = action;
 
     auto* edge = root->get_edge(i);
-    results.policy_prior(action) = edge->base_prob;
+    results.policy_prior(action) = edge->policy_prior_prob;
 
     i++;
   }
@@ -318,6 +326,37 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
     LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
              node->stable_data().active_seat);
   }
+}
+
+template <typename Traits>
+void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
+  search::node_pool_index_t index = context.initialization_index;
+  GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const RootInfo& root_info = general_context.root_info;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  if (index == root_info.node_index) {
+    if (search_params.full_search) {
+      if (manager_params.dirichlet_mult) {
+        add_dirichlet_noise(general_context, P);
+      }
+      P = P.pow(1.0 / general_context.aux_state.root_softmax_temperature.value());
+      P /= P.sum();
+    }
+  }
+}
+
+template <typename Traits>
+void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, LocalPolicyArray& P) {
+  const ManagerParams& manager_params = general_context.manager_params;
+  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
+  auto& rng = general_context.aux_state.rng;
+
+  int n = P.rows();
+  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+  LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
+  P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
 }
 
 template <typename Traits>

@@ -11,10 +11,8 @@
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
-#include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include <array>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -32,6 +30,7 @@ class Manager {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using Algorithms = Traits::Algorithms;
@@ -43,12 +42,7 @@ class Manager {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
 
-  using LocalPolicyArray = Node::LocalPolicyArray;
-  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
@@ -68,7 +62,6 @@ class Manager {
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;
   using MCTSKey = InputTensorizor::MCTSKey;
-  using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
 
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -210,8 +203,6 @@ class Manager {
 
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, expansion_state_t);
-  void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
-  void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
   void calc_canonical_state_data(SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
@@ -224,9 +215,6 @@ class Manager {
 
   GeneralContext general_context_;
 
-  mutable eigen_util::UniformDirichletGen<float> dirichlet_gen_;
-  math::ExponentialDecay root_softmax_temperature_;
-  mutable Eigen::Rand::P8_mt19937_64 rng_;
   post_visit_func_t post_visit_func_;
 
   context_vec_t contexts_;

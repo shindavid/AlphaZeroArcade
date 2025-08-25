@@ -121,8 +121,8 @@ void Node<Traits>::update_stats(MutexProtectedFunc func) {
         break;
       }
       const auto child_stats = child->stats_safe();  // make a copy
-      Q_sum += child_stats.Q * edge->base_prob;
-      Q_sq_sum += child_stats.Q_sq * edge->base_prob;
+      Q_sum += child_stats.Q * edge->chance_prob;
+      Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
       N++;
 
       all_provably_winning &= child_stats.provably_winning;
@@ -226,7 +226,7 @@ void Node<Traits>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   // threads can access this node until after load_eval() returns
   for (int i = 0; i < n; ++i) {
     Edge* edge = this->get_edge(i);
-    edge->base_prob = P_raw[i];
+    edge->policy_prior_prob = P_raw[i];
     edge->adjusted_base_prob = P_adjusted[i];
     edge->child_V_estimate = child_V[i];
   }

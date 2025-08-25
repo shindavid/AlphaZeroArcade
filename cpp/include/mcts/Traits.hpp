@@ -2,6 +2,7 @@
 
 #include "core/concepts/Game.hpp"
 #include "mcts/Algorithms.hpp"
+#include "mcts/AuxState.hpp"
 #include "mcts/Edge.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchResults.hpp"
@@ -19,6 +20,7 @@ struct Traits {
   using Game = G;
   using Node = mcts::Node<Traits>;
   using Edge = mcts::Edge;
+  using AuxState = mcts::AuxState<Traits>;
   using Algorithms = mcts::Algorithms<Traits>;
   using ManagerParams = search::ManagerParams<Traits>;
   using EvalRequest = nnet::NNEvaluationRequest<Traits>;

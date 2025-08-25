@@ -21,12 +21,19 @@ GeneralContext<Traits>::GeneralContext(const ManagerParams& mparams,
                                        search::mutex_vec_sptr_t node_mutex_pool)
     : manager_params(mparams),
       pondering_search_params(manager_params.pondering_search_params()),
+      aux_state(mparams),
       lookup_table(node_mutex_pool) {}
 
 template <typename Traits>
 void GeneralContext<Traits>::clear() {
+  aux_state.clear();
   lookup_table.clear();
   root_info.clear();
+}
+
+template <typename Traits>
+void GeneralContext<Traits>::step() {
+  aux_state.step();
 }
 
 }  // namespace search

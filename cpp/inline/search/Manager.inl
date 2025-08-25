@@ -26,9 +26,6 @@ Manager<Traits>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
                          core::GameServerBase* server, EvalServiceBase_sptr service)
     : manager_id_(next_instance_id_++),
       general_context_(params, node_mutex_pool),
-      root_softmax_temperature_(params.starting_root_softmax_temperature,
-                                params.ending_root_softmax_temperature,
-                                params.root_softmax_temperature_half_life),
       context_mutex_pool_(context_mutex_pool) {
   if (params.enable_pondering) {
     throw util::CleanException("Pondering mode temporarily unsupported");
@@ -76,7 +73,6 @@ inline void Manager<Traits>::start() {
 
 template <typename Traits>
 void Manager<Traits>::clear() {
-  root_softmax_temperature_.reset();
   general_context_.clear();
 }
 
@@ -118,7 +114,7 @@ void Manager<Traits>::update(core::action_t action) {
   const State& raw_state = root_info()->history_array[group::kIdentity].current();
   root_info()->canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 
-  root_softmax_temperature_.step();
+  general_context_.step();
   node_pool_index_t root_index = root_info()->node_index;
   if (root_index < 0) return;
 
@@ -411,10 +407,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   Node* node = lookup_table.get_node(node_index);
   bool is_root = (node_index == root_info.node_index);
 
-  for (auto& item : context.eval_request.fresh_items()) {
-    item.node()->load_eval(item.eval(),
-                           [&](LocalPolicyArray& P) { transform_policy(node_index, P); });
-  }
+  Algorithms::load_evaluations(context);
   context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
@@ -422,7 +415,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
       Edge* edge = node->get_edge(i);
       core::action_t action = edge->action;
-      edge->base_prob = chance_dist(action);
+      edge->chance_prob = chance_dist(action);
     }
   }
 
@@ -805,33 +798,6 @@ void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge, expansi
 }
 
 template <typename Traits>
-void Manager<Traits>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
-  const SearchParams& search_params = general_context_.search_params;
-  const RootInfo& root_info = general_context_.root_info;
-  const ManagerParams& manager_params = general_context_.manager_params;
-
-  if (index == root_info.node_index) {
-    if (search_params.full_search) {
-      if (manager_params.dirichlet_mult) {
-        add_dirichlet_noise(P);
-      }
-      P = P.pow(1.0 / root_softmax_temperature_.value());
-      P /= P.sum();
-    }
-  }
-}
-
-template <typename Traits>
-inline void Manager<Traits>::add_dirichlet_noise(LocalPolicyArray& P) const {
-  const ManagerParams& manager_params = general_context_.manager_params;
-
-  int n = P.rows();
-  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
-  LocalPolicyArray noise = dirichlet_gen_.template generate<LocalPolicyArray>(rng_, alpha, n);
-  P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
-}
-
-template <typename Traits>
 void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
@@ -970,7 +936,7 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
   int n = node->stable_data().num_valid_actions;
   float chance_dist[n];
   for (int i = 0; i < n; i++) {
-    chance_dist[i] = node->get_edge(i)->base_prob;
+    chance_dist[i] = node->get_edge(i)->chance_prob;
   }
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }

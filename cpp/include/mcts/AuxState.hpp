@@ -1,0 +1,27 @@
+#pragma once
+
+#include "util/EigenUtil.hpp"
+#include "util/Math.hpp"
+
+#include <EigenRand/EigenRand>
+
+namespace mcts {
+
+template <typename Traits>
+struct AuxState {
+  using ManagerParams = Traits::ManagerParams;
+
+  AuxState(const ManagerParams& params)
+      : root_softmax_temperature(params.starting_root_softmax_temperature,
+                                 params.ending_root_softmax_temperature,
+                                 params.root_softmax_temperature_half_life) {}
+
+  void clear() { root_softmax_temperature.reset(); }
+  void step() { root_softmax_temperature.step(); }
+
+  mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
+  math::ExponentialDecay root_softmax_temperature;
+  mutable Eigen::Rand::P8_mt19937_64 rng;
+};
+
+}  // namespace mcts

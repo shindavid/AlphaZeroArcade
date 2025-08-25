@@ -49,11 +49,14 @@ class Algorithms {
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
   static int get_best_child_index(const SearchContext& context);
+  static void load_evaluations(SearchContext& context);
 
   static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);
 
  private:
+  static void transform_policy(SearchContext&, LocalPolicyArray& P);
+  static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
   static void load_action_symmetries(const Node* root, core::action_t* actions, SearchResults&);
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void validate_search_path(const SearchContext& context);

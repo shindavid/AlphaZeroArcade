@@ -15,6 +15,7 @@ template <typename Traits>
 struct GeneralContext {
   using Game = Traits::Game;
   using ManagerParams = Traits::ManagerParams;
+  using AuxState = Traits::AuxState;
 
   using Rules = Game::Rules;
   using State = Game::State;
@@ -38,10 +39,12 @@ struct GeneralContext {
 
   GeneralContext(const ManagerParams& mparams, search::mutex_vec_sptr_t node_mutex_pool);
   void clear();
+  void step();
 
   const ManagerParams manager_params;
   const SearchParams pondering_search_params;
 
+  AuxState aux_state;
   LookupTable lookup_table;
   RootInfo root_info;
   SearchParams search_params;
