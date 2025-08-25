@@ -7,21 +7,21 @@
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
 
-namespace mcts {
+namespace search {
 
 template <typename Traits>
-inline ManagerParams<Traits>::ManagerParams(mcts::Mode mode) {
-  if (mode == mcts::kCompetitive) {
+inline ManagerParams<Traits>::ManagerParams(Mode mode) {
+  if (mode == kCompetitive) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
     forced_playouts = false;
     starting_root_softmax_temperature = 1;
     ending_root_softmax_temperature = 1;
     root_softmax_temperature_half_life = 1;
-  } else if (mode == mcts::kTraining) {
+  } else if (mode == kTraining) {
     force_evaluate_all_root_children = true;
   } else {
-    throw util::Exception("Unknown mcts::Mode: {}", mode);
+    throw util::Exception("Unknown search::Mode: {}", mode);
   }
 }
 
@@ -70,4 +70,4 @@ inline auto ManagerParams<Traits>::make_options_description() {
   return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
-}  // namespace mcts
+}  // namespace search

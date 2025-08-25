@@ -1,6 +1,6 @@
-#include "mcts/SimpleNNEvaluationService.hpp"
+#include "nnet/SimpleNNEvaluationService.hpp"
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 SimpleNNEvaluationService<Traits>::SimpleNNEvaluationService() {
@@ -26,4 +26,4 @@ core::yield_instruction_t SimpleNNEvaluationService<Traits>::evaluate(
   return core::kContinue;
 }
 
-}  // namespace mcts
+}  // namespace nnet

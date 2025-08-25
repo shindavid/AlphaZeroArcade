@@ -3,16 +3,11 @@
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace search {
-
-using hash_shard_t = int8_t;
-
-using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
 using mutex_vec_t = std::vector<mit::mutex>;
 using mutex_vec_sptr_t = std::shared_ptr<mutex_vec_t>;

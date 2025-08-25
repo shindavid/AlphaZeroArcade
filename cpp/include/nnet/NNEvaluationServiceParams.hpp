@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-namespace mcts {
+namespace nnet {
 
 /*
  * Controls behavior of an NNEvaluationService.
@@ -25,6 +25,6 @@ struct NNEvaluationServiceParams {
   std::string engine_build_precision = "FP16";
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/NNEvaluationServiceParams.inl"
+#include "inline/nnet/NNEvaluationServiceParams.inl"

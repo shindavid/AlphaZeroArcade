@@ -19,7 +19,7 @@
 #include <queue>
 #include <vector>
 
-namespace mcts {
+namespace search {
 
 /*
  * The Manager class is the main entry point for doing MCTS searches.
@@ -146,7 +146,7 @@ class Manager {
   Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
-  Manager(search::mutex_vec_sptr_t& node_mutex_pool, search::mutex_vec_sptr_t& context_mutex_pool,
+  Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
           const ManagerParams& params, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
@@ -161,8 +161,8 @@ class Manager {
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
   void update(core::action_t);
 
-  void set_search_params(const search::SearchParams& search_params);
-  SearchResponse search(const search::SearchRequest& request);
+  void set_search_params(const SearchParams& search_params);
+  SearchResponse search(const SearchRequest& request);
   core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
                                                     ActionValueTensor& action_values);
   const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
@@ -178,11 +178,11 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, search::mutex_vec_sptr_t node_mutex_pool,
-          search::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
+          mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
           core::GameServerBase*, EvalServiceBase_sptr service);
 
-  SearchResponse search_helper(const search::SearchRequest& request);
+  SearchResponse search_helper(const SearchRequest& request);
 
   // Assumes state_matchine_.mutex is held
   //
@@ -210,8 +210,8 @@ class Manager {
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
   void add_pending_notification(SearchContext&, Edge*);
-  void set_edge_state(SearchContext&, Edge*, search::expansion_state_t);
-  void transform_policy(search::node_pool_index_t index, LocalPolicyArray& P) const;
+  void set_edge_state(SearchContext&, Edge*, expansion_state_t);
+  void transform_policy(node_pool_index_t index, LocalPolicyArray& P) const;
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void expand_all_children(SearchContext& context, Node* node);
   void calc_canonical_state_data(SearchContext& context);
@@ -232,7 +232,7 @@ class Manager {
 
   context_vec_t contexts_;
   StateMachine state_machine_;
-  search::mutex_vec_sptr_t context_mutex_pool_;
+  mutex_vec_sptr_t context_mutex_pool_;
   EvalServiceBase_sptr nn_eval_service_;
 
   SearchResults results_;
@@ -241,6 +241,6 @@ class Manager {
   bool connected_ = false;
 };
 
-}  // namespace mcts
+}  // namespace search
 
 #include "inline/search/Manager.inl"

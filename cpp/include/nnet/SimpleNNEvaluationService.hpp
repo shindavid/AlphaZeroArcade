@@ -1,28 +1,26 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
-#include "mcts/NNEvaluationServiceBase.hpp"
-#include "mcts/Node.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
+#include "nnet/NNEvaluationServiceBase.hpp"
 #include "util/RecyclingAllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <functional>
 
-namespace mcts {
+namespace nnet {
 
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
 template <typename Traits>
-class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Traits> {
+class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Traits> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
-  using Node = mcts::Node<Traits>;
+  using Node = Traits::Node;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;
 
@@ -39,6 +37,6 @@ class SimpleNNEvaluationService : public mcts::NNEvaluationServiceBase<Traits> {
   init_func_t init_func_ = [](NNEvaluation*, const Item&) {};
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/SimpleNNEvaluationService.inl"
+#include "inline/nnet/SimpleNNEvaluationService.inl"

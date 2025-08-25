@@ -1,10 +1,10 @@
-#include "mcts/NNEvaluation.hpp"
+#include "nnet/NNEvaluation.hpp"
 
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 void NNEvaluation<Traits>::init(PolicyTensor& policy, ValueTensor& value,
@@ -81,4 +81,4 @@ void NNEvaluation<Traits>::load(ValueTensor& value, LocalPolicyArray& policy,
   eigen_util::debug_assert_is_valid_prob_distr(policy);
 }
 
-}  // namespace mcts
+}  // namespace nnet

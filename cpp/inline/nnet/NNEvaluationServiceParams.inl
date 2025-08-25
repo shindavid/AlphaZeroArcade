@@ -1,10 +1,10 @@
-#include "mcts/NNEvaluationServiceParams.hpp"
+#include "nnet/NNEvaluationServiceParams.hpp"
 
 #include "util/BoostUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
-namespace mcts {
+namespace nnet {
 
 inline auto NNEvaluationServiceParams::make_options_description() {
   namespace po = boost::program_options;
@@ -40,4 +40,4 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       "precision to use when building the TensorRT engine from an onnx file");
 }
 
-}  // namespace mcts
+}  // namespace nnet

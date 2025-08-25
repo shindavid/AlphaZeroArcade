@@ -1,6 +1,6 @@
 #include "mcts/Algorithms.hpp"
 
-#include "mcts/Constants.hpp"
+#include "search/Constants.hpp"
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
@@ -23,7 +23,7 @@ namespace mcts {
 template <typename Traits>
 void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, context.search_path_str(),
              fmt::streamed(value.transpose()));
   }
@@ -53,7 +53,7 @@ void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray&
 template <typename Traits>
 void Algorithms<Traits>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
@@ -83,7 +83,7 @@ void Algorithms<Traits>::undo_virtual_backprop(SearchContext& context) {
   // modified in between the two calls.
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
@@ -108,7 +108,7 @@ void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_vir
   auto value = GameResults::to_value_array(last_node->stable_data().VT);
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, context.search_path_str(),
              fmt::streamed(value.transpose()));
   }
@@ -138,7 +138,7 @@ void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_vir
 template <typename Traits>
 void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
@@ -213,7 +213,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     root2->stats().RN = 1;
   }
 
-  if (mcts::kEnableSearchDebug && purpose == search::kForStandardSearch) {
+  if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
     const auto& state = root_info.history_array[group::kIdentity].current();
     IO::print_state(std::cout, state);
   }
@@ -315,7 +315,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context,
 
 template <typename Traits>
 void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     const Node* node = context.visit_node;
     LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
              node->stable_data().active_seat);
@@ -395,7 +395,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
     results.policy_target = results.counts;
   }
 
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     LocalPolicyArray actions(n_actions);
     LocalPolicyArray pruned(n_actions);
 
@@ -439,7 +439,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
                                                         const ActionSelector& selector,
                                                         int argmax_index) {
   Node* node = context.visit_node;
-  if (mcts::kEnableSearchDebug) {
+  if (search::kEnableSearchDebug) {
     std::ostringstream ss;
     ss << std::format("{:>{}}", "", context.log_prefix_n());
 

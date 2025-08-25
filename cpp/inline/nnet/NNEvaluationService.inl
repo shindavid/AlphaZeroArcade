@@ -1,4 +1,4 @@
-#include "mcts/NNEvaluationService.hpp"
+#include "nnet/NNEvaluationService.hpp"
 
 #include "core/LoopControllerClient.hpp"
 #include "util/Asserts.hpp"
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <spanstream>
 
-namespace mcts {
+namespace nnet {
 
 namespace detail {
 
@@ -476,7 +476,7 @@ void NNEvaluationService<Traits>::end_session() {
   dump("search-thread total batch prepare time", "%.3fs", batch_prepare_time_s);
   dump("search-thread total batch write time", "%.3fs", batch_write_time_s);
   dump("search-thread total wait for nn eval time", "%.3fs", wait_for_nn_eval_time_s);
-  dump("search-thread total mcts time", "%.3fs", mcts_time_s);
+  dump("search-thread total nnet time", "%.3fs", mcts_time_s);
   dump("nn-eval per-batch wait for search threads time", "%.3fms",
        per_batch_wait_for_search_threads_time_ms);
   dump("nn-eval per-batch pipeline wait time", "%.3fms", per_batch_pipeline_wait_time_ms);
@@ -807,12 +807,12 @@ void NNEvaluationService<Traits>::state_loop() {
         return true;
       }
       if (num_connections_ == 0) {
-        if (mcts::kEnableServiceDebug) {
+        if (nnet::kEnableServiceDebug) {
           LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
         }
         return true;
       }
-      if (mcts::kEnableServiceDebug) {
+      if (nnet::kEnableServiceDebug) {
         LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
       }
       return false;
@@ -834,7 +834,7 @@ void NNEvaluationService<Traits>::state_loop() {
         return true;
       }
       if (num_connections_ == 0) {
-        if (mcts::kEnableServiceDebug) {
+        if (nnet::kEnableServiceDebug) {
           LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
         }
         return true;
@@ -869,22 +869,22 @@ void NNEvaluationService<Traits>::state_loop() {
   cv_main_.notify_all();
   lock.lock();
 
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
   }
   cv_main_.wait(lock, [&] {
     if (system_state_ == kShutDownComplete) {
-      if (mcts::kEnableServiceDebug) {
+      if (nnet::kEnableServiceDebug) {
         LOG_INFO("{}::{}() done waiting @{}", kCls, func, __LINE__);
       }
       return true;
     }
-    if (mcts::kEnableServiceDebug) {
+    if (nnet::kEnableServiceDebug) {
       LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
     }
     return false;
   });
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("{}::{}() done!", kCls, func);
   }
 }
@@ -1023,7 +1023,7 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
 
   const char* func = __func__;
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}()", kCls, func);
   }
 
@@ -1035,18 +1035,18 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (batch_data) {
       if (batch_data->frozen()) {
-        if (mcts::kEnableServiceDebug) {
+        if (nnet::kEnableServiceDebug) {
           LOG_INFO("<-- {}::{}() (count:{})", kCls, func, batch_data->allocate_count);
         }
         return true;
       }
-      if (mcts::kEnableServiceDebug) {
+      if (nnet::kEnableServiceDebug) {
         LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls, func,
                  batch_data->sequence_id, batch_data->accepting_allocations,
                  batch_data->allocate_count, batch_data->write_count);
       }
     }
-    if (mcts::kEnableServiceDebug) {
+    if (nnet::kEnableServiceDebug) {
       LOG_INFO("<-- {}::{}() still waiting (no batch data)", kCls, func);
     }
     return false;
@@ -1066,7 +1066,7 @@ void NNEvaluationService<Traits>::schedule_batch(
   RELEASE_ASSERT(batch_data->frozen());
 
   const char* func = __func__;
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", kCls, func, this->instance_id_,
              batch_data->sequence_id, batch_data->allocate_count);
   }
@@ -1098,7 +1098,7 @@ void NNEvaluationService<Traits>::schedule_batch(
 template <typename Traits>
 bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
              this->instance_id_);
   }
@@ -1106,14 +1106,14 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   cv_main_.wait(lock, [&] {
     if (!load_queue_.empty() || system_state_ == kPausingDrainLoop ||
         system_state_ == kShuttingDownDrainLoop) {
-      if (mcts::kEnableServiceDebug) {
+      if (nnet::kEnableServiceDebug) {
         LOG_INFO("<-- {}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, func,
                  this->instance_id_, system_state_, load_queue_.size());
       }
       return true;
     }
 
-    if (mcts::kEnableServiceDebug) {
+    if (nnet::kEnableServiceDebug) {
       LOG_INFO("<-- {}::{}() - still waiting... (service:{}, state:{}, queue:{})", kCls, func,
                this->instance_id_, system_state_, load_queue_.size());
     }
@@ -1125,7 +1125,7 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
 
   item = load_queue_.front();
   load_queue_.pop();
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", kCls, func,
              this->instance_id_, item.batch_data->sequence_id, item.pipeline_index);
   }
@@ -1142,7 +1142,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   float* value_data;
   float* action_values_data;
 
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, func,
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
@@ -1157,7 +1157,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);
 
-  if (mcts::kEnableServiceDebug) {
+  if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", kCls, func, this->instance_id_,
              last_evaluated_sequence_id_);
   }
@@ -1221,4 +1221,4 @@ void NNEvaluationService<Traits>::unpause() {
   cv_main_.notify_all();
 }
 
-}  // namespace mcts
+}  // namespace nnet

@@ -4,10 +4,10 @@
 #include "mcts/Algorithms.hpp"
 #include "mcts/Edge.hpp"
 #include "search/ManagerParams.hpp"
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
-#include "mcts/NNEvaluationServiceBase.hpp"
-#include "mcts/NNEvaluationServiceFactory.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
+#include "nnet/NNEvaluationServiceBase.hpp"
+#include "nnet/NNEvaluationServiceFactory.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchResults.hpp"
 #include "search/concepts/Traits.hpp"
@@ -20,11 +20,11 @@ struct Traits {
   using Node = mcts::Node<Traits>;
   using Edge = mcts::Edge;
   using Algorithms = mcts::Algorithms<Traits>;
-  using ManagerParams = mcts::ManagerParams<Traits>;
-  using EvalRequest = mcts::NNEvaluationRequest<Traits>;
-  using EvalResponse = mcts::NNEvaluation<Traits>;
-  using EvalServiceBase = mcts::NNEvaluationServiceBase<Traits>;
-  using EvalServiceFactory = mcts::NNEvaluationServiceFactory<Traits>;
+  using ManagerParams = search::ManagerParams<Traits>;
+  using EvalRequest = nnet::NNEvaluationRequest<Traits>;
+  using EvalResponse = nnet::NNEvaluation<Traits>;
+  using EvalServiceBase = nnet::NNEvaluationServiceBase<Traits>;
+  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Traits>;
   using SearchResults = mcts::SearchResults<Traits>;
 
   static_assert(search::concepts::Traits<Traits>);

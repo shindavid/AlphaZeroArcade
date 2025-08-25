@@ -1,23 +1,23 @@
 #pragma once
 
-#include "mcts/Constants.hpp"
-#include "mcts/NNEvaluationServiceParams.hpp"
+#include "search/Constants.hpp"
+#include "nnet/NNEvaluationServiceParams.hpp"
 #include "search/SearchParams.hpp"
 
 #include <boost/filesystem.hpp>
 
-namespace mcts {
+namespace search {
 
 /*
- * ManagerParams pertains to a single mcts::Manager instance.
+ * ManagerParams pertains to a single search::Manager instance.
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
 template <typename Traits>
-struct ManagerParams : public NNEvaluationServiceParams {
+struct ManagerParams : public nnet::NNEvaluationServiceParams {
   using Game = Traits::Game;
 
-  ManagerParams(mcts::Mode);
+  ManagerParams(Mode);
 
   search::SearchParams pondering_search_params() const {
     return search::SearchParams::make_pondering_params(pondering_tree_size_limit);
@@ -88,6 +88,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
   bool incorporate_sym_into_cache_key = true;
 };
 
-}  // namespace mcts
+}  // namespace search
 
 #include "inline/search/ManagerParams.inl"

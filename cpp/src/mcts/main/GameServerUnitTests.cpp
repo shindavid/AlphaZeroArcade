@@ -28,7 +28,7 @@ class GameServerTest : public testing::Test {
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
-  using Manager = mcts::Manager<Traits>;
+  using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = mcts::SearchResults<Traits>;
   using SearchLog = mcts::SearchLog<Traits>;

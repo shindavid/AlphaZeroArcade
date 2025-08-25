@@ -5,7 +5,7 @@
 
 #include <Eigen/Core>
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 class NNEvaluation {
@@ -65,6 +65,6 @@ class NNEvaluation {
   bool initialized_ = false;
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/NNEvaluation.inl"
+#include "inline/nnet/NNEvaluation.inl"

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "core/YieldManager.hpp"
-#include "mcts/Constants.hpp"
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/Node.hpp"
-#include "search/TypeDefs.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -12,7 +10,7 @@
 #include <span>
 #include <vector>
 
-namespace mcts {
+namespace nnet {
 
 // An NNEvaluationRequest is used to make requests to an NNEvaluationService.
 //
@@ -26,12 +24,12 @@ template <typename Traits>
 class NNEvaluationRequest {
  public:
   using Game = Traits::Game;
+  using Node = Traits::Node;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using Node = mcts::Node<Traits>;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)
@@ -49,7 +47,7 @@ class NNEvaluationRequest {
     uint64_t hash;  // hash of (eval_key, sym) - precomputed for efficiency
     EvalKey eval_key;
     group::element_t sym;
-    search::hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
+    hash_shard_t hash_shard;  // upper kNumHashShardsLog2 bits of hash
   };
 
   struct CacheKeyHasher {
@@ -98,7 +96,7 @@ class NNEvaluationRequest {
     Node* node() const { return node_; }
     NNEvaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
-    search::hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
+    hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
@@ -150,6 +148,6 @@ class NNEvaluationRequest {
   int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/NNEvaluationRequest.inl"
+#include "inline/nnet/NNEvaluationRequest.inl"

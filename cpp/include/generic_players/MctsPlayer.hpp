@@ -4,7 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
-#include "mcts/Constants.hpp"
+#include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/ManagerParams.hpp"
 #include "mcts/SearchResults.hpp"
@@ -30,7 +30,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
-    Params(mcts::Mode);
+    Params(search::Mode);
     void dump() const;
 
     auto make_options_description();
@@ -47,8 +47,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   };
 
   using Traits = mcts::Traits<Game>;
-  using MctsManager = mcts::Manager<Traits>;
-  using MctsManagerParams = mcts::ManagerParams<Traits>;
+  using MctsManager = search::Manager<Traits>;
+  using MctsManagerParams = search::ManagerParams<Traits>;
   using SearchResults = mcts::SearchResults<Traits>;
   using SearchResponse = search::SearchResponse<Traits>;
   using player_name_array_t = Game::Types::player_name_array_t;

@@ -7,13 +7,11 @@
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
-#include "mcts/Constants.hpp"
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
-#include "mcts/NNEvaluationServiceBase.hpp"
-#include "mcts/NNEvaluationServiceParams.hpp"
-#include "mcts/Node.hpp"
-#include "search/TypeDefs.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
+#include "nnet/NNEvaluationServiceBase.hpp"
+#include "nnet/NNEvaluationServiceParams.hpp"
+#include "nnet/TypeDefs.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -25,11 +23,11 @@
 #include <queue>
 #include <vector>
 
-namespace mcts {
+namespace nnet {
 
 /*
  * The NNEvaluationService services multiple search threads, which may belong to multiple
- * mcts::Manager instances (if two mcts agents are playing against each other for instance).
+ * nnet::Manager instances (if two nnet agents are playing against each other for instance).
  *
  * The main API is the evaluate() method. It accepts an NNEvaluationRequest, which contains one or
  * more game states to evaluate, along with instructions on how to asynchronously notify a handler
@@ -63,11 +61,11 @@ class NNEvaluationService
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
   using NeuralNet = core::NeuralNet<Traits>;
-  using Node = mcts::Node<Traits>;
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
+  using Node = Traits::Node;
   using Game = Traits::Game;
   using ActionMask = Game::Types::ActionMask;
   using InputTensor = Game::InputTensorizor::Tensor;
@@ -291,7 +289,7 @@ class NNEvaluationService
   // Convenience struct to sort the items in the request by hash shard.
   struct SortItem {
     auto operator<=>(const SortItem& other) const = default;
-    search::hash_shard_t shard;
+    hash_shard_t shard;
     bool fresh;
     int16_t item_index;
   };
@@ -387,6 +385,6 @@ class NNEvaluationService
   core::GameServerBase* server_ = nullptr;
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/NNEvaluationService.inl"
+#include "inline/nnet/NNEvaluationService.inl"

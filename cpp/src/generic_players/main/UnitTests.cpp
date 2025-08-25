@@ -30,8 +30,8 @@ template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
-  using Manager = mcts::Manager<Traits>;
-  using ManagerParams = mcts::ManagerParams<Traits>;
+  using Manager = search::Manager<Traits>;
+  using ManagerParams = search::ManagerParams<Traits>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
@@ -43,18 +43,18 @@ class MctsPlayerTest : public ::testing::Test {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = mcts::NNEvaluationServiceBase<Traits>;
+  using Service = nnet::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 
  public:
-  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(mcts::kCompetitive) {
+  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetitive) {
     player_params_.num_fast_iters = 10;
     player_params_.num_full_iters = 20;
   }
 
   ManagerParams create_manager_params() {
-    ManagerParams params(mcts::kCompetitive);
+    ManagerParams params(search::kCompetitive);
     params.no_model = true;
     return params;
   }

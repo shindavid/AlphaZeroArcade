@@ -1,6 +1,6 @@
-#include "mcts/UniformNNEvaluationService.hpp"
+#include "nnet/UniformNNEvaluationService.hpp"
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 UniformNNEvaluationService<Traits>::UniformNNEvaluationService() {
@@ -9,4 +9,4 @@ UniformNNEvaluationService<Traits>::UniformNNEvaluationService() {
   });
 }
 
-}  // namespace mcts
+}  // namespace nnet

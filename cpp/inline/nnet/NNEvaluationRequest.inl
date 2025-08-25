@@ -1,8 +1,8 @@
-#include "mcts/NNEvaluationRequest.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
 
-#include "util/CppUtil.hpp"
+#include "util/Exceptions.hpp"
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const State& state,
@@ -73,4 +73,4 @@ void NNEvaluationRequest<Traits>::mark_all_as_stale() {
     "This should not happen with the current MCTS logic.");
 }
 
-}  // namespace mcts
+}  // namespace nnet

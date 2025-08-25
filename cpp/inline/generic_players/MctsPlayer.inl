@@ -16,19 +16,19 @@
 namespace generic {
 
 template <core::concepts::Game Game>
-MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
-  if (mode == mcts::kCompetitive) {
+MctsPlayer<Game>::Params::Params(search::Mode mode) {
+  if (mode == search::kCompetitive) {
     num_fast_iters = 0;
     num_full_iters = 1600;
     full_pct = 1.0;
     starting_move_temperature = 0.5;
-  } else if (mode == mcts::kTraining) {
+  } else if (mode == search::kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
     starting_move_temperature = 0.8;
   } else {
-    throw util::Exception("Unknown mcts::Mode: {}", (int)mode);
+    throw util::Exception("Unknown search::Mode: {}", (int)mode);
   }
 }
 
@@ -269,7 +269,7 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
         auto mask = (UCB >= min_LCB).template cast<float>();
         PolicyTensor policy_masked = policy * mask;
 
-        if (mcts::kEnableSearchDebug) {
+        if (search::kEnableSearchDebug) {
           int visited_actions = 0;
           for (int a : bitset_util::on_indices(valid_actions)) {
             if (counts(a)) visited_actions++;

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
-#include "mcts/SimpleNNEvaluationService.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
+#include "nnet/SimpleNNEvaluationService.hpp"
 
-namespace mcts {
+namespace nnet {
 
 /*
  * UniformNNEvaluationService
@@ -14,15 +14,15 @@ namespace mcts {
  * The service assigns uniform probabilities to all valid actions.
  */
 template <typename Traits>
-class UniformNNEvaluationService : public mcts::SimpleNNEvaluationService<Traits> {
+class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Traits> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();
 };
 
-}  // namespace mcts
+}  // namespace nnet
 
-#include "inline/mcts/UniformNNEvaluationService.inl"
+#include "inline/nnet/UniformNNEvaluationService.inl"

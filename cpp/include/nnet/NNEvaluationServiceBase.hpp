@@ -1,12 +1,12 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "mcts/NNEvaluation.hpp"
-#include "mcts/NNEvaluationRequest.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
 
 #include <memory>
 
-namespace mcts {
+namespace nnet {
 
 /*
  * Base class of NNEvaluationService. We pull out this base class so that we create a mock
@@ -19,8 +19,8 @@ namespace mcts {
 template <typename Traits>
 class NNEvaluationServiceBase {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
-  using NNEvaluationRequest = mcts::NNEvaluationRequest<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}
@@ -44,4 +44,4 @@ class NNEvaluationServiceBase {
   virtual void end_session() {}
 };
 
-}  // namespace mcts
+}  // namespace nnet

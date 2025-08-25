@@ -1,10 +1,10 @@
-#include "mcts/NNEvaluationServiceFactory.hpp"
+#include "nnet/NNEvaluationServiceFactory.hpp"
 
-#include "mcts/NNEvaluationService.hpp"
-#include "mcts/UniformNNEvaluationService.hpp"
+#include "nnet/NNEvaluationService.hpp"
+#include "nnet/UniformNNEvaluationService.hpp"
 #include "util/Exceptions.hpp"
 
-namespace mcts {
+namespace nnet {
 
 template <typename Traits>
 typename NNEvaluationServiceFactory<Traits>::ServiceBase_ptr
@@ -19,4 +19,4 @@ NNEvaluationServiceFactory<Traits>::create(const ManagerParams& params,
   }
 }
 
-}  // namespace mcts
+}  // namespace nnet

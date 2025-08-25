@@ -5,10 +5,10 @@
 #include "games/tictactoe/Game.hpp"
 #include "search/Manager.hpp"
 #include "search/ManagerParams.hpp"
-#include "mcts/NNEvaluation.hpp"
+#include "nnet/NNEvaluation.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
-#include "mcts/SimpleNNEvaluationService.hpp"
+#include "nnet/SimpleNNEvaluationService.hpp"
 #include "mcts/Traits.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
@@ -35,10 +35,10 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<mcts::Traits<Nim>> {
+class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<mcts::Traits<Nim>> {
  public:
   using Traits = mcts::Traits<Nim>;
-  using NNEvaluation = mcts::NNEvaluation<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -95,14 +95,14 @@ template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
-  using Manager = mcts::Manager<Traits>;
-  using ManagerParams = mcts::ManagerParams<Traits>;
+  using Manager = search::Manager<Traits>;
+  using ManagerParams = search::ManagerParams<Traits>;
   using Node = mcts::Node<Traits>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = mcts::NNEvaluationServiceBase<Traits>;
+  using Service = nnet::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
@@ -118,7 +118,7 @@ class ManagerTest : public testing::Test {
   }
 
   static ManagerParams create_manager_params() {
-    ManagerParams params(mcts::kCompetitive);
+    ManagerParams params(search::kCompetitive);
     params.no_model = true;
     return params;
   }
