@@ -63,11 +63,21 @@ struct ManagerParams : public NNEvaluationServiceParams {
    * those games are independent. The downside is that we get less cache hits, hurting game
    * throughput.
    *
-   * Based on empirical testing, we find that in self-play, it's better not to incorporate sym
-   * into the cache key, to maximize game throughput. The downside is mitigated by the fact that
-   * the cache is cleared on each generation, leading to partial-independence. In contrast, for
-   * rating games, we incorporate sym into the cache key, to ensure the games are truly
-   * independent, in order to get more accurate ratings.
+   * @dshin performed ad-hoc tests in 2024 that showed that setting this to false in evaluation
+   * games contributed unacceptably large noise in rating evaluations. Based on that, we set it to
+   * true for kCompetition mode.
+   *
+   * In August 2025, @lichensongs performed further ad-hoc tests in the games of hex and Othello.
+   * These tests showed that in hex, incorporating sym into the cache key significantly decreased
+   * variance in the the skill-curve. Furthermore, though the cache hit rate was indeed lower, the
+   * overall skill progression with respect to self-play-time actually improved, for reasons we
+   * don't yet completely understand. In Othello, we observed a slight reduction in skill-curve
+   * variance, and no visible change in skill progression with respect to self-play-time.
+   *
+   * Skill-curve variance reduction is a worthy goal, as it allows us to perform A/B tests more
+   * effectively.
+   *
+   * Based on these tests, we decided to set this bool to true in both modes.
    */
   bool incorporate_sym_into_cache_key = true;
 };
