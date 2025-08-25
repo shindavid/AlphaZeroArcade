@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mcts/ManagerParams.hpp"
+#include "search/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/SearchResults.hpp"
 #include "search/NodeBase.hpp"

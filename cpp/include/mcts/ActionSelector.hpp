@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "mcts/ManagerParams.hpp"
+#include "search/ManagerParams.hpp"
 #include "search/SearchParams.hpp"
 
 namespace mcts {

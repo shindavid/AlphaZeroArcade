@@ -1,4 +1,4 @@
-#include "mcts/ManagerParams.hpp"
+#include "search/ManagerParams.hpp"
 
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"

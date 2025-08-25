@@ -1,4 +1,4 @@
-#include "mcts/Manager.hpp"
+#include "search/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"

@@ -3,7 +3,7 @@
 #include "core/concepts/Game.hpp"
 #include "mcts/Algorithms.hpp"
 #include "mcts/Edge.hpp"
-#include "mcts/ManagerParams.hpp"
+#include "search/ManagerParams.hpp"
 #include "mcts/NNEvaluation.hpp"
 #include "mcts/NNEvaluationRequest.hpp"
 #include "mcts/NNEvaluationServiceBase.hpp"

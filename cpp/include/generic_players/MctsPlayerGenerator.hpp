@@ -7,8 +7,8 @@
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "mcts/Constants.hpp"
-#include "mcts/Manager.hpp"
-#include "mcts/ManagerParams.hpp"
+#include "search/Manager.hpp"
+#include "search/ManagerParams.hpp"
 #include "mcts/Traits.hpp"
 #include "search/TypeDefs.hpp"
 

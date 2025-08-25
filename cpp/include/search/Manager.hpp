@@ -243,4 +243,4 @@ class Manager {
 
 }  // namespace mcts
 
-#include "inline/mcts/Manager.inl"
+#include "inline/search/Manager.inl"

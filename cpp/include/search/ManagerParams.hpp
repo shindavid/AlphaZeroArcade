@@ -90,4 +90,4 @@ struct ManagerParams : public NNEvaluationServiceParams {
 
 }  // namespace mcts
 
-#include "inline/mcts/ManagerParams.inl"
+#include "inline/search/ManagerParams.inl"
