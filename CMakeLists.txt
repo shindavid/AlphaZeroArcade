@@ -89,6 +89,9 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${EXTRA_DEFINITIONS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50")
 
+# -fconcepts-diagnostics-depth works for gcc but not clang. Our .clangd filters it out:
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
+
 # We don't set this by default, because clangd doesn't recognize this option, and because we use
 # clangd for code completion in Visual Studio Code.
 #
