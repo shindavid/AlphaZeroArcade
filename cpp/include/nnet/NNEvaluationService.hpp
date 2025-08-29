@@ -46,9 +46,9 @@ namespace nnet {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <typename Traits>
+template <core::concepts::Game Game>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<Traits>,
+    : public NNEvaluationServiceBase<Game>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -60,12 +60,9 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using Node = Traits::Node;
-  using Game = Traits::Game;
-
   using NeuralNet = core::NeuralNet<Game>;
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;

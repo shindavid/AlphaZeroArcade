@@ -23,11 +23,11 @@ struct Traits {
   using AuxState = mcts::AuxState<Traits>;
   using Algorithms = mcts::Algorithms<Traits>;
   using ManagerParams = search::ManagerParams<Game>;
-  using EvalRequest = nnet::NNEvaluationRequest<Traits>;
+  using EvalRequest = nnet::NNEvaluationRequest<Game>;
   using EvalResponse = nnet::NNEvaluation<Game>;
-  using EvalServiceBase = nnet::NNEvaluationServiceBase<Traits>;
-  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Traits>;
-  using SearchResults = mcts::SearchResults<Traits>;
+  using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
+  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;
+  using SearchResults = mcts::SearchResults<Game>;
 
   static_assert(search::concepts::Traits<Traits>);
 };

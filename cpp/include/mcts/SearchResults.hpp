@@ -1,15 +1,14 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
 
 #include <boost/json.hpp>
 
 namespace mcts {
 
-template <typename Traits>
+template <core::concepts::Game Game>
 struct SearchResults {
-  using Game = Traits::Game;
-
   using ActionMask = Game::Types::ActionMask;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using ActionValueTensor = Game::Types::ActionValueTensor;

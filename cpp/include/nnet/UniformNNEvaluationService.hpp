@@ -13,12 +13,11 @@ namespace nnet {
  * support generation-0 self-play scenarios where a neural network model is not yet available.
  * The service assigns uniform probabilities to all valid actions.
  */
-template <typename Traits>
-class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Traits> {
+template <core::concepts::Game Game>
+class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
  public:
-  using Game = Traits::Game;
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

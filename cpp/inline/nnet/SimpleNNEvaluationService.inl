@@ -2,13 +2,13 @@
 
 namespace nnet {
 
-template <typename Traits>
-SimpleNNEvaluationService<Traits>::SimpleNNEvaluationService() {
+template <core::concepts::Game Game>
+SimpleNNEvaluationService<Game>::SimpleNNEvaluationService() {
   eval_pool_.set_recycle_func([](NNEvaluation* eval) { eval->clear(); });
 }
 
-template <typename Traits>
-core::yield_instruction_t SimpleNNEvaluationService<Traits>::evaluate(
+template <core::concepts::Game Game>
+core::yield_instruction_t SimpleNNEvaluationService<Game>::evaluate(
   NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 

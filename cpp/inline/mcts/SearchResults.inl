@@ -4,8 +4,8 @@
 
 namespace mcts {
 
-template <typename Traits>
-boost::json::object SearchResults<Traits>::to_json() const {
+template <core::concepts::Game Game>
+boost::json::object SearchResults<Game>::to_json() const {
   boost::json::object results_json;
   results_json["valid_actions"] = valid_actions.to_string();
   results_json["counts"] = eigen_util::to_json(counts);

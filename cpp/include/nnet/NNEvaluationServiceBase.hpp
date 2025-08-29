@@ -16,12 +16,11 @@ namespace nnet {
  * place of new/delete. Doing so makes use of an underlying object pool and recycles
  * NNEvaluation objects.
  */
-template <typename Traits>
+template <core::concepts::Game Game>
 class NNEvaluationServiceBase {
  public:
-  using Game = Traits::Game;
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

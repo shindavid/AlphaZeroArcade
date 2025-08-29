@@ -4,8 +4,8 @@
 
 namespace nnet {
 
-template <typename Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const State& state,
+template <core::concepts::Game Game>
+NNEvaluationRequest<Game>::Item::Item(NodeBaseCore* node, StateHistory& history, const State& state,
                                         group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
@@ -14,8 +14,8 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <typename Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
+template <core::concepts::Game Game>
+NNEvaluationRequest<Game>::Item::Item(NodeBaseCore* node, StateHistory& history, group::element_t sym,
                                         bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
@@ -24,9 +24,9 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <typename Traits>
+template <core::concepts::Game Game>
 template <typename Func>
-auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
+auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
   if (split_history_) {
     history_->update(state_);  // temporary append
   }
@@ -42,8 +42,8 @@ auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
   return output;
 }
 
-template <typename Traits>
-typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
+template <core::concepts::Game Game>
+typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key = compute_over_history(
     [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
@@ -51,14 +51,14 @@ typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item
   return CacheKey(eval_key, cache_sym);
 }
 
-template <typename Traits>
-void NNEvaluationRequest<Traits>::set_notification_task_info(
+template <core::concepts::Game Game>
+void NNEvaluationRequest<Game>::set_notification_task_info(
   const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 
-template <typename Traits>
-void NNEvaluationRequest<Traits>::mark_all_as_stale() {
+template <core::concepts::Game Game>
+void NNEvaluationRequest<Game>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
     active_index_ = 1 - active_index_;

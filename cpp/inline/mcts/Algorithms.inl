@@ -263,8 +263,8 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 template <typename Traits>
 void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   for (auto& item : context.eval_request.fresh_items()) {
-    item.node()->load_eval(item.eval(),
-                           [&](LocalPolicyArray& P) { transform_policy(context, P); });
+    Node* node = static_cast<Node*>(item.node());
+    node->load_eval(item.eval(), [&](LocalPolicyArray& P) { transform_policy(context, P); });
   }
 }
 
