@@ -9,8 +9,8 @@
 
 namespace search {
 
-template <typename Traits>
-inline ManagerParams<Traits>::ManagerParams(Mode mode) {
+template <core::concepts::Game Game>
+inline ManagerParams<Game>::ManagerParams(Mode mode) {
   if (mode == kCompetitive) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
@@ -25,8 +25,8 @@ inline ManagerParams<Traits>::ManagerParams(Mode mode) {
   }
 }
 
-template <typename Traits>
-inline auto ManagerParams<Traits>::make_options_description() {
+template <core::concepts::Game Game>
+inline auto ManagerParams<Game>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 

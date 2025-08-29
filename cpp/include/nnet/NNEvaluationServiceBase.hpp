@@ -19,7 +19,8 @@ namespace nnet {
 template <typename Traits>
 class NNEvaluationServiceBase {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using Game = Traits::Game;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
   using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 

@@ -27,7 +27,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   static constexpr int kDefaultMutexPoolSize = 1024;
 
   using Traits = mcts::Traits<Game>;
-  using MctsManagerParams = search::ManagerParams<Traits>;
+  using MctsManagerParams = search::ManagerParams<Game>;
   using MctsManager = search::Manager<Traits>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = BaseMctsPlayer::Params;

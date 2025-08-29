@@ -31,7 +31,7 @@ class MctsPlayerTest : public ::testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = search::ManagerParams<Traits>;
+  using ManagerParams = search::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;

@@ -38,7 +38,7 @@ using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<mcts::Traits<Nim>> {
  public:
   using Traits = mcts::Traits<Nim>;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -96,7 +96,7 @@ class ManagerTest : public testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = search::ManagerParams<Traits>;
+  using ManagerParams = search::ManagerParams<Game>;
   using Node = mcts::Node<Traits>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;

@@ -17,7 +17,8 @@ namespace nnet {
 template <typename Traits>
 class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Traits> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using Game = Traits::Game;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
   using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
   using Node = Traits::Node;

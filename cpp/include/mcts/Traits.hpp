@@ -22,9 +22,9 @@ struct Traits {
   using Edge = mcts::Edge;
   using AuxState = mcts::AuxState<Traits>;
   using Algorithms = mcts::Algorithms<Traits>;
-  using ManagerParams = search::ManagerParams<Traits>;
+  using ManagerParams = search::ManagerParams<Game>;
   using EvalRequest = nnet::NNEvaluationRequest<Traits>;
-  using EvalResponse = nnet::NNEvaluation<Traits>;
+  using EvalResponse = nnet::NNEvaluation<Game>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Traits>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Traits>;
   using SearchResults = mcts::SearchResults<Traits>;

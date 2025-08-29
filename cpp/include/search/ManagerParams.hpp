@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/concepts/Game.hpp"
 #include "nnet/NNEvaluationServiceParams.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
@@ -13,10 +14,8 @@ namespace search {
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
-template <typename Traits>
+template <core::concepts::Game Game>
 struct ManagerParams : public nnet::NNEvaluationServiceParams {
-  using Game = Traits::Game;
-
   ManagerParams(Mode);
 
   search::SearchParams pondering_search_params() const {

@@ -28,8 +28,8 @@ class Node : public search::NodeBase<Traits> {
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using ManagerParams = search::ManagerParams<Traits>;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using ManagerParams = search::ManagerParams<Game>;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;

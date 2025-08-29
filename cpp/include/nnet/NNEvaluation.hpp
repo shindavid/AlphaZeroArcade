@@ -1,16 +1,16 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
 
 namespace nnet {
 
-template <typename Traits>
+template <core::concepts::Game Game>
 class NNEvaluation {
  public:
-  using Game = Traits::Game;
   using ActionValueTarget = Game::TrainingTargets::ActionValueTarget;
   using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;

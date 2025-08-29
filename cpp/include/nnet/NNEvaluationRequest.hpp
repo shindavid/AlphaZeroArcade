@@ -29,7 +29,7 @@ class NNEvaluationRequest {
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

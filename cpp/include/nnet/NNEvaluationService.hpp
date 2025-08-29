@@ -60,13 +60,14 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using NeuralNet = core::NeuralNet<Traits>;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using Node = Traits::Node;
+  using Game = Traits::Game;
+
+  using NeuralNet = core::NeuralNet<Game>;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
   using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
-  using Node = Traits::Node;
-  using Game = Traits::Game;
   using ActionMask = Game::Types::ActionMask;
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
