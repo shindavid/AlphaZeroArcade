@@ -10,7 +10,6 @@
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
-#include "core/BasicTypes.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
@@ -171,8 +170,9 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool, core::mutex_vec_sptr_t context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase*, EvalServiceBase_sptr service);
+  Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
+          core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+          core::GameServerBase*, EvalServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
 

@@ -1,3 +1,4 @@
+#include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "games/GameTransforms.hpp"
 #include "games/nim/Game.hpp"
@@ -13,7 +14,6 @@
 #include "search/ManagerParams.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
-#include "core/BasicTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -35,7 +35,7 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-template<core::concepts::Game Game>
+template <core::concepts::Game Game>
 class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
  public:
   using State = Game::State;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "search/LookupTable.hpp"
-#include "core/NodeBaseCore.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/NodeBaseCore.hpp"
+#include "search/LookupTable.hpp"
 
 namespace search {
 

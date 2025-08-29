@@ -5,7 +5,6 @@
 #include "search/GeneralContext.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
-#include "core/BasicTypes.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>

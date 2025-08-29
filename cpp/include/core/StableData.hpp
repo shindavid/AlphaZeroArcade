@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "core/StableDataBase.hpp"
+#include "core/concepts/Game.hpp"
 
 namespace core {
 

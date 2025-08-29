@@ -8,7 +8,6 @@
 namespace search {
 
 struct EdgeBase {
-
   enum expansion_state_t : int8_t {
     kNotExpanded,
     kMidExpansion,

@@ -104,7 +104,7 @@ void NeuralNet<Game>::release(pipeline_index_t index) {
 
 template <core::concepts::Game Game>
 void NeuralNet<Game>::load(pipeline_index_t index, float** policy_data, float** value_data,
-                             float** action_values_data) {
+                           float** action_values_data) {
   pipelines_[index]->load(policy_data, value_data, action_values_data);
 }
 
@@ -162,7 +162,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
 
 template <core::concepts::Game Game>
 NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
-                                      const nvinfer1::Dims& input_shape, int batch_size)
+                                    const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
       policy(detail::make_ptr<PolicyShape>(batch_size), detail::make_arr<PolicyShape>(batch_size)),
       value(detail::make_ptr<ValueShape>(batch_size), detail::make_arr<ValueShape>(batch_size)),
@@ -216,7 +216,7 @@ void NeuralNet<Game>::Pipeline::schedule() {
 
 template <core::concepts::Game Game>
 void NeuralNet<Game>::Pipeline::load(float** policy_data, float** value_data,
-                                       float** action_values_data) {
+                                     float** action_values_data) {
   cuda_util::synchronize_stream(stream);
   *policy_data = policy.data();
   *value_data = value.data();

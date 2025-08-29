@@ -1,9 +1,9 @@
 #pragma once
 
+#include "core/NodeBaseCore.hpp"  // TODO: move to core/
 #include "core/YieldManager.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/TypeDefs.hpp"
-#include "core/NodeBaseCore.hpp"  // TODO: move to core/
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 

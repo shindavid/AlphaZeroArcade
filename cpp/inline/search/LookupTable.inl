@@ -113,8 +113,9 @@ void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
 }
 
 template <typename Traits>
-core::node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key, core::node_pool_index_t value,
-                                                   bool overwrite) {
+core::node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key,
+                                                         core::node_pool_index_t value,
+                                                         bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;

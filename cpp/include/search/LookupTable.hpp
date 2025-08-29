@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/NodeBaseCore.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/NodeBaseCore.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

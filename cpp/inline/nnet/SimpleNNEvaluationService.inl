@@ -8,8 +8,7 @@ SimpleNNEvaluationService<Game>::SimpleNNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-core::yield_instruction_t SimpleNNEvaluationService<Game>::evaluate(
-  NNEvaluationRequest& request) {
+core::yield_instruction_t SimpleNNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 
   for (auto& item : request.stale_items()) {

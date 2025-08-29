@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/concepts/Game.hpp"
@@ -10,7 +11,6 @@
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/ManagerParams.hpp"
-#include "core/BasicTypes.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 

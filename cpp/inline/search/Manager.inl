@@ -4,7 +4,6 @@
 #include "core/concepts/Game.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
-#include "core/BasicTypes.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
@@ -47,13 +46,13 @@ Manager<Traits>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
 template <typename Traits>
 Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
                          EvalServiceBase_sptr service)
-    : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1), params,
-              server, service) {}
+    : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1),
+              params, server, service) {}
 
 template <typename Traits>
-Manager<Traits>::Manager(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
-                         const ManagerParams& params, core::GameServerBase* server,
-                         EvalServiceBase_sptr service)
+Manager<Traits>::Manager(core::mutex_vec_sptr_t& node_mutex_pool,
+                         core::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
+                         core::GameServerBase* server, EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <typename Traits>

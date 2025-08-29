@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
-#include "core/StableData.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/StableData.hpp"
+#include "core/concepts/Game.hpp"
 
 namespace core {
 
