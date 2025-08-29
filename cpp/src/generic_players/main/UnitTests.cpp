@@ -4,10 +4,10 @@
 #include "games/GameTransforms.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
+#include "mcts/ManagerParams.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/Traits.hpp"
 #include "search/Manager.hpp"
-#include "search/ManagerParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -31,7 +31,7 @@ class MctsPlayerTest : public ::testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = search::ManagerParams<Game>;
+  using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;

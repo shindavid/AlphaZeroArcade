@@ -1,8 +1,8 @@
 #pragma once
 
+#include "mcts/ManagerParams.hpp"
 #include "mcts/SearchResults.hpp"
 #include "nnet/NNEvaluation.hpp"
-#include "search/ManagerParams.hpp"
 #include "search/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -28,7 +28,7 @@ class Node : public search::NodeBase<Traits> {
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using ManagerParams = search::ManagerParams<Game>;
+  using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = nnet::NNEvaluation<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;

@@ -4,11 +4,11 @@
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
+#include "mcts/ManagerParams.hpp"
 #include "mcts/SearchResults.hpp"
 #include "mcts/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
-#include "search/ManagerParams.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
 #include "util/Math.hpp"
@@ -48,7 +48,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   using Traits = mcts::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
-  using MctsManagerParams = search::ManagerParams<Game>;
+  using MctsManagerParams = mcts::ManagerParams<Game>;
   using SearchResults = mcts::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;

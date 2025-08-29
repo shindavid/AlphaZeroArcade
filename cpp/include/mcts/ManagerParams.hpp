@@ -7,7 +7,7 @@
 
 #include <boost/filesystem.hpp>
 
-namespace search {
+namespace mcts {
 
 /*
  * ManagerParams pertains to a single search::Manager instance.
@@ -16,7 +16,7 @@ namespace search {
  */
 template <core::concepts::Game Game>
 struct ManagerParams : public nnet::NNEvaluationServiceParams {
-  ManagerParams(Mode);
+  ManagerParams(search::Mode);
 
   search::SearchParams pondering_search_params() const {
     return search::SearchParams::make_pondering_params(pondering_tree_size_limit);
@@ -58,6 +58,6 @@ struct ManagerParams : public nnet::NNEvaluationServiceParams {
   bool force_evaluate_all_root_children = false;
 };
 
-}  // namespace search
+}  // namespace mcts
 
-#include "inline/search/ManagerParams.inl"
+#include "inline/mcts/ManagerParams.inl"

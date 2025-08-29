@@ -4,6 +4,7 @@
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
+#include "mcts/ManagerParams.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/Traits.hpp"
@@ -11,7 +12,6 @@
 #include "nnet/SimpleNNEvaluationService.hpp"
 #include "search/LookupTable.hpp"
 #include "search/Manager.hpp"
-#include "search/ManagerParams.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
@@ -100,7 +100,7 @@ class ManagerTest : public testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = search::ManagerParams<Game>;
+  using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Traits>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
