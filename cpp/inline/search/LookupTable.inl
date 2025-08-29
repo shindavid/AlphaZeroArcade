@@ -9,14 +9,14 @@ LookupTable<Traits>::Defragmenter::Defragmenter(LookupTable* table)
       edge_bitset_(table->edge_pool_.size()) {}
 
 template <typename Traits>
-void LookupTable<Traits>::Defragmenter::scan(node_pool_index_t n) {
+void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
   NodeBaseCore* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
-  edge_pool_index_t first_edge_index = node->get_first_edge_index();
+  core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
   int n_edges = node->stable_data().num_valid_actions;
 
   edge_bitset_.set(first_edge_index, n_edges, true);
@@ -33,7 +33,7 @@ void LookupTable<Traits>::Defragmenter::prepare() {
 }
 
 template <typename Traits>
-void LookupTable<Traits>::Defragmenter::remap(node_pool_index_t& n) {
+void LookupTable<Traits>::Defragmenter::remap(core::node_pool_index_t& n) {
   bitset_t processed_nodes(table_->node_pool_.size());
   remap_helper(n, processed_nodes);
   n = node_index_remappings_[n];
@@ -56,7 +56,7 @@ void LookupTable<Traits>::Defragmenter::defrag() {
 }
 
 template <typename Traits>
-void LookupTable<Traits>::Defragmenter::remap_helper(node_pool_index_t n,
+void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
                                                      bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
@@ -64,7 +64,7 @@ void LookupTable<Traits>::Defragmenter::remap_helper(node_pool_index_t n,
   NodeBaseCore* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
-  edge_pool_index_t first_edge_index = node->get_first_edge_index();
+  core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
   int n_edges = node->stable_data().num_valid_actions;
 
   for (int e = 0; e < n_edges; ++e) {
@@ -93,7 +93,7 @@ void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings, 
 }
 
 template <typename Traits>
-LookupTable<Traits>::LookupTable(search::mutex_vec_sptr_t mutex_pool)
+LookupTable<Traits>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
     : mutex_pool_(mutex_pool), mutex_pool_size_(mutex_pool->size()) {}
 
 template <typename Traits>
@@ -104,7 +104,7 @@ void LookupTable<Traits>::clear() {
 }
 
 template <typename Traits>
-void LookupTable<Traits>::defragment(node_pool_index_t& root_index) {
+void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
   Defragmenter defragmenter(this);
   defragmenter.scan(root_index);
   defragmenter.prepare();
@@ -113,7 +113,7 @@ void LookupTable<Traits>::defragment(node_pool_index_t& root_index) {
 }
 
 template <typename Traits>
-node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key, node_pool_index_t value,
+core::node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key, core::node_pool_index_t value,
                                                    bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
@@ -126,7 +126,7 @@ node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key, node_pool
 }
 
 template <typename Traits>
-node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) const {
+core::node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {

@@ -43,7 +43,7 @@ class MctsPlayerTest : public ::testing::Test {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = nnet::NNEvaluationServiceBase<Traits>;
+  using Service = nnet::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 

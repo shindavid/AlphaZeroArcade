@@ -3,7 +3,7 @@
 #include "core/concepts/Game.hpp"
 #include "util/CppUtil.hpp"
 
-namespace search {
+namespace core {
 
 /*
  * StableDataBase<Game, false> is an empty class that does nothing.
@@ -44,4 +44,4 @@ constexpr bool kStoreStates = IS_DEFINED(STORE_STATES) || Game::MctsConfiguratio
 template <core::concepts::Game Game>
 using StableDataBaseImpl = StableDataBase<Game, kStoreStates<Game>>;
 
-}  // namespace search
+}  // namespace core

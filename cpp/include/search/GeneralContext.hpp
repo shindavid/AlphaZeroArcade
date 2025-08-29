@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <array>
@@ -32,12 +32,12 @@ struct GeneralContext {
     StateHistoryArray history_array;
 
     group::element_t canonical_sym = -1;
-    search::node_pool_index_t node_index = -1;
+    core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;
   };
 
-  GeneralContext(const ManagerParams& mparams, search::mutex_vec_sptr_t node_mutex_pool);
+  GeneralContext(const ManagerParams& mparams, core::mutex_vec_sptr_t node_mutex_pool);
   void clear();
   void step();
 

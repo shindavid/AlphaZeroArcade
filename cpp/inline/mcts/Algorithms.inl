@@ -330,7 +330,7 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
 
 template <typename Traits>
 void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
-  search::node_pool_index_t index = context.initialization_index;
+  core::node_pool_index_t index = context.initialization_index;
   GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;

@@ -34,7 +34,7 @@ class Node : public search::NodeBase<Traits> {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = Game::Types::ValueTensor;
-  using SearchResults = mcts::SearchResults<Traits>;
+  using SearchResults = mcts::SearchResults<Game>;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   using NodeBase = search::NodeBase<Traits>;

@@ -49,8 +49,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using Traits = mcts::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
   using MctsManagerParams = search::ManagerParams<Game>;
-  using SearchResults = mcts::SearchResults<Traits>;
-  using SearchResponse = search::SearchResponse<Traits>;
+  using SearchResults = mcts::SearchResults<Game>;
+  using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
   using State = Game::State;

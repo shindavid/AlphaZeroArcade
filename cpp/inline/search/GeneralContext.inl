@@ -18,7 +18,7 @@ void GeneralContext<Traits>::RootInfo::clear() {
 
 template <typename Traits>
 GeneralContext<Traits>::GeneralContext(const ManagerParams& mparams,
-                                       search::mutex_vec_sptr_t node_mutex_pool)
+                                       core::mutex_vec_sptr_t node_mutex_pool)
     : manager_params(mparams),
       pondering_search_params(manager_params.pondering_search_params()),
       aux_state(mparams),

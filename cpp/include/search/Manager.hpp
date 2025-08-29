@@ -10,7 +10,7 @@
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
@@ -48,7 +48,7 @@ class Manager {
   using RootInfo = GeneralContext::RootInfo;
   using LookupTable = search::LookupTable<Traits>;
   using SearchContext = search::SearchContext<Traits>;
-  using SearchResponse = search::SearchResponse<Traits>;
+  using SearchResponse = search::SearchResponse<SearchResults>;
 
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = Game::Types::ActionRequest;
@@ -139,7 +139,7 @@ class Manager {
   Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
-  Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+  Manager(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
           const ManagerParams& params, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
@@ -171,7 +171,7 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool, mutex_vec_sptr_t context_mutex_pool,
+  Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool, core::mutex_vec_sptr_t context_mutex_pool,
           const ManagerParams& params, core::GameServerBase*, EvalServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
@@ -202,7 +202,7 @@ class Manager {
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
   void add_pending_notification(SearchContext&, Edge*);
-  void set_edge_state(SearchContext&, Edge*, expansion_state_t);
+  void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);
   void calc_canonical_state_data(SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
@@ -219,7 +219,7 @@ class Manager {
 
   context_vec_t contexts_;
   StateMachine state_machine_;
-  mutex_vec_sptr_t context_mutex_pool_;
+  core::mutex_vec_sptr_t context_mutex_pool_;
   EvalServiceBase_sptr nn_eval_service_;
 
   SearchResults results_;

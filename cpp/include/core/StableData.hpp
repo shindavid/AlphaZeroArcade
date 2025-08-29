@@ -1,9 +1,9 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "search/StableDataBase.hpp"
+#include "core/StableDataBase.hpp"
 
-namespace search {
+namespace core {
 
 // StableData consists of data members of search::NodeBase<Traits> whose values do not change once
 // the node is created. The StableData member of search::NodeBase<Traits> is const in spirit, but
@@ -32,6 +32,6 @@ struct StableData : public StableDataBaseImpl<Game> {
   bool is_chance_node;
 };
 
-}  // namespace search
+}  // namespace core
 
-#include "inline/search/StableData.inl"
+#include "inline/core/StableData.inl"

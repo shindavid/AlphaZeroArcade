@@ -1,6 +1,10 @@
 #pragma once
 
+#include "util/AllocPool.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
+
 #include <cstdint>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -54,5 +58,11 @@ using slot_context_queue_t = std::queue<SlotContext>;
 // the other n will return kDrop. The GameServer will then drop the n threads, going back to only
 // have one copy of the GameSlot in the queue.
 enum yield_instruction_t : int8_t { kContinue, kYield, kDrop };
+
+using mutex_vec_t = std::vector<mit::mutex>;
+using mutex_vec_sptr_t = std::shared_ptr<mutex_vec_t>;
+
+using node_pool_index_t = util::pool_index_t;
+using edge_pool_index_t = util::pool_index_t;
 
 }  // namespace core

@@ -4,10 +4,8 @@
 
 namespace search {
 
-template <typename Traits>
+template <typename SearchResults>
 struct SearchResponse {
-  using SearchResults = Traits::SearchResults;
-
   static SearchResponse make_drop() { return SearchResponse(nullptr, core::kDrop); }
   static SearchResponse make_yield(int e = 0) { return SearchResponse(nullptr, core::kYield, e); }
 

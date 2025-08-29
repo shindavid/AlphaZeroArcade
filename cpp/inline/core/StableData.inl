@@ -1,6 +1,6 @@
-#include "search/StableData.hpp"
+#include "core/StableData.hpp"
 
-namespace search {
+namespace core {
 
 template <core::concepts::Game Game>
 StableData<Game>::StableData(const StateHistory& history, core::seat_index_t as)
@@ -27,4 +27,4 @@ StableData<Game>::StableData(const StateHistory& history, const ValueTensor& gam
   is_chance_node = false;
 }
 
-}  // namespace search
+}  // namespace core

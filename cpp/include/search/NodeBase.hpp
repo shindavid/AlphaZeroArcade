@@ -1,8 +1,8 @@
 #pragma once
 
 #include "search/LookupTable.hpp"
-#include "search/NodeBaseCore.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/NodeBaseCore.hpp"
+#include "core/BasicTypes.hpp"
 
 namespace search {
 
@@ -12,12 +12,12 @@ namespace search {
 // (e.g., MCTS and Bayesian-MCTS)
 
 template <typename Traits>
-class NodeBase : public NodeBaseCore<typename Traits::Game> {
+class NodeBase : public core::NodeBaseCore<typename Traits::Game> {
  public:
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using NodeBaseCore = search::NodeBaseCore<Game>;
+  using NodeBaseCore = core::NodeBaseCore<Game>;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
@@ -32,7 +32,7 @@ class NodeBase : public NodeBaseCore<typename Traits::Game> {
 
   Edge* get_edge(int i) const;
   Node* get_child(const Edge* edge) const;
-  node_pool_index_t lookup_child_by_action(core::action_t action) const;
+  core::node_pool_index_t lookup_child_by_action(core::action_t action) const;
   void update_child_expand_count(int n = 1);
   bool all_children_edges_initialized() const;
   bool trivial() const { return trivial_; }

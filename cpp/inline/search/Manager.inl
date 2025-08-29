@@ -1,9 +1,10 @@
 #include "search/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/Game.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
@@ -21,8 +22,8 @@ template <typename Traits>
 int Manager<Traits>::next_instance_id_ = 0;
 
 template <typename Traits>
-Manager<Traits>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
-                         mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+Manager<Traits>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
+                         core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                          core::GameServerBase* server, EvalServiceBase_sptr service)
     : manager_id_(next_instance_id_++),
       general_context_(params, node_mutex_pool),
@@ -46,11 +47,11 @@ Manager<Traits>::Manager(bool dummy, mutex_vec_sptr_t node_mutex_pool,
 template <typename Traits>
 Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
                          EvalServiceBase_sptr service)
-    : Manager(true, std::make_shared<mutex_vec_t>(1), std::make_shared<mutex_vec_t>(1), params,
+    : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1), params,
               server, service) {}
 
 template <typename Traits>
-Manager<Traits>::Manager(mutex_vec_sptr_t& node_mutex_pool, mutex_vec_sptr_t& context_mutex_pool,
+Manager<Traits>::Manager(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
                          const ManagerParams& params, core::GameServerBase* server,
                          EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
@@ -115,7 +116,7 @@ void Manager<Traits>::update(core::action_t action) {
   root_info()->canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 
   general_context_.step();
-  node_pool_index_t root_index = root_info()->node_index;
+  core::node_pool_index_t root_index = root_info()->node_index;
   if (root_index < 0) return;
 
   core::action_t transformed_action = action;
@@ -187,7 +188,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     auto* edge = root->get_edge(i);
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
-    node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
+    core::node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
     if (child_node_index < 0) {
       action_values(action) = edge->child_V_estimate;
     } else {
@@ -322,7 +323,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
 
   Algorithms::init_root_info(general_context_, kForStandardSearch);
 
-  node_pool_index_t root_index = root_info.node_index;
+  core::node_pool_index_t root_index = root_info.node_index;
   Node* root = lookup_table.get_node(root_index);
   if (root->is_terminal()) return core::kContinue;
 
@@ -363,7 +364,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
   const ManagerParams& manager_params = general_context_.manager_params;
 
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.initialization_index;
+  core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table.get_node(node_index);
 
   context.mid_node_initialization = true;
@@ -402,7 +403,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   LookupTable& lookup_table = general_context_.lookup_table;
 
   StateHistory* history = context.initialization_history;
-  node_pool_index_t node_index = context.initialization_index;
+  core::node_pool_index_t node_index = context.initialization_index;
 
   Node* node = lookup_table.get_node(node_index);
   bool is_root = (node_index == root_info.node_index);
@@ -501,12 +502,12 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   context.search_path.back().edge = edge;
   context.applied_action = false;
   context.inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
-  if (edge->state != kExpanded) {
+  if (edge->state != Edge::kExpanded) {
     // reread state under mutex in case of race-condition
     mit::unique_lock lock(node->mutex());
 
-    if (edge->state == kNotExpanded) {
-      set_edge_state(context, edge, kMidExpansion);
+    if (edge->state == Edge::kNotExpanded) {
+      set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
       // reorient edge->action into raw-orientation
@@ -535,11 +536,11 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       }
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
-    } else if (edge->state == kMidExpansion) {
+    } else if (edge->state == Edge::kMidExpansion) {
       add_pending_notification(context, edge);
       return core::kYield;
-    } else if (edge->state == kPreExpanded) {
-      set_edge_state(context, edge, kMidExpansion);
+    } else if (edge->state == Edge::kPreExpanded) {
+      set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
       DEBUG_ASSERT(edge->child_index >= 0);
@@ -553,7 +554,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       }
 
       lock.lock();
-      set_edge_state(context, edge, kExpanded);
+      set_edge_state(context, edge, Edge::kExpanded);
       context.visit_node = nullptr;
       context.mid_visit = false;
       return core::kContinue;
@@ -581,7 +582,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
   }
 
   // we could have hit the yield in the kMidExpansion case, as the non-primary context
-  RELEASE_ASSERT(edge->state == kExpanded, "Expected edge state to be kExpanded, but got {}",
+  RELEASE_ASSERT(edge->state == Edge::kExpanded, "Expected edge state to be kExpanded, but got {}",
                  edge->state);
 
   Node* child = node->get_child(edge);
@@ -680,7 +681,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   LookupTable& lookup_table = general_context_.lookup_table;
 
-  node_pool_index_t child_index = context.initialization_index;
+  core::node_pool_index_t child_index = context.initialization_index;
   Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
@@ -689,7 +690,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
   }
 
   if (context.expanded_new_node) {
-    node_pool_index_t inserted_child_index = context.inserted_node_index;
+    core::node_pool_index_t inserted_child_index = context.inserted_node_index;
     Node* child = lookup_table.get_node(child_index);
     bool terminal = child->is_terminal();
     bool do_virtual = !terminal && multithreaded();
@@ -754,7 +755,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   mit::unique_lock lock(parent->mutex());
   parent->update_child_expand_count();
-  set_edge_state(context, edge, kExpanded);
+  set_edge_state(context, edge, Edge::kExpanded);
   lock.unlock();
 
   context.mid_expansion = false;
@@ -777,16 +778,17 @@ void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edg
 }
 
 template <typename Traits>
-void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge, expansion_state_t state) {
+void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
+                                     Edge::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
-  if (state == kPreExpanded) {
+  if (state == Edge::kPreExpanded) {
     // Makes no assumptions about mutexes
     edge->state = state;
-  } else if (state == kMidExpansion) {
+  } else if (state == Edge::kMidExpansion) {
     // Assumes edge's parent node's mutex is held
     edge->state = state;
     edge->expanding_context_id = context.id;
-  } else if (state == kExpanded) {
+  } else if (state == Edge::kExpanded) {
     // Assumes edge's parent node's mutex is held
     mit::mutex& mutex = (*context_mutex_pool_)[context.pending_notifications_mutex_id];
     mit::unique_lock lock(mutex);
@@ -840,10 +842,10 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     Rules::apply(canonical_history, reoriented_action);
 
     expand_count++;
-    set_edge_state(context, edge, kPreExpanded);
+    set_edge_state(context, edge, Edge::kPreExpanded);
 
     MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
-    node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
+    core::node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
       canonical_history.undo();
@@ -893,7 +895,7 @@ void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
 
   context.canonical_history = context.raw_history;
 
-  if constexpr (core::concepts::RequiresMctsDoublePass<Traits>) {
+  if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
     using Group = SymmetryGroup;
     context.canonical_history = root_info.history_array[context.leaf_canonical_sym];
     group::element_t cur_canonical_sym = root_info.canonical_sym;

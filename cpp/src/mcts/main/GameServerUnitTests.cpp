@@ -30,7 +30,7 @@ class GameServerTest : public testing::Test {
   using action_vec_t = GameServer::action_vec_t;
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = mcts::SearchResults<Traits>;
+  using SearchResults = mcts::SearchResults<Game>;
   using SearchLog = mcts::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:

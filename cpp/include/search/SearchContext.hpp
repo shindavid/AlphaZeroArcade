@@ -5,7 +5,7 @@
 #include "search/GeneralContext.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
@@ -52,8 +52,8 @@ struct SearchContext {
 
   // node-initialization yield info
   StateHistory* initialization_history;
-  search::node_pool_index_t initialization_index = -1;
-  search::node_pool_index_t inserted_node_index = -1;
+  core::node_pool_index_t initialization_index = -1;
+  core::node_pool_index_t inserted_node_index = -1;
   bool expanded_new_node = false;
 
   // visit yield info

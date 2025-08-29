@@ -3,7 +3,7 @@
 #include "core/YieldManager.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/TypeDefs.hpp"
-#include "search/NodeBaseCore.hpp"  // TODO: move to core/
+#include "core/NodeBaseCore.hpp"  // TODO: move to core/
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -24,7 +24,7 @@ namespace nnet {
 template <core::concepts::Game Game>
 class NNEvaluationRequest {
  public:
-  using NodeBaseCore = search::NodeBaseCore<Game>;
+  using NodeBaseCore = core::NodeBaseCore<Game>;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;

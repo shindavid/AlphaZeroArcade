@@ -1,14 +1,14 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "search/StableData.hpp"
-#include "search/TypeDefs.hpp"
+#include "core/StableData.hpp"
+#include "core/BasicTypes.hpp"
 
-namespace search {
+namespace core {
 
 // Object hierarchy:
 //
-// search::NodeBaseCore<Traits>
+// core::NodeBaseCore<Traits>
 // └── search::NodeBase<Traits>
 //     ├── mcts::Node<Traits::Game>
 //     └── bayesian_mcts::Node<Traits::Game>
@@ -21,7 +21,7 @@ namespace search {
 template <core::concepts::Game Game>
 class NodeBaseCore {
  public:
-  using StableData = search::StableData<Game>;
+  using StableData = core::StableData<Game>;
 
   template <typename... Ts>
   NodeBaseCore(Ts&&... args) : stable_data_(std::forward<Ts>(args)...) {}
@@ -30,13 +30,13 @@ class NodeBaseCore {
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
   bool edges_initialized() const { return first_edge_index_ != -1; }
-  edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
-  void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
+  core::edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
+  void set_first_edge_index(core::edge_pool_index_t e) { first_edge_index_ = e; }
   const StableData& stable_data() const { return stable_data_; }
 
  protected:
   StableData stable_data_;
-  edge_pool_index_t first_edge_index_ = -1;
+  core::edge_pool_index_t first_edge_index_ = -1;
 };
 
-}  // namespace search
+}  // namespace core

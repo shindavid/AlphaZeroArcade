@@ -1,13 +1,22 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
+
+#include <cstdint>
 
 namespace search {
 
 struct EdgeBase {
-  node_pool_index_t child_index = -1;
+
+  enum expansion_state_t : int8_t {
+    kNotExpanded,
+    kMidExpansion,
+    kPreExpanded,  // used when evaluating all children when computing AV-targets
+    kExpanded
+  };
+
+  core::node_pool_index_t child_index = -1;
   core::action_t action = -1;
   float chance_prob = 0;  // only valid for chance nodes
   group::element_t sym = -1;

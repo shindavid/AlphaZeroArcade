@@ -25,7 +25,7 @@ typename Traits::Node* NodeBase<Traits>::get_child(const Edge* edge) const {
 
 // NOTE: this can be switched to use binary search if we'd like
 template <typename Traits>
-node_pool_index_t NodeBase<Traits>::lookup_child_by_action(core::action_t action) const {
+core::node_pool_index_t NodeBase<Traits>::lookup_child_by_action(core::action_t action) const {
   int i = 0;
   for (core::action_t a : bitset_util::on_indices(this->stable_data_.valid_action_mask)) {
     if (a == action) {
@@ -44,7 +44,7 @@ void NodeBase<Traits>::update_child_expand_count(int n) {
 
   // all children have been expanded, check for triviality
   if (child_expand_count_ == 0) return;
-  node_pool_index_t first_child_index = get_edge(0)->child_index;
+  core::node_pool_index_t first_child_index = get_edge(0)->child_index;
   for (int i = 1; i < this->stable_data_.num_valid_actions; ++i) {
     if (get_edge(i)->child_index != first_child_index) return;
   }
@@ -57,7 +57,7 @@ bool NodeBase<Traits>::all_children_edges_initialized() const {
   if (this->stable_data_.num_valid_actions == 0) return true;
   if (this->first_edge_index_ == -1) return false;
   for (int j = 0; j < this->stable_data_.num_valid_actions; ++j) {
-    if (get_edge(j)->state != kExpanded) return false;
+    if (get_edge(j)->state != Edge::kExpanded) return false;
   }
   return true;
 }
