@@ -24,6 +24,8 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       po::value<std::string>(&cuda_device)->default_value(cuda_device),
       "cuda device to use for nn evals. Usually you need to specify this again outside the "
       "--player string to register the device to the loop controller")
+    .template add_hidden_flag<"apply-random-symmetries", "disable-random-symmetries">(
+      &apply_random_symmetries, "apply random symmetries", "disable random symmetries")
     .template add_hidden_option<"num-pipelines">(
       po::value<int>(&num_pipelines)->default_value(num_pipelines),
       "number of nn eval pipelines to use")

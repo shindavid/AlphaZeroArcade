@@ -60,8 +60,6 @@ inline auto ManagerParams<Game>::make_options_description() {
       .template add_hidden_option<"pondering-tree-size-limit">(
         po::value<int>(&pondering_tree_size_limit)->default_value(pondering_tree_size_limit),
         "max tree size to grow to when pondering (only respected in --enable-pondering mode)")
-      .template add_hidden_flag<"apply-random-symmetries", "disable-random-symmetries">(
-        &apply_random_symmetries, "apply random symmetries", "disable random symmetries")
       .template add_hidden_flag<"forced-playouts", "no-forced-playouts">(
         &forced_playouts, "enable forced playouts", "disable forced playouts")
       .template add_hidden_flag<"enable-first-play-urgency", "disable-first-play-urgency">(
