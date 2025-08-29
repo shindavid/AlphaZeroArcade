@@ -14,7 +14,7 @@ class LookupTable {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
-  using NodeBaseCore = search::NodeBaseCore<Traits>;
+  using NodeBaseCore = search::NodeBaseCore<Game>;
 
   class Defragmenter {
    public:

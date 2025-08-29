@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/concepts/Game.hpp"
 #include "search/StableData.hpp"
 #include "search/TypeDefs.hpp"
 
@@ -17,10 +18,10 @@ namespace search {
 // NodeBaseCore is pulled out of NodeBase in order to break a circular dependency between
 // NodeBase and LookupTable.
 
-template <typename Traits>
+template <core::concepts::Game Game>
 class NodeBaseCore {
  public:
-  using StableData = search::StableData<Traits>;
+  using StableData = search::StableData<Game>;
 
   template <typename... Ts>
   NodeBaseCore(Ts&&... args) : stable_data_(std::forward<Ts>(args)...) {}

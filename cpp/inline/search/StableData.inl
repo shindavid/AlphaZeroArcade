@@ -2,8 +2,8 @@
 
 namespace search {
 
-template <typename Traits>
-StableData<Traits>::StableData(const StateHistory& history, core::seat_index_t as)
+template <core::concepts::Game Game>
+StableData<Game>::StableData(const StateHistory& history, core::seat_index_t as)
     : Base(history.current()) {
   VT.setZero();  // to be set lazily
   VT_valid = false;
@@ -15,8 +15,8 @@ StableData<Traits>::StableData(const StateHistory& history, core::seat_index_t a
   terminal = false;
 }
 
-template <typename Traits>
-StableData<Traits>::StableData(const StateHistory& history, const ValueTensor& game_outcome)
+template <core::concepts::Game Game>
+StableData<Game>::StableData(const StateHistory& history, const ValueTensor& game_outcome)
     : Base(history.current()) {
   VT = game_outcome;
   VT_valid = true;

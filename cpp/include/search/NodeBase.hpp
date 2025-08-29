@@ -12,12 +12,12 @@ namespace search {
 // (e.g., MCTS and Bayesian-MCTS)
 
 template <typename Traits>
-class NodeBase : public NodeBaseCore<Traits> {
+class NodeBase : public NodeBaseCore<typename Traits::Game> {
  public:
-  using NodeBaseCore = search::NodeBaseCore<Traits>;
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using NodeBaseCore = search::NodeBaseCore<Game>;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
