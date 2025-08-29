@@ -8,10 +8,10 @@ namespace core {
 
 // Object hierarchy:
 //
-// core::NodeBaseCore<Traits>
+// core::NodeBaseCore<Traits::Game>
 // └── search::NodeBase<Traits>
-//     ├── mcts::Node<Traits::Game>
-//     └── bayesian_mcts::Node<Traits::Game>
+//     ├── mcts::Node<Traits>
+//     └── bayesian_mcts::Node<Traits>
 //
 // NodeBase holds members that are common to all node types.
 //
