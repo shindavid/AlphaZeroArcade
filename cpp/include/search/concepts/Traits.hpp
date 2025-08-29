@@ -1,8 +1,6 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "search/concepts/Edge.hpp"
-#include "search/concepts/Node.hpp"
 
 namespace search {
 namespace concepts {
@@ -10,8 +8,15 @@ namespace concepts {
 template <class T>
 concept Traits = requires {
   requires core::concepts::Game<typename T::Game>;
-  requires search::concepts::Node<typename T::Node, T>;
-  requires search::concepts::Edge<typename T::Edge>;
+  typename T::Node;
+  typename T::Edge;
+  typename T::AuxState;
+  typename T::ManagerParams;
+  typename T::Algorithms;
+  typename T::EvalRequest;
+  typename T::EvalResponse;
+  typename T::EvalServiceBase;
+  typename T::EvalServiceFactory;
 };
 
 }  // namespace concepts
