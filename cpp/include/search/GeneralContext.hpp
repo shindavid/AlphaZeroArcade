@@ -1,8 +1,9 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/Traits.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <array>
@@ -10,9 +11,9 @@
 namespace search {
 
 // GeneralContext<Traits> contains data members that apply to the entire game tree.
-template <typename Traits>
+template <search::concepts::GeneralContextTraits Traits>
 struct GeneralContext {
-  using TraitsTypes = search::TraitsTypes<Traits>;
+  using GraphTraits = Traits::GraphTraits;
   using Game = Traits::Game;
   using Node = Traits::Node;
   using Edge = Traits::Edge;
@@ -26,7 +27,7 @@ struct GeneralContext {
   using SymmetryGroup = Game::SymmetryGroup;
 
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
-  using LookupTable = TraitsTypes::LookupTable;
+  using LookupTable = search::LookupTable<GraphTraits>;
 
   struct RootInfo {
     void clear();

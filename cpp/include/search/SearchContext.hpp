@@ -21,8 +21,9 @@ struct SearchContext {
   using Game = Traits::Game;
   using EvalRequest = Traits::EvalRequest;
 
-  using GeneralContext = search::GeneralContext<Traits>;
   using TraitsTypes = search::TraitsTypes<Traits>;
+  using GeneralContextTraits = TraitsTypes::GeneralContextTraits;
+  using GeneralContext = search::GeneralContext<GeneralContextTraits>;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = TraitsTypes::search_path_t;

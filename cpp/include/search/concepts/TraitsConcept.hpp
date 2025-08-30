@@ -1,9 +1,19 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
+#include "search/concepts/ManagerParamsConcept.hpp"
+#include "search/concepts/AuxStateConcept.hpp"
 
 namespace search {
 namespace concepts {
+
+template <class GCT>
+concept GeneralContextTraits = requires {
+  requires search::concepts::GraphTraits<GCT>;
+  requires search::concepts::ManagerParams<typename GCT::ManagerParams>;
+  requires search::concepts::AuxState<typename GCT::AuxState, typename GCT::ManagerParams>;
+};
 
 template <class T>
 concept Traits = requires {
