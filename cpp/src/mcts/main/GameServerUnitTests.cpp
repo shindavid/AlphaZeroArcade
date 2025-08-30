@@ -7,7 +7,7 @@
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/SearchResults.hpp"
-#include "search/TraitsTypes.hpp"
+#include "search/Traits.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"

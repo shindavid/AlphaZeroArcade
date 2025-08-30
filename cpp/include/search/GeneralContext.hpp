@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/SearchParams.hpp"
-#include "search/TraitsTypes.hpp"
+#include "search/Traits.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <array>

@@ -3,9 +3,8 @@
 #include "mcts/ActionSelector.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
-#include "search/GraphTraits.hpp"
 #include "search/SearchContext.hpp"
-#include "search/TraitsTypes.hpp"
+#include "search/Traits.hpp"
 
 namespace mcts {
 

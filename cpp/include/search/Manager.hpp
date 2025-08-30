@@ -8,7 +8,7 @@
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/TraitsTypes.hpp"
+#include "search/Traits.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>

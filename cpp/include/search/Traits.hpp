@@ -1,12 +1,20 @@
 #pragma once
 
-#include "search/GraphTraits.hpp"
 #include "search/LookupTable.hpp"
 
 #include <array>
 #include <vector>
 
 namespace search {
+
+template <core::concepts::Game G, search::concepts::Node<G> N, search::concepts::Edge E>
+struct GraphTraits {
+  using Game = G;
+  using Node = N;
+  using Edge = E;
+
+  // static_assert(search::concepts::GraphTraits<GraphTraits>);
+};
 
 template <typename Traits>
 struct TraitsTypes {

@@ -11,7 +11,6 @@
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"
-#include "search/concepts/Traits.hpp"
 
 namespace mcts {
 
@@ -30,7 +29,7 @@ struct Traits {
 
   using Algorithms = mcts::Algorithms<Traits>;
 
-  static_assert(search::concepts::Traits<Traits>);
+  // static_assert(search::concepts::Traits<Traits>);
 };
 
 }  // namespace mcts

@@ -9,7 +9,7 @@
 #include "mcts/Traits.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchRequest.hpp"
-#include "search/TraitsTypes.hpp"
+#include "search/Traits.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
