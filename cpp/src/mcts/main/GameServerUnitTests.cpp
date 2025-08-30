@@ -7,7 +7,6 @@
 #include "generic_players/MctsPlayerGenerator.hpp"
 #include "mcts/SearchLog.hpp"
 #include "mcts/SearchResults.hpp"
-#include "search/Traits.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -32,8 +31,7 @@ class GameServerTest : public testing::Test {
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = mcts::SearchResults<Game>;
-  using GraphTraits = search::TraitsTypes<Traits>::GraphTraits;
-  using SearchLog = mcts::SearchLog<GraphTraits>;
+  using SearchLog = mcts::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:
   //

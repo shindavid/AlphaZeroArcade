@@ -13,7 +13,6 @@ namespace search {
 // GeneralContext<Traits> contains data members that apply to the entire game tree.
 template <search::concepts::GeneralContextTraits Traits>
 struct GeneralContext {
-  using GraphTraits = Traits::GraphTraits;
   using Game = Traits::Game;
   using Node = Traits::Node;
   using Edge = Traits::Edge;
@@ -27,7 +26,7 @@ struct GeneralContext {
   using SymmetryGroup = Game::SymmetryGroup;
 
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
-  using LookupTable = search::LookupTable<GraphTraits>;
+  using LookupTable = search::LookupTable<Traits>;
 
   struct RootInfo {
     void clear();

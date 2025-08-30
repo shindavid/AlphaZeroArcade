@@ -17,12 +17,10 @@ class Algorithms {
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using GraphTraits = TraitsTypes::GraphTraits;
-  using GeneralContextTraits = TraitsTypes::GeneralContextTraits;
   using LookupTable = TraitsTypes::LookupTable;
 
-  using ActionSelector = mcts::ActionSelector<GraphTraits>;
-  using GeneralContext = search::GeneralContext<GeneralContextTraits>;
+  using ActionSelector = mcts::ActionSelector<Traits>;
+  using GeneralContext = search::GeneralContext<Traits>;
   using SearchContext = search::SearchContext<Traits>;
 
   using RootInfo = GeneralContext::RootInfo;

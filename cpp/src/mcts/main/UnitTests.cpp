@@ -112,8 +112,7 @@ class ManagerTest : public testing::Test {
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
-  using GraphTraits = TraitsTypes::GraphTraits;
-  using SearchLog = mcts::SearchLog<GraphTraits>;
+  using SearchLog = mcts::SearchLog<Traits>;
 
   static_assert(core::kStoreStates<Game>, "state-storage required for search-log tests");
 

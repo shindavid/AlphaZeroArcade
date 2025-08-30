@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/NodeBase.hpp"
-#include "search/concepts/GraphTraitsConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

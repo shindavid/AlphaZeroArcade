@@ -43,9 +43,7 @@ class Manager {
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
-  using GraphTraits = search::GraphTraits<Game, Node, Edge>;
-  using GeneralContextTraits = search::GeneralContextTraits<GraphTraits, ManagerParams, AuxState>;
-  using GeneralContext = search::GeneralContext<GeneralContextTraits>;
+  using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<SearchResults>;
