@@ -4,15 +4,16 @@
 #include "mcts/ManagerParams.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 
 namespace mcts {
 
-template <typename Traits>
+template <search::concepts::GraphTraits GraphTraits>
 struct ActionSelector {
-  using Node = Traits::Node;
-  using Edge = Traits::Edge;
-  using Game = Traits::Game;
-  using LookupTable = search::LookupTable<Game, Node, Edge>;
+  using Game = GraphTraits::Game;
+  using Node = GraphTraits::Node;
+  using Edge = GraphTraits::Edge;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 

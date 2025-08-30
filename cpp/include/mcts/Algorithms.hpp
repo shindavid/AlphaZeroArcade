@@ -3,7 +3,7 @@
 #include "mcts/ActionSelector.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
-#include "search/LookupTable.hpp"
+#include "search/GraphTraits.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 
@@ -17,10 +17,11 @@ class Algorithms {
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
-  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using TraitsTypes = search::TraitsTypes<Traits>;
+  using GraphTraits = search::GraphTraits<Game, Node, Edge>;
+  using LookupTable = TraitsTypes::LookupTable;
 
-  using ActionSelector = mcts::ActionSelector<Traits>;
+  using ActionSelector = mcts::ActionSelector<GraphTraits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using SearchContext = search::SearchContext<Traits>;
 

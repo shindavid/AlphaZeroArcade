@@ -5,8 +5,8 @@
 
 namespace mcts {
 
-template <typename Traits>
-inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
+template <search::concepts::GraphTraits GraphTraits>
+inline boost::json::object SearchLog<GraphTraits>::LogNode::to_json() const {
   boost::json::object node_json;
   node_json["index"] = index;
   node_json["N"] = N;
@@ -24,8 +24,8 @@ inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
   return node_json;
 }
 
-template <typename Traits>
-inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
+template <search::concepts::GraphTraits GraphTraits>
+inline boost::json::object SearchLog<GraphTraits>::LogEdge::to_json() const {
   boost::json::object edge_json;
   edge_json["index"] = index;
   edge_json["from"] = from;
@@ -35,22 +35,22 @@ inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
   return edge_json;
 }
 
-template <typename Traits>
-inline std::string SearchLog<Traits>::json_str() {
+template <search::concepts::GraphTraits GraphTraits>
+inline std::string SearchLog<GraphTraits>::json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, combine_json());
   return ss.str();
 };
 
-template <typename Traits>
-inline std::string SearchLog<Traits>::last_graph_json_str() {
+template <search::concepts::GraphTraits GraphTraits>
+inline std::string SearchLog<GraphTraits>::last_graph_json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, graphs_.back().graph_repr());
   return ss.str();
 };
 
-template <typename Traits>
-void SearchLog<Traits>::build_graph(Graph& graph) {
+template <search::concepts::GraphTraits GraphTraits>
+void SearchLog<GraphTraits>::build_graph(Graph& graph) {
   auto map = lookup_table_->map();
 
   for (auto [key, node_ix] : *map) {
@@ -72,16 +72,16 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
   }
 }
 
-template <typename Traits>
-inline void SearchLog<Traits>::update() {
+template <search::concepts::GraphTraits GraphTraits>
+inline void SearchLog<GraphTraits>::update() {
   Graph graph;
   build_graph(graph);
   graph.sort_by_index();
   add_graph(graph);
 }
 
-template <typename Traits>
-inline boost::json::object SearchLog<Traits>::combine_json() {
+template <search::concepts::GraphTraits GraphTraits>
+inline boost::json::object SearchLog<GraphTraits>::combine_json() {
   boost::json::array graphs_array;
   for (const auto& graph : graphs_) {
     graphs_array.push_back(graph.graph_repr());
@@ -94,8 +94,8 @@ inline boost::json::object SearchLog<Traits>::combine_json() {
   return log_json;
 }
 
-template <typename Traits>
-inline boost::json::object SearchLog<Traits>::Graph::graph_repr() const {
+template <search::concepts::GraphTraits GraphTraits>
+inline boost::json::object SearchLog<GraphTraits>::Graph::graph_repr() const {
   boost::json::object graph_json;
 
   // Nodes

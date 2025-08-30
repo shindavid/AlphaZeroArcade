@@ -9,6 +9,7 @@
 #include "mcts/Traits.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchRequest.hpp"
+#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -36,7 +37,8 @@ class MctsPlayerTest : public ::testing::Test {
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = mcts::SearchLog<Traits>;
+  using GraphTraits = search::TraitsTypes<Traits>::GraphTraits;
+  using SearchLog = mcts::SearchLog<GraphTraits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
   using State = Game::State;

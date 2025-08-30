@@ -1,5 +1,8 @@
 #pragma once
 
+#include "search/GraphTraits.hpp"
+#include "search/LookupTable.hpp"
+
 #include <array>
 #include <vector>
 
@@ -10,6 +13,7 @@ struct TraitsTypes {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using GraphTraits = search::GraphTraits<Game, Node, Edge>;
 
   using StateHistory = Game::StateHistory;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -20,6 +24,8 @@ struct TraitsTypes {
     Edge* edge;  // emanates from node, possibly nullptr
   };
   using search_path_t = std::vector<Visitation>;
+
+  using LookupTable = search::LookupTable<GraphTraits>;
 };
 
 }  // namespace search

@@ -4,7 +4,6 @@
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
 #include "search/GeneralContext.hpp"
-#include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
@@ -40,12 +39,12 @@ class Manager {
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
+  using LookupTable = TraitsTypes::LookupTable;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
-  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 

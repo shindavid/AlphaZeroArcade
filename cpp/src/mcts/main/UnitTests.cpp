@@ -10,10 +10,10 @@
 #include "mcts/Traits.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/SimpleNNEvaluationService.hpp"
-#include "search/LookupTable.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
+#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -99,19 +99,21 @@ template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Traits = mcts::Traits<Game>;
+  using TraitsTypes = search::TraitsTypes<Traits>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
   using Edge = mcts::Edge;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
-  using LookupTable = search::LookupTable<Game, Node, Edge>;
+  using LookupTable = TraitsTypes::LookupTable;
   using ValueArray = Game::Types::ValueArray;
   using Service = nnet::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = mcts::SearchLog<Traits>;
+  using GraphTraits = TraitsTypes::GraphTraits;
+  using SearchLog = mcts::SearchLog<GraphTraits>;
 
   static_assert(core::kStoreStates<Game>, "state-storage required for search-log tests");
 

@@ -2,17 +2,19 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/NodeBase.hpp"
-#include "core/concepts/Game.hpp"
-#include "search/concepts/EdgeConcept.hpp"
-#include "search/concepts/NodeConcept.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+template <search::concepts::GraphTraits GraphTraits>
 class LookupTable {
  public:
+  using Game = GraphTraits::Game;
+  using Node = GraphTraits::Node;
+  using Edge = GraphTraits::Edge;
+
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using NodeBase = core::NodeBase<Game>;
 

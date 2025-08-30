@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 
 #include <boost/json.hpp>
 
@@ -10,14 +11,14 @@
 
 namespace mcts {
 
-template <typename Traits>
+template <search::concepts::GraphTraits GraphTraits>
 class SearchLog {
  protected:
-  using Node = Traits::Node;
-  using Edge = Traits::Edge;
-  using Game = Traits::Game;
+  using Node = GraphTraits::Node;
+  using Edge = GraphTraits::Edge;
+  using Game = GraphTraits::Game;
   using State = Game::State;
-  using LookupTable = search::LookupTable<Game, Node, Edge>;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
