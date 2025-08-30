@@ -4,7 +4,7 @@
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
-#include "search/Traits.hpp"
+#include "search/TraitsTypes.hpp"
 
 namespace mcts {
 

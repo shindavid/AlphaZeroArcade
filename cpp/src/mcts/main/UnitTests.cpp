@@ -13,7 +13,7 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
-#include "search/Traits.hpp"
+#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
