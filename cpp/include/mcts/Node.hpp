@@ -1,8 +1,5 @@
 #pragma once
 
-#include "mcts/ManagerParams.hpp"
-#include "mcts/SearchResults.hpp"
-#include "nnet/NNEvaluation.hpp"
 #include "search/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -23,18 +20,9 @@ namespace mcts {
 template <typename Traits>
 class Node : public search::NodeBase<Traits> {
  public:
-  using Edge = Traits::Edge;
   using Game = Traits::Game;
-  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using NNEvaluation = nnet::NNEvaluation<Game>;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
-  using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
-  using ValueTensor = Game::Types::ValueTensor;
-  using SearchResults = mcts::SearchResults<Game>;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   using NodeBase = search::NodeBase<Traits>;
@@ -62,12 +50,6 @@ class Node : public search::NodeBase<Traits> {
 
   using NodeBase::NodeBase;
 
-  void write_results(const ManagerParams& params, group::element_t inv_sym,
-                     SearchResults& results) const;
-
-  template <typename MutexProtectedFunc>
-  void update_stats(MutexProtectedFunc);
-
   // stats() returns a reference to the stats object, WITHOUT acquiring the mutex. In order to use
   // this function properly, the caller must ensure that one of the following is true:
   //
@@ -85,12 +67,6 @@ class Node : public search::NodeBase<Traits> {
 
   // Acquires the mutex and returns a copy of the stats object.
   Stats stats_safe() const;
-
-  template <typename PolicyTransformFunc>
-  void load_eval(NNEvaluation* eval, PolicyTransformFunc);
-
-  // NO-OP in release builds, checks various invariants in debug builds
-  void validate_state() const;
 
  private:
   Stats stats_;

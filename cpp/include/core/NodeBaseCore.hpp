@@ -33,6 +33,7 @@ class NodeBaseCore {
   core::edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(core::edge_pool_index_t e) { first_edge_index_ = e; }
   const StableData& stable_data() const { return stable_data_; }
+  StableData& stable_data() { return stable_data_; }
 
  protected:
   StableData stable_data_;

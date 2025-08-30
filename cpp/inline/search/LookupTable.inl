@@ -136,14 +136,32 @@ core::node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) con
   return it->second;
 }
 
+
 template <typename Traits>
-int LookupTable<Traits>::get_random_mutex_id() const {
-  return mutex_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_pool_size_);
+typename LookupTable<Traits>::Node* LookupTable<Traits>::get_node(
+  core::node_pool_index_t index) const {
+  if (index < 0) return nullptr;
+  return const_cast<Node*>(&node_pool_[index]);
 }
 
 template <typename Traits>
-mit::mutex& LookupTable<Traits>::get_mutex(int mutex_id) {
-  return (*mutex_pool_)[mutex_id];
+typename LookupTable<Traits>::Edge* LookupTable<Traits>::get_edge(
+  core::edge_pool_index_t index) const {
+  if (index < 0) return nullptr;
+  return const_cast<Edge*>(&edge_pool_[index]);
+}
+
+template <typename Traits>
+typename LookupTable<Traits>::Edge* LookupTable<Traits>::get_edge(const Node* parent, int n) const {
+  int offset = parent->get_first_edge_index();
+  DEBUG_ASSERT(offset >= 0);
+  return const_cast<Edge*>(&edge_pool_[offset + n]);
+}
+
+template <typename Traits>
+mit::mutex* LookupTable<Traits>::get_random_mutex() {
+  int mutex_id = mutex_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_pool_size_);
+  return &(*mutex_pool_)[mutex_id];
 }
 
 }  // namespace search

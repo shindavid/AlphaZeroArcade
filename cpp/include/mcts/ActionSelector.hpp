@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "mcts/ManagerParams.hpp"
+#include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 
 namespace mcts {
@@ -11,14 +12,15 @@ struct ActionSelector {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using LookupTable = search::LookupTable<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
-  using LocalPolicyArray = Node::LocalPolicyArray;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
-  ActionSelector(const ManagerParams& manager_params, const search::SearchParams& search_params,
-                 const Node* node, bool is_root);
+  ActionSelector(const LookupTable& lookup_table, const ManagerParams& manager_params,
+                 const search::SearchParams& search_params, const Node* node, bool is_root);
 
   core::seat_index_t seat;
   LocalPolicyArray P;

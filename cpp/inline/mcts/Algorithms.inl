@@ -3,6 +3,7 @@
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
+#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
@@ -27,10 +28,11 @@ void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray&
              fmt::streamed(value.transpose()));
   }
 
+  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  last_node->update_stats([&] {
+  update_stats(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, true);
     stats.RN++;
@@ -41,7 +43,7 @@ void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray&
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    update_stats(node, lookup_table, [&] {
       edge->E++;
       node->stats().RN++;  // thread-safe because executed under mutex
     });
@@ -56,10 +58,11 @@ void Algorithms<Traits>::virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
+  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  last_node->update_stats([&] {
+  update_stats(last_node, lookup_table, [&] {
     last_node->stats().VN++;  // thread-safe because executed under mutex
   });
 
@@ -68,7 +71,7 @@ void Algorithms<Traits>::virtual_backprop(SearchContext& context) {
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    update_stats(node, lookup_table, [&] {
       edge->E++;
       node->stats().VN++;  // thread-safe because executed under mutex
     });
@@ -86,6 +89,7 @@ void Algorithms<Traits>::undo_virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
+  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
 
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
@@ -93,7 +97,7 @@ void Algorithms<Traits>::undo_virtual_backprop(SearchContext& context) {
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    update_stats(node, lookup_table, [&] {
       edge->E--;
       node->stats().VN--;  // thread-safe because executed under mutex
     });
@@ -112,7 +116,9 @@ void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_vir
              fmt::streamed(value.transpose()));
   }
 
-  last_node->update_stats([&] {
+  LookupTable& lookup_table = context.general_context->lookup_table;
+
+  update_stats(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, false);
     stats.RN++;
@@ -124,7 +130,7 @@ void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_vir
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    update_stats(node, lookup_table, [&] {
       edge->E += !undo_virtual;
       auto& stats = node->stats();  // thread-safe because executed under mutex
       stats.RN++;
@@ -141,12 +147,14 @@ void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
+  LookupTable& lookup_table = context.general_context->lookup_table;
+
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    update_stats(node, lookup_table, [&] {
       edge->E++;
       node->stats().RN++;  // thread-safe because executed under mutex
     });
@@ -192,20 +200,20 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
   }
 
   RootInfo& root_info = general_context.root_info;
-  LookupTable* lookup_table = &general_context.lookup_table;
+  LookupTable& lookup_table = general_context.lookup_table;
 
   root_info.add_noise = add_noise;
   if (root_info.node_index < 0 || add_noise) {
     const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
-    root_info.node_index = lookup_table->alloc_node();
-    Node* root = lookup_table->get_node(root_info.node_index);
+    root_info.node_index = lookup_table.alloc_node();
+    Node* root = lookup_table.get_node(root_info.node_index);
     core::seat_index_t active_seat = Game::Rules::get_current_player(canonical_history.current());
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
-    new (root) Node(lookup_table, canonical_history, active_seat);
+    new (root) Node(lookup_table.get_random_mutex(), canonical_history, active_seat);
   }
 
-  Node* root2 = lookup_table->get_node(root_info.node_index);
+  Node* root2 = lookup_table.get_node(root_info.node_index);
 
   // thread-safe since single-threaded here
   if (root2->stats().RN == 0) {
@@ -228,7 +236,7 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 
   Node* node = context.visit_node;
   bool is_root = (node == lookup_table.get_node(root_info.node_index));
-  ActionSelector action_selector(manager_params, search_params, node, is_root);
+  ActionSelector action_selector(lookup_table, manager_params, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
@@ -262,9 +270,40 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 
 template <typename Traits>
 void Algorithms<Traits>::load_evaluations(SearchContext& context) {
+  const LookupTable& lookup_table = context.general_context->lookup_table;
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
-    node->load_eval(item.eval(), [&](LocalPolicyArray& P) { transform_policy(context, P); });
+
+    auto& stable_data = node->stable_data();
+    auto& stats = node->stats();
+
+    int n = stable_data.num_valid_actions;
+    ValueTensor VT;
+
+    LocalPolicyArray P_raw(n);
+    LocalActionValueArray child_V(n);
+    item.eval()->load(VT, P_raw, child_V);
+
+    LocalPolicyArray P_adjusted = P_raw;
+    transform_policy(context, P_adjusted);
+
+    stable_data.VT = VT;
+    stable_data.VT_valid = true;
+
+    // No need to worry about thread-safety when modifying edges or stats below, since no other
+    // threads can access this node until after load_eval() returns
+    for (int i = 0; i < n; ++i) {
+      Edge* edge = lookup_table.get_edge(node, i);
+      edge->policy_prior_prob = P_raw[i];
+      edge->adjusted_base_prob = P_adjusted[i];
+      edge->child_V_estimate = child_V[i];
+    }
+
+    ValueArray VA = Game::GameResults::to_value_array(VT);
+    stats.Q = VA;
+    stats.Q_sq = VA * VA;
+
+    eigen_util::debug_assert_is_valid_prob_distr(VA);
   }
 }
 
@@ -293,14 +332,14 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     results.valid_actions.set(action, true);
     actions[i] = action;
 
-    auto* edge = root->get_edge(i);
+    auto* edge = lookup_table.get_edge(root, i);
     results.policy_prior(action) = edge->policy_prior_prob;
 
     i++;
   }
 
-  load_action_symmetries(root, &actions[0], results);
-  root->write_results(manager_params, inv_sym, results);
+  load_action_symmetries(general_context, root, &actions[0], results);
+  write_results(general_context, root, inv_sym, results);
   results.policy_target = results.counts;
   results.provably_lost = stats.provably_losing[stable_data.active_seat];
   results.trivial = root->trivial();
@@ -326,6 +365,194 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
     LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
              node->stable_data().active_seat);
   }
+}
+
+template <typename Traits>
+template <typename MutexProtectedFunc>
+void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
+                                      MutexProtectedFunc&& func) {
+  mit::unique_lock lock(node->mutex());
+  func();
+  lock.unlock();
+
+  ValueArray Q_sum;
+  ValueArray Q_sq_sum;
+  Q_sum.setZero();
+  Q_sq_sum.setZero();
+  int N = 0;
+
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
+
+  auto& stable_data = node->stable_data();
+  auto& stats = node->stats();
+
+  if (stable_data.is_chance_node) {
+    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      const Node* child = lookup_table.get_node(edge->child_index);
+
+      if (!child) {
+        break;
+      }
+      const auto child_stats = child->stats_safe();  // make a copy
+      Q_sum += child_stats.Q * edge->chance_prob;
+      Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
+      N++;
+
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+    }
+    if (N == stable_data.num_valid_actions) {
+      lock.lock();
+
+      stats.Q = Q_sum;
+      stats.Q_sq = Q_sq_sum;
+      stats.provably_winning = all_provably_winning;
+      stats.provably_losing = all_provably_losing;
+    }
+
+  } else {
+    core::seat_index_t seat = stable_data.active_seat;
+
+    // provably winning/losing calculation
+    bool cp_has_winning_move = false;
+    int num_children = 0;
+
+    bool skipped = false;
+    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      const Node* child = lookup_table.get_node(edge->child_index);
+      if (!child) {
+        skipped = true;
+        continue;
+      }
+      const auto child_stats = child->stats_safe();  // make a copy
+      if (child_stats.RN > 0) {
+        int e = edge->E;
+        N += e;
+        Q_sum += child_stats.Q * e;
+        Q_sq_sum += child_stats.Q_sq * e;
+      }
+
+      cp_has_winning_move |= child_stats.provably_winning[seat];
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+      num_children++;
+    }
+
+    if (skipped) {
+      all_provably_winning.reset();
+      all_provably_losing.reset();
+    }
+
+    if (stable_data.VT_valid) {
+      ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
+      Q_sum += VA;
+      Q_sq_sum += VA * VA;
+      N++;
+
+      eigen_util::debug_assert_is_valid_prob_distr(VA);
+    }
+
+    auto Q = N ? (Q_sum / N) : Q_sum;
+    auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+
+    lock.lock();
+
+    stats.Q = Q;
+    stats.Q_sq = Q_sq;
+    stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
+                                cp_has_winning_move, stable_data);
+
+    if (N) {
+      eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+    }
+  }
+}
+
+template <typename Traits>
+void Algorithms<Traits>::write_results(const GeneralContext& general_context, const Node* root,
+                                       group::element_t inv_sym, SearchResults& results) {
+  // This should only be called in contexts where the search-threads are inactive, so we do not need
+  // to worry about thread-safety
+
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& params = general_context.manager_params;
+
+  core::seat_index_t seat = root->stable_data().active_seat;
+  DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
+
+  auto& counts = results.counts;
+  auto& action_values = results.action_values;
+  auto& Q = results.Q;
+  auto& Q_sq = results.Q_sq;
+
+  counts.setZero();
+  action_values.setZero();
+  Q.setZero();
+  Q_sq.setZero();
+
+  const auto& parent_stats = root->stats();  // thread-safe because single-threaded here
+
+  bool provably_winning = parent_stats.provably_winning[seat];
+  bool provably_losing = parent_stats.provably_losing[seat];
+
+  for (int i = 0; i < root->stable_data().num_valid_actions; i++) {
+    const Edge* edge = lookup_table.get_edge(root, i);
+    core::action_t action = edge->action;
+
+    int count = edge->E;
+    int modified_count = count;
+
+    const Node* child = lookup_table.get_node(edge->child_index);
+    if (!child) continue;
+
+    // not actually unsafe since single-threaded
+    const auto& child_stats = child->stats();  // thread-safe because single-threaded here
+    if (params.avoid_proven_losers && !provably_losing && child_stats.provably_losing[seat]) {
+      modified_count = 0;
+    } else if (params.exploit_proven_winners && provably_winning &&
+               !child_stats.provably_winning[seat]) {
+      modified_count = 0;
+    }
+
+    if (modified_count) {
+      counts(action) = modified_count;
+      Q(action) = child_stats.Q(seat);
+      Q_sq(action) = child_stats.Q_sq(seat);
+    }
+
+    const auto& stable_data = child->stable_data();
+    RELEASE_ASSERT(stable_data.VT_valid);
+    ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
+    action_values(action) = VA(seat);
+  }
+}
+
+template <typename Traits>
+void Algorithms<Traits>::validate_state(LookupTable& lookup_table, Node* node) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
+  if (node->is_terminal()) return;
+
+  mit::unique_lock lock(node->mutex());
+
+  int N = 1;
+  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+    auto edge = lookup_table.get_edge(node, i);
+    N += edge->E;
+    DEBUG_ASSERT(edge->E >= 0);
+  }
+
+  const auto stats_copy = node->stats();  // thread-safe because we hold the mutex
+  lock.unlock();
+
+  DEBUG_ASSERT(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)node, N,
+               stats_copy.RN, stats_copy.VN);
+  DEBUG_ASSERT(stats_copy.RN >= 0);
+  DEBUG_ASSERT(stats_copy.VN >= 0);
 }
 
 template <typename Traits>
@@ -360,16 +587,17 @@ void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, Lo
 }
 
 template <typename Traits>
-void Algorithms<Traits>::load_action_symmetries(const Node* root, core::action_t* actions,
+void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context, const Node* root, core::action_t* actions,
                                                 SearchResults& results) {
   const auto& stable_data = root->stable_data();
+  const LookupTable& lookup_table = general_context.lookup_table;
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;
   items.reserve(stable_data.num_valid_actions);
 
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    Edge* edge = root->get_edge(e);
+    Edge* edge = lookup_table.get_edge(root, e);
     if (edge->child_index < 0) continue;
     items.emplace_back(edge->child_index, actions[e]);
   }
@@ -389,7 +617,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
   if (manager_params.no_model) return;
 
   const Node* root = lookup_table.get_node(root_info.node_index);
-  ActionSelector action_selector(manager_params, search_params, root, true);
+  ActionSelector action_selector(lookup_table, manager_params, search_params, root, true);
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;
@@ -412,7 +640,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {
-    const Edge* edge = root->get_edge(i);
+    const Edge* edge = lookup_table.get_edge(root, i);
     if (mE(i) == 0) {
       results.policy_target(edge->action) = 0;
       continue;
@@ -438,7 +666,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
 
     core::action_mode_t mode = root->action_mode();
     for (int i = 0; i < n_actions; ++i) {
-      core::action_t raw_action = root->get_edge(i)->action;
+      core::action_t raw_action = lookup_table.get_edge(root, i)->action;
       core::action_t action = raw_action;
       Symmetries::apply(action, inv_sym, mode);
       actions(i) = action;
@@ -465,9 +693,10 @@ template <typename Traits>
 void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
 
+  LookupTable& lookup_table = context.general_context->lookup_table;
   int N = context.search_path.size();
   for (int i = N - 1; i >= 0; --i) {
-    context.search_path[i].node->validate_state();
+    validate_state(lookup_table, context.search_path[i].node);
   }
 }
 
@@ -475,6 +704,7 @@ template <typename Traits>
 void Algorithms<Traits>::print_action_selection_details(const SearchContext& context,
                                                         const ActionSelector& selector,
                                                         int argmax_index) {
+  LookupTable& lookup_table = context.general_context->lookup_table;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
@@ -530,7 +760,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
 
     group::element_t inv_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
     for (int e = 0; e < n_actions; ++e) {
-      auto edge = node->get_edge(e);
+      auto edge = lookup_table.get_edge(node, e);
       core::action_t action = edge->action;
       Symmetries::apply(action, inv_sym, node->action_mode());
       actions(e) = action;

@@ -122,7 +122,7 @@ void Manager<Traits>::update(core::action_t action) {
   Symmetries::apply(transformed_action, root_sym, mode);
 
   Node* root = lookup_table()->get_node(root_index);
-  root_info()->node_index = root->lookup_child_by_action(transformed_action);  // tree reuse
+  root_info()->node_index = lookup_child_by_action(root, transformed_action);  // tree reuse
 }
 
 template <typename Traits>
@@ -184,10 +184,10 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
-    auto* edge = root->get_edge(i);
+    auto* edge = lookup_table()->get_edge(root, i);
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
-    core::node_pool_index_t child_node_index = root->lookup_child_by_action(transformed_action);
+    core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
     if (child_node_index < 0) {
       action_values(action) = edge->child_V_estimate;
     } else {
@@ -327,10 +327,10 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
   if (root->is_terminal()) return core::kContinue;
 
   if (!root->edges_initialized()) {
-    root->initialize_edges();
+    initialize_edges(root);
   }
 
-  if (root->all_children_edges_initialized()) {
+  if (all_children_edges_initialized(root)) {
     return core::kContinue;
   }
 
@@ -413,7 +413,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
-      Edge* edge = node->get_edge(i);
+      Edge* edge = lookup_table.get_edge(node, i);
       core::action_t action = edge->action;
       edge->chance_prob = chance_dist(action);
     }
@@ -450,7 +450,6 @@ template <typename Traits>
 core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
 
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
@@ -460,8 +459,6 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
-  Node* root = lookup_table.get_node(root_info.node_index);
-  root->validate_state();
   context.root_canonical_sym = root_info.canonical_sym;
   context.leaf_canonical_sym = root_info.canonical_sym;
   context.raw_history = root_info.history_array[group::kIdentity];
@@ -496,7 +493,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
     child_index = Algorithms::get_best_child_index(context);
   }
 
-  Edge* edge = node->get_edge(child_index);
+  Edge* edge = lookup_table.get_edge(node, child_index);
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_action = false;
@@ -584,7 +581,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
   RELEASE_ASSERT(edge->state == Edge::kExpanded, "Expected edge state to be kExpanded, but got {}",
                  edge->state);
 
-  Node* child = node->get_child(edge);
+  Node* child = lookup_table()->get_node(edge->child_index);
   if (child) {
     context.search_path.emplace_back(child, nullptr);
 
@@ -656,13 +653,13 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
                                        last_action, game_outcome);
 
     if (terminal) {
-      new (child) Node(&lookup_table, *history, game_outcome);
+      new (child) Node(lookup_table.get_random_mutex(), *history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, *history, context.active_seat);
+      new (child) Node(lookup_table.get_random_mutex(), *history, context.active_seat);
     }
 
     context.search_path.emplace_back(child, nullptr);
-    child->initialize_edges();
+    initialize_edges(child);
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
       Algorithms::virtual_backprop(context);
@@ -753,13 +750,78 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
   }
 
   mit::unique_lock lock(parent->mutex());
-  parent->update_child_expand_count();
+  update_child_expand_count(parent);
   set_edge_state(context, edge, Edge::kExpanded);
   lock.unlock();
 
   context.mid_expansion = false;
   return core::kContinue;
 }
+
+template <typename Traits>
+core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node, core::action_t action) const {
+  // NOTE: this can be switched to use binary search if we'd like
+  const LookupTable& lookup_table = general_context_.lookup_table;
+  int i = 0;
+  for (core::action_t a : bitset_util::on_indices(node->stable_data().valid_action_mask)) {
+    if (a == action) {
+      return lookup_table.get_edge(node, i)->child_index;
+    }
+    ++i;
+  }
+  return -1;
+}
+
+template <typename Traits>
+void Manager<Traits>::update_child_expand_count(Node* node, int k) {
+  if (!node->increment_child_expand_count(k)) return;
+
+  // all children have been expanded, check for triviality
+
+  const LookupTable& lookup_table = general_context_.lookup_table;
+  int n = node->stable_data().num_valid_actions;
+
+  core::node_pool_index_t first_child_index = lookup_table.get_edge(node, 0)->child_index;
+  for (int i = 1; i < n; i++) {
+    if (lookup_table.get_edge(node, i)->child_index != first_child_index) return;
+  }
+
+  node->mark_as_trivial();
+}
+
+template <typename Traits>
+void Manager<Traits>::initialize_edges(Node* node) {
+  int n_edges = node->stable_data().num_valid_actions;
+  if (n_edges == 0) return;
+
+  LookupTable& lookup_table = general_context_.lookup_table;
+  node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
+
+  int i = 0;
+  for (core::action_t action : bitset_util::on_indices(node->stable_data().valid_action_mask)) {
+    Edge* edge = lookup_table.get_edge(node, i);
+    new (edge) Edge();
+    edge->action = action;
+    i++;
+  }
+}
+
+template <typename Traits>
+bool Manager<Traits>::all_children_edges_initialized(const Node* root) const {
+  int n = root->stable_data().num_valid_actions;
+  if (n == 0) return true;
+  if (root->get_first_edge_index() == -1) return false;
+
+  const LookupTable& lookup_table = general_context_.lookup_table;
+  for (int i = 0; i < n; i++) {
+    Edge* edge = lookup_table.get_edge(root, i);
+    if (edge->state != Edge::kExpanded) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 template <typename Traits>
 void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edge) {
@@ -811,7 +873,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
   for (int e = 0; e < n_actions; e++) {
-    Edge* edge = node->get_edge(e);
+    Edge* edge = lookup_table.get_edge(node, e);
     if (edge->child_index >= 0) continue;
 
     // reorient edge->action into raw-orientation
@@ -860,11 +922,11 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
     ValueTensor game_outcome;
     if (Rules::is_terminal(raw_child_state, parent_active_seat, raw_edge_action, game_outcome)) {
-      new (child) Node(&lookup_table, canonical_history, game_outcome);
+      new (child) Node(lookup_table.get_random_mutex(), canonical_history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, canonical_history, child_active_seat);
+      new (child) Node(lookup_table.get_random_mutex(), canonical_history, child_active_seat);
     }
-    child->initialize_edges();
+    initialize_edges(child);
     bool overwrite = false;
     lookup_table.insert_node(mcts_key, edge->child_index, overwrite);
 
@@ -883,7 +945,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
                                       incorporate);
   }
 
-  node->update_child_expand_count(expand_count);
+  update_child_expand_count(node, expand_count);
 }
 
 template <typename Traits>
@@ -933,11 +995,12 @@ void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
 
 template <typename Traits>
 int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
+  const LookupTable& lookup_table = general_context_.lookup_table;
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_actions;
   float chance_dist[n];
   for (int i = 0; i < n; i++) {
-    chance_dist[i] = node->get_edge(i)->chance_prob;
+    chance_dist[i] = lookup_table.get_edge(node, i)->chance_prob;
   }
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }

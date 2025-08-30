@@ -60,16 +60,20 @@ class LookupTable {
 
   core::node_pool_index_t alloc_node() { return node_pool_.alloc(1); }
   core::edge_pool_index_t alloc_edges(int k) { return edge_pool_.alloc(k); }
-  const Node* get_node(core::node_pool_index_t index) const { return &node_pool_[index]; }
-  Node* get_node(core::node_pool_index_t index) { return &node_pool_[index]; }
-  const Edge* get_edge(core::edge_pool_index_t index) const { return &edge_pool_[index]; }
-  Edge* get_edge(core::edge_pool_index_t index) { return &edge_pool_[index]; }
+
+  // Returns nullptr if index <= 0
+  Node* get_node(core::node_pool_index_t index) const;
+
+  // Returns nullptr if index <= 0
+  Edge* get_edge(core::edge_pool_index_t index) const;
+
+  // return edge for n'th child of parent. Assumes that parent's edges have been expanded
+  Edge* get_edge(const Node* parent, int n) const;
 
   using map_t = std::unordered_map<MCTSKey, core::node_pool_index_t>;
   const map_t* map() const { return &map_; }
 
-  int get_random_mutex_id() const;
-  mit::mutex& get_mutex(int mutex_id);
+  mit::mutex* get_random_mutex();
 
  private:
   friend class Defragmenter;

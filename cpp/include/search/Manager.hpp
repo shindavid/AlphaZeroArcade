@@ -201,6 +201,10 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
+  core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
+  void update_child_expand_count(Node* node, int k = 1);
+  void initialize_edges(Node* node);
+  bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);

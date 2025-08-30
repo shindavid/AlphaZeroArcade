@@ -60,7 +60,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
     graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
                    stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
-      Edge* edge = node->get_edge(i);
+      Edge* edge = lookup_table_->get_edge(node, i);
 
       if (edge->child_index == -1) {
         continue;

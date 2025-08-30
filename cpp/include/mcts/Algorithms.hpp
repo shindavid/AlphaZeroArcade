@@ -33,9 +33,12 @@ class Algorithms {
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
+  using ValueTensor = Game::Types::ValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+  using player_bitset_t = Game::Types::player_bitset_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
@@ -55,9 +58,15 @@ class Algorithms {
   static void print_visit_info(const SearchContext&);
 
  private:
+  template <typename MutexProtectedFunc>
+  static void update_stats(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
+
+  static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
+                     SearchResults& results);
+  static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds
   static void transform_policy(SearchContext&, LocalPolicyArray& P);
   static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
-  static void load_action_symmetries(const Node* root, core::action_t* actions, SearchResults&);
+  static void load_action_symmetries(const GeneralContext&, const Node* root, core::action_t* actions, SearchResults&);
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void validate_search_path(const SearchContext& context);
   static void print_action_selection_details(const SearchContext& context,

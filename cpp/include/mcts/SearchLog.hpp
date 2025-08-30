@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "search/LookupTable.hpp"
 
 #include <boost/json.hpp>
 
@@ -16,7 +17,7 @@ class SearchLog {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using State = Game::State;
-  using LookupTable = Node::LookupTable;
+  using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
