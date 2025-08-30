@@ -1,14 +1,14 @@
 #pragma once
 
-#include "search/NodeBase.hpp"
+#include "core/NodeBase.hpp"
 
 #include <concepts>
 
 namespace search {
 namespace concepts {
 
-template <class N, class Traits>
-concept Node = requires { requires std::derived_from<N, search::NodeBase<Traits>>; };
+template <class N, class Game>
+concept Node = requires { requires std::derived_from<N, core::NodeBase<Game>>; };
 
 }  // namespace concepts
 }  // namespace search

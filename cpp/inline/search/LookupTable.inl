@@ -13,7 +13,7 @@ void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
-  NodeBaseCore* node = &table_->node_pool_[n];
+  NodeBase* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
@@ -61,7 +61,7 @@ void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
   if (processed_nodes[n]) return;
 
   processed_nodes[n] = true;
-  NodeBaseCore* node = &table_->node_pool_[n];
+  NodeBase* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();

@@ -18,16 +18,17 @@ namespace mcts {
 template <core::concepts::Game G>
 struct Traits {
   using Game = G;
-  using Node = mcts::Node<Traits>;
   using Edge = mcts::Edge;
-  using AuxState = mcts::AuxState<Traits>;
-  using Algorithms = mcts::Algorithms<Traits>;
+  using Node = mcts::Node<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
+  using AuxState = mcts::AuxState<ManagerParams>;
   using EvalRequest = nnet::NNEvaluationRequest<Game>;
   using EvalResponse = nnet::NNEvaluation<Game>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;
   using SearchResults = mcts::SearchResults<Game>;
+
+  using Algorithms = mcts::Algorithms<Traits>;
 
   static_assert(search::concepts::Traits<Traits>);
 };

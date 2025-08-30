@@ -5,7 +5,7 @@
 namespace nnet {
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(NodeBaseCore* node, StateHistory& history, const State& state,
+NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, const State& state,
                                       group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
@@ -15,7 +15,7 @@ NNEvaluationRequest<Game>::Item::Item(NodeBaseCore* node, StateHistory& history,
       sym_(sym) {}
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(NodeBaseCore* node, StateHistory& history,
+NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history,
                                       group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),

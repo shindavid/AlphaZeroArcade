@@ -1,6 +1,7 @@
 #pragma once
 
-#include "search/NodeBase.hpp"
+#include "core/concepts/Game.hpp"
+#include "core/NodeBase.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace mcts {
@@ -17,15 +18,13 @@ namespace mcts {
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
  */
-template <typename Traits>
-class Node : public search::NodeBase<Traits> {
+template <core::concepts::Game Game>
+class Node : public core::NodeBase<Game> {
  public:
-  using Game = Traits::Game;
-
   using ValueArray = Game::Types::ValueArray;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using NodeBase = search::NodeBase<Traits>;
+  using NodeBase = core::NodeBase<Game>;
   using StableData = NodeBase::StableData;
 
   // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some

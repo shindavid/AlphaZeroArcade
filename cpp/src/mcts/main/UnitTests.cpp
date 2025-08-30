@@ -101,7 +101,7 @@ class ManagerTest : public testing::Test {
   using Traits = mcts::Traits<Game>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
-  using Node = mcts::Node<Traits>;
+  using Node = mcts::Node<Game>;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
   using LookupTable = search::LookupTable<Traits>;

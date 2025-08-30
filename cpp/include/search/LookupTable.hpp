@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/NodeBaseCore.hpp"
+#include "core/NodeBase.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -14,7 +14,7 @@ class LookupTable {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
-  using NodeBaseCore = core::NodeBaseCore<Game>;
+  using NodeBase = core::NodeBase<Game>;
 
   class Defragmenter {
    public:

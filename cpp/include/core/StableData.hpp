@@ -5,8 +5,8 @@
 
 namespace core {
 
-// StableData consists of data members of search::NodeBase<Traits> whose values do not change once
-// the node is created. The StableData member of search::NodeBase<Traits> is const in spirit, but
+// StableData consists of data members of core::NodeBase<Game> whose values do not change once
+// the node is created. The StableData member of core::NodeBase<Game> is const in spirit, but
 // because we have some Node-copying in LookupTable, we cannot make it truly const.
 template <core::concepts::Game Game>
 struct StableData : public StableDataBaseImpl<Game> {

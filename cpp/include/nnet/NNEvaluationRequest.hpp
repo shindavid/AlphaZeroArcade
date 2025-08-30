@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/NodeBaseCore.hpp"  // TODO: move to core/
+#include "core/NodeBase.hpp"
 #include "core/YieldManager.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/TypeDefs.hpp"
@@ -24,7 +24,7 @@ namespace nnet {
 template <core::concepts::Game Game>
 class NNEvaluationRequest {
  public:
-  using NodeBaseCore = core::NodeBaseCore<Game>;
+  using NodeBase = core::NodeBase<Game>;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;
@@ -77,9 +77,9 @@ class NNEvaluationRequest {
      * rating games, we incorporate sym into the cache key, to ensure the games are truly
      * independent, in order to get more accurate ratings.
      */
-    Item(NodeBaseCore* node, StateHistory& history, const State& state, group::element_t sym,
+    Item(NodeBase* node, StateHistory& history, const State& state, group::element_t sym,
          bool incorporate_sym_into_cache_key);
-    Item(NodeBaseCore* node, StateHistory& history, group::element_t sym,
+    Item(NodeBase* node, StateHistory& history, group::element_t sym,
          bool incorporate_sym_into_cache_key);
 
     /*
@@ -93,7 +93,7 @@ class NNEvaluationRequest {
 
     void set_eval(NNEvaluation* eval) { eval_ = eval; }
 
-    NodeBaseCore* node() const { return node_; }
+    NodeBase* node() const { return node_; }
     NNEvaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
@@ -103,7 +103,7 @@ class NNEvaluationRequest {
    private:
     CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
-    NodeBaseCore* const node_;
+    NodeBase* const node_;
     const State state_;
     StateHistory* const history_;
     const bool split_history_;

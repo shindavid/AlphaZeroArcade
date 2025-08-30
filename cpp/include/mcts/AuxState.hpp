@@ -7,10 +7,8 @@
 
 namespace mcts {
 
-template <typename Traits>
+template <typename ManagerParams>
 struct AuxState {
-  using ManagerParams = Traits::ManagerParams;
-
   AuxState(const ManagerParams& params)
       : root_softmax_temperature(params.starting_root_softmax_temperature,
                                  params.ending_root_softmax_temperature,
