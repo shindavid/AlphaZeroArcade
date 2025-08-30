@@ -136,7 +136,6 @@ core::node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) con
   return it->second;
 }
 
-
 template <typename Traits>
 typename LookupTable<Traits>::Node* LookupTable<Traits>::get_node(
   core::node_pool_index_t index) const {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "core/NodeBase.hpp"
+#include "core/concepts/Game.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace mcts {

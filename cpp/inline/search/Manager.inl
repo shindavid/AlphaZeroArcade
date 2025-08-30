@@ -759,7 +759,8 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 }
 
 template <typename Traits>
-core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node, core::action_t action) const {
+core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node,
+                                                                core::action_t action) const {
   // NOTE: this can be switched to use binary search if we'd like
   const LookupTable& lookup_table = general_context_.lookup_table;
   int i = 0;
@@ -821,7 +822,6 @@ bool Manager<Traits>::all_children_edges_initialized(const Node* root) const {
   }
   return true;
 }
-
 
 template <typename Traits>
 void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edge) {

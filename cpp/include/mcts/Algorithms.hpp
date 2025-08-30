@@ -62,11 +62,12 @@ class Algorithms {
   static void update_stats(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
 
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
-                     SearchResults& results);
+                            SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds
   static void transform_policy(SearchContext&, LocalPolicyArray& P);
   static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
-  static void load_action_symmetries(const GeneralContext&, const Node* root, core::action_t* actions, SearchResults&);
+  static void load_action_symmetries(const GeneralContext&, const Node* root,
+                                     core::action_t* actions, SearchResults&);
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void validate_search_path(const SearchContext& context);
   static void print_action_selection_details(const SearchContext& context,

@@ -15,8 +15,8 @@ NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, con
       sym_(sym) {}
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history,
-                                      group::element_t sym, bool incorporate_sym_into_cache_key)
+NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, group::element_t sym,
+                                      bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
       history_(&history),

@@ -3,7 +3,8 @@
 namespace mcts {
 
 template <typename Traits>
-inline ActionSelector<Traits>::ActionSelector(const LookupTable& lookup_table, const ManagerParams& params,
+inline ActionSelector<Traits>::ActionSelector(const LookupTable& lookup_table,
+                                              const ManagerParams& params,
                                               const search::SearchParams& search_params,
                                               const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),

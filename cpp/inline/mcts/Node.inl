@@ -18,9 +18,9 @@ void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
 
 template <core::concepts::Game Game>
 void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
-                                               const player_bitset_t& all_actions_provably_losing,
-                                               int num_expanded_children, bool cp_has_winning_move,
-                                               const StableData& sdata) {
+                                             const player_bitset_t& all_actions_provably_losing,
+                                             int num_expanded_children, bool cp_has_winning_move,
+                                             const StableData& sdata) {
   int num_valid_actions = sdata.num_valid_actions;
   core::seat_index_t seat = sdata.active_seat;
 

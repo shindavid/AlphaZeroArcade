@@ -465,7 +465,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
     stats.Q = Q;
     stats.Q_sq = Q_sq;
     stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
-                                cp_has_winning_move, stable_data);
+                               cp_has_winning_move, stable_data);
 
     if (N) {
       eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
@@ -587,7 +587,8 @@ void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, Lo
 }
 
 template <typename Traits>
-void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context, const Node* root, core::action_t* actions,
+void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context,
+                                                const Node* root, core::action_t* actions,
                                                 SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
