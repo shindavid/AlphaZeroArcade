@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/TraitsConcepts.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <array>
