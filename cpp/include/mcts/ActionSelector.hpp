@@ -12,7 +12,7 @@ struct ActionSelector {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 

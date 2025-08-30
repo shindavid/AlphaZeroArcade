@@ -13,6 +13,8 @@ namespace search {
 template <typename Traits>
 struct GeneralContext {
   using Game = Traits::Game;
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
 
@@ -23,7 +25,7 @@ struct GeneralContext {
   using SymmetryGroup = Game::SymmetryGroup;
 
   using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
 
   struct RootInfo {
     void clear();

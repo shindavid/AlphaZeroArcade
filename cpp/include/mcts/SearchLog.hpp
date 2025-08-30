@@ -17,7 +17,7 @@ class SearchLog {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using State = Game::State;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;

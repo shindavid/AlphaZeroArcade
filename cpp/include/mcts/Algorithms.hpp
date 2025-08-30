@@ -17,7 +17,7 @@ class Algorithms {
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using TraitsTypes = search::TraitsTypes<Traits>;
 
   using ActionSelector = mcts::ActionSelector<Traits>;

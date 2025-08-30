@@ -102,9 +102,10 @@ class ManagerTest : public testing::Test {
   using Manager = search::Manager<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
+  using Edge = mcts::Edge;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using ValueArray = Game::Types::ValueArray;
   using Service = nnet::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;

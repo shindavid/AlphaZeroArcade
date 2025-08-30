@@ -2,17 +2,17 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/NodeBase.hpp"
+#include "core/concepts/Game.hpp"
+#include "search/concepts/EdgeConcept.hpp"
+#include "search/concepts/NodeConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <typename Traits>
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
 class LookupTable {
  public:
-  using Node = Traits::Node;
-  using Edge = Traits::Edge;
-  using Game = Traits::Game;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using NodeBase = core::NodeBase<Game>;
 

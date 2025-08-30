@@ -45,7 +45,7 @@ class Manager {
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<Game, Node, Edge>;
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 

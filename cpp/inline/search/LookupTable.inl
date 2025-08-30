@@ -2,14 +2,14 @@
 
 namespace search {
 
-template <typename Traits>
-LookupTable<Traits>::Defragmenter::Defragmenter(LookupTable* table)
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+LookupTable<Game, Node, Edge>::Defragmenter::Defragmenter(LookupTable* table)
     : table_(table),
       node_bitset_(table->node_pool_.size()),
       edge_bitset_(table->edge_pool_.size()) {}
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
@@ -26,22 +26,22 @@ void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   }
 }
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::prepare() {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::prepare() {
   init_remapping(node_index_remappings_, node_bitset_);
   init_remapping(edge_index_remappings_, edge_bitset_);
 }
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::remap(core::node_pool_index_t& n) {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::remap(core::node_pool_index_t& n) {
   bitset_t processed_nodes(table_->node_pool_.size());
   remap_helper(n, processed_nodes);
   n = node_index_remappings_[n];
   DEBUG_ASSERT(processed_nodes == node_bitset_);
 }
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::defrag() {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::defrag() {
   table_->node_pool_.defragment(node_bitset_);
   table_->edge_pool_.defragment(edge_bitset_);
 
@@ -55,8 +55,8 @@ void LookupTable<Traits>::Defragmenter::defrag() {
   }
 }
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::remap_helper(core::node_pool_index_t n,
                                                      bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
@@ -77,8 +77,8 @@ void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
   node->set_first_edge_index(edge_index_remappings_[first_edge_index]);
 }
 
-template <typename Traits>
-void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings, bitset_t& bitset) {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::Defragmenter::init_remapping(index_vec_t& remappings, bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
     remappings[i] = -1;
@@ -92,19 +92,19 @@ void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings, 
   }
 }
 
-template <typename Traits>
-LookupTable<Traits>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+LookupTable<Game, Node, Edge>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
     : mutex_pool_(mutex_pool), mutex_pool_size_(mutex_pool->size()) {}
 
-template <typename Traits>
-void LookupTable<Traits>::clear() {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::clear() {
   map_.clear();
   edge_pool_.clear();
   node_pool_.clear();
 }
 
-template <typename Traits>
-void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+void LookupTable<Game, Node, Edge>::defragment(core::node_pool_index_t& root_index) {
   Defragmenter defragmenter(this);
   defragmenter.scan(root_index);
   defragmenter.prepare();
@@ -112,8 +112,8 @@ void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
   defragmenter.defrag();
 }
 
-template <typename Traits>
-core::node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key,
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+core::node_pool_index_t LookupTable<Game, Node, Edge>::insert_node(const MCTSKey& key,
                                                          core::node_pool_index_t value,
                                                          bool overwrite) {
   mit::lock_guard lock(map_mutex_);
@@ -126,8 +126,8 @@ core::node_pool_index_t LookupTable<Traits>::insert_node(const MCTSKey& key,
   }
 }
 
-template <typename Traits>
-core::node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) const {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+core::node_pool_index_t LookupTable<Game, Node, Edge>::lookup_node(const MCTSKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {
@@ -136,29 +136,29 @@ core::node_pool_index_t LookupTable<Traits>::lookup_node(const MCTSKey& key) con
   return it->second;
 }
 
-template <typename Traits>
-typename LookupTable<Traits>::Node* LookupTable<Traits>::get_node(
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+Node* LookupTable<Game, Node, Edge>::get_node(
   core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }
 
-template <typename Traits>
-typename LookupTable<Traits>::Edge* LookupTable<Traits>::get_edge(
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+Edge* LookupTable<Game, Node, Edge>::get_edge(
   core::edge_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Edge*>(&edge_pool_[index]);
 }
 
-template <typename Traits>
-typename LookupTable<Traits>::Edge* LookupTable<Traits>::get_edge(const Node* parent, int n) const {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+Edge* LookupTable<Game, Node, Edge>::get_edge(const Node* parent, int n) const {
   int offset = parent->get_first_edge_index();
   DEBUG_ASSERT(offset >= 0);
   return const_cast<Edge*>(&edge_pool_[offset + n]);
 }
 
-template <typename Traits>
-mit::mutex* LookupTable<Traits>::get_random_mutex() {
+template <core::concepts::Game Game, search::concepts::Node<Game> Node, search::concepts::Edge Edge>
+mit::mutex* LookupTable<Game, Node, Edge>::get_random_mutex() {
   int mutex_id = mutex_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_pool_size_);
   return &(*mutex_pool_)[mutex_id];
 }
