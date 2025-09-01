@@ -3,13 +3,13 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/YieldManager.hpp"
+#include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
-#include "search/AlgorithmsFor.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

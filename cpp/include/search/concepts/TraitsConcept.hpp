@@ -1,10 +1,10 @@
 #pragma once
 
-#include "search/concepts/GeneralContextTraitsConcept.hpp"
 #include "search/concepts/EvalRequestConcept.hpp"
 #include "search/concepts/EvalResponseConcept.hpp"
 #include "search/concepts/EvalServiceBaseConcept.hpp"
 #include "search/concepts/EvalServiceFactoryConcept.hpp"
+#include "search/concepts/GeneralContextTraitsConcept.hpp"
 
 namespace search {
 namespace concepts {

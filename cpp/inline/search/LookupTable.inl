@@ -57,7 +57,7 @@ void LookupTable<GraphTraits>::Defragmenter::defrag() {
 
 template <search::concepts::GraphTraits GraphTraits>
 void LookupTable<GraphTraits>::Defragmenter::remap_helper(core::node_pool_index_t n,
-                                                     bitset_t& processed_nodes) {
+                                                          bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
   processed_nodes[n] = true;
@@ -78,7 +78,8 @@ void LookupTable<GraphTraits>::Defragmenter::remap_helper(core::node_pool_index_
 }
 
 template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::init_remapping(index_vec_t& remappings, bitset_t& bitset) {
+void LookupTable<GraphTraits>::Defragmenter::init_remapping(index_vec_t& remappings,
+                                                            bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
     remappings[i] = -1;
@@ -114,8 +115,8 @@ void LookupTable<GraphTraits>::defragment(core::node_pool_index_t& root_index) {
 
 template <search::concepts::GraphTraits GraphTraits>
 core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const MCTSKey& key,
-                                                         core::node_pool_index_t value,
-                                                         bool overwrite) {
+                                                              core::node_pool_index_t value,
+                                                              bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;

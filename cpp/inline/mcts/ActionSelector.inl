@@ -4,9 +4,9 @@ namespace mcts {
 
 template <search::concepts::GraphTraits GraphTraits>
 inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_table,
-                                              const ManagerParams& params,
-                                              const search::SearchParams& search_params,
-                                              const Node* node, bool is_root)
+                                                   const ManagerParams& params,
+                                                   const search::SearchParams& search_params,
+                                                   const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_actions),
       Q(P.rows()),
