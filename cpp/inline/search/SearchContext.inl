@@ -10,7 +10,7 @@
 
 namespace search {
 
-template <search::concepts::InnerTraits Traits>
+template <search::concepts::Traits Traits>
 std::string SearchContext<Traits>::search_path_str() const {
   group::element_t cur_sym = root_canonical_sym;
   std::string delim = Game::IO::action_delimiter();

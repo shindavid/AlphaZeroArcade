@@ -11,7 +11,7 @@ namespace concepts {
 
 // Everything in Traits except for Algorithms
 template <class T>
-concept InnerTraits = requires {
+concept Traits = requires {
   requires search::concepts::GeneralContextTraits<T>;
   requires search::concepts::EvalRequest<typename T::EvalRequest>;
   requires search::concepts::EvalResponse<typename T::EvalResponse>;

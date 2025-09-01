@@ -4,7 +4,7 @@
 #include "mcts/ManagerParams.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/InnerTraitsConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 namespace mcts {
 

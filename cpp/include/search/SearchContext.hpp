@@ -5,14 +5,14 @@
 #include "search/GeneralContext.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
-#include "search/concepts/InnerTraitsConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
 
 namespace search {
 
-template <search::concepts::InnerTraits Traits>
+template <search::concepts::Traits Traits>
 struct SearchContext {
   int log_prefix_n() const { return kThreadWhitespaceLength * id; }
   std::string search_path_str() const;  // slow, for debugging

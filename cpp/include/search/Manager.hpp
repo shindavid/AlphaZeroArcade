@@ -10,7 +10,7 @@
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/AlgorithmsFor.hpp"
-#include "search/concepts/TraitsConcepts.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
