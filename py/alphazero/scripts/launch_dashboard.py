@@ -34,6 +34,7 @@ class Params:
     bokeh_port: int = 5012
     flask_port: int = 8002
     debug: bool = False
+    bokeh_session_token_expiration: int = 3600  # seconds
 
     @staticmethod
     def create(args) -> 'Params':
@@ -41,6 +42,7 @@ class Params:
             bokeh_port=args.bokeh_port,
             flask_port=args.flask_port,
             debug=bool(args.debug),
+            bokeh_session_token_expiration=int(args.bokeh_session_token_expiration),
         )
 
     @staticmethod
@@ -53,6 +55,9 @@ class Params:
         group.add_argument('--flask-port', type=int, default=defaults.flask_port,
                            help='flask port (default: %(default)s)')
         group.add_argument('-d', '--debug', action='store_true', help='debug mode')
+        group.add_argument('--bokeh-session-token-expiration', type=int,
+                           default=defaults.bokeh_session_token_expiration,
+                           help='Bokeh session token TTL in seconds (default: %(default)s)')
 
 
 parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -318,9 +323,15 @@ def bk_worker():
     # because of their use of proxies. So, we allow all origins for now.
     allow_list = ['*']
 
-    server = Server(apps, io_loop=IOLoop(),
-                    allow_websocket_origin=allow_list,
-                    port=bokeh_port)
+    server = Server(
+        apps,
+        io_loop=IOLoop(),
+        allow_websocket_origin=allow_list,
+        port=bokeh_port,
+        # Increase token lifetime to avoid spurious "Token is expired" when
+        # embedding multiple apps and/or traversing proxies before WS connect.
+        session_token_expiration=params.bokeh_session_token_expiration,
+    )
 
     server.start()
     server.io_loop.start()
