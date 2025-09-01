@@ -246,7 +246,9 @@ later in the list.
 * `core`: core game code (nothing MCTS-specific). Some key classes provided here:
   * `AbstractPlayer`: abstract class for a player that can play a game
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
-* `mcts`: generic MCTS implementation
+* `nnet`: classes used to represent neural-network evaluations, and services that produce them
+* `search`: generic tree-search algorithms and data structures
+* `mcts`: generic instantiations of `search` algorithms/data-structures for MCTS
 * `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
 * `generic_players`: generic player implementations that can be used for any game
 
