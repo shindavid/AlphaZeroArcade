@@ -10,6 +10,7 @@
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
+#include "search/concepts/AlgorithmsConcept.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -67,6 +68,9 @@ class Manager {
   using ValueArray = Game::Types::ValueArray;
 
   using post_visit_func_t = std::function<void()>;
+
+  static_assert(search::concepts::Algorithms<Algorithms, ValueArray, SearchContext, GeneralContext,
+                                             SearchResults, Node, Edge>);
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
