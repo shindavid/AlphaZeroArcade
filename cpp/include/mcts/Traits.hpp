@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "mcts/Algorithms.hpp"
 #include "mcts/AuxState.hpp"
 #include "mcts/Edge.hpp"
 #include "mcts/ManagerParams.hpp"
@@ -26,7 +25,10 @@ struct Traits {
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;
   using SearchResults = mcts::SearchResults<Game>;
-  using Algorithms = mcts::Algorithms<Traits>;
 };
 
 }  // namespace mcts
+
+// Include the binding after defining mcts::Traits so the type is complete when
+// Algorithms and concept machinery get pulled in via the binding include.
+#include "mcts/AlgorithmsBinding.hpp"  // IWYU pragma: keep

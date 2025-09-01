@@ -9,6 +9,8 @@
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
 #include "search/TraitsTypes.hpp"
+#include "search/AlgorithmsFor.hpp"
+#include "search/concepts/TraitsConcepts.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
@@ -22,7 +24,7 @@ namespace search {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <typename Traits>
+template <search::concepts::Traits Traits>
 class Manager {
  public:
   using Node = Traits::Node;
@@ -31,7 +33,7 @@ class Manager {
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
-  using Algorithms = Traits::Algorithms;
+  using Algorithms = search::AlgorithmsForT<Traits>;
   using EvalRequest = Traits::EvalRequest;
   using EvalResponse = Traits::EvalResponse;
   using EvalServiceBase = Traits::EvalServiceBase;
