@@ -8,6 +8,8 @@
 
 namespace nnet {
 
+// TODO: We could expand the template params of this class to include Traits::EvalServiceBase.
+// That would allow us to replace the void* aux blob with something more specific.
 template <core::concepts::Game Game>
 class NNEvaluation {
  public:
