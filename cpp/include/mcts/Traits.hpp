@@ -26,10 +26,7 @@ struct Traits {
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;
   using SearchResults = mcts::SearchResults<Game>;
-
   using Algorithms = mcts::Algorithms<Traits>;
-
-  // static_assert(search::concepts::Traits<Traits>);
 };
 
 }  // namespace mcts

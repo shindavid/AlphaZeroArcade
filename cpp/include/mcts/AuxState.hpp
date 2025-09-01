@@ -1,5 +1,6 @@
 #pragma once
 
+#include "search/concepts/ManagerParamsConcept.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Math.hpp"
 
@@ -7,7 +8,7 @@
 
 namespace mcts {
 
-template <typename ManagerParams>
+template <search::concepts::ManagerParams ManagerParams>
 struct AuxState {
   AuxState(const ManagerParams& params)
       : root_softmax_temperature(params.starting_root_softmax_temperature,

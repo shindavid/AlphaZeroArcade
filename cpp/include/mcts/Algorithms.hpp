@@ -8,7 +8,7 @@
 
 namespace mcts {
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 class Algorithms {
  public:
   using Game = Traits::Game;

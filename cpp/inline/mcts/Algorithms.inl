@@ -20,7 +20,7 @@
 
 namespace mcts {
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -51,7 +51,7 @@ void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray&
   validate_search_path(context);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -79,7 +79,7 @@ void Algorithms<Traits>::virtual_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
@@ -105,7 +105,7 @@ void Algorithms<Traits>::undo_virtual_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   auto value = GameResults::to_value_array(last_node->stable_data().VT);
@@ -140,7 +140,7 @@ void Algorithms<Traits>::standard_backprop(SearchContext& context, bool undo_vir
   validate_search_path(context);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -162,14 +162,14 @@ void Algorithms<Traits>::short_circuit_backprop(SearchContext& context) {
   validate_search_path(context);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 bool Algorithms<Traits>::should_short_circuit(const Edge* edge, const Node* child) {
   int edge_count = edge->E;
   int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
   return edge_count < child_count;
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
                                                        const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
@@ -178,7 +178,7 @@ bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& gen
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
                                         search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;
@@ -226,7 +226,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
@@ -268,7 +268,7 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   return argmax_index;
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   const LookupTable& lookup_table = context.general_context->lookup_table;
   for (auto& item : context.eval_request.fresh_items()) {
@@ -307,7 +307,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -358,7 +358,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   results.action_mode = mode;
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
   if (search::kEnableSearchDebug) {
     const Node* node = context.visit_node;
@@ -367,7 +367,7 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 template <typename MutexProtectedFunc>
 void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
                                       MutexProtectedFunc&& func) {
@@ -473,7 +473,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::write_results(const GeneralContext& general_context, const Node* root,
                                        group::element_t inv_sym, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
@@ -532,7 +532,7 @@ void Algorithms<Traits>::write_results(const GeneralContext& general_context, co
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::validate_state(LookupTable& lookup_table, Node* node) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (node->is_terminal()) return;
@@ -555,7 +555,7 @@ void Algorithms<Traits>::validate_state(LookupTable& lookup_table, Node* node) {
   DEBUG_ASSERT(stats_copy.VN >= 0);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
   core::node_pool_index_t index = context.initialization_index;
   GeneralContext& general_context = *context.general_context;
@@ -574,7 +574,7 @@ void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArr
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, LocalPolicyArray& P) {
   const ManagerParams& manager_params = general_context.manager_params;
   auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
@@ -586,7 +586,7 @@ void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, Lo
   P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context,
                                                 const Node* root, core::action_t* actions,
                                                 SearchResults& results) {
@@ -606,7 +606,7 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
   results.action_symmetry_table.load(items);
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
                                              const GeneralContext& general_context,
                                              SearchResults& results) {
@@ -690,7 +690,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
 
@@ -701,7 +701,7 @@ void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
   }
 }
 
-template <typename Traits>
+template <search::concepts::InnerTraits Traits>
 void Algorithms<Traits>::print_action_selection_details(const SearchContext& context,
                                                         const ActionSelector& selector,
                                                         int argmax_index) {

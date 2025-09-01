@@ -9,6 +9,7 @@
 namespace search {
 namespace concepts {
 
+// Everything in Traits needed for using graph constructs
 template <class GT>
 concept GraphTraits = requires {
   requires core::concepts::Game<typename GT::Game>;
@@ -16,6 +17,7 @@ concept GraphTraits = requires {
   requires search::concepts::Edge<typename GT::Edge>;
 };
 
+// Everything in Traits needed for search::GeneralContext
 template <class GCT>
 concept GeneralContextTraits = requires {
   requires search::concepts::GraphTraits<GCT>;
@@ -23,14 +25,20 @@ concept GeneralContextTraits = requires {
   requires search::concepts::AuxState<typename GCT::AuxState, typename GCT::ManagerParams>;
 };
 
+// Everything in Traits except for Algorithms
 template <class T>
-concept Traits = requires {
+concept InnerTraits = requires {
   requires search::concepts::GeneralContextTraits<T>;
-  typename T::Algorithms;
   typename T::EvalRequest;
   typename T::EvalResponse;
   typename T::EvalServiceBase;
   typename T::EvalServiceFactory;
+};
+
+template <class T>
+concept Traits = requires {
+  requires search::concepts::InnerTraits<T>;
+  typename T::Algorithms;
 };
 
 }  // namespace concepts
