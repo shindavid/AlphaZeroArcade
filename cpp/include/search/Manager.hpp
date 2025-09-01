@@ -36,7 +36,7 @@ class Manager {
   using ManagerParams = Traits::ManagerParams;
   using Algorithms = search::AlgorithmsForT<Traits>;
   using EvalRequest = Traits::EvalRequest;
-  using EvalResponse = Traits::EvalResponse;
+  using Evaluation = Traits::Evaluation;
   using EvalServiceBase = Traits::EvalServiceBase;
   using EvalServiceFactory = Traits::EvalServiceFactory;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;

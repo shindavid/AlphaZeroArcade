@@ -21,7 +21,7 @@ struct Traits {
   using ManagerParams = mcts::ManagerParams<Game>;
   using AuxState = mcts::AuxState<ManagerParams>;
   using EvalRequest = nnet::NNEvaluationRequest<Game>;
-  using EvalResponse = nnet::NNEvaluation<Game>;
+  using Evaluation = nnet::NNEvaluation<Game>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;
   using SearchResults = mcts::SearchResults<Game>;
