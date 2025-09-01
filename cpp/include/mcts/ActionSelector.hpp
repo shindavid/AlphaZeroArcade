@@ -1,24 +1,27 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/Node.hpp"
-#include "mcts/SearchParams.hpp"
+#include "search/LookupTable.hpp"
+#include "search/SearchParams.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 namespace mcts {
 
-template <core::concepts::Game Game>
+template <search::concepts::GraphTraits GraphTraits>
 struct ActionSelector {
+  using Game = GraphTraits::Game;
+  using Node = GraphTraits::Node;
+  using Edge = GraphTraits::Edge;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ManagerParams = mcts::ManagerParams<Game>;
-  using Node = mcts::Node<Game>;
-  using LocalPolicyArray = Node::LocalPolicyArray;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
-  ActionSelector(const ManagerParams& manager_params, const SearchParams& search_params,
-                 const Node* node, bool is_root);
+  ActionSelector(const LookupTable& lookup_table, const ManagerParams& manager_params,
+                 const search::SearchParams& search_params, const Node* node, bool is_root);
 
   core::seat_index_t seat;
   LocalPolicyArray P;

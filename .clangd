@@ -2,4 +2,8 @@ Diagnostics:
   Suppress: "pp_including_mainfile_in_preamble"
 
 CompileFlags:
-  Add: [-Wno-vla-cxx-extension]
+  Remove:
+    - "-fconcepts-diagnostics-depth=*"
+  Add:
+    - -Wno-vla-cxx-extension
+

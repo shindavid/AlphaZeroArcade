@@ -2,10 +2,11 @@
 
 namespace mcts {
 
-template <core::concepts::Game Game>
-inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
-                                            const SearchParams& search_params, const Node* node,
-                                            bool is_root)
+template <search::concepts::GraphTraits GraphTraits>
+inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_table,
+                                                   const ManagerParams& params,
+                                                   const search::SearchParams& search_params,
+                                                   const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_actions),
       Q(P.rows()),
@@ -32,12 +33,11 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    using Edge = Node::Edge;
-    Edge* edge = node->get_edge(i);
+    Edge* edge = lookup_table.get_edge(node, i);
     P(i) = edge->adjusted_base_prob;
     E(i) = edge->E;
 
-    Node* child = node->get_child(edge);
+    Node* child = lookup_table.get_node(edge->child_index);
     if (child) {
       const auto child_stats = child->stats_safe();  // make a copy
       Q(i) = child_stats.Q(seat);

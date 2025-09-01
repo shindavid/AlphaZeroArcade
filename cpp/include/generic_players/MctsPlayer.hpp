@@ -4,10 +4,13 @@
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
-#include "mcts/Constants.hpp"
-#include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/SearchParams.hpp"
+#include "mcts/SearchResults.hpp"
+#include "mcts/Traits.hpp"
+#include "search/Constants.hpp"
+#include "search/Manager.hpp"
+#include "search/SearchParams.hpp"
+#include "search/SearchResponse.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -27,7 +30,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
-    Params(mcts::Mode);
+    Params(search::Mode);
     void dump() const;
 
     auto make_options_description();
@@ -43,12 +46,11 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using MctsManager = mcts::Manager<Game>;
+  using Traits = mcts::Traits<Game>;
+  using MctsManager = search::Manager<Traits>;
   using MctsManagerParams = mcts::ManagerParams<Game>;
-  using MctsSearchParams = mcts::SearchParams;
-  using SearchResults = Game::Types::SearchResults;
-  using SearchRequest = MctsManager::SearchRequest;
-  using SearchResponse = MctsManager::SearchResponse;
+  using SearchResults = mcts::SearchResults<Game>;
+  using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
   using State = Game::State;
@@ -110,7 +112,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   const Params params_;
 
-  const MctsSearchParams search_params_[core::kNumSearchModes];
+  const search::SearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   SharedData_sptr shared_data_;
   VerboseInfo* verbose_info_ = nullptr;

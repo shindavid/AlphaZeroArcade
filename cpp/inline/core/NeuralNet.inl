@@ -65,7 +65,7 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
 
 // NeuralNet<Game>
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 NeuralNet<Game>::~NeuralNet() {
   deactivate();
 
@@ -74,7 +74,7 @@ NeuralNet<Game>::~NeuralNet() {
   }
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
   mit::unique_lock lock(pipeline_mutex_);
   pipeline_cv_.wait(lock, [&] { return !available_pipeline_indices_.empty(); });
@@ -83,18 +83,18 @@ pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
   return index;
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 float* NeuralNet<Game>::get_input_ptr(pipeline_index_t index) {
   return pipelines_[index]->input.data();
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::schedule(pipeline_index_t index) const {
   RELEASE_ASSERT(activated(), "NeuralNet<Game>::predict() called while deactivated");
   pipelines_[index]->schedule();
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::release(pipeline_index_t index) {
   mit::unique_lock lock(pipeline_mutex_);
   available_pipeline_indices_.push_back(index);
@@ -102,13 +102,13 @@ void NeuralNet<Game>::release(pipeline_index_t index) {
   pipeline_cv_.notify_all();
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::load(pipeline_index_t index, float** policy_data, float** value_data,
                            float** action_values_data) {
   pipelines_[index]->load(policy_data, value_data, action_values_data);
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::deactivate() {
   if (!activated()) return;
 
@@ -127,7 +127,7 @@ void NeuralNet<Game>::deactivate() {
   engine_.reset();
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 bool NeuralNet<Game>::activate(int num_pipelines) {
   if (activated()) return false;
 
@@ -160,7 +160,7 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
   return true;
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
                                     const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
@@ -184,7 +184,7 @@ NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 NeuralNet<Game>::Pipeline::~Pipeline() {
   cuda_util::destroy_stream(stream);
   delete context;
@@ -200,7 +200,7 @@ NeuralNet<Game>::Pipeline::~Pipeline() {
   cuda_util::cpu_free(action_values.data());
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::Pipeline::schedule() {
   constexpr size_t f = sizeof(float);
   auto& dbs = device_buffers;
@@ -214,7 +214,7 @@ void NeuralNet<Game>::Pipeline::schedule() {
   cuda_util::gpu2cpu_memcpy_async(stream, action_values.data(), dbs[3], action_values.size() * f);
 }
 
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 void NeuralNet<Game>::Pipeline::load(float** policy_data, float** value_data,
                                      float** action_values_data) {
   cuda_util::synchronize_stream(stream);

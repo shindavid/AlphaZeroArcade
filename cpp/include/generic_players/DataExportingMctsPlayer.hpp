@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "core/TrainingDataWriter.hpp"
 #include "core/concepts/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
@@ -37,7 +36,6 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
   using SearchResults = base_t::SearchResults;
-  using SearchRequest = base_t::SearchRequest;
   using SearchResponse = base_t::SearchResponse;
 
   using base_t::base_t;

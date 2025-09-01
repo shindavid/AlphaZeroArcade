@@ -6,7 +6,7 @@
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include <NvInfer.h>
 #include <NvInferRuntime.h>
@@ -71,7 +71,7 @@ class NeuralNetBase {
 /*
  * A thin wrapper around a TensorRT engine.
  */
-template <concepts::Game Game>
+template <core::concepts::Game Game>
 class NeuralNet : public NeuralNetBase {
  public:
   using InputShape = Game::InputTensorizor::Tensor::Dimensions;

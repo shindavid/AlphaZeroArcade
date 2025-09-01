@@ -1,14 +1,19 @@
+#include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "games/GameTransforms.hpp"
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/NNEvaluation.hpp"
 #include "mcts/Node.hpp"
 #include "mcts/SearchLog.hpp"
-#include "mcts/SimpleNNEvaluationService.hpp"
+#include "mcts/Traits.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "nnet/SimpleNNEvaluationService.hpp"
+#include "search/Manager.hpp"
+#include "search/SearchParams.hpp"
+#include "search/SearchRequest.hpp"
+#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -30,13 +35,18 @@ using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
+template <core::concepts::Game Game>
+class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Nim>;
+  using State = Game::State;
+  using Base = nnet::SimpleNNEvaluationService<Game>;
+  using Traits = mcts::Traits<Game>;
+  using NNEvaluation = nnet::NNEvaluation<Game>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
+  using Item = Base::Item;
 
   MockNNEvaluationService(bool smart) : smart_(smart) {
     this->set_init_func([&](NNEvaluation* eval, const Item& item) { this->init_eval(eval, item); });
@@ -52,7 +62,7 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
     core::seat_index_t seat = item.node()->stable_data().active_seat;
     core::action_mode_t mode = item.node()->action_mode();
 
-    const Nim::State& state = item.cur_state();
+    const State& state = item.cur_state();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
     if (winning) {
@@ -88,23 +98,23 @@ class MockNNEvaluationService : public mcts::SimpleNNEvaluationService<Nim> {
 template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
-  using Manager = mcts::Manager<Game>;
+  using Traits = mcts::Traits<Game>;
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Manager = search::Manager<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
+  using Edge = mcts::Edge;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
-  using Edge = mcts::Node<Game>::Edge;
-  using LookupTable = mcts::Node<Game>::LookupTable;
-  using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
-  using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
+  using LookupTable = TraitsTypes::LookupTable;
   using ValueArray = Game::Types::ValueArray;
-  using Service = mcts::NNEvaluationServiceBase<Game>;
+  using Service = nnet::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
-  using SearchRequest = Manager::SearchRequest;
-  using SearchResult = Game::Types::SearchResults;
+  using SearchResults = Traits::SearchResults;
+  using SearchLog = mcts::SearchLog<Traits>;
 
-  static_assert(Node::kStoreStates, "state-storage required for search-log tests");
+  static_assert(core::kStoreStates<Game>, "state-storage required for search-log tests");
 
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}
@@ -114,7 +124,7 @@ class ManagerTest : public testing::Test {
   }
 
   static ManagerParams create_manager_params() {
-    ManagerParams params(mcts::kCompetitive);
+    ManagerParams params(search::kCompetitive);
     params.no_model = true;
     return params;
   }
@@ -124,7 +134,7 @@ class ManagerTest : public testing::Test {
   void init_manager(Service_sptr service = nullptr) {
     core::GameServerBase* server = nullptr;
     manager_ = new Manager(manager_params_, server, service);
-    search_log_ = new mcts::SearchLog<Game>(manager_->lookup_table());
+    search_log_ = new SearchLog(manager_->lookup_table());
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
@@ -138,25 +148,25 @@ class ManagerTest : public testing::Test {
 
   ManagerParams& manager_params() { return manager_params_; }
 
-  const SearchResult* search(int num_searches = 0) {
-    mcts::SearchParams search_params(num_searches, true);
+  const SearchResults* search(int num_searches = 0) {
+    search::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
-    SearchRequest request;
+    search::SearchRequest request;
     return manager_->search(request).results;
   }
 
-  Node* get_node_by_index(node_pool_index_t index) {
+  Node* get_node_by_index(core::node_pool_index_t index) {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
 
-  mcts::SearchLog<Game>* get_search_log() { return search_log_; }
+  SearchLog* get_search_log() { return search_log_; }
   ManagerParams& get_manager_params() { return manager_params_; }
 
   void test_search(const std::string& testname, int num_search,
                    const std::vector<core::action_t>& initial_actions, Service_sptr service) {
     init_manager(service);
     start_manager(initial_actions);
-    const SearchResult* result = search(num_search);
+    const SearchResults* result = search(num_search);
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
 
@@ -193,7 +203,7 @@ class ManagerTest : public testing::Test {
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
-  mcts::SearchLog<Game>* search_log_ = nullptr;
+  SearchLog* search_log_ = nullptr;
 };
 
 using NimManagerTest = ManagerTest<Nim>;
@@ -204,8 +214,8 @@ TEST_F(NimManagerTest, uniform_search) {
 }
 
 TEST_F(NimManagerTest, smart_search) {
-  std::shared_ptr<MockNNEvaluationService> mock_service =
-    std::make_shared<MockNNEvaluationService>(true);
+  std::shared_ptr<MockNNEvaluationService<Nim>> mock_service =
+    std::make_shared<MockNNEvaluationService<Nim>>(true);
 
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
@@ -213,8 +223,8 @@ TEST_F(NimManagerTest, smart_search) {
 }
 
 TEST_F(NimManagerTest, dumb_search) {
-  std::shared_ptr<MockNNEvaluationService> mock_service =
-    std::make_shared<MockNNEvaluationService>(false);
+  std::shared_ptr<MockNNEvaluationService<Nim>> mock_service =
+    std::make_shared<MockNNEvaluationService<Nim>>(false);
 
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};

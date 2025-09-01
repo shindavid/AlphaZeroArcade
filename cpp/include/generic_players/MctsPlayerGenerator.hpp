@@ -1,15 +1,16 @@
 #pragma once
 
 #include "core/AbstractPlayerGenerator.hpp"
+#include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "mcts/Constants.hpp"
-#include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
-#include "mcts/TypeDefs.hpp"
+#include "mcts/Traits.hpp"
+#include "search/Constants.hpp"
+#include "search/Manager.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
@@ -20,13 +21,14 @@
 
 namespace generic {
 
-template <core::concepts::Game Game, typename PlayerT, mcts::Mode Mode = mcts::kCompetitive>
+template <core::concepts::Game Game, typename PlayerT, search::Mode Mode = search::kCompetitive>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
+  using Traits = mcts::Traits<Game>;
   using MctsManagerParams = mcts::ManagerParams<Game>;
-  using MctsManager = mcts::Manager<Game>;
+  using MctsManager = search::Manager<Traits>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = BaseMctsPlayer::Params;
   using SharedData = BaseMctsPlayer::SharedData;
@@ -42,7 +44,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
 
   /*
    * If this generator already generated a player for the given game_slot_index_t, dispatches to
-   * generate_from_manager(), passing in the mcts::Manager* of that previous player. Otherwise,
+   * generate_from_manager(), passing in the search::Manager* of that previous player. Otherwise,
    * dispatches to generate_from_scratch().
    */
   core::AbstractPlayer<Game>* generate(core::game_slot_index_t game_slot_index) override;
@@ -69,8 +71,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   MctsManagerParams manager_params_;
   MctsPlayerParams mcts_player_params_;
   shared_data_map_t& shared_data_cache_;
-  mcts::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
-  mcts::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
+  core::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
+  core::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
 template <core::concepts::Game Game>
@@ -78,7 +80,7 @@ using CompetitiveMctsPlayerGenerator = MctsPlayerGeneratorBase<Game, generic::Mc
 
 template <core::concepts::Game Game>
 using TrainingMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<Game, generic::DataExportingMctsPlayer<Game>, mcts::kTraining>;
+  MctsPlayerGeneratorBase<Game, generic::DataExportingMctsPlayer<Game>, search::kTraining>;
 
 template <typename GeneratorT>
 class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {

@@ -4,9 +4,11 @@
 #include "games/GameTransforms.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "mcts/Manager.hpp"
 #include "mcts/ManagerParams.hpp"
 #include "mcts/SearchLog.hpp"
+#include "mcts/Traits.hpp"
+#include "search/Manager.hpp"
+#include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -27,32 +29,33 @@ using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
-  using Manager = mcts::Manager<Game>;
+  using Traits = mcts::Traits<Game>;
+  using Manager = search::Manager<Traits>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
-  using SearchResults = Game::Types::SearchResults;
-  using SearchLog = mcts::SearchLog<Game>;
+  using SearchResults = Traits::SearchResults;
+  using SearchLog = mcts::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
-  using SearchRequest = Manager::SearchRequest;
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = mcts::NNEvaluationServiceBase<Game>;
+  using Service = nnet::NNEvaluationServiceBase<Game>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 
  public:
-  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(mcts::kCompetitive) {
+  MctsPlayerTest()
+      : manager_params_(create_manager_params()), player_params_(search::kCompetitive) {
     player_params_.num_fast_iters = 10;
     player_params_.num_full_iters = 20;
   }
 
   ManagerParams create_manager_params() {
-    ManagerParams params(mcts::kCompetitive);
+    ManagerParams params(search::kCompetitive);
     params.no_model = true;
     return params;
   }
@@ -62,7 +65,7 @@ class MctsPlayerTest : public ::testing::Test {
     auto shared_player_data =
       std::make_shared<MctsPlayerSharedData>(manager_params_, server, service);
     auto manager = &shared_player_data->manager;
-    search_log_ = new mcts::SearchLog<Game>(manager->lookup_table());
+    search_log_ = new SearchLog(manager->lookup_table());
     manager->set_post_visit_func([&] { search_log_->update(); });
     mcts_player_ = new MctsPlayer(player_params_, shared_player_data, true);
   }
@@ -79,7 +82,7 @@ class MctsPlayerTest : public ::testing::Test {
     initial_actions_ = initial_actions;
   }
 
-  mcts::SearchLog<Game>* get_search_log() { return search_log_; }
+  SearchLog* get_search_log() { return search_log_; }
 
   void test_get_action_policy(const std::string& testname,
                               const std::vector<core::action_t>& initial_actions = {},
@@ -93,7 +96,7 @@ class MctsPlayerTest : public ::testing::Test {
 
     ActionRequest request(state_history.current(), valid_actions);
     mcts_player_->init_search_mode(request);
-    SearchRequest search_request;
+    search::SearchRequest search_request;
     const SearchResults* search_results =
       mcts_player_->get_manager()->search(search_request).results;
 
@@ -148,7 +151,7 @@ class MctsPlayerTest : public ::testing::Test {
   ManagerParams manager_params_;
   MctsPlayerParams player_params_;
   MctsPlayer* mcts_player_;
-  mcts::SearchLog<Game>* search_log_;
+  SearchLog* search_log_;
   std::vector<core::action_t> initial_actions_;
 };
 

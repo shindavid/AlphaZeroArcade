@@ -5,7 +5,7 @@
 #include <cstdint>
 
 /*
- * Each mcts::NNEvaluationService keeps track of its own performance statistics, in the form of
+ * Each search::NNEvaluationService keeps track of its own performance statistics, in the form of
  * a PerfStats object. In theory there can be multiple NNEvaluationService's running in a
  * single process, so we aggregate their stats for reporting purposes.
  */

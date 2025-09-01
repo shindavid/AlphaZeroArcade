@@ -1,18 +1,24 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
-#include "mcts/Node.hpp"
+#include "core/BasicTypes.hpp"
+#include "search/LookupTable.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 #include <boost/json.hpp>
 
 #include <string>
+#include <vector>
 
 namespace mcts {
 
-template <core::concepts::Game Game>
+template <search::concepts::GraphTraits GraphTraits>
 class SearchLog {
  protected:
-  using LookupTable = Node<Game>::LookupTable;
+  using Node = GraphTraits::Node;
+  using Edge = GraphTraits::Edge;
+  using Game = GraphTraits::Game;
+  using State = Game::State;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
