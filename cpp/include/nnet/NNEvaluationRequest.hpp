@@ -65,17 +65,8 @@ class NNEvaluationRequest {
      * the same history vector, as an optimization.
      *
      * We use sym to transform the history before tensorizing it. If incorporate_sym_into_cache_key
-     * is true, then we will incorporate sym into the cache key.
-     *
-     * The benefit of incorporating sym into the cache key is that when multiple games are played,
-     * those games are independent. The downside is that we get less cache hits, hurting game
-     * throughput.
-     *
-     * Based on empirical testing, we find that in self-play, it's better not to incorporate sym
-     * into the cache key, to maximize game throughput. The downside is mitigated by the fact that
-     * the cache is cleared on each generation, leading to partial-independence. In contrast, for
-     * rating games, we incorporate sym into the cache key, to ensure the games are truly
-     * independent, in order to get more accurate ratings.
+     * is true, then we will incorporate sym into the cache key. See comment in
+     * nnet::NNEvaluationServiceParams for discussion on this bool.
      */
     Item(NodeBase* node, StateHistory& history, const State& state, group::element_t sym,
          bool incorporate_sym_into_cache_key);
