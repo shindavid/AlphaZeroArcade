@@ -17,7 +17,7 @@ template <core::concepts::Game Game>
 class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
  public:
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

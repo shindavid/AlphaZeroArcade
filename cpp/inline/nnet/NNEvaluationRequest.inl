@@ -4,9 +4,10 @@
 
 namespace nnet {
 
-template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, const State& state,
-                                      group::element_t sym, bool incorporate_sym_into_cache_key)
+template <core::concepts::Game Game, typename Evaluation>
+NNEvaluationRequest<Game, Evaluation>::Item::Item(NodeBase* node, StateHistory& history,
+                                                  const State& state, group::element_t sym,
+                                                  bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
       history_(&history),
@@ -14,9 +15,10 @@ NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, con
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, group::element_t sym,
-                                      bool incorporate_sym_into_cache_key)
+template <core::concepts::Game Game, typename Evaluation>
+NNEvaluationRequest<Game, Evaluation>::Item::Item(NodeBase* node, StateHistory& history,
+                                                  group::element_t sym,
+                                                  bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
       history_(&history),
@@ -24,9 +26,9 @@ NNEvaluationRequest<Game>::Item::Item(NodeBase* node, StateHistory& history, gro
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <core::concepts::Game Game>
+template <core::concepts::Game Game, typename Evaluation>
 template <typename Func>
-auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
+auto NNEvaluationRequest<Game, Evaluation>::Item::compute_over_history(Func f) const {
   if (split_history_) {
     history_->update(state_);  // temporary append
   }
@@ -42,8 +44,9 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
   return output;
 }
 
-template <core::concepts::Game Game>
-typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::make_cache_key(
+template <core::concepts::Game Game, typename Evaluation>
+typename NNEvaluationRequest<Game, Evaluation>::CacheKey
+NNEvaluationRequest<Game, Evaluation>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key = compute_over_history(
     [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
@@ -51,14 +54,14 @@ typename NNEvaluationRequest<Game>::CacheKey NNEvaluationRequest<Game>::Item::ma
   return CacheKey(eval_key, cache_sym);
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationRequest<Game>::set_notification_task_info(
+template <core::concepts::Game Game, typename Evaluation>
+void NNEvaluationRequest<Game, Evaluation>::set_notification_task_info(
   const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 
-template <core::concepts::Game Game>
-void NNEvaluationRequest<Game>::mark_all_as_stale() {
+template <core::concepts::Game Game, typename Evaluation>
+void NNEvaluationRequest<Game, Evaluation>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
     active_index_ = 1 - active_index_;

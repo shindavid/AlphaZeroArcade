@@ -20,9 +20,9 @@ struct SearchContext {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using EvalRequest = Traits::EvalRequest;
 
   using TraitsTypes = search::TraitsTypes<Traits>;
+  using EvalRequest = TraitsTypes::EvalRequest;
   using GeneralContext = search::GeneralContext<Traits>;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using Visitation = TraitsTypes::Visitation;

@@ -35,13 +35,13 @@ class Manager {
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using Algorithms = search::AlgorithmsForT<Traits>;
-  using EvalRequest = Traits::EvalRequest;
   using Evaluation = Traits::Evaluation;
   using EvalServiceBase = Traits::EvalServiceBase;
   using EvalServiceFactory = Traits::EvalServiceFactory;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
+  using EvalRequest = TraitsTypes::EvalRequest;
   using LookupTable = TraitsTypes::LookupTable;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;

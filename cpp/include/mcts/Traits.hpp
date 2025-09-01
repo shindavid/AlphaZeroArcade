@@ -7,7 +7,6 @@
 #include "mcts/Node.hpp"
 #include "mcts/SearchResults.hpp"
 #include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"
 
@@ -20,7 +19,6 @@ struct Traits {
   using Node = mcts::Node<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using AuxState = mcts::AuxState<ManagerParams>;
-  using EvalRequest = nnet::NNEvaluationRequest<Game>;
   using Evaluation = nnet::NNEvaluation<Game>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<Game>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Game>;

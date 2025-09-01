@@ -2,7 +2,6 @@
 
 #include "core/NodeBase.hpp"
 #include "core/YieldManager.hpp"
-#include "nnet/NNEvaluation.hpp"
 #include "nnet/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
@@ -18,10 +17,10 @@ namespace nnet {
 // The proper usage is for a client to maintain a long-lived NNEvaluationRequest object. Whenever
 // the client wishes to request evaluations for one or more positions, it should call
 // NNEvaluationRequest::emplace_back() to add the positions to the request. It is important that the
-// request is long-lived, because of sensitivities around the reference-counting of NNEvaluation
-// objects. The request will hold onto old NNEvaluation objects from previous evaluations, and the
+// request is long-lived, because of sensitivities around the reference-counting of Evaluation
+// objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <core::concepts::Game Game>
+template <core::concepts::Game Game, typename Evaluation>
 class NNEvaluationRequest {
  public:
   using NodeBase = core::NodeBase<Game>;
@@ -29,7 +28,6 @@ class NNEvaluationRequest {
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-  using NNEvaluation = nnet::NNEvaluation<Game>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)
@@ -82,10 +80,10 @@ class NNEvaluationRequest {
     template <typename Func>
     auto compute_over_history(Func f) const;
 
-    void set_eval(NNEvaluation* eval) { eval_ = eval; }
+    void set_eval(Evaluation* eval) { eval_ = eval; }
 
     NodeBase* node() const { return node_; }
-    NNEvaluation* eval() const { return eval_; }
+    Evaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
@@ -101,7 +99,7 @@ class NNEvaluationRequest {
     const CacheKey cache_key_;
     const group::element_t sym_;
 
-    NNEvaluation* eval_ = nullptr;
+    Evaluation* eval_ = nullptr;
   };
   using item_vec_t = std::vector<Item>;
 

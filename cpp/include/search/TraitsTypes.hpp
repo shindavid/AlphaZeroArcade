@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nnet/NNEvaluationRequest.hpp"
 #include "search/LookupTable.hpp"
 
 #include <array>
@@ -14,6 +15,7 @@ struct TraitsTypes {
   using Game = Traits::Game;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
+  using Evaluation = Traits::Evaluation;
 
   using StateHistory = Game::StateHistory;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -25,6 +27,7 @@ struct TraitsTypes {
   };
   using search_path_t = std::vector<Visitation>;
 
+  using EvalRequest = nnet::NNEvaluationRequest<Game, Evaluation>;
   using LookupTable = search::LookupTable<Traits>;
 };
 

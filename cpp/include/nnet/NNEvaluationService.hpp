@@ -62,7 +62,7 @@ class NNEvaluationService
 
   using NeuralNet = core::NeuralNet<Game>;
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;

@@ -20,7 +20,7 @@ template <core::concepts::Game Game>
 class NNEvaluationServiceBase {
  public:
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

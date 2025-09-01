@@ -18,7 +18,7 @@ template <core::concepts::Game Game>
 class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Game> {
  public:
   using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;

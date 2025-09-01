@@ -1,6 +1,6 @@
 #pragma once
 
-#include "search/concepts/EvalRequestConcept.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
 #include "search/concepts/EvaluationConcept.hpp"
 #include "search/concepts/EvalServiceBaseConcept.hpp"
 #include "search/concepts/EvalServiceFactoryConcept.hpp"
@@ -13,9 +13,12 @@ namespace concepts {
 template <class T>
 concept Traits = requires {
   requires search::concepts::GeneralContextTraits<T>;
-  requires search::concepts::EvalRequest<typename T::EvalRequest>;
   requires search::concepts::Evaluation<typename T::Evaluation>;
-  requires search::concepts::EvalServiceBase<typename T::EvalServiceBase, typename T::EvalRequest>;
+
+  requires search::concepts::EvalServiceBase<
+    typename T::EvalServiceBase,
+    nnet::NNEvaluationRequest<typename T::Game, typename T::Evaluation>>;
+
   requires search::concepts::EvalServiceFactory<
     typename T::EvalServiceFactory, typename T::EvalServiceBase, typename T::ManagerParams>;
 };
