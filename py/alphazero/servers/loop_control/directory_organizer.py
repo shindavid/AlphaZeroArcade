@@ -187,6 +187,21 @@ class DirectoryOrganizer:
         return os.path.join(self.checkpoints_dir, f'gen-{gen}.pt')
 
     @staticmethod
+    def find_latest_tag(game: str, base_dir_root: BaseDir) -> Optional[str]:
+        output_dir = os.path.join(base_dir_root.output_dir(), game)
+        if not os.path.isdir(output_dir):
+            return None
+
+        # Each subdir in output_dir has an mtime. Return the one with the latest mtime
+        def get_mtime(d):
+            return os.path.getmtime(os.path.join(output_dir, d))
+
+        subdirs = [(get_mtime(d), d) for d in os.listdir(output_dir)]
+        if not subdirs:
+            return None
+        return max(subdirs)[1]
+
+    @staticmethod
     def get_ordered_subpaths(path: str) -> List[str]:
         subpaths = list(natsorted(f for f in os.listdir(path)))
         return [f for f in subpaths if not f.startswith('.')]

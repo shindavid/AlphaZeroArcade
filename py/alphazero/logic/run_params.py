@@ -48,7 +48,8 @@ class RunParams:
         return is_valid_path_component(tag)
 
     @staticmethod
-    def add_args(parser: argparse.ArgumentParser, multiple_tags=False) -> Optional[GameSpec]:
+    def add_args(parser: argparse.ArgumentParser, multiple_tags=False,
+                 tag_help_str: Optional[str]=None) -> Optional[GameSpec]:
         """
         Returns the game specified in the command line arguments, so that other command-line
         options can use game-specific defaults.
@@ -57,9 +58,11 @@ class RunParams:
 
         game_index.add_parser_argument(group, '-g', '--game')
         if multiple_tags:
-            group.add_argument('-t', '--tag', default='', help='comma-separated tags for this run (e.g. "v1,v2")')
+            help_str = tag_help_str or 'comma-separated tags for this run (e.g. "v1,v2")'
+            group.add_argument('-t', '--tag', default='', help=help_str)
         else:
-            group.add_argument('-t', '--tag', default='', help='tag for this run (e.g. "v1")')
+            help_str = tag_help_str or 'tag for this run (e.g. "v1")'
+            group.add_argument('-t', '--tag', default='', help=help_str)
 
         # attempt an early parse to see if -g/--game is specified:
         sys_args = [a for a in sys.argv[1:] if a not in ('-h', '--help')]
