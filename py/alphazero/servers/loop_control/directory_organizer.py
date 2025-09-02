@@ -51,13 +51,15 @@ from natsort import natsorted
 import json
 import logging
 import os
+import re
 import shutil
 import sqlite3
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+Gen = int
 PathStr = str
-
+SELF_PLAY_DATA_FILE_REGEX = re.compile(r"^gen-(\d+)\.data$")
 
 class PathInfo:
     def __init__(self, path: str):
@@ -256,12 +258,19 @@ class DirectoryOrganizer:
             return None
         return self.get_any_self_play_data_filename(gen - 1)
 
+
+    def _parse_self_play_data_filename(self, filename: str) -> Gen:
+        m = SELF_PLAY_DATA_FILE_REGEX.fullmatch(filename)
+        if not m:
+            raise ValueError(f'Unexpected file in self-play-data: {filename}')
+        return int(m.group(1))
+
     def _apply_to_self_play_data_dir(self, target: 'DirectoryOrganizer',
                                      func: Callable[[PathStr, PathStr], None],
                                      last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
-            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
-            gen = int(filename.split('.')[0].split('-')[1])
+            gen = self._parse_self_play_data_filename(filename)
+
             if last_model_gen is not None and gen >= last_model_gen:
                 continue
             src = os.path.join(self.self_play_data_dir, filename)
