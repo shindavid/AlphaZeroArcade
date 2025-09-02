@@ -56,6 +56,7 @@ import sqlite3
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+PathStr = str
 
 
 class PathInfo:
@@ -255,8 +256,9 @@ class DirectoryOrganizer:
             return None
         return self.get_any_self_play_data_filename(gen - 1)
 
-    def copy_self_play_data(self, target: 'DirectoryOrganizer',
-                            last_model_gen: Optional[Generation] = None):
+    def _apply_to_self_play_data_dir(self, target: 'DirectoryOrganizer',
+                                     func: Callable[[PathStr, PathStr], None],
+                                     last_model_gen: Optional[Generation] = None):
         for filename in os.listdir(self.self_play_data_dir):
             assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
             gen = int(filename.split('.')[0].split('-')[1])
@@ -264,18 +266,15 @@ class DirectoryOrganizer:
                 continue
             src = os.path.join(self.self_play_data_dir, filename)
             dst = os.path.join(target.self_play_data_dir, filename)
-            shutil.copyfile(src, dst)
+            func(src, dst)
+
+    def copy_self_play_data(self, target: 'DirectoryOrganizer',
+                            last_model_gen: Optional[Generation] = None):
+        self._apply_to_self_play_data_dir(self, target, shutil.copyfile, last_model_gen)
 
     def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
                                  last_model_gen: Optional[Generation] = None):
-        for filename in os.listdir(self.self_play_data_dir):
-            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
-            gen = int(filename.split('.')[0].split('-')[1])
-            if last_model_gen is not None and gen >= last_model_gen:
-                continue
-            src = os.path.join(self.self_play_data_dir, filename)
-            dst = os.path.join(target.self_play_data_dir, filename)
-            os.symlink(src, dst)
+        self._apply_to_self_play_data_dir(self, target, os.symlink, last_model_gen)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
                                     last_gen: Optional[Generation] = None):
