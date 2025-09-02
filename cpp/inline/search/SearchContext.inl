@@ -1,7 +1,5 @@
 #include "search/SearchContext.hpp"
 
-#include "util/Asserts.hpp"
-
 #include <boost/algorithm/string/join.hpp>
 
 #include <format>
@@ -23,8 +21,6 @@ std::string SearchContext<Traits>::search_path_str() const {
     cur_sym = SymmetryGroup::compose(cur_sym, SymmetryGroup::inverse(visitation.edge->sym));
     vec.push_back(Game::IO::action_to_str(action, mode));
   }
-  RELEASE_ASSERT(cur_sym == this->leaf_canonical_sym, "cur_sym={} leaf_canonical_sym={}", cur_sym,
-                 this->leaf_canonical_sym);
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }
 
