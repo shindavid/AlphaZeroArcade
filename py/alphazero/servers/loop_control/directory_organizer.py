@@ -279,11 +279,11 @@ class DirectoryOrganizer:
 
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
                             last_model_gen: Optional[Generation] = None):
-        self._apply_to_self_play_data_dir(self, target, shutil.copyfile, last_model_gen)
+        self._apply_to_self_play_data_dir(target, shutil.copyfile, last_model_gen)
 
     def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
                                  last_model_gen: Optional[Generation] = None):
-        self._apply_to_self_play_data_dir(self, target, os.symlink, last_model_gen)
+        self._apply_to_self_play_data_dir(target, os.symlink, last_model_gen)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
                                     last_gen: Optional[Generation] = None):
