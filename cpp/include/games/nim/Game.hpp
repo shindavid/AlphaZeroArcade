@@ -120,10 +120,10 @@ struct Game {
 
   struct InputTensorizor {
     using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
-    using MCTSKey = State;
+    using TransposeKey = State;
     using EvalKey = State;
 
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
 
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) {

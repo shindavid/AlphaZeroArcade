@@ -15,7 +15,7 @@ class LookupTable {
   using Node = GraphTraits::Node;
   using Edge = GraphTraits::Edge;
 
-  using MCTSKey = Game::InputTensorizor::MCTSKey;
+  using TransposeKey = Game::InputTensorizor::TransposeKey;
   using NodeBase = core::NodeBase<Game>;
 
   class Defragmenter {
@@ -55,10 +55,10 @@ class LookupTable {
   // Else, the mapping is only inserted if k is not already in the map.
   //
   // Returns the value that k maps to after the operation.
-  core::node_pool_index_t insert_node(const MCTSKey& k, core::node_pool_index_t v, bool overwrite);
+  core::node_pool_index_t insert_node(const TransposeKey& k, core::node_pool_index_t v, bool overwrite);
 
   // Returns the value that k maps to, or -1 if k is not in the map.
-  core::node_pool_index_t lookup_node(const MCTSKey&) const;
+  core::node_pool_index_t lookup_node(const TransposeKey&) const;
 
   core::node_pool_index_t alloc_node() { return node_pool_.alloc(1); }
   core::edge_pool_index_t alloc_edges(int k) { return edge_pool_.alloc(k); }
@@ -72,7 +72,7 @@ class LookupTable {
   // return edge for n'th child of parent. Assumes that parent's edges have been expanded
   Edge* get_edge(const Node* parent, int n) const;
 
-  using map_t = std::unordered_map<MCTSKey, core::node_pool_index_t>;
+  using map_t = std::unordered_map<TransposeKey, core::node_pool_index_t>;
   const map_t* map() const { return &map_; }
 
   mit::mutex* get_random_mutex();

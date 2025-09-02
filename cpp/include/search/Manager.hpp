@@ -62,7 +62,7 @@ class Manager {
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using InputTensorizor = Game::InputTensorizor;
-  using MCTSKey = InputTensorizor::MCTSKey;
+  using TransposeKey = InputTensorizor::TransposeKey;
 
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;

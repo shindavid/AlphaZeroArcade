@@ -97,10 +97,10 @@ class Game {
   struct InputTensorizor {
     static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = State;
+    using TransposeKey = State;
     using EvalKey = State;
 
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) {
       return *cur;

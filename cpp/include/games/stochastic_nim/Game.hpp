@@ -101,10 +101,10 @@ struct Game {
     // tensor is of the format {binary encoding of stones_left, current_mode}
     constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
     using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
-    using MCTSKey = State;
+    using TransposeKey = State;
     using EvalKey = State;
 
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) {
       return *cur;
