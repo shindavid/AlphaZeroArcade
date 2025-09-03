@@ -3,9 +3,72 @@
 """
 fork_run.py effectively copies a run-directory to a new directory.
 
-Usage:
+###############
+# Basic usage #
+###############
 
 ./fork_run.py -g GAME -f FROM_TAG -t TO_TAG
+
+The above cmd copies all files/directories from FROM_TAG to TO_TAG, with the exception of the
+self-play data. For the self-play data, we by default merely set up soft-links from TO_TAG to
+FROM_TAG. It is the responsibility of the user to make sure not to delete FROM_TAG if intending to
+still access that self-play data from TO_TAG.
+
+Beyond the basic usage, there are two other modes which can be useful in some common research
+scenarios:
+
+#####################
+# Retraining Models #
+#####################
+
+Sometimes, you want to experiment with a new NN model architecture, or new NN training
+hyperparameters. When doing this, you can essentially treat this as a supervised learning (SL)
+problem, rather than a reinforcement learning (RL) problem. That is, you can use the existing
+self-play data to train the new model. To determine whether your new architecture/hyperparameters
+represent an improvement, you can look at the dashboard and compare the loss-curves. If your new
+architecture is better, it should do a better job of fitting the existing self-play data, and this
+should be reflected when comparing the loss-curves between the two runs.
+
+Doing it this way should be more efficient than doing a fresh run from scratch, as you get to skip
+the self-play part. Additionally, by using the same self-play data (and training windows) as the
+original run, you can be more certain that comparing the loss-curves is an apples-to-apples
+comparison.
+
+For this mode, you want to add the --retrain-models option:
+
+./fork_run.py -g GAME -f FROM_TAG -t TO_TAG --retrain-models
+
+(NOTE: this cmd still launches the eval-server and performs eval-matches throughout the retraining.
+Given the motivating use-case I describe, we should consider tweaking the loop-controller behavior
+to only have the eval manager(s) issue requests after the retraining period ends.)
+
+#########################
+# Branching a Prior Run #
+#########################
+
+Sometimes, you want to experiment with c++ changes, without changing the NN model architecture.
+Perhaps you believe that your c++ changes will increase the skill-ceiling of your MCTS agent.
+
+An inefficient way to validate this would be to do a fresh run from scratch, and to compare the
+eval curves. For a complex game, getting all the way to the skill-frontier might take several days
+of self-play and training, and you would need to incur that full cost.
+
+A better approach is to fork the old run!
+
+You could use the basic-usage cmd line to create an exact fork of the old run. However, it's
+unclear what you could conclude from the forked run. To illustrate, suppose your old run ran up to
+gen-1000, and you fork it and run your forked run up to gen-1100. You can look at the eval-curve
+from gen-1000 to gen-1100. It might increase. But, maybe your old run would have also increased if
+you just let it run longer?
+
+Because of this conundrum, a more conclusive experiment would be to fork your old run up to gen-G
+for some G < 1000. Say, fork the first 900 generations of your old run. Then, on your forked run,
+you can let it run up to gen-1000. And then you can compare the eval curves between the two runs
+between gen-900 and gen-1000.
+
+For this usage, you can add the --last-gen option:
+
+./fork_run.py -g GAME -f FROM_TAG -t TO_TAG --last-gen GEN
 """
 from alphazero.logic.agent_types import AgentRole, MCTSAgent
 from alphazero.logic.arena import Arena
