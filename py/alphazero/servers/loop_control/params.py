@@ -18,6 +18,7 @@ class LoopControllerParams:
     ignore_sigint: bool = False
     simulate_cloud: bool = False
     task_mode: bool = False
+    retrain: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -55,6 +56,8 @@ class LoopControllerParams:
                            help='simulate cloud environment')
         group.add_argument('--task-mode', action='store_true', default=defaults.task_mode,
                            help='run without self-play/training; exit after task is done.')
+        group.add_argument('--retrain', action='store_true', default=False,
+                           help='retrain models from scratch, even if model files are present.')
 
 
     def add_to_cmd(self, cmd: List[str]):

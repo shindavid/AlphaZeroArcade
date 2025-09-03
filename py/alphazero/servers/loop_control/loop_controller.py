@@ -568,6 +568,7 @@ class LoopController:
         self._output_dir_syncer.start()
         self._client_connection_manager.start()
 
-        if not self.params.task_mode:
+        if not self.params.task_mode or self.params.retrain:
             self._organizer.assert_not_frozen()
+            logger.info('Starting self-play and training threads...')
             threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()
