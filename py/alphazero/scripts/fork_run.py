@@ -78,7 +78,7 @@ from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
-from util.logging_util import configure_logger
+from util.logging_util import LoggingParams, configure_logger
 from util import sqlite3_util
 
 import numpy as np
@@ -87,11 +87,13 @@ import argparse
 import dataclasses
 import logging
 import os
+import re
 import shutil
 from typing import Dict, Optional
 
 
 logger = logging.getLogger(__name__)
+DB_FILE_REGEX = pattern = re.compile(r'^(.+)\.db$')
 
 
 def load_args():
@@ -128,6 +130,8 @@ Noteworthy options:
                        help='Do not copy model files. The forked run will retrain the models '
                        'using the same self-play data and training-windows as the previous run.')
 
+    LoggingParams.add_args(parser)
+
     return parser.parse_args()
 
 
@@ -136,6 +140,8 @@ def copy_databases(source: DirectoryOrganizer, target: DirectoryOrganizer,
     shutil.copyfile(source.clients_db_filename, target.clients_db_filename)
 
     if not retrain_models:
+        copy_eval_databases(source, target, last_gen=last_gen)
+
         if last_gen is None:
             if os.path.exists(target.ratings_db_filename):
                 shutil.copyfile(source.ratings_db_filename, target.ratings_db_filename)
@@ -153,17 +159,29 @@ def copy_databases(source: DirectoryOrganizer, target: DirectoryOrganizer,
         sqlite3_util.copy_db(source.self_play_db_filename, target.self_play_db_filename,
                                 f'gen < {last_gen}')  # NOTE: intentionally using <, not <=
 
-    copy_eval_databases(source, target, last_gen=last_gen)
+
+def tag_from_db_filename(db_filename: str) -> Optional[str]:
+    m = DB_FILE_REGEX.fullmatch(db_filename)
+    if m is None:
+        return None
+    return m.group(1)
 
 
 def copy_eval_databases(from_organizer: DirectoryOrganizer, to_organizer: DirectoryOrganizer,
                         last_gen: Optional[Generation]=None):
     for f in os.listdir(from_organizer.eval_db_dir):
-        if f.endswith('.db') and f != f'{from_organizer.tag}.db':
-            benchmark_tag = f.split('.')[0]
-            db = RatingDB(from_organizer.eval_db_filename(benchmark_tag))
-            new_db = RatingDB(to_organizer.eval_db_filename(benchmark_tag))
-            copy_eval_db(db, new_db, to_organizer.tag, last_gen)
+        benchmark_tag = tag_from_db_filename(f)
+
+        if benchmark_tag is None:
+            raise ValueError(f'Invalid eval db filename: {f} in {from_organizer.eval_db_dir}')
+
+        if benchmark_tag == from_organizer.tag:
+            logger.debug(f'Skipping eval db for self-eval: {f}')
+            continue
+
+        db = RatingDB(from_organizer.eval_db_filename(benchmark_tag))
+        new_db = RatingDB(to_organizer.eval_db_filename(benchmark_tag))
+        copy_eval_db(db, new_db, to_organizer.tag, last_gen)
 
 
 def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optional[Generation]=None):
@@ -205,7 +223,8 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
 
 def main():
     args = load_args()
-    configure_logger()
+    logging_params = LoggingParams.create(args)
+    configure_logger(params=logging_params)
 
     if args.from_tag is None:
         raise ValueError('Required option: --from-tag/-f')
