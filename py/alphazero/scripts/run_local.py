@@ -49,6 +49,8 @@ Standard Usage Recipes:
 
     Once promoted, future runs will be rated relative to this run.
 
+3. Retrain a fork of an existing run:
+    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --task-mode --retrain
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
