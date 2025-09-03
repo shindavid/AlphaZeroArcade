@@ -360,9 +360,8 @@ class TrainingManager:
         Sets the next checkpoint based on the current training parameters and the last sample
         window. Returns True if the checkpoint was updated, False otherwise.
         """
-        num_committed_rows = self._controller.get_num_committed_rows()
         self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)
-        return self._checkpoint > num_committed_rows
+        return self._checkpoint > 0
 
     def _record_stats(self, gen: Generation):
         stats = self._stats
