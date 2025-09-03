@@ -47,6 +47,7 @@ class TrainingManager:
         self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
 
+        self._retraining = False
         self._checkpoint = controller.training_params.samples_per_window()  # gen-0 checkpoint
         self._last_sample_window: Optional[Window] = None  # initialized lazily
         self._latest_gen: Generation = 0
@@ -121,8 +122,11 @@ class TrainingManager:
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
             n_retrain_gens = len(self._controller.organizer.fork_info.train_windows)
+            self._retraining = True
+            self.train_gen1_model_if_necessary()
             while self._latest_gen < n_retrain_gens:
                 self.train_step()
+            self._retraining = False
 
     def train_gen1_model_if_necessary(self):
         if self._latest_gen == 0:
@@ -277,7 +281,7 @@ class TrainingManager:
         checkpoint_set = False
         if self._stats is not None:
             self._update_window()
-            if self._set_checkpoint():
+            if self._set_checkpoint(gen):
                 checkpoint_set = True
                 self._save_model(gen, self._net)
                 self._record_stats(gen)
@@ -355,13 +359,18 @@ class TrainingManager:
         window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
         self._last_sample_window = window
 
-    def _set_checkpoint(self):
+    def _set_checkpoint(self, gen: Generation) -> bool:
         """
         Sets the next checkpoint based on the current training parameters and the last sample
         window. Returns True if the checkpoint was updated, False otherwise.
         """
-        num_committed_rows = self._controller.get_num_committed_rows()
+        if self._retraining:
+            num_committed_rows = self._controller.organizer.fork_info.train_windows[gen][1]
+        else:
+            num_committed_rows = self._controller.get_num_committed_rows()
         self._checkpoint = get_required_dataset_size(self.training_params, self._last_sample_window)
+        logger.debug('_set_checkpoint(gen=%s) retraining:%s num-committed:%s checkpoint:%s', gen,
+                     self._retraining, num_committed_rows, self._checkpoint)
         return self._checkpoint > num_committed_rows
 
     def _record_stats(self, gen: Generation):

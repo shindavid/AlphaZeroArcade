@@ -12,6 +12,7 @@ from alphazero.logic.arena import Arena
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 from util.logging_util import configure_logger
