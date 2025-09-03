@@ -161,7 +161,7 @@ def copy_databases(source: DirectoryOrganizer, target: DirectoryOrganizer,
 
 
 def tag_from_db_filename(db_filename: str) -> Optional[str]:
-    m = DB_FILE_REGEX.match(db_filename)
+    m = DB_FILE_REGEX.fullmatch(db_filename)
     if m is None:
         return None
     return m.group(1)
