@@ -291,6 +291,20 @@ class DirectoryOrganizer:
             target_checkpoint_filename = target.get_checkpoint_filename(gen)
             shutil.copyfile(checkpoint_filename, target_checkpoint_filename)
 
+    def soft_link_models_and_checkpoints(self, target: 'DirectoryOrganizer',
+                                         last_gen: Optional[Generation] = None):
+        if last_gen is None:
+            last_gen = self.get_latest_model_generation(default=0)
+
+        for gen in range(1, last_gen + 1):
+            model_filename = self.get_model_filename(gen)
+            target_model_filename = target.get_model_filename(gen)
+            os.symlink(model_filename, target_model_filename)
+
+            checkpoint_filename = self.get_checkpoint_filename(gen)
+            target_checkpoint_filename = target.get_checkpoint_filename(gen)
+            os.symlink(checkpoint_filename, target_checkpoint_filename)
+
     def copy_binary(self, target: 'DirectoryOrganizer'):
         if not os.path.isfile(self.binary_filename):
             raise ValueError(f'Binary file does not exist: {self.binary_filename}')

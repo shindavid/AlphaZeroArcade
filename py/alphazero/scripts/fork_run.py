@@ -9,10 +9,10 @@ fork_run.py effectively copies a run-directory to a new directory.
 
 ./fork_run.py -g GAME -f FROM_TAG -t TO_TAG
 
-The above cmd copies all files/directories from FROM_TAG to TO_TAG, with the exception of the
-self-play data. For the self-play data, we by default merely set up soft-links from TO_TAG to
-FROM_TAG. It is the responsibility of the user to make sure not to delete FROM_TAG if intending to
-still access that self-play data from TO_TAG.
+The above cmd copies all files/directories from FROM_TAG to TO_TAG. For the file categories that
+take up a lot of disk space (self-play data, model files, checkpoint files), we by default merely
+set up soft-links from TO_TAG to FROM_TAG. It is the responsibility of the user to make sure not to
+delete FROM_TAG if intending to still access those files from TO_TAG.
 
 Beyond the basic usage, there are two other modes which can be useful in some common research
 scenarios:
@@ -100,7 +100,8 @@ def load_args():
     description = """fork_run.py effectively copies a run-directory to a new directory.
 
 By default, this does a "soft fork", meaning that the new run will soft-link to the self-play
-data files of the previous run. If --hard-fork is specified, the self-play data files are copied.
+data, models, and checkpoints of the previous run. If --hard-fork is specified, those files are
+copied.
 
 Noteworthy options:
 
@@ -121,8 +122,9 @@ Noteworthy options:
     group.add_argument('-f', '--from-tag', help='tag to fork from')
     group.add_argument('-t', '--to-tag', help='tag to fork to')
     group.add_argument('--hard-fork', action='store_true',
-                       help='copies self-play data from the previous run. By default, '
-                       'the new run will still point to the previous run for self-play data.')
+                       help='copies self-play data + models + checkpoints from the previous run. '
+                       'By default, the new run will still point to the previous run for self-play '
+                       'data.')
     group.add_argument('--last-gen', type=int,
                        help='Only copy models up to this generation, along with data created by '
                        'those models')
@@ -267,9 +269,12 @@ def main():
 
     if retrain_models:
         logger.info('Skipping model files...')
-    else:
+    elif hard_fork:
         logger.info('Copying model files...')
         from_organizer.copy_models_and_checkpoints(to_organizer, last_gen)
+    else:
+        logger.info('Soft-linking model files...')
+        from_organizer.soft_link_models_and_checkpoints(to_organizer, last_gen)
 
     logger.info('Copying database files...')
     copy_databases(from_organizer, to_organizer, retrain_models, last_gen)
