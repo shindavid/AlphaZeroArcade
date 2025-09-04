@@ -138,7 +138,7 @@ def chessformer(shape_info_dict: ShapeInfoDict):
 
     assert value_shape == (3,), value_shape
 
-    embed_dim = 64
+    embed_dim = 256
     n_heads = 8
     n_layers = 8
     c_trunk = 128
@@ -153,7 +153,13 @@ def chessformer(shape_info_dict: ShapeInfoDict):
         shape_info_dict=shape_info_dict,
 
         stem=ModuleSpec(type='ChessformerBlock', args=[
-                        input_shape, embed_dim, n_heads, n_layers, c_trunk]),
+                        input_shape, embed_dim, n_heads, n_layers, c_trunk],
+                        kwargs={
+                            'use_static_bias': True,    # learned T×T per-head bias
+                            'use_shaw': True,           # pairwise aQ/aK/aV
+                            'use_smolgen': True,        # dynamic T×T logits (shared 256→T^2)
+                            'ffn_multiplier': 1.0       # small FFN ≈ embed_dim),
+                        }),
 
         blocks=[],
 

@@ -106,7 +106,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         if self.use_smol:
             self.smolgen = Smolgen(Dm=Dm, H=H, T=T, shared_layer=smol_shared)
 
-        self.dropout = nn.Dropout(0.0)
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self, x):  # x: (B,T,Dm)
         B, T, Dm = x.shape
@@ -151,7 +151,7 @@ class FFN(nn.Module):
         self.fc1 = nn.Linear(Dm, Dff, bias=True)
         self.act = Mish()
         self.fc2 = nn.Linear(Dff, Dm, bias=True)
-        self.dropout = nn.Dropout(0.0)
+        self.dropout = nn.Dropout(0.1)
         self.res_scale = residual_scale(n_layers)
 
     def forward(self, x):
