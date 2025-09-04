@@ -128,6 +128,59 @@ class Transformer(ModelConfigGenerator):
         )
 
 
+def chessformer(shape_info_dict: ShapeInfoDict):
+    input_shape = shape_info_dict['input'].shape
+    policy_shape = shape_info_dict['policy'].shape
+    value_shape = shape_info_dict['value'].shape
+    action_value_shape = shape_info_dict['action_value'].shape
+    board_shape = input_shape[1:]
+    board_size = math.prod(board_shape)
+
+    assert value_shape == (3,), value_shape
+
+    embed_dim = 64
+    n_heads = 8
+    n_layers = 8
+    c_trunk = 128
+
+    c_policy_hidden = 2
+    c_opp_policy_hidden = 2
+    c_action_value_hidden = 2
+    c_value_hidden = 1
+    n_value_hidden = 256
+
+    return ModelConfig(
+        shape_info_dict=shape_info_dict,
+
+        stem=ModuleSpec(type='ChessformerBlock', args=[
+                        input_shape, embed_dim, n_heads, n_layers, c_trunk]),
+
+        blocks=[],
+
+        neck=None,
+
+        heads=[
+            ModuleSpec(type='PolicyHead',
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+            ModuleSpec(type='WinLossDrawValueHead',
+                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+            ModuleSpec(type='WinShareActionValueHead',
+                       args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                             action_value_shape]),
+            ModuleSpec(type='PolicyHead',
+                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
+        ],
+
+        loss_weights={
+            'policy': 1.0,
+            'value': 1.5,
+            'action_value': 1.0,
+            'opp_policy': 0.15,
+        },
+
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
+    )
+
 @dataclass
 class Connect4Spec(GameSpec):
     name = 'c4'
