@@ -138,7 +138,7 @@ def chessformer(shape_info_dict: ShapeInfoDict):
 
     assert value_shape == (3,), value_shape
 
-    embed_dim = 256
+    embed_dim = 64
     n_heads = 8
     n_layers = 8
     c_trunk = 128
@@ -184,7 +184,7 @@ def chessformer(shape_info_dict: ShapeInfoDict):
             'opp_policy': 0.15,
         },
 
-        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
+        opt=OptimizerSpec(type='RAdam', kwargs={'lr': 1e-4, 'weight_decay': 6e-5}),
     )
 
 @dataclass
