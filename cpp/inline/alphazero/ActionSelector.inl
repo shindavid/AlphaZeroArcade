@@ -1,4 +1,4 @@
-#include "a0/ActionSelector.hpp"
+#include "alphazero/ActionSelector.hpp"
 
 namespace a0 {
 

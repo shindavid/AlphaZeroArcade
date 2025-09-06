@@ -1,4 +1,4 @@
-#include "a0/SearchLog.hpp"
+#include "alphazero/SearchLog.hpp"
 
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"

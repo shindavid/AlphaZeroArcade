@@ -73,4 +73,4 @@ class Node : public core::NodeBase<Game> {
 
 }  // namespace a0
 
-#include "inline/a0/Node.inl"
+#include "inline/alphazero/Node.inl"

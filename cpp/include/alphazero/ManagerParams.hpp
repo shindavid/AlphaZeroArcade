@@ -60,4 +60,4 @@ struct ManagerParams : public nnet::NNEvaluationServiceParams {
 
 }  // namespace a0
 
-#include "inline/a0/ManagerParams.inl"
+#include "inline/alphazero/ManagerParams.inl"

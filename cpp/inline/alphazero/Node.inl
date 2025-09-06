@@ -1,4 +1,4 @@
-#include "a0/Node.hpp"
+#include "alphazero/Node.hpp"
 
 namespace a0 {
 

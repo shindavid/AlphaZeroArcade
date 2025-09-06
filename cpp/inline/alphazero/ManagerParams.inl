@@ -1,4 +1,4 @@
-#include "a0/ManagerParams.hpp"
+#include "alphazero/ManagerParams.hpp"
 
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"

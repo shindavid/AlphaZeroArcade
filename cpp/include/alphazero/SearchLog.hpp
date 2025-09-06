@@ -91,4 +91,4 @@ class SearchLog {
 
 }  // namespace a0
 
-#include "inline/a0/SearchLog.inl"
+#include "inline/alphazero/SearchLog.inl"

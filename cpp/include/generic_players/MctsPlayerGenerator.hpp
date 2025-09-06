@@ -7,8 +7,8 @@
 #include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "a0/ManagerParams.hpp"
-#include "a0/Traits.hpp"
+#include "alphazero/ManagerParams.hpp"
+#include "alphazero/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 

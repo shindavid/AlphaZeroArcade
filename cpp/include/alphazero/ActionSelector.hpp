@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "a0/ManagerParams.hpp"
+#include "alphazero/ManagerParams.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -38,4 +38,4 @@ struct ActionSelector {
 
 }  // namespace a0
 
-#include "inline/a0/ActionSelector.inl"
+#include "inline/alphazero/ActionSelector.inl"

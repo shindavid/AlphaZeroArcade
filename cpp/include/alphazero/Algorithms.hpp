@@ -1,6 +1,6 @@
 #pragma once
 
-#include "a0/ActionSelector.hpp"
+#include "alphazero/ActionSelector.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
@@ -75,4 +75,4 @@ class Algorithms {
 
 }  // namespace a0
 
-#include "inline/a0/Algorithms.inl"
+#include "inline/alphazero/Algorithms.inl"
