@@ -48,8 +48,8 @@ class ShapeInfo:
 
 
 class SearchParadigm(Enum):
-    A0 = 'a0'
-    B0 = 'b0'
+    AlphaZero = 'a0'
+    BetaZero = 'b0'
 
 
 ShapeInfoDict = Dict[str, ShapeInfo]
@@ -636,7 +636,7 @@ class ModelConfig:
     neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
     opt: OptimizerSpec
-    paradigm: SearchParadigm = SearchParadigm.A0
+    paradigm: SearchParadigm = SearchParadigm.AlphaZero
 
     def validate(self):
         for spec in [self.stem, self.neck] + self.blocks + self.heads:
@@ -645,7 +645,7 @@ class ModelConfig:
 
 
 class ModelConfigGenerator(abc.ABC):
-    search_paradigm: SearchParadigm = SearchParadigm.A0
+    search_paradigm: SearchParadigm = SearchParadigm.AlphaZero
 
     @staticmethod
     @abc.abstractmethod
