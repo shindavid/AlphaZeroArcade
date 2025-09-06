@@ -11,7 +11,6 @@
 #include "games/GameRulesBase.hpp"
 #include "games/connect4/Constants.hpp"
 #include "util/CppUtil.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -96,14 +95,6 @@ struct Game {
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);
   };
 
-  struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
-
-    template <util::concepts::RandomAccessIteratorOf<State> Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
   static void static_init() {}
 
  private:
@@ -132,4 +123,6 @@ static_assert(core::concepts::Game<c4::Game>);
 // Add bindings at the end, after defining c4::Game. Adding here ensures that wherever we #include
 // "games/connect4/Game.hpp", we also get the bindings.
 
+#include "games/connect4/InputTensorizor.hpp"  // IWYU pragma: keep
 #include "games/connect4/MctsEvalSpec.hpp"  // IWYU pragma: keep
+#include "games/connect4/BayesianMctsEvalSpec.hpp"  // IWYU pragma: keep

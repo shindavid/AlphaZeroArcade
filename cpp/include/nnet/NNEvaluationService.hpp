@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
@@ -62,7 +63,7 @@ class NNEvaluationService
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
   using Game = EvalSpec::Game;
-  using InputTensorizor = Game::InputTensorizor;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using TrainingTargets = EvalSpec::TrainingTargets;
 
   using NeuralNet = core::NeuralNet<EvalSpec>;

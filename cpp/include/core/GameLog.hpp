@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/Game.hpp"
 
@@ -177,7 +178,7 @@ class GameReadLog : public GameLogBase<typename EvalSpec::Game> {
   using TensorData = GameLogBase::TensorData;
 
   using Rules = Game::Rules;
-  using InputTensorizor = Game::InputTensorizor;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using InputTensor = InputTensorizor::Tensor;
   using TrainingTargetsList = TrainingTargets::List;
   using State = Game::State;

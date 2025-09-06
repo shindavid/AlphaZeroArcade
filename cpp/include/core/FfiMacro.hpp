@@ -3,6 +3,7 @@
 #include "core/Constants.hpp"
 #include "core/DataLoader.hpp"
 #include "core/GameLog.hpp"
+#include "core/BayesianMctsEvalSpec.hpp"
 #include "core/MctsEvalSpec.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/Exceptions.hpp"
@@ -18,6 +19,11 @@ struct FfiFunctions {
   using MctsEvalSpec = core::mcts::EvalSpec<Game>;
   using MctsGameReadLog = core::GameReadLog<MctsEvalSpec>;
   using MctsDataLoader = core::DataLoader<MctsEvalSpec>;
+
+  using BayesianMctsEvalSpec = core::bmcts::EvalSpec<Game>;
+  using BayesianMctsGameReadLog = core::GameReadLog<BayesianMctsEvalSpec>;
+  using BayesianMctsDataLoader = core::DataLoader<BayesianMctsEvalSpec>;
+
   using DataLoader = core::DataLoaderBase;
 
   static DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
@@ -29,7 +35,7 @@ struct FfiFunctions {
       case core::kParadigmMcts:
         return new MctsDataLoader(params);
       case core::kParadigmBmcts:
-        throw util::Exception("No FFI support for bmcts paradigm yet");
+        return new BayesianMctsDataLoader(params);
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -68,7 +74,7 @@ struct FfiFunctions {
       case core::kParadigmMcts:
         return MctsGameReadLog::get_shape_info_array();
       case core::kParadigmBmcts:
-        throw util::Exception("No FFI support for bmcts paradigm yet");
+        return BayesianMctsGameReadLog::get_shape_info_array();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }

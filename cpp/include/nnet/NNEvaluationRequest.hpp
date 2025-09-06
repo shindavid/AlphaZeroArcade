@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/InputTensorizor.hpp"
 #include "core/NodeBase.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
@@ -25,7 +26,8 @@ template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
 class NNEvaluationRequest {
  public:
   using Game = EvalSpec::Game;
-  using Keys = EvalSpec::Keys;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using Keys = InputTensorizor::Keys;
 
   using NodeBase = core::NodeBase<Game>;
   using State = Game::State;

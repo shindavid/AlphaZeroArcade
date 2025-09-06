@@ -1,13 +1,13 @@
 #pragma once
 
-#include "core/MctsEvalSpec.hpp"
+#include "core/BayesianMctsEvalSpec.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
 #include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
 
-namespace c4::mcts {
+namespace c4::bmcts {
 
 struct TrainingTargets {
   using PolicyTarget = core::PolicyTarget<Game>;
@@ -20,7 +20,7 @@ struct TrainingTargets {
 
 }  // namespace c4::mcts
 
-namespace core::mcts {
+namespace core::bmcts {
 
 template <>
 struct EvalSpec<c4::Game> {

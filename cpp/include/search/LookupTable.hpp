@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/NodeBase.hpp"
 #include "search/concepts/GraphTraitsConcept.hpp"
 #include "util/AllocPool.hpp"
@@ -16,7 +17,7 @@ class LookupTable {
   using Edge = GraphTraits::Edge;
   using EvalSpec = GraphTraits::EvalSpec;
 
-  using TransposeKey = EvalSpec::Keys::TransposeKey;
+  using TransposeKey = core::InputTensorizor<Game>::Keys::TransposeKey;
   using NodeBase = core::NodeBase<Game>;
 
   class Defragmenter {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -14,7 +15,7 @@ template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluation {
  public:
   using Game = EvalSpec::Game;
-  using InputTensorizor = Game::InputTensorizor;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using TrainingTargets = EvalSpec::TrainingTargets;
 
   using ActionValueTarget = TrainingTargets::ActionValueTarget;

@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/GameLog.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -363,7 +364,7 @@ class DataLoader : public core::DataLoaderBase {
  public:
   using Game = EvalSpec::Game;
   using TrainingTargets = EvalSpec::TrainingTargets;
-  using InputTensorizor = Game::InputTensorizor;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using GameReadLog = core::GameReadLog<EvalSpec>;
 
   class WorkerThread : public WorkerThreadBase {

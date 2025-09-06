@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
@@ -75,7 +76,7 @@ template <core::concepts::EvalSpec EvalSpec>
 class NeuralNet : public NeuralNetBase {
  public:
   using Game = EvalSpec::Game;
-  using InputTensorizor = Game::InputTensorizor;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using TrainingTargets = EvalSpec::TrainingTargets;
 
   using InputShape = InputTensorizor::Tensor::Dimensions;
