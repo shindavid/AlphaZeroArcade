@@ -27,6 +27,7 @@ constexpr int kNumRowsToDisplayVerbose = 10;
 
 enum SearchParadigm : int8_t { kParadigmMcts, kParadigmBmcts, kUnknownParadigm };
 
+// Must match string names in python code. See SearchParadigm enum in py/shared/net_modules.py
 inline SearchParadigm parse_search_paradigm(const char* s) {
   std::string ss(s);
   if (ss == "a0") {
