@@ -2,7 +2,7 @@ from .build_params import BuildParams
 
 from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
-from shared.net_modules import ShapeInfo, ShapeInfoDict
+from shared.net_modules import SearchParadigm, ShapeInfo, ShapeInfoDict
 from util.repo_util import Repo
 
 import torch
@@ -32,10 +32,11 @@ class GameLogReader:
     The functions of the shared library are exposed through the FFI interface.
     """
     def __init__(self, game_spec: GameSpec, build_params: BuildParams,
-                 cuda_device_str: str):
+                 cuda_device_str: str, paradigm: SearchParadigm):
         self._game_spec = game_spec
         self._build_params = build_params
         self._cuda_device_str = cuda_device_str
+        self._paradigm = paradigm
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._lib.init()
@@ -59,9 +60,11 @@ class GameLogReader:
         ffi = self._ffi
         lib = self._lib
 
-        data_dir = ffi.new('char[]', data_dir.encode('utf-8'))
-        self._data_loader = lib.DataLoader_new(data_dir, memory_budget, num_worker_threads,
-                                               num_prefetch_threads)
+        data_dir_c = ffi.new('char[]', data_dir.encode('utf-8'))
+        paradigm_str_c = ffi.new('char[]', self._paradigm.value.encode('utf-8'))
+
+        self._data_loader = lib.DataLoader_new(data_dir_c, memory_budget, num_worker_threads,
+                                               num_prefetch_threads, paradigm_str_c)
 
     @property
     def shape_info_dict(self) -> ShapeInfoDict:
@@ -189,12 +192,12 @@ class GameLogReader:
                 int target_index;
             };
 
-            struct ShapeInfo* get_shape_info_array();
+            struct ShapeInfo* get_shape_info_array(const char* paradigm);
 
             void free_shape_info_array(struct ShapeInfo* info);
 
             struct DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
-                int num_worker_threads, int num_prefetch_threads);
+                int num_worker_threads, int num_prefetch_threads, const char* paradigm);
 
             void DataLoader_delete(struct DataLoader* loader);
 
@@ -226,7 +229,8 @@ class GameLogReader:
         ffi = self._ffi
         lib = self._lib
 
-        shape_info_arr = lib.get_shape_info_array()
+        paradigm_str_c = ffi.new('char[]', self._paradigm.value.encode('utf-8'))
+        shape_info_arr = lib.get_shape_info_array(paradigm_str_c)
 
         shape_info_dict = {}
         i = 0

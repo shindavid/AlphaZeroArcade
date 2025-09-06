@@ -25,8 +25,10 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
+import abc
 import copy
 from dataclasses import dataclass, field
+from enum import Enum
 import hashlib
 import io
 import logging
@@ -43,6 +45,11 @@ class ShapeInfo:
     name: str
     target_index: int
     shape: Shape
+
+
+class SearchParadigm(Enum):
+    MCTS = 'mcts'
+    BMCTS = 'bmcts'
 
 
 ShapeInfoDict = Dict[str, ShapeInfo]
@@ -629,6 +636,7 @@ class ModelConfig:
     neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
     opt: OptimizerSpec
+    paradigm: SearchParadigm = SearchParadigm.MCTS
 
     def validate(self):
         for spec in [self.stem, self.neck] + self.blocks + self.heads:
@@ -636,7 +644,13 @@ class ModelConfig:
                 assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
 
 
-ModelConfigGenerator = Callable[[ShapeInfoDict], ModelConfig]
+class ModelConfigGenerator(abc.ABC):
+    search_paradigm: SearchParadigm = SearchParadigm.MCTS
+
+    @staticmethod
+    @abc.abstractmethod
+    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
+        pass
 
 
 class Model(nn.Module):
