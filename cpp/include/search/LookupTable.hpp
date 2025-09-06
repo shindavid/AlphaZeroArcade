@@ -57,7 +57,8 @@ class LookupTable {
   // Else, the mapping is only inserted if k is not already in the map.
   //
   // Returns the value that k maps to after the operation.
-  core::node_pool_index_t insert_node(const TransposeKey& k, core::node_pool_index_t v, bool overwrite);
+  core::node_pool_index_t insert_node(const TransposeKey& k, core::node_pool_index_t v,
+                                      bool overwrite);
 
   // Returns the value that k maps to, or -1 if k is not in the map.
   core::node_pool_index_t lookup_node(const TransposeKey&) const;

@@ -123,6 +123,6 @@ static_assert(core::concepts::Game<c4::Game>);
 // Add bindings at the end, after defining c4::Game. Adding here ensures that wherever we #include
 // "games/connect4/Game.hpp", we also get the bindings.
 
-#include "games/connect4/InputTensorizor.hpp"  // IWYU pragma: keep
-#include "games/connect4/MctsEvalSpec.hpp"  // IWYU pragma: keep
 #include "games/connect4/BayesianMctsEvalSpec.hpp"  // IWYU pragma: keep
+#include "games/connect4/InputTensorizor.hpp"       // IWYU pragma: keep
+#include "games/connect4/MctsEvalSpec.hpp"          // IWYU pragma: keep

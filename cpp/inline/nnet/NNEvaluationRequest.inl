@@ -48,8 +48,8 @@ template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
 typename NNEvaluationRequest<EvalSpec, Evaluation>::CacheKey
 NNEvaluationRequest<EvalSpec, Evaluation>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
-  EvalKey eval_key = compute_over_history(
-    [&](auto begin, auto end) { return Keys::eval_key(begin, end - 1); });
+  EvalKey eval_key =
+    compute_over_history([&](auto begin, auto end) { return Keys::eval_key(begin, end - 1); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }

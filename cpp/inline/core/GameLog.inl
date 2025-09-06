@@ -458,8 +458,8 @@ GameWriteLog<Game>::~GameWriteLog() {
 
 template <concepts::Game Game>
 void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t active_seat,
-                                 const PolicyTensor* policy_target,
-                                 const ActionValueTensor* action_values, bool use_for_training) {
+                             const PolicyTensor* policy_target,
+                             const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   WriteEntry* entry = new WriteEntry();
   entry->position = state;
@@ -499,8 +499,8 @@ bool GameWriteLog<Game>::was_previous_entry_used_for_policy_training() const {
 }
 
 template <concepts::Game Game>
-GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log,
-                                                       std::vector<char>& buf, int client_id) {
+GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std::vector<char>& buf,
+                                                   int client_id) {
   uint32_t start_buf_size = buf.size();
   RELEASE_ASSERT(log->terminal_added_);
   int num_entries = log->entries_.size();

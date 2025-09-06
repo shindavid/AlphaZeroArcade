@@ -1,9 +1,9 @@
 #pragma once
 
 #include "nnet/NNEvaluationRequest.hpp"
-#include "search/concepts/EvaluationConcept.hpp"
 #include "search/concepts/EvalServiceBaseConcept.hpp"
 #include "search/concepts/EvalServiceFactoryConcept.hpp"
+#include "search/concepts/EvaluationConcept.hpp"
 #include "search/concepts/GeneralContextTraitsConcept.hpp"
 
 namespace search {

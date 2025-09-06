@@ -1,9 +1,9 @@
 #pragma once
 
+#include "core/BayesianMctsEvalSpec.hpp"
 #include "core/Constants.hpp"
 #include "core/DataLoader.hpp"
 #include "core/GameLog.hpp"
-#include "core/BayesianMctsEvalSpec.hpp"
 #include "core/MctsEvalSpec.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/Exceptions.hpp"

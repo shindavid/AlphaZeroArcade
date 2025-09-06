@@ -11,4 +11,4 @@ concept EvalSpec = requires {
   requires core::concepts::TrainingTargets<typename ES::TrainingTargets, typename ES::Game>;
 };
 
-}  // namespace core
+}  // namespace core::concepts

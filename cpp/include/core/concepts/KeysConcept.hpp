@@ -8,8 +8,8 @@ namespace core::concepts {
 
 template <typename K, typename State, typename StateHistory>
 concept _KeysHelper = requires(const StateHistory& history, const State* start, const State* cur,
-                        std::vector<State>::const_iterator vec_start,
-                        std::vector<State>::const_iterator vec_cur) {
+                               std::vector<State>::const_iterator vec_start,
+                               std::vector<State>::const_iterator vec_cur) {
   requires util::concepts::UsableAsHashMapKey<typename K::TransposeKey>;
   requires util::concepts::UsableAsHashMapKey<typename K::EvalKey>;
 
@@ -23,8 +23,7 @@ concept _KeysHelper = requires(const StateHistory& history, const State* start, 
 };
 
 template <typename K, typename Game>
-concept Keys = requires {
-  requires _KeysHelper<K, typename Game::State, typename Game::StateHistory>;
-};
+concept Keys =
+  requires { requires _KeysHelper<K, typename Game::State, typename Game::StateHistory>; };
 
 }  // namespace core::concepts

@@ -433,13 +433,12 @@ concept UsableAsHashMapKey = requires(const T& a, const T& b) {
   { a == b } -> std::convertible_to<bool>;
 };
 
-template<class It, class T>
+template <class It, class T>
 concept RandomAccessIteratorOf =
-  std::random_access_iterator<It> &&                 // gives +, -, ==, etc.
-  std::indirectly_readable<It> &&                    // iterator-y deref contract
+  std::random_access_iterator<It> &&  // gives +, -, ==, etc.
+  std::indirectly_readable<It> &&     // iterator-y deref contract
   // value type matches T (ignoring cv/ref)
-  std::same_as<std::remove_cvref_t<std::iter_value_t<It>>,
-               std::remove_cvref_t<T>> &&
+  std::same_as<std::remove_cvref_t<std::iter_value_t<It>>, std::remove_cvref_t<T>> &&
   // deref is compatible with const T& (covers const_iterator cases)
   std::convertible_to<std::iter_reference_t<It>, const T&>;
 

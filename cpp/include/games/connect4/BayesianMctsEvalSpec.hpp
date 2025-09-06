@@ -18,7 +18,7 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
-}  // namespace c4::mcts
+}  // namespace c4::bmcts
 
 namespace core::bmcts {
 
@@ -28,4 +28,4 @@ struct EvalSpec<c4::Game> {
   using TrainingTargets = c4::mcts::TrainingTargets;
 };
 
-}  // namespace core::mcts
+}  // namespace core::bmcts
