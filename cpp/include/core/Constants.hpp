@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace core {
 
@@ -23,5 +24,18 @@ const int kSerializationLimit = 1024;
 enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 
 constexpr int kNumRowsToDisplayVerbose = 10;
+
+enum SearchParadigm : int8_t { kParadigmMcts, kParadigmBmcts, kUnknownParadigm };
+
+inline SearchParadigm parse_search_paradigm(const char* s) {
+  std::string ss(s);
+  if (ss == "mcts") {
+    return kParadigmMcts;
+  } else if (ss == "bmcts") {
+    return kParadigmBmcts;
+  } else {
+    return kUnknownParadigm;
+  }
+}
 
 }  // namespace core

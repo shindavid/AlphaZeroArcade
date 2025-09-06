@@ -14,11 +14,11 @@ namespace nnet {
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
-template <core::concepts::Game Game>
-class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Game> {
+template <core::concepts::EvalSpec EvalSpec>
+class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<EvalSpec> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
+  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;

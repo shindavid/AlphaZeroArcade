@@ -81,8 +81,6 @@ class TrainingDataWriter
   };
 
   using ValueArray = Game::Types::ValueArray;
-  using InputTensorizor = Game::InputTensorizor;
-  using TrainingTargetsList = Game::TrainingTargets::List;
 
   using GameLogSerializer = core::GameLogSerializer<Game>;
   using GameWriteLog = core::GameWriteLog<Game>;

@@ -3,12 +3,11 @@
 #include "core/GameTypes.hpp"
 #include "core/concepts/GameConstants.hpp"
 #include "core/concepts/GameIO.hpp"
-#include "core/concepts/GameInputTensorizor.hpp"
 #include "core/concepts/GameMctsConfiguration.hpp"
 #include "core/concepts/GameRules.hpp"
 #include "core/concepts/GameStateHistory.hpp"
 #include "core/concepts/GameSymmetries.hpp"
-#include "core/concepts/GameTrainingTargets.hpp"
+#include "core/concepts/InputTensorizorConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>
@@ -71,9 +70,7 @@ concept Game = requires {
                                      typename G::GameResults::Tensor, typename G::State,
                                      typename G::StateHistory>;
   requires core::concepts::GameIO<typename G::IO, typename G::Types>;
-  requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,
-                                               typename G::StateHistory>;
-  requires core::concepts::GameTrainingTargets<typename G::TrainingTargets, typename G::Types>;
+  requires core::concepts::InputTensorizor<typename G::InputTensorizor, typename G::State>;
 
   // Any game-specific one-time static-initialization code should be placed in a static method
   // called static_init().

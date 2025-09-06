@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/NodeBase.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -14,8 +14,9 @@ class LookupTable {
   using Game = GraphTraits::Game;
   using Node = GraphTraits::Node;
   using Edge = GraphTraits::Edge;
+  using EvalSpec = GraphTraits::EvalSpec;
 
-  using TransposeKey = Game::InputTensorizor::TransposeKey;
+  using TransposeKey = EvalSpec::Keys::TransposeKey;
   using NodeBase = core::NodeBase<Game>;
 
   class Defragmenter {

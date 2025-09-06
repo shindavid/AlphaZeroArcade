@@ -18,6 +18,14 @@ inline int Game::State::num_empty_cells(column_t col) const {
   return kNumRows - std::popcount(full_mask & _column_mask(col));
 }
 
+inline core::seat_index_t Game::State::get_player_at(row_t row, column_t col) const {
+  int cp = Rules::get_current_player(*this);
+  int index = _to_bit_index(row, col);
+  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
+  bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
+}
+
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
@@ -112,9 +120,9 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   state.full_mask |= piece_mask;
 }
 
-template <typename Iter>
+template <util::concepts::RandomAccessIteratorOf<c4::Game::State> Iter>
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
-  core::seat_index_t cp = Rules::get_current_player(*cur);
+  core::seat_index_t cp = Game::Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
   int i = 0;
@@ -122,9 +130,9 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter 
   while (true) {
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {
-        core::seat_index_t p = _get_player_at(*state, row, col);
+        core::seat_index_t p = state->get_player_at(row, col);
         if (p < 0) continue;
-        int x = (Constants::kNumPlayers + cp - p) % Constants::kNumPlayers;
+        int x = (kNumPlayers + cp - p) % kNumPlayers;
         tensor(i + x, row, col) = 1;
       }
     }
@@ -133,14 +141,6 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter 
     i += kNumPlayers;
   }
   return tensor;
-}
-
-inline core::seat_index_t Game::_get_player_at(const State& state, row_t row, column_t col) {
-  int cp = Rules::get_current_player(state);
-  int index = _to_bit_index(row, col);
-  bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;
-  bool occupied_by_any_player = (mask_t(1) << index) & state.full_mask;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
 inline constexpr int Game::_to_bit_index(row_t row, column_t col) { return 8 * col + row; }

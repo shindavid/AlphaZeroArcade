@@ -18,17 +18,13 @@
 
 namespace core {
 
-template <concepts::Game Game>
-DataLoader<Game>::DataFile::DataFile(const char* filename, int gen, int num_rows, int64_t file_size)
+inline DataLoaderBase::DataFile::DataFile(const char* filename, int gen, int num_rows,
+                                          int64_t file_size)
     : filename_(filename), gen_(gen), num_rows_(num_rows), file_size_(file_size) {}
 
-template <concepts::Game Game>
-DataLoader<Game>::DataFile::~DataFile() {
-  unload();
-}
+inline DataLoaderBase::DataFile::~DataFile() { unload(); }
 
-template <concepts::Game Game>
-void DataLoader<Game>::DataFile::load() {
+inline void DataLoaderBase::DataFile::load() {
   mit::unique_lock lock(mutex_);
   if (!buffer_) {
     buffer_ = util::read_file(filename_.c_str(), file_size_);
@@ -37,8 +33,7 @@ void DataLoader<Game>::DataFile::load() {
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-int64_t DataLoader<Game>::DataFile::unload() {
+inline int64_t DataLoaderBase::DataFile::unload() {
   mit::unique_lock lock(mutex_);
   if (!buffer_) return 0;
 
@@ -50,40 +45,13 @@ int64_t DataLoader<Game>::DataFile::unload() {
   return file_size_;
 }
 
-template <concepts::Game Game>
-const char* DataLoader<Game>::DataFile::buffer() const {
+inline const char* DataLoaderBase::DataFile::buffer() const {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
   return buffer_;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::LoadInstructions::init(bool apply_sym, int n_targets, float* output_array,
-                                              int* target_indices_array) {
-  apply_symmetry = apply_sym;
-  output_data_array = output_array;
-  target_indices.resize(n_targets);
-  for (int i = 0; i < n_targets; ++i) {
-    target_indices[i] = target_indices_array[i];
-  }
-
-  row_size = Game::InputTensorizor::Tensor::Dimensions::total_size;
-
-  using TrainingTargetsList = Game::TrainingTargets::List;
-  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
-  for (int target_index : target_indices) {
-    util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
-      using Target = mp::TypeAt_t<TrainingTargetsList, t>;
-      using Tensor = Target::Tensor;
-      constexpr int kSize = Tensor::Dimensions::total_size;
-      row_size += kSize;
-      row_size++;  // for the mask
-    });
-  }
-}
-
-template <concepts::Game Game>
-DataLoader<Game>::SamplingManager::~SamplingManager() {
+inline DataLoaderBase::SamplingManager::~SamplingManager() {
   for (local_index_vec_t* vec : vec_pool_used_) {
     delete vec;
   }
@@ -92,11 +60,13 @@ DataLoader<Game>::SamplingManager::~SamplingManager() {
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
-                                               const file_deque_t& files, int64_t window_start,
-                                               int64_t window_end, int64_t n_total_rows,
-                                               int n_samples) {
+inline void DataLoaderBase::SamplingManager::sample(work_unit_deque_t* work_units,
+                                                    const file_deque_t& files, int64_t n_total_rows,
+                                                    const LoadParams& params) {
+  int64_t window_start = params.window_start;
+  int64_t window_end = params.window_end;
+  int n_samples = params.n_samples;
+
   reset_vec_pools();
   sampled_indices_.resize(n_samples);
   for (int i = 0; i < n_samples; ++i) {
@@ -151,8 +121,7 @@ void DataLoader<Game>::SamplingManager::sample(work_unit_deque_t* work_units,
                         __LINE__, window_start, window_end, n_total_rows, n_samples, files.size());
 }
 
-template <concepts::Game Game>
-typename DataLoader<Game>::local_index_vec_t* DataLoader<Game>::SamplingManager::get_vec() {
+inline DataLoaderBase::local_index_vec_t* DataLoaderBase::SamplingManager::get_vec() {
   local_index_vec_t* local_indices;
   if (!vec_pool_unused_.empty()) {
     local_indices = vec_pool_unused_.back();
@@ -164,8 +133,7 @@ typename DataLoader<Game>::local_index_vec_t* DataLoader<Game>::SamplingManager:
   return local_indices;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::SamplingManager::reset_vec_pools() {
+inline void DataLoaderBase::SamplingManager::reset_vec_pools() {
   for (local_index_vec_t* vec : vec_pool_used_) {
     vec->clear();
     vec_pool_unused_.push_back(vec);
@@ -173,23 +141,20 @@ void DataLoader<Game>::SamplingManager::reset_vec_pools() {
   vec_pool_used_.clear();
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::ThreadTable::ThreadTable(int n_threads) : n_threads_(n_threads) {
+inline DataLoaderBase::ThreadTable::ThreadTable(int n_threads) : n_threads_(n_threads) {
   for (int i = 0; i < n_threads; ++i) {
     available_thread_ids_.push_back(i);
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::ThreadTable::mark_as_available(thread_id_t id) {
+inline void DataLoaderBase::ThreadTable::mark_as_available(thread_id_t id) {
   mit::unique_lock lock(mutex_);
   available_thread_ids_.push_back(id);
   lock.unlock();
   cv_.notify_one();
 }
 
-template <concepts::Game Game>
-typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_thread() {
+inline DataLoaderBase::thread_id_t DataLoaderBase::ThreadTable::allocate_thread() {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return quitting_ || !available_thread_ids_.empty(); });
   if (quitting_) return -1;
@@ -198,33 +163,26 @@ typename DataLoader<Game>::thread_id_t DataLoader<Game>::ThreadTable::allocate_t
   return id;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::ThreadTable::wait_until_all_threads_available() {
+inline void DataLoaderBase::ThreadTable::wait_until_all_threads_available() {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return quitting_ || (int)available_thread_ids_.size() == n_threads_; });
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::ThreadTable::quit() {
+inline void DataLoaderBase::ThreadTable::quit() {
   mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::PrefetchThread::PrefetchThread(ThreadTable* table, thread_id_t id)
+inline DataLoaderBase::PrefetchThread::PrefetchThread(ThreadTable* table, thread_id_t id)
     : table_(table), id_(id) {
   thread_ = mit::thread(&PrefetchThread::loop, this);
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::PrefetchThread::~PrefetchThread() {
-  quit();
-}
+inline DataLoaderBase::PrefetchThread::~PrefetchThread() { quit(); }
 
-template <concepts::Game Game>
-void DataLoader<Game>::PrefetchThread::quit() {
+inline void DataLoaderBase::PrefetchThread::quit() {
   mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
@@ -232,16 +190,14 @@ void DataLoader<Game>::PrefetchThread::quit() {
   thread_.join();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::PrefetchThread::schedule_prefetch(DataFile* data_file) {
+inline void DataLoaderBase::PrefetchThread::schedule_prefetch(DataFile* data_file) {
   mit::unique_lock lock(mutex_);
   file_ = data_file;
   lock.unlock();
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::PrefetchThread::loop() {
+inline void DataLoaderBase::PrefetchThread::loop() {
   while (!quitting_) {
     mit::unique_lock lock(mutex_);
     cv_.wait(lock, [this] { return quitting_ || file_ != nullptr; });
@@ -254,9 +210,8 @@ void DataLoader<Game>::PrefetchThread::loop() {
   }
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_dir,
-                                           int64_t memory_budget, int num_prefetch_threads)
+inline DataLoaderBase::FileManager::FileManager(const boost::filesystem::path& data_dir,
+                                                int64_t memory_budget, int num_prefetch_threads)
     : data_dir_(data_dir), memory_budget_(memory_budget), thread_table_(num_prefetch_threads) {
   for (int i = 0; i < num_prefetch_threads; ++i) {
     prefetch_threads_.push_back(new PrefetchThread(&thread_table_, i));
@@ -264,8 +219,7 @@ DataLoader<Game>::FileManager::FileManager(const boost::filesystem::path& data_d
   prefetch_loop_thread_ = mit::thread(&FileManager::prefetch_loop, this);
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::FileManager::~FileManager() {
+inline DataLoaderBase::FileManager::~FileManager() {
   thread_table_.quit();
   exit_prefetch_loop();
   delete_all_files();
@@ -278,8 +232,7 @@ DataLoader<Game>::FileManager::~FileManager() {
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
+inline void DataLoaderBase::FileManager::add_to_unload_queue(DataFile* file) {
   mit::unique_lock lock(mutex_);
   unload_queue_.push_back(file);
   RELEASE_ASSERT(active_file_count_ > 0, "FileManager::{}() bug", __func__);
@@ -288,9 +241,8 @@ void DataLoader<Game>::FileManager::add_to_unload_queue(DataFile* file) {
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_deque_t& work_units,
-                                                                      generation_t* gen_range) {
+inline void DataLoaderBase::FileManager::sort_work_units_and_prepare_files(
+  work_unit_deque_t& work_units, generation_t* gen_range) {
   mit::unique_lock lock(mutex_);
   load_queue_.clear();
   unload_queue_.clear();
@@ -336,19 +288,16 @@ void DataLoader<Game>::FileManager::sort_work_units_and_prepare_files(work_unit_
   gen_range[1] = end_gen;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::restore(int64_t n_total_rows, int n, generation_t* gens,
-                                            int* row_counts, int64_t* file_sizes) {
-  RELEASE_ASSERT(all_files_.empty(), "FileManager::init() bug");
+inline void DataLoaderBase::FileManager::restore(const RestoreParams& params) {
+  RELEASE_ASSERT(all_files_.empty(), "FileManager::restore() bug");
 
-  for (int i = 0; i < n; ++i) {
-    append(gens[i], row_counts[i], file_sizes[i]);
+  for (int i = 0; i < params.n; ++i) {
+    append(params.gens[i], params.row_counts[i], params.file_sizes[i]);
   }
-  n_total_rows_ = n_total_rows;
+  n_total_rows_ = params.n_total_rows;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t file_size) {
+inline void DataLoaderBase::FileManager::append(int end_gen, int num_rows, int64_t file_size) {
   auto filename = data_dir_ / std::format("gen-{}.data", end_gen);
   DataFile* data_file = new DataFile(filename.c_str(), end_gen, num_rows, file_size);
 
@@ -357,8 +306,7 @@ void DataLoader<Game>::FileManager::append(int end_gen, int num_rows, int64_t fi
   all_files_.push_front(data_file);
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::reset_prefetch_loop() {
+inline void DataLoaderBase::FileManager::reset_prefetch_loop() {
   // Resets the prefetch loop.
   //
   // We do this to ensure that when we call DataLoader::load(), we'll know for sure that we aren't
@@ -376,8 +324,7 @@ void DataLoader<Game>::FileManager::reset_prefetch_loop() {
   prefetch_loop_thread_ = mit::thread(&FileManager::prefetch_loop, this);
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::trim(int start_gen) {
+inline void DataLoaderBase::FileManager::trim(int start_gen) {
   // Unload all files with gen < start_gen
   while (!all_files_.empty() && all_files_.back()->gen() < start_gen) {
     DataFile* file = all_files_.back();
@@ -387,9 +334,8 @@ void DataLoader<Game>::FileManager::trim(int start_gen) {
   }
 }
 
-template <concepts::Game Game>
-typename DataLoader<Game>::FileManager::Instruction
-DataLoader<Game>::FileManager::get_next_instruction() const {
+inline DataLoaderBase::FileManager::Instruction DataLoaderBase::FileManager::get_next_instruction()
+  const {
   if (quitting_) return kQuit;
 
   if (load_queue_.empty()) {
@@ -426,8 +372,7 @@ DataLoader<Game>::FileManager::get_next_instruction() const {
   return kLoad;
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::prefetch_loop() {
+inline void DataLoaderBase::FileManager::prefetch_loop() {
   while (!quitting_) {
     mit::unique_lock lock(mutex_);
     Instruction instruction = kWait;
@@ -457,36 +402,29 @@ void DataLoader<Game>::FileManager::prefetch_loop() {
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::exit_prefetch_loop() {
+inline void DataLoaderBase::FileManager::exit_prefetch_loop() {
   mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::FileManager::delete_all_files() {
+inline void DataLoaderBase::FileManager::delete_all_files() {
   for (DataFile* file : all_files_) {
     delete file;
   }
   all_files_.clear();
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::WorkerThread::WorkerThread(FileManager* file_manager, ThreadTable* table,
-                                             thread_id_t id)
+inline DataLoaderBase::WorkerThreadBase::WorkerThreadBase(FileManager* file_manager,
+                                                          ThreadTable* table, thread_id_t id)
     : file_manager_(file_manager), table_(table), id_(id) {
-  thread_ = mit::thread(&WorkerThread::loop, this);
+  thread_ = mit::thread(&WorkerThreadBase::loop, this);
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::WorkerThread::~WorkerThread() {
-  quit();
-}
+inline DataLoaderBase::WorkerThreadBase::~WorkerThreadBase() { quit(); }
 
-template <concepts::Game Game>
-void DataLoader<Game>::WorkerThread::quit() {
+inline void DataLoaderBase::WorkerThreadBase::quit() {
   mit::unique_lock lock(mutex_);
   quitting_ = true;
   lock.unlock();
@@ -494,9 +432,8 @@ void DataLoader<Game>::WorkerThread::quit() {
   thread_.join();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::WorkerThread::schedule_work(const LoadInstructions& load_instructions,
-                                                   const WorkUnit& unit) {
+inline void DataLoaderBase::WorkerThreadBase::schedule_work(
+  const LoadInstructions& load_instructions, const WorkUnit& unit) {
   mit::unique_lock lock(mutex_);
   load_instructions_ = &load_instructions;
   unit_ = unit;
@@ -505,8 +442,7 @@ void DataLoader<Game>::WorkerThread::schedule_work(const LoadInstructions& load_
   cv_.notify_all();
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::WorkerThread::loop() {
+inline void DataLoaderBase::WorkerThreadBase::loop() {
   while (!quitting_) {
     mit::unique_lock lock(mutex_);
     cv_.wait(lock, [this] { return quitting_ || has_work_; });
@@ -519,8 +455,8 @@ void DataLoader<Game>::WorkerThread::loop() {
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::WorkerThread::do_work() {
+template <typename GameReadLog>
+void DataLoaderBase::WorkerThreadBase::do_work_helper() {
   const local_index_vec_t& sample_indices = *unit_.sample_indices;
 
   int num_samples = sample_indices.size();
@@ -564,25 +500,25 @@ void DataLoader<Game>::WorkerThread::do_work() {
                         num_samples, num_games);
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::WorkManager::WorkManager(FileManager* file_manager, int num_threads)
+template <typename WorkerThread>
+DataLoaderBase::WorkManager<WorkerThread>::WorkManager(FileManager* file_manager, int num_threads)
     : thread_table_(num_threads) {
   for (int i = 0; i < num_threads; ++i) {
     workers_.push_back(new WorkerThread(file_manager, &thread_table_, i));
   }
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::WorkManager::~WorkManager() {
+template <typename WorkerThread>
+DataLoaderBase::WorkManager<WorkerThread>::~WorkManager() {
   thread_table_.quit();
   for (WorkerThread* thread : workers_) {
     delete thread;
   }
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::WorkManager::process(const LoadInstructions& load_instructions,
-                                            work_unit_deque_t& work_units) {
+template <typename WorkerThread>
+void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadInstructions& load_instructions,
+                                                        work_unit_deque_t& work_units) {
   while (!work_units.empty()) {
     thread_id_t id = thread_table_.allocate_thread();
     WorkerThread* worker = workers_[id];
@@ -593,41 +529,67 @@ void DataLoader<Game>::WorkManager::process(const LoadInstructions& load_instruc
   thread_table_.wait_until_all_threads_available();
 }
 
-template <concepts::Game Game>
-DataLoader<Game>::DataLoader(const Params& params)
+template <concepts::EvalSpec EvalSpec>
+DataLoader<EvalSpec>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <concepts::Game Game>
-void DataLoader<Game>::restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
-                               int64_t* file_sizes) {
-  file_manager_.restore(n_total_rows, n, gens, row_counts, file_sizes);
+template <concepts::EvalSpec EvalSpec>
+void DataLoader<EvalSpec>::restore(const RestoreParams& params) {
+  file_manager_.restore(params);
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::add_gen(int gen, int num_rows, int64_t file_size) {
-  file_manager_.append(gen, num_rows, file_size);
+template <concepts::EvalSpec EvalSpec>
+void DataLoader<EvalSpec>::add_gen(const AddGenParams& params) {
+  file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::load(int64_t window_start, int64_t window_end, int n_samples,
-                            bool apply_symmetry, int n_targets, float* output_array,
-                            int* target_indices_array, int* gen_range) {
-  load_instructions_.init(apply_symmetry, n_targets, output_array, target_indices_array);
-  sampling_manager_.sample(&work_units_, file_manager_.files_in_reverse_order(), window_start,
-                           window_end, file_manager_.n_total_rows(), n_samples);
+template <concepts::EvalSpec EvalSpec>
+void DataLoader<EvalSpec>::load(const LoadParams& params) {
+  const file_deque_t& files = file_manager_.files_in_reverse_order();
+  int n_samples = params.n_samples;
+  int* gen_range = params.gen_range;
+
+  init_load_instructions(params);
+  sampling_manager_.sample(&work_units_, files, file_manager_.n_total_rows(), params);
   file_manager_.sort_work_units_and_prepare_files(work_units_, gen_range);
   work_manager_.process(load_instructions_, work_units_);
   file_manager_.reset_prefetch_loop();
   shuffle_output(n_samples);
 }
 
-template <concepts::Game Game>
-void DataLoader<Game>::shuffle_output(int n_samples) {
+template <concepts::EvalSpec EvalSpec>
+void DataLoader<EvalSpec>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
+}
+
+template <concepts::EvalSpec EvalSpec>
+void DataLoader<EvalSpec>::init_load_instructions(const LoadParams& params) {
+  int n_targets = params.n_targets;
+
+  load_instructions_.apply_symmetry = params.apply_symmetry;
+  load_instructions_.output_data_array = params.output_array;
+  load_instructions_.target_indices.resize(n_targets);
+  for (int i = 0; i < n_targets; ++i) {
+    load_instructions_.target_indices[i] = params.target_indices_array[i];
+  }
+
+  load_instructions_.row_size = InputTensorizor::Tensor::Dimensions::total_size;
+
+  using TrainingTargetsList = TrainingTargets::List;
+  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
+  for (int target_index : load_instructions_.target_indices) {
+    util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
+      using Target = mp::TypeAt_t<TrainingTargetsList, t>;
+      using Tensor = Target::Tensor;
+      constexpr int kSize = Tensor::Dimensions::total_size;
+      load_instructions_.row_size += kSize;
+      load_instructions_.row_size++;  // for the mask
+    });
+  }
 }
 
 }  // namespace core

@@ -7,6 +7,7 @@
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
@@ -46,9 +47,9 @@ namespace nnet {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<Game>,
+    : public NNEvaluationServiceBase<EvalSpec>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -60,15 +61,19 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using NeuralNet = core::NeuralNet<Game>;
-  using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
+  using Game = EvalSpec::Game;
+  using InputTensorizor = Game::InputTensorizor;
+  using TrainingTargets = EvalSpec::TrainingTargets;
+
+  using NeuralNet = core::NeuralNet<EvalSpec>;
+  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;
-  using InputTensor = Game::InputTensorizor::Tensor;
+  using InputTensor = InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
+  using ValueTensor = TrainingTargets::ValueTarget::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using InputShape = InputTensor::Dimensions;
@@ -82,7 +87,6 @@ class NNEvaluationService
   using DynamicActionValueTensor = NeuralNet::DynamicActionValueTensor;
 
   using State = Game::State;
-  using InputTensorizor = Game::InputTensorizor;
 
   using RequestItem = NNEvaluationRequest::Item;
 

@@ -6,13 +6,14 @@
 
 namespace nnet {
 
-template <core::concepts::Game Game>
-typename NNEvaluationServiceFactory<Game>::ServiceBase_ptr NNEvaluationServiceFactory<Game>::create(
-  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
+template <core::concepts::EvalSpec EvalSpec>
+typename NNEvaluationServiceFactory<EvalSpec>::ServiceBase_ptr
+NNEvaluationServiceFactory<EvalSpec>::create(const NNEvaluationServiceParams& params,
+                                             core::GameServerBase* server) {
   if (!params.no_model) {
-    return NNEvaluationService<Game>::create(params, server);
+    return NNEvaluationService<EvalSpec>::create(params, server);
   } else if (params.model_filename.empty()) {
-    return std::make_shared<UniformNNEvaluationService<Game>>();
+    return std::make_shared<UniformNNEvaluationService<EvalSpec>>();
   } else {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }

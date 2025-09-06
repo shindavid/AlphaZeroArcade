@@ -1,8 +1,10 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/Game.hpp"
 
+#include <cstdint>
 #include <vector>
 
 /*
@@ -96,6 +98,9 @@ struct GameLogCommon {
     float probability;
   };
 
+  static void merge_files(const char** input_filenames, int n_input_filenames,
+                          const char* output_filename);
+
   static constexpr int align(int offset);
 
   template <typename T>
@@ -106,6 +111,19 @@ template <concepts::Game Game>
 struct GameLogBase : public GameLogCommon {
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
+
+  struct WriteEntry {
+    State position;
+    PolicyTensor policy_target;       // only valid if policy_target_is_valid
+    ActionValueTensor action_values;  // only valid if action_values_are_valid
+    action_t action;
+    seat_index_t active_seat;
+    bool use_for_training;
+    bool policy_target_is_valid;
+    bool action_values_are_valid;
+  };
+  using write_entry_vector_t = std::vector<WriteEntry*>;
 
   struct Record {
     State position;
@@ -140,13 +158,17 @@ struct GameLogBase : public GameLogCommon {
     tensor_encoding_t encoding;
     data_t data;
   };
+
   static_assert(sizeof(TensorData) ==
                 sizeof(tensor_encoding_t) + sizeof(typename TensorData::data_t));
 };
 
-template <concepts::Game Game>
-class GameReadLog : public GameLogBase<Game> {
+template <concepts::EvalSpec EvalSpec>
+class GameReadLog : public GameLogBase<typename EvalSpec::Game> {
  public:
+  using Game = EvalSpec::Game;
+  using TrainingTargets = EvalSpec::TrainingTargets;
+
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using pos_index_t = GameLogCommon::pos_index_t;
 
@@ -156,8 +178,8 @@ class GameReadLog : public GameLogBase<Game> {
 
   using Rules = Game::Rules;
   using InputTensorizor = Game::InputTensorizor;
-  using InputTensor = Game::InputTensorizor::Tensor;
-  using TrainingTargetsList = Game::TrainingTargets::List;
+  using InputTensor = InputTensorizor::Tensor;
+  using TrainingTargetsList = TrainingTargets::List;
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -179,9 +201,6 @@ class GameReadLog : public GameLogBase<Game> {
               const char* buffer);
 
   static ShapeInfo* get_shape_info_array();
-
-  static void merge_files(const char** input_filenames, int n_input_filenames,
-                          const char* output_filename);
 
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;
@@ -226,24 +245,14 @@ class GameWriteLog : public GameLogBase<Game> {
   using GameLogBase = core::GameLogBase<Game>;
   using Record = GameLogBase::Record;
   using TensorData = GameLogBase::TensorData;
+  using WriteEntry = GameLogBase::WriteEntry;
+  using write_entry_vector_t = GameLogBase::write_entry_vector_t;
 
   using Rules = Game::Rules;
   using State = Game::State;
   using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-
-  struct Entry {
-    State position;
-    PolicyTensor policy_target;       // only valid if policy_target_is_valid
-    ActionValueTensor action_values;  // only valid if action_values_are_valid
-    action_t action;
-    seat_index_t active_seat;
-    bool use_for_training;
-    bool policy_target_is_valid;
-    bool action_values_are_valid;
-  };
-  using entry_vector_t = std::vector<Entry*>;
 
   GameWriteLog(game_id_t id, int64_t start_timestamp);
   ~GameWriteLog();
@@ -258,7 +267,7 @@ class GameWriteLog : public GameLogBase<Game> {
   int64_t start_timestamp() const { return start_timestamp_; }
 
  private:
-  entry_vector_t entries_;
+  write_entry_vector_t entries_;
   State final_state_;
   ValueTensor outcome_;
   const game_id_t id_;
@@ -279,12 +288,12 @@ class GameLogSerializer {
  public:
   using pos_index_t = GameLogCommon::pos_index_t;
   using mem_offset_t = GameLogCommon::mem_offset_t;
-  using GameReadLog = core::GameReadLog<Game>;
+  using GameLogBase = core::GameLogBase<Game>;
   using GameWriteLog = core::GameWriteLog<Game>;
 
-  using Record = GameReadLog::Record;
-  using TensorData = GameReadLog::TensorData;
-  using Entry = GameWriteLog::Entry;
+  using Record = GameLogBase::Record;
+  using TensorData = GameLogBase::TensorData;
+  using WriteEntry = GameLogBase::WriteEntry;
 
   GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -26,7 +26,7 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
-// Base class for NeuralNet<Game>
+// Base class for NeuralNet<EvalSpec>
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
@@ -71,16 +71,20 @@ class NeuralNetBase {
 /*
  * A thin wrapper around a TensorRT engine.
  */
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NeuralNet : public NeuralNetBase {
  public:
-  using InputShape = Game::InputTensorizor::Tensor::Dimensions;
+  using Game = EvalSpec::Game;
+  using InputTensorizor = Game::InputTensorizor;
+  using TrainingTargets = EvalSpec::TrainingTargets;
+
+  using InputShape = InputTensorizor::Tensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
   using ValueShape = Game::Types::ValueShape;
   using ActionValueShape = Game::Types::ActionValueShape;
 
   using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
+  using ValueTensor = TrainingTargets::ValueTarget::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;

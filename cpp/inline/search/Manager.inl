@@ -419,7 +419,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     }
   }
 
-  auto transpose_key = InputTensorizor::transpose_key(*history);
+  auto transpose_key = Keys::transpose_key(*history);
   bool overwrite = is_root;
   context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
@@ -623,7 +623,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   Node* parent = context.visit_node;
   Edge* edge = context.visit_edge;
 
-  TransposeKey transpose_key = InputTensorizor::transpose_key(*history);
+  TransposeKey transpose_key = Keys::transpose_key(*history);
 
   // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
   // do a corresponding insert_node() call. This is analagous to:
@@ -905,7 +905,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     expand_count++;
     set_edge_state(context, edge, Edge::kPreExpanded);
 
-    TransposeKey transpose_key = InputTensorizor::transpose_key(canonical_history);
+    TransposeKey transpose_key = Keys::transpose_key(canonical_history);
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;

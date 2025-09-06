@@ -2,6 +2,7 @@
 
 #include "core/NodeBase.hpp"
 #include "core/YieldManager.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "nnet/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
@@ -20,14 +21,16 @@ namespace nnet {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <core::concepts::Game Game, typename Evaluation>
+template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
 class NNEvaluationRequest {
  public:
+  using Game = EvalSpec::Game;
+  using Keys = EvalSpec::Keys;
+
   using NodeBase = core::NodeBase<Game>;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using InputTensorizor = Game::InputTensorizor;
-  using EvalKey = InputTensorizor::EvalKey;
+  using EvalKey = Keys::EvalKey;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

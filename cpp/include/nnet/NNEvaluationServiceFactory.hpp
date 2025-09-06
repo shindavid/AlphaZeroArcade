@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/GameServerBase.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceParams.hpp"
 
@@ -8,10 +9,10 @@
 
 namespace nnet {
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluationServiceFactory {
  public:
-  using ServiceBase = nnet::NNEvaluationServiceBase<Game>;
+  using ServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
   using ServiceBase_ptr = std::shared_ptr<ServiceBase>;
 
   // Factory method to create a service

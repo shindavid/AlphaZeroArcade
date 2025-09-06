@@ -6,14 +6,13 @@
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/connect4/Constants.hpp"
+#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -52,6 +51,7 @@ struct Game {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
     int num_empty_cells(column_t col) const;
+    core::seat_index_t get_player_at(row_t row, column_t col) const;
 
     mask_t full_mask;        // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
@@ -99,27 +99,9 @@ struct Game {
   struct InputTensorizor {
     static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
-    using TransposeKey = State;
-    using EvalKey = State;
 
-    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
+    template <util::concepts::RandomAccessIteratorOf<State> Iter>
     static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
   };
 
   static void static_init() {}
@@ -146,3 +128,8 @@ struct hash<c4::Game::State> {
 static_assert(core::concepts::Game<c4::Game>);
 
 #include "inline/games/connect4/Game.inl"
+
+// Add bindings at the end, after defining c4::Game. Adding here ensures that wherever we #include
+// "games/connect4/Game.hpp", we also get the bindings.
+
+#include "games/connect4/MctsEvalSpec.hpp"  // IWYU pragma: keep
