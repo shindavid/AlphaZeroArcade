@@ -1,4 +1,4 @@
-#include "mcts/ManagerParams.hpp"
+#include "a0/ManagerParams.hpp"
 
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -7,7 +7,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
 
-namespace mcts {
+namespace a0 {
 
 template <core::concepts::Game Game>
 inline ManagerParams<Game>::ManagerParams(search::Mode mode) {
@@ -68,4 +68,4 @@ inline auto ManagerParams<Game>::make_options_description() {
   return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
-}  // namespace mcts
+}  // namespace a0

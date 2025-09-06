@@ -4,9 +4,9 @@
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/SearchResults.hpp"
-#include "mcts/Traits.hpp"
+#include "a0/ManagerParams.hpp"
+#include "a0/SearchResults.hpp"
+#include "a0/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
@@ -46,10 +46,10 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Traits = mcts::Traits<Game>;
+  using Traits = a0::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
-  using MctsManagerParams = mcts::ManagerParams<Game>;
-  using SearchResults = mcts::SearchResults<Game>;
+  using MctsManagerParams = a0::ManagerParams<Game>;
+  using SearchResults = a0::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 

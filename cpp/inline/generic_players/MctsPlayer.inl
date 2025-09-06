@@ -53,10 +53,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
   return desc
     .template add_option<"num-fast-iters">(
       po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
-      "num mcts iterations to do per fast move")
+      "num MCTS iterations to do per fast move")
     .template add_option<"num-full-iters", 'i'>(
       po::value<int>(&num_full_iters)->default_value(num_full_iters),
-      "num mcts iterations to do per full move")
+      "num MCTS iterations to do per full move")
     .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
                                           "pct of moves that should be full")
     .template add_hidden_option<"starting-move-temp">(
@@ -71,10 +71,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
     .template add_option<"lcb-z-score">(po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
                                         "z-score for LCB. If zero, disable LCB")
     .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                         "mcts player verbose mode")
+                                         "MCTS player verbose mode")
     .template add_option<"verbose-num-rows-to-display", 'r'>(
       po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
-      "mcts player number of rows to display in verbose mode");
+      "MCTS player number of rows to display in verbose mode");
 }
 
 template <core::concepts::Game Game>

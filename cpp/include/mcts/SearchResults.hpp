@@ -5,7 +5,7 @@
 
 #include <boost/json.hpp>
 
-namespace mcts {
+namespace a0 {
 
 template <core::concepts::Game Game>
 struct SearchResults {
@@ -33,6 +33,6 @@ struct SearchResults {
   boost::json::object to_json() const;
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-#include "inline/mcts/SearchResults.inl"
+#include "inline/a0/SearchResults.inl"

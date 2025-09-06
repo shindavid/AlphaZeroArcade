@@ -1,9 +1,9 @@
-#include "mcts/SearchLog.hpp"
+#include "a0/SearchLog.hpp"
 
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 inline boost::json::object SearchLog<GraphTraits>::LogNode::to_json() const {
@@ -115,4 +115,4 @@ inline boost::json::object SearchLog<GraphTraits>::Graph::graph_repr() const {
   return graph_json;
 }
 
-}  // namespace mcts
+}  // namespace a0

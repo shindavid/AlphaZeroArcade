@@ -6,7 +6,7 @@
 
 namespace core {
 
-// core::NodeBase<Game> is a base class of mcts::Node<Game>.
+// core::NodeBase<Game> is a base class of a0::Node<Game>.
 //
 // It consists of data and methods that are shared across all different search-frameworks
 // (e.g., MCTS and Bayesian-MCTS)

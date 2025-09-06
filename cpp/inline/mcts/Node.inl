@@ -1,6 +1,6 @@
-#include "mcts/Node.hpp"
+#include "a0/Node.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <core::concepts::Game Game>
 void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
@@ -46,4 +46,4 @@ typename Node<Game>::Stats Node<Game>::stats_safe() const {
   return stats_;
 }
 
-}  // namespace mcts
+}  // namespace a0

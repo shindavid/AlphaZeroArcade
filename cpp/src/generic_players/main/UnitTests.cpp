@@ -4,9 +4,9 @@
 #include "games/GameTransforms.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/SearchLog.hpp"
-#include "mcts/Traits.hpp"
+#include "a0/ManagerParams.hpp"
+#include "a0/SearchLog.hpp"
+#include "a0/Traits.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
@@ -29,14 +29,14 @@ using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
-  using Traits = mcts::Traits<Game>;
+  using Traits = a0::Traits<Game>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = mcts::ManagerParams<Game>;
+  using ManagerParams = a0::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = mcts::SearchLog<Traits>;
+  using SearchLog = a0::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
   using State = Game::State;

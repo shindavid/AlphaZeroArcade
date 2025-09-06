@@ -1,12 +1,12 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "mcts/ManagerParams.hpp"
+#include "a0/ManagerParams.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 struct ActionSelector {
@@ -14,7 +14,7 @@ struct ActionSelector {
   using Node = GraphTraits::Node;
   using Edge = GraphTraits::Edge;
   using LookupTable = search::LookupTable<GraphTraits>;
-  using ManagerParams = mcts::ManagerParams<Game>;
+  using ManagerParams = a0::ManagerParams<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
@@ -36,6 +36,6 @@ struct ActionSelector {
   LocalPolicyArray PUCT;
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-#include "inline/mcts/ActionSelector.inl"
+#include "inline/a0/ActionSelector.inl"

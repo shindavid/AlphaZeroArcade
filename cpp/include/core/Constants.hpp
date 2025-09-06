@@ -29,9 +29,9 @@ enum SearchParadigm : int8_t { kParadigmMcts, kParadigmBmcts, kUnknownParadigm }
 
 inline SearchParadigm parse_search_paradigm(const char* s) {
   std::string ss(s);
-  if (ss == "mcts") {
+  if (ss == "a0") {
     return kParadigmMcts;
-  } else if (ss == "bmcts") {
+  } else if (ss == "b0") {
     return kParadigmBmcts;
   } else {
     return kUnknownParadigm;

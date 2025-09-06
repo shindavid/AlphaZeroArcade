@@ -2,33 +2,33 @@
 
 #include "core/MctsEvalSpec.hpp"
 #include "core/concepts/Game.hpp"
-#include "mcts/AuxState.hpp"
-#include "mcts/Edge.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/Node.hpp"
-#include "mcts/SearchResults.hpp"
+#include "a0/AuxState.hpp"
+#include "a0/Edge.hpp"
+#include "a0/ManagerParams.hpp"
+#include "a0/Node.hpp"
+#include "a0/SearchResults.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <core::concepts::Game G>
 struct Traits {
   using Game = G;
-  using EvalSpec = core::mcts::EvalSpec<G>;
-  using Edge = mcts::Edge;
-  using Node = mcts::Node<Game>;
-  using ManagerParams = mcts::ManagerParams<Game>;
-  using AuxState = mcts::AuxState<ManagerParams>;
+  using EvalSpec = core::a0::EvalSpec<G>;
+  using Edge = a0::Edge;
+  using Node = a0::Node<Game>;
+  using ManagerParams = a0::ManagerParams<Game>;
+  using AuxState = a0::AuxState<ManagerParams>;
   using Evaluation = nnet::NNEvaluation<EvalSpec>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
-  using SearchResults = mcts::SearchResults<Game>;
+  using SearchResults = a0::SearchResults<Game>;
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-// Include the binding after defining mcts::Traits so the type is complete when
+// Include the binding after defining a0::Traits so the type is complete when
 // Algorithms and concept machinery get pulled in via the binding include.
-#include "mcts/AlgorithmsBinding.hpp"  // IWYU pragma: keep
+#include "a0/AlgorithmsBinding.hpp"  // IWYU pragma: keep

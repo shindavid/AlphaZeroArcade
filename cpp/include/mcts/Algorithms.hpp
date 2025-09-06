@@ -1,12 +1,12 @@
 #pragma once
 
-#include "mcts/ActionSelector.hpp"
+#include "a0/ActionSelector.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::Traits Traits>
 class Algorithms {
@@ -19,7 +19,7 @@ class Algorithms {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using LookupTable = TraitsTypes::LookupTable;
 
-  using ActionSelector = mcts::ActionSelector<Traits>;
+  using ActionSelector = a0::ActionSelector<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using SearchContext = search::SearchContext<Traits>;
 
@@ -73,6 +73,6 @@ class Algorithms {
                                              const ActionSelector& selector, int argmax_index);
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-#include "inline/mcts/Algorithms.inl"
+#include "inline/a0/Algorithms.inl"

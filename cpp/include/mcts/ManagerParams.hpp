@@ -7,7 +7,7 @@
 
 #include <boost/filesystem.hpp>
 
-namespace mcts {
+namespace a0 {
 
 /*
  * ManagerParams pertains to a single search::Manager instance.
@@ -58,6 +58,6 @@ struct ManagerParams : public nnet::NNEvaluationServiceParams {
   bool force_evaluate_all_root_children = false;
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-#include "inline/mcts/ManagerParams.inl"
+#include "inline/a0/ManagerParams.inl"

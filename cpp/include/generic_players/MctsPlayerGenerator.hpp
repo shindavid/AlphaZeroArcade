@@ -7,8 +7,8 @@
 #include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/Traits.hpp"
+#include "a0/ManagerParams.hpp"
+#include "a0/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 
@@ -26,8 +26,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using Traits = mcts::Traits<Game>;
-  using MctsManagerParams = mcts::ManagerParams<Game>;
+  using Traits = a0::Traits<Game>;
+  using MctsManagerParams = a0::ManagerParams<Game>;
   using MctsManager = search::Manager<Traits>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = BaseMctsPlayer::Params;

@@ -4,7 +4,7 @@
 #include "core/concepts/Game.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-namespace mcts {
+namespace a0 {
 
 /*
  * A Node consists of n=3 main data members:
@@ -71,6 +71,6 @@ class Node : public core::NodeBase<Game> {
   Stats stats_;
 };
 
-}  // namespace mcts
+}  // namespace a0
 
-#include "inline/mcts/Node.inl"
+#include "inline/a0/Node.inl"

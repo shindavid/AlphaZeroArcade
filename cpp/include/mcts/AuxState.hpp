@@ -6,7 +6,7 @@
 
 #include <EigenRand/EigenRand>
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::ManagerParams ManagerParams>
 struct AuxState {
@@ -23,4 +23,4 @@ struct AuxState {
   mutable Eigen::Rand::P8_mt19937_64 rng;
 };
 
-}  // namespace mcts
+}  // namespace a0

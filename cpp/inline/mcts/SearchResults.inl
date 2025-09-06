@@ -1,8 +1,8 @@
-#include "mcts/SearchResults.hpp"
+#include "a0/SearchResults.hpp"
 
 #include "util/EigenUtil.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <core::concepts::Game Game>
 boost::json::object SearchResults<Game>::to_json() const {
@@ -22,4 +22,4 @@ boost::json::object SearchResults<Game>::to_json() const {
   return results_json;
 }
 
-}  // namespace mcts
+}  // namespace a0

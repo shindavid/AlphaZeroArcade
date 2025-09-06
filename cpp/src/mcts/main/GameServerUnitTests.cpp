@@ -5,8 +5,8 @@
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "generic_players/MctsPlayerGenerator.hpp"
-#include "mcts/SearchLog.hpp"
-#include "mcts/SearchResults.hpp"
+#include "a0/SearchLog.hpp"
+#include "a0/SearchResults.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -24,14 +24,14 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 template <core::concepts::Game Game>
 class GameServerTest : public testing::Test {
  protected:
-  using Traits = mcts::Traits<Game>;
+  using Traits = a0::Traits<Game>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = mcts::SearchResults<Game>;
-  using SearchLog = mcts::SearchLog<Traits>;
+  using SearchResults = a0::SearchResults<Game>;
+  using SearchLog = a0::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:
   //

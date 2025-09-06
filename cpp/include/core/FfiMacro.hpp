@@ -16,11 +16,11 @@ namespace detail {
 
 template <core::concepts::Game Game>
 struct FfiFunctions {
-  using MctsEvalSpec = core::mcts::EvalSpec<Game>;
+  using MctsEvalSpec = core::a0::EvalSpec<Game>;
   using MctsGameReadLog = core::GameReadLog<MctsEvalSpec>;
   using MctsDataLoader = core::DataLoader<MctsEvalSpec>;
 
-  using BayesianMctsEvalSpec = core::bmcts::EvalSpec<Game>;
+  using BayesianMctsEvalSpec = core::b0::EvalSpec<Game>;
   using BayesianMctsGameReadLog = core::GameReadLog<BayesianMctsEvalSpec>;
   using BayesianMctsDataLoader = core::DataLoader<BayesianMctsEvalSpec>;
 

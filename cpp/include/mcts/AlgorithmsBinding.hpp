@@ -1,22 +1,22 @@
 #pragma once
 
 #include "core/concepts/Game.hpp"
-#include "mcts/Algorithms.hpp"
+#include "a0/Algorithms.hpp"
 #include "search/AlgorithmsFor.hpp"
 
-namespace mcts {
+namespace a0 {
 
 // forward declaration
 template <core::concepts::Game Game>
 struct Traits;
 
-}  // namespace mcts
+}  // namespace a0
 
 namespace search {
 
 template <core::concepts::Game Game>
-struct algorithms_for<mcts::Traits<Game>> {
-  using type = mcts::Algorithms<mcts::Traits<Game>>;
+struct algorithms_for<a0::Traits<Game>> {
+  using type = a0::Algorithms<a0::Traits<Game>>;
 };
 
 }  // namespace search

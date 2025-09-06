@@ -1,4 +1,4 @@
-#include "mcts/Algorithms.hpp"
+#include "a0/Algorithms.hpp"
 
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"
@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
@@ -790,4 +790,4 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
   }
 }
 
-}  // namespace mcts
+}  // namespace a0

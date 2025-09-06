@@ -1,6 +1,6 @@
-#include "mcts/ActionSelector.hpp"
+#include "a0/ActionSelector.hpp"
 
-namespace mcts {
+namespace a0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_table,
@@ -104,4 +104,4 @@ inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_tab
   PUCT = mask * PUCT + (1 - mask) * -1e6;
 }
 
-}  // namespace mcts
+}  // namespace a0

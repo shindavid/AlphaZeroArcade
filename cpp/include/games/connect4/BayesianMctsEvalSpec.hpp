@@ -7,7 +7,7 @@
 
 #include <Eigen/Core>
 
-namespace c4::bmcts {
+namespace c4::b0 {
 
 struct TrainingTargets {
   using PolicyTarget = core::PolicyTarget<Game>;
@@ -18,14 +18,14 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
-}  // namespace c4::bmcts
+}  // namespace c4::b0
 
-namespace core::bmcts {
+namespace core::b0 {
 
 template <>
 struct EvalSpec<c4::Game> {
   using Game = c4::Game;
-  using TrainingTargets = c4::mcts::TrainingTargets;
+  using TrainingTargets = c4::a0::TrainingTargets;
 };
 
-}  // namespace core::bmcts
+}  // namespace core::b0
