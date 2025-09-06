@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alphazero/ManagerParams.hpp"
+#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
@@ -7,8 +9,6 @@
 #include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 

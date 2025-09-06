@@ -1,12 +1,12 @@
 #pragma once
 
+#include "alphazero/ManagerParams.hpp"
+#include "alphazero/SearchResults.hpp"
+#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/Game.hpp"
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchResults.hpp"
-#include "alphazero/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"

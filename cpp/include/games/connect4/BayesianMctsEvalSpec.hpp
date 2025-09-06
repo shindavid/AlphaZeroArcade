@@ -25,7 +25,7 @@ namespace core::b0 {
 template <>
 struct EvalSpec<c4::Game> {
   using Game = c4::Game;
-  using TrainingTargets = c4::a0::TrainingTargets;
+  using TrainingTargets = c4::b0::TrainingTargets;
 };
 
 }  // namespace core::b0

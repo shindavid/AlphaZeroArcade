@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "alphazero/ManagerParams.hpp"
+#include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"

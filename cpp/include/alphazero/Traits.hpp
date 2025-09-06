@@ -1,12 +1,12 @@
 #pragma once
 
-#include "core/MctsEvalSpec.hpp"
-#include "core/concepts/Game.hpp"
 #include "alphazero/AuxState.hpp"
 #include "alphazero/Edge.hpp"
 #include "alphazero/ManagerParams.hpp"
 #include "alphazero/Node.hpp"
 #include "alphazero/SearchResults.hpp"
+#include "core/MctsEvalSpec.hpp"
+#include "core/concepts/Game.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"

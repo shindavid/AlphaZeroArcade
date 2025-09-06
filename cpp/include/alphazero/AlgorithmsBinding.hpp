@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
 #include "alphazero/Algorithms.hpp"
+#include "core/concepts/Game.hpp"
 #include "search/AlgorithmsFor.hpp"
 
 namespace a0 {
