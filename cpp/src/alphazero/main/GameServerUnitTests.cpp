@@ -1,8 +1,9 @@
 #include "alphazero/SearchLog.hpp"
 #include "alphazero/SearchResults.hpp"
+#include "core/EvalSpecTransforms.hpp"
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"
-#include "games/GameTransforms.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
@@ -21,11 +22,11 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class GameServerTest : public testing::Test {
  protected:
-  using Traits = alpha0::Traits<Game>;
-  using EvalSpec = Traits::EvalSpec;
+  using Game = EvalSpec::Game;
+  using Traits = alpha0::Traits<Game, EvalSpec>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
@@ -78,9 +79,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<Game, TestPlayer> {
+  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<EvalSpec, TestPlayer> {
    public:
-    using base_t = generic::MctsPlayerGeneratorBase<Game, TestPlayer>;
+    using base_t = generic::MctsPlayerGeneratorBase<EvalSpec, TestPlayer>;
 
     using base_t::base_t;
 
@@ -196,11 +197,13 @@ class GameServerTest : public testing::Test {
   bool is_recorded_ = false;
 };
 
-using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
-using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
+using TicTacToeSpec =
+  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
+using StochasticNimSpec =
+  transforms::AddStateStorage<core::EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero>>;
 
-using TicTacToeTest = GameServerTest<TicTacToe>;
-using StochasticNimTest = GameServerTest<Stochastic_nim>;
+using TicTacToeTest = GameServerTest<TicTacToeSpec>;
+using StochasticNimTest = GameServerTest<StochasticNimSpec>;
 
 TEST_F(StochasticNimTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {

@@ -123,7 +123,7 @@ class MctsPlayer : public core::AbstractPlayer<typename EvalSpec::Game> {
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
-  template <core::concepts::Game>
+  template <core::concepts::EvalSpec ES>
   friend class MctsPlayerTest;
 };
 

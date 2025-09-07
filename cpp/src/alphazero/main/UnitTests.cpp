@@ -1,10 +1,11 @@
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/Node.hpp"
 #include "alphazero/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/Constants.hpp"
+#include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
-#include "games/GameTransforms.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
@@ -31,17 +32,19 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-using Nim = game_transform::AddStateStorage<nim::Game>;
-using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
-using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
+using NimSpec = transforms::AddStateStorage<core::EvalSpec<nim::Game, core::kParadigmAlphaZero>>;
+using StochasticNimSpec =
+  transforms::AddStateStorage<core::EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero>>;
+using TicTacToeSpec =
+  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
 
-template <core::concepts::Game Game>
-class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
+template <core::concepts::EvalSpec EvalSpec>
+class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<EvalSpec> {
  public:
+  using Game = EvalSpec::Game;
   using State = Game::State;
-  using Base = nnet::SimpleNNEvaluationService<Game>;
-  using Traits = alpha0::Traits<Game>;
-  using NNEvaluation = nnet::NNEvaluation<Game>;
+  using Base = nnet::SimpleNNEvaluationService<EvalSpec>;
+  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -95,11 +98,11 @@ class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
   bool smart_;
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class ManagerTest : public testing::Test {
  protected:
-  using Traits = alpha0::Traits<Game>;
-  using EvalSpec = Traits::EvalSpec;
+  using Game = EvalSpec::Game;
+  using Traits = alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
@@ -109,7 +112,7 @@ class ManagerTest : public testing::Test {
   using action_t = core::action_t;
   using LookupTable = TraitsTypes::LookupTable;
   using ValueArray = Game::Types::ValueArray;
-  using Service = nnet::NNEvaluationServiceBase<Game>;
+  using Service = nnet::NNEvaluationServiceBase<EvalSpec>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
@@ -207,7 +210,7 @@ class ManagerTest : public testing::Test {
   SearchLog* search_log_ = nullptr;
 };
 
-using NimManagerTest = ManagerTest<Nim>;
+using NimManagerTest = ManagerTest<NimSpec>;
 TEST_F(NimManagerTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
@@ -215,8 +218,8 @@ TEST_F(NimManagerTest, uniform_search) {
 }
 
 TEST_F(NimManagerTest, smart_search) {
-  std::shared_ptr<MockNNEvaluationService<Nim>> mock_service =
-    std::make_shared<MockNNEvaluationService<Nim>>(true);
+  std::shared_ptr<MockNNEvaluationService<NimSpec>> mock_service =
+    std::make_shared<MockNNEvaluationService<NimSpec>>(true);
 
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
@@ -224,8 +227,8 @@ TEST_F(NimManagerTest, smart_search) {
 }
 
 TEST_F(NimManagerTest, dumb_search) {
-  std::shared_ptr<MockNNEvaluationService<Nim>> mock_service =
-    std::make_shared<MockNNEvaluationService<Nim>>(false);
+  std::shared_ptr<MockNNEvaluationService<NimSpec>> mock_service =
+    std::make_shared<MockNNEvaluationService<NimSpec>>(false);
 
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
@@ -247,7 +250,7 @@ TEST_F(NimManagerTest, 40_searches_from_5_stones) {
   test_search("nim_5_stones", 40, initial_actions, nullptr);
 }
 
-using StochasticNimManagerTest = ManagerTest<Stochastic_nim>;
+using StochasticNimManagerTest = ManagerTest<StochasticNimSpec>;
 TEST_F(StochasticNimManagerTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {
     stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
@@ -283,7 +286,7 @@ TEST_F(StochasticNimManagerTest, 100_searches_from_6_stones) {
   test_search("stochastic_nim_6_stones", 100, initial_actions, nullptr);
 }
 
-using TicTacToeManagerTest = ManagerTest<TicTacToe>;
+using TicTacToeManagerTest = ManagerTest<TicTacToeSpec>;
 TEST_F(TicTacToeManagerTest, uniform_search_log) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_search("tictactoe_uniform", 40, initial_actions, nullptr);

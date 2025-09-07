@@ -2,9 +2,9 @@
 #include "alphazero/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/concepts/Game.hpp"
-#include "games/GameTransforms.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "search/Manager.hpp"
@@ -22,15 +22,16 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
+using TicTacToeSpec =
+  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
+
 namespace generic {
 
-using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
-
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class MctsPlayerTest : public ::testing::Test {
  protected:
-  using Traits = alpha0::Traits<Game>;
-  using EvalSpec = Traits::EvalSpec;
+  using Game = EvalSpec::Game;
+  using Traits = alpha0::Traits<Game, EvalSpec>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using MctsPlayer = generic::MctsPlayer<EvalSpec>;
@@ -44,7 +45,7 @@ class MctsPlayerTest : public ::testing::Test {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = nnet::NNEvaluationServiceBase<Game>;
+  using Service = nnet::NNEvaluationServiceBase<EvalSpec>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 
@@ -156,7 +157,7 @@ class MctsPlayerTest : public ::testing::Test {
   std::vector<core::action_t> initial_actions_;
 };
 
-using tictactoe_test = MctsPlayerTest<TicTacToe>;
+using tictactoe_test = MctsPlayerTest<TicTacToeSpec>;
 TEST_F(tictactoe_test, uniform_search) { test_get_action_policy("tictactoe"); }
 
 TEST_F(tictactoe_test, uniform_search_01247) {
