@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 
@@ -16,11 +17,12 @@ namespace nnet {
  * place of new/delete. Doing so makes use of an underlying object pool and recycles
  * NNEvaluation objects.
  */
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluationServiceBase {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Game>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Game, NNEvaluation>;
+  using Game = EvalSpec::Game;
+  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

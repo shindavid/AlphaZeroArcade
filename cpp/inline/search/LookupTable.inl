@@ -114,7 +114,7 @@ void LookupTable<GraphTraits>::defragment(core::node_pool_index_t& root_index) {
 }
 
 template <search::concepts::GraphTraits GraphTraits>
-core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const MCTSKey& key,
+core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const TransposeKey& key,
                                                               core::node_pool_index_t value,
                                                               bool overwrite) {
   mit::lock_guard lock(map_mutex_);
@@ -128,7 +128,7 @@ core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const MCTSKey& key
 }
 
 template <search::concepts::GraphTraits GraphTraits>
-core::node_pool_index_t LookupTable<GraphTraits>::lookup_node(const MCTSKey& key) const {
+core::node_pool_index_t LookupTable<GraphTraits>::lookup_node(const TransposeKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {

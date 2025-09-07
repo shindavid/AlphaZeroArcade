@@ -78,6 +78,14 @@ inline void flip_anti_diag(mask_t& mask1, mask_t& mask2) {
 
 inline size_t Game::State::hash() const { return (size_t(full_mask) << 16) + cur_player_mask; }
 
+inline core::seat_index_t Game::State::get_player_at(int row, int col) const {
+  int cp = Rules::get_current_player(*this);
+  int index = row * kBoardDimension + col;
+  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
+  bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
+}
+
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
@@ -175,60 +183,13 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
 
-template <typename Iterator>
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iterator start,
-                                                                      Iterator cur) {
-  core::seat_index_t cp = Rules::get_current_player(*cur);
-  Tensor tensor;
-  tensor.setZero();
-  int i = 0;
-  Iterator state = cur;
-  while (true) {
-    for (int row = 0; row < kBoardDimension; ++row) {
-      for (int col = 0; col < kBoardDimension; ++col) {
-        core::seat_index_t p = _get_player_at(*state, row, col);
-        if (p < 0) continue;
-        int x = (Constants::kNumPlayers + cp - p) % Constants::kNumPlayers;
-        tensor(i + x, row, col) = 1;
-      }
-    }
-    if (state == start) break;
-    state--;
-    i += kNumPlayers;
-  }
-  return tensor;
-}
-
-inline bool Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view,
-                                                              Tensor& tensor) {
-  tensor.setZero();
-  const State& state = *view.final_pos;
-  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
-  for (int row = 0; row < kBoardDimension; ++row) {
-    for (int col = 0; col < kBoardDimension; ++col) {
-      core::seat_index_t p = _get_player_at(state, row, col);
-      int x = (p == -1) ? 2 : ((p == cp) ? 0 : 1);
-      tensor(x, row, col) = 1;
-    }
-  }
-  return true;
-}
-
-inline core::seat_index_t Game::_get_player_at(const State& state, int row, int col) {
-  int cp = Rules::get_current_player(state);
-  int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;
-  bool occupied_by_any_player = (mask_t(1) << index) & state.full_mask;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
-}
-
 inline std::string Game::IO::compact_state_repr(const State& state) {
   char buf[12];
   const char* syms = "_XO";
 
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      buf[row * 4 + col] = syms[_get_player_at(state, row, col) + 1];
+      buf[row * 4 + col] = syms[state.get_player_at(row, col) + 1];
     }
   }
   buf[3] = '\n';
@@ -245,7 +206,7 @@ inline boost::json::value Game::IO::state_to_json(const State& state) {
   int c = 0;
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      buf[c++] = syms[_get_player_at(state, row, col) + 1];
+      buf[c++] = syms[state.get_player_at(row, col) + 1];
     }
   }
   buf[c] = '\0';

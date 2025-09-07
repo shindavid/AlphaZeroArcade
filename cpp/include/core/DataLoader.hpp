@@ -1,7 +1,9 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/GameLog.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/InputTensorizor.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -11,7 +13,7 @@
 #include <vector>
 
 /*
- * core::DataLoader<Game> is a class that is used on the python side via FFI to generate
+ * core::DataLoader<EvalSpec> is a class that is used on the python side via FFI to generate
  * minibatches of training data. We use it instead of pytorch's DataLoader.
  *
  **************
@@ -29,14 +31,14 @@
  *    - s: num samples (typically equals n_minibatches * minibatch_size)
  *    - w: window size
  *
- * Then core::DataLoader<Game> samples s rows from M[-w:].
+ * Then core::DataLoader<EvalSpec> samples s rows from M[-w:].
  *
  *************
  * Mechanics *
  *************
  *
- * core::DataLoader<Game> starts by sampling s indices, withouth replacement, from M[-w:]. It then
- * sorts these indices, grouping them by file. Each file can then be read in a single pass.
+ * core::DataLoader<EvalSpec> starts by sampling s indices, withouth replacement, from M[-w:]. It
+ *then sorts these indices, grouping them by file. Each file can then be read in a single pass.
  *
  * The work of reading each file is done by a worker thread. There are several worker threads,
  * coming from a worker pool. This allows us to read multiple files in parallel. Additionally, we
@@ -47,12 +49,10 @@
 
 namespace core {
 
-template <concepts::Game Game>
-class DataLoader {
- public:
-  using GameReadLog = core::GameReadLog<Game>;
+struct DataLoaderBase {
+  virtual ~DataLoaderBase() = default;
+
   using thread_id_t = int32_t;
-  using generation_t = int32_t;
   using target_index_t = int32_t;
   using global_index_t = int64_t;      // index within master list M
   using rev_global_index_t = int64_t;  // index within master list M, from the end
@@ -67,6 +67,31 @@ class DataLoader {
     int64_t memory_budget;     // memory budget for data files, in bytes
     int num_worker_threads;    // number of worker threads
     int num_prefetch_threads;  // number of prefetch threads
+  };
+
+  struct RestoreParams {
+    int64_t n_total_rows;  // total number of rows across all files
+    int n;                 // number of files
+    int* gens;             // array of generation numbers, length n
+    int* row_counts;       // array of row counts, length n
+    int64_t* file_sizes;   // array of file sizes, length n
+  };
+
+  struct AddGenParams {
+    int gen;            // generation number
+    int num_rows;       // number of rows in the file
+    int64_t file_size;  // size of the file, in bytes
+  };
+
+  struct LoadParams {
+    int64_t window_start;       // start index of the window (inclusive)
+    int64_t window_end;         // end index of the window (exclusive)
+    int n_samples;              // number of samples to draw from M[window_start:window_end]
+    bool apply_symmetry;        // whether to apply symmetry augmentation
+    int n_targets;              // number of training targets
+    float* output_array;        // preallocated array to write output into
+    int* target_indices_array;  // array of target indices, length n_targets
+    int* gen_range;             // output parameter: [min_gen, max_gen] of files used
   };
 
   class DataFile {
@@ -99,7 +124,6 @@ class DataLoader {
     mutable mit::mutex mutex_;
     mutable mit::condition_variable cv_;
     char* buffer_ = nullptr;
-    bool locked_ = false;
   };
   using file_deque_t = std::deque<DataFile*>;
 
@@ -109,18 +133,6 @@ class DataLoader {
     int output_index;
   };
   using work_unit_deque_t = std::deque<WorkUnit>;
-
-  /*
-   * LoadInstructions specifies what tensors to extract from the game data and where to write them.
-   */
-  struct LoadInstructions {
-    void init(bool apply_sym, int n_targets, float* output_array, int* target_indices_array);
-
-    bool apply_symmetry;
-    float* output_data_array;
-    std::vector<int> target_indices;
-    int row_size;
-  };
 
   /*
    * The SamplingManager is responsible for sampling from the master list M, and organizing the
@@ -135,8 +147,8 @@ class DataLoader {
     // that gen.
     //
     // We expect files to be in reverse order by generation.
-    void sample(work_unit_deque_t* work_units, const file_deque_t& files, int64_t window_start,
-                int64_t window_end, int64_t n_total_rows, int n_samples);
+    void sample(work_unit_deque_t* work_units, const file_deque_t& files, int64_t n_total_rows,
+                const LoadParams&);
 
    private:
     local_index_vec_t* get_vec();
@@ -224,8 +236,7 @@ class DataLoader {
     //
     // Each of the arrays will be of length n. The k'th generation of self-play data will be for
     // generation gens[k], with row_counts[k] rows and file_sizes[k] bytes.
-    void restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
-                 int64_t* file_sizes);
+    void restore(const RestoreParams&);
 
     // Add a new generation of data to the manager
     void append(generation_t gen, int num_rows, int64_t file_size);
@@ -269,20 +280,33 @@ class DataLoader {
   };
 
   /*
-   * A WorkerThread is responsible for doing the main work of processing a WorkUnit. It is given
+   * LoadInstructions specifies what tensors to extract from the game data and where to write them.
+   */
+  struct LoadInstructions {
+    bool apply_symmetry;
+    float* output_data_array;
+    std::vector<int> target_indices;
+    int row_size;
+  };
+
+  /*
+   * A WorkerThreadBase is responsible for doing the main work of processing a WorkUnit. It is given
    * work to do by the WorkManager.
    */
-  class WorkerThread {
+  class WorkerThreadBase {
    public:
-    WorkerThread(FileManager* file_manager, ThreadTable* table, thread_id_t id);
-    ~WorkerThread();
+    WorkerThreadBase(FileManager* file_manager, ThreadTable* table, thread_id_t id);
+    virtual ~WorkerThreadBase();
 
     void quit();
     void schedule_work(const LoadInstructions& load_instructions, const WorkUnit& unit);
 
-   private:
+   protected:
     void loop();
-    void do_work();
+    virtual void do_work() = 0;
+
+    template <typename GameReadLog>
+    void do_work_helper();
 
     FileManager* const file_manager_;
     ThreadTable* const table_;
@@ -301,6 +325,7 @@ class DataLoader {
    * The WorkManager is responsible for managing a collection of WorkUnit's, and distributing them
    * to WorkerThread's for processing.
    */
+  template <typename WorkerThread>
   class WorkManager {
    public:
     WorkManager(FileManager* file_manager, int num_threads);
@@ -315,12 +340,8 @@ class DataLoader {
     ThreadTable thread_table_;
   };
 
-  DataLoader(const Params&);
-
-  void restore(int64_t n_total_rows, int n, generation_t* gens, int* row_counts,
-               int64_t* file_sizes);
-
-  void add_gen(int gen, int num_rows, int64_t file_size);
+  virtual void restore(const RestoreParams&) = 0;
+  virtual void add_gen(const AddGenParams&) = 0;
 
   /*
    * Samples n_samples rows from M[window_size:window_end]. Converts the rows into tensors, which
@@ -335,11 +356,36 @@ class DataLoader {
    * to the caller to call load() multiple times, passing in values for n_minibatches that sum up to
    * the desired total.
    */
-  void load(int64_t window_start, int64_t window_end, int n_samples, bool apply_symmetry,
-            int n_targets, float* output_array, int* target_indices_array, int* gen_range);
+  virtual void load(const LoadParams&) = 0;
+};
+
+template <concepts::EvalSpec EvalSpec>
+class DataLoader : public core::DataLoaderBase {
+ public:
+  using Game = EvalSpec::Game;
+  using TrainingTargets = EvalSpec::TrainingTargets;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using GameReadLog = core::GameReadLog<EvalSpec>;
+
+  class WorkerThread : public WorkerThreadBase {
+   public:
+    using WorkerThreadBase::WorkerThreadBase;
+
+   protected:
+    void do_work() override { do_work_helper<GameReadLog>(); }
+  };
+
+  using WorkManager = WorkManager<WorkerThread>;
+
+  DataLoader(const Params&);
+
+  void restore(const RestoreParams&) override;
+  void add_gen(const AddGenParams&) override;
+  void load(const LoadParams&) override;
 
  private:
   void shuffle_output(int n_samples);
+  void init_load_instructions(const LoadParams& params);
 
   const Params params_;
   LoadInstructions load_instructions_;

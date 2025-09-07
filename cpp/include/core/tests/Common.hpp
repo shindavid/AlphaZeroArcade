@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 /*
  * This file contains unit-testing code that can be shared by all games.

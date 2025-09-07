@@ -13,6 +13,7 @@ struct TraitsTypes {
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
   using Evaluation = Traits::Evaluation;
@@ -27,7 +28,7 @@ struct TraitsTypes {
   };
   using search_path_t = std::vector<Visitation>;
 
-  using EvalRequest = nnet::NNEvaluationRequest<Game, Evaluation>;
+  using EvalRequest = nnet::NNEvaluationRequest<EvalSpec, Evaluation>;
   using LookupTable = search::LookupTable<Traits>;
 };
 

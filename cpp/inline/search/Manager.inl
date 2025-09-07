@@ -1,7 +1,7 @@
 #include "search/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
@@ -419,9 +419,9 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     }
   }
 
-  auto mcts_key = InputTensorizor::mcts_key(*history);
+  auto transpose_key = Keys::transpose_key(*history);
   bool overwrite = is_root;
-  context.inserted_node_index = lookup_table.insert_node(mcts_key, node_index, overwrite);
+  context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
   return core::kContinue;
 }
@@ -623,7 +623,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   Node* parent = context.visit_node;
   Edge* edge = context.visit_edge;
 
-  MCTSKey mcts_key = InputTensorizor::mcts_key(*history);
+  TransposeKey transpose_key = Keys::transpose_key(*history);
 
   // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
   // do a corresponding insert_node() call. This is analagous to:
@@ -638,7 +638,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   //
   // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
   // keeps the first resume_node_initialization() and "unwinds" the second one.
-  context.initialization_index = lookup_table.lookup_node(mcts_key);
+  context.initialization_index = lookup_table.lookup_node(transpose_key);
 
   context.expanded_new_node = context.initialization_index < 0;
   if (context.expanded_new_node) {
@@ -905,8 +905,8 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     expand_count++;
     set_edge_state(context, edge, Edge::kPreExpanded);
 
-    MCTSKey mcts_key = InputTensorizor::mcts_key(canonical_history);
-    core::node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
+    TransposeKey transpose_key = Keys::transpose_key(canonical_history);
+    core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
       canonical_history.undo();
@@ -928,7 +928,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     }
     initialize_edges(child);
     bool overwrite = false;
-    lookup_table.insert_node(mcts_key, edge->child_index, overwrite);
+    lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
 
     State canonical_child_state = canonical_history.current();
     canonical_history.undo();

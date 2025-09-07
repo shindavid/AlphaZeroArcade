@@ -2,7 +2,9 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/YieldManager.hpp"
+#include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
@@ -28,6 +30,7 @@ namespace search {
 template <search::concepts::Traits Traits>
 class Manager {
  public:
+  using EvalSpec = Traits::EvalSpec;
   using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
@@ -61,8 +64,11 @@ class Manager {
   using Constants = Game::Constants;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
-  using InputTensorizor = Game::InputTensorizor;
-  using MCTSKey = InputTensorizor::MCTSKey;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  static_assert(core::concepts::InputTensorizor<InputTensorizor, Game>);
+
+  using Keys = InputTensorizor::Keys;
+  using TransposeKey = Keys::TransposeKey;
 
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;

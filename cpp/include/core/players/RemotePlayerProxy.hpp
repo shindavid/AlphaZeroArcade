@@ -4,7 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/SocketUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

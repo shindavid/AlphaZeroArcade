@@ -2,13 +2,14 @@
 
 namespace nnet {
 
-template <core::concepts::Game Game>
-SimpleNNEvaluationService<Game>::SimpleNNEvaluationService() {
+template <core::concepts::EvalSpec EvalSpec>
+SimpleNNEvaluationService<EvalSpec>::SimpleNNEvaluationService() {
   eval_pool_.set_recycle_func([](NNEvaluation* eval) { eval->clear(); });
 }
 
-template <core::concepts::Game Game>
-core::yield_instruction_t SimpleNNEvaluationService<Game>::evaluate(NNEvaluationRequest& request) {
+template <core::concepts::EvalSpec EvalSpec>
+core::yield_instruction_t SimpleNNEvaluationService<EvalSpec>::evaluate(
+  NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 
   for (auto& item : request.stale_items()) {

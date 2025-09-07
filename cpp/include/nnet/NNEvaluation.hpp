@@ -1,7 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/InputTensorizor.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
@@ -10,10 +11,14 @@ namespace nnet {
 
 // TODO: We could expand the template params of this class to include Traits::EvalServiceBase.
 // That would allow us to replace the void* aux blob with something more specific.
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluation {
  public:
-  using ActionValueTarget = Game::TrainingTargets::ActionValueTarget;
+  using Game = EvalSpec::Game;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TrainingTargets = EvalSpec::TrainingTargets;
+
+  using ActionValueTarget = TrainingTargets::ActionValueTarget;
   using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::Types::ValueTensor;

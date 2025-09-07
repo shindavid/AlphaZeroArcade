@@ -3,8 +3,8 @@
 #include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/GameConstants.hpp"
-#include "core/concepts/GameResults.hpp"
+#include "core/concepts/GameConstantsConcept.hpp"
+#include "core/concepts/GameResultsConcept.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

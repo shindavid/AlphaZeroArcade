@@ -1,6 +1,7 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/concepts/EdgeConcept.hpp"
 #include "search/concepts/NodeConcept.hpp"
 
@@ -11,7 +12,8 @@ namespace concepts {
 template <class GT>
 concept GraphTraits = requires {
   requires core::concepts::Game<typename GT::Game>;
-  requires search::concepts::Node<typename GT::Node, typename GT::Game>;
+  requires core::concepts::EvalSpec<typename GT::EvalSpec>;
+  requires search::concepts::Node<typename GT::Node, typename GT::EvalSpec>;
   requires search::concepts::Edge<typename GT::Edge>;
 };
 

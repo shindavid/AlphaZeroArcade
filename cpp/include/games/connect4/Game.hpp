@@ -4,16 +4,13 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/connect4/Constants.hpp"
-#include "util/EigenUtil.hpp"
+#include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -44,14 +41,11 @@ struct Game {
     static constexpr int kMaxBranchingFactor = kNumColumns;
   };
 
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
-  };
-
   struct State {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
     int num_empty_cells(column_t col) const;
+    core::seat_index_t get_player_at(row_t row, column_t col) const;
 
     mask_t full_mask;        // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
@@ -96,32 +90,6 @@ struct Game {
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);
   };
 
-  struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
-    using MCTSKey = State;
-    using EvalKey = State;
-
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
-  };
-
   static void static_init() {}
 
  private:
@@ -146,3 +114,6 @@ struct hash<c4::Game::State> {
 static_assert(core::concepts::Game<c4::Game>);
 
 #include "inline/games/connect4/Game.inl"
+
+// Ensure that we always have bindings when we #include "games/connect4/Game.hpp":
+#include "games/connect4/Bindings.hpp"  // IWYU pragma: keep

@@ -7,8 +7,8 @@
 namespace search {
 namespace concepts {
 
-template <class N, class Game>
-concept Node = requires { requires std::derived_from<N, core::NodeBase<Game>>; };
+template <class N, class EvalSpec>
+concept Node = requires { requires std::derived_from<N, core::NodeBase<EvalSpec>>; };
 
 }  // namespace concepts
 }  // namespace search

@@ -4,16 +4,12 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/othello/Constants.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -39,13 +35,11 @@ class Game {
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
   };
 
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
-  };
-
   struct State {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
+    int get_count(core::seat_index_t seat) const;
+    core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
 
     mask_t opponent_mask;    // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
@@ -95,54 +89,9 @@ class Game {
                          column_t blink_column);
   };
 
-  struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = State;
-    using EvalKey = State;
-
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-    using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
-    using ScoreMarginShape = Eigen::Sizes<2, 2 * kNumCells + 1>;  // pdf/cdf, score-margin
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    struct ScoreMarginTarget {
-      static constexpr const char* kName = "score_margin";
-      using Tensor = eigen_util::FTensor<ScoreMarginShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    struct OwnershipTarget {
-      static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
-                              ScoreMarginTarget, OwnershipTarget>;
-  };
-
   static void static_init() {}
 
  private:
-  static int get_count(const State&, core::seat_index_t seat);
-  static core::seat_index_t get_player_at(const State&, int row, int col);  // -1 for unoccupied
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 };
@@ -163,3 +112,6 @@ struct hash<othello::Game::State> {
 static_assert(core::concepts::Game<othello::Game>);
 
 #include "inline/games/othello/Game.inl"
+
+// Ensure that we always have bindings when we #include "games/othello/Game.hpp":
+#include "games/othello/Bindings.hpp"  // IWYU pragma: keep

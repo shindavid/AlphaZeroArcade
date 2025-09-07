@@ -1,4 +1,3 @@
-#include "core/tests/Common.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "util/GTestUtil.hpp"
@@ -21,6 +20,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
+using InputTensorizor = core::InputTensorizor<Game>;
 
 class PerfectPlayerTest : public testing::Test {
  protected:
@@ -268,8 +268,7 @@ TEST(StochasticNimGameTest, tensorize) {
   Rules::apply(history, stochastic_nim::kTake1);  // Player 1 removes 1 stone
   Rules::apply(history, 0);                       // chance
 
-  Game::InputTensorizor::Tensor tensor =
-    Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
+  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(history.begin(), history.end() - 1);
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

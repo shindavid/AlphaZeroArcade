@@ -15,8 +15,8 @@
 
 namespace generic {
 
-template <core::concepts::Game Game>
-MctsPlayer<Game>::Params::Params(search::Mode mode) {
+template <search::concepts::Traits Traits>
+MctsPlayer<Traits>::Params::Params(search::Mode mode) {
   if (mode == search::kCompetitive) {
     num_fast_iters = 0;
     num_full_iters = 1600;
@@ -32,8 +32,8 @@ MctsPlayer<Game>::Params::Params(search::Mode mode) {
   }
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::Params::dump() const {
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::Params::dump() const {
   if (full_pct == 0) {
     util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
@@ -43,8 +43,8 @@ void MctsPlayer<Game>::Params::dump() const {
   }
 }
 
-template <core::concepts::Game Game>
-auto MctsPlayer<Game>::Params::make_options_description() {
+template <search::concepts::Traits Traits>
+auto MctsPlayer<Traits>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -53,10 +53,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
   return desc
     .template add_option<"num-fast-iters">(
       po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
-      "num mcts iterations to do per fast move")
+      "num MCTS iterations to do per fast move")
     .template add_option<"num-full-iters", 'i'>(
       po::value<int>(&num_full_iters)->default_value(num_full_iters),
-      "num mcts iterations to do per full move")
+      "num MCTS iterations to do per full move")
     .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
                                           "pct of moves that should be full")
     .template add_hidden_option<"starting-move-temp">(
@@ -71,15 +71,15 @@ auto MctsPlayer<Game>::Params::make_options_description() {
     .template add_option<"lcb-z-score">(po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
                                         "z-score for LCB. If zero, disable LCB")
     .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
-                                         "mcts player verbose mode")
+                                         "MCTS player verbose mode")
     .template add_option<"verbose-num-rows-to-display", 'r'>(
       po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
-      "mcts player number of rows to display in verbose mode");
+      "MCTS player number of rows to display in verbose mode");
 }
 
-template <core::concepts::Game Game>
-inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
-                                    bool owns_shared_data)
+template <search::concepts::Traits Traits>
+inline MctsPlayer<Traits>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
+                                      bool owns_shared_data)
     : params_(params),
       search_params_{
         {params.num_fast_iters, false},  // kFast
@@ -97,15 +97,15 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared
   RELEASE_ASSERT(shared_data_.get() != nullptr);
 }
 
-template <core::concepts::Game Game>
-inline MctsPlayer<Game>::~MctsPlayer() {
+template <search::concepts::Traits Traits>
+inline MctsPlayer<Traits>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::start_game() {
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
@@ -113,9 +113,9 @@ inline void MctsPlayer<Game>::start_game() {
   }
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                   core::action_t action) {
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
+                                                     core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
@@ -132,8 +132,8 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
   }
 }
 
-template <core::concepts::Game Game>
-typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
+template <search::concepts::Traits Traits>
+typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response(
   const ActionRequest& request) {
   mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
@@ -151,14 +151,14 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   return get_action_response_helper(response.results, request.valid_actions);
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::clear_search_mode() {
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::clear_search_mode() {
   mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 
-template <core::concepts::Game Game>
-bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
+template <search::concepts::Traits Traits>
+bool MctsPlayer<Traits>::init_search_mode(const ActionRequest& request) {
   if (search_mode_ != core::kNumSearchModes) return false;
 
   search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
@@ -166,8 +166,8 @@ bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
   return true;
 }
 
-template <core::concepts::Game Game>
-typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_helper(
+template <search::concepts::Traits Traits>
+typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
@@ -181,9 +181,9 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
   return action;
 }
 
-template <core::concepts::Game Game>
-auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
-                                         const ActionMask& valid_actions) const {
+template <search::concepts::Traits Traits>
+auto MctsPlayer<Traits>::get_action_policy(const SearchResults* mcts_results,
+                                           const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
@@ -335,8 +335,8 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
   return policy;
 }
 
-template <core::concepts::Game Game>
-core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
+template <search::concepts::Traits Traits>
+core::SearchMode MctsPlayer<Traits>::get_random_search_mode() const {
   if (params_.full_pct >= 1.0) {
     return core::kFull;
   }
@@ -344,8 +344,8 @@ core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::verbose_dump() const {
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;
@@ -355,9 +355,9 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   print_mcts_results(std::cout, action_policy, mcts_results);
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                          const SearchResults& results) const {
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                                            const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

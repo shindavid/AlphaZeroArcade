@@ -63,10 +63,10 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
   }
 }
 
-// NeuralNet<Game>
+// NeuralNet<EvalSpec>
 
-template <core::concepts::Game Game>
-NeuralNet<Game>::~NeuralNet() {
+template <core::concepts::EvalSpec EvalSpec>
+NeuralNet<EvalSpec>::~NeuralNet() {
   deactivate();
 
   for (Pipeline* pipeline : pipelines_) {
@@ -74,8 +74,8 @@ NeuralNet<Game>::~NeuralNet() {
   }
 }
 
-template <core::concepts::Game Game>
-pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
+template <core::concepts::EvalSpec EvalSpec>
+pipeline_index_t NeuralNet<EvalSpec>::get_pipeline_assignment() {
   mit::unique_lock lock(pipeline_mutex_);
   pipeline_cv_.wait(lock, [&] { return !available_pipeline_indices_.empty(); });
   pipeline_index_t index = available_pipeline_indices_.back();
@@ -83,33 +83,33 @@ pipeline_index_t NeuralNet<Game>::get_pipeline_assignment() {
   return index;
 }
 
-template <core::concepts::Game Game>
-float* NeuralNet<Game>::get_input_ptr(pipeline_index_t index) {
+template <core::concepts::EvalSpec EvalSpec>
+float* NeuralNet<EvalSpec>::get_input_ptr(pipeline_index_t index) {
   return pipelines_[index]->input.data();
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::schedule(pipeline_index_t index) const {
-  RELEASE_ASSERT(activated(), "NeuralNet<Game>::predict() called while deactivated");
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::schedule(pipeline_index_t index) const {
+  RELEASE_ASSERT(activated(), "NeuralNet<EvalSpec>::predict() called while deactivated");
   pipelines_[index]->schedule();
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::release(pipeline_index_t index) {
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
   mit::unique_lock lock(pipeline_mutex_);
   available_pipeline_indices_.push_back(index);
   lock.unlock();
   pipeline_cv_.notify_all();
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::load(pipeline_index_t index, float** policy_data, float** value_data,
-                           float** action_values_data) {
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::load(pipeline_index_t index, float** policy_data, float** value_data,
+                               float** action_values_data) {
   pipelines_[index]->load(policy_data, value_data, action_values_data);
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::deactivate() {
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::deactivate() {
   if (!activated()) return;
 
   LOG_DEBUG("Deactivating NeuralNet...");
@@ -127,14 +127,14 @@ void NeuralNet<Game>::deactivate() {
   engine_.reset();
 }
 
-template <core::concepts::Game Game>
-bool NeuralNet<Game>::activate(int num_pipelines) {
+template <core::concepts::EvalSpec EvalSpec>
+bool NeuralNet<EvalSpec>::activate(int num_pipelines) {
   if (activated()) return false;
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
   activated_ = true;
-  RELEASE_ASSERT(loaded(), "NeuralNet<Game>::{}() called before weights loaded", __func__);
+  RELEASE_ASSERT(loaded(), "NeuralNet<EvalSpec>::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(params_.cuda_device_id);
   if (!engine_) {
@@ -160,9 +160,9 @@ bool NeuralNet<Game>::activate(int num_pipelines) {
   return true;
 }
 
-template <core::concepts::Game Game>
-NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
-                                    const nvinfer1::Dims& input_shape, int batch_size)
+template <core::concepts::EvalSpec EvalSpec>
+NeuralNet<EvalSpec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
+                                        const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
       policy(detail::make_ptr<PolicyShape>(batch_size), detail::make_arr<PolicyShape>(batch_size)),
       value(detail::make_ptr<ValueShape>(batch_size), detail::make_arr<ValueShape>(batch_size)),
@@ -184,8 +184,8 @@ NeuralNet<Game>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }
 
-template <core::concepts::Game Game>
-NeuralNet<Game>::Pipeline::~Pipeline() {
+template <core::concepts::EvalSpec EvalSpec>
+NeuralNet<EvalSpec>::Pipeline::~Pipeline() {
   cuda_util::destroy_stream(stream);
   delete context;
 
@@ -200,8 +200,8 @@ NeuralNet<Game>::Pipeline::~Pipeline() {
   cuda_util::cpu_free(action_values.data());
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::Pipeline::schedule() {
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::Pipeline::schedule() {
   constexpr size_t f = sizeof(float);
   auto& dbs = device_buffers;
   cuda_util::cpu2gpu_memcpy_async(stream, dbs[0], input.data(), input.size() * f);
@@ -214,9 +214,9 @@ void NeuralNet<Game>::Pipeline::schedule() {
   cuda_util::gpu2cpu_memcpy_async(stream, action_values.data(), dbs[3], action_values.size() * f);
 }
 
-template <core::concepts::Game Game>
-void NeuralNet<Game>::Pipeline::load(float** policy_data, float** value_data,
-                                     float** action_values_data) {
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::Pipeline::load(float** policy_data, float** value_data,
+                                         float** action_values_data) {
   cuda_util::synchronize_stream(stream);
   *policy_data = policy.data();
   *value_data = value.data();

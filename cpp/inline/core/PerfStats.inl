@@ -112,7 +112,7 @@ inline void PerfStats::update(const LoopControllerPerfStats& stats) {
 inline void PerfStats::calibrate(int num_game_threads) {
   search_thread_stats.normalize(num_game_threads);
 
-  // mcts-time-ns includes everything except for wait-for-game-slot-time-ns. Let's undo that.
+  // mcts_time_ns includes everything except for wait_for_game_slot_time_ns. Let's undo that.
   search_thread_stats.mcts_time_ns -= search_thread_stats.cache_mutex_acquire_time_ns;
   search_thread_stats.mcts_time_ns -= search_thread_stats.cache_insert_time_ns;
   search_thread_stats.mcts_time_ns -= search_thread_stats.batch_prepare_time_ns;

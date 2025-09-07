@@ -2,7 +2,7 @@
 
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <string>
 #include <vector>

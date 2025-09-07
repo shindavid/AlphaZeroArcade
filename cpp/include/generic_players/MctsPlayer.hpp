@@ -1,16 +1,16 @@
 #pragma once
 
+#include "alphazero/ManagerParams.hpp"
+#include "alphazero/SearchResults.hpp"
+#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
-#include "core/concepts/Game.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/SearchResults.hpp"
-#include "mcts/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -24,9 +24,11 @@ namespace generic {
  * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
  * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template <core::concepts::Game Game>
-class MctsPlayer : public core::AbstractPlayer<Game> {
+template <search::concepts::Traits Traits>
+class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
  public:
+  using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
   using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
@@ -40,16 +42,15 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     float full_pct;
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
-    float move_temperature_half_life = 0.5 * Game::MctsConfiguration::kOpeningLength;
+    float move_temperature_half_life = 0.5 * EvalSpec::MctsConfiguration::kOpeningLength;
     float LCB_z_score = 2.0;
     bool verbose = false;
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Traits = mcts::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
-  using MctsManagerParams = mcts::ManagerParams<Game>;
-  using SearchResults = mcts::SearchResults<Game>;
+  using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
+  using SearchResults = alpha0::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
@@ -122,7 +123,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
-  template <core::concepts::Game>
+  template <core::concepts::EvalSpec ES>
   friend class MctsPlayerTest;
 };
 

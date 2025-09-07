@@ -1,16 +1,16 @@
 #pragma once
 
+#include "alphazero/ManagerParams.hpp"
+#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
-#include "core/concepts/Game.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
-#include "mcts/ManagerParams.hpp"
-#include "mcts/Traits.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
@@ -21,15 +21,17 @@
 
 namespace generic {
 
-template <core::concepts::Game Game, typename PlayerT, search::Mode Mode = search::kCompetitive>
-class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
+template <search::concepts::Traits Traits, typename PlayerT,
+          search::Mode Mode = search::kCompetitive>
+class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Traits::Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using Traits = mcts::Traits<Game>;
-  using MctsManagerParams = mcts::ManagerParams<Game>;
+  using EvalSpec = Traits::EvalSpec;
+  using Game = Traits::Game;
+  using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
   using MctsManager = search::Manager<Traits>;
-  using BaseMctsPlayer = generic::MctsPlayer<Game>;
+  using BaseMctsPlayer = generic::MctsPlayer<Traits>;
   using MctsPlayerParams = BaseMctsPlayer::Params;
   using SharedData = BaseMctsPlayer::SharedData;
   using SharedData_sptr = std::shared_ptr<SharedData>;
@@ -38,7 +40,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   using shared_data_map_t = std::map<core::game_slot_index_t, shared_data_vec_t>;
 
   static_assert(std::is_base_of_v<BaseMctsPlayer, PlayerT>,
-                "PlayerT must be derived from generic::MctsPlayer<Game>");
+                "PlayerT must be derived from generic::MctsPlayer<EvalSpec>");
 
   MctsPlayerGeneratorBase(core::GameServerBase*, shared_data_map_t& shared_data_cache);
 
@@ -75,12 +77,12 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   core::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
-template <core::concepts::Game Game>
-using CompetitiveMctsPlayerGenerator = MctsPlayerGeneratorBase<Game, generic::MctsPlayer<Game>>;
+template <search::concepts::Traits Traits>
+using CompetitiveMctsPlayerGenerator = MctsPlayerGeneratorBase<Traits, generic::MctsPlayer<Traits>>;
 
-template <core::concepts::Game Game>
+template <search::concepts::Traits Traits>
 using TrainingMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<Game, generic::DataExportingMctsPlayer<Game>, search::kTraining>;
+  MctsPlayerGeneratorBase<Traits, generic::DataExportingMctsPlayer<Traits>, search::kTraining>;
 
 template <typename GeneratorT>
 class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {
@@ -99,13 +101,13 @@ class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Ga
 
 namespace core {
 
-template <core::concepts::Game Game>
-class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>
-    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>> {};
+template <search::concepts::Traits Traits>
+class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>>
+    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>> {};
 
-template <core::concepts::Game Game>
-class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>
-    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<Game>> {};
+template <search::concepts::Traits Traits>
+class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Traits>>
+    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<Traits>> {};
 
 }  // namespace core
 

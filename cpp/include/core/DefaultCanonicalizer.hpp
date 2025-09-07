@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>

@@ -4,19 +4,15 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
 #include "util/CppUtil.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -32,10 +28,6 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
-  };
-
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
   };
 
   using State = blokus::GameState;
@@ -80,70 +72,6 @@ class Game {
     static State load(const std::string& str, int pass_count = 0);
   };
 
-  // TODO: add unplayed-pieces as an auxiliary input.
-  struct InputTensorizor {
-    // +1 to record the partial move if necessary.
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode) + 1;
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = State;
-    using EvalKey = State;
-
-    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-    using OwnershipShape = Eigen::Sizes<kNumPlayers + 1, kBoardDimension, kBoardDimension>;
-    using ScoreShape = Eigen::Sizes<2, kVeryBadScore + 1, kNumPlayers>;  // pdf/cdf, score, player
-    using UnplayedPiecesShape = Eigen::Sizes<kNumPlayers, kNumPieces>;
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-
-    struct ScoreTarget {
-      static constexpr const char* kName = "score";
-      using Tensor = eigen_util::FTensor<ScoreShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    /*
-     * Who owns which square at the end of the game.
-     */
-    struct OwnershipTarget {
-      static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    /*
-     * Which pieces are unplayed at the end of the game.
-     */
-    struct UnplayedPiecesTarget {
-      static constexpr const char* kName = "unplayed_pieces";
-      using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    // TODO:
-    // - ReachableSquaresTarget: for each square, whether it is reachable by some player if all
-    //                           other players are forced to pass all their turns.
-    // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
-    //                               before the current player's next move.
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
-                              OwnershipTarget, UnplayedPiecesTarget>;
-  };
-
   static void static_init() {}
 };
 
@@ -161,3 +89,6 @@ struct hash<blokus::Game::State> {
 static_assert(core::concepts::Game<blokus::Game>);
 
 #include "inline/games/blokus/Game.inl"
+
+// Ensure that we always have bindings when we #include "games/blokus/Game.hpp":
+#include "games/blokus/Bindings.hpp"  // IWYU pragma: keep
