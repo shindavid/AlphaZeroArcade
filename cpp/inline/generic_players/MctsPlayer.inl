@@ -15,8 +15,8 @@
 
 namespace generic {
 
-template <core::concepts::EvalSpec EvalSpec>
-MctsPlayer<EvalSpec>::Params::Params(search::Mode mode) {
+template <search::concepts::Traits Traits>
+MctsPlayer<Traits>::Params::Params(search::Mode mode) {
   if (mode == search::kCompetitive) {
     num_fast_iters = 0;
     num_full_iters = 1600;
@@ -32,8 +32,8 @@ MctsPlayer<EvalSpec>::Params::Params(search::Mode mode) {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void MctsPlayer<EvalSpec>::Params::dump() const {
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::Params::dump() const {
   if (full_pct == 0) {
     util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
@@ -43,8 +43,8 @@ void MctsPlayer<EvalSpec>::Params::dump() const {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-auto MctsPlayer<EvalSpec>::Params::make_options_description() {
+template <search::concepts::Traits Traits>
+auto MctsPlayer<Traits>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -77,8 +77,8 @@ auto MctsPlayer<EvalSpec>::Params::make_options_description() {
       "MCTS player number of rows to display in verbose mode");
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline MctsPlayer<EvalSpec>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
+template <search::concepts::Traits Traits>
+inline MctsPlayer<Traits>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
                                         bool owns_shared_data)
     : params_(params),
       search_params_{
@@ -97,15 +97,15 @@ inline MctsPlayer<EvalSpec>::MctsPlayer(const Params& params, SharedData_sptr sh
   RELEASE_ASSERT(shared_data_.get() != nullptr);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline MctsPlayer<EvalSpec>::~MctsPlayer() {
+template <search::concepts::Traits Traits>
+inline MctsPlayer<Traits>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline void MctsPlayer<EvalSpec>::start_game() {
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
@@ -113,8 +113,8 @@ inline void MctsPlayer<EvalSpec>::start_game() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline void MctsPlayer<EvalSpec>::receive_state_change(core::seat_index_t seat, const State& state,
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
                                                        core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
@@ -132,8 +132,8 @@ inline void MctsPlayer<EvalSpec>::receive_state_change(core::seat_index_t seat, 
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_response(
+template <search::concepts::Traits Traits>
+typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response(
   const ActionRequest& request) {
   mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
@@ -151,14 +151,14 @@ typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_r
   return get_action_response_helper(response.results, request.valid_actions);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void MctsPlayer<EvalSpec>::clear_search_mode() {
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::clear_search_mode() {
   mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-bool MctsPlayer<EvalSpec>::init_search_mode(const ActionRequest& request) {
+template <search::concepts::Traits Traits>
+bool MctsPlayer<Traits>::init_search_mode(const ActionRequest& request) {
   if (search_mode_ != core::kNumSearchModes) return false;
 
   search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
@@ -166,8 +166,8 @@ bool MctsPlayer<EvalSpec>::init_search_mode(const ActionRequest& request) {
   return true;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_response_helper(
+template <search::concepts::Traits Traits>
+typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
@@ -181,8 +181,8 @@ typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_r
   return action;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-auto MctsPlayer<EvalSpec>::get_action_policy(const SearchResults* mcts_results,
+template <search::concepts::Traits Traits>
+auto MctsPlayer<Traits>::get_action_policy(const SearchResults* mcts_results,
                                              const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
@@ -335,8 +335,8 @@ auto MctsPlayer<EvalSpec>::get_action_policy(const SearchResults* mcts_results,
   return policy;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-core::SearchMode MctsPlayer<EvalSpec>::get_random_search_mode() const {
+template <search::concepts::Traits Traits>
+core::SearchMode MctsPlayer<Traits>::get_random_search_mode() const {
   if (params_.full_pct >= 1.0) {
     return core::kFull;
   }
@@ -344,8 +344,8 @@ core::SearchMode MctsPlayer<EvalSpec>::get_random_search_mode() const {
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline void MctsPlayer<EvalSpec>::verbose_dump() const {
+template <search::concepts::Traits Traits>
+inline void MctsPlayer<Traits>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;
@@ -355,8 +355,8 @@ inline void MctsPlayer<EvalSpec>::verbose_dump() const {
   print_mcts_results(std::cout, action_policy, mcts_results);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void MctsPlayer<EvalSpec>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+template <search::concepts::Traits Traits>
+void MctsPlayer<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                                               const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;

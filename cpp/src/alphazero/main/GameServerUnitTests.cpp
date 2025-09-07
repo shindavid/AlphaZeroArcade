@@ -48,9 +48,9 @@ class GameServerTest : public testing::Test {
   // Also, if we later want to extend this test to operate on multiple concurrent games to test
   // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
   // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
-  class TestPlayer : public generic::MctsPlayer<EvalSpec> {
+  class TestPlayer : public generic::MctsPlayer<Traits> {
    public:
-    using base_t = generic::MctsPlayer<EvalSpec>;
+    using base_t = generic::MctsPlayer<Traits>;
     using ActionMask = base_t::ActionMask;
     using ActionResponse = base_t::ActionResponse;
 
@@ -79,9 +79,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<EvalSpec, TestPlayer> {
+  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<Traits, TestPlayer> {
    public:
-    using base_t = generic::MctsPlayerGeneratorBase<EvalSpec, TestPlayer>;
+    using base_t = generic::MctsPlayerGeneratorBase<Traits, TestPlayer>;
 
     using base_t::base_t;
 

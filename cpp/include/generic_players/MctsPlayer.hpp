@@ -6,11 +6,11 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -24,10 +24,11 @@ namespace generic {
  * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
  * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template <core::concepts::EvalSpec EvalSpec>
-class MctsPlayer : public core::AbstractPlayer<typename EvalSpec::Game> {
+template <search::concepts::Traits Traits>
+class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
  public:
-  using Game = EvalSpec::Game;
+  using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
   using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
@@ -47,7 +48,6 @@ class MctsPlayer : public core::AbstractPlayer<typename EvalSpec::Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Traits = alpha0::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
   using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
   using SearchResults = alpha0::SearchResults<Game>;

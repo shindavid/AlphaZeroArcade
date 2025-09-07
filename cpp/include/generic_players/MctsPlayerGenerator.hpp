@@ -6,11 +6,11 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
@@ -21,17 +21,17 @@
 
 namespace generic {
 
-template <core::concepts::EvalSpec EvalSpec, typename PlayerT,
+template <search::concepts::Traits Traits, typename PlayerT,
           search::Mode Mode = search::kCompetitive>
-class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename EvalSpec::Game> {
+class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Traits::Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using Game = EvalSpec::Game;
-  using Traits = alpha0::Traits<Game>;
+  using EvalSpec = Traits::EvalSpec;
+  using Game = Traits::Game;
   using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
   using MctsManager = search::Manager<Traits>;
-  using BaseMctsPlayer = generic::MctsPlayer<EvalSpec>;
+  using BaseMctsPlayer = generic::MctsPlayer<Traits>;
   using MctsPlayerParams = BaseMctsPlayer::Params;
   using SharedData = BaseMctsPlayer::SharedData;
   using SharedData_sptr = std::shared_ptr<SharedData>;
@@ -77,13 +77,13 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Ev
   core::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 using CompetitiveMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<EvalSpec, generic::MctsPlayer<EvalSpec>>;
+  MctsPlayerGeneratorBase<Traits, generic::MctsPlayer<Traits>>;
 
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 using TrainingMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<EvalSpec, generic::DataExportingMctsPlayer<EvalSpec>, search::kTraining>;
+  MctsPlayerGeneratorBase<Traits, generic::DataExportingMctsPlayer<Traits>, search::kTraining>;
 
 template <typename GeneratorT>
 class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {
@@ -102,13 +102,13 @@ class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Ga
 
 namespace core {
 
-template <core::concepts::EvalSpec EvalSpec>
-class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<EvalSpec>>
-    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<EvalSpec>> {};
+template <search::concepts::Traits Traits>
+class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>>
+    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>> {};
 
-template <core::concepts::EvalSpec EvalSpec>
-class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<EvalSpec>>
-    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<EvalSpec>> {};
+template <search::concepts::Traits Traits>
+class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Traits>>
+    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<Traits>> {};
 
 }  // namespace core
 

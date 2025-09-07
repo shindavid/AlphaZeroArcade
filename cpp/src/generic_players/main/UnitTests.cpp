@@ -34,7 +34,7 @@ class MctsPlayerTest : public ::testing::Test {
   using Traits = alpha0::Traits<Game, EvalSpec>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using MctsPlayer = generic::MctsPlayer<EvalSpec>;
+  using MctsPlayer = generic::MctsPlayer<Traits>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Traits::SearchResults;

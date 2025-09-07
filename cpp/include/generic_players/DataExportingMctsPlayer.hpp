@@ -9,8 +9,8 @@ namespace generic {
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
  */
-template <core::concepts::EvalSpec EvalSpec>
-class DataExportingMctsPlayer : public MctsPlayer<EvalSpec> {
+template <search::concepts::Traits Traits>
+class DataExportingMctsPlayer : public MctsPlayer<Traits> {
  public:
   /*
    * The argument for using a full search is so that the opp reply target is more accurate.
@@ -20,7 +20,7 @@ class DataExportingMctsPlayer : public MctsPlayer<EvalSpec> {
    */
   static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
 
-  using Game = EvalSpec::Game;
+  using Game = Traits::Game;
   using GameWriteLog_sptr = core::TrainingDataWriter<Game>::GameWriteLog_sptr;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
@@ -33,7 +33,7 @@ class DataExportingMctsPlayer : public MctsPlayer<EvalSpec> {
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
-  using base_t = MctsPlayer<EvalSpec>;
+  using base_t = MctsPlayer<Traits>;
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
   using SearchResults = base_t::SearchResults;

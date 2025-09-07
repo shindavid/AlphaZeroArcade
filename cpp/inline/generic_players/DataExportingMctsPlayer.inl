@@ -6,9 +6,9 @@
 
 namespace generic {
 
-template <core::concepts::EvalSpec EvalSpec>
-typename DataExportingMctsPlayer<EvalSpec>::ActionResponse
-DataExportingMctsPlayer<EvalSpec>::get_action_response(const ActionRequest& request) {
+template <search::concepts::Traits Traits>
+typename DataExportingMctsPlayer<Traits>::ActionResponse
+DataExportingMctsPlayer<Traits>::get_action_response(const ActionRequest& request) {
   const ActionMask& valid_actions = request.valid_actions;
 
   mit::unique_lock lock(this->search_mode_mutex_);
@@ -57,9 +57,9 @@ DataExportingMctsPlayer<EvalSpec>::get_action_response(const ActionRequest& requ
   return action_response;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename DataExportingMctsPlayer<EvalSpec>::ChanceEventPreHandleResponse
-DataExportingMctsPlayer<EvalSpec>::prehandle_chance_event(
+template <search::concepts::Traits Traits>
+typename DataExportingMctsPlayer<Traits>::ChanceEventPreHandleResponse
+DataExportingMctsPlayer<Traits>::prehandle_chance_event(
   const ChangeEventPreHandleRequest& request) {
   // So that only one player outputs the action values.
   if (!this->owns_shared_data_) {
@@ -87,8 +87,8 @@ DataExportingMctsPlayer<EvalSpec>::prehandle_chance_event(
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void DataExportingMctsPlayer<EvalSpec>::extract_policy_target(const SearchResults* mcts_results,
+template <search::concepts::Traits Traits>
+void DataExportingMctsPlayer<Traits>::extract_policy_target(const SearchResults* mcts_results,
                                                               PolicyTensor** target) {
   **target = mcts_results->policy_target;
   float sum = eigen_util::sum(**target);
