@@ -38,12 +38,7 @@ struct Game {
 
   struct State {
     auto operator<=>(const State& other) const = default;
-
-    size_t hash() const {
-      auto tuple = std::make_tuple(stones_left, current_player);
-      std::hash<decltype(tuple)> hasher;
-      return hasher(tuple);
-    }
+    size_t hash() const;
 
     int stones_left;
     int current_player;
@@ -56,100 +51,21 @@ struct Game {
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Rules : public game_base::RulesBase<Types> {
-    static void init_state(State& state) {
-      state.stones_left = nim::kStartingStones;
-      state.current_player = 0;
-    }
-
-    static Types::ActionMask get_legal_moves(const StateHistory& history) {
-      const State& state = history.current();
-      Types::ActionMask mask;
-
-      for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-        mask[i] = i + 1 <= state.stones_left;
-      }
-
-      return mask;
-    }
-
+    static void init_state(State& state);
+    static Types::ActionMask get_legal_moves(const StateHistory& history);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
-
-    static core::seat_index_t get_current_player(const State& state) {
-      return state.current_player;
-    }
-
-    static void apply(StateHistory& history, core::action_t action) {
-      if (action < 0 || action >= nim::kMaxStonesToTake) {
-        throw std::invalid_argument("Invalid action: " + std::to_string(action));
-      }
-
-      State& state = history.extend();
-      state.stones_left -= action + 1;
-      state.current_player = 1 - state.current_player;
-    }
-
+    static core::seat_index_t get_current_player(const State& state);
+    static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
-                            core::action_t last_action, GameResults::Tensor& outcome) {
-      if (state.stones_left == 0) {
-        outcome.setZero();
-        outcome(last_player) = 1;
-        return true;
-      }
-      return false;
-    }
+                            core::action_t last_action, GameResults::Tensor& outcome);
   };
 
   struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
-
-    static std::string action_to_str(core::action_t action, core::action_mode_t) {
-      return std::to_string(action + 1);
-    }
-
+    static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream& os, const State& state, core::action_t last_action = -1,
-                            const Types::player_name_array_t* player_names = nullptr) {
-      os << "[" << state.stones_left << ", " << state.current_player << "]" << std::endl;
-    }
-
-    static std::string compact_state_repr(const State& state) {
-      std::ostringstream ss;
-      ss << "[" << state.stones_left << ", " << state.current_player << "]";
-      return ss.str();
-    }
-  };
-
-  struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
-    using TransposeKey = State;
-    using EvalKey = State;
-
-    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
-
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur) {
-      Tensor tensor;
-      tensor.setZero();
-      Iter state = cur;
-
-      for (int i = 0; i < state->stones_left; ++i) {
-        tensor(nim::kStartingStones - 1 - i) = 1;
-      }
-      return tensor;
-    }
-  };
-
-  struct TrainingTargets {
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+                            const Types::player_name_array_t* player_names = nullptr);
+    static std::string compact_state_repr(const State& state);
   };
 
   static void static_init() {}
@@ -167,3 +83,8 @@ struct hash<nim::Game::State> {
 }  // namespace std
 
 static_assert(core::concepts::Game<nim::Game>);
+
+#include "inline/games/nim/Game.inl"  // IWYU pragma: keep
+                                           //
+// Ensure that we always have bindings when we #include "games/nim/Game.hpp":
+#include "games/nim/Bindings.hpp"  // IWYU pragma: keep

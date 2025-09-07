@@ -4,10 +4,6 @@
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 
-/*
- * Connect4 InputTensorizor
- */
-
 namespace c4 {
 
 struct InputTensorizor {

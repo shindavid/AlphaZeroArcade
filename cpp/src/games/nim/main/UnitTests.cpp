@@ -15,6 +15,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
+using InputTensorizor = core::InputTensorizor<Game>;
 
 TEST(NimGameTest, InitialState) {
   StateHistory history;
@@ -87,8 +88,7 @@ TEST(NimGameTest, tensorize) {
   Rules::apply(history, 1);  // Player 0
   Rules::apply(history, 0);  // Player 1
 
-  Game::InputTensorizor::Tensor tensor =
-    Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
+  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(history.begin(), history.end() - 1);
   float expectedValues[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
