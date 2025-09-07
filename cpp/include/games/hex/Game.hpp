@@ -5,7 +5,7 @@
 #include "core/IOBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"

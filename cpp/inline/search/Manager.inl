@@ -1,7 +1,7 @@
 #include "search/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"

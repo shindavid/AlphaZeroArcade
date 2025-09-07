@@ -2,7 +2,7 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/BoostUtil.hpp"
 
 #include <ostream>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/concepts/EdgeConcept.hpp"
 #include "search/concepts/NodeConcept.hpp"
 

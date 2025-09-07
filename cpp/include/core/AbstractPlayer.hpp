@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/TrainingDataWriter.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <array>
 #include <string>

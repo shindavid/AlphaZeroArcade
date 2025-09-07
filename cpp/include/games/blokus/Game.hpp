@@ -7,7 +7,7 @@
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"

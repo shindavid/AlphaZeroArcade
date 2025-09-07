@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameResults.hpp"
+#include "core/concepts/GameResultsConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <algorithm>

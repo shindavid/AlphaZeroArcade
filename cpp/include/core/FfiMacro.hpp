@@ -4,7 +4,7 @@
 #include "core/DataLoader.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/GameLog.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/Exceptions.hpp"
 
 #ifdef MIT_TEST_MODE

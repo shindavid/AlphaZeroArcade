@@ -8,7 +8,7 @@
 #include "core/PerfStats.hpp"
 #include "core/TrainingDataWriter.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "third_party/ProgressBar.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep

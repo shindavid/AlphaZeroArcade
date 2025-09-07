@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "core/concepts/MctsConfigurationConcept.hpp"
 #include "core/concepts/TrainingTargetsConcept.hpp"
 

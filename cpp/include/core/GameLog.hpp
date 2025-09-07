@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <cstdint>
 #include <vector>

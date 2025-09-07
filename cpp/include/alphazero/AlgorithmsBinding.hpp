@@ -2,7 +2,7 @@
 
 #include "alphazero/Algorithms.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 
 namespace alpha0 {

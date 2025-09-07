@@ -8,7 +8,7 @@
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
 #include "nnet/NNEvaluationServiceFactory.hpp"

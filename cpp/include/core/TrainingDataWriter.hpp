@@ -3,7 +3,7 @@
 #include "core/GameLog.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/LoopControllerListener.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>

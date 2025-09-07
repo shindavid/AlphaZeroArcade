@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/GameTypes.hpp"
-#include "core/concepts/GameConstants.hpp"
-#include "core/concepts/GameIO.hpp"
-#include "core/concepts/GameRules.hpp"
-#include "core/concepts/GameStateHistory.hpp"
-#include "core/concepts/GameSymmetries.hpp"
+#include "core/concepts/GameConstantsConcept.hpp"
+#include "core/concepts/GameIOConcept.hpp"
+#include "core/concepts/GameRulesConcept.hpp"
+#include "core/concepts/GameStateHistoryConcept.hpp"
+#include "core/concepts/GameSymmetriesConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>

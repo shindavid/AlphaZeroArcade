@@ -6,7 +6,7 @@
 #include "core/IOBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossDrawResults.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/othello/Constants.hpp"
 #include "util/FiniteGroups.hpp"

@@ -3,7 +3,7 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <boost/program_options.hpp>
 
