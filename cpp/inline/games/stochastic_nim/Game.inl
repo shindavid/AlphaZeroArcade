@@ -31,6 +31,13 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
+inline core::action_mode_t Game::Rules::get_action_mode(const State& state) {
+  return state.current_mode;
+}
+inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
+  return state.current_player;
+}
+
 // current_player only switches AFTER a chance action
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   bool is_chance = is_chance_mode(history.current().current_mode);
@@ -61,6 +68,10 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
+inline bool Game::Rules::is_chance_mode(const core::action_mode_t& mode) {
+  return mode == stochastic_nim::kChanceMode;
+}
+
 /*
  * Assign the chance distribution mass to each legal move. If the sum of the probabilities is less
  * than 1, move the remaining probability mass to the last legal move.
@@ -82,17 +93,27 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
   return dist;
 }
 
-template <typename Iter>
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
-  Tensor tensor;
-  tensor.setZero();
-  Iter state = cur;
-
-  for (int i = 0; i < stochastic_nim::kStartingStonesBitWidth; ++i) {
-    tensor(0, i, 0) = (state->stones_left & (1 << i)) ? 1 : 0;
+inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t mode) {
+  if (mode == stochastic_nim::kChanceMode) {
+    return std::format("r{}", action);
+  } else {
+    return std::format("{}", action + 1);
   }
-  tensor(0, stochastic_nim::kStartingStonesBitWidth, 0) = state->current_mode;
-  return tensor;
+}
+
+inline void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
+                                  const Types::player_name_array_t* player_names) {
+  ss << compact_state_repr(state) << std::endl;
+}
+
+inline std::string Game::IO::compact_state_repr(const State& state) {
+  std::ostringstream ss;
+  ss << "p" << state.current_player;
+  if (state.current_mode == stochastic_nim::kChanceMode) {
+    ss << "*";
+  }
+  ss << "@" << state.stones_left;
+  return ss.str();
 }
 
 }  // namespace stochastic_nim

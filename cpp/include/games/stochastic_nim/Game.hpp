@@ -57,68 +57,21 @@ struct Game {
   struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
-    static core::action_mode_t get_action_mode(const State& state) { return state.current_mode; }
-    static core::seat_index_t get_current_player(const State& state) {
-      return state.current_player;
-    }
+    static core::action_mode_t get_action_mode(const State& state);
+    static core::seat_index_t get_current_player(const State& state);
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
-    static bool is_chance_mode(const core::action_mode_t& mode) {
-      return mode == stochastic_nim::kChanceMode;
-    }
+    static bool is_chance_mode(const core::action_mode_t& mode);
     static Types::ChanceDistribution get_chance_distribution(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {
     static std::string action_delimiter() { return "-"; }
-
-    static std::string action_to_str(core::action_t action, core::action_mode_t mode) {
-      if (mode == stochastic_nim::kChanceMode) {
-        return std::format("r{}", action);
-      } else {
-        return std::format("{}", action + 1);
-      }
-    }
-
+    static std::string action_to_str(core::action_t action, core::action_mode_t mode);
     static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,
-                            const Types::player_name_array_t* player_names = nullptr) {
-      ss << compact_state_repr(state) << std::endl;
-    }
-
-    static std::string compact_state_repr(const State& state) {
-      std::ostringstream ss;
-      ss << "p" << state.current_player;
-      if (state.current_mode == stochastic_nim::kChanceMode) {
-        ss << "*";
-      }
-      ss << "@" << state.stones_left;
-      return ss.str();
-    }
-  };
-
-  struct InputTensorizor {
-    // tensor is of the format {binary encoding of stones_left, current_mode}
-    constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
-    using TransposeKey = State;
-    using EvalKey = State;
-
-    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+                            const Types::player_name_array_t* player_names = nullptr);
+    static std::string compact_state_repr(const State& state);
   };
 
   static void static_init() {}
@@ -136,3 +89,6 @@ struct hash<stochastic_nim::Game::State> {
 static_assert(core::concepts::Game<stochastic_nim::Game>);
 
 #include "inline/games/stochastic_nim/Game.inl"
+
+// Ensure that we always have bindings when we #include "games/stochastic_nim/Game.hpp":
+#include "games/stochastic_nim/Bindings.hpp"  // IWYU pragma: keep
