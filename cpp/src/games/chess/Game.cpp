@@ -7,10 +7,4 @@ void Game::IO::print_state(std::ostream&, const State&, core::action_t last_acti
   throw std::runtime_error("Not implemented");
 }
 
-// TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
-Game::InputTensorizor::TransposeKey Game::InputTensorizor::transpose_key(
-  const StateHistory& history) {
-  throw std::runtime_error("Not implemented");
-}
-
 }  // namespace chess

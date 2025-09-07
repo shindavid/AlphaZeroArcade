@@ -1,16 +1,6 @@
 #include "games/chess/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
-#include "util/AnsiCodes.hpp"
-#include "util/BitMapUtil.hpp"
-#include "util/BitSet.hpp"
-#include "util/CppUtil.hpp"
-
 #include <boost/lexical_cast.hpp>
-
-#include <algorithm>
-#include <bit>
-#include <iostream>
 
 namespace chess {
 
@@ -47,11 +37,6 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
 
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   return lczero::MoveFromNNIndex(action, 0).as_string();
-}
-
-template <typename Iter>
-Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
-  throw std::runtime_error("Not implemented");
 }
 
 }  // namespace chess
