@@ -10,6 +10,10 @@
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
+/*
+ * Connect4 InputTensorizor
+ */
+
 namespace c4 {
 
 struct InputTensorizor {
@@ -51,6 +55,10 @@ struct InputTensorizor<c4::Game> : public c4::InputTensorizor {
 
 }  // namespace core
 
+/*
+ * Connect4 AlphaZero
+ */
+
 namespace c4::alpha0 {
 
 struct TrainingTargets {
@@ -73,6 +81,10 @@ struct EvalSpec<c4::Game> {
 };
 
 }  // namespace core::alpha0
+
+/*
+ * Connect4 BetaZero: for now, identical to Connect4 AlphaZero.
+ */
 
 namespace c4::beta0 {
 
