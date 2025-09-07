@@ -14,15 +14,6 @@ struct InputTensorizor {
 
   using Shape = Eigen::Sizes<kDim0, Constants::kBoardDim, Constants::kBoardDim>;
   using Tensor = eigen_util::FTensor<Shape>;
-  using TransposeKey = Game::State;
-  using EvalKey = Game::State;
-
-  static TransposeKey transpose_key(const Game::StateHistory& history) { return history.current(); }
-
-  template <typename Iter>
-  static EvalKey eval_key(Iter start, Iter cur) {
-    return *cur;
-  }
 
   template <typename Iter>
   static Tensor tensorize(Iter start, Iter cur) {
