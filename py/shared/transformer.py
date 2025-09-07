@@ -44,14 +44,15 @@ class RMSNorm(nn.Module):
 
 class Smolgen(nn.Module):
     """Dynamic, state-conditioned supplemental logits: (B,H,T,T)"""
-    def __init__(self, Dm: int, H: int, T: int, tok_dim: int = 32, glob_dim: int = 256, shared_layer: nn.Linear | None = None):
+    def __init__(self, Dm: int, H: int, T: int, compress_dim: int = 32, shared_dim: int = 256,
+                 shared_layer: nn.Linear | None = None):
         super().__init__()
         self.T, self.H = T, H
-        self.proj_token  = nn.Linear(Dm, tok_dim, bias=True)
-        self.proj_global = nn.Linear(T * tok_dim, glob_dim, bias=True)
-        self.per_head    = nn.Linear(glob_dim, H * glob_dim, bias=True)
-        # shared 256 -> T*T (can be shared across layers via injection)
-        self.shared = shared_layer if shared_layer is not None else nn.Linear(glob_dim, T * T, bias=False)
+        self.proj_token  = nn.Linear(Dm, compress_dim, bias=True)
+        self.proj_global = nn.Linear(T * compress_dim, shared_dim, bias=True)
+        self.per_head    = nn.Linear(shared_dim, H * shared_dim, bias=True)
+
+        self.shared = shared_layer if shared_layer is not None else nn.Linear(shared_dim, T * T, bias=False)
 
     def forward(self, x):  # x: (B,T,Dm)
         B = x.size(0)
@@ -73,8 +74,11 @@ class MultiheadAttentionWithExtras(nn.Module):
                  use_static_bias: bool = True,
                  use_shaw: bool = True,
                  use_smolgen: bool = True,
-                 smol_shared: nn.Linear | None = None,
+                 smolgen_shared: nn.Linear | None = None,
+                 smolgen_shared_dim: int = 256,
+                 smolgen_compress_dim: int = 32,
                  n_layers: int = 1):
+
         super().__init__()
         assert Dm % H == 0
         self.Dm, self.H, self.T = Dm, H, T
@@ -82,7 +86,6 @@ class MultiheadAttentionWithExtras(nn.Module):
         self.scale = 1.0 / math.sqrt(self.dh)
         self.res_scale = residual_scale(n_layers)
 
-        # Projections (no bias per paper/blog)
         self.Wq = nn.Linear(Dm, Dm, bias=False)
         self.Wk = nn.Linear(Dm, Dm, bias=False)
         self.Wv = nn.Linear(Dm, Dm, bias=False)
@@ -104,7 +107,8 @@ class MultiheadAttentionWithExtras(nn.Module):
                 nn.init.trunc_normal_(p, std=0.02)
 
         if self.use_smol:
-            self.smolgen = Smolgen(Dm=Dm, H=H, T=T, shared_layer=smol_shared)
+            self.smolgen = Smolgen(Dm=Dm, H=H, T=T, shared_layer=smolgen_shared,
+                                   compress_dim=smolgen_compress_dim, shared_dim=smolgen_shared_dim)
 
         self.dropout = nn.Dropout(0.1)
 
@@ -145,6 +149,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         out = self.dropout(self.Wo(out)) * self.res_scale
         return out
 
+
 class FFN(nn.Module):
     def __init__(self, Dm: int, Dff: int, n_layers: int):
         super().__init__()
@@ -158,18 +163,21 @@ class FFN(nn.Module):
         y = self.fc2(self.act(self.fc1(x)))
         return self.dropout(y) * self.res_scale
 
+
 class EncoderLayer(nn.Module):
     def __init__(self, Dm: int, H: int, T: int, Dff: int, n_layers: int,
-                 use_static_bias=True, use_shaw=True, use_smolgen=True, smol_shared=None):
+                 use_static_bias=True, use_shaw=True, use_smolgen=True, smolgen_shared=None,
+                 smolgen_shared_dim: int = 256, smolgen_compress_dim: int = 32):
         super().__init__()
         self.mha = MultiheadAttentionWithExtras(Dm, H, T,
                                                 use_static_bias=use_static_bias,
                                                 use_shaw=use_shaw,
                                                 use_smolgen=use_smolgen,
-                                                smol_shared=smol_shared,
+                                                smolgen_shared=smolgen_shared,
+                                                smolgen_shared_dim=smolgen_shared_dim,
+                                                smolgen_compress_dim=smolgen_compress_dim,
                                                 n_layers=n_layers)
         self.ffn = FFN(Dm, Dff, n_layers)
-        # Post-LN with RMSNorm-like behavior
         self.norm1 = RMSNorm(Dm)
         self.norm2 = RMSNorm(Dm)
 
@@ -178,9 +186,6 @@ class EncoderLayer(nn.Module):
         x = self.norm2(x + self.ffn(x))
         return x
 
-# -----------------------
-# Drop-in TransformerBlock
-# -----------------------
 
 class ChessformerBlock(nn.Module):
     def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
@@ -188,11 +193,11 @@ class ChessformerBlock(nn.Module):
                  use_static_bias: bool = True,
                  use_shaw: bool = True,
                  use_smolgen: bool = True,
+                 smolgen_compress_dim: int = 32,
+                 smolgen_shared_dim: int = 256,
                  ffn_multiplier: float = 1.0):
         """
-        input_shape: (C, H, W)
-        - Keeps the external API identical to your current block.
-        - Internally runs a Chessformer-style encoder on (B, T=H*W, C) tokens.
+        input_shape: (B, C, H, W)
         """
         super(ChessformerBlock, self).__init__()
 
@@ -200,7 +205,6 @@ class ChessformerBlock(nn.Module):
         self.H, self.W = H, W
         self.board_size = H * W                     # T
         n_input_channels = input_shape[0]           # C_in
-        Dm = embed_dim
         Hh = n_heads
         Dff = int(ffn_multiplier * embed_dim)       # small FFN per paper/blog (≈ 1x to 2x)
 
@@ -211,7 +215,7 @@ class ChessformerBlock(nn.Module):
         self.positional_embedding = FilmAbsPos(self.board_size, embed_dim)
 
         # Optional: share Smolgen's final 256->T^2 map across all layers
-        self.smol_shared = nn.Linear(256, self.board_size * self.board_size, bias=False) if use_smolgen else None
+        self.smolgen_shared = nn.Linear(smolgen_shared_dim, self.board_size * self.board_size, bias=False) if use_smolgen else None
 
         # Transformer encoder (custom, Post-LN, DeepNorm-style scaling, Mish, no QKV bias)
         layers = []
@@ -221,7 +225,9 @@ class ChessformerBlock(nn.Module):
                              use_static_bias=use_static_bias,
                              use_shaw=use_shaw,
                              use_smolgen=use_smolgen,
-                             smol_shared=self.smol_shared)
+                             smolgen_compress_dim=smolgen_compress_dim,
+                             smolgen_shared_dim=smolgen_shared_dim,
+                             smolgen_shared=self.smolgen_shared)
             )
         self.transformer_encoder = nn.ModuleList(layers)
 
