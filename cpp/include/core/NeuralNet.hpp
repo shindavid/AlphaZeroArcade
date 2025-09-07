@@ -71,6 +71,9 @@ class NeuralNetBase {
 
 /*
  * A thin wrapper around a TensorRT engine.
+ *
+ * TODO: rather than hard-coding the specific output heads, we should generically get them from the
+ * EvalSpec. This will allow us to support alternative paradigms like MuZero and BetaZero.
  */
 template <core::concepts::EvalSpec EvalSpec>
 class NeuralNet : public NeuralNetBase {
