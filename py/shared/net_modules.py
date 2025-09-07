@@ -34,7 +34,7 @@ import io
 import logging
 import math
 import os
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -48,8 +48,8 @@ class ShapeInfo:
 
 
 class SearchParadigm(Enum):
-    AlphaZero = 'a0'
-    BetaZero = 'b0'
+    AlphaZero = 'alpha0'
+    BetaZero = 'beta0'
 
 
 ShapeInfoDict = Dict[str, ShapeInfo]

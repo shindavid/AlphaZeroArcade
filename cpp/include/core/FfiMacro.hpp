@@ -32,9 +32,9 @@ struct FfiFunctions {
     DataLoader::Params params{data_dir, memory_budget, num_worker_threads, num_prefetch_threads};
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     switch (p) {
-      case core::kParadigmMcts:
+      case core::kParadigmAlphaZero:
         return new MctsDataLoader(params);
-      case core::kParadigmBmcts:
+      case core::kParadigmBetaZero:
         return new BayesianMctsDataLoader(params);
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
@@ -71,9 +71,9 @@ struct FfiFunctions {
   static core::ShapeInfo* get_shape_info_array(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     switch (p) {
-      case core::kParadigmMcts:
+      case core::kParadigmAlphaZero:
         return MctsGameReadLog::get_shape_info_array();
-      case core::kParadigmBmcts:
+      case core::kParadigmBetaZero:
         return BayesianMctsGameReadLog::get_shape_info_array();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
