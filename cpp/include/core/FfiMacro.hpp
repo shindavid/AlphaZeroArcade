@@ -20,7 +20,7 @@ struct FfiFunctions {
   using MctsGameReadLog = core::GameReadLog<MctsEvalSpec>;
   using MctsDataLoader = core::DataLoader<MctsEvalSpec>;
 
-  using BayesianMctsEvalSpec = core::b0::EvalSpec<Game>;
+  using BayesianMctsEvalSpec = core::beta0::EvalSpec<Game>;
   using BayesianMctsGameReadLog = core::GameReadLog<BayesianMctsEvalSpec>;
   using BayesianMctsDataLoader = core::DataLoader<BayesianMctsEvalSpec>;
 

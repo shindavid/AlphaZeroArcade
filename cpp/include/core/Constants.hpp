@@ -32,7 +32,7 @@ inline SearchParadigm parse_search_paradigm(const char* s) {
   std::string ss(s);
   if (ss == "alpha0") {
     return kParadigmMcts;
-  } else if (ss == "b0") {
+  } else if (ss == "beta0") {
     return kParadigmBmcts;
   } else {
     return kUnknownParadigm;
