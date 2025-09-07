@@ -5,7 +5,7 @@
 #include "core/InputTensorizor.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
-#include "games/connect4/InputTensorrizor.hpp"
+#include "games/connect4/InputTensorizor.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace c4::alpha0 {

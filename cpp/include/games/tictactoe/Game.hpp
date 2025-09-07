@@ -6,14 +6,11 @@
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/tictactoe/Constants.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -50,6 +47,7 @@ class Game {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
     mask_t opponent_mask() const { return full_mask ^ cur_player_mask; }
+    core::seat_index_t get_player_at(int row, int col) const;
 
     mask_t full_mask;        // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
@@ -94,49 +92,11 @@ class Game {
     static boost::json::value state_to_json(const State& state);
   };
 
-  struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using TransposeKey = State;
-    using EvalKey = State;
-
-    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-    using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    struct OwnershipTarget {
-      static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
-
-      static bool tensorize(const Types::GameLogView& view, Tensor&);
-    };
-
-    using List =
-      mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
-  };
-
   static constexpr mask_t kThreeInARowMasks[] = {
     make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
     make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
   static void static_init() {}
-
- private:
-  static core::seat_index_t _get_player_at(const State& state, int row, int col);
 };
 
 }  // namespace tictactoe
@@ -153,3 +113,6 @@ struct hash<tictactoe::Game::State> {
 static_assert(core::concepts::Game<tictactoe::Game>);
 
 #include "inline/games/tictactoe/Game.inl"
+
+// Ensure that we always have bindings when we #include "games/tictactoe/Game.hpp":
+#include "games/tictactoe/Bindings.hpp"  // IWYU pragma: keep
