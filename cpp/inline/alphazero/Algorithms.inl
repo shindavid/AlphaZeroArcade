@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::pure_backprop(SearchContext& context, const ValueArray& value) {
@@ -790,4 +790,4 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
   }
 }
 
-}  // namespace a0
+}  // namespace alpha0

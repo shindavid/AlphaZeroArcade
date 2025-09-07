@@ -1,6 +1,6 @@
 #include "alphazero/ActionSelector.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_table,
@@ -104,4 +104,4 @@ inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_tab
   PUCT = mask * PUCT + (1 - mask) * -1e6;
 }
 
-}  // namespace a0
+}  // namespace alpha0

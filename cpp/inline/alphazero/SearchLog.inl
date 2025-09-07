@@ -3,7 +3,7 @@
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 inline boost::json::object SearchLog<GraphTraits>::LogNode::to_json() const {
@@ -115,4 +115,4 @@ inline boost::json::object SearchLog<GraphTraits>::Graph::graph_repr() const {
   return graph_json;
 }
 
-}  // namespace a0
+}  // namespace alpha0

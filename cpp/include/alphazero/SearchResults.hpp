@@ -5,7 +5,7 @@
 
 #include <boost/json.hpp>
 
-namespace a0 {
+namespace alpha0 {
 
 template <core::concepts::Game Game>
 struct SearchResults {
@@ -33,6 +33,6 @@ struct SearchResults {
   boost::json::object to_json() const;
 };
 
-}  // namespace a0
+}  // namespace alpha0
 
 #include "inline/alphazero/SearchResults.inl"

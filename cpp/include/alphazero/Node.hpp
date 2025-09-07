@@ -4,7 +4,7 @@
 #include "core/concepts/Game.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-namespace a0 {
+namespace alpha0 {
 
 /*
  * A Node consists of n=3 main data members:
@@ -71,6 +71,6 @@ class Node : public core::NodeBase<Game> {
   Stats stats_;
 };
 
-}  // namespace a0
+}  // namespace alpha0
 
 #include "inline/alphazero/Node.inl"

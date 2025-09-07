@@ -6,7 +6,7 @@
 #include "search/SearchParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 struct ActionSelector {
@@ -14,7 +14,7 @@ struct ActionSelector {
   using Node = GraphTraits::Node;
   using Edge = GraphTraits::Edge;
   using LookupTable = search::LookupTable<GraphTraits>;
-  using ManagerParams = a0::ManagerParams<Game>;
+  using ManagerParams = alpha0::ManagerParams<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
@@ -36,6 +36,6 @@ struct ActionSelector {
   LocalPolicyArray PUCT;
 };
 
-}  // namespace a0
+}  // namespace alpha0
 
 #include "inline/alphazero/ActionSelector.inl"

@@ -6,7 +6,7 @@
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::Traits Traits>
 class Algorithms {
@@ -19,7 +19,7 @@ class Algorithms {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using LookupTable = TraitsTypes::LookupTable;
 
-  using ActionSelector = a0::ActionSelector<Traits>;
+  using ActionSelector = alpha0::ActionSelector<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using SearchContext = search::SearchContext<Traits>;
 
@@ -73,6 +73,6 @@ class Algorithms {
                                              const ActionSelector& selector, int argmax_index);
 };
 
-}  // namespace a0
+}  // namespace alpha0
 
 #include "inline/alphazero/Algorithms.inl"

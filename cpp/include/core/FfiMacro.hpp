@@ -16,7 +16,7 @@ namespace detail {
 
 template <core::concepts::Game Game>
 struct FfiFunctions {
-  using MctsEvalSpec = core::a0::EvalSpec<Game>;
+  using MctsEvalSpec = core::alpha0::EvalSpec<Game>;
   using MctsGameReadLog = core::GameReadLog<MctsEvalSpec>;
   using MctsDataLoader = core::DataLoader<MctsEvalSpec>;
 

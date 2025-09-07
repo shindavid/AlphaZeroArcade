@@ -46,10 +46,10 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Traits = a0::Traits<Game>;
+  using Traits = alpha0::Traits<Game>;
   using MctsManager = search::Manager<Traits>;
-  using MctsManagerParams = a0::ManagerParams<Game>;
-  using SearchResults = a0::SearchResults<Game>;
+  using MctsManagerParams = alpha0::ManagerParams<Game>;
+  using SearchResults = alpha0::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 

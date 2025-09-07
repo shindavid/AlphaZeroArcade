@@ -2,7 +2,7 @@
 
 #include "util/EigenUtil.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 template <core::concepts::Game Game>
 boost::json::object SearchResults<Game>::to_json() const {
@@ -22,4 +22,4 @@ boost::json::object SearchResults<Game>::to_json() const {
   return results_json;
 }
 
-}  // namespace a0
+}  // namespace alpha0

@@ -2,7 +2,7 @@
 
 #include "search/EdgeBase.hpp"
 
-namespace a0 {
+namespace alpha0 {
 
 /*
  * An Edge corresponds to an action that can be taken from this node.
@@ -17,4 +17,4 @@ struct Edge : public search::EdgeBase {
   float child_V_estimate = 0;  // network estimate of child-value for current-player
 };
 
-}  // namespace a0
+}  // namespace alpha0

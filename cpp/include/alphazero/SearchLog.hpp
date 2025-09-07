@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace a0 {
+namespace alpha0 {
 
 template <search::concepts::GraphTraits GraphTraits>
 class SearchLog {
@@ -89,6 +89,6 @@ class SearchLog {
   boost::json::object combine_json();
 };
 
-}  // namespace a0
+}  // namespace alpha0
 
 #include "inline/alphazero/SearchLog.inl"

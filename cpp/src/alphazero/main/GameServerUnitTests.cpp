@@ -24,14 +24,14 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 template <core::concepts::Game Game>
 class GameServerTest : public testing::Test {
  protected:
-  using Traits = a0::Traits<Game>;
+  using Traits = alpha0::Traits<Game>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = a0::SearchResults<Game>;
-  using SearchLog = a0::SearchLog<Traits>;
+  using SearchResults = alpha0::SearchResults<Game>;
+  using SearchLog = alpha0::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of MctsPlayer. The key differences are:
   //

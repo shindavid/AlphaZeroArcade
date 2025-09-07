@@ -7,7 +7,7 @@
 
 #include <Eigen/Core>
 
-namespace c4::a0 {
+namespace c4::alpha0 {
 
 struct TrainingTargets {
   using PolicyTarget = core::PolicyTarget<Game>;
@@ -18,14 +18,14 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
-}  // namespace c4::a0
+}  // namespace c4::alpha0
 
-namespace core::a0 {
+namespace core::alpha0 {
 
 template <>
 struct EvalSpec<c4::Game> {
   using Game = c4::Game;
-  using TrainingTargets = c4::a0::TrainingTargets;
+  using TrainingTargets = c4::alpha0::TrainingTargets;
 };
 
-}  // namespace core::a0
+}  // namespace core::alpha0

@@ -7,7 +7,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
 
-namespace a0 {
+namespace alpha0 {
 
 template <core::concepts::Game Game>
 inline ManagerParams<Game>::ManagerParams(search::Mode mode) {
@@ -68,4 +68,4 @@ inline auto ManagerParams<Game>::make_options_description() {
   return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
-}  // namespace a0
+}  // namespace alpha0

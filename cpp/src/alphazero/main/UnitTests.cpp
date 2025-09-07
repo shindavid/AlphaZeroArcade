@@ -40,7 +40,7 @@ class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
  public:
   using State = Game::State;
   using Base = nnet::SimpleNNEvaluationService<Game>;
-  using Traits = a0::Traits<Game>;
+  using Traits = alpha0::Traits<Game>;
   using NNEvaluation = nnet::NNEvaluation<Game>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
@@ -98,12 +98,12 @@ class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Game> {
 template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
-  using Traits = a0::Traits<Game>;
+  using Traits = alpha0::Traits<Game>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = a0::ManagerParams<Game>;
-  using Node = a0::Node<Game>;
-  using Edge = a0::Edge;
+  using ManagerParams = alpha0::ManagerParams<Game>;
+  using Node = alpha0::Node<Game>;
+  using Edge = alpha0::Edge;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
   using LookupTable = TraitsTypes::LookupTable;
@@ -112,7 +112,7 @@ class ManagerTest : public testing::Test {
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = a0::SearchLog<Traits>;
+  using SearchLog = alpha0::SearchLog<Traits>;
 
   static_assert(core::kStoreStates<Game>, "state-storage required for search-log tests");
 
