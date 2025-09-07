@@ -3,6 +3,7 @@
 #include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputTensorizor.hpp"
@@ -19,6 +20,10 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
+};
+
 }  // namespace c4::alpha0
 
 namespace core {
@@ -32,6 +37,7 @@ template <>
 struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using Game = c4::Game;
   using TrainingTargets = c4::alpha0::TrainingTargets;
+  using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -39,6 +45,7 @@ template <>
 struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Game = c4::Game;
   using TrainingTargets = c4::alpha0::TrainingTargets;
+  using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

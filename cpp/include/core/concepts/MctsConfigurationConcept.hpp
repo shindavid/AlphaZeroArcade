@@ -8,7 +8,7 @@ namespace core {
 namespace concepts {
 
 template <class MC>
-concept GameMctsConfiguration = requires {
+concept MctsConfiguration = requires {
   /*
    * kOpeningLength is a subjectively chosen value that indicates the number of moves that are
    * considered to be part of the "opening" phase of the game. This is used to select default

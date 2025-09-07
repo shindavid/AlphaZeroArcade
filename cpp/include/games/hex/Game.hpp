@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossResults.hpp"
 #include "core/concepts/Game.hpp"
@@ -18,10 +17,6 @@ namespace hex {
 
 struct Game {
   using Constants = hex::Constants;
-
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 8;
-  };
 
   using State = hex::GameState;
   using GameResults = core::WinLossResults;

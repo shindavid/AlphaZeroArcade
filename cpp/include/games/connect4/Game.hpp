@@ -4,7 +4,6 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/Game.hpp"
@@ -40,10 +39,6 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<kNumColumns>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = kNumColumns;
-  };
-
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
   };
 
   struct State {

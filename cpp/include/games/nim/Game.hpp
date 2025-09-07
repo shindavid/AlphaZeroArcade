@@ -4,7 +4,6 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
@@ -26,10 +25,6 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
-  };
-
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 3;
   };
 
   struct State {

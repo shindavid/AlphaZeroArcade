@@ -3,6 +3,7 @@
 #include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/InputTensorizor.hpp"
@@ -30,6 +31,10 @@ struct TrainingTargets {
     mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 4;
+};
+
 }  // namespace tictactoe::alpha0
 
 namespace core {
@@ -43,6 +48,7 @@ template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
   using Game = tictactoe::Game;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
+  using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -50,6 +56,7 @@ template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmBetaZero> {
   using Game = tictactoe::Game;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
+  using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

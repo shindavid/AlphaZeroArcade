@@ -4,7 +4,6 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/Game.hpp"
@@ -37,10 +36,6 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
-  };
-
-  struct MctsConfiguration : public core::MctsConfigurationBase {
-    static constexpr float kOpeningLength = 4;
   };
 
   struct State {

@@ -3,6 +3,7 @@
 #include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/blokus/InputTensorizor.hpp"
@@ -58,6 +59,10 @@ struct TrainingTargets {
                             OwnershipTarget, UnplayedPiecesTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
+};
+
 }  // namespace blokus::alpha0
 
 namespace core {
@@ -71,6 +76,7 @@ template <>
 struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
+  using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -78,6 +84,7 @@ template <>
 struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
+  using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

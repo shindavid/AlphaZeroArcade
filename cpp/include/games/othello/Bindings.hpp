@@ -3,6 +3,7 @@
 #include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/InputTensorizor.hpp"
@@ -38,6 +39,10 @@ struct TrainingTargets {
                             ScoreMarginTarget, OwnershipTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
+};
+
 }  // namespace othello::alpha0
 
 namespace core {
@@ -51,6 +56,7 @@ template <>
 struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   using Game = othello::Game;
   using TrainingTargets = othello::alpha0::TrainingTargets;
+  using MctsConfiguration = othello::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -58,6 +64,7 @@ template <>
 struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
   using Game = othello::Game;
   using TrainingTargets = othello::alpha0::TrainingTargets;
+  using MctsConfiguration = othello::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

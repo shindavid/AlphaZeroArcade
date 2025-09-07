@@ -3,7 +3,6 @@
 #include "core/GameTypes.hpp"
 #include "core/concepts/GameConstants.hpp"
 #include "core/concepts/GameIO.hpp"
-#include "core/concepts/GameMctsConfiguration.hpp"
 #include "core/concepts/GameRules.hpp"
 #include "core/concepts/GameStateHistory.hpp"
 #include "core/concepts/GameSymmetries.hpp"
@@ -21,7 +20,6 @@ namespace concepts {
 template <class G>
 concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
-  requires core::concepts::GameMctsConfiguration<typename G::MctsConfiguration>;
   requires std::same_as<typename G::Types,
                         core::GameTypes<typename G::Constants, typename G::State,
                                         typename G::GameResults, typename G::SymmetryGroup>>;

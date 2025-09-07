@@ -39,8 +39,7 @@ struct StableDataBase<EvalSpec, true> {
 };
 
 template <core::concepts::EvalSpec EvalSpec>
-constexpr bool kStoreStates =
-  IS_DEFINED(STORE_STATES) || EvalSpec::Game::MctsConfiguration::kStoreStates;
+constexpr bool kStoreStates = IS_DEFINED(STORE_STATES) || EvalSpec::MctsConfiguration::kStoreStates;
 
 template <core::concepts::EvalSpec EvalSpec>
 using StableDataBaseImpl = StableDataBase<EvalSpec, kStoreStates<EvalSpec>>;

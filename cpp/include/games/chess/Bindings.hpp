@@ -2,6 +2,7 @@
 
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/InputTensorizor.hpp"
@@ -37,6 +38,10 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
+};
+
 }  // namespace alpha0
 
 }  // namespace chess
@@ -52,6 +57,7 @@ template <>
 struct EvalSpec<chess::Game, core::kParadigmAlphaZero> {
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
+  using MctsConfiguration = chess::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -59,6 +65,7 @@ template <>
 struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
+  using MctsConfiguration = chess::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

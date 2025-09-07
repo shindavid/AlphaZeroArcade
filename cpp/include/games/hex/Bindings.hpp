@@ -3,6 +3,7 @@
 #include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/MctsConfigurationBase.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/InputTensorizor.hpp"
@@ -21,6 +22,10 @@ struct TrainingTargets {
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
+struct MctsConfiguration : public core::MctsConfigurationBase {
+  static constexpr float kOpeningLength = 8;
+};
+
 }  // namespace hex::alpha0
 
 namespace core {
@@ -34,6 +39,7 @@ template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
+  using MctsConfiguration = hex::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
@@ -41,6 +47,7 @@ template <>
 struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
+  using MctsConfiguration = hex::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

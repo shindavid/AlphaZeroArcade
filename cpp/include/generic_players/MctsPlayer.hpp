@@ -41,7 +41,7 @@ class MctsPlayer : public core::AbstractPlayer<typename EvalSpec::Game> {
     float full_pct;
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
-    float move_temperature_half_life = 0.5 * Game::MctsConfiguration::kOpeningLength;
+    float move_temperature_half_life = 0.5 * EvalSpec::MctsConfiguration::kOpeningLength;
     float LCB_z_score = 2.0;
     bool verbose = false;
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
