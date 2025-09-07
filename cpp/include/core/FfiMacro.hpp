@@ -1,10 +1,9 @@
 #pragma once
 
-#include "core/BayesianMctsEvalSpec.hpp"
 #include "core/Constants.hpp"
 #include "core/DataLoader.hpp"
+#include "core/EvalSpec.hpp"
 #include "core/GameLog.hpp"
-#include "core/MctsEvalSpec.hpp"
 #include "core/concepts/Game.hpp"
 #include "util/Exceptions.hpp"
 
@@ -16,13 +15,13 @@ namespace detail {
 
 template <core::concepts::Game Game>
 struct FfiFunctions {
-  using MctsEvalSpec = core::alpha0::EvalSpec<Game>;
-  using MctsGameReadLog = core::GameReadLog<MctsEvalSpec>;
-  using MctsDataLoader = core::DataLoader<MctsEvalSpec>;
+  using AlphaZeroEvalSpec = core::EvalSpec<Game, core::kParadigmAlphaZero>;
+  using AlphaZeroGameReadLog = core::GameReadLog<AlphaZeroEvalSpec>;
+  using AlphaZeroDataLoader = core::DataLoader<AlphaZeroEvalSpec>;
 
-  using BayesianMctsEvalSpec = core::beta0::EvalSpec<Game>;
-  using BayesianMctsGameReadLog = core::GameReadLog<BayesianMctsEvalSpec>;
-  using BayesianMctsDataLoader = core::DataLoader<BayesianMctsEvalSpec>;
+  using BetaZeroEvalSpec = core::EvalSpec<Game, core::kParadigmBetaZero>;
+  using BetaZeroGameReadLog = core::GameReadLog<BetaZeroEvalSpec>;
+  using BetaZeroDataLoader = core::DataLoader<BetaZeroEvalSpec>;
 
   using DataLoader = core::DataLoaderBase;
 
@@ -33,9 +32,9 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     switch (p) {
       case core::kParadigmAlphaZero:
-        return new MctsDataLoader(params);
+        return new AlphaZeroDataLoader(params);
       case core::kParadigmBetaZero:
-        return new BayesianMctsDataLoader(params);
+        return new BetaZeroDataLoader(params);
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -72,9 +71,9 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     switch (p) {
       case core::kParadigmAlphaZero:
-        return MctsGameReadLog::get_shape_info_array();
+        return AlphaZeroGameReadLog::get_shape_info_array();
       case core::kParadigmBetaZero:
-        return BayesianMctsGameReadLog::get_shape_info_array();
+        return BetaZeroGameReadLog::get_shape_info_array();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }

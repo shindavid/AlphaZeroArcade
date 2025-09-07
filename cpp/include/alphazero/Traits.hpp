@@ -5,7 +5,8 @@
 #include "alphazero/ManagerParams.hpp"
 #include "alphazero/Node.hpp"
 #include "alphazero/SearchResults.hpp"
-#include "core/MctsEvalSpec.hpp"
+#include "core/Constants.hpp"
+#include "core/EvalSpec.hpp"
 #include "core/concepts/Game.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
@@ -16,7 +17,7 @@ namespace alpha0 {
 template <core::concepts::Game G>
 struct Traits {
   using Game = G;
-  using EvalSpec = core::alpha0::EvalSpec<G>;
+  using EvalSpec = core::EvalSpec<Game, core::kParadigmAlphaZero>;
   using Edge = alpha0::Edge;
   using Node = alpha0::Node<Game>;
   using ManagerParams = alpha0::ManagerParams<Game>;
