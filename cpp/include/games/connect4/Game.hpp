@@ -118,11 +118,7 @@ struct hash<c4::Game::State> {
 
 static_assert(core::concepts::Game<c4::Game>);
 
-#include "inline/games/connect4/Game.inl"
+#include "inline/games/connect4/Game.inl"  // IWYU pragma: keep
 
-// Add bindings at the end, after defining c4::Game. Adding here ensures that wherever we #include
-// "games/connect4/Game.hpp", we also get the bindings.
-
-#include "games/connect4/BayesianMctsEvalSpec.hpp"  // IWYU pragma: keep
-#include "games/connect4/InputTensorizor.hpp"       // IWYU pragma: keep
-#include "games/connect4/MctsEvalSpec.hpp"          // IWYU pragma: keep
+// Ensure that we always have bindings when we #include "games/connect4/Game.hpp":
+#include "games/connect4/Bindings.hpp"  // IWYU pragma: keep
