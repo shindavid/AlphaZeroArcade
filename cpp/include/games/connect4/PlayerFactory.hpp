@@ -22,14 +22,13 @@ class PlayerFactory : public core::PlayerFactory<Game> {
 
  private:
   static player_subfactory_vec_t make_subfactories() {
-    return {
-      new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>(),
-      new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<AlphaZeroTraits>>(),
-      new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<AlphaZeroTraits>>(),
-      new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
-      new core::PlayerSubfactory<generic::WebPlayerGenerator<c4::WebPlayer>>(),
-      new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
-      new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
+    return {new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>(),
+            new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<AlphaZeroTraits>>(),
+            new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<AlphaZeroTraits>>(),
+            new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
+            new core::PlayerSubfactory<generic::WebPlayerGenerator<c4::WebPlayer>>(),
+            new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
+            new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }
 };
 

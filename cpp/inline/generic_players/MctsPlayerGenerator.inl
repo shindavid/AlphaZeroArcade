@@ -18,8 +18,7 @@ MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::MctsPlayerGeneratorBase(
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
 core::AbstractPlayer<typename Traits::Game>*
-MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate(
-  core::game_slot_index_t game_slot_index) {
+MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {

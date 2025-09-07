@@ -78,8 +78,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Tr
 };
 
 template <search::concepts::Traits Traits>
-using CompetitiveMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<Traits, generic::MctsPlayer<Traits>>;
+using CompetitiveMctsPlayerGenerator = MctsPlayerGeneratorBase<Traits, generic::MctsPlayer<Traits>>;
 
 template <search::concepts::Traits Traits>
 using TrainingMctsPlayerGenerator =

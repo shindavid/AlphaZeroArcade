@@ -79,7 +79,7 @@ auto MctsPlayer<Traits>::Params::make_options_description() {
 
 template <search::concepts::Traits Traits>
 inline MctsPlayer<Traits>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
-                                        bool owns_shared_data)
+                                      bool owns_shared_data)
     : params_(params),
       search_params_{
         {params.num_fast_iters, false},  // kFast
@@ -115,7 +115,7 @@ inline void MctsPlayer<Traits>::start_game() {
 
 template <search::concepts::Traits Traits>
 inline void MctsPlayer<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                       core::action_t action) {
+                                                     core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
@@ -183,7 +183,7 @@ typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_respo
 
 template <search::concepts::Traits Traits>
 auto MctsPlayer<Traits>::get_action_policy(const SearchResults* mcts_results,
-                                             const ActionMask& valid_actions) const {
+                                           const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
@@ -357,7 +357,7 @@ inline void MctsPlayer<Traits>::verbose_dump() const {
 
 template <search::concepts::Traits Traits>
 void MctsPlayer<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                              const SearchResults& results) const {
+                                            const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

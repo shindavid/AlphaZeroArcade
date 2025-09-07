@@ -89,7 +89,7 @@ DataExportingMctsPlayer<Traits>::prehandle_chance_event(
 
 template <search::concepts::Traits Traits>
 void DataExportingMctsPlayer<Traits>::extract_policy_target(const SearchResults* mcts_results,
-                                                              PolicyTensor** target) {
+                                                            PolicyTensor** target) {
   **target = mcts_results->policy_target;
   float sum = eigen_util::sum(**target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
