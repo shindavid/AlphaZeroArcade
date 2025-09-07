@@ -6,8 +6,8 @@
 namespace chess {
 
 struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Game::Constants::kNumPreviousStatesToEncode);
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
+  static constexpr int kDim0 = kNumPlayers * (1 + Game::Constants::kNumPreviousStatesToEncode);
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
 
   template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>
   static Tensor tensorize(Iter start, Iter cur) {

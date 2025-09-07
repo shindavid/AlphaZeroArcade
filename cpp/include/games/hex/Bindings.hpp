@@ -11,14 +11,14 @@
 namespace hex::alpha0 {
 
 struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<Constants::kBoardDim, Constants::kBoardDim>;
+  using BoardShape = Eigen::Sizes<Constants::kBoardDim, Constants::kBoardDim>;
 
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
+  using PolicyTarget = core::PolicyTarget<Game>;
+  using ValueTarget = core::ValueTarget<Game>;
+  using ActionValueTarget = core::ActionValueTarget<Game>;
+  using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
 }  // namespace hex::alpha0

@@ -52,8 +52,7 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
   return std::to_string(action + 1);
 }
 
-inline void Game::IO::print_state(std::ostream& os, const State& state,
-                                  core::action_t last_action,
+inline void Game::IO::print_state(std::ostream& os, const State& state, core::action_t last_action,
                                   const Types::player_name_array_t* player_names) {
   os << "[" << state.stones_left << ", " << state.current_player << "]" << std::endl;
 }

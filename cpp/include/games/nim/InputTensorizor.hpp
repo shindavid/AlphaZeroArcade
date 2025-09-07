@@ -7,7 +7,7 @@
 namespace nim {
 
 struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
 
   template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>
   static Tensor tensorize(Iter start, Iter cur) {

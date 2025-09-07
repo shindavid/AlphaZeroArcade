@@ -2,8 +2,7 @@
 
 namespace blokus::alpha0 {
 
-inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view,
-                                                    Tensor& tensor) {
+inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = *view.final_pos;
   color_t cp = Game::Rules::get_current_player(*view.cur_pos);
@@ -29,8 +28,7 @@ inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view,
   return true;
 }
 
-inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view,
-                                                        Tensor& tensor) {
+inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = *view.final_pos;
   color_t cp = Game::Rules::get_current_player(*view.cur_pos);

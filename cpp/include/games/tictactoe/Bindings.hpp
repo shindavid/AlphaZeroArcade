@@ -11,23 +11,23 @@
 namespace tictactoe::alpha0 {
 
 struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-    using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
+  using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
+  using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
 
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
+  using PolicyTarget = core::PolicyTarget<Game>;
+  using ValueTarget = core::ValueTarget<Game>;
+  using ActionValueTarget = core::ActionValueTarget<Game>;
+  using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-    struct OwnershipTarget {
-      static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
+  struct OwnershipTarget {
+    static constexpr const char* kName = "ownership";
+    using Tensor = eigen_util::FTensor<OwnershipShape>;
 
-      static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
-    };
+    static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
+  };
 
-    using List =
-      mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
+  using List =
+    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
 };
 
 }  // namespace tictactoe::alpha0
