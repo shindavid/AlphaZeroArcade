@@ -1,7 +1,6 @@
 #include "core/tests/Common.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 

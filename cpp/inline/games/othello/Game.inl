@@ -15,6 +15,18 @@ inline size_t Game::State::hash() const {
   return hasher(tuple);
 }
 
+inline int Game::State::get_count(core::seat_index_t seat) const {
+  return std::popcount(seat == cur_player ? cur_player_mask : opponent_mask);
+}
+
+inline core::seat_index_t Game::State::get_player_at(int row, int col) const {
+  int cp = Rules::get_current_player(*this);
+  int index = row * kBoardDimension + col;
+  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
+  bool occupied_by_opponent = (mask_t(1) << index) & opponent_mask;
+  return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
+}
+
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
@@ -136,78 +148,6 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.cur_player;
-}
-
-template <typename Iter>
-Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
-  core::seat_index_t cp = Rules::get_current_player(*cur);
-  Tensor tensor;
-  tensor.setZero();
-  int i = 0;
-  Iter state = cur;
-  while (true) {
-    for (int row = 0; row < kBoardDimension; ++row) {
-      for (int col = 0; col < kBoardDimension; ++col) {
-        core::seat_index_t p = get_player_at(*state, row, col);
-        if (p < 0) continue;
-        int x = (Constants::kNumPlayers + cp - p) % Constants::kNumPlayers;
-        tensor(i + x, row, col) = 1;
-      }
-    }
-    if (state == start) break;
-    state--;
-    i += kNumPlayers;
-  }
-  return tensor;
-}
-
-inline bool Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view,
-                                                                Tensor& tensor) {
-  tensor.setZero();
-  const State& state = *view.final_pos;
-  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
-  int score_index = kNumCells + get_count(state, cp) - get_count(state, 1 - cp);
-  RELEASE_ASSERT(score_index >= 0 && score_index <= kNumCells * 2);
-
-  // PDF
-  tensor(0, score_index) = 1;
-
-  // CDF
-  for (int i = 0; i <= score_index; ++i) {
-    tensor(1, i) = 1;
-  }
-  return true;
-}
-
-inline bool Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view,
-                                                              Tensor& tensor) {
-  tensor.setZero();
-  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
-  for (int row = 0; row < kBoardDimension; ++row) {
-    for (int col = 0; col < kBoardDimension; ++col) {
-      core::seat_index_t p = get_player_at(*view.final_pos, row, col);
-      int x = (p == -1) ? 2 : ((p == cp) ? 0 : 1);
-      tensor(x, row, col) = 1;
-    }
-  }
-
-  return true;
-}
-
-inline int Game::get_count(const State& state, core::seat_index_t seat) {
-  if (seat == state.cur_player) {
-    return std::popcount(state.cur_player_mask);
-  } else {
-    return std::popcount(state.opponent_mask);
-  }
-}
-
-inline core::seat_index_t Game::get_player_at(const State& state, int row, int col) {
-  int cp = Rules::get_current_player(state);
-  int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;
-  bool occupied_by_opponent = (mask_t(1) << index) & state.opponent_mask;
-  return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
 }
 
 // copied from edax-reversi repo
