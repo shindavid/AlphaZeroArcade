@@ -29,7 +29,7 @@ class NNEvaluationRequest {
   using InputTensorizor = core::InputTensorizor<Game>;
   using Keys = InputTensorizor::Keys;
 
-  using NodeBase = core::NodeBase<Game>;
+  using NodeBase = core::NodeBase<EvalSpec>;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using EvalKey = Keys::EvalKey;

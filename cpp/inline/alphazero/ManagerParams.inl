@@ -9,8 +9,8 @@
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
-inline ManagerParams<Game>::ManagerParams(search::Mode mode) {
+template <core::concepts::EvalSpec EvalSpec>
+inline ManagerParams<EvalSpec>::ManagerParams(search::Mode mode) {
   if (mode == search::kCompetitive) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
@@ -25,8 +25,8 @@ inline ManagerParams<Game>::ManagerParams(search::Mode mode) {
   }
 }
 
-template <core::concepts::Game Game>
-inline auto ManagerParams<Game>::make_options_description() {
+template <core::concepts::EvalSpec EvalSpec>
+inline auto ManagerParams<EvalSpec>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 

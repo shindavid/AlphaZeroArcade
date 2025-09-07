@@ -18,7 +18,7 @@ class LookupTable {
   using EvalSpec = GraphTraits::EvalSpec;
 
   using TransposeKey = core::InputTensorizor<Game>::Keys::TransposeKey;
-  using NodeBase = core::NodeBase<Game>;
+  using NodeBase = core::NodeBase<EvalSpec>;
 
   class Defragmenter {
    public:

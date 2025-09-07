@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/NodeBase.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace alpha0 {
@@ -18,13 +18,14 @@ namespace alpha0 {
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
  */
-template <core::concepts::Game Game>
-class Node : public core::NodeBase<Game> {
+template <core::concepts::EvalSpec EvalSpec>
+class Node : public core::NodeBase<EvalSpec> {
  public:
+  using Game = EvalSpec::Game;
   using ValueArray = Game::Types::ValueArray;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using NodeBase = core::NodeBase<Game>;
+  using NodeBase = core::NodeBase<EvalSpec>;
   using StableData = NodeBase::StableData;
 
   // Generally, we acquire this->mutex() when reading or writing to this->stats_. There are some

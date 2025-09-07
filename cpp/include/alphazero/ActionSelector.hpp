@@ -4,7 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 
 namespace alpha0 {
 
@@ -13,8 +13,9 @@ struct ActionSelector {
   using Game = GraphTraits::Game;
   using Node = GraphTraits::Node;
   using Edge = GraphTraits::Edge;
+  using EvalSpec = GraphTraits::EvalSpec;
   using LookupTable = search::LookupTable<GraphTraits>;
-  using ManagerParams = alpha0::ManagerParams<Game>;
+  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;

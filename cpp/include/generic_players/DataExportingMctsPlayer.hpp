@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/TrainingDataWriter.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "generic_players/MctsPlayer.hpp"
 
 namespace generic {
@@ -9,8 +9,8 @@ namespace generic {
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
  */
-template <core::concepts::Game Game>
-class DataExportingMctsPlayer : public MctsPlayer<Game> {
+template <core::concepts::EvalSpec EvalSpec>
+class DataExportingMctsPlayer : public MctsPlayer<EvalSpec> {
  public:
   /*
    * The argument for using a full search is so that the opp reply target is more accurate.
@@ -20,6 +20,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
    */
   static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
 
+  using Game = EvalSpec::Game;
   using GameWriteLog_sptr = core::TrainingDataWriter<Game>::GameWriteLog_sptr;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
@@ -32,7 +33,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
-  using base_t = MctsPlayer<Game>;
+  using base_t = MctsPlayer<EvalSpec>;
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
   using SearchResults = base_t::SearchResults;

@@ -30,9 +30,10 @@ template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
   using Traits = alpha0::Traits<Game>;
+  using EvalSpec = Traits::EvalSpec;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = alpha0::ManagerParams<Game>;
-  using MctsPlayer = generic::MctsPlayer<Game>;
+  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
+  using MctsPlayer = generic::MctsPlayer<EvalSpec>;
   using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Traits::SearchResults;

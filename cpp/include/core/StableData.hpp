@@ -1,16 +1,17 @@
 #pragma once
 
 #include "core/StableDataBase.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace core {
 
-// StableData consists of data members of core::NodeBase<Game> whose values do not change once
-// the node is created. The StableData member of core::NodeBase<Game> is const in spirit, but
+// StableData consists of data members of core::NodeBase<EvalSpec> whose values do not change once
+// the node is created. The StableData member of core::NodeBase<EvalSpec> is const in spirit, but
 // because we have some Node-copying in LookupTable, we cannot make it truly const.
-template <core::concepts::Game Game>
-struct StableData : public StableDataBaseImpl<Game> {
-  using Base = StableDataBaseImpl<Game>;
+template <core::concepts::EvalSpec EvalSpec>
+struct StableData : public StableDataBaseImpl<EvalSpec> {
+  using Base = StableDataBaseImpl<EvalSpec>;
+  using Game = EvalSpec::Game;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;

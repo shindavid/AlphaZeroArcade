@@ -15,8 +15,8 @@
 
 namespace generic {
 
-template <core::concepts::Game Game>
-MctsPlayer<Game>::Params::Params(search::Mode mode) {
+template <core::concepts::EvalSpec EvalSpec>
+MctsPlayer<EvalSpec>::Params::Params(search::Mode mode) {
   if (mode == search::kCompetitive) {
     num_fast_iters = 0;
     num_full_iters = 1600;
@@ -32,8 +32,8 @@ MctsPlayer<Game>::Params::Params(search::Mode mode) {
   }
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::Params::dump() const {
+template <core::concepts::EvalSpec EvalSpec>
+void MctsPlayer<EvalSpec>::Params::dump() const {
   if (full_pct == 0) {
     util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
@@ -43,8 +43,8 @@ void MctsPlayer<Game>::Params::dump() const {
   }
 }
 
-template <core::concepts::Game Game>
-auto MctsPlayer<Game>::Params::make_options_description() {
+template <core::concepts::EvalSpec EvalSpec>
+auto MctsPlayer<EvalSpec>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -77,9 +77,9 @@ auto MctsPlayer<Game>::Params::make_options_description() {
       "MCTS player number of rows to display in verbose mode");
 }
 
-template <core::concepts::Game Game>
-inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
-                                    bool owns_shared_data)
+template <core::concepts::EvalSpec EvalSpec>
+inline MctsPlayer<EvalSpec>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
+                                        bool owns_shared_data)
     : params_(params),
       search_params_{
         {params.num_fast_iters, false},  // kFast
@@ -97,15 +97,15 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared
   RELEASE_ASSERT(shared_data_.get() != nullptr);
 }
 
-template <core::concepts::Game Game>
-inline MctsPlayer<Game>::~MctsPlayer() {
+template <core::concepts::EvalSpec EvalSpec>
+inline MctsPlayer<EvalSpec>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::start_game() {
+template <core::concepts::EvalSpec EvalSpec>
+inline void MctsPlayer<EvalSpec>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
@@ -113,9 +113,9 @@ inline void MctsPlayer<Game>::start_game() {
   }
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                   core::action_t action) {
+template <core::concepts::EvalSpec EvalSpec>
+inline void MctsPlayer<EvalSpec>::receive_state_change(core::seat_index_t seat, const State& state,
+                                                       core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
@@ -132,8 +132,8 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
   }
 }
 
-template <core::concepts::Game Game>
-typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
+template <core::concepts::EvalSpec EvalSpec>
+typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_response(
   const ActionRequest& request) {
   mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
@@ -151,14 +151,14 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(
   return get_action_response_helper(response.results, request.valid_actions);
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::clear_search_mode() {
+template <core::concepts::EvalSpec EvalSpec>
+void MctsPlayer<EvalSpec>::clear_search_mode() {
   mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 
-template <core::concepts::Game Game>
-bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
+template <core::concepts::EvalSpec EvalSpec>
+bool MctsPlayer<EvalSpec>::init_search_mode(const ActionRequest& request) {
   if (search_mode_ != core::kNumSearchModes) return false;
 
   search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
@@ -166,8 +166,8 @@ bool MctsPlayer<Game>::init_search_mode(const ActionRequest& request) {
   return true;
 }
 
-template <core::concepts::Game Game>
-typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_helper(
+template <core::concepts::EvalSpec EvalSpec>
+typename MctsPlayer<EvalSpec>::ActionResponse MctsPlayer<EvalSpec>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
@@ -181,9 +181,9 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
   return action;
 }
 
-template <core::concepts::Game Game>
-auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
-                                         const ActionMask& valid_actions) const {
+template <core::concepts::EvalSpec EvalSpec>
+auto MctsPlayer<EvalSpec>::get_action_policy(const SearchResults* mcts_results,
+                                             const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
@@ -335,8 +335,8 @@ auto MctsPlayer<Game>::get_action_policy(const SearchResults* mcts_results,
   return policy;
 }
 
-template <core::concepts::Game Game>
-core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
+template <core::concepts::EvalSpec EvalSpec>
+core::SearchMode MctsPlayer<EvalSpec>::get_random_search_mode() const {
   if (params_.full_pct >= 1.0) {
     return core::kFull;
   }
@@ -344,8 +344,8 @@ core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::verbose_dump() const {
+template <core::concepts::EvalSpec EvalSpec>
+inline void MctsPlayer<EvalSpec>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;
@@ -355,9 +355,9 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   print_mcts_results(std::cout, action_policy, mcts_results);
 }
 
-template <core::concepts::Game Game>
-void MctsPlayer<Game>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                          const SearchResults& results) const {
+template <core::concepts::EvalSpec EvalSpec>
+void MctsPlayer<EvalSpec>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                                              const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

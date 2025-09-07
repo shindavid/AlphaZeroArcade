@@ -99,11 +99,12 @@ template <core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Traits = alpha0::Traits<Game>;
+  using EvalSpec = Traits::EvalSpec;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = alpha0::ManagerParams<Game>;
-  using Node = alpha0::Node<Game>;
-  using Edge = alpha0::Edge;
+  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
   using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
   using LookupTable = TraitsTypes::LookupTable;
@@ -114,7 +115,7 @@ class ManagerTest : public testing::Test {
   using SearchResults = Traits::SearchResults;
   using SearchLog = alpha0::SearchLog<Traits>;
 
-  static_assert(core::kStoreStates<Game>, "state-storage required for search-log tests");
+  static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
 
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}

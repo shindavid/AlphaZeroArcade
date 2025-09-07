@@ -20,8 +20,8 @@ struct Traits {
   using Game = G;
   using EvalSpec = core::EvalSpec<Game, core::kParadigmBetaZero>;
   using Edge = alpha0::Edge;
-  using Node = alpha0::Node<Game>;
-  using ManagerParams = alpha0::ManagerParams<Game>;
+  using Node = alpha0::Node<EvalSpec>;
+  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using AuxState = alpha0::AuxState<ManagerParams>;
   using Evaluation = nnet::NNEvaluation<EvalSpec>;
   using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;

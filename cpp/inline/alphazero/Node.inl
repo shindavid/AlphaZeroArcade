@@ -2,8 +2,8 @@
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
-void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
+template <core::concepts::EvalSpec EvalSpec>
+void Node<EvalSpec>::Stats::init_q(const ValueArray& value, bool pure) {
   Q = value;
   Q_sq = value * value;
   if (pure) {
@@ -16,11 +16,11 @@ void Node<Game>::Stats::init_q(const ValueArray& value, bool pure) {
   eigen_util::debug_assert_is_valid_prob_distr(Q);
 }
 
-template <core::concepts::Game Game>
-void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
-                                             const player_bitset_t& all_actions_provably_losing,
-                                             int num_expanded_children, bool cp_has_winning_move,
-                                             const StableData& sdata) {
+template <core::concepts::EvalSpec EvalSpec>
+void Node<EvalSpec>::Stats::update_provable_bits(
+  const player_bitset_t& all_actions_provably_winning,
+  const player_bitset_t& all_actions_provably_losing, int num_expanded_children,
+  bool cp_has_winning_move, const StableData& sdata) {
   int num_valid_actions = sdata.num_valid_actions;
   core::seat_index_t seat = sdata.active_seat;
 
@@ -36,8 +36,8 @@ void Node<Game>::Stats::update_provable_bits(const player_bitset_t& all_actions_
   }
 }
 
-template <core::concepts::Game Game>
-typename Node<Game>::Stats Node<Game>::stats_safe() const {
+template <core::concepts::EvalSpec EvalSpec>
+typename Node<EvalSpec>::Stats Node<EvalSpec>::stats_safe() const {
   // NOTE[dshin]: I attempted a version of this that attempted a lock-free read, resorting to a
   // the mutex only when a set dirty-bit was found on the copied stats. Contrary to my expectations,
   // this was slightly but clearly slower than the current version. I don't really understand why

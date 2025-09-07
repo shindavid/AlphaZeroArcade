@@ -13,7 +13,7 @@ template <class GT>
 concept GraphTraits = requires {
   requires core::concepts::Game<typename GT::Game>;
   requires core::concepts::EvalSpec<typename GT::EvalSpec>;
-  requires search::concepts::Node<typename GT::Node, typename GT::Game>;
+  requires search::concepts::Node<typename GT::Node, typename GT::EvalSpec>;
   requires search::concepts::Edge<typename GT::Edge>;
 };
 

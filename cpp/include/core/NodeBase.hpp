@@ -2,19 +2,19 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/StableData.hpp"
-#include "core/concepts/Game.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace core {
 
-// core::NodeBase<Game> is a base class of alpha0::Node<Game>.
+// core::NodeBase<EvalSpec> is a base class of alpha0::Node<EvalSpec>.
 //
 // It consists of data and methods that are shared across all different search-frameworks
 // (e.g., MCTS and Bayesian-MCTS)
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 class NodeBase {
  public:
-  using StableData = core::StableData<Game>;
+  using StableData = core::StableData<EvalSpec>;
 
   template <typename... Ts>
   NodeBase(mit::mutex* m, Ts&&... args) : mutex_(m), stable_data_(std::forward<Ts>(args)...) {}

@@ -25,6 +25,7 @@ template <core::concepts::Game Game>
 class GameServerTest : public testing::Test {
  protected:
   using Traits = alpha0::Traits<Game>;
+  using EvalSpec = Traits::EvalSpec;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using action_vec_t = GameServer::action_vec_t;
@@ -46,9 +47,9 @@ class GameServerTest : public testing::Test {
   // Also, if we later want to extend this test to operate on multiple concurrent games to test
   // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
   // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
-  class TestPlayer : public generic::MctsPlayer<Game> {
+  class TestPlayer : public generic::MctsPlayer<EvalSpec> {
    public:
-    using base_t = generic::MctsPlayer<Game>;
+    using base_t = generic::MctsPlayer<EvalSpec>;
     using ActionMask = base_t::ActionMask;
     using ActionResponse = base_t::ActionResponse;
 
