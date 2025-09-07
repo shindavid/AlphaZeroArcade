@@ -5,14 +5,12 @@
 #include "core/IOBase.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/SimpleStateHistory.hpp"
-#include "core/TrainingTargets.hpp"
 #include "core/WinLossResults.hpp"
 #include "core/concepts/Game.hpp"
 #include "games/GameRulesBase.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
 #include "util/FiniteGroups.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <string>
 
@@ -69,38 +67,6 @@ struct Game {
     static int print_row(char* buf, int n, const State&, int row, int blink_column);
   };
 
-  struct InputTensorizor {
-    // TODO: add more feature planes
-
-    // +1 for swap-legality plane
-    static constexpr int kDim0 =
-      1 + Constants::kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
-
-    using Shape = Eigen::Sizes<kDim0, Constants::kBoardDim, Constants::kBoardDim>;
-    using Tensor = eigen_util::FTensor<Shape>;
-    using TransposeKey = State;
-    using EvalKey = State;
-
-    static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
-    template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur);
-  };
-
-  struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<Constants::kBoardDim, Constants::kBoardDim>;
-
-    using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
-    using ActionValueTarget = core::ActionValueTarget<Game>;
-    using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
-  };
-
   static void static_init() {}
 };
 
@@ -109,3 +75,7 @@ struct Game {
 static_assert(core::concepts::Game<hex::Game>);
 
 #include "inline/games/hex/Game.inl"
+
+// IWYU pragma: keep
+// Ensure that we always have bindings when we #include "games/hex/Game.hpp":
+#include "games/hex/Bindings.hpp"  // IWYU pragma: keep
