@@ -4,17 +4,17 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/GraphTraitsConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 namespace alpha0 {
 
-template <search::concepts::GraphTraits GraphTraits>
+template <search::concepts::Traits Traits>
 struct ActionSelector {
-  using Game = GraphTraits::Game;
-  using Node = GraphTraits::Node;
-  using Edge = GraphTraits::Edge;
-  using EvalSpec = GraphTraits::EvalSpec;
-  using LookupTable = search::LookupTable<GraphTraits>;
+  using Game = Traits::Game;
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
+  using EvalSpec = Traits::EvalSpec;
+  using LookupTable = search::LookupTable<Traits>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 

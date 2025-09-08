@@ -8,10 +8,12 @@
 namespace search {
 namespace concepts {
 
-template <class E, class EvalServiceBase, class ManagerParams>
+template <class E, class Traits>
 concept EvalServiceFactory =
-  requires(E& factory, const ManagerParams& params, core::GameServerBase* server) {
-    { factory.create(params, server) } -> std::same_as<std::shared_ptr<EvalServiceBase>>;
+  requires(E& factory, const typename Traits::ManagerParams& params, core::GameServerBase* server) {
+    {
+      factory.create(params, server)
+    } -> std::same_as<std::shared_ptr<typename Traits::EvalServiceBase>>;
   };
 
 }  // namespace concepts

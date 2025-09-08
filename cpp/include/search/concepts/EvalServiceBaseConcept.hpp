@@ -1,14 +1,17 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
 
 #include <concepts>
 
 namespace search {
 namespace concepts {
 
-template <class E, class EvalRequest>
-concept EvalServiceBase = requires(E& service, EvalRequest& request) {
+template <class E, class Traits>
+concept EvalServiceBase = requires(
+  E& service,
+  nnet::NNEvaluationRequest<typename Traits::EvalSpec, typename Traits::Evaluation>& request) {
   // An EvalServiceBase must have a connect() method, which will be called in
   // search::Manager::start(). This is the appropriate place to start any threads used to support
   // the key evaluate() method.

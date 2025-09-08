@@ -2,8 +2,8 @@
 
 namespace alpha0 {
 
-template <search::concepts::GraphTraits GraphTraits>
-inline ActionSelector<GraphTraits>::ActionSelector(const LookupTable& lookup_table,
+template <search::concepts::Traits Traits>
+inline ActionSelector<Traits>::ActionSelector(const LookupTable& lookup_table,
                                                    const ManagerParams& params,
                                                    const search::SearchParams& search_params,
                                                    const Node* node, bool is_root)

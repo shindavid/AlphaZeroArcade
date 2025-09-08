@@ -2,14 +2,14 @@
 
 namespace search {
 
-template <search::concepts::GraphTraits GraphTraits>
-LookupTable<GraphTraits>::Defragmenter::Defragmenter(LookupTable* table)
+template <search::concepts::Traits Traits>
+LookupTable<Traits>::Defragmenter::Defragmenter(LookupTable* table)
     : table_(table),
       node_bitset_(table->node_pool_.size()),
       edge_bitset_(table->edge_pool_.size()) {}
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::scan(core::node_pool_index_t n) {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
@@ -26,22 +26,22 @@ void LookupTable<GraphTraits>::Defragmenter::scan(core::node_pool_index_t n) {
   }
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::prepare() {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::prepare() {
   init_remapping(node_index_remappings_, node_bitset_);
   init_remapping(edge_index_remappings_, edge_bitset_);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::remap(core::node_pool_index_t& n) {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::remap(core::node_pool_index_t& n) {
   bitset_t processed_nodes(table_->node_pool_.size());
   remap_helper(n, processed_nodes);
   n = node_index_remappings_[n];
   DEBUG_ASSERT(processed_nodes == node_bitset_);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::defrag() {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::defrag() {
   table_->node_pool_.defragment(node_bitset_);
   table_->edge_pool_.defragment(edge_bitset_);
 
@@ -55,8 +55,8 @@ void LookupTable<GraphTraits>::Defragmenter::defrag() {
   }
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::remap_helper(core::node_pool_index_t n,
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
                                                           bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
@@ -77,8 +77,8 @@ void LookupTable<GraphTraits>::Defragmenter::remap_helper(core::node_pool_index_
   node->set_first_edge_index(edge_index_remappings_[first_edge_index]);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::Defragmenter::init_remapping(index_vec_t& remappings,
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings,
                                                             bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
@@ -93,19 +93,19 @@ void LookupTable<GraphTraits>::Defragmenter::init_remapping(index_vec_t& remappi
   }
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-LookupTable<GraphTraits>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
+template <search::concepts::Traits Traits>
+LookupTable<Traits>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
     : mutex_pool_(mutex_pool), mutex_pool_size_(mutex_pool->size()) {}
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::clear() {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::clear() {
   map_.clear();
   edge_pool_.clear();
   node_pool_.clear();
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-void LookupTable<GraphTraits>::defragment(core::node_pool_index_t& root_index) {
+template <search::concepts::Traits Traits>
+void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
   Defragmenter defragmenter(this);
   defragmenter.scan(root_index);
   defragmenter.prepare();
@@ -113,8 +113,8 @@ void LookupTable<GraphTraits>::defragment(core::node_pool_index_t& root_index) {
   defragmenter.defrag();
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const TransposeKey& key,
+template <search::concepts::Traits Traits>
+core::node_pool_index_t LookupTable<Traits>::insert_node(const TransposeKey& key,
                                                               core::node_pool_index_t value,
                                                               bool overwrite) {
   mit::lock_guard lock(map_mutex_);
@@ -127,8 +127,8 @@ core::node_pool_index_t LookupTable<GraphTraits>::insert_node(const TransposeKey
   }
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-core::node_pool_index_t LookupTable<GraphTraits>::lookup_node(const TransposeKey& key) const {
+template <search::concepts::Traits Traits>
+core::node_pool_index_t LookupTable<Traits>::lookup_node(const TransposeKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {
@@ -137,29 +137,29 @@ core::node_pool_index_t LookupTable<GraphTraits>::lookup_node(const TransposeKey
   return it->second;
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-typename GraphTraits::Node* LookupTable<GraphTraits>::get_node(
+template <search::concepts::Traits Traits>
+typename Traits::Node* LookupTable<Traits>::get_node(
   core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-typename GraphTraits::Edge* LookupTable<GraphTraits>::get_edge(
+template <search::concepts::Traits Traits>
+typename Traits::Edge* LookupTable<Traits>::get_edge(
   core::edge_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Edge*>(&edge_pool_[index]);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-typename GraphTraits::Edge* LookupTable<GraphTraits>::get_edge(const Node* parent, int n) const {
+template <search::concepts::Traits Traits>
+typename Traits::Edge* LookupTable<Traits>::get_edge(const Node* parent, int n) const {
   int offset = parent->get_first_edge_index();
   DEBUG_ASSERT(offset >= 0);
   return const_cast<Edge*>(&edge_pool_[offset + n]);
 }
 
-template <search::concepts::GraphTraits GraphTraits>
-mit::mutex* LookupTable<GraphTraits>::get_random_mutex() {
+template <search::concepts::Traits Traits>
+mit::mutex* LookupTable<Traits>::get_random_mutex() {
   int mutex_id = mutex_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_pool_size_);
   return &(*mutex_pool_)[mutex_id];
 }

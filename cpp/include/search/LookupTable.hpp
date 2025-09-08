@@ -3,19 +3,19 @@
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/NodeBase.hpp"
-#include "search/concepts/GraphTraitsConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <search::concepts::GraphTraits GraphTraits>
+template <search::concepts::Traits Traits>
 class LookupTable {
  public:
-  using Game = GraphTraits::Game;
-  using Node = GraphTraits::Node;
-  using Edge = GraphTraits::Edge;
-  using EvalSpec = GraphTraits::EvalSpec;
+  using Game = Traits::Game;
+  using Node = Traits::Node;
+  using Edge = Traits::Edge;
+  using EvalSpec = Traits::EvalSpec;
 
   using TransposeKey = core::InputTensorizor<Game>::Keys::TransposeKey;
   using NodeBase = core::NodeBase<EvalSpec>;
