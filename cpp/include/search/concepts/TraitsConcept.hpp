@@ -1,14 +1,14 @@
 #pragma once
 
+#include "core/concepts/EvalSpecConcept.hpp"
+#include "core/concepts/GameConcept.hpp"
+#include "search/concepts/AuxStateConcept.hpp"
+#include "search/concepts/EdgeConcept.hpp"
 #include "search/concepts/EvalServiceBaseConcept.hpp"
 #include "search/concepts/EvalServiceFactoryConcept.hpp"
 #include "search/concepts/EvaluationConcept.hpp"
-#include "search/concepts/AuxStateConcept.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
-#include "core/concepts/GameConcept.hpp"
-#include "search/concepts/EdgeConcept.hpp"
-#include "search/concepts/NodeConcept.hpp"
 #include "search/concepts/ManagerParamsConcept.hpp"
+#include "search/concepts/NodeConcept.hpp"
 
 namespace search {
 namespace concepts {

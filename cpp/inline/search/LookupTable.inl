@@ -57,7 +57,7 @@ void LookupTable<Traits>::Defragmenter::defrag() {
 
 template <search::concepts::Traits Traits>
 void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
-                                                          bitset_t& processed_nodes) {
+                                                     bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
   processed_nodes[n] = true;
@@ -78,8 +78,7 @@ void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
 }
 
 template <search::concepts::Traits Traits>
-void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings,
-                                                            bitset_t& bitset) {
+void LookupTable<Traits>::Defragmenter::init_remapping(index_vec_t& remappings, bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
     remappings[i] = -1;
@@ -115,8 +114,8 @@ void LookupTable<Traits>::defragment(core::node_pool_index_t& root_index) {
 
 template <search::concepts::Traits Traits>
 core::node_pool_index_t LookupTable<Traits>::insert_node(const TransposeKey& key,
-                                                              core::node_pool_index_t value,
-                                                              bool overwrite) {
+                                                         core::node_pool_index_t value,
+                                                         bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;
@@ -138,15 +137,13 @@ core::node_pool_index_t LookupTable<Traits>::lookup_node(const TransposeKey& key
 }
 
 template <search::concepts::Traits Traits>
-typename Traits::Node* LookupTable<Traits>::get_node(
-  core::node_pool_index_t index) const {
+typename Traits::Node* LookupTable<Traits>::get_node(core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }
 
 template <search::concepts::Traits Traits>
-typename Traits::Edge* LookupTable<Traits>::get_edge(
-  core::edge_pool_index_t index) const {
+typename Traits::Edge* LookupTable<Traits>::get_edge(core::edge_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Edge*>(&edge_pool_[index]);
 }
