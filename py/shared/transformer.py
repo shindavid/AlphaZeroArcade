@@ -8,12 +8,13 @@ import torch.nn.functional as F
 # -----------------------
 
 class Mish(nn.Module):
-    def forward(self, x):  # avoids F.mish versioning issues
+    def forward(self, x):
         return x * torch.tanh(F.softplus(x))
 
+
 def residual_scale(n_layers: int) -> float:
-    # Lightweight DeepNorm-style residual scaling
     return 1.0 / math.sqrt(2.0 * max(1, n_layers))
+
 
 class FilmAbsPos(nn.Module):
     """FiLM-style absolute positional embedding: (U + A) * (1 + M)"""
@@ -24,8 +25,9 @@ class FilmAbsPos(nn.Module):
         nn.init.trunc_normal_(self.pos_add, std=0.02)
         nn.init.trunc_normal_(self.pos_mul, std=0.02)
 
-    def forward(self, U):  # U: (B,T,D)
+    def forward(self, U):
         return (U + self.pos_add) * (1.0 + self.pos_mul)
+
 
 class RMSNorm(nn.Module):
     """No-centering, no-bias norm (matches paper’s 'omit centering and biases')."""
@@ -38,9 +40,6 @@ class RMSNorm(nn.Module):
         norm = x.pow(2).mean(dim=-1, keepdim=True).add(self.eps).rsqrt()
         return self.scale * x * norm
 
-# -----------------------
-# Chessformer attention bits
-# -----------------------
 
 class Smolgen(nn.Module):
     """Dynamic, state-conditioned supplemental logits: (B,H,T,T)"""
@@ -51,14 +50,21 @@ class Smolgen(nn.Module):
         self.proj_token  = nn.Linear(Dm, compress_dim, bias=True)
         self.proj_global = nn.Linear(T * compress_dim, shared_dim, bias=True)
         self.per_head    = nn.Linear(shared_dim, H * shared_dim, bias=True)
-
+        self.norm1 = nn.LayerNorm(shared_dim)
+        self.norm2 = nn.LayerNorm(shared_dim)
         self.shared = shared_layer if shared_layer is not None else nn.Linear(shared_dim, T * T, bias=False)
 
     def forward(self, x):  # x: (B,T,Dm)
         B = x.size(0)
         z = self.proj_token(x)                     # (B,T,32)
         g = self.proj_global(z.reshape(B, -1))     # (B,256)
-        u = self.per_head(g).view(B, self.H, -1)   # (B,H,256)
+        g = F.silu(g)
+        g = self.norm1(g)
+
+        u = self.per_head(g)   # (B,H*256)
+        u = F.silu(u)
+        u = u.view(B, self.H, -1)   # (B,H,256)
+        u = self.norm2(u)
         S = self.shared(u).view(B, self.H, self.T, self.T)  # (B,H,T,T)
         return S
 
