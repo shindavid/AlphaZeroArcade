@@ -151,8 +151,8 @@ class Chessformer(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
-        smolgen_compress_dim = 32
-        smolgen_shared_dim = 256
+        smolgen_compress_dim = 8
+        smolgen_shared_dim = 32
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
@@ -192,7 +192,7 @@ class Chessformer(ModelConfigGenerator):
                 'opp_policy': 0.15,
             },
 
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 1e-3, 'weight_decay': 6e-5}),
         )
 
 

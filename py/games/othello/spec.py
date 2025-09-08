@@ -107,8 +107,8 @@ class Chessformer(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
-        smolgen_compress_dim = 32
-        smolgen_shared_dim = 256
+        smolgen_compress_dim = 16
+        smolgen_shared_dim = 64
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
