@@ -182,33 +182,26 @@ void NNEvaluationService<EvalSpec>::BatchData::copy_input_to(
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchData::load(const float* policy_batch_data,
-                                                    const float* value_batch_data,
-                                                    const float* action_values_batch_data) {
-  const float* policy_data = policy_batch_data;
-  const float* value_data = value_batch_data;
-  const float* action_values_data = action_values_batch_data;
-
+void NNEvaluationService<EvalSpec>::BatchData::load(OutputDataArray& output_data) {
   for (int i = 0; i < write_count; ++i) {
     TensorGroup& group = tensor_groups[i];
 
-    PolicyTensor policy;
-    ValueTensor value;
-    ActionValueTensor action_values;
+    OutputTensorTuple outputs;
 
-    std::copy_n(policy_data, policy.size(), policy.data());
-    std::copy_n(value_data, value.size(), value.data());
-    std::copy_n(action_values_data, action_values.size(), action_values.data());
-
-    policy_data += PolicyShape::total_size;
-    value_data += ValueShape::total_size;
-    action_values_data += ActionValueShape::total_size;
+    int j = 0;
+    std::apply([&](auto&... output) { (load_helper(output_data[j++], output), ...); }, outputs);
 
     // WARNING: this function all modifies policy/value/action_values in-place. So we should be
     // careful not to read them after this call.
-    group.eval->init(policy, value, action_values, group.valid_actions, group.sym,
-                     group.active_seat, group.action_mode);
+    group.eval->init(outputs, group.valid_actions, group.sym, group.active_seat, group.action_mode);
   }
+}
+
+template <core::concepts::EvalSpec EvalSpec>
+template <typename Tensor>
+void NNEvaluationService<EvalSpec>::BatchData::load_helper(const float* src, Tensor& dst) {
+  std::copy_n(src, Tensor::Dimensions::total_size, dst.data());
+  src += Tensor::Dimensions::total_size;
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -1138,17 +1131,15 @@ void NNEvaluationService<EvalSpec>::drain_batch(const LoadQueueItem& item) {
   BatchData* batch_data = item.batch_data;
   core::pipeline_index_t pipeline_index = item.pipeline_index;
 
-  float* policy_data;
-  float* value_data;
-  float* action_values_data;
+  OutputDataArray output_data;
 
   if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, func,
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
-  net_.load(pipeline_index, &policy_data, &value_data, &action_values_data);
-  batch_data->load(policy_data, value_data, action_values_data);
+  net_.load(pipeline_index, output_data);
+  batch_data->load(output_data);
   net_.release(pipeline_index);
 
   mit::unique_lock lock(main_mutex_);

@@ -21,14 +21,14 @@ struct TrainingTargets {
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  struct ScoreMarginTarget {
+  struct ScoreMarginTarget : public core::TargetBase {
     static constexpr const char* kName = "score_margin";
     using Tensor = eigen_util::FTensor<ScoreMarginShape>;
 
     static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
   };
 
-  struct OwnershipTarget {
+  struct OwnershipTarget : public core::TargetBase {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 

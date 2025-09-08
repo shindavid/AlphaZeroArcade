@@ -277,21 +277,7 @@ TEST(eigen_util, sort_columns_one_element) {
   }
 }
 
-TEST(eigen_util, softmax_Array) {
-  constexpr int N = 4;
-  using Array = eigen_util::FArray<N>;
-
-  Array array{{0, 1, 2, 3}};
-  Array expected{{0.0320586, 0.0871443, 0.2368828, 0.6439143}};
-
-  array = eigen_util::softmax(array);
-
-  for (int i = 0; i < N; ++i) {
-    EXPECT_NEAR(array(i), expected(i), 1e-5);
-  }
-}
-
-TEST(eigen_util, softmax_Tensor) {
+TEST(eigen_util, softmax) {
   constexpr int N = 4;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
 

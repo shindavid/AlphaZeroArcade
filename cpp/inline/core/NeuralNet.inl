@@ -3,6 +3,7 @@
 #include "util/Asserts.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <onnx/onnx_pb.h>
 
@@ -21,6 +22,22 @@ float* make_ptr(int batch_size) {
 template <eigen_util::concepts::Shape Shape>
 auto make_arr(int batch_size) {
   return util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<Shape>);
+}
+
+template<class Tuple, eigen_util::concepts::Shape... Shapes, std::size_t... I>
+Tuple tuple_from_shapes_impl(std::index_sequence<I...>, int batch_size) {
+  return Tuple{
+    std::make_from_tuple<std::tuple_element_t<I, Tuple>>(
+      std::make_tuple(make_ptr<Shapes>(batch_size), make_arr<Shapes>(batch_size))
+    )...
+  };
+}
+
+template<class Tuple, class TL> Tuple tuple_from_shapes(TL, int batch_size);
+
+template<class Tuple, eigen_util::concepts::Shape... Shapes>
+Tuple tuple_from_shapes(mp::TypeList<Shapes...>, int batch_size) {
+  return tuple_from_shapes_impl<Tuple, Shapes...>(std::index_sequence_for<Shapes...>{}, batch_size);
 }
 
 }  // namespace detail
@@ -103,9 +120,8 @@ void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NeuralNet<EvalSpec>::load(pipeline_index_t index, float** policy_data, float** value_data,
-                               float** action_values_data) {
-  pipelines_[index]->load(policy_data, value_data, action_values_data);
+void NeuralNet<EvalSpec>::load(pipeline_index_t index, OutputDataArray& array) {
+  pipelines_[index]->load(array);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -164,15 +180,9 @@ template <core::concepts::EvalSpec EvalSpec>
 NeuralNet<EvalSpec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
                                         const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
-      policy(detail::make_ptr<PolicyShape>(batch_size), detail::make_arr<PolicyShape>(batch_size)),
-      value(detail::make_ptr<ValueShape>(batch_size), detail::make_arr<ValueShape>(batch_size)),
-      action_values(detail::make_ptr<ActionValueShape>(batch_size),
-                    detail::make_arr<ActionValueShape>(batch_size)) {
-  constexpr size_t f = sizeof(float);
-  device_buffers.push_back(cuda_util::gpu_malloc(f * input.size()));
-  device_buffers.push_back(cuda_util::gpu_malloc(f * policy.size()));
-  device_buffers.push_back(cuda_util::gpu_malloc(f * value.size()));
-  device_buffers.push_back(cuda_util::gpu_malloc(f * action_values.size()));
+      outputs(detail::tuple_from_shapes<DynamicOutputTensorMapTuple>(OutputShapes{}, batch_size)) {
+  add_device_buffer(input.size());
+  std::apply([&](auto&... output) { (add_device_buffer(output.size()), ...); }, outputs);
 
   context = engine->createExecutionContext();
   for (int i = 0; i < (int)device_buffers.size(); ++i) {
@@ -195,32 +205,36 @@ NeuralNet<EvalSpec>::Pipeline::~Pipeline() {
   device_buffers.clear();
 
   cuda_util::cpu_free(input.data());
-  cuda_util::cpu_free(policy.data());
-  cuda_util::cpu_free(value.data());
-  cuda_util::cpu_free(action_values.data());
+  std::apply([&](auto&... output) { (cuda_util::cpu_free(output.data()), ...); }, outputs);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::schedule() {
-  constexpr size_t f = sizeof(float);
   auto& dbs = device_buffers;
-  cuda_util::cpu2gpu_memcpy_async(stream, dbs[0], input.data(), input.size() * f);
+  int i = 0;
+  gpu2cpu(dbs[i++], input);
 
   bool ok = context->enqueueV3(stream);
   if (!ok) throw std::runtime_error("TensorRT inference failed");
 
-  cuda_util::gpu2cpu_memcpy_async(stream, policy.data(), dbs[1], policy.size() * f);
-  cuda_util::gpu2cpu_memcpy_async(stream, value.data(), dbs[2], value.size() * f);
-  cuda_util::gpu2cpu_memcpy_async(stream, action_values.data(), dbs[3], action_values.size() * f);
+  std::apply([&](auto&... output) { (gpu2cpu(dbs[i++], output), ...); }, outputs);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NeuralNet<EvalSpec>::Pipeline::load(float** policy_data, float** value_data,
-                                         float** action_values_data) {
+void NeuralNet<EvalSpec>::Pipeline::load(OutputDataArray& array) {
   cuda_util::synchronize_stream(stream);
-  *policy_data = policy.data();
-  *value_data = value.data();
-  *action_values_data = action_values.data();
+  int i = 0;
+  std::apply([&](auto&... output) { ((array[i++] = output.data()), ...); }, outputs);
+}
+template <core::concepts::EvalSpec EvalSpec>
+void NeuralNet<EvalSpec>::Pipeline::add_device_buffer(size_t tensor_size) {
+  device_buffers.push_back(cuda_util::gpu_malloc(sizeof(float) * tensor_size));
+}
+
+template <core::concepts::EvalSpec EvalSpec>
+template <typename Src>
+void NeuralNet<EvalSpec>::Pipeline::gpu2cpu(void* dst, const Src& src) {
+  cuda_util::gpu2cpu_memcpy_async(stream, dst, src.data(), src.size() * sizeof(float));
 }
 
 }  // namespace core

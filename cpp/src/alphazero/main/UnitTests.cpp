@@ -42,13 +42,14 @@ template <core::concepts::EvalSpec EvalSpec>
 class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<EvalSpec> {
  public:
   using Game = EvalSpec::Game;
+  using GameTypes = Game::Types;
   using State = Game::State;
   using Base = nnet::SimpleNNEvaluationService<EvalSpec>;
   using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
-  using ValueTensor = NNEvaluation::ValueTensor;
-  using PolicyTensor = NNEvaluation::PolicyTensor;
-  using ActionValueTensor = NNEvaluation::ActionValueTensor;
-  using ActionMask = NNEvaluation::ActionMask;
+  using ValueTensor = GameTypes::ValueTensor;
+  using PolicyTensor = GameTypes::PolicyTensor;
+  using ActionValueTensor = GameTypes::ActionValueTensor;
+  using ActionMask = GameTypes::ActionMask;
   using Item = Base::Item;
 
   MockNNEvaluationService(bool smart) : smart_(smart) {
@@ -91,7 +92,8 @@ class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<EvalSpec>
       action_values.setZero();
     }
 
-    eval->init(policy, value, action_values, valid_actions, sym, seat, mode);
+    auto outputs = std::make_tuple(policy, value, action_values);
+    eval->init(outputs, valid_actions, sym, seat, mode);
   }
 
  private:

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <tuple>
+#include <algorithm>
 #include <utility>
 
 /*
@@ -122,18 +121,14 @@ struct IndexOf<TypeList<Head, Tails...>, T> {
 template <typename TList, template <typename> typename F>
 struct Apply;
 
-template <template <typename> typename F>
-struct Apply<TypeList<>, F> {
-  using type = TypeList<>;
-};
-
-template <template <typename> typename F, typename Head, typename... Tails>
-struct Apply<TypeList<Head, Tails...>, F> {
-  using type = TypeList<F<Head>, typename Apply<TypeList<Tails...>, F>::type>;
+// If F is an alias template: template<class T> using F = /*mapped type*/;
+template <template <typename> typename F, typename... Ts>
+struct Apply<TypeList<Ts...>, F> {
+  using type = TypeList<typename F<Ts>::type...>;
 };
 
 template <typename TList, template <typename> typename F>
-using Apply_t = Apply<TList, F>::type;
+using Apply_t = typename Apply<TList, F>::type;
 
 // maxsizeof
 
@@ -194,6 +189,44 @@ struct Concat<TypeList<HeadTypes...>, TypeList<TailTypes...>, TLists...> {
 template <typename... TLists>
 using Concat_t = typename Concat<TLists...>::type;
 
+// rebind
+
+template<class TList, template<class...> class NewTemplate>
+struct Rebind;
+
+template<template<class...> class OldTemplate, class... T, template<class...> class NewTemplate>
+struct Rebind<OldTemplate<T...>, NewTemplate> {
+    using type = NewTemplate<T...>;
+};
+
+// Convenience alias for Rebind
+template<class TList, template<class...> class NewTemplate>
+using Rebind_t = Rebind<TList, NewTemplate>::type;
+
+// filter
+
+template <typename TList, template <typename> typename Pred>
+struct Filter;
+
+template <template <typename> typename Pred>
+struct Filter<TypeList<>, Pred> {
+  using type = TypeList<>;
+};
+
+template <template <typename> typename Pred, typename Head, typename... Tails>
+struct Filter<TypeList<Head, Tails...>, Pred> {
+ private:
+  using TailResult = typename Filter<TypeList<Tails...>, Pred>::type;
+
+ public:
+  using type = std::conditional_t<Pred<Head>::value,
+                                   TypeList<Head, TailResult>,
+                                   TailResult>;
+};
+
+template <typename TList, template <typename> typename Pred>
+using Filter_t = typename Filter<TList, Pred>::type;
+
 // static for loop
 //
 // Usage:
@@ -215,4 +248,31 @@ constexpr void constexpr_for(F&& f) {
     constexpr_for<Start + Inc, End, Inc>(f);
   }
 }
+
+// for_each
+//
+// Usage:
+//
+// using TL = TypeList<int, float, double>;
+// for_each<TL>([]<class T> {
+//   do something with T
+// });
+
+template <class T, class F>
+constexpr void invoke_for_type(F&& f) {
+  if constexpr (requires { std::forward<F>(f).template operator()<T>(); }) {
+    std::forward<F>(f).template operator()<T>();
+  } else {
+    std::forward<F>(f)(std::type_identity<T>{});
+  }
+}
+
+// for_each<TypeList<...>>(f)
+template <class TL, class F>
+constexpr void for_each(F&& f) {
+  [&]<class... Ts>(TypeList<Ts...>) {
+    (invoke_for_type<Ts>(std::forward<F>(f)), ...);
+  }(TL{});
+}
+
 }  // namespace mp

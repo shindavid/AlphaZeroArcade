@@ -185,6 +185,24 @@ concept FArray = is_farray_v<T>;
 
 }  // namespace concepts
 
+template <class T> struct ConcreteFTensor;
+
+// Case 1: already a TensorFixedSize
+template <class S, class Shape, int Opt, class Idx>
+struct ConcreteFTensor<Eigen::TensorFixedSize<S, Shape, Opt, Idx>> {
+  using type = Eigen::TensorFixedSize<S, Shape, Opt, Idx>;
+};
+
+// Case 2: TensorMap<TensorFixedSize<...>, MapOptions, MakePointer>
+template <class S, class Shape, int Opt, class Idx, int MapOpt, template<class> class MakePtr>
+struct ConcreteFTensor<Eigen::TensorMap<
+    Eigen::TensorFixedSize<S, Shape, Opt, Idx>, MapOpt, MakePtr>> {
+  using type = Eigen::TensorFixedSize<S, Shape, Opt, Idx>;
+};
+
+template <class D>
+using ConcreteFTensor_t = ConcreteFTensor<std::remove_cvref_t<D>>::type;
+
 template <typename T>
 struct extract_length {};
 template <int N>
@@ -210,13 +228,11 @@ template <typename Derived>
 auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool ascending = true);
 
 /*
- * Returns a float of the same shape as the input, whose values are positive and summing to 1.
+ * Returns a float Tensor of the same shape as the input, whose values are positive and summing
+ * to 1. Assumes that the input represents a fixed-size Tensor.
  */
-template <typename Array>
-auto softmax(const Array& arr);
-
-template <concepts::FTensor Tensor>
-auto softmax(const Tensor& tensor);
+template <typename Derived>
+auto softmax(const Eigen::TensorBase<Derived>& t);
 
 /*
  * Applies an element-wise sigmoid function to the input tensor and returns the result.
@@ -305,12 +321,12 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
 /*
  * Convenience methods that return scalars.
  */
-template <concepts::FTensor Tensor>
-float sum(const Tensor& tensor);
-template <concepts::FTensor Tensor>
-float max(const Tensor& tensor);
-template <concepts::FTensor Tensor>
-float min(const Tensor& tensor);
+template <typename Derived>
+float sum(const Eigen::TensorBase<Derived>& tensor);
+template <typename Derived>
+float max(const Eigen::TensorBase<Derived>& tensor);
+template <typename Derived>
+float min(const Eigen::TensorBase<Derived>& tensor);
 template <concepts::FTensor Tensor>
 bool any(const Tensor& tensor);
 template <concepts::FTensor Tensor>

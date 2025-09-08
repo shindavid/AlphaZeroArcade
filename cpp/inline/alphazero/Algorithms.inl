@@ -282,7 +282,15 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     LocalPolicyArray P_raw(n);
     LocalActionValueArray child_V(n);
-    item.eval()->load(VT, P_raw, child_V);
+
+    auto eval = item.eval();
+
+    // assumes that heads are in order policy, value, action-value
+    //
+    // TODO: we should be able to verify this assumption at compile-time
+    std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
+    std::copy_n(eval->data(1), VT.size(), VT.data());
+    std::copy_n(eval->data(2), child_V.size(), child_V.data());
 
     LocalPolicyArray P_adjusted = P_raw;
     transform_policy(context, P_adjusted);

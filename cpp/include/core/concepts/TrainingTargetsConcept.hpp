@@ -14,6 +14,9 @@ template <typename T, typename Game>
 concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
                                   typename T::Tensor& tensor_ref, seat_index_t active_seat) {
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
+  { util::decay_copy(T::kValueBased) } -> std::same_as<bool>;
+  { util::decay_copy(T::kPolicyBased) } -> std::same_as<bool>;
+  { util::decay_copy(T::kUsesLogitScale) } -> std::same_as<bool>;
 
   typename T::Tensor;
   requires eigen_util::concepts::FTensor<typename T::Tensor>;

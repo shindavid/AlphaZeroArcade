@@ -205,18 +205,11 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascendin
   return out;
 }
 
-template <typename Array>
-auto softmax(const Array& array) {
-  auto normalized_array = array - array.maxCoeff();
-  auto z = normalized_array.exp();
-  return z / z.sum();
-}
-
-template <concepts::FTensor Tensor>
-auto softmax(const Tensor& tensor) {
-  Tensor normalized_tensor = tensor - max(tensor);
-  Tensor z = normalized_tensor.exp();
-  Tensor q = z / sum(z);
+template <typename Derived>
+auto softmax(const Eigen::TensorBase<Derived>& x) {
+  using OutT = ConcreteFTensor_t<Derived>;
+  OutT z = (x - max(x)).exp();
+  OutT q = z / sum(z);
   return q;
 }
 
@@ -344,20 +337,20 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
   }
 }
 
-template <concepts::FTensor Tensor>
-float sum(const Tensor& tensor) {
+template <typename Derived>
+float sum(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.sum();
   return out(0);
 }
 
-template <concepts::FTensor Tensor>
-float max(const Tensor& tensor) {
+template <typename Derived>
+float max(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.maximum();
   return out(0);
 }
 
-template <concepts::FTensor Tensor>
-float min(const Tensor& tensor) {
+template <typename Derived>
+float min(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.minimum();
   return out(0);
 }
