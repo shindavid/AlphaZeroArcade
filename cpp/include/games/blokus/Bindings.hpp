@@ -55,8 +55,8 @@ struct TrainingTargets {
   // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
   //                               before the current player's next move.
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
-                            OwnershipTarget, UnplayedPiecesTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
+  using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
 };
 
 struct MctsConfiguration : public core::MctsConfigurationBase {

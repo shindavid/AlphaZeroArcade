@@ -4,6 +4,7 @@
 #include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -168,7 +169,9 @@ template <concepts::EvalSpec EvalSpec>
 class GameReadLog : public GameLogBase<typename EvalSpec::Game> {
  public:
   using Game = EvalSpec::Game;
-  using TrainingTargets = EvalSpec::TrainingTargets;
+  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
+  using AuxTargets = EvalSpec::TrainingTargets::AuxList;
+  using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using pos_index_t = GameLogCommon::pos_index_t;
@@ -180,7 +183,6 @@ class GameReadLog : public GameLogBase<typename EvalSpec::Game> {
   using Rules = Game::Rules;
   using InputTensorizor = core::InputTensorizor<Game>;
   using InputTensor = InputTensorizor::Tensor;
-  using TrainingTargetsList = TrainingTargets::List;
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;

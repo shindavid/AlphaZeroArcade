@@ -35,8 +35,8 @@ struct TrainingTargets {
     static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
   };
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
-                            ScoreMarginTarget, OwnershipTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
+  using AuxList = mp::TypeList<OppPolicyTarget, ScoreMarginTarget, OwnershipTarget>;
 };
 
 struct MctsConfiguration : public core::MctsConfigurationBase {

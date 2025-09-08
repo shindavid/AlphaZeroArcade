@@ -26,7 +26,7 @@ concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
 }  // namespace concepts
 
 template <typename Game>
-struct _IsTrainingTarget {
+struct _IsTarget {
   template <typename T>
   struct Pred {
     static constexpr bool value = concepts::TrainingTarget<T, Game>;
@@ -37,8 +37,16 @@ namespace concepts {
 
 template <typename TT, typename Game>
 concept TrainingTargets = requires {
-  typename TT::List;
-  requires mp::IsTypeListSatisfying<typename TT::List, _IsTrainingTarget<Game>::template Pred>;
+  // TT::PrimaryList consists of targets that will be predicted by the neural net during game-play.
+  //
+  // TT::AuxList consists of targets that will only be predicted during training. These targets will
+  // be stripped out of the neural net before it is exported for game-play.
+
+  typename TT::PrimaryList;
+  typename TT::AuxList;
+
+  requires mp::IsTypeListSatisfying<typename TT::PrimaryList, _IsTarget<Game>::template Pred>;
+  requires mp::IsTypeListSatisfying<typename TT::AuxList, _IsTarget<Game>::template Pred>;
 };
 
 }  // namespace concepts

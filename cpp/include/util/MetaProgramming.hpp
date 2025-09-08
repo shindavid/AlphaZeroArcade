@@ -171,6 +171,29 @@ struct MaxOf<std::integer_sequence<T, I, Is...>> {
 template <typename T>
 constexpr auto MaxOf_v = MaxOf<T>::value;
 
+// concat
+
+template <typename... TLists>
+struct Concat;
+
+template <>
+struct Concat<> {
+  using type = TypeList<>;
+};
+
+template <typename... Types>
+struct Concat<TypeList<Types...>> {
+  using type = TypeList<Types...>;
+};
+
+template <typename... HeadTypes, typename... TailTypes, typename... TLists>
+struct Concat<TypeList<HeadTypes...>, TypeList<TailTypes...>, TLists...> {
+  using type = typename Concat<TypeList<HeadTypes..., TailTypes...>, TLists...>::type;
+};
+
+template <typename... TLists>
+using Concat_t = typename Concat<TLists...>::type;
+
 // static for loop
 //
 // Usage:
