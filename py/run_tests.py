@@ -7,7 +7,6 @@ from termcolor import colored
 
 import argparse
 import os
-import subprocess
 import sys
 
 import torch
@@ -67,6 +66,8 @@ def run_cpp_tests(build):
 
     pass_count = 0
     fail_count = 0
+    failed_tests = []
+
     for bin in bins:
         full_bin = os.path.join(tests_dir, bin)
         print(f'Running: {full_bin}')
@@ -80,6 +81,7 @@ def run_cpp_tests(build):
             print('stderr:')
             print(stderr)
             fail_count += 1
+            failed_tests.append(full_bin)
         else:
             pass_count += 1
 
@@ -87,6 +89,8 @@ def run_cpp_tests(build):
         print(colored(f'All {pass_count} c++ tests passed!', 'green'))
     else:
         print(colored(f'Failed {fail_count} of {fail_count + pass_count} c++ tests!', 'red'))
+        for filename in failed_tests:
+            print(colored(f"❌ {filename}", 'red'))
 
 
 def run_py_tests():
@@ -97,6 +101,7 @@ def run_py_tests():
 
     pass_count = 0
     fail_count = 0
+    failed_tests = []
 
     # use os.walk to find all python files in the tests directory
     for root, dirs, files in os.walk(tests_dir):
@@ -115,6 +120,7 @@ def run_py_tests():
                     print('stderr:')
                     print(stderr)
                     fail_count += 1
+                    failed_tests.append(full_file)
                 else:
                     pass_count += 1
 
@@ -122,6 +128,8 @@ def run_py_tests():
         print(colored(f'All {pass_count} python tests passed!', 'green'))
     else:
         print(colored(f'Failed {fail_count} of {fail_count + pass_count} python tests!', 'red'))
+        for filename in failed_tests:
+            print(colored(f"❌ {filename}", 'red'))
 
 
 def main():
