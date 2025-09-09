@@ -3,9 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# -----------------------
-# Small utilities
-# -----------------------
 
 class Mish(nn.Module):
     def forward(self, x):
@@ -66,6 +63,7 @@ class Smolgen(nn.Module):
         u = self.norm2(u)
         S = self.shared(u).view(B, self.H, self.T, self.T)  # (B,H,T,T)
         return S
+
 
 class MultiheadAttentionWithExtras(nn.Module):
     """

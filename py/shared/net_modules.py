@@ -18,7 +18,7 @@ AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unforma
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
-from shared.transformer import ChessformerBlock
+from shared.chessformer_modules import ChessformerBlock
 from util.torch_util import Shape
 
 import onnx
