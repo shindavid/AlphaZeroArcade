@@ -119,8 +119,7 @@ class NeuralNet : public NeuralNetBase {
     void load(OutputDataArray& array);
     void add_device_buffer(size_t tensor_size);
 
-    template <typename Src>
-    void gpu2cpu(void* dst, const Src& src);
+    void gpu2cpu(void* dst, const void* src, int n_floats);
 
     nvinfer1::IExecutionContext* context = nullptr;
     cudaStream_t stream;

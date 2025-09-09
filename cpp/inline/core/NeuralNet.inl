@@ -212,12 +212,13 @@ template <core::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::schedule() {
   auto& dbs = device_buffers;
   int i = 0;
-  gpu2cpu(dbs[i++], input);
+  gpu2cpu(dbs[i++], input.data(), input.size());
 
   bool ok = context->enqueueV3(stream);
   if (!ok) throw std::runtime_error("TensorRT inference failed");
 
-  std::apply([&](auto&... output) { (gpu2cpu(dbs[i++], output), ...); }, outputs);
+  std::apply([&](auto&... output) { (gpu2cpu(output.data(), dbs[i++], output.size()), ...); },
+             outputs);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -232,9 +233,8 @@ void NeuralNet<EvalSpec>::Pipeline::add_device_buffer(size_t tensor_size) {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-template <typename Src>
-void NeuralNet<EvalSpec>::Pipeline::gpu2cpu(void* dst, const Src& src) {
-  cuda_util::gpu2cpu_memcpy_async(stream, dst, src.data(), src.size() * sizeof(float));
+void NeuralNet<EvalSpec>::Pipeline::gpu2cpu(void* dst, const void* src, int n_floats) {
+  cuda_util::gpu2cpu_memcpy_async(stream, dst, src, n_floats * sizeof(float));
 }
 
 }  // namespace core
