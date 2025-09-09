@@ -286,7 +286,7 @@ TEST(eigen_util, softmax) {
   Tensor expected;
   expected.setValues({{0.0320586}, {0.0871443}, {0.2368828}, {0.6439143}});
 
-  tensor = eigen_util::softmax(tensor);
+  eigen_util::softmax_in_place(tensor);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
@@ -295,15 +295,17 @@ TEST(eigen_util, softmax) {
 
 TEST(eigen_util, sigmoid) {
   constexpr int N = 4;
-  using Array = eigen_util::FArray<N>;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
 
-  Array array{{0, 1, 2, 3}};
-  Array expected{{0.5, 0.7310586, 0.8807971, 0.9525741}};
+  Tensor tensor;
+  tensor.setValues({{0}, {1}, {2}, {3}});
+  Tensor expected;
+  expected.setValues({{0.5}, {0.7310586}, {0.8807971}, {0.9525741}});
 
-  array = eigen_util::sigmoid(array);
+  eigen_util::sigmoid_in_place(tensor);
 
   for (int i = 0; i < N; ++i) {
-    EXPECT_NEAR(array(i), expected(i), 1e-5);
+    EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
   }
 }
 

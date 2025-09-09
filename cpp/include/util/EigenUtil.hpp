@@ -185,24 +185,6 @@ concept FArray = is_farray_v<T>;
 
 }  // namespace concepts
 
-template <class T> struct ConcreteFTensor;
-
-// Case 1: already a TensorFixedSize
-template <class S, class Shape, int Opt, class Idx>
-struct ConcreteFTensor<Eigen::TensorFixedSize<S, Shape, Opt, Idx>> {
-  using type = Eigen::TensorFixedSize<S, Shape, Opt, Idx>;
-};
-
-// Case 2: TensorMap<TensorFixedSize<...>, MapOptions, MakePointer>
-template <class S, class Shape, int Opt, class Idx, int MapOpt, template<class> class MakePtr>
-struct ConcreteFTensor<Eigen::TensorMap<
-    Eigen::TensorFixedSize<S, Shape, Opt, Idx>, MapOpt, MakePtr>> {
-  using type = Eigen::TensorFixedSize<S, Shape, Opt, Idx>;
-};
-
-template <class D>
-using ConcreteFTensor_t = ConcreteFTensor<std::remove_cvref_t<D>>::type;
-
 template <typename T>
 struct extract_length {};
 template <int N>
@@ -228,17 +210,16 @@ template <typename Derived>
 auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool ascending = true);
 
 /*
- * Returns a float Tensor of the same shape as the input, whose values are positive and summing
- * to 1. Assumes that the input represents a fixed-size Tensor.
+ * Performs a global-softmax on the input tensor, in place.
  */
-template <typename Derived>
-auto softmax(const Eigen::TensorBase<Derived>& t);
+template <class Derived>
+void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
 /*
- * Applies an element-wise sigmoid function to the input tensor and returns the result.
+ * Applies an element-wise sigmoid function to the input tensor, in place.
  */
-template <typename Array>
-auto sigmoid(const Array& arr);
+template <class Derived>
+void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
 /*
  * Returns the index of the maximum element. Only works for 1D Array or Matrix.
@@ -270,6 +251,10 @@ auto reverse(const Tensor& tensor, int dim);
  */
 template <concepts::FTensor Tensor>
 int sample(const Tensor& T);
+
+// Like tensor.size(), but works for Eigen::TensorMap<...> as well.
+template <class Derived>
+int size(const Eigen::TensorBase<Derived>& t);
 
 /*
  * Divides tensor by its sum.

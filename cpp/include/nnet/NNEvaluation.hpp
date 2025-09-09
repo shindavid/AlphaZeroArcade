@@ -10,30 +10,6 @@
 
 namespace nnet {
 
-namespace detail {
-
-template <typename Target>
-struct IsValueBased {
-  static constexpr bool value = Target::kValueBased;
-};
-
-template <typename Target>
-struct IsPolicyBased {
-  static constexpr bool value = Target::kPolicyBased;
-};
-
-template <typename Target>
-struct IsNotPolicyBased {
-  static constexpr bool value = !Target::kPolicyBased;
-};
-
-template <typename Target>
-struct UsesLogitScale {
-  static constexpr bool value = Target::kUsesLogitScale;
-};
-
-}  // namespace detail
-
 // TODO: We could expand the template params of this class to include Traits::EvalServiceBase.
 // That would allow us to replace the void* aux blob with something more specific.
 template <core::concepts::EvalSpec EvalSpec>

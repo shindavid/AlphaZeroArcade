@@ -4,6 +4,8 @@
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
+#include <new>
+
 namespace nnet {
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -17,21 +19,23 @@ void NNEvaluation<EvalSpec>::init(OutputTensorTuple& outputs, const ActionMask& 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Target = mp::TypeAt_t<PrimaryTargets, Index>;
     using Tensor = Target::Tensor;
+    using Shape = Tensor::Dimensions;
 
     auto& src = std::get<Index>(outputs);
-    constexpr bool is_value_based = detail::IsValueBased<Target>::value;
-    constexpr bool is_policy_based = detail::IsPolicyBased<Target>::value;
-    constexpr bool uses_logit_scale = detail::UsesLogitScale<Target>::value;
 
-    if constexpr (is_value_based) {
+    if constexpr (Target::kValueBased) {
       Game::GameResults::right_rotate(src, active_seat);
     }
 
-    using Dst = std::conditional_t<is_policy_based, LocalPolicyTensor, Tensor>;
+    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
-    DstMap dst(data(Index), 0);
+    auto arr = eigen_util::to_int64_std_array_v<Shape>;
+    if constexpr (Target::kPolicyBased) {
+      arr[0] = valid_actions.count();
+    }
+    DstMap dst(data(Index), arr);
 
-    if constexpr (is_policy_based) {
+    if constexpr (Target::kPolicyBased) {
       Game::Symmetries::apply(src, inv_sym, mode);
 
       int i = 0;
@@ -42,9 +46,7 @@ void NNEvaluation<EvalSpec>::init(OutputTensorTuple& outputs, const ActionMask& 
       dst = src;
     }
 
-    if constexpr (uses_logit_scale) {
-      dst = eigen_util::softmax(dst);
-    }
+    Target::transform(dst);
   });
 }
 
@@ -55,13 +57,16 @@ void NNEvaluation<EvalSpec>::uniform_init(const ActionMask& valid_actions) {
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Target = mp::TypeAt_t<PrimaryTargets, Index>;
     using Tensor = Target::Tensor;
+    using Shape = Tensor::Dimensions;
 
-    constexpr bool is_policy_based = detail::IsPolicyBased<Target>::value;
-    using Dst = std::conditional_t<is_policy_based, LocalPolicyTensor, Tensor>;
+    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
-    DstMap dst(data(Index), 0);
-
-    Target::uniform_init(valid_actions, dst);
+    auto arr = eigen_util::to_int64_std_array_v<Shape>;
+    if constexpr (Target::kPolicyBased) {
+      arr[0] = valid_actions.count();
+    }
+    DstMap dst(data(Index), arr);
+    Target::uniform_init(dst);
   });
 }
 
@@ -80,8 +85,11 @@ void NNEvaluation<EvalSpec>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
-  delete[] data_;
-  data_ = nullptr;
+
+  if (data_) {
+    ::operator delete[](data_, std::align_val_t{16});
+    data_ = nullptr;
+  }
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -92,7 +100,7 @@ void NNEvaluation<EvalSpec>::init_data_and_offsets(const ActionMask& valid_actio
     using Target = mp::TypeAt_t<PrimaryTargets, i>;
 
     int size = Target::Tensor::Dimensions::total_size;
-    if (detail::IsPolicyBased<Target>::value) {
+    if (Target::kPolicyBased) {
       size = valid_actions.count();
     }
 
@@ -104,7 +112,17 @@ void NNEvaluation<EvalSpec>::init_data_and_offsets(const ActionMask& valid_actio
     offset += padded_size;
   });
 
-  data_ = new float[offset];
+  if (data_) {
+    ::operator delete[](data_, std::align_val_t{16});
+  }
+
+  // We want to do:
+  //
+  // data_ = new float[offset];
+  //
+  // But that doesn't guarantee 16-byte alignment. So we do this instead:
+  std::size_t bytes = offset * sizeof(float);
+  data_ = static_cast<float*>(::operator new[](bytes, std::align_val_t{16}));
 }
 
 }  // namespace nnet

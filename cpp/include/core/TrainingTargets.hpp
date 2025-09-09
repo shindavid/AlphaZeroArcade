@@ -2,6 +2,8 @@
 
 #include "core/concepts/GameConcept.hpp"
 
+#include <unsupported/Eigen/CXX11/Tensor>
+
 namespace core {
 
 // TargetBase is a base class for all training targets. It provides useful defaults. These defaults
@@ -19,28 +21,32 @@ struct TargetBase {
   // this is that we need to left/right-rotate them based on the active seat.
   static constexpr bool kValueBased = false;
 
-  // If kUsesLogitScale is true, then the neural network makes predictions for this target in the
-  // logit space.
-  static constexpr bool kUsesLogitScale = false;
+   // Some network heads output values in the logit space. This function transforms the values
+   // into a more usable space. The default implementation is a no-op.
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&) {}
 
   // Used for generation-0 evaluations
-  template <typename ActionMask, typename Tensor>
-  static void uniform_init(const ActionMask&, Tensor&);
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
 template <core::concepts::Game Game>
 struct PolicyTarget : public TargetBase {
   static constexpr const char* kName = "policy";
+  static constexpr bool kPolicyBased = true;
+
   using Tensor = Game::Types::PolicyTensor;
   using GameLogView = Game::Types::GameLogView;
   using ActionMask = Game::Types::ActionMask;
-  static constexpr bool kPolicyBased = true;
-  static constexpr bool kUsesLogitScale = true;
 
   static bool tensorize(const GameLogView& view, Tensor&);
 
-  template<typename Dst>
-  static void uniform_init(const ActionMask&, Dst&);
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
 // NOTE: If we add a game where we produce non-logit value predictions, we should modify this to
@@ -48,16 +54,19 @@ struct PolicyTarget : public TargetBase {
 template <core::concepts::Game Game>
 struct ValueTarget : public TargetBase {
   static constexpr const char* kName = "value";
+  static constexpr bool kValueBased = true;
+
   using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
   using ActionMask = Game::Types::ActionMask;
-  static constexpr bool kValueBased = true;
-  static constexpr bool kUsesLogitScale = true;
 
   static bool tensorize(const GameLogView& view, Tensor&);
 
-  template<typename Dst>
-  static void uniform_init(const ActionMask&, Dst&);
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
 template <core::concepts::Game Game>
@@ -70,8 +79,11 @@ struct ActionValueTarget : public TargetBase {
 
   static bool tensorize(const GameLogView& view, Tensor&);
 
-  template<typename Dst>
-  static void uniform_init(const ActionMask&, Dst&);
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
 template <core::concepts::Game Game>

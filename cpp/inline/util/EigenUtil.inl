@@ -1,7 +1,6 @@
 #include "util/EigenUtil.hpp"
 
 #include "util/Asserts.hpp"
-#include "util/Exceptions.hpp"
 #include "util/Random.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -205,17 +204,17 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascendin
   return out;
 }
 
-template <typename Derived>
-auto softmax(const Eigen::TensorBase<Derived>& x) {
-  using OutT = ConcreteFTensor_t<Derived>;
-  OutT z = (x - max(x)).exp();
-  OutT q = z / sum(z);
-  return q;
+template <class Derived>
+void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  auto& x = static_cast<Derived&>(t);
+  x = (x - max(x)).exp();
+  x = x / sum(x);
 }
 
-template <typename Array>
-auto sigmoid(const Array& array) {
-  return 1.0 / (1.0 + (-array).exp());
+template <class Derived>
+void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  auto& x = static_cast<Derived&>(t);
+  x = 1.0 / (1.0 + (-x).exp());
 }
 
 template <typename Derived>
@@ -263,6 +262,17 @@ int sample(const Tensor& T) {
   const auto* data = T.data();
   int n = T.size();
   return util::Random::weighted_sample(data, data + n);
+}
+
+template<class Derived>
+int size(const Eigen::TensorBase<Derived>& t) {
+  constexpr int Rank = Derived::NumDimensions;
+
+  const auto& x = static_cast<const Derived&>(t);
+  auto dims = x.dimensions();
+  int n = 1;
+  for (int i = 0; i < Rank; ++i) n *= dims[i];
+  return n;
 }
 
 template <concepts::FTensor Tensor>

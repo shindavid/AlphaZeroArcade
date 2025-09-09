@@ -10,9 +10,15 @@ bool PolicyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
 }
 
 template <core::concepts::Game Game>
-template <typename Dst>
-void PolicyTarget<Game>::uniform_init(const ActionMask& valid_actions, Dst& dst) {
-  dst.setConstant(1.0 / valid_actions.count());
+template <typename Derived>
+void PolicyTarget<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+  eigen_util::softmax_in_place(dst);
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void PolicyTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+  dst.setConstant(1.0 / eigen_util::size(dst));
 }
 
 template <core::concepts::Game Game>
@@ -23,9 +29,15 @@ bool ValueTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
 }
 
 template <core::concepts::Game Game>
-template <typename Dst>
-void ValueTarget<Game>::uniform_init(const ActionMask& valid_actions, Dst& dst) {
-  dst.setConstant(1.0 / dst.size());
+template <typename Derived>
+void ValueTarget<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+  eigen_util::softmax_in_place(dst);
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void ValueTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+  dst.setConstant(1.0 / eigen_util::size(dst));
 }
 
 template <core::concepts::Game Game>
@@ -36,8 +48,14 @@ bool ActionValueTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor)
 }
 
 template <core::concepts::Game Game>
-template <typename Dst>
-void ActionValueTarget<Game>::uniform_init(const ActionMask& valid_actions, Dst& dst) {
+template <typename Derived>
+void ActionValueTarget<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+  eigen_util::sigmoid_in_place(dst);
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void ActionValueTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
   dst.setConstant(1.0 / Game::Constants::kNumPlayers);
 }
 
