@@ -4,6 +4,9 @@
 .vscode
 cmake-build-debug
 
+# clangd
+.cache
+
 # emacs tmp files
 *~
 \#*#
