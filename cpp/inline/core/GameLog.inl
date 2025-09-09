@@ -237,14 +237,14 @@ GameReadLog<EvalSpec>::GameReadLog(const char* filename, int game_index,
 
 template <concepts::EvalSpec EvalSpec>
 ShapeInfo* GameReadLog<EvalSpec>::get_shape_info_array() {
-  constexpr int n_targets = mp::Length_v<TrainingTargetsList>;
+  constexpr int n_targets = mp::Length_v<AllTargets>;
   constexpr int n = n_targets + 2;  // 1 for input, 1 for terminator
 
   ShapeInfo* info_array = new ShapeInfo[n];
   info_array[0].template init<InputTensor>("input", -1);
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
-    using Target = mp::TypeAt_t<TrainingTargetsList, a>;
+    using Target = mp::TypeAt_t<AllTargets, a>;
     using Tensor = Target::Tensor;
     info_array[1 + a].template init<Tensor>(Target::kName, a);
   });
@@ -323,10 +323,10 @@ void GameReadLog<EvalSpec>::load(int row_index, bool apply_symmetry,
   GameLogView view{cur_pos,         &final_state,      &outcome,   policy_ptr,
                    next_policy_ptr, action_values_ptr, active_seat};
 
-  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
+  constexpr size_t N = mp::Length_v<AllTargets>;
   for (int target_index : target_indices) {
     util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
-      using Target = mp::TypeAt_t<TrainingTargetsList, t>;
+      using Target = mp::TypeAt_t<AllTargets, t>;
       using Tensor = Target::Tensor;
       constexpr int kSize = Tensor::Dimensions::total_size;
 

@@ -22,7 +22,7 @@ struct TrainingTargets {
   using ValueTarget = core::ValueTarget<Game>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
 
-  struct ScoreTarget {
+  struct ScoreTarget : public core::TargetBase {
     static constexpr const char* kName = "score";
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
@@ -32,7 +32,7 @@ struct TrainingTargets {
   /*
    * Who owns which square at the end of the game.
    */
-  struct OwnershipTarget {
+  struct OwnershipTarget : public core::TargetBase {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
@@ -42,7 +42,7 @@ struct TrainingTargets {
   /*
    * Which pieces are unplayed at the end of the game.
    */
-  struct UnplayedPiecesTarget {
+  struct UnplayedPiecesTarget : public core::TargetBase {
     static constexpr const char* kName = "unplayed_pieces";
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
@@ -55,8 +55,8 @@ struct TrainingTargets {
   // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
   //                               before the current player's next move.
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
-                            OwnershipTarget, UnplayedPiecesTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
+  using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
 };
 
 struct MctsConfiguration : public core::MctsConfigurationBase {

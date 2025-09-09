@@ -1,7 +1,6 @@
 #include "util/EigenUtil.hpp"
 
 #include "util/Asserts.hpp"
-#include "util/Exceptions.hpp"
 #include "util/Random.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -205,24 +204,17 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascendin
   return out;
 }
 
-template <typename Array>
-auto softmax(const Array& array) {
-  auto normalized_array = array - array.maxCoeff();
-  auto z = normalized_array.exp();
-  return z / z.sum();
+template <class Derived>
+void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  auto& x = static_cast<Derived&>(t);
+  x = (x - max(x)).exp();
+  x = x / sum(x);
 }
 
-template <concepts::FTensor Tensor>
-auto softmax(const Tensor& tensor) {
-  Tensor normalized_tensor = tensor - max(tensor);
-  Tensor z = normalized_tensor.exp();
-  Tensor q = z / sum(z);
-  return q;
-}
-
-template <typename Array>
-auto sigmoid(const Array& array) {
-  return 1.0 / (1.0 + (-array).exp());
+template <class Derived>
+void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  auto& x = static_cast<Derived&>(t);
+  x = 1.0 / (1.0 + (-x).exp());
 }
 
 template <typename Derived>
@@ -270,6 +262,17 @@ int sample(const Tensor& T) {
   const auto* data = T.data();
   int n = T.size();
   return util::Random::weighted_sample(data, data + n);
+}
+
+template<class Derived>
+int size(const Eigen::TensorBase<Derived>& t) {
+  constexpr int Rank = Derived::NumDimensions;
+
+  const auto& x = static_cast<const Derived&>(t);
+  auto dims = x.dimensions();
+  int n = 1;
+  for (int i = 0; i < Rank; ++i) n *= dims[i];
+  return n;
 }
 
 template <concepts::FTensor Tensor>
@@ -344,20 +347,20 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
   }
 }
 
-template <concepts::FTensor Tensor>
-float sum(const Tensor& tensor) {
+template <typename Derived>
+float sum(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.sum();
   return out(0);
 }
 
-template <concepts::FTensor Tensor>
-float max(const Tensor& tensor) {
+template <typename Derived>
+float max(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.maximum();
   return out(0);
 }
 
-template <concepts::FTensor Tensor>
-float min(const Tensor& tensor) {
+template <typename Derived>
+float min(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.minimum();
   return out(0);
 }

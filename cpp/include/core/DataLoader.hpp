@@ -4,6 +4,7 @@
 #include "core/GameLog.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
+#include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -363,7 +364,10 @@ template <concepts::EvalSpec EvalSpec>
 class DataLoader : public core::DataLoaderBase {
  public:
   using Game = EvalSpec::Game;
-  using TrainingTargets = EvalSpec::TrainingTargets;
+  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
+  using AuxTargets = EvalSpec::TrainingTargets::AuxList;
+  using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
+
   using InputTensorizor = core::InputTensorizor<Game>;
   using GameReadLog = core::GameReadLog<EvalSpec>;
 

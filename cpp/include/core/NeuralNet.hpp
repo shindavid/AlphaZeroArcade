@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
+#include "core/TensorTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
@@ -79,28 +79,13 @@ template <core::concepts::EvalSpec EvalSpec>
 class NeuralNet : public NeuralNetBase {
  public:
   using Game = EvalSpec::Game;
-  using InputTensorizor = core::InputTensorizor<Game>;
-  using TrainingTargets = EvalSpec::TrainingTargets;
-
-  using InputShape = InputTensorizor::Tensor::Dimensions;
-  using PolicyShape = Game::Types::PolicyShape;
-  using ValueShape = Game::Types::ValueShape;
-  using ActionValueShape = Game::Types::ActionValueShape;
-
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = TrainingTargets::ValueTarget::Tensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
-
-  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
-  using DynamicPolicyTensor = Eigen::Tensor<float, PolicyShape::count + 1, Eigen::RowMajor>;
-  using DynamicValueTensor = Eigen::Tensor<float, ValueShape::count + 1, Eigen::RowMajor>;
-  using DynamicActionValueTensor =
-    Eigen::Tensor<float, ActionValueShape::count + 1, Eigen::RowMajor>;
-
-  using DynamicInputTensorMap = Eigen::TensorMap<DynamicInputTensor, Eigen::Aligned>;
-  using DynamicPolicyTensorMap = Eigen::TensorMap<DynamicPolicyTensor, Eigen::Aligned>;
-  using DynamicValueTensorMap = Eigen::TensorMap<DynamicValueTensor, Eigen::Aligned>;
-  using DynamicActionValueTensorMap = Eigen::TensorMap<DynamicActionValueTensor, Eigen::Aligned>;
+  using TensorTypes = core::TensorTypes<EvalSpec>;
+  using InputShape = TensorTypes::InputShape;
+  using OutputShapes = TensorTypes::OutputShapes;
+  using DynamicInputTensorMap = TensorTypes::DynamicInputTensorMap;
+  using DynamicOutputTensorMaps = TensorTypes::DynamicOutputTensorMaps;
+  using DynamicOutputTensorMapTuple = TensorTypes::DynamicOutputTensorMapTuple;
+  using OutputDataArray = TensorTypes::OutputDataArray;
 
   using NeuralNetBase::NeuralNetBase;
   ~NeuralNet();
@@ -110,7 +95,7 @@ class NeuralNet : public NeuralNetBase {
   void schedule(pipeline_index_t) const;
   void release(pipeline_index_t);
 
-  void load(pipeline_index_t, float** policy_data, float** value_data, float** action_values_data);
+  void load_to(pipeline_index_t, OutputDataArray& array);
 
   // Frees all GPU resources
   void deactivate();
@@ -130,16 +115,18 @@ class NeuralNet : public NeuralNetBase {
     ~Pipeline();
 
     void schedule();
-    void load(float** policy_data, float** value_data, float** action_values_data);
+
+    void load_to(OutputDataArray& array);
+    void add_device_buffer(size_t tensor_size);
+
+    void gpu2cpu(void* dst, const void* src, int n_floats);
 
     nvinfer1::IExecutionContext* context = nullptr;
     cudaStream_t stream;
     std::vector<void*> device_buffers;
 
     DynamicInputTensorMap input;
-    DynamicPolicyTensorMap policy;
-    DynamicValueTensorMap value;
-    DynamicActionValueTensorMap action_values;
+    DynamicOutputTensorMapTuple outputs;
   };
 
   std::vector<Pipeline*> pipelines_;

@@ -19,7 +19,8 @@ struct TrainingTargets {
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
+  using AuxList = mp::TypeList<OppPolicyTarget>;
 };
 
 struct MctsConfiguration : public core::MctsConfigurationBase {

@@ -7,6 +7,7 @@
 #include "core/LoopControllerListener.hpp"
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
+#include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
@@ -63,6 +64,7 @@ class NNEvaluationService
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
   using Game = EvalSpec::Game;
+  using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = core::InputTensorizor<Game>;
   using TrainingTargets = EvalSpec::TrainingTargets;
 
@@ -72,20 +74,11 @@ class NNEvaluationService
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;
-  using InputTensor = InputTensorizor::Tensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = TrainingTargets::ValueTarget::Tensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
 
-  using InputShape = InputTensor::Dimensions;
-  using PolicyShape = Game::Types::PolicyShape;
-  using ValueShape = ValueTensor::Dimensions;
-  using ActionValueShape = Game::Types::ActionValueShape;
-
-  using DynamicInputTensor = NeuralNet::DynamicInputTensor;
-  using DynamicPolicyTensor = NeuralNet::DynamicPolicyTensor;
-  using DynamicValueTensor = NeuralNet::DynamicValueTensor;
-  using DynamicActionValueTensor = NeuralNet::DynamicActionValueTensor;
+  using InputShape = TensorTypes::InputShape;
+  using InputTensor = TensorTypes::InputTensor;
+  using OutputTensorTuple = TensorTypes::OutputTensorTuple;
+  using OutputDataArray = TensorTypes::OutputDataArray;
 
   using State = Game::State;
 
@@ -164,8 +157,10 @@ class NNEvaluationService
     BatchData() { set_capacity(1); }
     void set_capacity(int capacity);
     void copy_input_to(int num_rows, NeuralNet&, core::pipeline_index_t);
-    void load(const float* policy_batch_data, const float* value_batch_data,
-              const float* action_values_batch_data);
+    void load(OutputDataArray& output_data);
+
+    template<typename Tensor>
+    void load_helper(float** src, Tensor& dst);
 
     int capacity() const { return tensor_groups.size(); }
     void clear();

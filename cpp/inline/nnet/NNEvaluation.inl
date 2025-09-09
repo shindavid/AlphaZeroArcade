@@ -1,56 +1,73 @@
 #include "nnet/NNEvaluation.hpp"
 
-#include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/MetaProgramming.hpp"
+
+#include <new>
 
 namespace nnet {
 
 template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::init(PolicyTensor& policy, ValueTensor& value,
-                                  ActionValueTensor& action_values, const ActionMask& valid_actions,
+void NNEvaluation<EvalSpec>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
                                   group::element_t sym, core::seat_index_t active_seat,
                                   core::action_mode_t mode) {
-  dynamic_array_.resize(2, valid_actions.count());
-
-  // value prediction is from current-player's POV, so rotate it
-  value = eigen_util::softmax(value);
-  Game::GameResults::right_rotate(value, active_seat);
-
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-  Game::Symmetries::apply(policy, inv_sym, mode);
-  Game::Symmetries::apply(action_values, inv_sym, mode);
 
-  int i = 0;
-  for (core::action_t a : bitset_util::on_indices(valid_actions)) {
-    dynamic_array_(0, i) = policy(a);
-    dynamic_array_(1, i) = action_values(a);
-    i++;
-  }
+  init_data_and_offsets(valid_actions);
 
-  dynamic_array_.row(0) = eigen_util::softmax(dynamic_array_.row(0));
+  mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
+    using Target = mp::TypeAt_t<PrimaryTargets, Index>;
+    using Tensor = Target::Tensor;
+    using Shape = Tensor::Dimensions;
 
-  // TODO: this sigmoid() call assumes that the action-values are logits. If/when we devise
-  // networks that output non-logit action-values, we should modify this.
-  dynamic_array_.row(1) = eigen_util::sigmoid(dynamic_array_.row(1));
+    auto& src = std::get<Index>(outputs);
 
-  value_ = value;
-  eigen_util::debug_assert_is_valid_prob_distr(value_);
-  initialized_ = true;
+    if constexpr (Target::kValueBased) {
+      Game::GameResults::right_rotate(src, active_seat);
+    }
+
+    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
+    using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
+    auto arr = eigen_util::to_int64_std_array_v<Shape>;
+    if constexpr (Target::kPolicyBased) {
+      arr[0] = valid_actions.count();
+    }
+    DstMap dst(data(Index), arr);
+
+    if constexpr (Target::kPolicyBased) {
+      Game::Symmetries::apply(src, inv_sym, mode);
+
+      int i = 0;
+      for (core::action_t a : bitset_util::on_indices(valid_actions)) {
+        dst(i++) = src(a);
+      }
+    } else {
+      dst = src;
+    }
+
+    Target::transform(dst);
+  });
 }
 
 template <core::concepts::EvalSpec EvalSpec>
 void NNEvaluation<EvalSpec>::uniform_init(const ActionMask& valid_actions) {
-  dynamic_array_.resize(2, valid_actions.count());
+  init_data_and_offsets(valid_actions);
 
-  float policy_entry = 1.0 / valid_actions.count();
-  float value_entry = 1.0 / value_.size();
-  float action_value_entry = 1.0 / Game::Constants::kNumPlayers;
+  mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
+    using Target = mp::TypeAt_t<PrimaryTargets, Index>;
+    using Tensor = Target::Tensor;
+    using Shape = Tensor::Dimensions;
 
-  value_.setConstant(value_entry);
-  dynamic_array_.row(0).setConstant(policy_entry);
-  dynamic_array_.row(1).setConstant(action_value_entry);
-  initialized_ = true;
+    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
+    using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
+    auto arr = eigen_util::to_int64_std_array_v<Shape>;
+    if constexpr (Target::kPolicyBased) {
+      arr[0] = valid_actions.count();
+    }
+    DstMap dst(data(Index), arr);
+    Target::uniform_init(dst);
+  });
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -68,17 +85,44 @@ void NNEvaluation<EvalSpec>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
-  initialized_ = false;
+
+  if (data_) {
+    ::operator delete[](data_, std::align_val_t{16});
+    data_ = nullptr;
+  }
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::load(ValueTensor& value, LocalPolicyArray& policy,
-                                  LocalActionValueArray& action_value) {
-  RELEASE_ASSERT(initialized_, "NNEvaluation not initialized");
-  value = value_;
-  policy = dynamic_array_.row(0);
-  action_value = dynamic_array_.row(1);
-  eigen_util::debug_assert_is_valid_prob_distr(policy);
+void NNEvaluation<EvalSpec>::init_data_and_offsets(const ActionMask& valid_actions) {
+  int offset = 0;
+
+  mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
+    using Target = mp::TypeAt_t<PrimaryTargets, i>;
+
+    int size = Target::Tensor::Dimensions::total_size;
+    if (Target::kPolicyBased) {
+      size = valid_actions.count();
+    }
+
+    // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)
+    int padded_size = (size + 3) & ~3;
+    if (i > 0) {
+      offsets_[i - 1] = offset;
+    }
+    offset += padded_size;
+  });
+
+  if (data_) {
+    ::operator delete[](data_, std::align_val_t{16});
+  }
+
+  // We want to do:
+  //
+  // data_ = new float[offset];
+  //
+  // But that doesn't guarantee 16-byte alignment. So we do this instead:
+  std::size_t bytes = offset * sizeof(float);
+  data_ = static_cast<float*>(::operator new[](bytes, std::align_val_t{16}));
 }
 
 }  // namespace nnet

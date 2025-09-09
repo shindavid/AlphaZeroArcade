@@ -20,15 +20,15 @@ struct TrainingTargets {
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  struct OwnershipTarget {
+  struct OwnershipTarget : public core::TargetBase {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
   };
 
-  using List =
-    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget, OwnershipTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
+  using AuxList = mp::TypeList<OppPolicyTarget, OwnershipTarget>;
 };
 
 struct MctsConfiguration : public core::MctsConfigurationBase {

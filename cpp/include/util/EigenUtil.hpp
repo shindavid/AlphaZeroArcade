@@ -210,19 +210,16 @@ template <typename Derived>
 auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool ascending = true);
 
 /*
- * Returns a float of the same shape as the input, whose values are positive and summing to 1.
+ * Performs a global-softmax on the input tensor, in place.
  */
-template <typename Array>
-auto softmax(const Array& arr);
-
-template <concepts::FTensor Tensor>
-auto softmax(const Tensor& tensor);
+template <class Derived>
+void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
 /*
- * Applies an element-wise sigmoid function to the input tensor and returns the result.
+ * Applies an element-wise sigmoid function to the input tensor, in place.
  */
-template <typename Array>
-auto sigmoid(const Array& arr);
+template <class Derived>
+void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
 /*
  * Returns the index of the maximum element. Only works for 1D Array or Matrix.
@@ -254,6 +251,10 @@ auto reverse(const Tensor& tensor, int dim);
  */
 template <concepts::FTensor Tensor>
 int sample(const Tensor& T);
+
+// Like tensor.size(), but works for Eigen::TensorMap<...> as well.
+template <class Derived>
+int size(const Eigen::TensorBase<Derived>& t);
 
 /*
  * Divides tensor by its sum.
@@ -305,12 +306,12 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
 /*
  * Convenience methods that return scalars.
  */
-template <concepts::FTensor Tensor>
-float sum(const Tensor& tensor);
-template <concepts::FTensor Tensor>
-float max(const Tensor& tensor);
-template <concepts::FTensor Tensor>
-float min(const Tensor& tensor);
+template <typename Derived>
+float sum(const Eigen::TensorBase<Derived>& tensor);
+template <typename Derived>
+float max(const Eigen::TensorBase<Derived>& tensor);
+template <typename Derived>
+float min(const Eigen::TensorBase<Derived>& tensor);
 template <concepts::FTensor Tensor>
 bool any(const Tensor& tensor);
 template <concepts::FTensor Tensor>

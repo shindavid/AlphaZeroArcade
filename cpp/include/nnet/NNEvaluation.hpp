@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/TensorTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -15,19 +16,17 @@ template <core::concepts::EvalSpec EvalSpec>
 class NNEvaluation {
  public:
   using Game = EvalSpec::Game;
+  using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = core::InputTensorizor<Game>;
-  using TrainingTargets = EvalSpec::TrainingTargets;
+  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
 
-  using ActionValueTarget = TrainingTargets::ActionValueTarget;
+  static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
+
   using ActionMask = Game::Types::ActionMask;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = Game::Types::ValueTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
-  using LocalActionValueArray = Game::Types::LocalActionValueArray;
+  using OutputTensorTuple = TensorTypes::OutputTensorTuple;
+  using LocalPolicyTensor = Game::Types::LocalPolicyTensor;
 
-  // 2 rows, one for policy, one for action-value
-  using DynamicArray = Eigen::Array<float, 2, Eigen::Dynamic>;
+  ~NNEvaluation() { clear(); }
 
   /*
    * Warning: the passed-in tensors are modified in-place!
@@ -41,15 +40,15 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  void init(PolicyTensor&, ValueTensor&, ActionValueTensor&, const ActionMask& valid_actions,
-            group::element_t sym, core::seat_index_t active_seat, core::action_mode_t mode);
+  void init(OutputTensorTuple& outputs, const ActionMask& valid_actions, group::element_t sym,
+            core::seat_index_t active_seat, core::action_mode_t mode);
 
   void uniform_init(const ActionMask&);  // Used by UniformNNEvaluationService
 
   bool decrement_ref_count();  // returns true iff ref_count_ == 0
   void increment_ref_count() { ref_count_++; }
   int ref_count() const { return ref_count_; }
-  bool pending() const { return !initialized_; }
+  bool pending() const { return !data_; }
   void clear();
 
   void set_aux(void* aux) { aux_ = aux; }
@@ -61,15 +60,17 @@ class NNEvaluation {
   void set_eval_sequence_id(core::nn_evaluation_sequence_id_t id) { eval_sequence_id_ = id; }
   core::nn_evaluation_sequence_id_t eval_sequence_id() const { return eval_sequence_id_; }
 
-  void load(ValueTensor&, LocalPolicyArray&, LocalActionValueArray&);
+  const float* data(int index) const { return data_ + (index == 0 ? 0 : offsets_[index - 1]); }
+  float* data(int index) { return data_ + (index == 0 ? 0 : offsets_[index - 1]); }
 
  protected:
-  ValueTensor value_;
-  DynamicArray dynamic_array_;
+  void init_data_and_offsets(const ActionMask& valid_actions);
+
+  float* data_ = nullptr;
   void* aux_ = nullptr;  // set to a NNEvaluationService-specific object
   core::nn_evaluation_sequence_id_t eval_sequence_id_ = 0;
+  int offsets_[kNumOutputs - 1];  // leave off trivial 0
   int ref_count_ = 0;  // access only permitted under NNEvaluationService cache_mutex_!
-  bool initialized_ = false;
 };
 
 }  // namespace nnet

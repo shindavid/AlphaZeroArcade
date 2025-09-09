@@ -40,6 +40,7 @@ struct GameTypes {
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
+  using LocalPolicyTensor = Eigen::Tensor<float, 1, Eigen::RowMajor>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
   using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
 
