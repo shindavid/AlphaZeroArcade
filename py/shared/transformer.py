@@ -16,8 +16,7 @@ def residual_scale(n_layers: int) -> float:
     return 1.0 / math.sqrt(2.0 * max(1, n_layers))
 
 
-class FilmAbsPos(nn.Module):
-    """FiLM-style absolute positional embedding: (U + A) * (1 + M)"""
+class MAGating(nn.Module):
     def __init__(self, T: int, D: int):
         super().__init__()
         self.pos_add = nn.Parameter(torch.zeros(T, D))
@@ -26,11 +25,11 @@ class FilmAbsPos(nn.Module):
         nn.init.trunc_normal_(self.pos_mul, std=0.02)
 
     def forward(self, U):
-        return (U + self.pos_add) * (1.0 + self.pos_mul)
+        mult = F.softplus(1.0 + self.pos_mul)
+        return U * mult + self.pos_add
 
 
 class RMSNorm(nn.Module):
-    """No-centering, no-bias norm (matches paper’s 'omit centering and biases')."""
     def __init__(self, dim: int, eps: float = 1e-8):
         super().__init__()
         self.eps = eps
@@ -209,21 +208,17 @@ class ChessformerBlock(nn.Module):
 
         H, W = input_shape[1], input_shape[2]
         self.H, self.W = H, W
-        self.board_size = H * W                     # T
-        n_input_channels = input_shape[0]           # C_in
+        self.board_size = H * W  # T
+        n_input_channels = input_shape[0]
         Hh = n_heads
-        Dff = int(ffn_multiplier * embed_dim)       # small FFN per paper/blog (≈ 1x to 2x)
+        Dff = int(ffn_multiplier * embed_dim)
 
-        # Input embedding from input channels to embed_dim
         self.input_embed = nn.Linear(n_input_channels, embed_dim, bias=True)
+        self.embed_act = Mish()
+        self.gating = MAGating(self.board_size, embed_dim)
 
-        # Absolute position embedding (FiLM)
-        self.positional_embedding = FilmAbsPos(self.board_size, embed_dim)
-
-        # Optional: share Smolgen's final 256->T^2 map across all layers
         self.smolgen_shared = nn.Linear(smolgen_shared_dim, self.board_size * self.board_size, bias=False) if use_smolgen else None
 
-        # Transformer encoder (custom, Post-LN, DeepNorm-style scaling, Mish, no QKV bias)
         layers = []
         for _ in range(n_layers):
             layers.append(
@@ -236,33 +231,25 @@ class ChessformerBlock(nn.Module):
                              smolgen_shared=self.smolgen_shared)
             )
         self.transformer_encoder = nn.ModuleList(layers)
-
-        # Final projection to n_output_channels (matching the n-channels expected by heads)
         self.output_projection = nn.Linear(embed_dim, n_output_channels, bias=True)
 
     def forward(self, x):
         """
-        Keeps your exact shape choreography:
           (B, C, H, W) -> (B, T, C) -> ... -> (B, T, n_out) -> (B, n_out, H, W)
         """
         (B, C, H, W) = x.shape
         assert H == self.H and W == self.W, f"Expected HxW = {self.H}x{self.W}, got {H}x{W}"
 
-        # ---- Reshape from (B, C, H, W) to (B, H * W, C) ----
         x = x.permute(0, 2, 3, 1).reshape(B, H * W, C)  # (B, T, C)
 
-        # ---- Apply input embedding and FiLM absolute positional encoding ----
-        x = self.input_embed(x)               # (B, T, E)
-        x = self.positional_embedding(x)      # (B, T, E)
+        x = self.input_embed(x)  # (B, T, Dm)
+        x = self.embed_act(x)
+        x = self.gating(x)  # (B, T, Dm)
 
-        # ---- Pass through transformer (batch-first all the way) ----
         for layer in self.transformer_encoder:
-            x = layer(x)                      # (B, T, E)
+            x = layer(x)  # (B, T, Dm)
 
-        # ---- Project token features to channels expected by your heads ----
-        x = self.output_projection(x)         # (B, T, n_output_channels)
-
-        # ---- Reshape back to (B, n_output_channels, H, W) for minimal integration change ----
+        x = self.output_projection(x)  # (B, T, n_output_channels)
         x = x.permute(0, 2, 1).contiguous().view(B, -1, H, W)
 
         return x
