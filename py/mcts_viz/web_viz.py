@@ -12,7 +12,7 @@ import numpy as np
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # Load your JSON data
-base_dir = '/workspace/repo/sample_search_logs/mcts_tests'
+base_dir = '/workspace/repo/sample_search_logs/alphazero_tests'
 
 # List all files ending with '_log.json'
 log_files = sorted([f for f in os.listdir(base_dir) if f.endswith('.json')])
