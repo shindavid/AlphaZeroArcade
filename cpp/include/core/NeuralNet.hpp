@@ -95,7 +95,7 @@ class NeuralNet : public NeuralNetBase {
   void schedule(pipeline_index_t) const;
   void release(pipeline_index_t);
 
-  void load(pipeline_index_t, OutputDataArray& array);
+  void load_to(pipeline_index_t, OutputDataArray& array);
 
   // Frees all GPU resources
   void deactivate();
@@ -116,7 +116,7 @@ class NeuralNet : public NeuralNetBase {
 
     void schedule();
 
-    void load(OutputDataArray& array);
+    void load_to(OutputDataArray& array);
     void add_device_buffer(size_t tensor_size);
 
     void gpu2cpu(void* dst, const void* src, int n_floats);

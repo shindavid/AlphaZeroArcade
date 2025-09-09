@@ -120,8 +120,8 @@ void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NeuralNet<EvalSpec>::load(pipeline_index_t index, OutputDataArray& array) {
-  pipelines_[index]->load(array);
+void NeuralNet<EvalSpec>::load_to(pipeline_index_t index, OutputDataArray& array) {
+  pipelines_[index]->load_to(array);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -222,7 +222,7 @@ void NeuralNet<EvalSpec>::Pipeline::schedule() {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NeuralNet<EvalSpec>::Pipeline::load(OutputDataArray& array) {
+void NeuralNet<EvalSpec>::Pipeline::load_to(OutputDataArray& array) {
   cuda_util::synchronize_stream(stream);
   int i = 0;
   std::apply([&](auto&... output) { ((array[i++] = output.data()), ...); }, outputs);

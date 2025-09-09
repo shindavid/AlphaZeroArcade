@@ -189,7 +189,7 @@ void NNEvaluationService<EvalSpec>::BatchData::load(OutputDataArray& output_data
     OutputTensorTuple outputs;
 
     int j = 0;
-    std::apply([&](auto&... output) { (load_helper(output_data[j++], output), ...); }, outputs);
+    std::apply([&](auto&... output) { (load_helper(&output_data[j++], output), ...); }, outputs);
 
     // WARNING: this function all modifies policy/value/action_values in-place. So we should be
     // careful not to read them after this call.
@@ -199,9 +199,9 @@ void NNEvaluationService<EvalSpec>::BatchData::load(OutputDataArray& output_data
 
 template <core::concepts::EvalSpec EvalSpec>
 template <typename Tensor>
-void NNEvaluationService<EvalSpec>::BatchData::load_helper(const float* src, Tensor& dst) {
-  std::copy_n(src, Tensor::Dimensions::total_size, dst.data());
-  src += Tensor::Dimensions::total_size;
+void NNEvaluationService<EvalSpec>::BatchData::load_helper(float** src, Tensor& dst) {
+  std::copy_n(*src, Tensor::Dimensions::total_size, dst.data());
+  *src += Tensor::Dimensions::total_size;
 }
 
 template <core::concepts::EvalSpec EvalSpec>
@@ -1138,7 +1138,7 @@ void NNEvaluationService<EvalSpec>::drain_batch(const LoadQueueItem& item) {
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
-  net_.load(pipeline_index, output_data);
+  net_.load_to(pipeline_index, output_data);
   batch_data->load(output_data);
   net_.release(pipeline_index);
 

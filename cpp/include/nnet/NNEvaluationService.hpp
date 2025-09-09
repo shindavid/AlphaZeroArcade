@@ -160,7 +160,7 @@ class NNEvaluationService
     void load(OutputDataArray& output_data);
 
     template<typename Tensor>
-    void load_helper(const float* src, Tensor& dst);
+    void load_helper(float** src, Tensor& dst);
 
     int capacity() const { return tensor_groups.size(); }
     void clear();
