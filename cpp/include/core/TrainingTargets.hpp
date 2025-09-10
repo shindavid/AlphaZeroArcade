@@ -38,7 +38,6 @@ struct PolicyTarget : public TargetBase {
 
   using Tensor = Game::Types::PolicyTensor;
   using GameLogView = Game::Types::GameLogView;
-  using ActionMask = Game::Types::ActionMask;
 
   static bool tensorize(const GameLogView& view, Tensor&);
 
@@ -58,7 +57,6 @@ struct ValueTarget : public TargetBase {
 
   using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
-  using ActionMask = Game::Types::ActionMask;
 
   static bool tensorize(const GameLogView& view, Tensor&);
 
@@ -74,7 +72,6 @@ struct ActionValueTarget : public TargetBase {
   static constexpr const char* kName = "action_value";
   using Tensor = Game::Types::ActionValueTensor;
   using GameLogView = Game::Types::GameLogView;
-  using ActionMask = Game::Types::ActionMask;
   static constexpr bool kPolicyBased = true;
 
   static bool tensorize(const GameLogView& view, Tensor&);
