@@ -8,6 +8,9 @@
 
 namespace trt_util {
 
+// Increment this whenever you want to invalidate all existing cached engine plans.
+constexpr int kCacheVersion = 1;
+
 enum class Precision : uint8_t { kFP32, kFP16, kINT8 };
 
 Precision parse_precision(const char* c);
