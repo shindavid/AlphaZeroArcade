@@ -44,8 +44,8 @@ Tuple tuple_from_shapes(mp::TypeList<Shapes...>, int batch_size) {
 
 // NeuralNetBase
 
-template <typename T>
-void NeuralNetBase::load_weights(T&& onnx_data) {
+template <eigen_util::concepts::Shape InputShape, typename T>
+void NeuralNetBase::load_weights_helper(T&& onnx_data) {
   cuda_util::set_device(params_.cuda_device_id);
   load_data(onnx_bytes_, std::forward<T>(onnx_data));
 
@@ -74,7 +74,8 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
     refit_engine_plan();
     save_plan_bytes();
   } else {
-    build_engine_plan_from_scratch();
+    auto input_shape = eigen_util::to_int64_std_array_v<InputShape>;
+    build_engine_plan_from_scratch(input_shape.data(), input_shape.size());
     save_plan_bytes();
     write_plan_to_disk(cache_path);
   }
@@ -117,6 +118,12 @@ void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
   available_pipeline_indices_.push_back(index);
   lock.unlock();
   pipeline_cv_.notify_all();
+}
+
+template <core::concepts::EvalSpec EvalSpec>
+template <typename T>
+void NeuralNet<EvalSpec>::load_weights(T&& onnx_data) {
+  load_weights_helper<InputShape>(std::forward<T>(onnx_data));
 }
 
 template <core::concepts::EvalSpec EvalSpec>

@@ -32,9 +32,6 @@ class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
 
-  template <typename T>
-  void load_weights(T&& onnx_data);
-
   bool loaded() const { return !plan_data_.empty(); }
 
  protected:
@@ -48,13 +45,16 @@ class NeuralNetBase {
     }
   };
 
+  template <eigen_util::concepts::Shape InputShape, typename T>
+  void load_weights_helper(T&& onnx_data);
+
   void set_model_architecture_signature();
   void load_data(std::vector<char>& dst, const char* filename);
   void load_data(std::vector<char>& dst, std::ispanstream& bytes);
 
   void init_engine_from_plan_data();
   void refit_engine_plan();
-  void build_engine_plan_from_scratch();
+  void build_engine_plan_from_scratch(const int64_t* input_shape_arr, int input_shape_size);
   void save_plan_bytes();
   void write_plan_to_disk(const boost::filesystem::path& cache_path);
 
@@ -94,6 +94,9 @@ class NeuralNet : public NeuralNetBase {
   float* get_input_ptr(pipeline_index_t);
   void schedule(pipeline_index_t) const;
   void release(pipeline_index_t);
+
+  template <typename T>
+  void load_weights(T&& onnx_data);
 
   void load_to(pipeline_index_t, OutputDataArray& array);
 

@@ -65,7 +65,8 @@ void NeuralNetBase::refit_engine_plan() {
   LOG_INFO("TensorRT Engine refitting time: {} ms", t12);
 }
 
-void NeuralNetBase::build_engine_plan_from_scratch() {
+void NeuralNetBase::build_engine_plan_from_scratch(const int64_t* input_shape_arr,
+                                                   int input_shape_size) {
   LOG_INFO("Building a TensorRT engine from an ONNX model from scratch.");
   LOG_INFO("");
   LOG_INFO("** This will take a long time! **");
@@ -88,9 +89,16 @@ void NeuralNetBase::build_engine_plan_from_scratch() {
   cfg->setFlag(nvinfer1::BuilderFlag::kREFIT);
   auto* in = net_def->getInput(0);
   auto dims = in->getDimensions();
+  RELEASE_ASSERT(dims.nbDims == input_shape_size + 1,
+                 "Unexpected number of input dimensions: expected {}, got {}", input_shape_size + 1,
+                 dims.nbDims);
 
   nvinfer1::IOptimizationProfile* prof = builder->createOptimizationProfile();
   dims.d[0] = params_.batch_size;
+  for (int i = 0; i < input_shape_size; ++i) {
+    dims.d[i + 1] = (int)input_shape_arr[i];
+  }
+
   prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMIN, dims);
   prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kOPT, dims);
   prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMAX, dims);
