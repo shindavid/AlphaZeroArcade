@@ -214,7 +214,7 @@ class CombinedTrainingPlotter:
     def make_figure(self):
         tags = list(self.head_data_dict.keys())
         select = Select(title="Select Tag", value=tags[0], options=tags)
-        select_wrapper = column(select, sizing_mode="fixed")
+        select_wrapper = column(select)
 
         initial_plot = self.make_stacked_loss_plot(self.head_data_dict[select.value])
 

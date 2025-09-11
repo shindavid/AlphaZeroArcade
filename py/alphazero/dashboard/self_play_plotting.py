@@ -202,8 +202,7 @@ class SelfPlayPlotter:
         initial_tag = list(self.data_dict.keys())[0]
         tags = list(self.data_dict.keys())
         select = Select(title='tag', value=initial_tag, options=tags)
-        select_wrapper = column(select, sizing_mode="fixed")
-
+        select_wrapper = column(select)
 
         total_run_time_plot = self.make_stacked_plots(STACKED_TOTAL_RUNTIME_PLOT, initial_tag,
                                                       'Total Runtime', 'Seconds')

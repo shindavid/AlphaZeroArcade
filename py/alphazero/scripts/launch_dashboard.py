@@ -34,7 +34,7 @@ class Params:
     bokeh_port: int = 5012
     flask_port: int = 8002
     debug: bool = False
-    bokeh_session_token_expiration: int = 3600  # seconds
+    bokeh_session_token_expiration: int = 36000  # seconds
 
     @staticmethod
     def create(args) -> 'Params':
