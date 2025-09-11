@@ -21,7 +21,7 @@ struct NNEvaluationServiceParams {
   size_t cache_size = 1048576;
 
   int batch_size = 256;
-  uint64_t engine_build_workspace_size_in_bytes = 1 << 28;  // 256 MB
+  uint64_t engine_build_workspace_size_in_bytes = 1ULL << 32;  // 4 GB
   std::string engine_build_precision = "FP16";
 
   bool apply_random_symmetries = true;
