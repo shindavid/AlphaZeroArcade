@@ -11,7 +11,7 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 inline ManagerParams<EvalSpec>::ManagerParams(search::Mode mode) {
-  if (mode == search::kCompetitive) {
+  if (mode == search::kCompetition) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
     forced_playouts = false;

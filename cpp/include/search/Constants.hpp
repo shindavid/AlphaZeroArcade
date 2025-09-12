@@ -6,7 +6,7 @@
 
 namespace search {
 
-enum Mode : int8_t { kCompetitive, kTraining };
+enum Mode : int8_t { kCompetition, kTraining };
 
 constexpr int kThreadWhitespaceLength = 50;  // for debug printing alignment
 constexpr bool kEnableSearchDebug = IS_DEFINED(MCTS_DEBUG);

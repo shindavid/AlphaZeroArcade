@@ -15,16 +15,17 @@
 
 #include <memory>
 
-namespace generic {
+namespace generic::alpha0 {
 
 /*
- * The MctsPlayer uses MCTS to select actions.
+ * The generic::alpha0::Player uses AlphaZero MCTS to select actions.
  *
- * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
- * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
+ * Note that when 2 or more identically-configured generic::alpha0::Player's are playing in the same
+ * game, they can share the same MCTS tree, as an optimization. This implementation supports this
+ * optimization.
  */
 template <search::concepts::Traits Traits>
-class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
+class Player : public core::AbstractPlayer<typename Traits::Game> {
  public:
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
@@ -47,9 +48,9 @@ class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using MctsManager = search::Manager<Traits>;
-  using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using SearchResults = alpha0::SearchResults<Game>;
+  using Manager = search::Manager<Traits>;
+  using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
+  using SearchResults = ::alpha0::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
@@ -69,15 +70,15 @@ class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
     template <typename... Ts>
     SharedData(Ts&&... args) : manager(std::forward<Ts>(args)...) {}
 
-    MctsManager manager;
+    Manager manager;
     int num_raw_policy_starting_moves = 0;
   };
   using SharedData_sptr = std::shared_ptr<SharedData>;
 
-  MctsPlayer(const Params&, SharedData_sptr, bool owns_shared_data);
-  ~MctsPlayer();
+  Player(const Params&, SharedData_sptr, bool owns_shared_data);
+  ~Player();
 
-  MctsManager* get_manager() const { return &shared_data_->manager; }
+  Manager* get_manager() const { return &shared_data_->manager; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
@@ -123,9 +124,9 @@ class MctsPlayer : public core::AbstractPlayer<typename Traits::Game> {
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
   template <core::concepts::EvalSpec ES>
-  friend class MctsPlayerTest;
+  friend class PlayerTest;
 };
 
-}  // namespace generic
+}  // namespace generic::alpha0
 
-#include "inline/generic_players/MctsPlayer.inl"
+#include "inline/generic_players/alpha0/Player.inl"

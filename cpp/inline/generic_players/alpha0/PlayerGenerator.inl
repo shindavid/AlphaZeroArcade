@@ -1,15 +1,15 @@
-#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/alpha0/PlayerGenerator.hpp"
 
 #include "search/Constants.hpp"
 
 #include <format>
 
-namespace generic {
+namespace generic::alpha0 {
 
-// MctsPlayerGeneratorBase
+// PlayerGeneratorBase
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::MctsPlayerGeneratorBase(
+PlayerGeneratorBase<Traits, PlayerT, Mode>::PlayerGeneratorBase(
   core::GameServerBase* server, shared_data_map_t& shared_data_cache)
     : server_(server),
       manager_params_(Mode),
@@ -18,7 +18,7 @@ MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::MctsPlayerGeneratorBase(
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
 core::AbstractPlayer<typename Traits::Game>*
-MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
+PlayerGeneratorBase<Traits, PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {
@@ -32,7 +32,7 @@ MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate(core::game_slot_index_t
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-void MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::end_session() {
+void PlayerGeneratorBase<Traits, PlayerT, Mode>::end_session() {
   for (auto& pair : shared_data_cache_) {
     for (SharedData_sptr& shared_data : pair.second) {
       shared_data->manager.end_session();
@@ -41,20 +41,20 @@ void MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::end_session() {
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-std::string MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::get_default_name() const {
+std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_default_name() const {
   return std::format("{}-{}", this->get_types()[0], mcts_player_params_.num_fast_iters);
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-void MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(
+void PlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(
   const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-std::vector<std::string> MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::get_types() const {
-  if (Mode == search::kCompetitive) {
-    return {"MCTS-C", "MCTS-Competitive"};
+std::vector<std::string> PlayerGeneratorBase<Traits, PlayerT, Mode>::get_types() const {
+  if (Mode == search::kCompetition) {
+    return {"MCTS-C", "MCTS-Competition"};
   } else if (Mode == search::kTraining) {
     return {"MCTS-T", "MCTS-Training"};
   } else {
@@ -63,9 +63,9 @@ std::vector<std::string> MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::get_typ
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-std::string MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::get_description() const {
-  if (Mode == search::kCompetitive) {
-    return "Competitive MCTS player";
+std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_description() const {
+  if (Mode == search::kCompetition) {
+    return "Competition MCTS player";
   } else if (Mode == search::kTraining) {
     return "Training MCTS player";
   } else {
@@ -74,14 +74,14 @@ std::string MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::get_description() co
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-PlayerT* MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate_helper(
+PlayerT* PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_helper(
   SharedData_sptr& shared_data, bool owns_shared_data) {
   return new PlayerT(this->mcts_player_params_, shared_data, owns_shared_data);
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-typename MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::SharedData_sptr
-MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate_shared_data() {
+typename PlayerGeneratorBase<Traits, PlayerT, Mode>::SharedData_sptr
+PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_shared_data() {
   if (manager_params_.num_search_threads == 1) {
     return std::make_shared<SharedData>(manager_params_, server_);
   } else {
@@ -96,4 +96,4 @@ MctsPlayerGeneratorBase<Traits, PlayerT, Mode>::generate_shared_data() {
   }
 }
 
-}  // namespace generic
+}  // namespace generic::alpha0

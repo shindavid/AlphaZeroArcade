@@ -6,7 +6,7 @@
 #include "games/othello/Game.hpp"
 #include "games/othello/players/EdaxPlayerGenerator.hpp"
 #include "games/othello/players/HumanTuiPlayerGenerator.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/alpha0/PlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 
 namespace othello {
@@ -23,8 +23,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
   static player_subfactory_vec_t make_subfactories() {
     return {new core::PlayerSubfactory<othello::HumanTuiPlayerGenerator>(),
             new core::PlayerSubfactory<othello::EdaxPlayerGenerator>(),
-            new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<AlphaZeroTraits>>(),
-            new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<AlphaZeroTraits>>(),
+            new core::PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<AlphaZeroTraits>>(),
+            new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }

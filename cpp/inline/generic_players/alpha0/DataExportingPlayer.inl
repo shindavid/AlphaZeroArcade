@@ -1,14 +1,14 @@
 
-#include "generic_players/DataExportingMctsPlayer.hpp"
+#include "generic_players/alpha0/DataExportingPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
 #include "search/SearchRequest.hpp"
 
-namespace generic {
+namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits>
-typename DataExportingMctsPlayer<Traits>::ActionResponse
-DataExportingMctsPlayer<Traits>::get_action_response(const ActionRequest& request) {
+typename DataExportingPlayer<Traits>::ActionResponse
+DataExportingPlayer<Traits>::get_action_response(const ActionRequest& request) {
   const ActionMask& valid_actions = request.valid_actions;
 
   mit::unique_lock lock(this->search_mode_mutex_);
@@ -64,8 +64,8 @@ DataExportingMctsPlayer<Traits>::get_action_response(const ActionRequest& reques
 }
 
 template <search::concepts::Traits Traits>
-typename DataExportingMctsPlayer<Traits>::ChanceEventPreHandleResponse
-DataExportingMctsPlayer<Traits>::prehandle_chance_event(
+typename DataExportingPlayer<Traits>::ChanceEventPreHandleResponse
+DataExportingPlayer<Traits>::prehandle_chance_event(
   const ChangeEventPreHandleRequest& request) {
   // So that only one player outputs the action values.
   if (!this->owns_shared_data_) {
@@ -94,7 +94,7 @@ DataExportingMctsPlayer<Traits>::prehandle_chance_event(
 }
 
 template <search::concepts::Traits Traits>
-void DataExportingMctsPlayer<Traits>::extract_policy_target(const SearchResults* mcts_results,
+void DataExportingPlayer<Traits>::extract_policy_target(const SearchResults* mcts_results,
                                                             PolicyTensor** target) {
   **target = mcts_results->policy_target;
   float sum = eigen_util::sum(**target);
@@ -107,4 +107,4 @@ void DataExportingMctsPlayer<Traits>::extract_policy_target(const SearchResults*
   }
 }
 
-}  // namespace generic
+}  // namespace generic::alpha0

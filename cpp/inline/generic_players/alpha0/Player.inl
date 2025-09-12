@@ -1,4 +1,4 @@
-#include "generic_players/MctsPlayer.hpp"
+#include "generic_players/alpha0/Player.hpp"
 
 #include "core/Constants.hpp"
 #include "search/SearchRequest.hpp"
@@ -13,11 +13,11 @@
 
 #include <unistd.h>
 
-namespace generic {
+namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits>
-MctsPlayer<Traits>::Params::Params(search::Mode mode) {
-  if (mode == search::kCompetitive) {
+Player<Traits>::Params::Params(search::Mode mode) {
+  if (mode == search::kCompetition) {
     num_fast_iters = 0;
     num_full_iters = 1600;
     full_pct = 1.0;
@@ -33,22 +33,22 @@ MctsPlayer<Traits>::Params::Params(search::Mode mode) {
 }
 
 template <search::concepts::Traits Traits>
-void MctsPlayer<Traits>::Params::dump() const {
+void Player<Traits>::Params::dump() const {
   if (full_pct == 0) {
-    util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
+    util::KeyValueDumper::add("generic::alpha0::Player num iters", "%d", num_fast_iters);
   } else {
-    util::KeyValueDumper::add("MctsPlayer num fast iters", "%d", num_fast_iters);
-    util::KeyValueDumper::add("MctsPlayer num full iters", "%d", num_full_iters);
-    util::KeyValueDumper::add("MctsPlayer pct full iters", "%6.2%%", 100. * full_pct);
+    util::KeyValueDumper::add("generic::alpha0::Player num fast iters", "%d", num_fast_iters);
+    util::KeyValueDumper::add("generic::alpha0::Player num full iters", "%d", num_full_iters);
+    util::KeyValueDumper::add("generic::alpha0::Player pct full iters", "%6.2%%", 100. * full_pct);
   }
 }
 
 template <search::concepts::Traits Traits>
-auto MctsPlayer<Traits>::Params::make_options_description() {
+auto Player<Traits>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po2::options_description desc("MctsPlayer options");
+  po2::options_description desc("Player options");
 
   return desc
     .template add_option<"num-fast-iters">(
@@ -78,7 +78,7 @@ auto MctsPlayer<Traits>::Params::make_options_description() {
 }
 
 template <search::concepts::Traits Traits>
-inline MctsPlayer<Traits>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
+inline Player<Traits>::Player(const Params& params, SharedData_sptr shared_data,
                                       bool owns_shared_data)
     : params_(params),
       search_params_{
@@ -98,14 +98,14 @@ inline MctsPlayer<Traits>::MctsPlayer(const Params& params, SharedData_sptr shar
 }
 
 template <search::concepts::Traits Traits>
-inline MctsPlayer<Traits>::~MctsPlayer() {
+inline Player<Traits>::~Player() {
   if (verbose_info_) {
     delete verbose_info_;
   }
 }
 
 template <search::concepts::Traits Traits>
-inline void MctsPlayer<Traits>::start_game() {
+inline void Player<Traits>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
@@ -114,7 +114,7 @@ inline void MctsPlayer<Traits>::start_game() {
 }
 
 template <search::concepts::Traits Traits>
-inline void MctsPlayer<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
+inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
                                                      core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
@@ -133,7 +133,7 @@ inline void MctsPlayer<Traits>::receive_state_change(core::seat_index_t seat, co
 }
 
 template <search::concepts::Traits Traits>
-typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response(
+typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
   mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
@@ -152,13 +152,13 @@ typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_respo
 }
 
 template <search::concepts::Traits Traits>
-void MctsPlayer<Traits>::clear_search_mode() {
+void Player<Traits>::clear_search_mode() {
   mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 
 template <search::concepts::Traits Traits>
-bool MctsPlayer<Traits>::init_search_mode(const ActionRequest& request) {
+bool Player<Traits>::init_search_mode(const ActionRequest& request) {
   if (search_mode_ != core::kNumSearchModes) return false;
 
   search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
@@ -167,7 +167,7 @@ bool MctsPlayer<Traits>::init_search_mode(const ActionRequest& request) {
 }
 
 template <search::concepts::Traits Traits>
-typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_response_helper(
+typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
@@ -182,7 +182,7 @@ typename MctsPlayer<Traits>::ActionResponse MctsPlayer<Traits>::get_action_respo
 }
 
 template <search::concepts::Traits Traits>
-auto MctsPlayer<Traits>::get_action_policy(const SearchResults* mcts_results,
+auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
                                            const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
@@ -336,7 +336,7 @@ auto MctsPlayer<Traits>::get_action_policy(const SearchResults* mcts_results,
 }
 
 template <search::concepts::Traits Traits>
-core::SearchMode MctsPlayer<Traits>::get_random_search_mode() const {
+core::SearchMode Player<Traits>::get_random_search_mode() const {
   if (params_.full_pct >= 1.0) {
     return core::kFull;
   }
@@ -345,7 +345,7 @@ core::SearchMode MctsPlayer<Traits>::get_random_search_mode() const {
 }
 
 template <search::concepts::Traits Traits>
-inline void MctsPlayer<Traits>::verbose_dump() const {
+inline void Player<Traits>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;
@@ -356,7 +356,7 @@ inline void MctsPlayer<Traits>::verbose_dump() const {
 }
 
 template <search::concepts::Traits Traits>
-void MctsPlayer<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+void Player<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                                             const SearchResults& results) const {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -422,4 +422,4 @@ void MctsPlayer<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor
   }
 }
 
-}  // namespace generic
+}  // namespace generic::alpha0

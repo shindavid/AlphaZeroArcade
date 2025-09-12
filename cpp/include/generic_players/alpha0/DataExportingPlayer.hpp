@@ -2,15 +2,15 @@
 
 #include "core/TrainingDataWriter.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "generic_players/MctsPlayer.hpp"
+#include "generic_players/alpha0/Player.hpp"
 
-namespace generic {
+namespace generic::alpha0 {
 
 /*
- * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
+ * A variant of generic::alpha0::Player that exports training data to a file via TrainingDataWriter.
  */
 template <search::concepts::Traits Traits>
-class DataExportingMctsPlayer : public MctsPlayer<Traits> {
+class DataExportingPlayer : public Player<Traits> {
  public:
   /*
    * The argument for using a full search is so that the opp reply target is more accurate.
@@ -33,9 +33,9 @@ class DataExportingMctsPlayer : public MctsPlayer<Traits> {
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
-  using base_t = MctsPlayer<Traits>;
+  using base_t = Player<Traits>;
   using Params = base_t::Params;
-  using MctsManager = base_t::MctsManager;
+  using Manager = base_t::Manager;
   using SearchResults = base_t::SearchResults;
   using SearchResponse = base_t::SearchResponse;
 
@@ -55,6 +55,6 @@ class DataExportingMctsPlayer : public MctsPlayer<Traits> {
   bool mid_prehandle_chance_event_ = false;
 };
 
-}  // namespace generic
+}  // namespace generic::alpha0
 
-#include "inline/generic_players/DataExportingMctsPlayer.inl"
+#include "inline/generic_players/alpha0/DataExportingPlayer.inl"

@@ -4,8 +4,8 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
-#include "generic_players/DataExportingMctsPlayer.hpp"
-#include "generic_players/MctsPlayer.hpp"
+#include "generic_players/alpha0/DataExportingPlayer.hpp"
+#include "generic_players/alpha0/Player.hpp"
 #include "search/Constants.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
@@ -16,28 +16,28 @@
 #include <string>
 #include <vector>
 
-namespace generic {
+namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits, typename PlayerT,
-          search::Mode Mode = search::kCompetitive>
-class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Traits::Game> {
+          search::Mode Mode = search::kCompetition>
+class PlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Traits::Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
   using Game = Traits::Game;
-  using MctsManagerParams = Traits::ManagerParams;
-  using BaseMctsPlayer = generic::MctsPlayer<Traits>;
-  using MctsPlayerParams = BaseMctsPlayer::Params;
-  using SharedData = BaseMctsPlayer::SharedData;
+  using ManagerParams = Traits::ManagerParams;
+  using BasePlayer = generic::alpha0::Player<Traits>;
+  using PlayerParams = BasePlayer::Params;
+  using SharedData = BasePlayer::SharedData;
   using SharedData_sptr = std::shared_ptr<SharedData>;
 
   using shared_data_vec_t = std::vector<SharedData_sptr>;
   using shared_data_map_t = std::map<core::game_slot_index_t, shared_data_vec_t>;
 
-  static_assert(std::is_base_of_v<BaseMctsPlayer, PlayerT>,
-                "PlayerT must be derived from generic::MctsPlayer<Traits>");
+  static_assert(std::is_base_of_v<BasePlayer, PlayerT>,
+                "PlayerT must be derived from generic::alpha0::Player<Traits>");
 
-  MctsPlayerGeneratorBase(core::GameServerBase*, shared_data_map_t& shared_data_cache);
+  PlayerGeneratorBase(core::GameServerBase*, shared_data_map_t& shared_data_cache);
 
   /*
    * If this generator already generated a player for the given game_slot_index_t, dispatches to
@@ -65,22 +65,22 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Tr
   void validate_params();
 
   core::GameServerBase* const server_;
-  MctsManagerParams manager_params_;
-  MctsPlayerParams mcts_player_params_;
+  ManagerParams manager_params_;
+  PlayerParams mcts_player_params_;
   shared_data_map_t& shared_data_cache_;
   core::mutex_vec_sptr_t common_node_mutex_pool_;     // only used in multi-threaded mode
   core::mutex_vec_sptr_t common_context_mutex_pool_;  // only used in multi-threaded mode
 };
 
 template <search::concepts::Traits Traits>
-using CompetitiveMctsPlayerGenerator = MctsPlayerGeneratorBase<Traits, generic::MctsPlayer<Traits>>;
+using CompetitionPlayerGenerator = PlayerGeneratorBase<Traits, generic::alpha0::Player<Traits>>;
 
 template <search::concepts::Traits Traits>
-using TrainingMctsPlayerGenerator =
-  MctsPlayerGeneratorBase<Traits, generic::DataExportingMctsPlayer<Traits>, search::kTraining>;
+using TrainingPlayerGenerator =
+  PlayerGeneratorBase<Traits, generic::alpha0::DataExportingPlayer<Traits>, search::kTraining>;
 
 template <typename GeneratorT>
-class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {
+class Subfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {
  public:
   using shared_data_map_t = GeneratorT::shared_data_map_t;
 
@@ -92,18 +92,18 @@ class MctsSubfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Ga
   shared_data_map_t shared_data_cache_;
 };
 
-}  // namespace generic
+}  // namespace generic::alpha0
 
 namespace core {
 
 template <search::concepts::Traits Traits>
-class PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>>
-    : public generic::MctsSubfactory<generic::CompetitiveMctsPlayerGenerator<Traits>> {};
+class PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<Traits>>
+    : public generic::alpha0::Subfactory<generic::alpha0::CompetitionPlayerGenerator<Traits>> {};
 
 template <search::concepts::Traits Traits>
-class PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Traits>>
-    : public generic::MctsSubfactory<generic::TrainingMctsPlayerGenerator<Traits>> {};
+class PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<Traits>>
+    : public generic::alpha0::Subfactory<generic::alpha0::TrainingPlayerGenerator<Traits>> {};
 
 }  // namespace core
 
-#include "inline/generic_players/MctsPlayerGenerator.inl"
+#include "inline/generic_players/alpha0/PlayerGenerator.inl"

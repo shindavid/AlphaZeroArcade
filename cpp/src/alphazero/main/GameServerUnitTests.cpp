@@ -7,8 +7,8 @@
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "generic_players/MctsPlayer.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
+#include "generic_players/alpha0/Player.hpp"
+#include "generic_players/alpha0/PlayerGenerator.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -36,22 +36,17 @@ class GameServerTest : public testing::Test {
   using SearchResults = alpha0::SearchResults<Game>;
   using SearchLog = alpha0::SearchLog<Traits>;
 
-  // TestPlayer is a simple extension of MctsPlayer. The key differences are:
+  // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:
   //
   // - Records the first MCTS response to a stringstream.
   // - Configures the MCTS manager to record a search log.
   //
-  // NOTE[dshin]: I was *tempted* to also incorporate the "initial moves" functionality into
-  // TestPlayer. The problem is that for stochastic games, initial moves includes chance-events,
-  // which are not executed by AbstractPlayer objects. So it wasn't possible to maintain the
-  // existing testing behavior simply by extending MctsPlayer.
-  //
-  // Also, if we later want to extend this test to operate on multiple concurrent games to test
+  // If we later want to extend this test to operate on multiple concurrent games to test
   // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
   // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
-  class TestPlayer : public generic::MctsPlayer<Traits> {
+  class TestPlayer : public generic::alpha0::Player<Traits> {
    public:
-    using base_t = generic::MctsPlayer<Traits>;
+    using base_t = generic::alpha0::Player<Traits>;
     using ActionMask = base_t::ActionMask;
     using ActionResponse = base_t::ActionResponse;
 
@@ -80,9 +75,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerGenerator : public generic::MctsPlayerGeneratorBase<Traits, TestPlayer> {
+  class TestPlayerGenerator : public generic::alpha0::PlayerGeneratorBase<Traits, TestPlayer> {
    public:
-    using base_t = generic::MctsPlayerGeneratorBase<Traits, TestPlayer>;
+    using base_t = generic::alpha0::PlayerGeneratorBase<Traits, TestPlayer>;
 
     using base_t::base_t;
 
@@ -98,9 +93,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerSubfactory : public generic::MctsSubfactory<TestPlayerGenerator> {
+  class TestPlayerSubfactory : public generic::alpha0::Subfactory<TestPlayerGenerator> {
    public:
-    using base_t = generic::MctsSubfactory<TestPlayerGenerator>;
+    using base_t = generic::alpha0::Subfactory<TestPlayerGenerator>;
 
     TestPlayerSubfactory(GameServerTest* test) : test_(test) {}
 

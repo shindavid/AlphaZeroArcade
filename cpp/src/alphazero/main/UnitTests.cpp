@@ -130,7 +130,7 @@ class ManagerTest : public testing::Test {
   }
 
   static ManagerParams create_manager_params() {
-    ManagerParams params(search::kCompetitive);
+    ManagerParams params(search::kCompetition);
     params.no_model = true;
     return params;
   }
