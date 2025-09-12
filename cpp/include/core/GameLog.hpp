@@ -37,13 +37,14 @@ namespace core {
 
 struct ShapeInfo {
   template <eigen_util::concepts::FTensor Tensor>
-  void init(const char* nm, int target_idx);
+  void init(const char* nm, int target_idx, bool primary);
   ~ShapeInfo();
 
   const char* name = nullptr;
   int* dims = nullptr;
   int num_dims = 0;
   int target_index = -1;
+  int is_primary = false;
 };
 
 struct GameLogFileHeader {
@@ -120,6 +121,8 @@ struct GameLogBase : public GameLogCommon {
     PolicyTensor policy_target;       // only valid if policy_target_is_valid
     ActionValueTensor action_values;  // only valid if action_values_are_valid
     action_t action;
+    float Q_prior;
+    float Q_posterior;
     seat_index_t active_seat;
     bool use_for_training;
     bool policy_target_is_valid;
@@ -129,6 +132,8 @@ struct GameLogBase : public GameLogCommon {
 
   struct Record {
     State position;
+    float Q_prior;
+    float Q_posterior;
     seat_index_t active_seat;
     action_mode_t action_mode;
     action_t action;
@@ -256,13 +261,12 @@ class GameWriteLog : public GameLogBase<Game> {
   using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using TrainingInfo = Game::Types::TrainingInfo;
 
   GameWriteLog(game_id_t id, int64_t start_timestamp);
   ~GameWriteLog();
 
-  void add(const State& state, action_t action, seat_index_t active_seat,
-           const PolicyTensor* policy_target, const ActionValueTensor* action_values,
-           bool use_for_training);
+  void add(const State& state, action_t action, seat_index_t active_seat, const TrainingInfo&);
   void add_terminal(const State& state, const ValueTensor& outcome);
   bool was_previous_entry_used_for_policy_training() const;
   int sample_count() const { return sample_count_; }

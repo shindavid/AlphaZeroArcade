@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"

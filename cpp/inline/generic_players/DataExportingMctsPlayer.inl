@@ -40,9 +40,15 @@ DataExportingMctsPlayer<Traits>::get_action_response(const ActionRequest& reques
   const SearchResults* mcts_results = response.results;
   ActionResponse action_response = base_t::get_action_response_helper(mcts_results, valid_actions);
 
+  core::seat_index_t my_seat = this->get_my_seat();
+  float Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[my_seat];
+  float Q_posterior = mcts_results->win_rates(my_seat);
+
   TrainingInfo& training_info = action_response.training_info;
   training_info.policy_target = nullptr;
   training_info.action_values_target = nullptr;
+  training_info.Q_prior = Q_prior;
+  training_info.Q_posterior = Q_posterior;
   training_info.use_for_training = use_for_training_;
 
   if (use_for_training_ || previous_used_for_training_) {

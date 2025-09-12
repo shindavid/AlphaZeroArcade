@@ -13,12 +13,13 @@
 namespace core {
 
 template <eigen_util::concepts::FTensor Tensor>
-void ShapeInfo::init(const char* nm, int target_idx) {
+void ShapeInfo::init(const char* nm, int target_idx, bool primary) {
   using Shape = Tensor::Dimensions;
   this->name = nm;
   this->dims = new int[Shape::count];
   this->num_dims = Shape::count;
   this->target_index = target_idx;
+  this->is_primary = primary;
 
   Shape shape;
   for (int i = 0; i < Shape::count; ++i) {
@@ -237,16 +238,18 @@ GameReadLog<EvalSpec>::GameReadLog(const char* filename, int game_index,
 
 template <concepts::EvalSpec EvalSpec>
 ShapeInfo* GameReadLog<EvalSpec>::get_shape_info_array() {
+  constexpr int n_primary_targets = mp::Length_v<PrimaryTargets>;
   constexpr int n_targets = mp::Length_v<AllTargets>;
   constexpr int n = n_targets + 2;  // 1 for input, 1 for terminator
 
   ShapeInfo* info_array = new ShapeInfo[n];
-  info_array[0].template init<InputTensor>("input", -1);
+  info_array[0].template init<InputTensor>("input", -1, false);
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
     using Target = mp::TypeAt_t<AllTargets, a>;
     using Tensor = Target::Tensor;
-    info_array[1 + a].template init<Tensor>(Target::kName, a);
+    bool primary = (a < n_primary_targets);
+    info_array[1 + a].template init<Tensor>(Target::kName, a, primary);
   });
 
   return info_array;
@@ -288,6 +291,8 @@ void GameReadLog<EvalSpec>::load(int row_index, bool apply_symmetry,
   }
   Game::Symmetries::apply(final_state, sym);
 
+  float Q_prior = record.Q_prior;
+  float Q_posterior = record.Q_posterior;
   seat_index_t active_seat = record.active_seat;
   action_mode_t mode = record.action_mode;
 
@@ -320,8 +325,8 @@ void GameReadLog<EvalSpec>::load(int row_index, bool apply_symmetry,
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
   ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
-  GameLogView view{cur_pos,         &final_state,      &outcome,   policy_ptr,
-                   next_policy_ptr, action_values_ptr, active_seat};
+  GameLogView view(cur_pos, &final_state, &outcome, policy_ptr, next_policy_ptr, action_values_ptr,
+                   Q_prior, Q_posterior, active_seat);
 
   constexpr size_t N = mp::Length_v<AllTargets>;
   for (int target_index : target_indices) {
@@ -458,8 +463,13 @@ GameWriteLog<Game>::~GameWriteLog() {
 
 template <concepts::Game Game>
 void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t active_seat,
-                             const PolicyTensor* policy_target,
-                             const ActionValueTensor* action_values, bool use_for_training) {
+                             const TrainingInfo& training_info) {
+  PolicyTensor* policy_target = training_info.policy_target;
+  ActionValueTensor* action_values_target = training_info.action_values_target;
+  float Q_prior = training_info.Q_prior;
+  float Q_posterior = training_info.Q_posterior;
+  bool use_for_training = training_info.use_for_training;
+
   // TODO: get entries from a thread-specific object pool
   WriteEntry* entry = new WriteEntry();
   entry->position = state;
@@ -468,16 +478,18 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
   } else {
     entry->policy_target.setZero();
   }
-  if (action_values) {
-    entry->action_values = *action_values;
+  if (action_values_target) {
+    entry->action_values = *action_values_target;
   } else {
     entry->action_values.setZero();
   }
   entry->action = action;
+  entry->Q_prior = Q_prior;
+  entry->Q_posterior = Q_posterior;
   entry->active_seat = active_seat;
   entry->use_for_training = use_for_training;
   entry->policy_target_is_valid = policy_target != nullptr;
-  entry->action_values_are_valid = action_values != nullptr;
+  entry->action_values_are_valid = action_values_target != nullptr;
   entries_.push_back(entry);
   sample_count_ += use_for_training;
 }
@@ -517,6 +529,8 @@ GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std:
 
     Record record;
     record.position = entry->position;
+    record.Q_prior = entry->Q_prior;
+    record.Q_posterior = entry->Q_posterior;
     record.active_seat = entry->active_seat;
     record.action_mode = Game::Rules::get_action_mode(entry->position);
     record.action = entry->action;

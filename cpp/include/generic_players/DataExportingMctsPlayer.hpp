@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/TrainingDataWriter.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "generic_players/MctsPlayer.hpp"
 
 namespace generic {

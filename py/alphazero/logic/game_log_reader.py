@@ -190,6 +190,7 @@ class GameLogReader:
                 int* dims;
                 int num_dims;
                 int target_index;
+                int is_primary;
             };
 
             struct ShapeInfo* get_shape_info_array(const char* paradigm);
@@ -240,7 +241,8 @@ class GameLogReader:
                 break
             name = ffi.string(info.name).decode('utf-8')
             shape = tuple([info.dims[j] for j in range(info.num_dims)])
-            shape_info = ShapeInfo(name=name, target_index=info.target_index, shape=shape)
+            shape_info = ShapeInfo(name=name, target_index=info.target_index,
+                                   primary=bool(info.is_primary), shape=shape)
             shape_info_dict[name] = shape_info
             logger.debug('ShapeInfo: %s -> %s', name, shape_info)
             i += 1

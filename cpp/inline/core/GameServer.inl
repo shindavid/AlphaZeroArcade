@@ -766,8 +766,12 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
   action_t action = eigen_util::sample(chance_dist);
   if (game_log_) {
-    game_log_->add(state_history_.current(), action, active_seat_, nullptr, chance_action_values_,
-                   chance_action_values_);
+    // TODO: The ChanceEventPreHandleResponse should really contain the TrainingInfo
+    // TODO: add Q_prior/Q_posterior here
+    TrainingInfo training_info;
+    training_info.action_values_target = chance_action_values_;
+    training_info.use_for_training = chance_action_values_ != nullptr;
+    game_log_->add(state_history_.current(), action, active_seat_, training_info);
   }
 
   // reset for next chance event:
@@ -833,10 +837,9 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   continue_hit_ = false;
   move_number_++;
   action_t action = response.action;
-  const TrainingInfo& training_info = response.training_info;
   if (game_log_) {
-    game_log_->add(state_history_.current(), action, active_seat_, training_info.policy_target,
-                   training_info.action_values_target, training_info.use_for_training);
+    const TrainingInfo& training_info = response.training_info;
+    game_log_->add(state_history_.current(), action, active_seat_, training_info);
   }
 
   if (response.victory_guarantee && params().respect_victory_hints) {

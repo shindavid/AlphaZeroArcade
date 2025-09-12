@@ -16,6 +16,7 @@
 
 namespace core {
 
+// TODO: some of the classes whose definitions are inlined here don't need to be. Move them out.
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
@@ -57,6 +58,8 @@ struct GameTypes {
   struct TrainingInfo {
     PolicyTensor* policy_target = nullptr;
     ActionValueTensor* action_values_target = nullptr;
+    float Q_prior = 0;
+    float Q_posterior = 0;
     bool use_for_training = false;
   };
 
@@ -138,12 +141,27 @@ struct GameTypes {
    * training-target classes for each specific Game.
    */
   struct GameLogView {
+    GameLogView(const State* c, const State* f, const ValueTensor* r, const PolicyTensor* p,
+                const PolicyTensor* np, const ActionValueTensor* av, float qpr, float qpo,
+                seat_index_t a)
+        : cur_pos(c),
+          final_pos(f),
+          game_result(r),
+          policy(p),
+          next_policy(np),
+          action_values(av),
+          Q_prior(qpr),
+          Q_posterior(qpo),
+          active_seat(a) {}
+
     const State* cur_pos;
     const State* final_pos;
     const ValueTensor* game_result;
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
     const ActionValueTensor* action_values;
+    const float Q_prior;
+    const float Q_posterior;
     const seat_index_t active_seat;
   };
 };

@@ -2,7 +2,6 @@
 
 #include "alphazero/ManagerParams.hpp"
 #include "alphazero/SearchResults.hpp"
-#include "alphazero/Traits.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"

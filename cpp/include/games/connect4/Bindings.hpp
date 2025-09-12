@@ -27,6 +27,25 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 }  // namespace c4::alpha0
 
+namespace c4::beta0 {
+
+struct TrainingTargets {
+  using PolicyTarget = core::PolicyTarget<Game>;
+  using ValueTarget = core::ValueTarget<Game>;
+  using ActionValueTarget = core::ActionValueTarget<Game>;
+  using ValueUncertaintyTarget = core::ValueUncertaintyTarget<Game>;
+  using OppPolicyTarget = core::OppPolicyTarget<Game>;
+
+  using PrimaryList =
+    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ValueUncertaintyTarget>;
+  using AuxList = mp::TypeList<OppPolicyTarget>;
+};
+
+using MctsConfiguration = alpha0::MctsConfiguration;
+
+}  // namespace c4::beta0
+
+
 namespace core {
 
 template <>
@@ -45,8 +64,8 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
 template <>
 struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Game = c4::Game;
-  using TrainingTargets = c4::alpha0::TrainingTargets;
-  using MctsConfiguration = c4::alpha0::MctsConfiguration;
+  using TrainingTargets = c4::beta0::TrainingTargets;
+  using MctsConfiguration = c4::beta0::MctsConfiguration;
 };
 
 }  // namespace core
