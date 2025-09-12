@@ -1,5 +1,6 @@
 #include "alphazero/SearchLog.hpp"
 #include "alphazero/SearchResults.hpp"
+#include "alphazero/Traits.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"

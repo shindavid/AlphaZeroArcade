@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alphazero/Traits.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/othello/Game.hpp"

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alphazero/ManagerParams.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
@@ -8,7 +7,6 @@
 #include "generic_players/DataExportingMctsPlayer.hpp"
 #include "generic_players/MctsPlayer.hpp"
 #include "search/Constants.hpp"
-#include "search/Manager.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
@@ -26,10 +24,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Tr
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using EvalSpec = Traits::EvalSpec;
   using Game = Traits::Game;
-  using MctsManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using MctsManager = search::Manager<Traits>;
+  using MctsManagerParams = Traits::ManagerParams;
   using BaseMctsPlayer = generic::MctsPlayer<Traits>;
   using MctsPlayerParams = BaseMctsPlayer::Params;
   using SharedData = BaseMctsPlayer::SharedData;
@@ -39,7 +35,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Tr
   using shared_data_map_t = std::map<core::game_slot_index_t, shared_data_vec_t>;
 
   static_assert(std::is_base_of_v<BaseMctsPlayer, PlayerT>,
-                "PlayerT must be derived from generic::MctsPlayer<EvalSpec>");
+                "PlayerT must be derived from generic::MctsPlayer<Traits>");
 
   MctsPlayerGeneratorBase(core::GameServerBase*, shared_data_map_t& shared_data_cache);
 
