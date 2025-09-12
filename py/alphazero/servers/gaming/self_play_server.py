@@ -165,8 +165,8 @@ class SelfPlayServer:
         max_rows = msg['max_rows']
 
         player_args = {
-            '--type': 'MCTS-T',
-            '--name': 'MCTS',
+            '--type': 'alpha0-T',
+            '--name': 'alpha0',
             '--no-model': None,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -206,8 +206,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': 'MCTS%d' % (p + 2),
-                '--copy-from': 'MCTS',
+                '--name': 'alpha0-%d' % (p + 2),
+                '--copy-from': 'alpha0',
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')
@@ -239,8 +239,8 @@ class SelfPlayServer:
         self._session_data.request_files([required_binary])
 
         player_args = {
-            '--type': 'MCTS-T',
-            '--name': 'MCTS',
+            '--type': 'alpha0-T',
+            '--name': 'alpha0',
             '--cuda-device': self._params.cuda_device,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -274,8 +274,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': 'MCTS%d' % (p + 2),
-                '--copy-from': 'MCTS',
+                '--name': 'alpha0-%d' % (p + 2),
+                '--copy-from': 'alpha0',
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')

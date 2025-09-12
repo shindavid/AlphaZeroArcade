@@ -45,7 +45,7 @@ class MCTSAgent(Agent):
     model: Optional[str] = None
 
     def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
-        name_tokens = ['MCTS', str(self.gen)]
+        name_tokens = ['alpha0', str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
         name = '-'.join(name_tokens)
@@ -53,7 +53,7 @@ class MCTSAgent(Agent):
             name += suffix
 
         player_args = {
-            '--type': 'MCTS-C',
+            '--type': 'alpha0-C',
             '--name': name,
             '-n': 1,
         }
@@ -77,7 +77,7 @@ class MCTSAgent(Agent):
 
     def to_dict(self) -> JsonDict:
         return {
-            'type': 'MCTS',
+            'type': 'alpha0',
             'data': {
                 'gen': self.gen,
                 'n_iters': self.n_iters,

@@ -98,7 +98,7 @@ class RatingsServer(ServerBase):
 
         self._procs.add(proc)
 
-        logger.info('Running %s vs %s match [%s] from %s: %s', f'MCTS-{mcts_agent.gen}', ref_name, proc.pid,
+        logger.info('Running %s vs %s match [%s] from %s: %s', f'alpha0-{mcts_agent.gen}', ref_name, proc.pid,
                     cwd, cmd)
         stdout = self._session_data.wait_for(proc)
 

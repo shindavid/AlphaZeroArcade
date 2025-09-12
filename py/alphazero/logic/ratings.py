@@ -81,7 +81,7 @@ def extract_match_record(stdout: Union[List[str], str]) -> MatchRecord:
     ...
     2024-03-13 14:10:09.131334 All games complete!
     2024-03-13 14:10:09.131368 pid=0 name=Perfect-21 W51 L49 D0 [51]
-    2024-03-13 14:10:09.131382 pid=1 name=MCTS-C-100 W49 L51 D0 [49]
+    2024-03-13 14:10:09.131382 pid=1 name=alpha0-C-100 W49 L51 D0 [49]
     ...
 
     OR:
@@ -89,7 +89,7 @@ def extract_match_record(stdout: Union[List[str], str]) -> MatchRecord:
     ...
     All games complete!
     pid=0 name=Perfect-21 W51 L49 D0 [51]
-    pid=1 name=MCTS-C-100 W49 L51 D0 [49]
+    pid=1 name=alpha0-C-100 W49 L51 D0 [49]
     ...
     """
     record = MatchRecord()

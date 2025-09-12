@@ -54,9 +54,11 @@ void PlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
 std::vector<std::string> PlayerGeneratorBase<Traits, PlayerT, Mode>::get_types() const {
   if (Mode == search::kCompetition) {
-    return {"MCTS-C", "MCTS-Competition"};
+    // We keep MCTS-C for nostalgic reasons
+    return {"alpha0-C", "AlphaZero-Competition", "MCTS-C"};
   } else if (Mode == search::kTraining) {
-    return {"MCTS-T", "MCTS-Training"};
+    // We keep MCTS-T for nostalgic reasons
+    return {"alpha0-T", "AlphaZero-Training", "MCTS-T"};
   } else {
     throw util::CleanException("Unknown search::Mode: {}", Mode);
   }
@@ -65,9 +67,9 @@ std::vector<std::string> PlayerGeneratorBase<Traits, PlayerT, Mode>::get_types()
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
 std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_description() const {
   if (Mode == search::kCompetition) {
-    return "Competition MCTS player";
+    return "Competition AlphaZero player";
   } else if (Mode == search::kTraining) {
-    return "Training MCTS player";
+    return "Training AlphaZero player";
   } else {
     throw util::CleanException("Unknown search::Mode: {}", Mode);
   }
