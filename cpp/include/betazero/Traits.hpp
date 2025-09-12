@@ -15,10 +15,11 @@
 namespace beta0 {
 
 // For now, beta0::Traits uses the same classes as alpha0::Traits. Later we will specialize it.
-template <core::concepts::Game G>
+template <core::concepts::Game G,
+          core::concepts::EvalSpec ES = core::EvalSpec<G, core::kParadigmBetaZero>>
 struct Traits {
   using Game = G;
-  using EvalSpec = core::EvalSpec<Game, core::kParadigmBetaZero>;
+  using EvalSpec = ES;
   using Edge = alpha0::Edge;
   using Node = alpha0::Node<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
