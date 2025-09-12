@@ -772,7 +772,7 @@ class Model(nn.Module):
         torch.onnx.export(
             clone, example_input, buf,
             export_params=True,
-            opset_version=16,
+            opset_version=18,
             input_names=input_names,
             output_names=output_names,
             dynamic_axes=dynamic_axes,

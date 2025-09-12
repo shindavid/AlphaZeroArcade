@@ -83,7 +83,7 @@ class MultiheadAttentionWithExtras(nn.Module):
                  n_layers: int = 1):
 
         super().__init__()
-        assert Dm % H == 0
+
         self.Dm, self.H, self.T = Dm, H, T
         self.dh = Dm // H
         self.scale = 1.0 / math.sqrt(self.dh)
@@ -236,7 +236,6 @@ class ChessformerBlock(nn.Module):
           (B, C, H, W) -> (B, T, C) -> ... -> (B, T, n_out) -> (B, n_out, H, W)
         """
         (B, C, H, W) = x.shape
-        assert H == self.H and W == self.W, f"Expected HxW = {self.H}x{self.W}, got {H}x{W}"
 
         x = x.permute(0, 2, 3, 1).reshape(B, H * W, C)  # (B, T, C)
 
