@@ -38,14 +38,14 @@ class RMSNorm(nn.Module):
 
 
 class Smolgen(nn.Module):
-    """Dynamic, state-conditioned supplemental logits: (B,H,T,T)"""
-    def __init__(self, Dm: int, H: int, T: int, compress_dim: int = 32, shared_dim: int = 256,
+    """Dynamic, state-conditioned supplemental logits: (B,Hh,T,T)"""
+    def __init__(self, Dm: int, Hh: int, T: int, compress_dim: int = 32, shared_dim: int = 256,
                  shared_layer: nn.Linear | None = None):
         super().__init__()
-        self.T, self.H = T, H
+        self.T, self.Hh = T, Hh
         self.proj_token  = nn.Linear(Dm, compress_dim, bias=True)
         self.proj_global = nn.Linear(T * compress_dim, shared_dim, bias=True)
-        self.per_head    = nn.Linear(shared_dim, H * shared_dim, bias=True)
+        self.per_head    = nn.Linear(shared_dim, Hh * shared_dim, bias=True)
         self.norm1 = nn.LayerNorm(shared_dim)
         self.norm2 = nn.LayerNorm(shared_dim)
         self.shared = shared_layer if shared_layer is not None else nn.Linear(shared_dim, T * T, bias=False)
@@ -57,11 +57,11 @@ class Smolgen(nn.Module):
         g = F.silu(g)
         g = self.norm1(g)
 
-        u = self.per_head(g)   # (B,H*256)
+        u = self.per_head(g)   # (B,Hh*256)
         u = F.silu(u)
-        u = u.view(B, self.H, -1)   # (B,H,256)
+        u = u.view(B, self.Hh, -1)   # (B,Hh,256)
         u = self.norm2(u)
-        S = self.shared(u).view(B, self.H, self.T, self.T)  # (B,H,T,T)
+        S = self.shared(u).view(B, self.Hh, self.T, self.T)  # (B,Hh,T,T)
         return S
 
 
@@ -73,7 +73,7 @@ class MultiheadAttentionWithExtras(nn.Module):
       - optional Shaw pairwise (aQ,aK,aV) in logits/values
       - optional Smolgen supplemental logits S(x)
     """
-    def __init__(self, Dm: int, H: int, T: int,
+    def __init__(self, Dm: int, Hh: int, T: int,
                  use_static_bias: bool = True,
                  use_shaw: bool = True,
                  use_smolgen: bool = True,
@@ -84,8 +84,10 @@ class MultiheadAttentionWithExtras(nn.Module):
 
         super().__init__()
 
-        self.Dm, self.H, self.T = Dm, H, T
-        self.dh = Dm // H
+        self.Dm, self.Hh, self.T = Dm, Hh, T
+        # assert int(Dm % Hh) == 0, f"Dm ({Dm}) must be divisible by Hh ({Hh})"
+
+        self.dh = Dm // Hh
         self.scale = 1.0 / math.sqrt(self.dh)
         self.res_scale = residual_scale(n_layers)
 
@@ -99,36 +101,36 @@ class MultiheadAttentionWithExtras(nn.Module):
         self.use_smol   = use_smolgen
 
         if self.use_static:
-            self.static_bias = nn.Parameter(torch.zeros(H, T, T))  # (H,T,T)
+            self.static_bias = nn.Parameter(torch.zeros(Hh, T, T))  # (Hh,T,T)
 
         if self.use_shaw:
-            # Full pairwise (H,T,T,dh)
-            self.aQ = nn.Parameter(torch.zeros(H, T, T, self.dh))
-            self.aK = nn.Parameter(torch.zeros(H, T, T, self.dh))
-            self.aV = nn.Parameter(torch.zeros(H, T, T, self.dh))
+            # Full pairwise (Hh,T,T,dh)
+            self.aQ = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
+            self.aK = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
+            self.aV = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
             for p in (self.aQ, self.aK, self.aV):
                 nn.init.trunc_normal_(p, std=0.02)
 
         if self.use_smol:
-            self.smolgen = Smolgen(Dm=Dm, H=H, T=T, shared_layer=smolgen_shared,
+            self.smolgen = Smolgen(Dm=Dm, Hh=Hh, T=T, shared_layer=smolgen_shared,
                                    compress_dim=smolgen_compress_dim, shared_dim=smolgen_shared_dim)
 
         self.dropout = nn.Dropout(0.1)
 
     def forward(self, x):  # x: (B,T,Dm)
         B, T, Dm = x.shape
-        H, dh = self.H, self.dh
+        Hh, dh = self.Hh, self.dh
 
-        Q = self.Wq(x).view(B, T, H, dh).transpose(1, 2)  # (B,H,T,dh)
-        K = self.Wk(x).view(B, T, H, dh).transpose(1, 2)
-        V = self.Wv(x).view(B, T, H, dh).transpose(1, 2)
+        Q = self.Wq(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+        K = self.Wk(x).view(B, T, Hh, dh).transpose(1, 2)
+        V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)
 
         # Base logits
-        logits = torch.einsum('bhtd,bhsd->bhts', Q, K) * self.scale  # (B,H,T,T)
+        logits = torch.einsum('bhtd,bhsd->bhts', Q, K) * self.scale  # (B,Hh,T,T)
 
         # Static bias
         if self.use_static:
-            logits = logits + self.static_bias.unsqueeze(0)  # (B,H,T,T)
+            logits = logits + self.static_bias.unsqueeze(0)  # (B,Hh,T,T)
 
         # Shaw pairwise
         if self.use_shaw:
@@ -139,12 +141,12 @@ class MultiheadAttentionWithExtras(nn.Module):
 
         # Smolgen dynamic bias
         if self.use_smol:
-            logits = logits + self.smolgen(x)  # (B,H,T,T)
+            logits = logits + self.smolgen(x)  # (B,Hh,T,T)
 
         attn = torch.softmax(logits, dim=-1)
         attn = self.dropout(attn)
 
-        out = torch.einsum('bhts,bhsd->bhtd', attn, V)  # (B,H,T,dh)
+        out = torch.einsum('bhts,bhsd->bhtd', attn, V)  # (B,Hh,T,dh)
         if self.use_shaw:
             out = out + torch.einsum('bhts,htsd->bhtd', attn, self.aV)
 
@@ -168,11 +170,11 @@ class FFN(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, Dm: int, H: int, T: int, Dff: int, n_layers: int,
+    def __init__(self, Dm: int, Hh: int, T: int, Dff: int, n_layers: int,
                  use_static_bias=True, use_shaw=True, use_smolgen=True, smolgen_shared=None,
                  smolgen_shared_dim: int = 256, smolgen_compress_dim: int = 32):
         super().__init__()
-        self.mha = MultiheadAttentionWithExtras(Dm, H, T,
+        self.mha = MultiheadAttentionWithExtras(Dm, Hh, T,
                                                 use_static_bias=use_static_bias,
                                                 use_shaw=use_shaw,
                                                 use_smolgen=use_smolgen,
@@ -200,7 +202,7 @@ class ChessformerBlock(nn.Module):
                  smolgen_shared_dim: int = 256,
                  ffn_multiplier: float = 1.0):
         """
-        input_shape: (B, C, H, W)
+        input_shape: (C, H, W)
         """
         super(ChessformerBlock, self).__init__()
 
@@ -220,7 +222,7 @@ class ChessformerBlock(nn.Module):
         layers = []
         for _ in range(n_layers):
             layers.append(
-                EncoderLayer(Dm=embed_dim, H=Hh, T=self.board_size, Dff=Dff, n_layers=n_layers,
+                EncoderLayer(Dm=embed_dim, Hh=Hh, T=self.board_size, Dff=Dff, n_layers=n_layers,
                              use_static_bias=use_static_bias,
                              use_shaw=use_shaw,
                              use_smolgen=use_smolgen,
