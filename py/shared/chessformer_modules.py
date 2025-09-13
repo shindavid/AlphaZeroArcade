@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from typing import Optional
 
 class Mish(nn.Module):
     def forward(self, x):
@@ -76,8 +77,10 @@ class MultiheadAttentionWithExtras(nn.Module):
     def __init__(self, Dm: int, Hh: int, T: int,
                  use_static_bias: bool = True,
                  use_shaw: bool = True,
+                 use_rpe: bool = False,
+                 rpe_factorizer: Optional[torch.Tensor] = None,
                  use_smolgen: bool = True,
-                 smolgen_shared: nn.Linear | None = None,
+                 smolgen_shared: Optional[nn.Linear] = None,
                  smolgen_shared_dim: int = 256,
                  smolgen_compress_dim: int = 32,
                  n_layers: int = 1):
@@ -98,6 +101,7 @@ class MultiheadAttentionWithExtras(nn.Module):
 
         self.use_static = use_static_bias
         self.use_shaw   = use_shaw
+        self.use_rpe    = use_rpe
         self.use_smol   = use_smolgen
 
         if self.use_static:
@@ -111,19 +115,40 @@ class MultiheadAttentionWithExtras(nn.Module):
             for p in (self.aQ, self.aK, self.aV):
                 nn.init.trunc_normal_(p, std=0.02)
 
+        if self.use_rpe:
+            assert rpe_factorizer is not None, "rpe_factorizer must be provided if use_rpe is True"
+            self.register_buffer('rpe_factorizer', rpe_factorizer)  # (num_bins, T*T)
+
+            num_bins = rpe_factorizer.size(0)
+            Hd = Hh * self.dh
+
+            # already have:
+            self.rpe_q = nn.Parameter(torch.zeros(Hd, num_bins))
+            self.rpe_k = nn.Parameter(torch.zeros(Hd, num_bins))
+            self.rpe_v = nn.Parameter(torch.zeros(Hd, num_bins))
+            nn.init.trunc_normal_(self.rpe_q, std=0.02)
+            nn.init.trunc_normal_(self.rpe_k, std=0.02)
+            nn.init.trunc_normal_(self.rpe_v, std=0.02)
+
+
         if self.use_smol:
             self.smolgen = Smolgen(Dm=Dm, Hh=Hh, T=T, shared_layer=smolgen_shared,
                                    compress_dim=smolgen_compress_dim, shared_dim=smolgen_shared_dim)
 
         self.dropout = nn.Dropout(0.1)
 
+    def _expand_rpe_logits(self, W_small: torch.Tensor) -> torch.Tensor:
+        # (Hh*dh, T*T)
+        rpe_flat = torch.matmul(W_small, self.rpe_factorizer)
+        return rpe_flat.view(self.Hh, self.dh, self.T, self.T).permute(0, 2, 3, 1)  # (Hh, T, T, dh)
+
     def forward(self, x):  # x: (B,T,Dm)
         B, T, Dm = x.shape
         Hh, dh = self.Hh, self.dh
 
         Q = self.Wq(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
-        K = self.Wk(x).view(B, T, Hh, dh).transpose(1, 2)
-        V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)
+        K = self.Wk(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+        V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
 
         # Base logits
         logits = torch.einsum('bhtd,bhsd->bhts', Q, K) * self.scale  # (B,Hh,T,T)
@@ -139,6 +164,15 @@ class MultiheadAttentionWithExtras(nn.Module):
                       + torch.einsum('htsd,bhsd->bhts', self.aQ, K) * self.scale
                       + torch.einsum('htsd,htsd->hts',  self.aQ, self.aK).unsqueeze(0) * self.scale)
 
+        # RPE
+        if self.use_rpe:
+            rpe_q = self._expand_rpe_logits(self.rpe_q)  # (Hh, T, T, dh)
+            rpe_k = self._expand_rpe_logits(self.rpe_k)  # (Hh, T, T, dh)
+            logits = (logits
+                      + torch.einsum('bhtd,htsd->bhts', Q, rpe_k) * self.scale
+                      + torch.einsum('htsd,bhsd->bhts', rpe_q, K) * self.scale
+                      + torch.einsum('htsd,htsd->hts',  rpe_q, rpe_k).unsqueeze(0) * self.scale)
+
         # Smolgen dynamic bias
         if self.use_smol:
             logits = logits + self.smolgen(x)  # (B,Hh,T,T)
@@ -149,6 +183,10 @@ class MultiheadAttentionWithExtras(nn.Module):
         out = torch.einsum('bhts,bhsd->bhtd', attn, V)  # (B,Hh,T,dh)
         if self.use_shaw:
             out = out + torch.einsum('bhts,htsd->bhtd', attn, self.aV)
+
+        if self.use_rpe:
+            rpe_v = self._expand_rpe_logits(self.rpe_v)  # (Hh, dh, T, T)
+            out = out + torch.einsum('bhts,htsd->bhtd', attn, rpe_v)
 
         out = out.transpose(1, 2).contiguous().view(B, T, Dm)  # (B,T,Dm)
         out = self.dropout(self.Wo(out)) * self.res_scale
@@ -171,12 +209,16 @@ class FFN(nn.Module):
 
 class EncoderLayer(nn.Module):
     def __init__(self, Dm: int, Hh: int, T: int, Dff: int, n_layers: int,
-                 use_static_bias=True, use_shaw=True, use_smolgen=True, smolgen_shared=None,
+                 use_static_bias=True, use_shaw=True,
+                 use_rpe: bool = False, rpe_factorizer: Optional[torch.Tensor] = None,
+                 use_smolgen=True, smolgen_shared=None,
                  smolgen_shared_dim: int = 256, smolgen_compress_dim: int = 32):
         super().__init__()
         self.mha = MultiheadAttentionWithExtras(Dm, Hh, T,
                                                 use_static_bias=use_static_bias,
                                                 use_shaw=use_shaw,
+                                                use_rpe=use_rpe,
+                                                rpe_factorizer=rpe_factorizer,
                                                 use_smolgen=use_smolgen,
                                                 smolgen_shared=smolgen_shared,
                                                 smolgen_shared_dim=smolgen_shared_dim,
@@ -192,11 +234,81 @@ class EncoderLayer(nn.Module):
         return x
 
 
+def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H*W))
+    """
+    Build a binary factorizer matrix M for 2D relative position encoding on an H×W grid.
+
+    Shape:
+        M ∈ {0,1}^{(2H-1)*(2W-1) , (H*W)*(H*W)}
+
+    Meaning:
+        • Rows correspond to all possible relative offsets (dy, dx) between two squares:
+              dy = i - k,   dx = j - l
+          where (i, j) is the query square (row i, column j)
+          and (k, l) is the key square (row k, column l).
+          dy ∈ [-(H-1), ..., H-1],  dx ∈ [-(W-1), ..., W-1].
+          Total number of rows = (2H-1) * (2W-1).
+
+        • Columns correspond to all ordered query–key square pairs ((i, j), (k, l))
+          on the H×W grid. There are (H*W)² such pairs.
+
+    Indexing:
+        • Let R_h = H - 1 and R_w = W - 1.
+        • Row index = (dy + R_h) * (2W - 1) + (dx + R_w).
+        • Query index: q_idx = i * W + j.
+        • Key index:   k_idx = k * W + l.
+        • Column index = q_idx * (H*W) + k_idx.
+
+    Entry:
+        M[row, col] = 1 means the query–key pair ((i, j), (k, l))
+                      has relative displacement (dy, dx).
+        Each column has exactly one '1', selecting the unique relative-offset bin
+        for that (query, key) pair.
+    """
+    assert H > 0 and W > 0, "H and W must be positive integers."
+
+    N = H * W
+    Rh, Rw = H - 1, W - 1
+    n_rows = (2 * H - 1) * (2 * W - 1)
+    n_cols = N * N
+
+    # Query and key coordinates
+    ys = torch.arange(H)
+    xs = torch.arange(W)
+    QY, QX = torch.meshgrid(ys, xs, indexing="ij")
+    KY, KX = QY, QX
+
+    QY = QY.reshape(-1)  # (N,)
+    QX = QX.reshape(-1)
+    KY = KY.reshape(-1)
+    KX = KX.reshape(-1)
+
+    # Relative displacements
+    dy = QY.unsqueeze(1) - KY.unsqueeze(0)  # (N, N)
+    dx = QX.unsqueeze(1) - KX.unsqueeze(0)  # (N, N)
+
+    # Row indices (for relative bins)
+    row_idx = (dy + Rh) * (2 * W - 1) + (dx + Rw)
+    row_idx = row_idx.reshape(-1).long()  # (N*N,)
+
+    # Column indices (for (q,k) pairs)
+    q_idx = torch.arange(N).unsqueeze(1).expand(N, N)
+    k_idx = torch.arange(N).unsqueeze(0).expand(N, N)
+    col_idx = (q_idx * N + k_idx).reshape(-1).long()  # (N*N,)
+
+    # Construct binary factorizer
+    M = torch.zeros(n_rows, n_cols)
+    M.index_put_((row_idx, col_idx), torch.ones_like(row_idx, dtype=M.dtype), accumulate=False)
+
+    return M
+
+
 class ChessformerBlock(nn.Module):
     def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
                  n_output_channels: int,
                  use_static_bias: bool = True,
                  use_shaw: bool = True,
+                 use_rpe: bool = False,
                  use_smolgen: bool = True,
                  smolgen_compress_dim: int = 32,
                  smolgen_shared_dim: int = 256,
@@ -207,6 +319,8 @@ class ChessformerBlock(nn.Module):
         super(ChessformerBlock, self).__init__()
 
         H, W = input_shape[1], input_shape[2]
+        rpe_factorizer = build_rpe_factorizer_2d(H, W)
+
         self.H, self.W = H, W
         self.board_size = H * W  # T
         n_input_channels = input_shape[0]
@@ -225,6 +339,8 @@ class ChessformerBlock(nn.Module):
                 EncoderLayer(Dm=embed_dim, Hh=Hh, T=self.board_size, Dff=Dff, n_layers=n_layers,
                              use_static_bias=use_static_bias,
                              use_shaw=use_shaw,
+                             use_rpe=use_rpe,
+                             rpe_factorizer=rpe_factorizer,
                              use_smolgen=use_smolgen,
                              smolgen_compress_dim=smolgen_compress_dim,
                              smolgen_shared_dim=smolgen_shared_dim,
