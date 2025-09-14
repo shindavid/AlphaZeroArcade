@@ -151,7 +151,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
 
         # Base logits
-        logits = torch.einsum('bhtd,bhsd->bhts', Q, K) * self.scale  # (B,Hh,T,T)
+        logits = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # (B,Hh,T,T)
 
         # Static bias
         if self.use_static:
@@ -180,7 +180,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         attn = torch.softmax(logits, dim=-1)
         attn = self.dropout(attn)
 
-        out = torch.einsum('bhts,bhsd->bhtd', attn, V)  # (B,Hh,T,dh)
+        out = torch.matmul(attn, V)  # (B,Hh,T,dh)
         if self.use_shaw:
             out = out + torch.einsum('bhts,htsd->bhtd', attn, self.aV)
 
