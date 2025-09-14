@@ -98,7 +98,7 @@ class Chessformer(ModelConfigGenerator):
 
         embed_dim = 64
         n_heads = 8
-        n_layers = 6
+        n_layers = 8
         c_trunk = 128
 
         c_policy_hidden = 2
@@ -117,7 +117,8 @@ class Chessformer(ModelConfigGenerator):
                             input_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
                             'use_static_bias': True,    # learned T×T per-head bias
-                            'use_shaw': True,          # pairwise aQ/aK/aV
+                            'use_shaw': False,          # pairwise aQ/aK/aV
+                            'use_rpe': True,
                             'use_smolgen': True,        # dynamic T×T logits (shared 256→T^2)
                             'smolgen_compress_dim': smolgen_compress_dim,
                             'smolgen_shared_dim': smolgen_shared_dim,
