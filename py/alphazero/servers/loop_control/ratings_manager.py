@@ -3,8 +3,9 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
-    RatingTag, ServerStatus
+    RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
     ServerAuxBase, WorkerAux
@@ -122,44 +123,21 @@ class RatingsManager(GamingManagerBase):
         strength = rating_data.get_next_strength_to_test()
         assert strength is not None
 
-        game = self._controller._run_params.game
-        tag = self._controller._run_params.tag
-
-        binary = self._controller._get_binary_path()
-        eval_binary = FileToTransfer.from_src_scratch_path(
-            source_path=binary,
-            scratch_path=f'bin/{game}',
-            asset_path_mode='scratch'
-        )
-        files_required = [eval_binary]
-
+        files_required = []
         for dep in self._controller.game_spec.extra_runtime_deps:
             dep_binary = FileToTransfer.from_src_scratch_path(
                 source_path=dep, scratch_path=dep, asset_path_mode='scratch'
             )
             files_required.append(dep_binary)
 
-        model_file = None
-        if rating_data.mcts_gen > 0:
-            model_file = FileToTransfer.from_src_scratch_path(
-                source_path=self._controller._organizer.get_model_filename(rating_data.mcts_gen),
-                scratch_path=f'eval-models/{tag}/gen-{rating_data.mcts_gen}.onnx',
-                asset_path_mode='scratch')
-            files_required.append(model_file)
-
         data = {
             'type': 'match-request',
-            'mcts_agent': {
-                'gen': rating_data.mcts_gen,
-                'set_temp_zero': True,
-                'tag': tag,
-                'binary': eval_binary.scratch_path,
-                'model': model_file.scratch_path if model_file else None,
-                },
             'ref_strength': strength,
             'n_games': N_GAMES,
             'files_required': [f.to_dict() for f in files_required],
         }
+        self._add_mcts_agent(data, 'mcts_agent', rating_data.mcts_gen, True, 'scratch',
+                             'eval-models')
         conn.socket.send_json(data)
 
     def handle_match_result(self, msg: JsonDict, conn: ClientConnection):

@@ -316,7 +316,7 @@ class ServerBase:
         return self._rating_params.rating_player_options.num_search_threads
 
     def _build_agent(self, agent_msg: JsonDict) -> Agent:
-        if agent_msg['type'] == 'alpha0':
+        if agent_msg['type'] == 'MCTS':
             return MCTSAgent(**agent_msg['data'])
         elif agent_msg['type'] == 'Reference':
             return ReferenceAgent(**agent_msg['data'])

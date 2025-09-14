@@ -65,16 +65,19 @@ class RatingDB:
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
-        query = '''SELECT agents.id, gen, n_iters, tag, is_zero_temp, role
+        columns = ['agents.id', 'gen', 'paradigm', 'n_iters', 'tag', 'is_zero_temp', 'role']
+
+        query = '''SELECT %s
                    FROM agents
                    JOIN mcts_agents
                    ON agents.sub_id = mcts_agents.id
                    WHERE subtype="mcts"
-                   '''
+                   ''' % ', '.join(columns)
 
         c.execute(query)
-        for agent_id, gen, n_iters, tag, set_temp_zero, roles in c.fetchall():
-            agent = MCTSAgent(gen, n_iters, bool(set_temp_zero), tag)
+        for row in c.fetchall():
+            agent_id, gen, paradigm, n_iters, tag, set_temp_zero, roles = row
+            agent = MCTSAgent(paradigm, gen, n_iters, bool(set_temp_zero), tag)
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
@@ -210,9 +213,10 @@ class RatingDB:
         if isinstance(agent, MCTSAgent):
             subtype = 'mcts'
 
-            insert = '''INSERT INTO mcts_agents (gen, n_iters, tag, is_zero_temp)
-                         VALUES (?, ?, ?, ?)'''
-            c.execute(insert, (agent.gen, agent.n_iters, agent.tag, agent.set_temp_zero))
+            insert = '''INSERT INTO mcts_agents (paradigm, gen, n_iters, tag, is_zero_temp)
+                         VALUES (?, ?, ?, ?, ?)'''
+            c.execute(insert, (agent.paradigm, agent.gen, agent.n_iters, agent.tag,
+                               agent.set_temp_zero))
             conn.commit()
             sub_id = c.lastrowid
         elif isinstance(agent, ReferenceAgent):

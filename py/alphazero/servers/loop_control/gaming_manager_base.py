@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.custom_types import ClientConnection, Domain, ServerStatus
+from alphazero.logic.agent_types import MCTSAgent
+from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
+    ServerStatus
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
@@ -297,6 +299,48 @@ class GamingManagerBase:
 
     def _handle_file_request(self, conn: ClientConnection, files: List[JsonDict]):
         self._controller.handle_file_request(conn, files)
+
+    def _add_mcts_agent(self, data: JsonDict, agent_key: str, gen: Generation, set_temp_zero: bool,
+                        binary_asset_path_mode: str, scratch_path_start: str):
+        game = self._controller._run_params.game
+        tag = self._controller._run_params.tag
+
+        files_required = data.get('files_required', [])
+
+        binary_path = self._controller._get_binary_path()
+        binary = FileToTransfer.from_src_scratch_path(
+            source_path=binary_path,
+            scratch_path=f'bin/{game}',
+            asset_path_mode=binary_asset_path_mode)
+        binary_dict = binary.to_dict()
+        if binary_dict not in files_required:
+            files_required.append(binary_dict)
+
+        model = None
+        if gen > 0:
+            model = FileToTransfer.from_src_scratch_path(
+                source_path=self._controller._organizer.get_model_filename(gen),
+                scratch_path=f'{scratch_path_start}/{tag}/gen-{gen}.onnx',
+                asset_path_mode='scratch'
+            )
+            model_dict = model.to_dict()
+            if model_dict not in files_required:
+                files_required.append(model_dict)
+
+        if files_required:
+            data['files_required'] = files_required
+
+        agent = MCTSAgent(
+            paradigm=self._controller.search_paradigm.value,
+            gen=gen,
+            n_iters=self._controller.rating_params.rating_player_options.num_iterations,
+            set_temp_zero=set_temp_zero,
+            tag=self._controller._run_params.tag,
+            binary=binary.scratch_path,
+            model=model.scratch_path if model else None
+            )
+
+        data[agent_key] = agent.to_dict()
 
     @abstractmethod
     def set_priority(self):

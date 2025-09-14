@@ -5,6 +5,7 @@ from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
+from shared.net_modules import SearchParadigm
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str
@@ -162,11 +163,14 @@ class SelfPlayServer:
         required_binary = FileToTransfer(**msg['binary'])
         self._session_data.request_files([required_binary])
 
+        paradigm = msg['paradigm']
         max_rows = msg['max_rows']
 
+        assert SearchParadigm.is_valid(paradigm), f'Invalid search paradigm: {paradigm}'
+
         player_args = {
-            '--type': 'alpha0-T',
-            '--name': 'alpha0',
+            '--type': f'{paradigm}-T',
+            '--name': paradigm,
             '--no-model': None,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -206,8 +210,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': 'alpha0-%d' % (p + 2),
-                '--copy-from': 'alpha0',
+                '--name': f'{paradigm}-{p + 2}',
+                '--copy-from': paradigm,
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')
@@ -235,12 +239,15 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_helper(self, msg: JsonDict):
+        paradigm = msg['paradigm']
+        assert SearchParadigm.is_valid(paradigm), f'Invalid search paradigm: {paradigm}'
+
         required_binary = FileToTransfer(**msg['binary'])
         self._session_data.request_files([required_binary])
 
         player_args = {
-            '--type': 'alpha0-T',
-            '--name': 'alpha0',
+            '--type': f'{paradigm}-T',
+            '--name': paradigm,
             '--cuda-device': self._params.cuda_device,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -274,8 +281,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': 'alpha0-%d' % (p + 2),
-                '--copy-from': 'alpha0',
+                '--name': f'{paradigm}-{p+1}',
+                '--copy-from': paradigm,
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')

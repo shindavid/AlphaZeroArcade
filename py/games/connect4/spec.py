@@ -134,7 +134,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 'value': 1.5,
                 'action_value': 1.0,
                 'opp_policy': 0.15,
-                'value_uncertainty': 0.1,
+                'value_uncertainty': 1.0,
             },
 
             opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
