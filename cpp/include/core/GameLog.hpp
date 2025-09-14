@@ -118,15 +118,17 @@ struct GameLogBase : public GameLogCommon {
 
   struct WriteEntry {
     State position;
-    PolicyTensor policy_target;       // only valid if policy_target_is_valid
-    ActionValueTensor action_values;  // only valid if action_values_are_valid
+    PolicyTensor policy_target;                    // only valid if policy_target_valid
+    ActionValueTensor action_values;               // only valid if action_values_valid
+    ActionValueTensor action_value_uncertainties;  // only valid if action_value_uncertainties_valid
     action_t action;
     float Q_prior;
     float Q_posterior;
     seat_index_t active_seat;
     bool use_for_training;
-    bool policy_target_is_valid;
-    bool action_values_are_valid;
+    bool policy_target_valid;
+    bool action_values_valid;
+    bool action_value_uncertainties_valid;
   };
   using write_entry_vector_t = std::vector<WriteEntry*>;
 
@@ -226,6 +228,9 @@ class GameReadLog : public GameLogBase<typename EvalSpec::Game> {
 
   // Populates passed-in tensor and returns true iff a valid tensor is available.
   bool get_action_values(mem_offset_t mem_offset, ActionValueTensor&) const;
+
+  // Populates passed-in tensor and returns true iff a valid tensor is available.
+  bool get_action_value_uncertainties(mem_offset_t mem_offset, ActionValueTensor&) const;
 
   const State& get_final_state() const;
   const ValueTensor& get_outcome() const;

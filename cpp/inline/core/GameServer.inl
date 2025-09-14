@@ -767,7 +767,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   action_t action = eigen_util::sample(chance_dist);
   if (game_log_) {
     // TODO: The ChanceEventPreHandleResponse should really contain the TrainingInfo
-    // TODO: add Q_prior/Q_posterior here
+    // TODO: add Q_prior/Q_posterior here, and add action_value_uncertainties
     TrainingInfo training_info;
     training_info.action_values_target = chance_action_values_;
     training_info.use_for_training = chance_action_values_ != nullptr;

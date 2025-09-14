@@ -99,6 +99,21 @@ struct ValueUncertaintyTarget : public TargetBase {
 };
 
 template <core::concepts::Game Game>
+struct ActionValueUncertaintyTarget : public TargetBase {
+  static constexpr const char* kName = "action_value_uncertainty";
+  using Tensor = Game::Types::ActionValueTensor;
+  using GameLogView = Game::Types::GameLogView;
+
+  static bool tensorize(const GameLogView& view, Tensor&);
+
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
+};
+
+template <core::concepts::Game Game>
 struct OppPolicyTarget : public TargetBase {
   static constexpr const char* kName = "opp_policy";
   using Tensor = Game::Types::PolicyTensor;

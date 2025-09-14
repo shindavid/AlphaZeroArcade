@@ -34,10 +34,11 @@ struct TrainingTargets {
   using ValueTarget = core::ValueTarget<Game>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using ValueUncertaintyTarget = core::ValueUncertaintyTarget<Game>;
+  using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  using PrimaryList =
-    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ValueUncertaintyTarget>;
+  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget,
+                                   ValueUncertaintyTarget, ActionValueUncertaintyTarget>;
   using AuxList = mp::TypeList<OppPolicyTarget>;
 };
 

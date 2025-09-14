@@ -58,6 +58,7 @@ struct GameTypes {
   struct TrainingInfo {
     PolicyTensor* policy_target = nullptr;
     ActionValueTensor* action_values_target = nullptr;
+    ActionValueTensor* action_value_uncertainties_target = nullptr;
     float Q_prior = 0;
     float Q_posterior = 0;
     bool use_for_training = false;
@@ -142,14 +143,15 @@ struct GameTypes {
    */
   struct GameLogView {
     GameLogView(const State* c, const State* f, const ValueTensor* r, const PolicyTensor* p,
-                const PolicyTensor* np, const ActionValueTensor* av, float qpr, float qpo,
-                seat_index_t a)
+                const PolicyTensor* np, const ActionValueTensor* av, const ActionValueTensor* avu,
+                float qpr, float qpo, seat_index_t a)
         : cur_pos(c),
           final_pos(f),
           game_result(r),
           policy(p),
           next_policy(np),
           action_values(av),
+          action_value_uncertainties(avu),
           Q_prior(qpr),
           Q_posterior(qpo),
           active_seat(a) {}
@@ -160,6 +162,7 @@ struct GameTypes {
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
     const ActionValueTensor* action_values;
+    const ActionValueTensor* action_value_uncertainties;
     const float Q_prior;
     const float Q_posterior;
     const seat_index_t active_seat;

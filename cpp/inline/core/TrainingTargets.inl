@@ -80,6 +80,26 @@ void ValueUncertaintyTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst)
 }
 
 template <core::concepts::Game Game>
+bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+  if (!view.action_value_uncertainties) return false;
+  tensor = *view.action_value_uncertainties;
+  return true;
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void ActionValueUncertaintyTarget<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+  eigen_util::sigmoid_in_place(dst);
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void ActionValueUncertaintyTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+  constexpr float p = 1.0f / Game::Constants::kNumPlayers;
+  dst.setConstant(p * (1 - p));
+}
+
+template <core::concepts::Game Game>
 bool OppPolicyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.next_policy) return false;
   tensor = *view.next_policy;

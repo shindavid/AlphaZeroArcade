@@ -304,6 +304,12 @@ void GameReadLog<EvalSpec>::load(int row_index, bool apply_symmetry,
   bool action_values_valid = get_action_values(mem_offset, action_values);
   if (action_values_valid) Game::Symmetries::apply(action_values, sym, mode);
 
+  ActionValueTensor action_value_uncertainties;
+  bool action_value_uncertainties_valid =
+    get_action_value_uncertainties(mem_offset, action_value_uncertainties);
+  if (action_value_uncertainties_valid)
+    Game::Symmetries::apply(action_value_uncertainties, sym, mode);
+
   PolicyTensor next_policy;
   bool next_policy_valid = false;
   bool has_next = state_index + 1 < num_positions();
@@ -325,8 +331,11 @@ void GameReadLog<EvalSpec>::load(int row_index, bool apply_symmetry,
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
   ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
+  ActionValueTensor* action_value_uncertainties_ptr =
+    action_value_uncertainties_valid ? &action_value_uncertainties : nullptr;
+
   GameLogView view(cur_pos, &final_state, &outcome, policy_ptr, next_policy_ptr, action_values_ptr,
-                   Q_prior, Q_posterior, active_seat);
+                   action_value_uncertainties_ptr, Q_prior, Q_posterior, active_seat);
 
   constexpr size_t N = mp::Length_v<AllTargets>;
   for (int target_index : target_indices) {
@@ -413,12 +422,31 @@ template <concepts::EvalSpec EvalSpec>
 bool GameReadLog<EvalSpec>::get_action_values(mem_offset_t mem_offset,
                                               ActionValueTensor& action_values) const {
   int full_offset = layout_.records_start + mem_offset + sizeof(Record);
+
   const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
   full_offset += policy_data->size();
+
   const TensorData* action_values_data = (const TensorData*)&buffer_[full_offset];
 
   return action_values_data->load(action_values);
 }
+
+template <concepts::EvalSpec EvalSpec>
+bool GameReadLog<EvalSpec>::get_action_value_uncertainties(
+  mem_offset_t mem_offset, ActionValueTensor& action_value_uncertainties) const {
+  int full_offset = layout_.records_start + mem_offset + sizeof(Record);
+
+  const TensorData* policy_data = (const TensorData*)&buffer_[full_offset];
+  full_offset += policy_data->size();
+
+  const TensorData* action_values_data = (const TensorData*)&buffer_[full_offset];
+  full_offset += action_values_data->size();
+
+  const TensorData* action_value_uncertainties_data = (const TensorData*)&buffer_[full_offset];
+
+  return action_value_uncertainties_data->load(action_value_uncertainties);
+}
+
 
 template <concepts::EvalSpec EvalSpec>
 const typename GameReadLog<EvalSpec>::State& GameReadLog<EvalSpec>::get_final_state() const {
@@ -466,6 +494,9 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
                              const TrainingInfo& training_info) {
   PolicyTensor* policy_target = training_info.policy_target;
   ActionValueTensor* action_values_target = training_info.action_values_target;
+  ActionValueTensor* action_value_uncertainties_target =
+    training_info.action_value_uncertainties_target;
+
   float Q_prior = training_info.Q_prior;
   float Q_posterior = training_info.Q_posterior;
   bool use_for_training = training_info.use_for_training;
@@ -473,23 +504,33 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
   // TODO: get entries from a thread-specific object pool
   WriteEntry* entry = new WriteEntry();
   entry->position = state;
+
   if (policy_target) {
     entry->policy_target = *policy_target;
   } else {
     entry->policy_target.setZero();
   }
+
   if (action_values_target) {
     entry->action_values = *action_values_target;
   } else {
     entry->action_values.setZero();
   }
+
+  if (action_value_uncertainties_target) {
+    entry->action_value_uncertainties = *action_value_uncertainties_target;
+  } else {
+    entry->action_value_uncertainties.setZero();
+  }
+
   entry->action = action;
   entry->Q_prior = Q_prior;
   entry->Q_posterior = Q_posterior;
   entry->active_seat = active_seat;
   entry->use_for_training = use_for_training;
-  entry->policy_target_is_valid = policy_target != nullptr;
-  entry->action_values_are_valid = action_values_target != nullptr;
+  entry->policy_target_valid = policy_target != nullptr;
+  entry->action_values_valid = action_values_target != nullptr;
+  entry->action_value_uncertainties_valid = action_value_uncertainties_target != nullptr;
   entries_.push_back(entry);
   sample_count_ += use_for_training;
 }
@@ -535,12 +576,15 @@ GameLogMetadata GameLogSerializer<Game>::serialize(const GameWriteLog* log, std:
     record.action_mode = Game::Rules::get_action_mode(entry->position);
     record.action = entry->action;
 
-    TensorData policy(entry->policy_target_is_valid, entry->policy_target);
-    TensorData action_values(entry->action_values_are_valid, entry->action_values);
+    TensorData policy(entry->policy_target_valid, entry->policy_target);
+    TensorData action_values(entry->action_values_valid, entry->action_values);
+    TensorData action_value_uncertainties(entry->action_value_uncertainties_valid,
+                                          entry->action_value_uncertainties);
 
     mem_offset += GameLogCommon::write_section(data_buf_, &record, 1, false);
     mem_offset += policy.write_to(data_buf_);
     mem_offset += action_values.write_to(data_buf_);
+    mem_offset += action_value_uncertainties.write_to(data_buf_);
   }
 
   GameLogCommon::write_section(buf, &log->final_state_);
