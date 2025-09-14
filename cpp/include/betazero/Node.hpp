@@ -4,8 +4,9 @@
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-namespace alpha0 {
+namespace beta0 {
 
+// beta0::Node has everything that alpha0::Node has, plus uncertainty tracking.
 template <core::concepts::EvalSpec EvalSpec>
 class Node : public core::NodeBase<EvalSpec> {
  public:
@@ -30,6 +31,7 @@ class Node : public core::NodeBase<EvalSpec> {
     ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;       // real count
     int VN = 0;       // virtual count
+    float W = 0;      // dynamic uncertainty
 
     // TODO: generalize these fields to utility lower/upper bounds
     player_bitset_t provably_winning;
@@ -60,6 +62,6 @@ class Node : public core::NodeBase<EvalSpec> {
   Stats stats_;
 };
 
-}  // namespace alpha0
+}  // namespace beta0
 
-#include "inline/alphazero/Node.inl"
+#include "inline/betazero/Node.inl"

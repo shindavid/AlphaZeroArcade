@@ -1,7 +1,7 @@
 #pragma once
 
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchResults.hpp"
+#include "betazero/ManagerParams.hpp"
+#include "betazero/SearchResults.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
@@ -49,8 +49,8 @@ class Player : public core::AbstractPlayer<typename Traits::Game> {
   };
 
   using Manager = search::Manager<Traits>;
-  using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;  // TODO: specialize for beta0
-  using SearchResults = ::alpha0::SearchResults<Game>;  // TODO: specialize for beta0
+  using ManagerParams = ::beta0::ManagerParams<EvalSpec>;
+  using SearchResults = ::beta0::SearchResults<Game>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 

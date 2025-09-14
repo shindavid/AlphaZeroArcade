@@ -57,6 +57,8 @@ struct InputTensorizor<c4::Game> : public c4::InputTensorizor {
 template <>
 struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using Game = c4::Game;
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
+
   using TrainingTargets = c4::alpha0::TrainingTargets;
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
@@ -65,6 +67,8 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
 template <>
 struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Game = c4::Game;
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
+
   using TrainingTargets = c4::beta0::TrainingTargets;
   using MctsConfiguration = c4::beta0::MctsConfiguration;
 };

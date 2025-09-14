@@ -21,6 +21,7 @@ struct StableData : public StableDataBaseImpl<EvalSpec> {
 
   ValueTensor VT;
   ActionMask valid_action_mask;
+  float U = 0;  // uncertainty - not used in alpha0, but being a little sloppy by having it here
   int num_valid_actions;
   core::action_mode_t action_mode;
 

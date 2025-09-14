@@ -10,7 +10,15 @@ namespace core {
 //
 // It consists of data and methods that are shared across all different search-frameworks
 // (e.g., MCTS and Bayesian-MCTS)
-
+//
+// It consists of two main parts:
+//
+// 1. StableData: write-once data that is fixed for the lifetime of the node
+// 2. Edge[]: edges to children nodes, needed for tree traversal
+//
+// The Edge[] array is effectively represented by a an Edge* and an array length. The Edge* is
+// captured by first_edge_index_ (an index into a pool of edge objects), and the array length is
+// gotten from stable_data_.num_valid_actions.
 template <core::concepts::EvalSpec EvalSpec>
 class NodeBase {
  public:
