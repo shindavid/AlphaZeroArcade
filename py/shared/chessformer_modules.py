@@ -171,8 +171,7 @@ class MultiheadAttentionWithExtras(nn.Module):
             rpe_k = self._expand_rpe_logits(self.rpe_k)  # (Hh, T, T, dh)
             logits = (logits
                       + torch.einsum('bhtd,htsd->bhts', Q, rpe_k) * self.scale
-                      + torch.einsum('htsd,bhsd->bhts', rpe_q, K) * self.scale
-                      + torch.einsum('htsd,htsd->hts',  rpe_q, rpe_k).unsqueeze(0) * self.scale)
+                      + torch.einsum('htsd,bhsd->bhts', rpe_q, K) * self.scale)
 
         # Smolgen dynamic bias
         if self.use_smol:
