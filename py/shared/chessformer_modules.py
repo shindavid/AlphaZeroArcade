@@ -49,21 +49,22 @@ class Smolgen(nn.Module):
         self.per_head    = nn.Linear(shared_dim, Hh * shared_dim, bias=True)
         self.norm1 = nn.LayerNorm(shared_dim)
         self.norm2 = nn.LayerNorm(shared_dim)
+        self.gate = nn.Parameter(torch.tensor(0.0))
         self.shared = shared_layer if shared_layer is not None else nn.Linear(shared_dim, T * T, bias=False)
 
     def forward(self, x):  # x: (B,T,Dm)
         B = x.size(0)
         z = self.proj_token(x)                     # (B,T,32)
-        g = self.proj_global(z.reshape(B, -1))     # (B,256)
+        g = self.proj_global(z.reshape(B, -1))     # (B,shared_dim)
         g = F.silu(g)
         g = self.norm1(g)
 
-        u = self.per_head(g)   # (B,Hh*256)
+        u = self.per_head(g)  # (B,Hh*shared_dim)
         u = F.silu(u)
-        u = u.view(B, self.Hh, -1)   # (B,Hh,256)
+        u = u.view(B, self.Hh, -1)  # (B,Hh,shared_dim)
         u = self.norm2(u)
         S = self.shared(u).view(B, self.Hh, self.T, self.T)  # (B,Hh,T,T)
-        return S
+        return self.gate * S
 
 
 class MultiheadAttentionWithExtras(nn.Module):
