@@ -84,6 +84,93 @@ class CNN_b9_c128(ModelConfigGenerator):
         )
 
 
+class Hybrid(ModelConfigGenerator):
+    @staticmethod
+    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
+        input_shape = shape_info_dict['input'].shape
+        policy_shape = shape_info_dict['policy'].shape
+        value_shape = shape_info_dict['value'].shape
+        action_value_shape = shape_info_dict['action_value'].shape
+        score_margin_shape = shape_info_dict['score_margin'].shape
+        ownership_shape = shape_info_dict['ownership'].shape
+        board_shape = input_shape[1:]
+        board_size = math.prod(board_shape)
+
+        assert value_shape == (3,), value_shape
+
+        embed_dim = 64
+        n_heads = 8
+        n_layers = 2
+        c_trunk = 128
+        c_mid = 128
+
+        c_policy_hidden = 2
+        c_opp_policy_hidden = 2
+        c_action_value_hidden = 2
+        c_value_hidden = 1
+        n_value_hidden = 256
+
+        c_score_margin_hidden = 32
+        n_score_margin_hidden = 32
+        c_ownership_hidden = 64
+
+        smolgen_compress_dim = 8
+        smolgen_shared_dim = 32
+        cnn_output_shape  = (c_trunk, *board_shape)
+
+        return ModelConfig(
+            shape_info_dict=shape_info_dict,
+
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+
+            blocks=[
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
+                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
+                ModuleSpec(type='ChessformerBlock', args=[
+                    cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
+                           kwargs={
+                               'use_static_bias': True,    # learned T×T per-head bias
+                               'use_shaw': False,          # pairwise aQ/aK/aV
+                               'use_rpe': True,
+                               'use_smolgen': True,        # dynamic T×T logits (shared 256→T^2)
+                               'smolgen_compress_dim': smolgen_compress_dim,
+                               'smolgen_shared_dim': smolgen_shared_dim,
+                               'ffn_multiplier': 1.0       # small FFN ≈ embed_dim),
+                               })],
+
+            neck=None,
+
+            heads=[
+                ModuleSpec(type='PolicyHead',
+                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+                ModuleSpec(type='WinLossDrawValueHead',
+                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+                ModuleSpec(type='WinShareActionValueHead',
+                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                              action_value_shape]),
+                ModuleSpec(type='PolicyHead',
+                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden,
+                              policy_shape]),
+                ModuleSpec(type='ScoreHead',
+                        args=['score_margin', c_trunk, c_score_margin_hidden,
+                                n_score_margin_hidden, score_margin_shape]),
+                ModuleSpec(type='OwnershipHead',
+                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
+            ],
+            loss_weights={
+                'policy': 1.0,
+                'value': 1.5,
+                'action_value': 2.0,
+                'opp_policy': 0.15,
+                'score_margin': 0.02,
+                'ownership': 0.15,
+            },
+
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
+        )
+
+
 class Chessformer(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
@@ -98,7 +185,7 @@ class Chessformer(ModelConfigGenerator):
 
         embed_dim = 64
         n_heads = 8
-        n_layers = 8
+        n_layers = 2
         c_trunk = 128
 
         c_policy_hidden = 2
@@ -165,6 +252,7 @@ class OthelloSpec(GameSpec):
         'default': CNN_b9_c128,
         'b9_c128': CNN_b9_c128,
         'chessformer': Chessformer,
+        'hybrid': Hybrid,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 15)
     ref_neighborhood_size = 5
