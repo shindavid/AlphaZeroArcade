@@ -1,5 +1,6 @@
 #include "alphazero/Algorithms.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
@@ -312,6 +313,25 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     stats.Q_sq = VA * VA;
 
     eigen_util::debug_assert_is_valid_prob_distr(VA);
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::write_to_training_info(TrainingInfo& training_info_,
+                                                const SearchResults* mcts_results,
+                                                bool use_for_training,
+                                                bool previous_used_for_training,
+                                                core::seat_index_t seat) {
+  training_info_.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[seat];
+  training_info_.Q_posterior = mcts_results->win_rates(seat);
+
+  if (use_for_training || previous_used_for_training) {
+    training_info_.policy_target_valid =
+      extract_policy_target(mcts_results, training_info_.policy_target);
+  }
+  if (use_for_training) {
+    training_info_.action_values_target = mcts_results->action_values;
+    training_info_.action_values_target_valid = true;
   }
 }
 
@@ -863,6 +883,22 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
     }
 
     LOG_INFO(ss.str());
+  }
+}
+
+template <search::concepts::Traits Traits>
+bool Algorithms<Traits>::extract_policy_target(const SearchResults* mcts_results,
+                                               PolicyTensor& target) {
+  target = mcts_results->policy_target;
+
+  float sum = eigen_util::sum(target);
+  if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
+    // python training code will ignore these rows for policy training.
+    return false;
+  } else {
+    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = target / eigen_util::sum(target);
+    return true;
   }
 }
 

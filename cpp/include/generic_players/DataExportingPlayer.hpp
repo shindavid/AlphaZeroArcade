@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/TrainingDataWriter.hpp"
+#include "search/AlgorithmsFor.hpp"
 
 namespace generic {
 
@@ -26,6 +27,7 @@ class DataExportingPlayer : public BasePlayer {
   using ActionResponse = Game::Types::ActionResponse;
   using ChangeEventHandleRequest = Game::Types::ChangeEventHandleRequest;
   using TrainingInfo = Game::Types::TrainingInfo;
+  using Algorithms = search::AlgorithmsForT<Traits>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;

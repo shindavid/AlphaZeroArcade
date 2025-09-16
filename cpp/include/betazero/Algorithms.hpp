@@ -34,6 +34,7 @@ class Algorithms {
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
+  using TrainingInfo = Game::Types::TrainingInfo;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::Types::ValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -56,6 +57,10 @@ class Algorithms {
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
 
+  static void write_to_training_info(TrainingInfo& training_info_,
+                                     const SearchResults* mcts_results, bool use_for_training,
+                                     bool previous_used_for_training, core::seat_index_t seat);
+
   static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);
   static void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
@@ -76,6 +81,7 @@ class Algorithms {
   static void validate_search_path(const SearchContext& context);
   static void print_action_selection_details(const SearchContext& context,
                                              const ActionSelector& selector, int argmax_index);
+  static bool extract_policy_target(const SearchResults* mcts_results, PolicyTensor& target);
 };
 
 }  // namespace beta0

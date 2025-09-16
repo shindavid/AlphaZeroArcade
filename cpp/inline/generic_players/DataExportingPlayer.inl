@@ -69,19 +69,12 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   // differently.
   bool previous_used_for_training = game_log_->was_previous_entry_used_for_policy_training();
 
-  // TODO: dispatch to Algorithms:: here
   training_info_.clear();
   core::seat_index_t my_seat = this->get_my_seat();
-  training_info_.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[my_seat];
-  training_info_.Q_posterior = mcts_results->win_rates(my_seat);
 
-  if (use_for_training || previous_used_for_training) {
-    extract_policy_target(mcts_results);
-  }
-  if (use_for_training) {
-    training_info_.action_values_target = mcts_results->action_values;
-    training_info_.action_values_target_valid = true;
-  }
+  // TODO: add signature of this Algorithms function concepts::Algorithms
+  Algorithms::write_to_training_info(training_info_, mcts_results, use_for_training,
+                                     previous_used_for_training, my_seat);
 
   game_log_->add(request.state, response.action, my_seat, training_info_);
 }
