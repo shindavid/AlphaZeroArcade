@@ -95,9 +95,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         self.scale = 1.0 / math.sqrt(self.dh)
         self.res_scale = residual_scale(n_layers)
 
-        self.Wq = nn.Linear(Dm, Dm, bias=False)
-        self.Wk = nn.Linear(Dm, Dm, bias=False)
-        self.Wv = nn.Linear(Dm, Dm, bias=False)
+        self.Wqkv = nn.Linear(Dm, 3 * Dm, bias=False)
         self.Wo = nn.Linear(Dm, Dm, bias=True)  # keep bias after attention
 
         self.use_static = use_static_bias
@@ -147,9 +145,8 @@ class MultiheadAttentionWithExtras(nn.Module):
         B, T, Dm = x.shape
         Hh, dh = self.Hh, self.dh
 
-        Q = self.Wq(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
-        K = self.Wk(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
-        V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+        qkv = self.Wqkv(x).view(B, T, 3, Hh, dh).permute(2, 0, 3, 1, 4)  # (3,B,Hh,T,dh)
+        Q, K, V = qkv[0], qkv[1], qkv[2]
 
         # Base logits
         logits = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # (B,Hh,T,T)
