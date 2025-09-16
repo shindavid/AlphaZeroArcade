@@ -72,7 +72,7 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   training_info_.clear();
   core::seat_index_t my_seat = this->get_my_seat();
 
-  // TODO: add signature of this Algorithms function concepts::Algorithms
+  // TODO: add signature of this Algorithms function to concepts::Algorithms
   Algorithms::write_to_training_info(training_info_, mcts_results, use_for_training,
                                      previous_used_for_training, my_seat);
 
