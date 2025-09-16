@@ -64,7 +64,7 @@ class GameServerTest : public testing::Test {
 
    protected:
     ActionResponse get_action_response_helper(const SearchResults* results,
-                                              const ActionMask& valid_actions) const override {
+                                              const ActionMask& valid_actions) override {
       if (!test_->is_recorded_) {
         boost_util::pretty_print(test_->ss_result_, results->to_json());
         test_->is_recorded_ = true;

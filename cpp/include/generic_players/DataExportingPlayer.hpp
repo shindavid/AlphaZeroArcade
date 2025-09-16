@@ -1,26 +1,22 @@
 #pragma once
 
 #include "core/TrainingDataWriter.hpp"
-#include "search/concepts/TraitsConcept.hpp"
-#include "generic_players/alpha0/Player.hpp"
 
-namespace generic::alpha0 {
+namespace generic {
 
 /*
- * A variant of generic::alpha0::Player that exports training data to a file via TrainingDataWriter.
+ * A generic player that exports training data to a file via TrainingDataWriter.
+ *
+ * Assumes that BasePlayer is either one of the following:
+ *
+ * - generic::alpha0::Player<Traits>
+ * - generic::beta0::Player<Traits>
  */
-template <search::concepts::Traits Traits>
-class DataExportingPlayer : public Player<Traits> {
+template <typename BasePlayer>
+class DataExportingPlayer : public BasePlayer {
  public:
-  /*
-   * The argument for using a full search is so that the opp reply target is more accurate.
-   *
-   * The argument against is that the opp reply target is not that important, making full searches
-   * for that purpose an inefficient use of compute budget.
-   */
-  static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
-
-  using Game = Traits::Game;
+  using Traits = BasePlayer::Traits;
+  using Game = BasePlayer::Game;
   using GameWriteLog_sptr = core::TrainingDataWriter<Game>::GameWriteLog_sptr;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
@@ -33,18 +29,16 @@ class DataExportingPlayer : public Player<Traits> {
   using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
 
-  using base_t = Player<Traits>;
-  using Params = base_t::Params;
-  using Manager = base_t::Manager;
-  using SearchResults = base_t::SearchResults;
-  using SearchResponse = base_t::SearchResponse;
+  using SearchResults = BasePlayer::SearchResults;
+  using SearchResponse = BasePlayer::SearchResponse;
 
-  using base_t::base_t;
+  using BasePlayer::BasePlayer;
 
-  ActionResponse get_action_response(const ActionRequest& request) override;
   ChanceEventPreHandleResponse prehandle_chance_event(const ChangeEventPreHandleRequest&) override;
 
  protected:
+  virtual ActionResponse get_action_response_helper(const SearchResults*,
+                                                    const ActionMask& valid_actions) override;
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
 
   PolicyTensor policy_target_;
@@ -55,6 +49,6 @@ class DataExportingPlayer : public Player<Traits> {
   bool mid_prehandle_chance_event_ = false;
 };
 
-}  // namespace generic::alpha0
+}  // namespace generic
 
-#include "inline/generic_players/alpha0/DataExportingPlayer.inl"
+#include "inline/generic_players/DataExportingPlayer.inl"

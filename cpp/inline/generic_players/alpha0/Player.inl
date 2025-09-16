@@ -135,10 +135,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
-  mit::unique_lock lock(search_mode_mutex_);
   init_search_mode(request);
-  lock.unlock();
-
   search::SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
 
@@ -147,7 +144,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   } else if (response.yield_instruction == core::kDrop) {
     return ActionResponse::drop();
   }
-  RELEASE_ASSERT(response.yield_instruction == core::kContinue);
+
   return get_action_response_helper(response.results, request.valid_actions);
 }
 
@@ -158,17 +155,17 @@ void Player<Traits>::clear_search_mode() {
 }
 
 template <search::concepts::Traits Traits>
-bool Player<Traits>::init_search_mode(const ActionRequest& request) {
-  if (search_mode_ != core::kNumSearchModes) return false;
+void Player<Traits>::init_search_mode(const ActionRequest& request) {
+  mit::unique_lock lock(search_mode_mutex_);
+  if (search_mode_ != core::kNumSearchModes) return;
 
   search_mode_ = request.play_noisily ? core::kRawPolicy : get_random_search_mode();
   get_manager()->set_search_params(search_params_[search_mode_]);
-  return true;
 }
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
-  const SearchResults* mcts_results, const ActionMask& valid_actions) const {
+  const SearchResults* mcts_results, const ActionMask& valid_actions) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
 
   if (verbose_info_) {

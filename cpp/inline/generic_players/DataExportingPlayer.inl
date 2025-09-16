@@ -1,50 +1,32 @@
 
-#include "generic_players/beta0/DataExportingPlayer.hpp"
+#include "generic_players/DataExportingPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "search/SearchRequest.hpp"
+#include "core/Constants.hpp"
 
-namespace generic::beta0 {
+namespace generic {
 
-template <search::concepts::Traits Traits>
-typename DataExportingPlayer<Traits>::ActionResponse
-DataExportingPlayer<Traits>::get_action_response(const ActionRequest& request) {
-  const ActionMask& valid_actions = request.valid_actions;
+template <typename BasePlayer>
+DataExportingPlayer<BasePlayer>::ActionResponse
+DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults* mcts_results,
+                                                            const ActionMask& valid_actions) {
+  ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, valid_actions);
 
-  mit::unique_lock lock(this->search_mode_mutex_);
-  if (this->init_search_mode(request)) {
-    GameWriteLog_sptr game_log = this->get_game_log();
-    use_for_training_ = game_log && this->search_mode_ == core::kFull;
+  GameWriteLog_sptr game_log = this->get_game_log();
+  use_for_training_ = game_log && this->search_mode_ == core::kFull;
 
-    // TODO: if we have chance-events between player-events, we should compute this bool
-    // differently.
-    previous_used_for_training_ =
-      game_log && game_log->was_previous_entry_used_for_policy_training();
-
-    if (kForceFullSearchIfRecordingAsOppReply && previous_used_for_training_) {
-      this->search_mode_ = core::kFull;
-    }
-  }
-  lock.unlock();
-
-  search::SearchRequest search_request(request.notification_unit);
-  SearchResponse response = this->get_manager()->search(search_request);
-
-  if (response.yield_instruction == core::kYield) {
-    return ActionResponse::yield(response.extra_enqueue_count);
-  } else if (response.yield_instruction == core::kDrop) {
-    return ActionResponse::drop();
-  }
-  RELEASE_ASSERT(response.yield_instruction == core::kContinue);
-
-  const SearchResults* mcts_results = response.results;
-  ActionResponse action_response = base_t::get_action_response_helper(mcts_results, valid_actions);
+  // TODO: if we have chance-events between player-events, we should compute this bool
+  // differently.
+  previous_used_for_training_ =
+    game_log && game_log->was_previous_entry_used_for_policy_training();
 
   core::seat_index_t my_seat = this->get_my_seat();
+
+  // TODO: dispatch to Algorithms:: here
   float Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[my_seat];
   float Q_posterior = mcts_results->win_rates(my_seat);
 
-  TrainingInfo& training_info = action_response.training_info;
+  TrainingInfo& training_info = response.training_info;
   training_info.policy_target = nullptr;
   training_info.action_values_target = nullptr;
   training_info.Q_prior = Q_prior;
@@ -60,12 +42,12 @@ DataExportingPlayer<Traits>::get_action_response(const ActionRequest& request) {
     training_info.action_values_target = &action_values_target_;
   }
 
-  return action_response;
+  return response;
 }
 
-template <search::concepts::Traits Traits>
-typename DataExportingPlayer<Traits>::ChanceEventPreHandleResponse
-DataExportingPlayer<Traits>::prehandle_chance_event(
+template <typename BasePlayer>
+typename DataExportingPlayer<BasePlayer>::ChanceEventPreHandleResponse
+DataExportingPlayer<BasePlayer>::prehandle_chance_event(
   const ChangeEventPreHandleRequest& request) {
   // So that only one player outputs the action values.
   if (!this->owns_shared_data_) {
@@ -93,8 +75,8 @@ DataExportingPlayer<Traits>::prehandle_chance_event(
   }
 }
 
-template <search::concepts::Traits Traits>
-void DataExportingPlayer<Traits>::extract_policy_target(const SearchResults* mcts_results,
+template <typename BasePlayer>
+void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults* mcts_results,
                                                             PolicyTensor** target) {
   **target = mcts_results->policy_target;
   float sum = eigen_util::sum(**target);
@@ -107,4 +89,4 @@ void DataExportingPlayer<Traits>::extract_policy_target(const SearchResults* mct
   }
 }
 
-}  // namespace generic::beta0
+}  // namespace generic

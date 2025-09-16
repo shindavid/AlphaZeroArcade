@@ -4,7 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
-#include "generic_players/beta0/DataExportingPlayer.hpp"
+#include "generic_players/DataExportingPlayer.hpp"
 #include "generic_players/beta0/Player.hpp"
 #include "search/Constants.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -77,7 +77,8 @@ using CompetitionPlayerGenerator = PlayerGeneratorBase<Traits, generic::beta0::P
 
 template <search::concepts::Traits Traits>
 using TrainingPlayerGenerator =
-  PlayerGeneratorBase<Traits, generic::beta0::DataExportingPlayer<Traits>, search::kTraining>;
+  PlayerGeneratorBase<Traits, generic::DataExportingPlayer<generic::beta0::Player<Traits>>,
+                      search::kTraining>;
 
 template <typename GeneratorT>
 class Subfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {

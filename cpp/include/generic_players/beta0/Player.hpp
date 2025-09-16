@@ -24,9 +24,10 @@ namespace generic::beta0 {
  * game, they can share the same MCTS tree, as an optimization. This implementation supports this
  * optimization.
  */
-template <search::concepts::Traits Traits>
-class Player : public core::AbstractPlayer<typename Traits::Game> {
+template <search::concepts::Traits Traits_>
+class Player : public core::AbstractPlayer<typename Traits_::Game> {
  public:
+  using Traits = Traits_;
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
   using base_t = core::AbstractPlayer<Game>;
@@ -88,15 +89,13 @@ class Player : public core::AbstractPlayer<typename Traits::Game> {
 
  protected:
   void clear_search_mode();
-
-  // assumes search_mode_mutex_ is held, returns true if search mode was changed
-  bool init_search_mode(const ActionRequest&);
+  void init_search_mode(const ActionRequest&);
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 
-  // This is virtual so that it can be overridden in tests.
+  // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual ActionResponse get_action_response_helper(const SearchResults*,
-                                                    const ActionMask& valid_actions) const;
+                                                    const ActionMask& valid_actions);
 
   void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                           const SearchResults& results) const;
