@@ -96,4 +96,16 @@ PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_shared_data() {
   }
 }
 
+template <search::concepts::Traits Traits>
+void TrainingPlayerGenerator<Traits>::end_session() {
+  Base::end_session();
+
+  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+
+  TrainingDataWriter* writer = TrainingDataWriter::instance();
+  if (writer) {
+    writer->wait_until_batch_empty();
+  }
+}
+
 }  // namespace generic::beta0

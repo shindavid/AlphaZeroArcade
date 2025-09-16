@@ -17,7 +17,6 @@ class DataExportingPlayer : public BasePlayer {
  public:
   using Traits = BasePlayer::Traits;
   using Game = BasePlayer::Game;
-  using GameWriteLog_sptr = core::TrainingDataWriter<Game>::GameWriteLog_sptr;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
@@ -25,28 +24,34 @@ class DataExportingPlayer : public BasePlayer {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ChangeEventPreHandleRequest = Game::Types::ChangeEventPreHandleRequest;
-  using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
+  using ChangeEventHandleRequest = Game::Types::ChangeEventHandleRequest;
   using TrainingInfo = Game::Types::TrainingInfo;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using BasePlayer::BasePlayer;
+  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+  using GameWriteLog = TrainingDataWriter::GameWriteLog;
+  using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 
-  ChanceEventPreHandleResponse prehandle_chance_event(const ChangeEventPreHandleRequest&) override;
+  template <typename... Ts>
+  DataExportingPlayer(Ts&&... args)
+      : BasePlayer(std::forward<Ts>(args)...), writer_(TrainingDataWriter::instance()) {}
+
+  core::yield_instruction_t handle_chance_event(const ChangeEventHandleRequest&) override;
+  bool start_game() override;
+  void end_game(const State&, const ValueTensor&) override;
 
  protected:
-  virtual ActionResponse get_action_response_helper(const SearchResults*,
-                                                    const ActionMask& valid_actions) override;
-  static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
+  ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;
 
-  PolicyTensor policy_target_;
-  ActionValueTensor action_values_target_;
+  void add_to_game_log(const ActionRequest&, const ActionResponse&, const SearchResults*);
+  void extract_policy_target(const SearchResults* results);
 
-  bool use_for_training_;
-  bool previous_used_for_training_;
-  bool mid_prehandle_chance_event_ = false;
+  TrainingDataWriter* const writer_;
+  TrainingInfo training_info_;
+  GameWriteLog_sptr game_log_;
+  bool mid_handle_chance_event_ = false;
 };
 
 }  // namespace generic

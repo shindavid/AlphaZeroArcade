@@ -6,7 +6,6 @@
 #include "core/GameServerBase.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
-#include "core/TrainingDataWriter.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
@@ -60,18 +59,13 @@ class GameServer
   using StepResult = core::GameServerBase::StepResult;
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
-  using TrainingDataWriter = core::TrainingDataWriter<Game>;
-  using TrainingDataWriterParams = TrainingDataWriter::Params;
-  using GameWriteLog = TrainingDataWriter::GameWriteLog;
-  using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
   using GameResults = Game::GameResults;
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
-  using ChangeEventPreHandleRequest = Game::Types::ChangeEventPreHandleRequest;
+  using ChangeEventHandleRequest = Game::Types::ChangeEventHandleRequest;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ChanceEventPreHandleResponse = Game::Types::ChanceEventPreHandleResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
@@ -207,7 +201,6 @@ class GameServer
 
     // Initialized at the start of the game
     game_id_t game_id_;
-    GameWriteLog_sptr game_log_;
     player_instantiation_array_t player_order_;
     player_array_t players_;
     player_name_array_t player_names_;
@@ -217,9 +210,9 @@ class GameServer
     // Updated for each move
     StateHistory state_history_;
     ActionMask valid_actions_;
-    ActionValueTensor* chance_action_values_ = nullptr;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
+    action_t chance_action_ = -1;
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
@@ -235,7 +228,7 @@ class GameServer
    */
   class SharedData {
    public:
-    SharedData(GameServer* server, const Params&, const TrainingDataWriterParams&);
+    SharedData(GameServer* server, const Params&);
     ~SharedData();
 
     const Params& params() const { return params_; }
@@ -273,7 +266,6 @@ class GameServer
     int num_games_ended() const { return num_games_ended_; }
     int num_registrations() const { return registrations_.size(); }
     registration_vec_t& registration_templates() { return registrations_; }
-    TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
     YieldManager* yield_manager() { return &yield_manager_; }
     pause_state_t pause_state() const { return pause_state_; }
 
@@ -300,8 +292,6 @@ class GameServer
 
     GameServer* const server_;
     const Params params_;
-
-    TrainingDataWriter* training_data_writer_ = nullptr;
 
     registration_vec_t registrations_;
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
@@ -376,8 +366,7 @@ class GameServer
   virtual void debug_dump() const override { shared_data_.debug_dump(); }
 
  public:
-  GameServer(const Params&, const TrainingDataWriterParams&);
-  GameServer(const Params& params) : GameServer(params, TrainingDataWriterParams()) {}
+  GameServer(const Params&);
 
   void set_initial_actions(const action_vec_t& initial_actions) {
     initial_actions_ = initial_actions;

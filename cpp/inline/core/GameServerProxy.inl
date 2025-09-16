@@ -69,7 +69,7 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
   mid_yield_ = false;
 
   Player* player = players_[payload.player_id];
-  player->init_game(game_id_, player_names_, payload.seat_assignment, nullptr);
+  player->init_game(game_id_, player_names_, payload.seat_assignment);
   player->start_game();
 }
 

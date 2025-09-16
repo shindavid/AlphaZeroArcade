@@ -76,9 +76,18 @@ template <search::concepts::Traits Traits>
 using CompetitionPlayerGenerator = PlayerGeneratorBase<Traits, generic::beta0::Player<Traits>>;
 
 template <search::concepts::Traits Traits>
-using TrainingPlayerGenerator =
-  PlayerGeneratorBase<Traits, generic::DataExportingPlayer<generic::beta0::Player<Traits>>,
-                      search::kTraining>;
+using TrainingPlayerGeneratorBase = PlayerGeneratorBase<
+  Traits, generic::DataExportingPlayer<generic::beta0::Player<Traits>>, search::kTraining>;
+
+template <search::concepts::Traits Traits>
+class TrainingPlayerGenerator : public TrainingPlayerGeneratorBase<Traits> {
+ public:
+  using Base = TrainingPlayerGeneratorBase<Traits>;
+  using Game = Base::Game;
+  using Base::Base;
+
+  void end_session() override;
+};
 
 template <typename GeneratorT>
 class Subfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> {

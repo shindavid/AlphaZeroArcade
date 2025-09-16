@@ -121,7 +121,7 @@ RemotePlayerProxy<Game>::RemotePlayerProxy(io::Socket* socket, player_id_t playe
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::start_game() {
+bool RemotePlayerProxy<Game>::start_game() {
   Packet<StartGame> packet;
   StartGame& payload = packet.payload();
   payload.game_id = this->get_game_id();
@@ -130,6 +130,7 @@ void RemotePlayerProxy<Game>::start_game() {
   payload.seat_assignment = this->get_my_seat();
   payload.load_player_names(packet, this->get_player_names());
   packet.send_to(socket_);
+  return true;
 }
 
 template <concepts::Game Game>

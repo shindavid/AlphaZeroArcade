@@ -17,9 +17,9 @@ inline HumanTuiPlayer::~HumanTuiPlayer() {
   delete move_history_;
 }
 
-inline void HumanTuiPlayer::start_game() {
+inline bool HumanTuiPlayer::start_game() {
   if (move_history_) move_history_->reset();
-  base_t::start_game();
+  return base_t::start_game();
 }
 
 inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const State& state,

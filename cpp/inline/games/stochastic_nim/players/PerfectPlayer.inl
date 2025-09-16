@@ -1,5 +1,7 @@
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 
+#include "util/BitSet.hpp"
+
 namespace stochastic_nim {
 
 inline auto PerfectPlayer::Params::make_options_description() {

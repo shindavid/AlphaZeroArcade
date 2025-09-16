@@ -18,7 +18,7 @@ namespace blokus {
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  public:
   using base_t = generic::HumanTuiPlayer<Game>;
-  void start_game() override;
+  bool start_game() override;
 
  private:
 #pragma pack(push, 1)

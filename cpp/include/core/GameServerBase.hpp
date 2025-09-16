@@ -47,7 +47,7 @@ class GameServerBase {
     std::atomic<bool>& in_critical_section_;
   };
 
-  GameServerBase(int num_game_threads) : num_game_threads_(num_game_threads) {}
+  GameServerBase(int num_game_threads);
 
   void add_client(GameServerClient* client);
 

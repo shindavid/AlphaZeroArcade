@@ -82,7 +82,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   ~Player();
 
   Manager* get_manager() const { return &shared_data_->manager; }
-  void start_game() override;
+  bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void set_facing_human_tui_player() override {
@@ -96,8 +96,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
-  virtual ActionResponse get_action_response_helper(const SearchResults*,
-                                                    const ActionMask& valid_actions);
+  virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
 
   struct VerboseInfo {
     PolicyTensor action_policy;

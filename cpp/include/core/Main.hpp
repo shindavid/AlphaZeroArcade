@@ -3,7 +3,6 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
-#include "core/TrainingDataWriter.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -17,8 +16,6 @@ struct Main {
   using GameServerParams = GameServer::Params;
   using GameServerProxy = core::GameServerProxy<Game>;
   using Player = core::AbstractPlayer<Game>;
-  using TrainingDataWriter = core::TrainingDataWriter<Game>;
-  using TrainingDataWriterParams = TrainingDataWriter::Params;
 
   struct Args {
     std::vector<std::string> player_strs;

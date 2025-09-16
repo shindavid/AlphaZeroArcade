@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/CppUtil.hpp"
-#include "util/StringUtil.hpp"
 
 #include <boost/dynamic_bitset.hpp>
 #include <boost/filesystem.hpp>

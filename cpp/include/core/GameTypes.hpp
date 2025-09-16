@@ -56,18 +56,26 @@ struct GameTypes {
    * position 11 (the opponent's reply), even if we don't sample position 11.
    */
   struct TrainingInfo {
-    PolicyTensor* policy_target = nullptr;
-    ActionValueTensor* action_values_target = nullptr;
-    ActionValueTensor* action_value_uncertainties_target = nullptr;
+    void clear() { *this = TrainingInfo(); }
+
+    PolicyTensor policy_target;
+    ActionValueTensor action_values_target;
+    ActionValueTensor action_value_uncertainties_target;
     float Q_prior = 0;
     float Q_posterior = 0;
     bool use_for_training = false;
+    bool policy_target_valid = false;
+    bool action_values_target_valid = false;
+    bool action_value_uncertainties_target_valid = false;
   };
 
-  struct ChangeEventPreHandleRequest {
-    ChangeEventPreHandleRequest(const YieldNotificationUnit& u) : notification_unit(u) {}
+  struct ChangeEventHandleRequest {
+    ChangeEventHandleRequest(const YieldNotificationUnit& u, const State& s, action_t ca)
+        : notification_unit(u), state(s), chance_action(ca) {}
 
-    YieldNotificationUnit notification_unit;
+    const YieldNotificationUnit& notification_unit;
+    const State& state;
+    action_t chance_action;
   };
 
   struct ActionRequest {
@@ -116,23 +124,11 @@ struct GameTypes {
       return r;
     }
 
-    TrainingInfo training_info;
     action_t action = -1;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
     bool resign_game = false;  // If true, the player resigns the game.
-  };
-
-  struct ChanceEventPreHandleResponse {
-    ChanceEventPreHandleResponse(ActionValueTensor* a = nullptr,
-                                 core::yield_instruction_t y = core::kContinue)
-        : action_values(a), yield_instruction(y) {}
-
-    static auto yield() { return ChanceEventPreHandleResponse(nullptr, core::kYield); }
-
-    ActionValueTensor* action_values = nullptr;
-    core::yield_instruction_t yield_instruction = core::kContinue;
   };
 
   /*

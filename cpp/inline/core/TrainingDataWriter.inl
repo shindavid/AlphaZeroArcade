@@ -2,7 +2,6 @@
 
 #include "core/LoopControllerClient.hpp"
 #include "core/PerfStats.hpp"
-#include "util/BoostUtil.hpp"
 #include "util/CppUtil.hpp"
 
 #include <format>
@@ -11,23 +10,16 @@
 namespace core {
 
 template <concepts::Game Game>
-auto TrainingDataWriter<Game>::Params::make_options_description() {
-  namespace po = boost::program_options;
-  namespace po2 = boost_util::program_options;
+TrainingDataWriter<Game>* TrainingDataWriter<Game>::instance() {
+  const TrainingParams& params = TrainingParams::instance();
+  if (!params.enabled) return nullptr;
 
-  po2::options_description desc("TrainingDataWriter options");
-  return desc
-    .template add_option<"max-rows", 'M'>(po::value<int64_t>(&max_rows)->default_value(max_rows),
-                                          "if specified, kill process after writing this many rows")
-    .template add_option<"heartbeat-frequency-seconds", 'H'>(
-      po::value<float>(&heartbeat_frequency_seconds)->default_value(heartbeat_frequency_seconds),
-      "heartbeat frequency in seconds")
-    .template add_flag<"enable-training", "disable-training">(&enabled, "enable training",
-                                                              "disable training");
+  static TrainingDataWriter instance(params);
+  return &instance;
 }
 
 template <concepts::Game Game>
-TrainingDataWriter<Game>::TrainingDataWriter(GameServerBase* server, const Params& params) {
+TrainingDataWriter<Game>::TrainingDataWriter(const TrainingParams& params) {
   misc_data_.params = params;
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
@@ -46,7 +38,7 @@ TrainingDataWriter<Game>::TrainingDataWriter(GameServerBase* server, const Param
   misc_data_.heartbeat_interval =
     std::chrono::milliseconds(int64_t(1e3 * params.heartbeat_frequency_seconds));
   misc_data_.thread = new mit::thread([&] { loop(); });
-  misc_data_.num_game_threads = server->num_game_threads();
+  misc_data_.num_game_threads = params.num_game_threads;
 }
 
 template <concepts::Game Game>
@@ -55,11 +47,29 @@ TrainingDataWriter<Game>::~TrainingDataWriter() {
 }
 
 template <concepts::Game Game>
+TrainingDataWriter<Game>::GameWriteLog_sptr TrainingDataWriter<Game>::get_game_log(game_id_t id) {
+  mit::unique_lock lock(active_logs_mutex_);
+
+  auto it = active_logs_.find(id);
+  if (it != active_logs_.end()) {
+    return it->second;
+  }
+
+  int64_t start_timestamp = util::ns_since_epoch();
+  GameWriteLog_sptr log = std::make_shared<GameWriteLog>(id, start_timestamp);
+  active_logs_[id] = log;
+  return log;
+}
+
+template <concepts::Game Game>
 void TrainingDataWriter<Game>::add(GameWriteLog_sptr data) {
   mit::unique_lock lock(game_queue_mutex_);
   game_queue_data_.completed_games[game_queue_data_.queue_index].push_back(data);
   lock.unlock();
   game_queue_cv_.notify_one();
+
+  mit::unique_lock lock2(active_logs_mutex_);
+  active_logs_.erase(data->id());
 }
 
 template <concepts::Game Game>

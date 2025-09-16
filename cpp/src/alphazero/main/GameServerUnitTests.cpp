@@ -49,6 +49,7 @@ class GameServerTest : public testing::Test {
     using base_t = generic::alpha0::Player<Traits>;
     using ActionMask = base_t::ActionMask;
     using ActionResponse = base_t::ActionResponse;
+    using ActionRequest = base_t::ActionRequest;
 
     using base_t::base_t;
 
@@ -64,12 +65,12 @@ class GameServerTest : public testing::Test {
 
    protected:
     ActionResponse get_action_response_helper(const SearchResults* results,
-                                              const ActionMask& valid_actions) override {
+                                              const ActionRequest& request) override {
       if (!test_->is_recorded_) {
         boost_util::pretty_print(test_->ss_result_, results->to_json());
         test_->is_recorded_ = true;
       }
-      return base_t::get_action_response_helper(results, valid_actions);
+      return base_t::get_action_response_helper(results, request);
     }
 
     GameServerTest* test_ = nullptr;

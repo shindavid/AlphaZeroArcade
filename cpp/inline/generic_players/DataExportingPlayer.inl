@@ -7,85 +7,97 @@
 namespace generic {
 
 template <typename BasePlayer>
+core::yield_instruction_t DataExportingPlayer<BasePlayer>::handle_chance_event(
+  const ChangeEventHandleRequest& request) {
+  if (!game_log_) return core::kContinue;
+  if (!this->owns_shared_data_) return core::kContinue;  // so only one player handles chance events
+
+  if (!mid_handle_chance_event_) {
+    // Sample chance events at the same frequency as we do for player events. This seems right, as
+    // it ensures that chance events are represented in the training data proportionally to how
+    // often they occur in the game.
+    if (this->get_random_search_mode() != core::kFull) return core::kContinue;
+    mid_handle_chance_event_ = true;
+    training_info_.clear();
+  }
+
+  core::yield_instruction_t instruction =
+    this->get_manager()->load_root_action_values(request.notification_unit, training_info_);
+
+  if (instruction == core::kContinue) {
+    mid_handle_chance_event_ = false;
+    game_log_->add(request.state, request.chance_action, this->get_my_seat(), training_info_);
+  }
+  return instruction;
+}
+
+template <typename BasePlayer>
+bool DataExportingPlayer<BasePlayer>::start_game() {
+  if (writer_) {
+    if (writer_->closed()) return false;
+    game_log_ = writer_->get_game_log(this->get_game_id());
+  }
+  return true;
+}
+
+template <typename BasePlayer>
+void DataExportingPlayer<BasePlayer>::end_game(const State& state, const ValueTensor& outcome) {
+  if (!game_log_) return;
+  game_log_->add_terminal(state, outcome);  // redundant if multiple players, but that's ok
+  writer_->add(game_log_);
+}
+
+template <typename BasePlayer>
 DataExportingPlayer<BasePlayer>::ActionResponse
 DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults* mcts_results,
-                                                            const ActionMask& valid_actions) {
-  ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, valid_actions);
-
-  GameWriteLog_sptr game_log = this->get_game_log();
-  use_for_training_ = game_log && this->search_mode_ == core::kFull;
-
-  // TODO: if we have chance-events between player-events, we should compute this bool
-  // differently.
-  previous_used_for_training_ =
-    game_log && game_log->was_previous_entry_used_for_policy_training();
-
-  core::seat_index_t my_seat = this->get_my_seat();
-
-  // TODO: dispatch to Algorithms:: here
-  float Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[my_seat];
-  float Q_posterior = mcts_results->win_rates(my_seat);
-
-  TrainingInfo& training_info = response.training_info;
-  training_info.policy_target = nullptr;
-  training_info.action_values_target = nullptr;
-  training_info.Q_prior = Q_prior;
-  training_info.Q_posterior = Q_posterior;
-  training_info.use_for_training = use_for_training_;
-
-  if (use_for_training_ || previous_used_for_training_) {
-    training_info.policy_target = &policy_target_;
-    extract_policy_target(mcts_results, &training_info.policy_target);
-  }
-  if (use_for_training_) {
-    action_values_target_ = mcts_results->action_values;
-    training_info.action_values_target = &action_values_target_;
-  }
+                                                            const ActionRequest& request) {
+  ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
+  add_to_game_log(request, response, mcts_results);
 
   return response;
 }
 
 template <typename BasePlayer>
-typename DataExportingPlayer<BasePlayer>::ChanceEventPreHandleResponse
-DataExportingPlayer<BasePlayer>::prehandle_chance_event(
-  const ChangeEventPreHandleRequest& request) {
-  // So that only one player outputs the action values.
-  if (!this->owns_shared_data_) {
-    return ChanceEventPreHandleResponse();
+void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& request,
+                                                      const ActionResponse& response,
+                                                      const SearchResults* mcts_results) {
+  if (!game_log_) return;
+
+  bool use_for_training = this->search_mode_ == core::kFull;
+
+  // TODO: if we have chance-events between player-events, we should compute this bool
+  // differently.
+  bool previous_used_for_training = game_log_->was_previous_entry_used_for_policy_training();
+
+  // TODO: dispatch to Algorithms:: here
+  training_info_.clear();
+  core::seat_index_t my_seat = this->get_my_seat();
+  training_info_.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[my_seat];
+  training_info_.Q_posterior = mcts_results->win_rates(my_seat);
+
+  if (use_for_training || previous_used_for_training) {
+    extract_policy_target(mcts_results);
+  }
+  if (use_for_training) {
+    training_info_.action_values_target = mcts_results->action_values;
+    training_info_.action_values_target_valid = true;
   }
 
-  if (!mid_prehandle_chance_event_) {
-    // Sample chance events at the same frequency as we do for player events. This seems right, as
-    // it ensures that chance events are represented in the training data proportionally to how
-    // often they occur in the game.
-    if (this->get_random_search_mode() != core::kFull) {
-      return ChanceEventPreHandleResponse();
-    }
-    mid_prehandle_chance_event_ = true;
-  }
-
-  core::yield_instruction_t i =
-    this->get_manager()->load_root_action_values(request.notification_unit, action_values_target_);
-
-  if (i == core::kContinue) {
-    mid_prehandle_chance_event_ = false;
-    return ChanceEventPreHandleResponse(&action_values_target_, core::kContinue);
-  } else {
-    return ChanceEventPreHandleResponse(nullptr, i);
-  }
+  game_log_->add(request.state, response.action, my_seat, training_info_);
 }
 
 template <typename BasePlayer>
-void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults* mcts_results,
-                                                            PolicyTensor** target) {
-  **target = mcts_results->policy_target;
-  float sum = eigen_util::sum(**target);
+void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults* mcts_results) {
+  auto& target = training_info_.policy_target;
+  target = mcts_results->policy_target;
+
+  float sum = eigen_util::sum(target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
     // python training code will ignore these rows for policy training.
-    *target = nullptr;
+    training_info_.policy_target_valid = false;
   } else {
-    **target = mcts_results->action_symmetry_table.symmetrize(**target);
-    **target = **target / eigen_util::sum(**target);
+    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = target / eigen_util::sum(target);
   }
 }
 

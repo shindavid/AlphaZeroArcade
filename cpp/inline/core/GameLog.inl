@@ -492,11 +492,6 @@ GameWriteLog<Game>::~GameWriteLog() {
 template <concepts::Game Game>
 void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t active_seat,
                              const TrainingInfo& training_info) {
-  PolicyTensor* policy_target = training_info.policy_target;
-  ActionValueTensor* action_values_target = training_info.action_values_target;
-  ActionValueTensor* action_value_uncertainties_target =
-    training_info.action_value_uncertainties_target;
-
   float Q_prior = training_info.Q_prior;
   float Q_posterior = training_info.Q_posterior;
   bool use_for_training = training_info.use_for_training;
@@ -505,20 +500,20 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
   WriteEntry* entry = new WriteEntry();
   entry->position = state;
 
-  if (policy_target) {
-    entry->policy_target = *policy_target;
+  if (training_info.policy_target_valid) {
+    entry->policy_target = training_info.policy_target;
   } else {
     entry->policy_target.setZero();
   }
 
-  if (action_values_target) {
-    entry->action_values = *action_values_target;
+  if (training_info.action_values_target_valid) {
+    entry->action_values = training_info.action_values_target;
   } else {
     entry->action_values.setZero();
   }
 
-  if (action_value_uncertainties_target) {
-    entry->action_value_uncertainties = *action_value_uncertainties_target;
+  if (training_info.action_value_uncertainties_target_valid) {
+    entry->action_value_uncertainties = training_info.action_value_uncertainties_target;
   } else {
     entry->action_value_uncertainties.setZero();
   }
@@ -528,16 +523,15 @@ void GameWriteLog<Game>::add(const State& state, action_t action, seat_index_t a
   entry->Q_posterior = Q_posterior;
   entry->active_seat = active_seat;
   entry->use_for_training = use_for_training;
-  entry->policy_target_valid = policy_target != nullptr;
-  entry->action_values_valid = action_values_target != nullptr;
-  entry->action_value_uncertainties_valid = action_value_uncertainties_target != nullptr;
+  entry->policy_target_valid = training_info.policy_target_valid;
+  entry->action_values_valid = training_info.action_values_target_valid;
+  entry->action_value_uncertainties_valid = training_info.action_value_uncertainties_target_valid;
   entries_.push_back(entry);
   sample_count_ += use_for_training;
 }
 
 template <concepts::Game Game>
 void GameWriteLog<Game>::add_terminal(const State& state, const ValueTensor& outcome) {
-  RELEASE_ASSERT(!terminal_added_);
   terminal_added_ = true;
   final_state_ = state;
   outcome_ = outcome;

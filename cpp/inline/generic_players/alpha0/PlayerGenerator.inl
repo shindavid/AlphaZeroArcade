@@ -1,5 +1,6 @@
 #include "generic_players/alpha0/PlayerGenerator.hpp"
 
+#include "core/TrainingDataWriter.hpp"
 #include "search/Constants.hpp"
 
 #include <format>
@@ -95,6 +96,18 @@ PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_shared_data() {
     }
     return std::make_shared<SharedData>(common_node_mutex_pool_, common_context_mutex_pool_,
                                         manager_params_, server_);
+  }
+}
+
+template <search::concepts::Traits Traits>
+void TrainingPlayerGenerator<Traits>::end_session() {
+  Base::end_session();
+
+  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+
+  TrainingDataWriter* writer = TrainingDataWriter::instance();
+  if (writer) {
+    writer->wait_until_batch_empty();
   }
 }
 

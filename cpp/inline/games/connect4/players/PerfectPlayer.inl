@@ -30,7 +30,10 @@ inline PerfectPlayer::PerfectPlayer(OraclePool* oracle_pool, const Params& param
   CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 21, "strength must be in [0, 21]");
 }
 
-inline void PerfectPlayer::start_game() { move_history_.reset(); }
+inline bool PerfectPlayer::start_game() { 
+  move_history_.reset();
+  return true;
+}
 
 inline void PerfectPlayer::receive_state_change(core::seat_index_t, const State&,
                                                 core::action_t action) {

@@ -151,10 +151,15 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchReq
 
 /*
  * Here, we do a skimmed-down version of Manager::search()
+ *
+ * TODO: dispatch to Algorithms:: here, since different paradigms want to fill in training_info
+ * differently.
  */
 template <search::concepts::Traits Traits>
 core::yield_instruction_t Manager<Traits>::load_root_action_values(
-  const core::YieldNotificationUnit& notification_unit, ActionValueTensor& action_values) {
+  const core::YieldNotificationUnit& notification_unit, TrainingInfo& training_info) {
+  ActionValueTensor& action_values = training_info.action_values_target;
+
   if (!mid_load_root_action_values_) {
     action_values.setZero();
     Algorithms::init_root_info(general_context_, kToLoadRootActionValues);

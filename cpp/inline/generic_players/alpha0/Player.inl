@@ -105,12 +105,13 @@ inline Player<Traits>::~Player() {
 }
 
 template <search::concepts::Traits Traits>
-inline void Player<Traits>::start_game() {
+inline bool Player<Traits>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
     get_manager()->start();
   }
+  return true;
 }
 
 template <search::concepts::Traits Traits>
@@ -145,7 +146,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  return get_action_response_helper(response.results, request.valid_actions);
+  return get_action_response_helper(response.results, request);
 }
 
 template <search::concepts::Traits Traits>
@@ -165,8 +166,8 @@ void Player<Traits>::init_search_mode(const ActionRequest& request) {
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
-  const SearchResults* mcts_results, const ActionMask& valid_actions) {
-  PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
+  const SearchResults* mcts_results, const ActionRequest& request) {
+  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 
   if (verbose_info_) {
     verbose_info_->action_policy = modified_policy;
@@ -174,7 +175,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
     verbose_info_->initialized = true;
   }
   core::action_t action = eigen_util::sample(modified_policy);
-  RELEASE_ASSERT(valid_actions[action]);
+  RELEASE_ASSERT(request.valid_actions[action]);
   return action;
 }
 

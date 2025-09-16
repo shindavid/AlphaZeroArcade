@@ -71,6 +71,7 @@ class Manager {
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using TrainingInfo = Game::Types::TrainingInfo;
 
   using post_visit_func_t = std::function<void()>;
 
@@ -166,7 +167,7 @@ class Manager {
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
   core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
-                                                    ActionValueTensor& action_values);
+                                                    TrainingInfo&);
   const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
   const RootInfo* root_info() const { return &general_context_.root_info; }
   LookupTable* lookup_table() { return &general_context_.lookup_table; }

@@ -2,6 +2,7 @@
 
 #include "util/Asserts.hpp"
 #include "util/Random.hpp"
+#include "util/StringUtil.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>

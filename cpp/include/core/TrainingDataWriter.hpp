@@ -1,13 +1,12 @@
 #pragma once
 
 #include "core/GameLog.hpp"
-#include "core/GameServerBase.hpp"
 #include "core/LoopControllerListener.hpp"
+#include "core/TrainingParams.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
-#include <cstdint>
 #include <vector>
 
 namespace core {
@@ -71,24 +70,16 @@ class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kDataRequest> {
  public:
-  struct Params {
-    auto make_options_description();
-    bool operator==(const Params& other) const = default;
-
-    int64_t max_rows = 0;
-    float heartbeat_frequency_seconds = 1.0;
-    bool enabled = false;
-  };
-
   using ValueArray = Game::Types::ValueArray;
 
   using GameLogSerializer = core::GameLogSerializer<Game>;
   using GameWriteLog = core::GameWriteLog<Game>;
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
-  TrainingDataWriter(GameServerBase*, const Params& params);
+  static TrainingDataWriter* instance();
   ~TrainingDataWriter();
 
+  GameWriteLog_sptr get_game_log(game_id_t id);
   void add(GameWriteLog_sptr log);
   void shut_down();
   bool closed() const { return misc_data_.closed; }
@@ -103,6 +94,7 @@ class TrainingDataWriter
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using game_queue_t = std::vector<GameWriteLog_sptr>;
 
+  TrainingDataWriter(const TrainingParams& params);
   const auto& heartbeat_interval() const { return misc_data_.heartbeat_interval; }
 
   void loop();
@@ -143,7 +135,7 @@ class TrainingDataWriter
    * These data members do not require mutex protection, as they are not accessed concurrently.
    */
   struct MiscData {
-    Params params;
+    TrainingParams params;
     mit::thread* thread;
     std::chrono::nanoseconds heartbeat_interval;
     bool closed = false;
@@ -156,11 +148,13 @@ class TrainingDataWriter
   GameQueueData game_queue_data_;
   BatchData batch_data_;
   GameLogSerializer serializer_;
+  std::map<game_id_t, GameWriteLog_sptr> active_logs_;
 
   mit::condition_variable game_queue_cv_;
   mit::condition_variable batch_cv_;
   mutable mit::mutex game_queue_mutex_;
   mutable mit::mutex batch_mutex_;
+  mutable mit::mutex active_logs_mutex_;
 };
 
 }  // namespace core
