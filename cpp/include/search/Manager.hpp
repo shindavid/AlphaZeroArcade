@@ -70,11 +70,12 @@ class Manager {
 
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
 
   using post_visit_func_t = std::function<void()>;
 
-  static_assert(search::concepts::Algorithms<Algorithms, ValueArray, SearchContext, GeneralContext,
-                                             SearchResults, Node, Edge>);
+  static_assert(search::concepts::Algorithms<Algorithms, PolicyTensor, ValueArray, SearchContext,
+                                             GeneralContext, SearchResults, Node, Edge>);
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 

@@ -5,6 +5,7 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
+#include "search/AlgorithmsFor.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
@@ -49,6 +50,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
+  using Algorithms = search::AlgorithmsForT<Traits>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::beta0::ManagerParams<EvalSpec>;
   using SearchResults = ::beta0::SearchResults<Game>;
@@ -96,9 +98,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual ActionResponse get_action_response_helper(const SearchResults*,
                                                     const ActionMask& valid_actions);
-
-  void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                          const SearchResults& results) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;

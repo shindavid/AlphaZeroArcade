@@ -6,6 +6,8 @@
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 
+#include <ostream>
+
 namespace beta0 {
 
 template <search::concepts::Traits Traits>
@@ -32,6 +34,7 @@ class Algorithms {
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
+  using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::Types::ValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
@@ -55,6 +58,8 @@ class Algorithms {
 
   static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);
+  static void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                                 const SearchResults& results, int n_rows_to_display);
 
  private:
   template <typename MutexProtectedFunc>
