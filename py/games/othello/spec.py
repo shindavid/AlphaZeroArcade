@@ -84,7 +84,7 @@ class CNN_b9_c128(ModelConfigGenerator):
         )
 
 
-class Hybrid(ModelConfigGenerator):
+class CNNb2TransformerL2(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -126,7 +126,6 @@ class Hybrid(ModelConfigGenerator):
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
                 ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
                 ModuleSpec(type='ChessformerBlock', args=[
                     cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                            kwargs={
@@ -171,7 +170,7 @@ class Hybrid(ModelConfigGenerator):
         )
 
 
-class ShallowCNN(ModelConfigGenerator):
+class CNN_b2_c128(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -206,7 +205,6 @@ class ShallowCNN(ModelConfigGenerator):
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
                 ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
                 ],
 
             neck=None,
@@ -323,7 +321,7 @@ class OthelloSpec(GameSpec):
         'b9_c128': CNN_b9_c128,
         'chessformer': Chessformer,
         'hybrid': Hybrid,
-        'shallow_cnn': ShallowCNN,
+        'cnn_b2': CNN_b2_c128,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 15)
     ref_neighborhood_size = 5
