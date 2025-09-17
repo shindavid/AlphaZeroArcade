@@ -185,7 +185,6 @@ plot thus indicates that the system approximately matches perfect play within ab
 Note: although we only need 3 minutes of self-play runtime, the actual wall-clock time is quite a bit more, as that includes:
 
 - Neural network train-time
-- TensorRT build-time (to export the trained models)
 - Evaluation time (test matches against benchmark agents)
 
 However, on a more mature compute setup, all these components could be performed by separate servers, while on my laptop, these
@@ -196,8 +195,7 @@ You can also manually play against an MCTS agent powered by a net produced by th
 example, you can do this with a command like:
 
 ```
-./target/Release/bin/c4 --player "--type=TUI" \
-  --player "--type=MCTS-C -m /workspace/output/c4/my-first-run/models/gen-10.pt"
+./py/play_in_browser.py -g c4 -t my-first-run
 ```
 
 NOTE: By way of comparison, this oft-cited blog-post [series](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
@@ -248,27 +246,20 @@ later in the list.
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
 * `nnet`: classes used to represent neural-network evaluations, and services that produce them
 * `search`: generic tree-search algorithms and data structures
-* `mcts`: generic instantiations of `search` algorithms/data-structures for MCTS
+* `alphazero`: generic instantiations of `search` algorithms/data-structures for AlphaZero
 * `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
 * `generic_players`: generic player implementations that can be used for any game
 
 ### Game Types as C++ Template Parameters
 
-The MCTS code is entirely templated based on the game type. This can make the code a bit daunting at first. What drove
+Much of the code is entirely templated based on the game type. This can make the code a bit daunting at first. What drove
 this decision?
 
-A high-performance MCTS implementation should aim to saturate both GPU and CPU resources via parallelism. When CPU
-resources are fully saturated, it is common for the PUCT calculation that powers MCTS to become a bottleneck. In order
-to optimize this calculation, it is important for the various tensors involved to have sizes and types known at compile
+A high-performance AlphaZero implementation should aim to saturate both GPU and CPU resources via parallelism. In order
+to optimize the CPU side, it is important for the various tensors involved to have sizes and types known at compile
 time. If the sizes and types are specified at runtime, then the tensor calculations can hide a lot of inefficient
 dynamic memory allocation/deallocation and virtual dispatch under the hood.
 
 Fundamentally, this consideration drove the design of this framework to specify the game type as a template parameter.
 The simpler alternative would have been to use an abstract game-type base class and inheritance, but this would incur
 the performance penalty described above.
-
-Note: most MCTS implementations are for 1-player games or 2-player zero-sum games. In such games, the value of a state
-can be represented as a scalar. This implementation, however, supports n-player games for arbitrary n, and so the value
-is instead represented as a 1D tensor. This is another reason why compile-time knowledge of the game type helps,
-as otherwise, all value-calculations (which are simply scalar calculations in typical MCTS implementations) would incur
-dynamic memory allocation/deallocation.
