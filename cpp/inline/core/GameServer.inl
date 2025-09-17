@@ -735,7 +735,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChangeEventHandleRequest request(notification_unit, state_history_.current(), chance_action_);
+    ChanceEventHandleRequest request(notification_unit, state_history_.current(), chance_action_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 

@@ -1,6 +1,7 @@
 #include "generic_players/beta0/PlayerGenerator.hpp"
 
 #include "search/Constants.hpp"
+#include "search/TrainingDataWriter.hpp"
 
 #include <format>
 
@@ -99,7 +100,7 @@ template <search::concepts::Traits Traits>
 void TrainingPlayerGenerator<Traits>::end_session() {
   Base::end_session();
 
-  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+  using TrainingDataWriter = search::TrainingDataWriter<Traits>;
 
   TrainingDataWriter* writer = TrainingDataWriter::instance();
   if (writer) {

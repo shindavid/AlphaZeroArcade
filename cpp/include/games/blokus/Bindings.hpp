@@ -12,7 +12,6 @@
 namespace blokus::alpha0 {
 
 struct TrainingTargets {
-  using GameLogView = blokus::Game::Types::GameLogView;
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
   using OwnershipShape = Eigen::Sizes<kNumPlayers + 1, kBoardDimension, kBoardDimension>;
   using ScoreShape = Eigen::Sizes<2, kVeryBadScore + 1, kNumPlayers>;  // pdf/cdf, score, player
@@ -26,6 +25,7 @@ struct TrainingTargets {
     static constexpr const char* kName = "score";
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
+    template <typename GameLogView>
     static bool tensorize(const GameLogView& view, Tensor&);
   };
 
@@ -36,6 +36,7 @@ struct TrainingTargets {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
+    template <typename GameLogView>
     static bool tensorize(const GameLogView& view, Tensor&);
   };
 
@@ -46,6 +47,7 @@ struct TrainingTargets {
     static constexpr const char* kName = "unplayed_pieces";
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
+    template <typename GameLogView>
     static bool tensorize(const GameLogView& view, Tensor&);
   };
 

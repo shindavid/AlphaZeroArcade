@@ -1,18 +1,29 @@
 #pragma once
 
 #include "search/Constants.hpp"
+#include "search/GameLogBase.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/PuctCalculator.hpp"
 #include "search/SearchContext.hpp"
+#include "search/TrainingInfoParams.hpp"
 #include "search/TraitsTypes.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 #include <ostream>
+#include <vector>
 
 namespace search {
 
 // For now, we have alpha0::Algorithms and beta0::Algorithms inherit from this base class to reduce
 // code duplication. In the future, as we specialize the algorithms, we may want to move functions
 // from here to the derived classes.
+//
+// TODO: add some signatures to concepts::Algorithms:
+//
+// - write_to_training_info()
+// - to_record()
+// - compactify_record()
+// - to_view()
 template <search::concepts::Traits Traits>
 class AlgorithmsBase {
  public:
@@ -21,12 +32,18 @@ class AlgorithmsBase {
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
+  using TrainingInfo = Traits::TrainingInfo;
+  using GameLogCompactRecord = Traits::GameLogCompactRecord;
+  using GameLogFullRecord = Traits::GameLogFullRecord;
+  using GameLogView = Traits::GameLogView;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using LookupTable = TraitsTypes::LookupTable;
 
   using PuctCalculator = search::PuctCalculator<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using SearchContext = search::SearchContext<Traits>;
+  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
+  using TensorData = search::GameLogBase<Traits>::TensorData;
 
   using RootInfo = GeneralContext::RootInfo;
   using Visitation = TraitsTypes::Visitation;
@@ -37,7 +54,6 @@ class AlgorithmsBase {
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using TrainingInfo = Game::Types::TrainingInfo;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::Types::ValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -60,9 +76,10 @@ class AlgorithmsBase {
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
 
-  static void write_to_training_info(TrainingInfo& training_info_,
-                                     const SearchResults* mcts_results, bool use_for_training,
-                                     bool previous_used_for_training, core::seat_index_t seat);
+  static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
+  static void to_record(const TrainingInfo&, GameLogFullRecord&);
+  static void serialize_record(const GameLogFullRecord&, std::vector<char>& buf);
+  static void to_view(const GameLogCompactRecord&, GameLogView&);
 
   static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);

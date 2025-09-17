@@ -157,11 +157,9 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchReq
  */
 template <search::concepts::Traits Traits>
 core::yield_instruction_t Manager<Traits>::load_root_action_values(
-  const core::YieldNotificationUnit& notification_unit, TrainingInfo& training_info) {
-  ActionValueTensor& action_values = training_info.action_values_target;
-
+  const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
+  TrainingInfo& training_info) {
   if (!mid_load_root_action_values_) {
-    action_values.setZero();
     Algorithms::init_root_info(general_context_, kToLoadRootActionValues);
 
     // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
@@ -174,7 +172,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     mid_load_root_action_values_ = true;
   }
 
-  SearchRequest request(notification_unit);
+  SearchRequest request(chance_request.notification_unit);
   SearchResponse response = search(request);
   if (response.yield_instruction == core::kYield) return core::kYield;
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
@@ -186,6 +184,9 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   group::element_t sym = root_info()->canonical_sym;
 
   RELEASE_ASSERT(Rules::is_chance_mode(mode));
+
+  ActionValueTensor& action_values = training_info.action_values_target;
+  action_values.setZero();
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
@@ -201,6 +202,12 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     }
     i++;
   }
+
+  training_info.state = chance_request.state;
+  training_info.action = chance_request.chance_action;
+  training_info.use_for_training = true;
+  training_info.active_seat = seat;
+  training_info.action_values_target_valid = true;
 
   mid_load_root_action_values_ = false;
   return core::kContinue;

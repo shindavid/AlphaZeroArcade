@@ -1,15 +1,16 @@
 #pragma once
 
-#include "core/GameLog.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/TrainingParams.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "search/GameLog.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
+#include <map>
 #include <vector>
 
-namespace core {
+namespace search {
 
 /*
  * Noteworthy implementation details:
@@ -65,21 +66,22 @@ namespace core {
  * can produce more data in total than the loop controller actually needs. This is fine; the
  * loop-controller will simply ignore the extra data.
  */
-template <concepts::Game Game>
+template <search::concepts::Traits Traits>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kDataRequest> {
  public:
+  using Game = Traits::Game;
   using ValueArray = Game::Types::ValueArray;
 
-  using GameLogSerializer = core::GameLogSerializer<Game>;
-  using GameWriteLog = core::GameWriteLog<Game>;
+  using GameLogSerializer = search::GameLogSerializer<Traits>;
+  using GameWriteLog = search::GameWriteLog<Traits>;
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   static TrainingDataWriter* instance();
   ~TrainingDataWriter();
 
-  GameWriteLog_sptr get_game_log(game_id_t id);
+  GameWriteLog_sptr get_game_log(core::game_id_t id);
   void add(GameWriteLog_sptr log);
   void shut_down();
   bool closed() const { return misc_data_.closed; }
@@ -94,7 +96,7 @@ class TrainingDataWriter
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using game_queue_t = std::vector<GameWriteLog_sptr>;
 
-  TrainingDataWriter(const TrainingParams& params);
+  TrainingDataWriter(const core::TrainingParams& params);
   const auto& heartbeat_interval() const { return misc_data_.heartbeat_interval; }
 
   void loop();
@@ -135,7 +137,7 @@ class TrainingDataWriter
    * These data members do not require mutex protection, as they are not accessed concurrently.
    */
   struct MiscData {
-    TrainingParams params;
+    core::TrainingParams params;
     mit::thread* thread;
     std::chrono::nanoseconds heartbeat_interval;
     bool closed = false;
@@ -148,7 +150,7 @@ class TrainingDataWriter
   GameQueueData game_queue_data_;
   BatchData batch_data_;
   GameLogSerializer serializer_;
-  std::map<game_id_t, GameWriteLog_sptr> active_logs_;
+  std::map<core::game_id_t, GameWriteLog_sptr> active_logs_;
 
   mit::condition_variable game_queue_cv_;
   mit::condition_variable batch_cv_;
@@ -157,6 +159,6 @@ class TrainingDataWriter
   mutable mit::mutex active_logs_mutex_;
 };
 
-}  // namespace core
+}  // namespace search
 
-#include "inline/core/TrainingDataWriter.inl"
+#include "inline/search/TrainingDataWriter.inl"

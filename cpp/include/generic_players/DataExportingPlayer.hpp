@@ -1,7 +1,8 @@
 #pragma once
 
-#include "core/TrainingDataWriter.hpp"
 #include "search/AlgorithmsFor.hpp"
+#include "search/TrainingDataWriter.hpp"
+#include "search/TrainingInfoParams.hpp"
 
 namespace generic {
 
@@ -25,14 +26,16 @@ class DataExportingPlayer : public BasePlayer {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ChangeEventHandleRequest = Game::Types::ChangeEventHandleRequest;
-  using TrainingInfo = Game::Types::TrainingInfo;
+  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
+
+  using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
+  using TrainingDataWriter = search::TrainingDataWriter<Traits>;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
   using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 
@@ -40,7 +43,7 @@ class DataExportingPlayer : public BasePlayer {
   DataExportingPlayer(Ts&&... args)
       : BasePlayer(std::forward<Ts>(args)...), writer_(TrainingDataWriter::instance()) {}
 
-  core::yield_instruction_t handle_chance_event(const ChangeEventHandleRequest&) override;
+  core::yield_instruction_t handle_chance_event(const ChanceEventHandleRequest&) override;
   bool start_game() override;
   void end_game(const State&, const ValueTensor&) override;
 

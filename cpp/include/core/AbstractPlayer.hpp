@@ -41,7 +41,7 @@ class AbstractPlayer {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ChangeEventHandleRequest = Game::Types::ChangeEventHandleRequest;
+  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
@@ -65,7 +65,7 @@ class AbstractPlayer {
    * In games with chance events, this method is called before the chance event occurs. This gives
    * the player a chance to output action value targets to be used for training.
    */
-  virtual core::yield_instruction_t handle_chance_event(const ChangeEventHandleRequest&) {
+  virtual core::yield_instruction_t handle_chance_event(const ChanceEventHandleRequest&) {
     return core::kContinue;
   }
 

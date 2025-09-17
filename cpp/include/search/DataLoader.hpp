@@ -1,9 +1,9 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/GameLog.hpp"
 #include "core/InputTensorizor.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/GameLog.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -14,7 +14,7 @@
 #include <vector>
 
 /*
- * core::DataLoader<EvalSpec> is a class that is used on the python side via FFI to generate
+ * search::DataLoader<EvalSpec> is a class that is used on the python side via FFI to generate
  * minibatches of training data. We use it instead of pytorch's DataLoader.
  *
  **************
@@ -32,13 +32,13 @@
  *    - s: num samples (typically equals n_minibatches * minibatch_size)
  *    - w: window size
  *
- * Then core::DataLoader<EvalSpec> samples s rows from M[-w:].
+ * Then search::DataLoader<EvalSpec> samples s rows from M[-w:].
  *
  *************
  * Mechanics *
  *************
  *
- * core::DataLoader<EvalSpec> starts by sampling s indices, withouth replacement, from M[-w:]. It
+ * search::DataLoader<EvalSpec> starts by sampling s indices, withouth replacement, from M[-w:]. It
  *then sorts these indices, grouping them by file. Each file can then be read in a single pass.
  *
  * The work of reading each file is done by a worker thread. There are several worker threads,
@@ -48,7 +48,7 @@
  * start reading from the next file, masking filesystem latency.
  */
 
-namespace core {
+namespace search {
 
 struct DataLoaderBase {
   virtual ~DataLoaderBase() = default;
@@ -59,7 +59,7 @@ struct DataLoaderBase {
   using rev_global_index_t = int64_t;  // index within master list M, from the end
   using local_index_t = int32_t;       // index within a single file
   using local_index_vec_t = std::vector<local_index_t>;
-  using sampling_plan_t = std::map<generation_t, local_index_vec_t>;
+  using sampling_plan_t = std::map<core::generation_t, local_index_vec_t>;
   using rev_global_index_vec_t = std::vector<rev_global_index_t>;
 
   // Used to pass parameters to the DataLoader constructor
@@ -101,7 +101,7 @@ struct DataLoaderBase {
     ~DataFile();
 
     const char* filename() const { return filename_.c_str(); }
-    generation_t gen() const { return gen_; }
+    core::generation_t gen() const { return gen_; }
     const int num_rows() const { return num_rows_; }
     int64_t file_size() const { return file_size_; }
 
@@ -118,7 +118,7 @@ struct DataLoaderBase {
 
    private:
     std::string filename_;
-    const generation_t gen_;
+    const core::generation_t gen_;
     const int num_rows_;
     const int64_t file_size_;
 
@@ -231,7 +231,8 @@ struct DataLoaderBase {
     // Launches background prefetching of files. Writes the first and last gen of the sampled rows
     // into gen_range. Also sorts work_units so that the prefetch loop will load files in an order
     // consistent with the order of the work units.
-    void sort_work_units_and_prepare_files(work_unit_deque_t& work_units, generation_t* gen_range);
+    void sort_work_units_and_prepare_files(work_unit_deque_t& work_units,
+                                           core::generation_t* gen_range);
 
     // Called at startup to restore an existing run
     //
@@ -240,7 +241,7 @@ struct DataLoaderBase {
     void restore(const RestoreParams&);
 
     // Add a new generation of data to the manager
-    void append(generation_t gen, int num_rows, int64_t file_size);
+    void append(core::generation_t gen, int num_rows, int64_t file_size);
 
     // Returns the list of files in reverse order by generation
     const file_deque_t& files_in_reverse_order() const { return all_files_; }
@@ -253,7 +254,7 @@ struct DataLoaderBase {
     enum Instruction : int8_t { kUnload, kLoad, kWait, kQuit };
 
     // Unload data files that are no longer needed
-    void trim(generation_t start_gen);
+    void trim(core::generation_t start_gen);
 
     Instruction get_next_instruction() const;
     void prefetch_loop();
@@ -360,16 +361,17 @@ struct DataLoaderBase {
   virtual void load(const LoadParams&) = 0;
 };
 
-template <concepts::EvalSpec EvalSpec>
-class DataLoader : public core::DataLoaderBase {
+template <search::concepts::Traits Traits>
+class DataLoader : public search::DataLoaderBase {
  public:
-  using Game = EvalSpec::Game;
+  using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
   using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
   using AuxTargets = EvalSpec::TrainingTargets::AuxList;
   using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
 
   using InputTensorizor = core::InputTensorizor<Game>;
-  using GameReadLog = core::GameReadLog<EvalSpec>;
+  using GameReadLog = search::GameReadLog<Traits>;
 
   class WorkerThread : public WorkerThreadBase {
    public:
@@ -400,6 +402,6 @@ class DataLoader : public core::DataLoaderBase {
   work_unit_deque_t work_units_;
 };
 
-}  // namespace core
+}  // namespace search
 
-#include "inline/core/DataLoader.inl"
+#include "inline/search/DataLoader.inl"

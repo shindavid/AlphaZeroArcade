@@ -47,32 +47,8 @@ struct GameTypes {
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
-  /*
-   * Whenever use_for_training is true, policy_target_valid and action_values_target_valid should
-   * both be true.
-   *
-   * The reverse, however, is not true: we can have use_for_training false, but have
-   * policy_target_valid or action_values_target_valid true. The reason for this is subtle: it's
-   * because we have an opponent-reply-policy target. If we sample position 10 of the game, then we
-   * want to export the policy target for position 11 (the opponent's reply), even if we don't
-   * sample position 11.
-   */
-  struct TrainingInfo {
-    void clear() { *this = TrainingInfo(); }
-
-    PolicyTensor policy_target;
-    ActionValueTensor action_values_target;
-    ActionValueTensor action_value_uncertainties_target;
-    float Q_prior = 0;
-    float Q_posterior = 0;
-    bool use_for_training = false;
-    bool policy_target_valid = false;
-    bool action_values_target_valid = false;
-    bool action_value_uncertainties_target_valid = false;
-  };
-
-  struct ChangeEventHandleRequest {
-    ChangeEventHandleRequest(const YieldNotificationUnit& u, const State& s, action_t ca)
+  struct ChanceEventHandleRequest {
+    ChanceEventHandleRequest(const YieldNotificationUnit& u, const State& s, action_t ca)
         : notification_unit(u), state(s), chance_action(ca) {}
 
     const YieldNotificationUnit& notification_unit;
@@ -131,39 +107,6 @@ struct GameTypes {
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
     bool resign_game = false;  // If true, the player resigns the game.
-  };
-
-  /*
-   * A (symmetry-adjusted) view of a specific position in a game log.
-   *
-   * This is declared here so that we can properly declare the function signature for the
-   * training-target classes for each specific Game.
-   */
-  struct GameLogView {
-    GameLogView(const State* c, const State* f, const ValueTensor* r, const PolicyTensor* p,
-                const PolicyTensor* np, const ActionValueTensor* av, const ActionValueTensor* avu,
-                float qpr, float qpo, seat_index_t a)
-        : cur_pos(c),
-          final_pos(f),
-          game_result(r),
-          policy(p),
-          next_policy(np),
-          action_values(av),
-          action_value_uncertainties(avu),
-          Q_prior(qpr),
-          Q_posterior(qpo),
-          active_seat(a) {}
-
-    const State* cur_pos;
-    const State* final_pos;
-    const ValueTensor* game_result;
-    const PolicyTensor* policy;
-    const PolicyTensor* next_policy;
-    const ActionValueTensor* action_values;
-    const ActionValueTensor* action_value_uncertainties;
-    const float Q_prior;
-    const float Q_posterior;
-    const seat_index_t active_seat;
   };
 };
 

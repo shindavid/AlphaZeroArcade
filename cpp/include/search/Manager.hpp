@@ -37,6 +37,7 @@ class Manager {
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
+  using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
   using EvalServiceBase = Traits::EvalServiceBase;
   using EvalServiceFactory = Traits::EvalServiceFactory;
@@ -46,6 +47,7 @@ class Manager {
   using LookupTable = TraitsTypes::LookupTable;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
@@ -71,7 +73,6 @@ class Manager {
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using TrainingInfo = Game::Types::TrainingInfo;
 
   using post_visit_func_t = std::function<void()>;
 
@@ -166,8 +167,9 @@ class Manager {
 
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
-  core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
-                                                    TrainingInfo&);
+  core::yield_instruction_t load_root_action_values(const ChanceEventHandleRequest&,
+                                                    core::seat_index_t seat, TrainingInfo&);
+
   const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
   const RootInfo* root_info() const { return &general_context_.root_info; }
   LookupTable* lookup_table() { return &general_context_.lookup_table; }

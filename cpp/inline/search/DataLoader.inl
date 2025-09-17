@@ -1,6 +1,5 @@
-#include "core/DataLoader.hpp"
+#include "search/DataLoader.hpp"
 
-#include "core/GameLog.hpp"
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FileUtil.hpp"
@@ -16,7 +15,7 @@
 #include <cstdlib>
 #include <format>
 
-namespace core {
+namespace search {
 
 inline DataLoaderBase::DataFile::DataFile(const char* filename, int gen, int num_rows,
                                           int64_t file_size)
@@ -76,7 +75,7 @@ inline void DataLoaderBase::SamplingManager::sample(work_unit_deque_t* work_unit
 
   int sample_index = 0;
   int64_t file_end = n_total_rows;
-  generation_t gen = -1;
+  core::generation_t gen = -1;
   for (DataFile* file : files) {
     RELEASE_ASSERT(gen == -1 || file->gen() < gen, "DataFileSet::files() bug");
     gen = file->gen();
@@ -242,14 +241,14 @@ inline void DataLoaderBase::FileManager::add_to_unload_queue(DataFile* file) {
 }
 
 inline void DataLoaderBase::FileManager::sort_work_units_and_prepare_files(
-  work_unit_deque_t& work_units, generation_t* gen_range) {
+  work_unit_deque_t& work_units, core::generation_t* gen_range) {
   mit::unique_lock lock(mutex_);
   load_queue_.clear();
   unload_queue_.clear();
   active_file_count_ = 0;
 
-  generation_t start_gen = -1;
-  generation_t end_gen = -1;
+  core::generation_t start_gen = -1;
+  core::generation_t end_gen = -1;
   if (!work_units.empty()) {
     start_gen = work_units.back().file->gen();
     end_gen = work_units.front().file->gen();
@@ -529,24 +528,24 @@ void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadInstructions& 
   thread_table_.wait_until_all_threads_available();
 }
 
-template <concepts::EvalSpec EvalSpec>
-DataLoader<EvalSpec>::DataLoader(const Params& params)
+template <search::concepts::Traits Traits>
+DataLoader<Traits>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <concepts::EvalSpec EvalSpec>
-void DataLoader<EvalSpec>::restore(const RestoreParams& params) {
+template <search::concepts::Traits Traits>
+void DataLoader<Traits>::restore(const RestoreParams& params) {
   file_manager_.restore(params);
 }
 
-template <concepts::EvalSpec EvalSpec>
-void DataLoader<EvalSpec>::add_gen(const AddGenParams& params) {
+template <search::concepts::Traits Traits>
+void DataLoader<Traits>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <concepts::EvalSpec EvalSpec>
-void DataLoader<EvalSpec>::load(const LoadParams& params) {
+template <search::concepts::Traits Traits>
+void DataLoader<Traits>::load(const LoadParams& params) {
   const file_deque_t& files = file_manager_.files_in_reverse_order();
   int n_samples = params.n_samples;
   int* gen_range = params.gen_range;
@@ -559,15 +558,15 @@ void DataLoader<EvalSpec>::load(const LoadParams& params) {
   shuffle_output(n_samples);
 }
 
-template <concepts::EvalSpec EvalSpec>
-void DataLoader<EvalSpec>::shuffle_output(int n_samples) {
+template <search::concepts::Traits Traits>
+void DataLoader<Traits>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
-template <concepts::EvalSpec EvalSpec>
-void DataLoader<EvalSpec>::init_load_instructions(const LoadParams& params) {
+template <search::concepts::Traits Traits>
+void DataLoader<Traits>::init_load_instructions(const LoadParams& params) {
   int n_targets = params.n_targets;
 
   load_instructions_.apply_symmetry = params.apply_symmetry;
@@ -591,4 +590,4 @@ void DataLoader<EvalSpec>::init_load_instructions(const LoadParams& params) {
   }
 }
 
-}  // namespace core
+}  // namespace search

@@ -2,9 +2,13 @@
 
 #include "betazero/AuxState.hpp"
 #include "betazero/Edge.hpp"
+#include "betazero/GameLogCompactRecord.hpp"
+#include "betazero/GameLogFullRecord.hpp"
+#include "betazero/GameLogView.hpp"
 #include "betazero/ManagerParams.hpp"
 #include "betazero/Node.hpp"
 #include "betazero/SearchResults.hpp"
+#include "betazero/TrainingInfo.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -27,6 +31,10 @@ struct Traits {
   using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
   using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
   using SearchResults = beta0::SearchResults<Game>;
+  using TrainingInfo = beta0::TrainingInfo<Game>;
+  using GameLogCompactRecord = beta0::GameLogCompactRecord<Game>;
+  using GameLogFullRecord = beta0::GameLogFullRecord<Game>;
+  using GameLogView = beta0::GameLogView<Game>;
 };
 
 }  // namespace beta0

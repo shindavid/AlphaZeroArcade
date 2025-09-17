@@ -8,7 +8,7 @@ namespace generic {
 
 template <typename BasePlayer>
 core::yield_instruction_t DataExportingPlayer<BasePlayer>::handle_chance_event(
-  const ChangeEventHandleRequest& request) {
+  const ChanceEventHandleRequest& request) {
   if (!game_log_) return core::kContinue;
   if (!this->owns_shared_data_) return core::kContinue;  // so only one player handles chance events
 
@@ -22,11 +22,11 @@ core::yield_instruction_t DataExportingPlayer<BasePlayer>::handle_chance_event(
   }
 
   core::yield_instruction_t instruction =
-    this->get_manager()->load_root_action_values(request.notification_unit, training_info_);
+    this->get_manager()->load_root_action_values(request, this->get_my_seat(), training_info_);
 
   if (instruction == core::kContinue) {
     mid_handle_chance_event_ = false;
-    game_log_->add(request.state, request.chance_action, this->get_my_seat(), training_info_);
+    game_log_->add(training_info_);
   }
   return instruction;
 }
@@ -72,11 +72,17 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   training_info_.clear();
   core::seat_index_t my_seat = this->get_my_seat();
 
-  // TODO: add signature of this Algorithms function to concepts::Algorithms
-  Algorithms::write_to_training_info(training_info_, mcts_results, use_for_training,
-                                     previous_used_for_training, my_seat);
+  TrainingInfoParams params;
+  params.state = request.state;
+  params.mcts_results = mcts_results;
+  params.action = response.action;
+  params.seat = my_seat;
+  params.use_for_training = use_for_training;
+  params.previous_used_for_training = previous_used_for_training;
 
-  game_log_->add(request.state, response.action, my_seat, training_info_);
+  Algorithms::write_to_training_info(params, training_info_);
+
+  game_log_->add(training_info_);
 }
 
 template <typename BasePlayer>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
+#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -11,8 +11,7 @@ namespace core {
 namespace concepts {
 
 template <typename T, typename Game>
-concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
-                                  typename T::Tensor& tensor_ref, seat_index_t active_seat) {
+concept TrainingTarget = requires {
   // Name of the target. Must match name used in python.
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
 
@@ -36,7 +35,9 @@ concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
 
   // If we have a valid training target, populates tensor_ref and returns true.
   // Otherwise, returns false.
-  { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
+  //
+  // TODO: revive this requirement once if possible...
+  // { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
 
   // Performs an in-place transformation of the tensor into a more usable space.
   // For example, this might be a softmax() if the network training uses cross-entropy loss.
@@ -48,7 +49,9 @@ concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
   // templated to allow this. See core::TrainingTargets.inl for examples.
   //
   // For kPolicyBased == true targets, the tensor will be packed based on ActionMask.
-  { T::transform(tensor_ref) };
+  //
+  // TODO: revive this requirement once if possible...
+  // { T::transform(tensor_ref) };
 
   // Uniformly initializes the tensor in place. This is used in contexts where we don't have a
   // model (e.g. generation-0 self-play and unit-tests).
@@ -60,7 +63,9 @@ concept TrainingTarget = requires(const typename Game::Types::GameLogView& view,
   // templated to allow this. See core::TrainingTargets.inl for examples.
   //
   // For kPolicyBased == true targets, the tensor will be packed based on ActionMask.
-  { T::uniform_init(tensor_ref) };
+  //
+  // TODO: revive this requirement once if possible...
+  // { T::uniform_init(tensor_ref) };
 };
 
 }  // namespace concepts

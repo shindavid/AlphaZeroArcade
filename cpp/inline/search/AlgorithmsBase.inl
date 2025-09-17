@@ -316,25 +316,71 @@ void AlgorithmsBase<Traits>::load_evaluations(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-void AlgorithmsBase<Traits>::write_to_training_info(TrainingInfo& training_info_,
-                                                    const SearchResults* mcts_results,
-                                                    bool use_for_training,
-                                                    bool previous_used_for_training,
-                                                    core::seat_index_t seat) {
-  training_info_.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[seat];
-  training_info_.Q_posterior = mcts_results->win_rates(seat);
+void AlgorithmsBase<Traits>::write_to_training_info(const TrainingInfoParams& params,
+                                                    TrainingInfo& training_info) {
+  const SearchResults* mcts_results = params.mcts_results;
+  bool use_for_training = params.use_for_training;
+  bool previous_used_for_training = params.previous_used_for_training;
+  core::seat_index_t seat = params.seat;
+
+  training_info.state = params.state;
+  training_info.active_seat = seat;
+  training_info.action = params.action;
+  training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
-    training_info_.policy_target_valid =
-      extract_policy_target(mcts_results, training_info_.policy_target);
+    training_info.policy_target_valid =
+      extract_policy_target(mcts_results, training_info.policy_target);
   }
   if (use_for_training) {
-    training_info_.action_values_target = mcts_results->action_values;
-    training_info_.action_values_target_valid = true;
-
-    // TODO: we should get action_value_uncertainties_target from mcts_results as well for beta0
+    training_info.action_values_target = mcts_results->action_values;
+    training_info.action_values_target_valid = true;
   }
 }
+
+template <search::concepts::Traits Traits>
+void AlgorithmsBase<Traits>::to_record(const TrainingInfo& training_info,
+                                       GameLogFullRecord& full_record) {
+  full_record.position = training_info.state;
+
+  if (training_info.policy_target_valid) {
+    full_record.policy_target = training_info.policy_target;
+  } else {
+    full_record.policy_target.setZero();
+  }
+
+  if (training_info.action_values_target_valid) {
+    full_record.action_values = training_info.action_values_target;
+  } else {
+    full_record.action_values.setZero();
+  }
+
+  full_record.action = training_info.action;
+  full_record.active_seat = training_info.active_seat;
+  full_record.use_for_training = training_info.use_for_training;
+  full_record.policy_target_valid = training_info.policy_target_valid;
+  full_record.action_values_valid = training_info.action_values_target_valid;
+}
+
+template <search::concepts::Traits Traits>
+void AlgorithmsBase<Traits>::serialize_record(const GameLogFullRecord& full_record,
+                                              std::vector<char>& buf) {
+  GameLogCompactRecord compact_record;
+  compact_record.position = full_record.position;
+  compact_record.active_seat = full_record.active_seat;
+  compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
+  compact_record.action = full_record.action;
+
+  TensorData policy(full_record.policy_target_valid, full_record.policy_target);
+  TensorData action_values(full_record.action_values_valid, full_record.action_values);
+
+  GameLogCommon::write_section(buf, &compact_record, 1, false);
+  policy.write_to(buf);
+  action_values.write_to(buf);
+}
+
+template <search::concepts::Traits Traits>
+void AlgorithmsBase<Traits>::to_view(const GameLogCompactRecord&, GameLogView&) {}
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::to_results(const GeneralContext& general_context,
