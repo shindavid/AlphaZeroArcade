@@ -21,8 +21,8 @@ struct TargetBase {
   // this is that we need to left/right-rotate them based on the active seat.
   static constexpr bool kValueBased = false;
 
-   // Some network heads output values in the logit space. This function transforms the values
-   // into a more usable space. The default implementation is a no-op.
+  // Some network heads output values in the logit space. This function transforms the values
+  // into a more usable space. The default implementation is a no-op.
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&) {}
 

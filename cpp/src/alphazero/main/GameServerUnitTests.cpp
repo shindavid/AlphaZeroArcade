@@ -1,4 +1,3 @@
-#include "search/SearchLog.hpp"
 #include "alphazero/SearchResults.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -9,6 +8,7 @@
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
+#include "search/SearchLog.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"

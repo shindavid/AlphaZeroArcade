@@ -79,7 +79,7 @@ auto Player<Traits>::Params::make_options_description() {
 
 template <search::concepts::Traits Traits>
 inline Player<Traits>::Player(const Params& params, SharedData_sptr shared_data,
-                                      bool owns_shared_data)
+                              bool owns_shared_data)
     : params_(params),
       search_params_{
         {params.num_fast_iters, false},  // kFast
@@ -116,7 +116,7 @@ inline bool Player<Traits>::start_game() {
 
 template <search::concepts::Traits Traits>
 inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                     core::action_t action) {
+                                                 core::action_t action) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
@@ -181,7 +181,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 
 template <search::concepts::Traits Traits>
 auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
-                                           const ActionMask& valid_actions) const {
+                                       const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {

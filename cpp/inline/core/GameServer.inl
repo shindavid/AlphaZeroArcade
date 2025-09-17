@@ -94,8 +94,7 @@ auto GameServer<Game>::Params::make_options_description() {
 }
 
 template <concepts::Game Game>
-GameServer<Game>::SharedData::SharedData(
-  GameServer* server, const Params& params)
+GameServer<Game>::SharedData::SharedData(GameServer* server, const Params& params)
     : server_(server), params_(params), yield_manager_(cv_, mutex_, queue_, pending_queue_count_) {
   if (params_.alternating_mode == 0) {
     global_active_player_id_ = -1;
@@ -736,8 +735,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChangeEventHandleRequest request(notification_unit, state_history_.current(),
-                                        chance_action_);
+    ChangeEventHandleRequest request(notification_unit, state_history_.current(), chance_action_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 
@@ -1012,9 +1010,7 @@ void GameServer<Game>::handle_alternating_mode_recommendation() {
 
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params)
-    : PerfStatsClient(),
-      GameServerBase(params.num_game_threads),
-      shared_data_(this, params) {
+    : PerfStatsClient(), GameServerBase(params.num_game_threads), shared_data_(this, params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);

@@ -159,7 +159,7 @@ class NNEvaluationService
     void copy_input_to(int num_rows, NeuralNet&, core::pipeline_index_t);
     void load(OutputDataArray& output_data);
 
-    template<typename Tensor>
+    template <typename Tensor>
     void load_helper(float** src, Tensor& dst);
 
     int capacity() const { return tensor_groups.size(); }

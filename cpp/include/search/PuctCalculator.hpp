@@ -36,6 +36,6 @@ struct PuctCalculator {
   LocalPolicyArray PUCT;
 };
 
-}  // namespace alpha0
+}  // namespace search
 
 #include "inline/search/PuctCalculator.inl"

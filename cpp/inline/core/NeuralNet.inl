@@ -24,18 +24,16 @@ auto make_arr(int batch_size) {
   return util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<Shape>);
 }
 
-template<class Tuple, eigen_util::concepts::Shape... Shapes, std::size_t... I>
+template <class Tuple, eigen_util::concepts::Shape... Shapes, std::size_t... I>
 Tuple tuple_from_shapes_impl(std::index_sequence<I...>, int batch_size) {
-  return Tuple{
-    std::make_from_tuple<std::tuple_element_t<I, Tuple>>(
-      std::make_tuple(make_ptr<Shapes>(batch_size), make_arr<Shapes>(batch_size))
-    )...
-  };
+  return Tuple{std::make_from_tuple<std::tuple_element_t<I, Tuple>>(
+    std::make_tuple(make_ptr<Shapes>(batch_size), make_arr<Shapes>(batch_size)))...};
 }
 
-template<class Tuple, class TL> Tuple tuple_from_shapes(TL, int batch_size);
+template <class Tuple, class TL>
+Tuple tuple_from_shapes(TL, int batch_size);
 
-template<class Tuple, eigen_util::concepts::Shape... Shapes>
+template <class Tuple, eigen_util::concepts::Shape... Shapes>
 Tuple tuple_from_shapes(mp::TypeList<Shapes...>, int batch_size) {
   return tuple_from_shapes_impl<Tuple, Shapes...>(std::index_sequence_for<Shapes...>{}, batch_size);
 }

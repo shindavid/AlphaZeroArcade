@@ -3,7 +3,6 @@
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/ManagerParamsBase.hpp"
 
-
 namespace beta0 {
 
 // For now, most of the code lives in ManagerParamsBase, because beta0 is currently just a copy of

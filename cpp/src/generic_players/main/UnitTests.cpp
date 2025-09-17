@@ -1,5 +1,4 @@
 #include "alphazero/ManagerParams.hpp"
-#include "search/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -8,6 +7,7 @@
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "search/Manager.hpp"
+#include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -50,8 +50,7 @@ class PlayerTest : public ::testing::Test {
   using Rules = Game::Rules;
 
  public:
-  PlayerTest()
-      : manager_params_(create_manager_params()), player_params_(search::kCompetition) {
+  PlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetition) {
     player_params_.num_fast_iters = 10;
     player_params_.num_full_iters = 20;
   }
@@ -64,8 +63,7 @@ class PlayerTest : public ::testing::Test {
 
   void init(Service_sptr service) {
     core::GameServerBase* server = nullptr;
-    auto shared_player_data =
-      std::make_shared<PlayerSharedData>(manager_params_, server, service);
+    auto shared_player_data = std::make_shared<PlayerSharedData>(manager_params_, server, service);
     auto manager = &shared_player_data->manager;
     search_log_ = new SearchLog(manager->lookup_table());
     manager->set_post_visit_func([&] { search_log_->update(); });

@@ -76,8 +76,9 @@ template <search::concepts::Traits Traits>
 using CompetitionPlayerGenerator = PlayerGeneratorBase<Traits, generic::alpha0::Player<Traits>>;
 
 template <search::concepts::Traits Traits>
-using TrainingPlayerGeneratorBase = PlayerGeneratorBase<
-  Traits, generic::DataExportingPlayer<generic::alpha0::Player<Traits>>, search::kTraining>;
+using TrainingPlayerGeneratorBase =
+  PlayerGeneratorBase<Traits, generic::DataExportingPlayer<generic::alpha0::Player<Traits>>,
+                      search::kTraining>;
 
 template <search::concepts::Traits Traits>
 class TrainingPlayerGenerator : public TrainingPlayerGeneratorBase<Traits> {

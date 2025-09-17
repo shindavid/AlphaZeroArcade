@@ -1,7 +1,6 @@
 #include "core/Main.hpp"
 
 #include "core/TrainingParams.hpp"
-
 #include "util/LoggingUtil.hpp"
 
 #ifdef MIT_TEST_MODE

@@ -171,7 +171,7 @@ bool AlgorithmsBase<Traits>::should_short_circuit(const Edge* edge, const Node* 
 
 template <search::concepts::Traits Traits>
 bool AlgorithmsBase<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
-                                                       const Node* root) {
+                                                           const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
   if (!search_params.ponder && root->trivial()) return false;
@@ -180,7 +180,7 @@ bool AlgorithmsBase<Traits>::more_search_iterations_needed(const GeneralContext&
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::init_root_info(GeneralContext& general_context,
-                                        search::RootInitPurpose purpose) {
+                                            search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;
   const search::SearchParams& search_params = general_context.search_params;
 
@@ -317,10 +317,10 @@ void AlgorithmsBase<Traits>::load_evaluations(SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::write_to_training_info(TrainingInfo& training_info_,
-                                                const SearchResults* mcts_results,
-                                                bool use_for_training,
-                                                bool previous_used_for_training,
-                                                core::seat_index_t seat) {
+                                                    const SearchResults* mcts_results,
+                                                    bool use_for_training,
+                                                    bool previous_used_for_training,
+                                                    core::seat_index_t seat) {
   training_info_.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[seat];
   training_info_.Q_posterior = mcts_results->win_rates(seat);
 
@@ -337,7 +337,8 @@ void AlgorithmsBase<Traits>::write_to_training_info(TrainingInfo& training_info_
 }
 
 template <search::concepts::Traits Traits>
-void AlgorithmsBase<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
+void AlgorithmsBase<Traits>::to_results(const GeneralContext& general_context,
+                                        SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
   const ManagerParams& manager_params = general_context.manager_params;
@@ -398,7 +399,8 @@ void AlgorithmsBase<Traits>::print_visit_info(const SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                            const SearchResults& results, int n_rows_to_display) {
+                                                const SearchResults& results,
+                                                int n_rows_to_display) {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -440,8 +442,7 @@ void AlgorithmsBase<Traits>::print_mcts_results(std::ostream& ss, const PolicyTe
   int num_rows = std::min(num_valid, n_rows_to_display);
 
   posterior_arr = mcts_counts_arr / total_count;
-  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts",
-                                              "Modified"};
+  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
   auto data = eigen_util::sort_rows(
     eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
                                     action_policy_arr),
@@ -467,7 +468,7 @@ void AlgorithmsBase<Traits>::print_mcts_results(std::ostream& ss, const PolicyTe
 template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
 void AlgorithmsBase<Traits>::update_stats(Node* node, LookupTable& lookup_table,
-                                      MutexProtectedFunc&& func) {
+                                          MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
   lock.unlock();
@@ -572,7 +573,7 @@ void AlgorithmsBase<Traits>::update_stats(Node* node, LookupTable& lookup_table,
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::write_results(const GeneralContext& general_context, const Node* root,
-                                       group::element_t inv_sym, SearchResults& results) {
+                                           group::element_t inv_sym, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -672,7 +673,8 @@ void AlgorithmsBase<Traits>::transform_policy(SearchContext& context, LocalPolic
 }
 
 template <search::concepts::Traits Traits>
-void AlgorithmsBase<Traits>::add_dirichlet_noise(GeneralContext& general_context, LocalPolicyArray& P) {
+void AlgorithmsBase<Traits>::add_dirichlet_noise(GeneralContext& general_context,
+                                                 LocalPolicyArray& P) {
   const ManagerParams& manager_params = general_context.manager_params;
   auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
   auto& rng = general_context.aux_state.rng;
@@ -685,8 +687,8 @@ void AlgorithmsBase<Traits>::add_dirichlet_noise(GeneralContext& general_context
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::load_action_symmetries(const GeneralContext& general_context,
-                                                const Node* root, core::action_t* actions,
-                                                SearchResults& results) {
+                                                    const Node* root, core::action_t* actions,
+                                                    SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
 
@@ -705,8 +707,8 @@ void AlgorithmsBase<Traits>::load_action_symmetries(const GeneralContext& genera
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::prune_policy_target(group::element_t inv_sym,
-                                             const GeneralContext& general_context,
-                                             SearchResults& results) {
+                                                 const GeneralContext& general_context,
+                                                 SearchResults& results) {
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -800,8 +802,8 @@ void AlgorithmsBase<Traits>::validate_search_path(const SearchContext& context) 
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::print_action_selection_details(const SearchContext& context,
-                                                        const PuctCalculator& selector,
-                                                        int argmax_index) {
+                                                            const PuctCalculator& selector,
+                                                            int argmax_index) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
@@ -889,7 +891,7 @@ void AlgorithmsBase<Traits>::print_action_selection_details(const SearchContext&
 
 template <search::concepts::Traits Traits>
 bool AlgorithmsBase<Traits>::extract_policy_target(const SearchResults* mcts_results,
-                                               PolicyTensor& target) {
+                                                   PolicyTensor& target) {
   target = mcts_results->policy_target;
 
   float sum = eigen_util::sum(target);

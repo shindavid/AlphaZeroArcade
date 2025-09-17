@@ -447,7 +447,6 @@ bool GameReadLog<EvalSpec>::get_action_value_uncertainties(
   return action_value_uncertainties_data->load(action_value_uncertainties);
 }
 
-
 template <concepts::EvalSpec EvalSpec>
 const typename GameReadLog<EvalSpec>::State& GameReadLog<EvalSpec>::get_final_state() const {
   return *reinterpret_cast<const State*>(buffer_ + layout_.final_state);

@@ -191,16 +191,16 @@ using Concat_t = typename Concat<TLists...>::type;
 
 // rebind
 
-template<class TList, template<class...> class NewTemplate>
+template <class TList, template <class...> class NewTemplate>
 struct Rebind;
 
-template<template<class...> class OldTemplate, class... T, template<class...> class NewTemplate>
+template <template <class...> class OldTemplate, class... T, template <class...> class NewTemplate>
 struct Rebind<OldTemplate<T...>, NewTemplate> {
-    using type = NewTemplate<T...>;
+  using type = NewTemplate<T...>;
 };
 
 // Convenience alias for Rebind
-template<class TList, template<class...> class NewTemplate>
+template <class TList, template <class...> class NewTemplate>
 using Rebind_t = Rebind<TList, NewTemplate>::type;
 
 // filter
@@ -219,9 +219,7 @@ struct Filter<TypeList<Head, Tails...>, Pred> {
   using TailResult = typename Filter<TypeList<Tails...>, Pred>::type;
 
  public:
-  using type = std::conditional_t<Pred<Head>::value,
-                                   TypeList<Head, TailResult>,
-                                   TailResult>;
+  using type = std::conditional_t<Pred<Head>::value, TypeList<Head, TailResult>, TailResult>;
 };
 
 template <typename TList, template <typename> typename Pred>
@@ -270,9 +268,7 @@ constexpr void invoke_for_type(F&& f) {
 // for_each<TypeList<...>>(f)
 template <class TL, class F>
 constexpr void for_each(F&& f) {
-  [&]<class... Ts>(TypeList<Ts...>) {
-    (invoke_for_type<Ts>(std::forward<F>(f)), ...);
-  }(TL{});
+  [&]<class... Ts>(TypeList<Ts...>) { (invoke_for_type<Ts>(std::forward<F>(f)), ...); }(TL{});
 }
 
 }  // namespace mp

@@ -2,8 +2,8 @@
 
 #include "betazero/AuxState.hpp"
 #include "betazero/Edge.hpp"
-#include "betazero/Node.hpp"
 #include "betazero/ManagerParams.hpp"
+#include "betazero/Node.hpp"
 #include "betazero/SearchResults.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"

@@ -1,5 +1,4 @@
 #include "alphazero/ManagerParams.hpp"
-#include "search/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
@@ -12,6 +11,7 @@
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/SimpleNNEvaluationService.hpp"
 #include "search/Manager.hpp"
+#include "search/SearchLog.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"

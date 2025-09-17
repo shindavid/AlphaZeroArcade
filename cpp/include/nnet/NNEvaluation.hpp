@@ -70,7 +70,7 @@ class NNEvaluation {
   void* aux_ = nullptr;  // set to a NNEvaluationService-specific object
   core::nn_evaluation_sequence_id_t eval_sequence_id_ = 0;
   int offsets_[kNumOutputs - 1];  // leave off trivial 0
-  int ref_count_ = 0;  // access only permitted under NNEvaluationService cache_mutex_!
+  int ref_count_ = 0;             // access only permitted under NNEvaluationService cache_mutex_!
 };
 
 }  // namespace nnet

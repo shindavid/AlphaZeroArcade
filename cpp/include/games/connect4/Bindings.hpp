@@ -46,7 +46,6 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace c4::beta0
 
-
 namespace core {
 
 template <>

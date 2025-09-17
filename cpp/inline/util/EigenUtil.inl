@@ -265,7 +265,7 @@ int sample(const Tensor& T) {
   return util::Random::weighted_sample(data, data + n);
 }
 
-template<class Derived>
+template <class Derived>
 int size(const Eigen::TensorBase<Derived>& t) {
   constexpr int Rank = Derived::NumDimensions;
 

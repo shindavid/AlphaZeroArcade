@@ -17,8 +17,8 @@ PlayerGeneratorBase<Traits, PlayerT, Mode>::PlayerGeneratorBase(
       shared_data_cache_(shared_data_cache) {}
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-core::AbstractPlayer<typename Traits::Game>*
-PlayerGeneratorBase<Traits, PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
+core::AbstractPlayer<typename Traits::Game>* PlayerGeneratorBase<Traits, PlayerT, Mode>::generate(
+  core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {
@@ -46,8 +46,7 @@ std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_default_name() const
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-void PlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(
-  const std::vector<std::string>& args) {
+void PlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
 }
 
@@ -74,8 +73,8 @@ std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_description() const 
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
-PlayerT* PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_helper(
-  SharedData_sptr& shared_data, bool owns_shared_data) {
+PlayerT* PlayerGeneratorBase<Traits, PlayerT, Mode>::generate_helper(SharedData_sptr& shared_data,
+                                                                     bool owns_shared_data) {
   return new PlayerT(this->mcts_player_params_, shared_data, owns_shared_data);
 }
 
