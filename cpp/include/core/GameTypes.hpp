@@ -48,12 +48,14 @@ struct GameTypes {
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
   /*
-   * Whenever use_for_training is true, policy_target and action_values_target should be non-null.
+   * Whenever use_for_training is true, policy_target_valid and action_values_target_valid should
+   * both be true.
    *
-   * The reverse, however, is not true: we can have use_for_training false, but have a non-null
-   * policy_target. The reason for this is subtle: it's because we have an opponent-reply-policy
-   * target. If we sample position 10 of the game, then we want to export the policy target for
-   * position 11 (the opponent's reply), even if we don't sample position 11.
+   * The reverse, however, is not true: we can have use_for_training false, but have
+   * policy_target_valid or action_values_target_valid true. The reason for this is subtle: it's
+   * because we have an opponent-reply-policy target. If we sample position 10 of the game, then we
+   * want to export the policy target for position 11 (the opponent's reply), even if we don't
+   * sample position 11.
    */
   struct TrainingInfo {
     void clear() { *this = TrainingInfo(); }
