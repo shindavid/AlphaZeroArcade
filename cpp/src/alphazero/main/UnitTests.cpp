@@ -1,5 +1,5 @@
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchLog.hpp"
+#include "search/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
@@ -118,7 +118,7 @@ class ManagerTest : public testing::Test {
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = alpha0::SearchLog<Traits>;
+  using SearchLog = search::SearchLog<Traits>;
 
   static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
 

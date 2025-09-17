@@ -1,4 +1,4 @@
-#include "alphazero/SearchLog.hpp"
+#include "search/SearchLog.hpp"
 #include "alphazero/SearchResults.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -34,7 +34,7 @@ class GameServerTest : public testing::Test {
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = alpha0::SearchResults<Game>;
-  using SearchLog = alpha0::SearchLog<Traits>;
+  using SearchLog = search::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:
   //

@@ -1,4 +1,4 @@
-#include "alphazero/ManagerParams.hpp"
+#include "search/ManagerParamsBase.hpp"
 
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -7,10 +7,10 @@
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
 
-namespace alpha0 {
+namespace search {
 
 template <core::concepts::EvalSpec EvalSpec>
-inline ManagerParams<EvalSpec>::ManagerParams(search::Mode mode) {
+inline ManagerParamsBase<EvalSpec>::ManagerParamsBase(search::Mode mode) {
   if (mode == search::kCompetition) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
@@ -26,7 +26,7 @@ inline ManagerParams<EvalSpec>::ManagerParams(search::Mode mode) {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-inline auto ManagerParams<EvalSpec>::make_options_description() {
+inline auto ManagerParamsBase<EvalSpec>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -68,4 +68,4 @@ inline auto ManagerParams<EvalSpec>::make_options_description() {
   return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
-}  // namespace alpha0
+}  // namespace search

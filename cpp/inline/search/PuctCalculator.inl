@@ -1,9 +1,9 @@
-#include "alphazero/ActionSelector.hpp"
+#include "search/PuctCalculator.hpp"
 
-namespace alpha0 {
+namespace search {
 
 template <search::concepts::Traits Traits>
-inline ActionSelector<Traits>::ActionSelector(const LookupTable& lookup_table,
+inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
                                               const ManagerParams& params,
                                               const search::SearchParams& search_params,
                                               const Node* node, bool is_root)
@@ -104,4 +104,4 @@ inline ActionSelector<Traits>::ActionSelector(const LookupTable& lookup_table,
   PUCT = mask * PUCT + (1 - mask) * -1e6;
 }
 
-}  // namespace alpha0
+}  // namespace search

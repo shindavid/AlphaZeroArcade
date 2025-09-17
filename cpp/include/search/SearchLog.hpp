@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace beta0 {
+namespace search {
 
 template <search::concepts::Traits Traits>
 class SearchLog {
@@ -31,7 +31,6 @@ class SearchLog {
     node_index_t index;
     int N;
     ValueArray Q;
-    float W;  // uncertainty
     std::string state;
     player_bitset_t provably_winning;
     player_bitset_t provably_losing;
@@ -60,10 +59,10 @@ class SearchLog {
 
     boost::json::object graph_repr() const;
 
-    void add_node(node_index_t index, int N, const ValueArray& Q, float W, const std::string& state,
+    void add_node(node_index_t index, int N, const ValueArray& Q, const std::string& state,
                   const player_bitset_t& provably_winning, const player_bitset_t& provably_losing,
                   core::seat_index_t active_seat) {
-      nodes.emplace_back(index, N, Q, W, state, provably_winning, provably_losing, active_seat);
+      nodes.emplace_back(index, N, Q, state, provably_winning, provably_losing, active_seat);
     }
 
     void add_edge(edge_index_t index, node_index_t from, node_index_t to, int E,
@@ -90,6 +89,6 @@ class SearchLog {
   boost::json::object combine_json();
 };
 
-}  // namespace beta0
+}  // namespace search
 
-#include "inline/betazero/SearchLog.inl"
+#include "inline/search/SearchLog.inl"

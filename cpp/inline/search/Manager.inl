@@ -735,7 +735,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
     // - At a minimum we want to slide E and adjusted_base_prob, and then mark the edge as defunct,
     //   so that PUCT will not select it.
     // - We can easily mutex-protect the writes, by doing this under the parent's mutex. For the
-    //   reads in ActionSelector, we can probably be unsafe. I think a reasonable order would be:
+    //   reads in PuctCalculator, we can probably be unsafe. I think a reasonable order would be:
     //
     //   edge1->merged_edge_index = edge2_index;
     //   edge2->adjusted_base_prob += edge1->adjusted_base_prob;
@@ -743,9 +743,9 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
     //   edge2->E += edge1->E;
     //   edge1->E = 0;
     //
-    //   We just have to reason carefully about the order of the reads in ActionSelector. Choosing
+    //   We just have to reason carefully about the order of the reads in PuctCalculator. Choosing
     //   which edge merges into which edge can also give us more control over possible races, as
-    //   ActionSelector iterates over the edges in a specific order. More careful analysis is
+    //   PuctCalculator iterates over the edges in a specific order. More careful analysis is
     //   needed here.
     //
     //   Wherever we increment an edge->E, we can check, under the parent-mutex, if

@@ -1,5 +1,5 @@
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchLog.hpp"
+#include "search/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -38,7 +38,7 @@ class PlayerTest : public ::testing::Test {
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = ::alpha0::SearchLog<Traits>;
+  using SearchLog = ::search::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
   using State = Game::State;

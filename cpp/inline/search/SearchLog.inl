@@ -1,9 +1,9 @@
-#include "betazero/SearchLog.hpp"
+#include "search/SearchLog.hpp"
 
 #include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 
-namespace beta0 {
+namespace search {
 
 template <search::concepts::Traits Traits>
 inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
@@ -16,7 +16,6 @@ inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
     Q_array.push_back(Q[i]);
   }
   node_json["Q"] = Q_array;
-  node_json["W"] = W;
 
   node_json["state"] = state;
   node_json["provably_winning"] = bitset_util::to_string(provably_winning);
@@ -58,7 +57,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
     const Node* node = lookup_table_->get_node(node_ix);
     const State* state = node->stable_data().get_state();
     const auto stats = node->stats_safe();  // make a copy
-    graph.add_node(node_ix, stats.RN, stats.Q, stats.W, Game::IO::compact_state_repr(*state),
+    graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
                    stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       Edge* edge = lookup_table_->get_edge(node, i);
@@ -116,4 +115,4 @@ inline boost::json::object SearchLog<Traits>::Graph::graph_repr() const {
   return graph_json;
 }
 
-}  // namespace beta0
+}  // namespace search
