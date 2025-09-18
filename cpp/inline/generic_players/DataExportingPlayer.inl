@@ -33,6 +33,7 @@ core::yield_instruction_t DataExportingPlayer<BasePlayer>::handle_chance_event(
 
 template <typename BasePlayer>
 bool DataExportingPlayer<BasePlayer>::start_game() {
+  BasePlayer::start_game();
   if (writer_) {
     if (writer_->closed()) return false;
     game_log_ = writer_->get_game_log(this->get_game_id());
@@ -42,6 +43,7 @@ bool DataExportingPlayer<BasePlayer>::start_game() {
 
 template <typename BasePlayer>
 void DataExportingPlayer<BasePlayer>::end_game(const State& state, const ValueTensor& outcome) {
+  BasePlayer::end_game(state, outcome);
   if (!game_log_) return;
   game_log_->add_terminal(state, outcome);  // redundant if multiple players, but that's ok
   writer_->add(game_log_);
