@@ -3,8 +3,9 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
-#include "core/YieldManager.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
+#include "nnet/NNEvaluationServiceBase.hpp"
+#include "nnet/NNEvaluationServiceFactory.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/SearchContext.hpp"
@@ -39,8 +40,8 @@ class Manager {
   using ManagerParams = Traits::ManagerParams;
   using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
-  using EvalServiceBase = Traits::EvalServiceBase;
-  using EvalServiceFactory = Traits::EvalServiceFactory;
+  using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
+  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;

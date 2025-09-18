@@ -12,9 +12,6 @@
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationServiceBase.hpp"
-#include "nnet/NNEvaluationServiceFactory.hpp"
 
 namespace beta0 {
 
@@ -27,9 +24,6 @@ struct Traits {
   using Node = beta0::Node<EvalSpec>;
   using ManagerParams = beta0::ManagerParams<EvalSpec>;
   using AuxState = beta0::AuxState<ManagerParams>;
-  using Evaluation = nnet::NNEvaluation<EvalSpec>;
-  using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
-  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
   using SearchResults = beta0::SearchResults<Game>;
   using TrainingInfo = beta0::TrainingInfo<Game>;
   using GameLogCompactRecord = beta0::GameLogCompactRecord<Game>;
