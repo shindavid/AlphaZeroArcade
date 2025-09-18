@@ -236,7 +236,7 @@ The `include/` directory contains the header files (`.hpp`), and the `src/` dire
 inline file (`.inl`) - those files live in the `inline/` directory, and are `#include`'d at the bottom of the
 corresponding header file. All three directories have parallel matching subdirectory structures.
 
-Below are the list of modules of `cpp/include/`. In the list, no module has any dependencies on a module that appears
+Below are some of the modules of `cpp/include/`. In the list, no module has any dependencies on a module that appears
 later in the list.
 
 * `third_party`: third-party code that was simply copy-pasted because it was not available as a package
@@ -244,7 +244,6 @@ later in the list.
 * `core`: core game code (nothing MCTS-specific). Some key classes provided here:
   * `AbstractPlayer`: abstract class for a player that can play a game
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
-* `nnet`: classes used to represent neural-network evaluations, and services that produce them
 * `search`: generic tree-search algorithms and data structures
 * `alphazero`: generic instantiations of `search` algorithms/data-structures for AlphaZero
 * `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
