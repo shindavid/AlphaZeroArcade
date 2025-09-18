@@ -1,4 +1,4 @@
-#include "nnet/NNEvaluationService.hpp"
+#include "search/NNEvaluationService.hpp"
 
 #include "core/LoopControllerClient.hpp"
 #include "util/Asserts.hpp"
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <spanstream>
 
-namespace nnet {
+namespace search {
 
 namespace detail {
 
@@ -799,12 +799,12 @@ void NNEvaluationService<Traits>::state_loop() {
         return true;
       }
       if (num_connections_ == 0) {
-        if (nnet::kEnableServiceDebug) {
+        if (search::kEnableServiceDebug) {
           LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
         }
         return true;
       }
-      if (nnet::kEnableServiceDebug) {
+      if (search::kEnableServiceDebug) {
         LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
       }
       return false;
@@ -826,7 +826,7 @@ void NNEvaluationService<Traits>::state_loop() {
         return true;
       }
       if (num_connections_ == 0) {
-        if (nnet::kEnableServiceDebug) {
+        if (search::kEnableServiceDebug) {
           LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
         }
         return true;
@@ -861,22 +861,22 @@ void NNEvaluationService<Traits>::state_loop() {
   cv_main_.notify_all();
   lock.lock();
 
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
   }
   cv_main_.wait(lock, [&] {
     if (system_state_ == kShutDownComplete) {
-      if (nnet::kEnableServiceDebug) {
+      if (search::kEnableServiceDebug) {
         LOG_INFO("{}::{}() done waiting @{}", kCls, func, __LINE__);
       }
       return true;
     }
-    if (nnet::kEnableServiceDebug) {
+    if (search::kEnableServiceDebug) {
       LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
     }
     return false;
   });
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("{}::{}() done!", kCls, func);
   }
 }
@@ -1016,7 +1016,7 @@ NNEvaluationService<Traits>::get_next_batch_data(
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
 
   const char* func = __func__;
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}()", kCls, func);
   }
 
@@ -1028,18 +1028,18 @@ NNEvaluationService<Traits>::get_next_batch_data(
     BatchData* batch_data = batch_data_slice_allocator_.get_first_pending_batch_data();
     if (batch_data) {
       if (batch_data->frozen()) {
-        if (nnet::kEnableServiceDebug) {
+        if (search::kEnableServiceDebug) {
           LOG_INFO("<-- {}::{}() (count:{})", kCls, func, batch_data->allocate_count);
         }
         return true;
       }
-      if (nnet::kEnableServiceDebug) {
+      if (search::kEnableServiceDebug) {
         LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls, func,
                  batch_data->sequence_id, batch_data->accepting_allocations,
                  batch_data->allocate_count, batch_data->write_count);
       }
     }
-    if (nnet::kEnableServiceDebug) {
+    if (search::kEnableServiceDebug) {
       LOG_INFO("<-- {}::{}() still waiting (no batch data)", kCls, func);
     }
     return false;
@@ -1059,7 +1059,7 @@ void NNEvaluationService<Traits>::schedule_batch(
   RELEASE_ASSERT(batch_data->frozen());
 
   const char* func = __func__;
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", kCls, func, this->instance_id_,
              batch_data->sequence_id, batch_data->allocate_count);
   }
@@ -1091,7 +1091,7 @@ void NNEvaluationService<Traits>::schedule_batch(
 template <search::concepts::Traits Traits>
 bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
              this->instance_id_);
   }
@@ -1099,14 +1099,14 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   cv_main_.wait(lock, [&] {
     if (!load_queue_.empty() || system_state_ == kPausingDrainLoop ||
         system_state_ == kShuttingDownDrainLoop) {
-      if (nnet::kEnableServiceDebug) {
+      if (search::kEnableServiceDebug) {
         LOG_INFO("<-- {}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, func,
                  this->instance_id_, system_state_, load_queue_.size());
       }
       return true;
     }
 
-    if (nnet::kEnableServiceDebug) {
+    if (search::kEnableServiceDebug) {
       LOG_INFO("<-- {}::{}() - still waiting... (service:{}, state:{}, queue:{})", kCls, func,
                this->instance_id_, system_state_, load_queue_.size());
     }
@@ -1118,7 +1118,7 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
 
   item = load_queue_.front();
   load_queue_.pop();
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", kCls, func,
              this->instance_id_, item.batch_data->sequence_id, item.pipeline_index);
   }
@@ -1133,7 +1133,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
 
   OutputDataArray output_data;
 
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, func,
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
@@ -1148,7 +1148,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   last_evaluated_sequence_id_ = batch_data->sequence_id;
   batch_data_slice_allocator_.recycle(batch_data);
 
-  if (nnet::kEnableServiceDebug) {
+  if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", kCls, func, this->instance_id_,
              last_evaluated_sequence_id_);
   }
@@ -1212,4 +1212,4 @@ void NNEvaluationService<Traits>::unpause() {
   cv_main_.notify_all();
 }
 
-}  // namespace nnet
+}  // namespace search

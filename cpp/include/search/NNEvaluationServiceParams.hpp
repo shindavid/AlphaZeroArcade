@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-namespace nnet {
+namespace search {
 
 /*
  * Controls behavior of an NNEvaluationService.
@@ -55,6 +55,6 @@ struct NNEvaluationServiceParams {
   bool incorporate_sym_into_cache_key = true;
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/NNEvaluationServiceParams.inl"
+#include "inline/search/NNEvaluationServiceParams.inl"

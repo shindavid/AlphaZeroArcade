@@ -1,4 +1,4 @@
-#include "nnet/NNEvaluation.hpp"
+#include "search/NNEvaluation.hpp"
 
 #include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
@@ -6,7 +6,7 @@
 
 #include <new>
 
-namespace nnet {
+namespace search {
 
 template <search::concepts::Traits Traits>
 void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
@@ -125,4 +125,4 @@ void NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions
   data_ = static_cast<float*>(::operator new[](bytes, std::align_val_t{16}));
 }
 
-}  // namespace nnet
+}  // namespace search

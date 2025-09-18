@@ -1,8 +1,8 @@
-#include "nnet/NNEvaluationRequest.hpp"
+#include "search/NNEvaluationRequest.hpp"
 
 #include "util/Exceptions.hpp"
 
-namespace nnet {
+namespace search {
 
 template <search::concepts::Traits Traits>
 NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
@@ -76,4 +76,4 @@ void NNEvaluationRequest<Traits>::mark_all_as_stale() {
     "This should not happen with the current MCTS logic.");
 }
 
-}  // namespace nnet
+}  // namespace search

@@ -1,10 +1,10 @@
-#include "nnet/NNEvaluationServiceFactory.hpp"
+#include "search/NNEvaluationServiceFactory.hpp"
 
-#include "nnet/NNEvaluationService.hpp"
-#include "nnet/UniformNNEvaluationService.hpp"
+#include "search/NNEvaluationService.hpp"
+#include "search/UniformNNEvaluationService.hpp"
 #include "util/Exceptions.hpp"
 
-namespace nnet {
+namespace search {
 
 template <search::concepts::Traits Traits>
 typename NNEvaluationServiceFactory<Traits>::ServiceBase_ptr
@@ -19,4 +19,4 @@ NNEvaluationServiceFactory<Traits>::create(const NNEvaluationServiceParams& para
   }
 }
 
-}  // namespace nnet
+}  // namespace search

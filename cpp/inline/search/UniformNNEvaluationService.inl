@@ -1,6 +1,6 @@
-#include "nnet/UniformNNEvaluationService.hpp"
+#include "search/UniformNNEvaluationService.hpp"
 
-namespace nnet {
+namespace search {
 
 template <search::concepts::Traits Traits>
 UniformNNEvaluationService<Traits>::UniformNNEvaluationService() {
@@ -9,4 +9,4 @@ UniformNNEvaluationService<Traits>::UniformNNEvaluationService() {
   });
 }
 
-}  // namespace nnet
+}  // namespace search

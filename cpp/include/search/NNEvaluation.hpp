@@ -8,7 +8,7 @@
 
 #include <Eigen/Core>
 
-namespace nnet {
+namespace search {
 
 // TODO: We could expand the template params of this class to include Traits::EvalServiceBase.
 // That would allow us to replace the void* aux blob with something more specific.
@@ -74,6 +74,6 @@ class NNEvaluation {
   int ref_count_ = 0;             // access only permitted under NNEvaluationService cache_mutex_!
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/NNEvaluation.inl"
+#include "inline/search/NNEvaluation.inl"

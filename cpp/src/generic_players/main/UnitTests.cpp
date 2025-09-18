@@ -45,7 +45,7 @@ class PlayerTest : public ::testing::Test {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = nnet::NNEvaluationServiceBase<Traits>;
+  using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 

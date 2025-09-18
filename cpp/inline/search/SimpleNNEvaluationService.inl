@@ -1,6 +1,6 @@
-#include "nnet/SimpleNNEvaluationService.hpp"
+#include "search/SimpleNNEvaluationService.hpp"
 
-namespace nnet {
+namespace search {
 
 template <search::concepts::Traits Traits>
 SimpleNNEvaluationService<Traits>::SimpleNNEvaluationService() {
@@ -26,4 +26,4 @@ core::yield_instruction_t SimpleNNEvaluationService<Traits>::evaluate(
   return core::kContinue;
 }
 
-}  // namespace nnet
+}  // namespace search

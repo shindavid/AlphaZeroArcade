@@ -8,8 +8,8 @@
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/SimpleNNEvaluationService.hpp"
+#include "search/NNEvaluation.hpp"
+#include "search/SimpleNNEvaluationService.hpp"
 #include "search/LookupTable.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchLog.hpp"
@@ -44,13 +44,13 @@ using StochasticNimTraits = alpha0::Traits<stochastic_nim::Game, StochasticNimSp
 using TicTacToeTraits = alpha0::Traits<tictactoe::Game, TicTacToeSpec>;
 
 template <search::concepts::Traits Traits>
-class MockNNEvaluationService : public nnet::SimpleNNEvaluationService<Traits> {
+class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits> {
  public:
   using Game = Traits::Game;
   using GameTypes = Game::Types;
   using State = Game::State;
-  using Base = nnet::SimpleNNEvaluationService<Traits>;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using Base = search::SimpleNNEvaluationService<Traits>;
+  using NNEvaluation = search::NNEvaluation<Traits>;
   using ValueTensor = GameTypes::ValueTensor;
   using PolicyTensor = GameTypes::PolicyTensor;
   using ActionValueTensor = GameTypes::ActionValueTensor;
@@ -119,7 +119,7 @@ class ManagerTest : public testing::Test {
   using action_t = core::action_t;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = nnet::NNEvaluationServiceBase<Traits>;
+  using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = Traits::SearchResults;

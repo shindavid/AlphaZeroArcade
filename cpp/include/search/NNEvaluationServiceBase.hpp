@@ -2,12 +2,12 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
+#include "search/NNEvaluation.hpp"
+#include "search/NNEvaluationRequest.hpp"
 
 #include <memory>
 
-namespace nnet {
+namespace search {
 
 /*
  * Base class of NNEvaluationService. We pull out this base class so that we create a mock
@@ -21,8 +21,8 @@ template <search::concepts::Traits Traits>
 class NNEvaluationServiceBase {
  public:
   using Game = Traits::Game;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluation = search::NNEvaluation<Traits>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}
@@ -46,4 +46,4 @@ class NNEvaluationServiceBase {
   virtual void end_session() {}
 };
 
-}  // namespace nnet
+}  // namespace search

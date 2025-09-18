@@ -6,7 +6,7 @@
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
+#include "search/NNEvaluationRequest.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
@@ -24,7 +24,7 @@ struct SearchContext {
 
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
-  using EvalRequest = nnet::NNEvaluationRequest<Traits>;
+  using EvalRequest = search::NNEvaluationRequest<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using Visitation = TraitsTypes::Visitation;

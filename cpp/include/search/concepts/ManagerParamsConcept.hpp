@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nnet/NNEvaluationServiceParams.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
 #include "search/Constants.hpp"
 
 #include <concepts>
@@ -11,7 +11,7 @@ namespace concepts {
 template <class M>
 concept ManagerParams = requires(search::Mode mode) {
   { M(mode) };
-  requires std::derived_from<M, nnet::NNEvaluationServiceParams>;
+  requires std::derived_from<M, search::NNEvaluationServiceParams>;
 };
 
 }  // namespace concepts

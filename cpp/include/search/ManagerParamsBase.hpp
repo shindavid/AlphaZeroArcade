@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "nnet/NNEvaluationServiceParams.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 
@@ -13,7 +13,7 @@ namespace search {
 // so everything lives in this base class. As we specialize beta0 more, we may want to move some of
 // the parameters to derived classes.
 template <core::concepts::EvalSpec EvalSpec>
-struct ManagerParamsBase : public nnet::NNEvaluationServiceParams {
+struct ManagerParamsBase : public search::NNEvaluationServiceParams {
   ManagerParamsBase(search::Mode);
 
   search::SearchParams pondering_search_params() const {

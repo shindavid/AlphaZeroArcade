@@ -1,10 +1,10 @@
-#include "nnet/NNEvaluationServiceParams.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
 
 #include "util/BoostUtil.hpp"
 
 #include <boost/filesystem.hpp>
 
-namespace nnet {
+namespace search {
 
 inline auto NNEvaluationServiceParams::make_options_description() {
   namespace po = boost::program_options;
@@ -42,4 +42,4 @@ inline auto NNEvaluationServiceParams::make_options_description() {
       "precision to use when building the TensorRT engine from an onnx file");
 }
 
-}  // namespace nnet
+}  // namespace search

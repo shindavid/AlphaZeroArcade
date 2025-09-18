@@ -10,11 +10,11 @@
 #include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
-#include "nnet/NNEvaluationServiceBase.hpp"
-#include "nnet/NNEvaluationServiceParams.hpp"
-#include "nnet/TypeDefs.hpp"
+#include "search/NNEvaluation.hpp"
+#include "search/NNEvaluationRequest.hpp"
+#include "search/NNEvaluationServiceBase.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -26,11 +26,11 @@
 #include <queue>
 #include <vector>
 
-namespace nnet {
+namespace search {
 
 /*
  * The NNEvaluationService services multiple search threads, which may belong to multiple
- * nnet::Manager instances (if two nnet agents are playing against each other for instance).
+ * search::Manager instances (if two nnet agents are playing against each other for instance).
  *
  * The main API is the evaluate() method. It accepts an NNEvaluationRequest, which contains one or
  * more game states to evaluate, along with instructions on how to asynchronously notify a handler
@@ -70,8 +70,8 @@ class NNEvaluationService
   using TrainingTargets = Traits::EvalSpec::TrainingTargets;
 
   using NeuralNet = core::NeuralNet<EvalSpec>;
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluation = search::NNEvaluation<Traits>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;
@@ -384,6 +384,6 @@ class NNEvaluationService
   core::GameServerBase* server_ = nullptr;
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/NNEvaluationService.inl"
+#include "inline/search/NNEvaluationService.inl"

@@ -1,25 +1,25 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
-#include "nnet/NNEvaluationServiceBase.hpp"
+#include "search/NNEvaluation.hpp"
+#include "search/NNEvaluationRequest.hpp"
+#include "search/NNEvaluationServiceBase.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/RecyclingAllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <functional>
 
-namespace nnet {
+namespace search {
 
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
 template <search::concepts::Traits Traits>
-class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Traits> {
+class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<Traits> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluation = search::NNEvaluation<Traits>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;
@@ -37,6 +37,6 @@ class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Traits> {
   init_func_t init_func_ = [](NNEvaluation*, const Item&) {};
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/SimpleNNEvaluationService.inl"
+#include "inline/search/SimpleNNEvaluationService.inl"

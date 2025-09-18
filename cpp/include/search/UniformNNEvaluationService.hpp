@@ -1,11 +1,11 @@
 #pragma once
 
 #include "search/concepts/TraitsConcept.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationRequest.hpp"
-#include "nnet/SimpleNNEvaluationService.hpp"
+#include "search/NNEvaluation.hpp"
+#include "search/NNEvaluationRequest.hpp"
+#include "search/SimpleNNEvaluationService.hpp"
 
-namespace nnet {
+namespace search {
 
 /*
  * UniformNNEvaluationService
@@ -15,15 +15,15 @@ namespace nnet {
  * The service assigns uniform probabilities to all valid actions.
  */
 template <search::concepts::Traits Traits>
-class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Traits> {
+class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Traits> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<Traits>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
+  using NNEvaluation = search::NNEvaluation<Traits>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/UniformNNEvaluationService.inl"
+#include "inline/search/UniformNNEvaluationService.inl"

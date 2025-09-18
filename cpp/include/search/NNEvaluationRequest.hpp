@@ -3,10 +3,10 @@
 #include "core/InputTensorizor.hpp"
 #include "core/Node.hpp"
 #include "core/YieldManager.hpp"
-#include "nnet/NNEvaluation.hpp"
+#include "search/NNEvaluation.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "nnet/TypeDefs.hpp"
+#include "search/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -14,7 +14,7 @@
 #include <span>
 #include <vector>
 
-namespace nnet {
+namespace search {
 
 // An NNEvaluationRequest is used to make requests to an NNEvaluationService.
 //
@@ -27,7 +27,7 @@ namespace nnet {
 template <search::concepts::Traits Traits>
 class NNEvaluationRequest {
  public:
-  using Evaluation = nnet::NNEvaluation<Traits>;
+  using Evaluation = search::NNEvaluation<Traits>;
   using Game = Traits::Game;
   using Node = search::TraitsTypes<Traits>::Node;
   using InputTensorizor = core::InputTensorizor<Game>;
@@ -72,7 +72,7 @@ class NNEvaluationRequest {
      *
      * We use sym to transform the history before tensorizing it. If incorporate_sym_into_cache_key
      * is true, then we will incorporate sym into the cache key. See comment in
-     * nnet::NNEvaluationServiceParams for discussion on this bool.
+     * search::NNEvaluationServiceParams for discussion on this bool.
      */
     Item(Node* node, StateHistory& history, const State& state, group::element_t sym,
          bool incorporate_sym_into_cache_key);
@@ -145,6 +145,6 @@ class NNEvaluationRequest {
   int8_t active_index_ = 0;  // index of the active items_ vector, the other is stale
 };
 
-}  // namespace nnet
+}  // namespace search
 
-#include "inline/nnet/NNEvaluationRequest.inl"
+#include "inline/search/NNEvaluationRequest.inl"
