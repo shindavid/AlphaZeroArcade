@@ -5,9 +5,8 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
-                                                      const State& state, group::element_t sym,
-                                                      bool incorporate_sym_into_cache_key)
+NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const State& state,
+                                        group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
       history_(&history),
@@ -16,9 +15,8 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
-                                                      group::element_t sym,
-                                                      bool incorporate_sym_into_cache_key)
+NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
+                                        bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
       history_(&history),
@@ -45,8 +43,7 @@ auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
 }
 
 template <search::concepts::Traits Traits>
-typename NNEvaluationRequest<Traits>::CacheKey
-NNEvaluationRequest<Traits>::Item::make_cache_key(
+typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key =
     compute_over_history([&](auto begin, auto end) { return Keys::eval_key(begin, end - 1); });

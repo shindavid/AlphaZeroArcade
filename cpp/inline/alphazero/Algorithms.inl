@@ -171,7 +171,7 @@ bool Algorithms<Traits>::should_short_circuit(const Edge* edge, const Node* chil
 
 template <search::concepts::Traits Traits>
 bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
-                                                           const Node* root) {
+                                                       const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
   if (!search_params.ponder && root->trivial()) return false;
@@ -180,7 +180,7 @@ bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& gen
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
-                                            search::RootInitPurpose purpose) {
+                                        search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;
   const search::SearchParams& search_params = general_context.search_params;
 
@@ -317,7 +317,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
-                                                    TrainingInfo& training_info) {
+                                                TrainingInfo& training_info) {
   const SearchResults* mcts_results = params.mcts_results;
   bool use_for_training = params.use_for_training;
   bool previous_used_for_training = params.previous_used_for_training;
@@ -340,7 +340,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
-                                       GameLogFullRecord& full_record) {
+                                   GameLogFullRecord& full_record) {
   full_record.position = training_info.state;
 
   if (training_info.policy_target_valid) {
@@ -364,7 +364,7 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
-                                              std::vector<char>& buf) {
+                                          std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
   compact_record.active_seat = full_record.active_seat;
@@ -431,8 +431,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 }
 
 template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_results(const GeneralContext& general_context,
-                                        SearchResults& results) {
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
   const ManagerParams& manager_params = general_context.manager_params;
@@ -493,8 +492,7 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                                const SearchResults& results,
-                                                int n_rows_to_display) {
+                                            const SearchResults& results, int n_rows_to_display) {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -562,7 +560,7 @@ void Algorithms<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor
 template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
 void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
-                                          MutexProtectedFunc&& func) {
+                                      MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
   lock.unlock();
@@ -667,7 +665,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::write_results(const GeneralContext& general_context, const Node* root,
-                                           group::element_t inv_sym, SearchResults& results) {
+                                       group::element_t inv_sym, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -767,8 +765,7 @@ void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArr
 }
 
 template <search::concepts::Traits Traits>
-void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context,
-                                                 LocalPolicyArray& P) {
+void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, LocalPolicyArray& P) {
   const ManagerParams& manager_params = general_context.manager_params;
   auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
   auto& rng = general_context.aux_state.rng;
@@ -781,8 +778,8 @@ void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context,
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context,
-                                                    const Node* root, core::action_t* actions,
-                                                    SearchResults& results) {
+                                                const Node* root, core::action_t* actions,
+                                                SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
 
@@ -801,8 +798,8 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
-                                                 const GeneralContext& general_context,
-                                                 SearchResults& results) {
+                                             const GeneralContext& general_context,
+                                             SearchResults& results) {
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -896,8 +893,8 @@ void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::print_action_selection_details(const SearchContext& context,
-                                                            const PuctCalculator& selector,
-                                                            int argmax_index) {
+                                                        const PuctCalculator& selector,
+                                                        int argmax_index) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
@@ -985,7 +982,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
 
 template <search::concepts::Traits Traits>
 bool Algorithms<Traits>::extract_policy_target(const SearchResults* mcts_results,
-                                                   PolicyTensor& target) {
+                                               PolicyTensor& target) {
   target = mcts_results->policy_target;
 
   float sum = eigen_util::sum(target);

@@ -10,8 +10,8 @@ namespace search {
 
 template <search::concepts::Traits Traits>
 void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
-                                  group::element_t sym, core::seat_index_t active_seat,
-                                  core::action_mode_t mode) {
+                                group::element_t sym, core::seat_index_t active_seat,
+                                core::action_mode_t mode) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   init_data_and_offsets(valid_actions);

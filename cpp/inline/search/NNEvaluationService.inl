@@ -34,7 +34,7 @@ int NNEvaluationService<Traits>::instance_count_ = 0;
 
 template <search::concepts::Traits Traits>
 inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServiceParams& params,
-                                                          core::GameServerBase* server)
+                                                        core::GameServerBase* server)
     : core::PerfStatsClient(),
       core::GameServerClient(server),
       instance_id_(instance_count_++),
@@ -169,8 +169,8 @@ void NNEvaluationService<Traits>::BatchData::set_capacity(int capacity) {
 }
 
 template <search::concepts::Traits Traits>
-void NNEvaluationService<Traits>::BatchData::copy_input_to(
-  int num_rows, NeuralNet& net, core::pipeline_index_t pipeline_index) {
+void NNEvaluationService<Traits>::BatchData::copy_input_to(int num_rows, NeuralNet& net,
+                                                           core::pipeline_index_t pipeline_index) {
   float* input_ptr = net.get_input_ptr(pipeline_index);
   constexpr size_t input_size = InputShape::total_size;
   int r = 0;
@@ -234,8 +234,9 @@ NNEvaluationService<Traits>::BatchDataSliceAllocator::~BatchDataSliceAllocator()
 }
 
 template <search::concepts::Traits Traits>
-void NNEvaluationService<Traits>::BatchDataSliceAllocator::allocate_slices(
-  BatchDataSlice* slices, int n, mit::mutex& main_mutex) {
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::allocate_slices(BatchDataSlice* slices,
+                                                                           int n,
+                                                                           mit::mutex& main_mutex) {
   mit::unique_lock lock(main_mutex);
 
   int slice_index = 0;
@@ -515,7 +516,7 @@ void NNEvaluationService<Traits>::activate_net() {
 
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::check_cache(NNEvaluationRequest& request,
-                                                CacheLookupResult& result) {
+                                              CacheLookupResult& result) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
   int s = m + n;
@@ -568,7 +569,7 @@ void NNEvaluationService<Traits>::check_cache(NNEvaluationRequest& request,
 
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::populate_sort_items(SortItem* sort_items,
-                                                        NNEvaluationRequest& request) {
+                                                      NNEvaluationRequest& request) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
   DEBUG_ASSERT(n > 0);
@@ -596,8 +597,8 @@ void NNEvaluationService<Traits>::populate_sort_items(SortItem* sort_items,
 
 template <search::concepts::Traits Traits>
 bool NNEvaluationService<Traits>::handle_fresh_item(NNEvaluationRequest& request,
-                                                      CacheLookupResult& result, ShardData& shard,
-                                                      int item_index) {
+                                                    CacheLookupResult& result, ShardData& shard,
+                                                    int item_index) {
   core::PerfClocker clocker(result.stats.cache_insert_time_ns);
   RequestItem& item = request.get_fresh_item(item_index);
   RELEASE_ASSERT(item.eval() == nullptr);
@@ -634,9 +635,9 @@ bool NNEvaluationService<Traits>::handle_fresh_item(NNEvaluationRequest& request
 
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::write_miss_infos(NNEvaluationRequest& request,
-                                                     CacheLookupResult& result,
-                                                     int& miss_info_write_index,
-                                                     int misses_for_this_shard) {
+                                                   CacheLookupResult& result,
+                                                   int& miss_info_write_index,
+                                                   int misses_for_this_shard) {
   core::PerfClocker clocker(result.stats.batch_prepare_time_ns);
 
   // Assign the missed items to BatchData's.
@@ -674,7 +675,7 @@ void NNEvaluationService<Traits>::write_miss_infos(NNEvaluationRequest& request,
 
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchData* batch_data,
-                                                   int row) {
+                                                 int row) {
   const CacheKey& cache_key = item.cache_key();
 
   const auto& stable_data = item.node()->stable_data();
@@ -707,7 +708,7 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
 
 template <search::concepts::Traits Traits>
 bool NNEvaluationService<Traits>::register_notification_task(const NNEvaluationRequest& request,
-                                                               const CacheLookupResult& result) {
+                                                             const CacheLookupResult& result) {
   // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
   // There should only ever be one yield_manager_ for the entire process. We do it here to
   // avoid having to pass it around all over the place during initialization.
@@ -1009,8 +1010,7 @@ void NNEvaluationService<Traits>::drain_loop_prelude() {
 }
 
 template <search::concepts::Traits Traits>
-typename NNEvaluationService<Traits>::BatchData*
-NNEvaluationService<Traits>::get_next_batch_data(
+typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::get_next_batch_data(
   core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   mit::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);

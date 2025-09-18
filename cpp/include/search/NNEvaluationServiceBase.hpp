@@ -1,9 +1,9 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 #include <memory>
 

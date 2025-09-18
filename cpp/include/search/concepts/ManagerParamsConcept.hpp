@@ -1,7 +1,7 @@
 #pragma once
 
-#include "search/NNEvaluationServiceParams.hpp"
 #include "search/Constants.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
 
 #include <concepts>
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "search/NNEvaluationServiceParams.hpp"
 #include "search/Constants.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
 #include "search/SearchParams.hpp"
 
 #include <boost/filesystem.hpp>

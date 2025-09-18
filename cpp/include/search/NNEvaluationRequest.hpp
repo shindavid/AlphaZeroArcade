@@ -5,8 +5,8 @@
 #include "core/YieldManager.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TraitsTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
 #include "search/TypeDefs.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 

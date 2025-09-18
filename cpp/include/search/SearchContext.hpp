@@ -3,10 +3,10 @@
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
+#include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "search/NNEvaluationRequest.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
