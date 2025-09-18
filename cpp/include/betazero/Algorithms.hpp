@@ -1,16 +1,15 @@
 #pragma once
 
-#include "search/AlgorithmsBase.hpp"
+#include "alphazero/Algorithms.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 
 namespace beta0 {
 
-// For now, most of the code lives in AlgorithmsBase, because beta0 is currently just a copy of
-// alpha0. As we specialize beta0 more, we should move more code from AlgorithmsBase to
-// alpha0::Algorithms.
+// For now, we piggy-back alpha0::Algorithms for most of beta0::Algorithms
 template <search::concepts::Traits Traits>
-class Algorithms : public search::AlgorithmsBase<Traits> {
+class Algorithms : public alpha0::Algorithms<Traits> {
  public:
-  using Base = search::AlgorithmsBase<Traits>;
+  using Base = alpha0::Algorithms<Traits>;
   using Game = Base::Game;
   using GameLogCompactRecord = Base::GameLogCompactRecord;
   using GameLogFullRecord = Base::GameLogFullRecord;
