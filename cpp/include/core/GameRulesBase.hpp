@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/concepts/GameConcept.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/EigenUtil.hpp"
 
-namespace game_base {
+namespace core {
 
 template <typename Types>
 struct RulesBase {
@@ -13,4 +13,4 @@ struct RulesBase {
     return eigen_util::zeros<typename Types::ChanceDistribution>();
   }
 };
-}  // namespace game_base
+}  // namespace core
