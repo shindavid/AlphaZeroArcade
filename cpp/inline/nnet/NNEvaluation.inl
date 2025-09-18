@@ -8,8 +8,8 @@
 
 namespace nnet {
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
+template <search::concepts::Traits Traits>
+void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
                                   group::element_t sym, core::seat_index_t active_seat,
                                   core::action_mode_t mode) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
@@ -50,8 +50,8 @@ void NNEvaluation<EvalSpec>::init(OutputTensorTuple& outputs, const ActionMask& 
   });
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::uniform_init(const ActionMask& valid_actions) {
+template <search::concepts::Traits Traits>
+void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
   init_data_and_offsets(valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
@@ -70,8 +70,8 @@ void NNEvaluation<EvalSpec>::uniform_init(const ActionMask& valid_actions) {
   });
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-bool NNEvaluation<EvalSpec>::decrement_ref_count() {
+template <search::concepts::Traits Traits>
+bool NNEvaluation<Traits>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
   // safety during that phase of the program. If for some reason that changes, we will need to
@@ -80,8 +80,8 @@ bool NNEvaluation<EvalSpec>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::clear() {
+template <search::concepts::Traits Traits>
+void NNEvaluation<Traits>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
@@ -92,8 +92,8 @@ void NNEvaluation<EvalSpec>::clear() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluation<EvalSpec>::init_data_and_offsets(const ActionMask& valid_actions) {
+template <search::concepts::Traits Traits>
+void NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {

@@ -8,6 +8,7 @@
 #include "nnet/NNEvaluationServiceFactory.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
+#include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
@@ -32,7 +33,6 @@ template <search::concepts::Traits Traits>
 class Manager {
  public:
   using EvalSpec = Traits::EvalSpec;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using AuxState = Traits::AuxState;
@@ -40,12 +40,15 @@ class Manager {
   using ManagerParams = Traits::ManagerParams;
   using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
-  using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
-  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
+  using EvalServiceBase = nnet::NNEvaluationServiceBase<Traits>;
+  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<Traits>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
+
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
-  using LookupTable = TraitsTypes::LookupTable;
+  using Node = TraitsTypes::Node;
+
+  using LookupTable = search::LookupTable<Traits>;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;

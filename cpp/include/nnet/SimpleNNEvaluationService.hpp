@@ -4,6 +4,7 @@
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/RecyclingAllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -14,11 +15,11 @@ namespace nnet {
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
-template <core::concepts::EvalSpec EvalSpec>
-class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<EvalSpec> {
+template <search::concepts::Traits Traits>
+class SimpleNNEvaluationService : public nnet::NNEvaluationServiceBase<Traits> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;

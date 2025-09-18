@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 #include <boost/json.hpp>
@@ -14,7 +15,6 @@ namespace search {
 template <search::concepts::Traits Traits>
 class SearchLog {
  protected:
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using State = Game::State;
@@ -23,6 +23,9 @@ class SearchLog {
   using node_index_t = int;
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
+
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
 
  public:
   SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}

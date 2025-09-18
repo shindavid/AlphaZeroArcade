@@ -13,7 +13,7 @@ void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
-  NodeBase* node = &table_->node_pool_[n];
+  Node* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
@@ -61,7 +61,7 @@ void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
   if (processed_nodes[n]) return;
 
   processed_nodes[n] = true;
-  NodeBase* node = &table_->node_pool_[n];
+  Node* node = &table_->node_pool_[n];
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
@@ -137,7 +137,8 @@ core::node_pool_index_t LookupTable<Traits>::lookup_node(const TransposeKey& key
 }
 
 template <search::concepts::Traits Traits>
-typename Traits::Node* LookupTable<Traits>::get_node(core::node_pool_index_t index) const {
+typename LookupTable<Traits>::Node* LookupTable<Traits>::get_node(
+  core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }

@@ -6,9 +6,11 @@
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
+#include "nnet/NNEvaluationRequest.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
+#include <vector>
 
 namespace search {
 
@@ -17,16 +19,16 @@ struct SearchContext {
   int log_prefix_n() const { return kThreadWhitespaceLength * id; }
   std::string search_path_str() const;  // slow, for debugging
 
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
 
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using EvalRequest = TraitsTypes::EvalRequest;
+  using Node = TraitsTypes::Node;
+  using EvalRequest = nnet::NNEvaluationRequest<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using Visitation = TraitsTypes::Visitation;
-  using search_path_t = TraitsTypes::search_path_t;
+  using search_path_t = std::vector<Visitation>;
 
   using StateHistory = Game::StateHistory;
   using SymmetryGroup = Game::SymmetryGroup;

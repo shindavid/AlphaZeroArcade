@@ -1,12 +1,14 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/StableData.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
 namespace core {
 
-// core::NodeBase<EvalSpec> is a base class of alpha0::Node<EvalSpec>.
+// core::NodeBase<EvalSpec> is a base class of core::Node<EvalSpec, ...>
+//
+// It is pulled out so that some nnet::NNEval* classes can operate on Node pointers without
+// needing to know the specific Node implementation.
 //
 // It consists of data and methods that are shared across all different search-frameworks
 // (e.g., MCTS and Bayesian-MCTS)
@@ -22,10 +24,7 @@ namespace core {
 template <core::concepts::EvalSpec EvalSpec>
 class NodeBase {
  public:
-  using StableData = core::StableData<EvalSpec>;
-
-  template <typename... Ts>
-  NodeBase(mit::mutex* m, Ts&&... args) : mutex_(m), stable_data_(std::forward<Ts>(args)...) {}
+  NodeBase(mit::mutex* m) : mutex_(m) {}
 
   mit::mutex& mutex() const { return *mutex_; }
   int child_expand_count() const { return child_expand_count_; }
@@ -36,19 +35,13 @@ class NodeBase {
   void mark_as_trivial() { trivial_ = true; }
   bool trivial() const { return trivial_; }
 
-  bool is_terminal() const { return stable_data_.terminal; }
-  core::action_mode_t action_mode() const { return stable_data_.action_mode; }
-
   bool edges_initialized() const { return first_edge_index_ != -1; }
   core::edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(core::edge_pool_index_t e) { first_edge_index_ = e; }
-  const StableData& stable_data() const { return stable_data_; }
-  StableData& stable_data() { return stable_data_; }
 
  protected:
   mit::mutex* mutex_;  // potentially shared by multiple Node's
 
-  StableData stable_data_;
   core::edge_pool_index_t first_edge_index_ = -1;
 
   int child_expand_count_ = 0;

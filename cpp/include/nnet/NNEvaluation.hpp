@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/TensorTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
@@ -12,13 +12,14 @@ namespace nnet {
 
 // TODO: We could expand the template params of this class to include Traits::EvalServiceBase.
 // That would allow us to replace the void* aux blob with something more specific.
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 class NNEvaluation {
  public:
-  using Game = EvalSpec::Game;
+  using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = core::InputTensorizor<Game>;
-  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
+  using PrimaryTargets = Traits::EvalSpec::TrainingTargets::PrimaryList;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
 

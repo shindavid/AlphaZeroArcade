@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -14,10 +15,12 @@ namespace search {
 template <search::concepts::Traits Traits>
 struct GeneralContext {
   using Game = Traits::Game;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
+
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
 
   using Rules = Game::Rules;
   using State = Game::State;

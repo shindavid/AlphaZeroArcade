@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
-#include "core/NodeBase.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -13,12 +13,12 @@ template <search::concepts::Traits Traits>
 class LookupTable {
  public:
   using Game = Traits::Game;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using EvalSpec = Traits::EvalSpec;
 
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
   using TransposeKey = core::InputTensorizor<Game>::Keys::TransposeKey;
-  using NodeBase = core::NodeBase<EvalSpec>;
 
   class Defragmenter {
    public:

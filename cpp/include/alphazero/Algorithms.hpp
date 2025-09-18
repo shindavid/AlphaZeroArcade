@@ -4,6 +4,7 @@
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
 #include "search/GeneralContext.hpp"
+#include "search/LookupTable.hpp"
 #include "search/PuctCalculator.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TrainingInfoParams.hpp"
@@ -25,7 +26,6 @@ template <search::concepts::Traits Traits>
 class Algorithms {
  public:
   using Game = Traits::Game;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
@@ -33,8 +33,12 @@ class Algorithms {
   using GameLogCompactRecord = Traits::GameLogCompactRecord;
   using GameLogFullRecord = Traits::GameLogFullRecord;
   using GameLogView = Traits::GameLogView;
+
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using LookupTable = TraitsTypes::LookupTable;
+  using Visitation = TraitsTypes::Visitation;
+  using Node = TraitsTypes::Node;
+
+  using LookupTable = search::LookupTable<Traits>;
 
   using PuctCalculator = search::PuctCalculator<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
@@ -44,7 +48,6 @@ class Algorithms {
   using GameLogViewParams = search::GameLogViewParams<Traits>;
 
   using RootInfo = GeneralContext::RootInfo;
-  using Visitation = TraitsTypes::Visitation;
 
   using GameResults = Game::GameResults;
   using IO = Game::IO;

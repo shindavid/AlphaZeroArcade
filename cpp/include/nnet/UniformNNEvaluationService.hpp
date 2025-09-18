@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/SimpleNNEvaluationService.hpp"
@@ -14,11 +14,11 @@ namespace nnet {
  * support generation-0 self-play scenarios where a neural network model is not yet available.
  * The service assigns uniform probabilities to all valid actions.
  */
-template <core::concepts::EvalSpec EvalSpec>
-class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<EvalSpec> {
+template <search::concepts::Traits Traits>
+class UniformNNEvaluationService : public nnet::SimpleNNEvaluationService<Traits> {
  public:
-  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

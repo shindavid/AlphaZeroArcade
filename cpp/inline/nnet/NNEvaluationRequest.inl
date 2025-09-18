@@ -4,8 +4,8 @@
 
 namespace nnet {
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
-NNEvaluationRequest<EvalSpec, Evaluation>::Item::Item(NodeBase* node, StateHistory& history,
+template <search::concepts::Traits Traits>
+NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
                                                       const State& state, group::element_t sym,
                                                       bool incorporate_sym_into_cache_key)
     : node_(node),
@@ -15,8 +15,8 @@ NNEvaluationRequest<EvalSpec, Evaluation>::Item::Item(NodeBase* node, StateHisto
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
-NNEvaluationRequest<EvalSpec, Evaluation>::Item::Item(NodeBase* node, StateHistory& history,
+template <search::concepts::Traits Traits>
+NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history,
                                                       group::element_t sym,
                                                       bool incorporate_sym_into_cache_key)
     : node_(node),
@@ -26,9 +26,9 @@ NNEvaluationRequest<EvalSpec, Evaluation>::Item::Item(NodeBase* node, StateHisto
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
+template <search::concepts::Traits Traits>
 template <typename Func>
-auto NNEvaluationRequest<EvalSpec, Evaluation>::Item::compute_over_history(Func f) const {
+auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
   if (split_history_) {
     history_->update(state_);  // temporary append
   }
@@ -44,9 +44,9 @@ auto NNEvaluationRequest<EvalSpec, Evaluation>::Item::compute_over_history(Func 
   return output;
 }
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
-typename NNEvaluationRequest<EvalSpec, Evaluation>::CacheKey
-NNEvaluationRequest<EvalSpec, Evaluation>::Item::make_cache_key(
+template <search::concepts::Traits Traits>
+typename NNEvaluationRequest<Traits>::CacheKey
+NNEvaluationRequest<Traits>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
   EvalKey eval_key =
     compute_over_history([&](auto begin, auto end) { return Keys::eval_key(begin, end - 1); });
@@ -54,14 +54,14 @@ NNEvaluationRequest<EvalSpec, Evaluation>::Item::make_cache_key(
   return CacheKey(eval_key, cache_sym);
 }
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
-void NNEvaluationRequest<EvalSpec, Evaluation>::set_notification_task_info(
+template <search::concepts::Traits Traits>
+void NNEvaluationRequest<Traits>::set_notification_task_info(
   const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
-void NNEvaluationRequest<EvalSpec, Evaluation>::mark_all_as_stale() {
+template <search::concepts::Traits Traits>
+void NNEvaluationRequest<Traits>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
     active_index_ = 1 - active_index_;

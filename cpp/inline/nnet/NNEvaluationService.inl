@@ -29,11 +29,11 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
 
 }  // namespace detail
 
-template <core::concepts::EvalSpec EvalSpec>
-int NNEvaluationService<EvalSpec>::instance_count_ = 0;
+template <search::concepts::Traits Traits>
+int NNEvaluationService<Traits>::instance_count_ = 0;
 
-template <core::concepts::EvalSpec EvalSpec>
-inline NNEvaluationService<EvalSpec>::NNEvaluationService(const NNEvaluationServiceParams& params,
+template <search::concepts::Traits Traits>
+inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServiceParams& params,
                                                           core::GameServerBase* server)
     : core::PerfStatsClient(),
       core::GameServerClient(server),
@@ -64,13 +64,13 @@ inline NNEvaluationService<EvalSpec>::NNEvaluationService(const NNEvaluationServ
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-NNEvaluationService<EvalSpec>::~NNEvaluationService() {
+template <search::concepts::Traits Traits>
+NNEvaluationService<Traits>::~NNEvaluationService() {
   disconnect();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename NNEvaluationService<EvalSpec>::sptr NNEvaluationService<EvalSpec>::create(
+template <search::concepts::Traits Traits>
+typename NNEvaluationService<Traits>::sptr NNEvaluationService<Traits>::create(
   const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
   // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
@@ -104,8 +104,8 @@ typename NNEvaluationService<EvalSpec>::sptr NNEvaluationService<EvalSpec>::crea
   return shared_ptr;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::connect() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::connect() {
   mit::unique_lock lock(main_mutex_);
   bool first_connect = (num_connections_ == 0);
   num_connections_++;
@@ -117,8 +117,8 @@ void NNEvaluationService<EvalSpec>::connect() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::disconnect() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::disconnect() {
   mit::unique_lock lock(main_mutex_);
   num_connections_--;
   if (num_connections_ > 0) {
@@ -134,8 +134,8 @@ void NNEvaluationService<EvalSpec>::disconnect() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::CacheLookupResult::update_notification_info(
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::CacheLookupResult::update_notification_info(
   BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
   if (id > notifying_sequence_id) {
     notifying_batch_data = batch_data;
@@ -143,33 +143,33 @@ void NNEvaluationService<EvalSpec>::CacheLookupResult::update_notification_info(
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-NNEvaluationService<EvalSpec>::ShardData::~ShardData() {
+template <search::concepts::Traits Traits>
+NNEvaluationService<Traits>::ShardData::~ShardData() {
   // If we don't clear the eviction handler here, we encounter race conditions during the
   // destruction of the eval_cache. Sometimes, those race conditions lead to a segfault.
   eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::ShardData::init(int cache_size) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::ShardData::init(int cache_size) {
   eval_cache.set_capacity(cache_size);
   eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::ShardData::decrement_ref_count(NNEvaluation* eval) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::ShardData::decrement_ref_count(NNEvaluation* eval) {
   if (eval->decrement_ref_count()) {
     eval_pool.free(eval);
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchData::set_capacity(int capacity) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchData::set_capacity(int capacity) {
   tensor_groups.resize(capacity);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchData::copy_input_to(
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchData::copy_input_to(
   int num_rows, NeuralNet& net, core::pipeline_index_t pipeline_index) {
   float* input_ptr = net.get_input_ptr(pipeline_index);
   constexpr size_t input_size = InputShape::total_size;
@@ -181,8 +181,8 @@ void NNEvaluationService<EvalSpec>::BatchData::copy_input_to(
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchData::load(OutputDataArray& output_data) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) {
   for (int i = 0; i < write_count; ++i) {
     TensorGroup& group = tensor_groups[i];
 
@@ -197,15 +197,15 @@ void NNEvaluationService<EvalSpec>::BatchData::load(OutputDataArray& output_data
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 template <typename Tensor>
-void NNEvaluationService<EvalSpec>::BatchData::load_helper(float** src, Tensor& dst) {
+void NNEvaluationService<Traits>::BatchData::load_helper(float** src, Tensor& dst) {
   std::copy_n(*src, Tensor::Dimensions::total_size, dst.data());
   *src += Tensor::Dimensions::total_size;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchData::clear() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchData::clear() {
   sequence_id = 0;
   allocate_count = 0;
   write_count = 0;
@@ -213,15 +213,15 @@ void NNEvaluationService<EvalSpec>::BatchData::clear() {
   notification_tasks.clear();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::BatchDataSliceAllocator(
+template <search::concepts::Traits Traits>
+NNEvaluationService<Traits>::BatchDataSliceAllocator::BatchDataSliceAllocator(
   core::PerfStats& perf_stats)
     : perf_stats_(perf_stats) {
   add_batch_data();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
+template <search::concepts::Traits Traits>
+NNEvaluationService<Traits>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
   while (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -233,8 +233,8 @@ NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::~BatchDataSliceAllocator
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::allocate_slices(
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::allocate_slices(
   BatchDataSlice* slices, int n, mit::mutex& main_mutex) {
   mit::unique_lock lock(main_mutex);
 
@@ -259,15 +259,15 @@ void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::allocate_slices(
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
   LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::freeze_first() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::freeze_first() {
   if (pending_batch_datas_.empty()) return;
   BatchData* batch_data = pending_batch_datas_.front();
   if (batch_data->allocate_count == 0) return;
@@ -282,18 +282,18 @@ void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::freeze_first() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename NNEvaluationService<EvalSpec>::BatchData*
-NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+template <search::concepts::Traits Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
   if (!pending_batch_datas_.empty()) {
     return pending_batch_datas_.front();
   }
   return nullptr;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename NNEvaluationService<EvalSpec>::BatchData*
-NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
+template <search::concepts::Traits Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
   if (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -305,8 +305,8 @@ NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::pop_first_pending_batch_
   return nullptr;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
   batch_size_limit_ = limit;
   for (auto& batch_data : batch_data_reserve_) {
     batch_data->set_capacity(limit);
@@ -316,9 +316,9 @@ void NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::set_batch_size_limi
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename NNEvaluationService<EvalSpec>::BatchData*
-NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::add_batch_data() {
+template <search::concepts::Traits Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::BatchDataSliceAllocator::add_batch_data() {
   // Assumes mutex_ is locked
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
@@ -334,8 +334,8 @@ NNEvaluationService<EvalSpec>::BatchDataSliceAllocator::add_batch_data() {
   return batch_data;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-core::yield_instruction_t NNEvaluationService<EvalSpec>::evaluate(NNEvaluationRequest& request) {
+template <search::concepts::Traits Traits>
+core::yield_instruction_t NNEvaluationService<Traits>::evaluate(NNEvaluationRequest& request) {
   if (request.num_fresh_items() == 0) {
     return core::kContinue;
   }
@@ -403,8 +403,8 @@ core::yield_instruction_t NNEvaluationService<EvalSpec>::evaluate(NNEvaluationRe
   return yield_instruction;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::end_session() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::end_session() {
   if (session_ended_) return;
 
   core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
@@ -476,8 +476,8 @@ void NNEvaluationService<EvalSpec>::end_session() {
   session_ended_ = true;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::update_perf_stats(core::PerfStats& perf_stats) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::update_perf_stats(core::PerfStats& perf_stats) {
   mit::unique_lock lock(perf_stats_mutex_);
   core::PerfStats perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::PerfStats();
@@ -486,8 +486,8 @@ void NNEvaluationService<EvalSpec>::update_perf_stats(core::PerfStats& perf_stat
   perf_stats += perf_stats_copy;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::handle_force_progress() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::handle_force_progress() {
   mit::unique_lock lock(main_mutex_);
   LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
@@ -497,13 +497,13 @@ void NNEvaluationService<EvalSpec>::handle_force_progress() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-std::string NNEvaluationService<EvalSpec>::dump_key(const char* descr) {
+template <search::concepts::Traits Traits>
+std::string NNEvaluationService<Traits>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::activate_net() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::activate_net() {
   if (net_.activated()) return;
 
   net_.activate(params_.num_pipelines);
@@ -513,8 +513,8 @@ void NNEvaluationService<EvalSpec>::activate_net() {
             params_.num_pipelines, params_.batch_size);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::check_cache(NNEvaluationRequest& request,
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::check_cache(NNEvaluationRequest& request,
                                                 CacheLookupResult& result) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -566,8 +566,8 @@ void NNEvaluationService<EvalSpec>::check_cache(NNEvaluationRequest& request,
   request.clear_stale_items();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::populate_sort_items(SortItem* sort_items,
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::populate_sort_items(SortItem* sort_items,
                                                         NNEvaluationRequest& request) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -594,8 +594,8 @@ void NNEvaluationService<EvalSpec>::populate_sort_items(SortItem* sort_items,
   std::sort(sort_items, sort_items + s);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-bool NNEvaluationService<EvalSpec>::handle_fresh_item(NNEvaluationRequest& request,
+template <search::concepts::Traits Traits>
+bool NNEvaluationService<Traits>::handle_fresh_item(NNEvaluationRequest& request,
                                                       CacheLookupResult& result, ShardData& shard,
                                                       int item_index) {
   core::PerfClocker clocker(result.stats.cache_insert_time_ns);
@@ -632,8 +632,8 @@ bool NNEvaluationService<EvalSpec>::handle_fresh_item(NNEvaluationRequest& reque
   return false;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::write_miss_infos(NNEvaluationRequest& request,
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::write_miss_infos(NNEvaluationRequest& request,
                                                      CacheLookupResult& result,
                                                      int& miss_info_write_index,
                                                      int misses_for_this_shard) {
@@ -672,8 +672,8 @@ void NNEvaluationService<EvalSpec>::write_miss_infos(NNEvaluationRequest& reques
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::write_to_batch(const RequestItem& item, BatchData* batch_data,
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchData* batch_data,
                                                    int row) {
   const CacheKey& cache_key = item.cache_key();
 
@@ -705,8 +705,8 @@ void NNEvaluationService<EvalSpec>::write_to_batch(const RequestItem& item, Batc
   group.active_seat = active_seat;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-bool NNEvaluationService<EvalSpec>::register_notification_task(const NNEvaluationRequest& request,
+template <search::concepts::Traits Traits>
+bool NNEvaluationService<Traits>::register_notification_task(const NNEvaluationRequest& request,
                                                                const CacheLookupResult& result) {
   // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
   // There should only ever be one yield_manager_ for the entire process. We do it here to
@@ -742,8 +742,8 @@ bool NNEvaluationService<EvalSpec>::register_notification_task(const NNEvaluatio
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::schedule_loop() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::schedule_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
@@ -766,8 +766,8 @@ void NNEvaluationService<EvalSpec>::schedule_loop() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::drain_loop() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::drain_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       drain_loop_prelude();
@@ -788,8 +788,8 @@ void NNEvaluationService<EvalSpec>::drain_loop() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::state_loop() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::state_loop() {
   const char* func = __func__;
   mit::unique_lock lock(main_mutex_);
   while (true) {
@@ -881,8 +881,8 @@ void NNEvaluationService<EvalSpec>::state_loop() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::load_initial_weights_if_necessary() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::load_initial_weights_if_necessary() {
   if (ready_) return;
 
   auto client = core::LoopControllerClient::get();
@@ -913,8 +913,8 @@ void NNEvaluationService<EvalSpec>::load_initial_weights_if_necessary() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::schedule_loop_prelude() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::schedule_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
@@ -963,8 +963,8 @@ void NNEvaluationService<EvalSpec>::schedule_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::drain_loop_prelude() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::drain_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
@@ -1008,9 +1008,9 @@ void NNEvaluationService<EvalSpec>::drain_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-typename NNEvaluationService<EvalSpec>::BatchData*
-NNEvaluationService<EvalSpec>::get_next_batch_data(
+template <search::concepts::Traits Traits>
+typename NNEvaluationService<Traits>::BatchData*
+NNEvaluationService<Traits>::get_next_batch_data(
   core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   mit::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
@@ -1052,8 +1052,8 @@ NNEvaluationService<EvalSpec>::get_next_batch_data(
   return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::schedule_batch(
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
   RELEASE_ASSERT(batch_data->frozen());
@@ -1088,8 +1088,8 @@ void NNEvaluationService<EvalSpec>::schedule_batch(
   perf_stats_.update(schedule_loop_stats);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-bool NNEvaluationService<EvalSpec>::load_queue_item(LoadQueueItem& item) {
+template <search::concepts::Traits Traits>
+bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
   if (nnet::kEnableServiceDebug) {
     LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
@@ -1125,8 +1125,8 @@ bool NNEvaluationService<EvalSpec>::load_queue_item(LoadQueueItem& item) {
   return true;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::drain_batch(const LoadQueueItem& item) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   const char* func = __func__;
   BatchData* batch_data = item.batch_data;
   core::pipeline_index_t pipeline_index = item.pipeline_index;
@@ -1157,8 +1157,8 @@ void NNEvaluationService<EvalSpec>::drain_batch(const LoadQueueItem& item) {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::reload_weights(const std::vector<char>& buf) {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
   const char* func = __func__;
   LOG_INFO("{}: reloading network weights...", kCls);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
@@ -1181,8 +1181,8 @@ void NNEvaluationService<EvalSpec>::reload_weights(const std::vector<char>& buf)
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::pause() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::pause() {
   const char* func = __func__;
   LOG_INFO("{}::{}()", kCls, func);
   mit::unique_lock lock(main_mutex_);
@@ -1191,8 +1191,8 @@ void NNEvaluationService<EvalSpec>::pause() {
   cv_main_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-void NNEvaluationService<EvalSpec>::unpause() {
+template <search::concepts::Traits Traits>
+void NNEvaluationService<Traits>::unpause() {
   const char* func = __func__;
   LOG_INFO("{}::{}() [state:{}]", kCls, func, system_state_);
   mit::unique_lock lock(main_mutex_);

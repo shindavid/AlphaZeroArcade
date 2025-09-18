@@ -9,10 +9,10 @@
 
 namespace nnet {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 class NNEvaluationServiceFactory {
  public:
-  using ServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
+  using ServiceBase = nnet::NNEvaluationServiceBase<Traits>;
   using ServiceBase_ptr = std::shared_ptr<ServiceBase>;
 
   // Factory method to create a service

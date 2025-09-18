@@ -581,8 +581,11 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
   auto& stable_data = node->stable_data();
   auto& stats = node->stats();
 
+  int num_valid_actions = stable_data.num_valid_actions;
+  core::seat_index_t seat = stable_data.active_seat;
+
   if (stable_data.is_chance_node) {
-    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+    for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
 
@@ -597,7 +600,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
     }
-    if (N == stable_data.num_valid_actions) {
+    if (N == num_valid_actions) {
       lock.lock();
 
       stats.Q = Q_sum;
@@ -605,16 +608,13 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
     }
-
   } else {
-    core::seat_index_t seat = stable_data.active_seat;
-
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
     int num_children = 0;
 
     bool skipped = false;
-    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+    for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
       if (!child) {
@@ -657,7 +657,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
     stats.Q = Q;
     stats.Q_sq = Q_sq;
     stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
-                               cp_has_winning_move, stable_data);
+                               cp_has_winning_move, num_valid_actions, seat);
 
     if (N) {
       eigen_util::debug_assert_is_valid_prob_distr(stats.Q);

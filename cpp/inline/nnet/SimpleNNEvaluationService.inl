@@ -2,13 +2,13 @@
 
 namespace nnet {
 
-template <core::concepts::EvalSpec EvalSpec>
-SimpleNNEvaluationService<EvalSpec>::SimpleNNEvaluationService() {
+template <search::concepts::Traits Traits>
+SimpleNNEvaluationService<Traits>::SimpleNNEvaluationService() {
   eval_pool_.set_recycle_func([](NNEvaluation* eval) { eval->clear(); });
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-core::yield_instruction_t SimpleNNEvaluationService<EvalSpec>::evaluate(
+template <search::concepts::Traits Traits>
+core::yield_instruction_t SimpleNNEvaluationService<Traits>::evaluate(
   NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 

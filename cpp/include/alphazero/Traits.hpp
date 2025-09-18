@@ -6,7 +6,8 @@
 #include "alphazero/GameLogFullRecord.hpp"
 #include "alphazero/GameLogView.hpp"
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/Node.hpp"
+#include "alphazero/NodeStableData.hpp"
+#include "alphazero/NodeStats.hpp"
 #include "alphazero/SearchResults.hpp"
 #include "alphazero/TrainingInfo.hpp"
 #include "core/Constants.hpp"
@@ -22,7 +23,8 @@ struct Traits {
   using Game = G;
   using EvalSpec = ES;
   using Edge = alpha0::Edge;
-  using Node = alpha0::Node<EvalSpec>;
+  using NodeStableData = alpha0::NodeStableData<EvalSpec>;
+  using NodeStats = alpha0::NodeStats<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using AuxState = alpha0::AuxState<ManagerParams>;
   using SearchResults = alpha0::SearchResults<Game>;

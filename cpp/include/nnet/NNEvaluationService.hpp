@@ -9,7 +9,7 @@
 #include "core/PerfStats.hpp"
 #include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "nnet/NNEvaluation.hpp"
 #include "nnet/NNEvaluationRequest.hpp"
 #include "nnet/NNEvaluationServiceBase.hpp"
@@ -49,9 +49,9 @@ namespace nnet {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <core::concepts::EvalSpec EvalSpec>
+template <search::concepts::Traits Traits>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<EvalSpec>,
+    : public NNEvaluationServiceBase<Traits>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -63,14 +63,15 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using Game = EvalSpec::Game;
+  using EvalSpec = Traits::EvalSpec;
+  using Game = Traits::Game;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = core::InputTensorizor<Game>;
-  using TrainingTargets = EvalSpec::TrainingTargets;
+  using TrainingTargets = Traits::EvalSpec::TrainingTargets;
 
   using NeuralNet = core::NeuralNet<EvalSpec>;
-  using NNEvaluation = nnet::NNEvaluation<EvalSpec>;
-  using NNEvaluationRequest = nnet::NNEvaluationRequest<EvalSpec, NNEvaluation>;
+  using NNEvaluation = nnet::NNEvaluation<Traits>;
+  using NNEvaluationRequest = nnet::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using ActionMask = Game::Types::ActionMask;

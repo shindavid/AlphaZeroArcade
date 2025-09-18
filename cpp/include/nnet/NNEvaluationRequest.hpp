@@ -1,9 +1,11 @@
 #pragma once
 
 #include "core/InputTensorizor.hpp"
-#include "core/NodeBase.hpp"
+#include "core/Node.hpp"
 #include "core/YieldManager.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "nnet/NNEvaluation.hpp"
+#include "search/TraitsTypes.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "nnet/TypeDefs.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
@@ -22,14 +24,15 @@ namespace nnet {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <core::concepts::EvalSpec EvalSpec, typename Evaluation>
+template <search::concepts::Traits Traits>
 class NNEvaluationRequest {
  public:
-  using Game = EvalSpec::Game;
+  using Evaluation = nnet::NNEvaluation<Traits>;
+  using Game = Traits::Game;
+  using Node = search::TraitsTypes<Traits>::Node;
   using InputTensorizor = core::InputTensorizor<Game>;
   using Keys = InputTensorizor::Keys;
 
-  using NodeBase = core::NodeBase<EvalSpec>;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using EvalKey = Keys::EvalKey;
@@ -71,9 +74,9 @@ class NNEvaluationRequest {
      * is true, then we will incorporate sym into the cache key. See comment in
      * nnet::NNEvaluationServiceParams for discussion on this bool.
      */
-    Item(NodeBase* node, StateHistory& history, const State& state, group::element_t sym,
+    Item(Node* node, StateHistory& history, const State& state, group::element_t sym,
          bool incorporate_sym_into_cache_key);
-    Item(NodeBase* node, StateHistory& history, group::element_t sym,
+    Item(Node* node, StateHistory& history, group::element_t sym,
          bool incorporate_sym_into_cache_key);
 
     /*
@@ -87,7 +90,7 @@ class NNEvaluationRequest {
 
     void set_eval(Evaluation* eval) { eval_ = eval; }
 
-    NodeBase* node() const { return node_; }
+    Node* node() const { return node_; }
     Evaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
@@ -97,7 +100,7 @@ class NNEvaluationRequest {
    private:
     CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
-    NodeBase* const node_;
+    Node* const node_;
     const State state_;
     StateHistory* const history_;
     const bool split_history_;

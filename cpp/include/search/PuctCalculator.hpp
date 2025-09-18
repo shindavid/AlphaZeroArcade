@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 namespace search {
@@ -10,12 +11,14 @@ namespace search {
 template <search::concepts::Traits Traits>
 struct PuctCalculator {
   using Game = Traits::Game;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using EvalSpec = Traits::EvalSpec;
   using LookupTable = search::LookupTable<Traits>;
   using ManagerParams = Traits::ManagerParams;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
