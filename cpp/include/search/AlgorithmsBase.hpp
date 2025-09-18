@@ -2,6 +2,7 @@
 
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
+#include "search/GameLogViewParams.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/PuctCalculator.hpp"
 #include "search/SearchContext.hpp"
@@ -44,12 +45,14 @@ class AlgorithmsBase {
   using SearchContext = search::SearchContext<Traits>;
   using TrainingInfoParams = search::TrainingInfoParams<Traits>;
   using TensorData = search::GameLogBase<Traits>::TensorData;
+  using GameLogViewParams = search::GameLogViewParams<Traits>;
 
   using RootInfo = GeneralContext::RootInfo;
   using Visitation = TraitsTypes::Visitation;
 
   using GameResults = Game::GameResults;
   using IO = Game::IO;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -79,7 +82,7 @@ class AlgorithmsBase {
   static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord&, std::vector<char>& buf);
-  static void to_view(const GameLogCompactRecord&, GameLogView&);
+  static void to_view(const GameLogViewParams&, GameLogView&);
 
   static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);

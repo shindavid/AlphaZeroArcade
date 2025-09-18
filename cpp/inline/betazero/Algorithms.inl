@@ -13,7 +13,10 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[seat];
   training_info.Q_posterior = mcts_results->win_rates(seat);
 
-  // TODO: we should write action_value_uncertainties_target here as well
+  if (params.use_for_training) {
+    training_info.action_value_uncertainties_target = mcts_results->action_value_uncertainties;
+    training_info.action_value_uncertainties_target_valid = true;
+  }
 }
 
 template <search::concepts::Traits Traits>
@@ -56,6 +59,36 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
 }
 
 template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_view(const GameLogCompactRecord&, GameLogView&) {}
+void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
+  Base::to_view(params, view);
+
+  const GameLogCompactRecord* record = params.record;
+  group::element_t sym = params.sym;
+  core::action_mode_t mode = record->action_mode;
+
+  const char* addr = reinterpret_cast<const char*>(record);
+
+  const char* policy_data_addr = addr + sizeof(GameLogCompactRecord);
+  const TensorData* policy_data = reinterpret_cast<const TensorData*>(policy_data_addr);
+
+  const char* action_values_data_addr = policy_data_addr + policy_data->size();
+  const TensorData* action_values_data =
+    reinterpret_cast<const TensorData*>(action_values_data_addr);
+
+  const char* action_values_uncertainty_data_addr =
+    action_values_data_addr + action_values_data->size();
+  const TensorData* action_values_uncertainty_data =
+    reinterpret_cast<const TensorData*>(action_values_uncertainty_data_addr);
+
+  view.action_value_uncertainties_valid =
+    action_values_uncertainty_data->load(view.action_value_uncertainties);
+
+  if (view.action_value_uncertainties_valid) {
+    Game::Symmetries::apply(view.action_value_uncertainties, sym, mode);
+  }
+
+  view.Q_prior = record->Q_prior;
+  view.Q_posterior = record->Q_posterior;
+}
 
 }  // namespace beta0

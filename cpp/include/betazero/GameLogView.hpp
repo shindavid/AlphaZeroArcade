@@ -13,6 +13,7 @@ struct GameLogView : public alpha0::GameLogView<Game> {
   ActionValueTensor action_value_uncertainties;
   float Q_prior;
   float Q_posterior;
+  bool action_value_uncertainties_valid;
 };
 
 }  // namespace beta0

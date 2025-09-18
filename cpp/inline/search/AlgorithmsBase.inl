@@ -380,7 +380,55 @@ void AlgorithmsBase<Traits>::serialize_record(const GameLogFullRecord& full_reco
 }
 
 template <search::concepts::Traits Traits>
-void AlgorithmsBase<Traits>::to_view(const GameLogCompactRecord&, GameLogView&) {}
+void AlgorithmsBase<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
+  const GameLogCompactRecord* record = params.record;
+  const GameLogCompactRecord* next_record = params.next_record;
+  const State* cur_pos = params.cur_pos;
+  const State* final_pos = params.final_pos;
+  const ValueTensor* outcome = params.outcome;
+  group::element_t sym = params.sym;
+
+  core::seat_index_t active_seat = record->active_seat;
+  core::action_mode_t mode = record->action_mode;
+
+  const char* addr = reinterpret_cast<const char*>(record);
+
+  const char* policy_data_addr = addr + sizeof(GameLogCompactRecord);
+  const TensorData* policy_data = reinterpret_cast<const TensorData*>(policy_data_addr);
+
+  const char* action_values_data_addr = policy_data_addr + policy_data->size();
+  const TensorData* action_values_data =
+    reinterpret_cast<const TensorData*>(action_values_data_addr);
+
+  view.policy_valid = policy_data->load(view.policy);
+  view.action_values_valid = action_values_data->load(view.action_values);
+
+  if (view.policy_valid) {
+    Game::Symmetries::apply(view.policy, sym, mode);
+  }
+
+  if (view.action_values_valid) {
+    Game::Symmetries::apply(view.action_values, sym, mode);
+  }
+
+  view.next_policy_valid = false;
+  if (next_record) {
+    const char* next_addr = reinterpret_cast<const char*>(next_record);
+
+    const char* next_policy_data_addr = next_addr + sizeof(GameLogCompactRecord);
+    const TensorData* next_policy_data = reinterpret_cast<const TensorData*>(next_policy_data_addr);
+
+    view.next_policy_valid = next_policy_data->load(view.next_policy);
+    if (view.next_policy_valid) {
+      Game::Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+    }
+  }
+
+  view.cur_pos = *cur_pos;
+  view.final_pos = *final_pos;
+  view.game_result = *outcome;
+  view.active_seat = active_seat;
+}
 
 template <search::concepts::Traits Traits>
 void AlgorithmsBase<Traits>::to_results(const GeneralContext& general_context,

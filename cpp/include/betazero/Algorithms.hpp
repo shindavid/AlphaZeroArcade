@@ -15,6 +15,7 @@ class Algorithms : public search::AlgorithmsBase<Traits> {
   using GameLogCompactRecord = Base::GameLogCompactRecord;
   using GameLogFullRecord = Base::GameLogFullRecord;
   using GameLogView = Base::GameLogView;
+  using GameLogViewParams = Base::GameLogViewParams;
   using SearchResults = Base::SearchResults;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using TrainingInfo = Base::TrainingInfo;
@@ -23,7 +24,7 @@ class Algorithms : public search::AlgorithmsBase<Traits> {
   static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
-  static void to_view(const GameLogCompactRecord&, GameLogView&);
+  static void to_view(const GameLogViewParams&, GameLogView&);
 };
 
 }  // namespace beta0

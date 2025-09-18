@@ -51,99 +51,71 @@ ShapeInfo* GameReadLog<Traits>::get_shape_info_array() {
 template <search::concepts::Traits Traits>
 void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
                                const std::vector<int>& target_indices, float* output_array) const {
-  // RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_positions(),
-  //                "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_positions(),
-  //                filename_, game_index_);
+  RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_positions(),
+                 "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_positions(),
+                 filename_, game_index_);
 
-  // pos_index_t state_index = get_pos_index(row_index);
-  // mem_offset_t mem_offset = get_mem_offset(state_index);
-  // const GameLogCompactRecord& record = get_record(mem_offset);
+  pos_index_t state_index = get_pos_index(row_index);
+  const GameLogCompactRecord* record = &get_record(get_mem_offset(state_index));
 
-  // int num_prev_states_to_cp = std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
-  // int num_states = num_prev_states_to_cp + 1;
+  const GameLogCompactRecord* next_record = nullptr;
+  if (state_index + 1 < num_positions()) {
+    next_record = &get_record(get_mem_offset(state_index + 1));
+  }
 
-  // State states[num_states];
-  // for (int i = 0; i < num_prev_states_to_cp; ++i) {
-  //   int prev_state_index = state_index - num_prev_states_to_cp + i;
-  //   states[i] = get_record(get_mem_offset(prev_state_index)).position;
-  // }
-  // states[num_states - 1] = record.position;
+  int num_prev_states_to_cp = std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
+  int num_states = num_prev_states_to_cp + 1;
 
-  // State* start_pos = &states[0];
-  // State* cur_pos = &states[num_states - 1];
-  // State final_state = get_final_state();
+  State states[num_states];
+  for (int i = 0; i < num_prev_states_to_cp; ++i) {
+    int prev_state_index = state_index - num_prev_states_to_cp + i;
+    states[i] = get_record(get_mem_offset(prev_state_index)).position;
+  }
+  states[num_states - 1] = record->position;
 
-  // group::element_t sym = 0;
-  // if (apply_symmetry) {
-  //   sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
-  // }
+  State* start_pos = &states[0];
+  State* cur_pos = &states[num_states - 1];
+  State final_state = get_final_state();
 
-  // for (int i = 0; i < num_states; ++i) {
-  //   Game::Symmetries::apply(states[i], sym);
-  // }
-  // Game::Symmetries::apply(final_state, sym);
+  group::element_t sym = 0;
+  if (apply_symmetry) {
+    sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
+  }
 
-  // float Q_prior = record.Q_prior;
-  // float Q_posterior = record.Q_posterior;
-  // core::seat_index_t active_seat = record.active_seat;
-  // core::action_mode_t mode = record.action_mode;
+  for (int i = 0; i < num_states; ++i) {
+    Game::Symmetries::apply(states[i], sym);
+  }
+  Game::Symmetries::apply(final_state, sym);
 
-  // PolicyTensor policy;
-  // bool policy_valid = get_policy(mem_offset, policy);
-  // if (policy_valid) Game::Symmetries::apply(policy, sym, mode);
+  GameLogViewParams params;
+  params.record = record;
+  params.next_record = next_record;
+  params.cur_pos = cur_pos;
+  params.final_pos = &final_state;
+  params.outcome = &get_outcome();
+  params.sym = sym;
 
-  // ActionValueTensor action_values;
-  // bool action_values_valid = get_action_values(mem_offset, action_values);
-  // if (action_values_valid) Game::Symmetries::apply(action_values, sym, mode);
+  GameLogView view;
+  Algorithms::to_view(params, view);
 
-  // ActionValueTensor action_value_uncertainties;
-  // bool action_value_uncertainties_valid =
-  //   get_action_value_uncertainties(mem_offset, action_value_uncertainties);
-  // if (action_value_uncertainties_valid)
-  //   Game::Symmetries::apply(action_value_uncertainties, sym, mode);
+  constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
+  auto input = InputTensorizor::tensorize(start_pos, cur_pos);
+  output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
 
-  // PolicyTensor next_policy;
-  // bool next_policy_valid = false;
-  // bool has_next = state_index + 1 < num_positions();
+  constexpr size_t N = mp::Length_v<AllTargets>;
+  for (int target_index : target_indices) {
+    util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
+      using Target = mp::TypeAt_t<AllTargets, t>;
+      using Tensor = Target::Tensor;
+      constexpr int kSize = Tensor::Dimensions::total_size;
 
-  // if (has_next) {
-  //   mem_offset_t next_mem_offset = get_mem_offset(state_index + 1);
-  //   next_policy_valid = get_policy(next_mem_offset, next_policy);
-  //   if (next_policy_valid) {
-  //     Game::Symmetries::apply(next_policy, sym, get_record(next_mem_offset).action_mode);
-  //   }
-  // }
-
-  // const ValueTensor& outcome = get_outcome();
-
-  // constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
-  // auto input = InputTensorizor::tensorize(start_pos, cur_pos);
-  // output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
-
-  // PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
-  // PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
-  // ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
-  // ActionValueTensor* action_value_uncertainties_ptr =
-  //   action_value_uncertainties_valid ? &action_value_uncertainties : nullptr;
-
-  // GameLogView view(cur_pos, &final_state, &outcome, policy_ptr, next_policy_ptr,
-  // action_values_ptr,
-  //                  action_value_uncertainties_ptr, Q_prior, Q_posterior, active_seat);
-
-  // constexpr size_t N = mp::Length_v<AllTargets>;
-  // for (int target_index : target_indices) {
-  //   util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
-  //     using Target = mp::TypeAt_t<AllTargets, t>;
-  //     using Tensor = Target::Tensor;
-  //     constexpr int kSize = Tensor::Dimensions::total_size;
-
-  //     Tensor tensor;
-  //     bool mask = Target::tensorize(view, tensor);
-  //     output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
-  //     output_array[0] = mask;
-  //     output_array++;
-  //   });
-  // }
+      Tensor tensor;
+      bool mask = Target::tensorize(view, tensor);
+      output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
+      output_array[0] = mask;
+      output_array++;
+    });
+  }
 }
 
 // TODO: bring back replay()

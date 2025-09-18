@@ -4,6 +4,7 @@
 #include "core/InputTensorizor.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GameLogBase.hpp"
+#include "search/GameLogViewParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -45,10 +46,12 @@ class GameReadLog : public GameLogBase<Traits> {
   using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
   using AuxTargets = EvalSpec::TrainingTargets::AuxList;
   using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
+  using Algorithms = search::AlgorithmsForT<Traits>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using pos_index_t = GameLogCommon::pos_index_t;
 
+  using GameLogViewParams = search::GameLogViewParams<Traits>;
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using TensorData = GameLogBase::TensorData;
