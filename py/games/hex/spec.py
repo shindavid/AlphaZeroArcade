@@ -100,6 +100,7 @@ class Chessformer(ModelConfigGenerator):
 
         smolgen_compress_dim = 8
         smolgen_shared_dim = 32
+        cnn_output_shape  = (c_trunk, *board_shape)
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
@@ -108,9 +109,9 @@ class Chessformer(ModelConfigGenerator):
 
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
                 ModuleSpec(type='ChessformerBlock', args=[
-                            input_shape, embed_dim, n_heads, n_layers, c_trunk],
+                            cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
                             'use_static_bias': True,
                             'use_rpe': True,

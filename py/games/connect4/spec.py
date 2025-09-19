@@ -218,7 +218,7 @@ class Chessformer(ModelConfigGenerator):
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
-        assert value_shape == (2,), value_shape
+        assert value_shape == (3,), value_shape
 
         embed_dim = 64
         n_heads = 8
@@ -234,6 +234,7 @@ class Chessformer(ModelConfigGenerator):
 
         smolgen_compress_dim = 8
         smolgen_shared_dim = 32
+        cnn_output_shape  = (c_trunk, *board_shape)
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
@@ -243,7 +244,7 @@ class Chessformer(ModelConfigGenerator):
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
                 ModuleSpec(type='ChessformerBlock', args=[
-                            input_shape, embed_dim, n_heads, n_layers, c_trunk],
+                            cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
                             'use_static_bias': True,
                             'use_rpe': True,
@@ -258,7 +259,7 @@ class Chessformer(ModelConfigGenerator):
             heads=[
                 ModuleSpec(type='PolicyHead',
                         args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinLossValueHead',
+                ModuleSpec(type='WinLossDrawValueHead',
                         args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
                 ModuleSpec(type='WinShareActionValueHead',
                         args=['action_value', board_size, c_trunk, c_action_value_hidden,
