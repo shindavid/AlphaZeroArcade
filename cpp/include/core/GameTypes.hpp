@@ -16,6 +16,7 @@
 
 namespace core {
 
+// TODO: some of the classes whose definitions are inlined here don't need to be. Move them out.
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
@@ -46,24 +47,13 @@ struct GameTypes {
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
-  /*
-   * Whenever use_for_training is true, policy_target and action_values_target should be non-null.
-   *
-   * The reverse, however, is not true: we can have use_for_training false, but have a non-null
-   * policy_target. The reason for this is subtle: it's because we have an opponent-reply-policy
-   * target. If we sample position 10 of the game, then we want to export the policy target for
-   * position 11 (the opponent's reply), even if we don't sample position 11.
-   */
-  struct TrainingInfo {
-    PolicyTensor* policy_target = nullptr;
-    ActionValueTensor* action_values_target = nullptr;
-    bool use_for_training = false;
-  };
+  struct ChanceEventHandleRequest {
+    ChanceEventHandleRequest(const YieldNotificationUnit& u, const State& s, action_t ca)
+        : notification_unit(u), state(s), chance_action(ca) {}
 
-  struct ChangeEventPreHandleRequest {
-    ChangeEventPreHandleRequest(const YieldNotificationUnit& u) : notification_unit(u) {}
-
-    YieldNotificationUnit notification_unit;
+    const YieldNotificationUnit& notification_unit;
+    const State& state;
+    action_t chance_action;
   };
 
   struct ActionRequest {
@@ -112,39 +102,11 @@ struct GameTypes {
       return r;
     }
 
-    TrainingInfo training_info;
     action_t action = -1;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
     bool resign_game = false;  // If true, the player resigns the game.
-  };
-
-  struct ChanceEventPreHandleResponse {
-    ChanceEventPreHandleResponse(ActionValueTensor* a = nullptr,
-                                 core::yield_instruction_t y = core::kContinue)
-        : action_values(a), yield_instruction(y) {}
-
-    static auto yield() { return ChanceEventPreHandleResponse(nullptr, core::kYield); }
-
-    ActionValueTensor* action_values = nullptr;
-    core::yield_instruction_t yield_instruction = core::kContinue;
-  };
-
-  /*
-   * A (symmetry-adjusted) view of a specific position in a game log.
-   *
-   * This is declared here so that we can properly declare the function signature for the
-   * training-target classes for each specific Game.
-   */
-  struct GameLogView {
-    const State* cur_pos;
-    const State* final_pos;
-    const ValueTensor* game_result;
-    const PolicyTensor* policy;
-    const PolicyTensor* next_policy;
-    const ActionValueTensor* action_values;
-    const seat_index_t active_seat;
   };
 };
 

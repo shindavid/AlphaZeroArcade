@@ -1,13 +1,13 @@
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchLog.hpp"
 #include "alphazero/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "generic_players/MctsPlayer.hpp"
+#include "generic_players/alpha0/Player.hpp"
 #include "search/Manager.hpp"
+#include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -25,51 +25,49 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using TicTacToeSpec =
   transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
 
-namespace generic {
+namespace generic::alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-class MctsPlayerTest : public ::testing::Test {
+class PlayerTest : public ::testing::Test {
  protected:
   using Game = EvalSpec::Game;
-  using Traits = alpha0::Traits<Game, EvalSpec>;
+  using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using MctsPlayer = generic::MctsPlayer<Traits>;
-  using MctsPlayerSharedData = MctsPlayer::SharedData;
-  using MctsPlayerParams = MctsPlayer::Params;
+  using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
+  using Player = generic::alpha0::Player<Traits>;
+  using PlayerSharedData = Player::SharedData;
+  using PlayerParams = Player::Params;
   using SearchResults = Traits::SearchResults;
-  using SearchLog = alpha0::SearchLog<Traits>;
+  using SearchLog = ::search::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ActionMask = Game::Types::ActionMask;
-  using Service = nnet::NNEvaluationServiceBase<EvalSpec>;
+  using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
 
  public:
-  MctsPlayerTest()
-      : manager_params_(create_manager_params()), player_params_(search::kCompetitive) {
+  PlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetition) {
     player_params_.num_fast_iters = 10;
     player_params_.num_full_iters = 20;
   }
 
   ManagerParams create_manager_params() {
-    ManagerParams params(search::kCompetitive);
+    ManagerParams params(search::kCompetition);
     params.no_model = true;
     return params;
   }
 
   void init(Service_sptr service) {
     core::GameServerBase* server = nullptr;
-    auto shared_player_data =
-      std::make_shared<MctsPlayerSharedData>(manager_params_, server, service);
+    auto shared_player_data = std::make_shared<PlayerSharedData>(manager_params_, server, service);
     auto manager = &shared_player_data->manager;
     search_log_ = new SearchLog(manager->lookup_table());
     manager->set_post_visit_func([&] { search_log_->update(); });
-    mcts_player_ = new MctsPlayer(player_params_, shared_player_data, true);
+    mcts_player_ = new Player(player_params_, shared_player_data, true);
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions) {
@@ -151,13 +149,13 @@ class MctsPlayerTest : public ::testing::Test {
 
  private:
   ManagerParams manager_params_;
-  MctsPlayerParams player_params_;
-  MctsPlayer* mcts_player_;
+  PlayerParams player_params_;
+  Player* mcts_player_;
   SearchLog* search_log_;
   std::vector<core::action_t> initial_actions_;
 };
 
-using tictactoe_test = MctsPlayerTest<TicTacToeSpec>;
+using tictactoe_test = PlayerTest<TicTacToeSpec>;
 TEST_F(tictactoe_test, uniform_search) { test_get_action_policy("tictactoe"); }
 
 TEST_F(tictactoe_test, uniform_search_01247) {
@@ -165,6 +163,6 @@ TEST_F(tictactoe_test, uniform_search_01247) {
   test_get_action_policy("tictactoe01247", initial_actions);
 }
 
-}  // namespace generic
+}  // namespace generic::alpha0
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

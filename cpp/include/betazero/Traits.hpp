@@ -1,32 +1,36 @@
 #pragma once
 
-#include "alphazero/AuxState.hpp"
-#include "alphazero/Edge.hpp"
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/Node.hpp"
-#include "alphazero/SearchResults.hpp"
+#include "betazero/AuxState.hpp"
+#include "betazero/Edge.hpp"
+#include "betazero/GameLogCompactRecord.hpp"
+#include "betazero/GameLogFullRecord.hpp"
+#include "betazero/GameLogView.hpp"
+#include "betazero/ManagerParams.hpp"
+#include "betazero/NodeStableData.hpp"
+#include "betazero/NodeStats.hpp"
+#include "betazero/SearchResults.hpp"
+#include "betazero/TrainingInfo.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "nnet/NNEvaluation.hpp"
-#include "nnet/NNEvaluationServiceBase.hpp"
-#include "nnet/NNEvaluationServiceFactory.hpp"
 
 namespace beta0 {
 
-// For now, beta0::Traits uses the same classes as alpha0::Traits. Later we will specialize it.
-template <core::concepts::Game G>
+template <core::concepts::Game G,
+          core::concepts::EvalSpec ES = core::EvalSpec<G, core::kParadigmBetaZero>>
 struct Traits {
   using Game = G;
-  using EvalSpec = core::EvalSpec<Game, core::kParadigmBetaZero>;
-  using Edge = alpha0::Edge;
-  using Node = alpha0::Node<EvalSpec>;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using AuxState = alpha0::AuxState<ManagerParams>;
-  using Evaluation = nnet::NNEvaluation<EvalSpec>;
-  using EvalServiceBase = nnet::NNEvaluationServiceBase<EvalSpec>;
-  using EvalServiceFactory = nnet::NNEvaluationServiceFactory<EvalSpec>;
-  using SearchResults = alpha0::SearchResults<Game>;
+  using EvalSpec = ES;
+  using Edge = beta0::Edge;
+  using NodeStableData = beta0::NodeStableData<EvalSpec>;
+  using NodeStats = beta0::NodeStats<EvalSpec>;
+  using ManagerParams = beta0::ManagerParams<EvalSpec>;
+  using AuxState = beta0::AuxState<ManagerParams>;
+  using SearchResults = beta0::SearchResults<Game>;
+  using TrainingInfo = beta0::TrainingInfo<Game>;
+  using GameLogCompactRecord = beta0::GameLogCompactRecord<Game>;
+  using GameLogFullRecord = beta0::GameLogFullRecord<Game>;
+  using GameLogView = beta0::GameLogView<Game>;
 };
 
 }  // namespace beta0

@@ -44,12 +44,17 @@ logger = logging.getLogger(__name__)
 class ShapeInfo:
     name: str
     target_index: int
+    primary: bool
     shape: Shape
 
 
 class SearchParadigm(Enum):
     AlphaZero = 'alpha0'
     BetaZero = 'beta0'
+
+    @staticmethod
+    def is_valid(value: str) -> bool:
+        return value in {paradigm.value for paradigm in SearchParadigm}
 
 
 ShapeInfoDict = Dict[str, ShapeInfo]
@@ -562,12 +567,13 @@ class OwnershipHead(Head):
         return out
 
 
-class GeneralLogitHead(Head):
+class GeneralHead(Head):
     """
-    A head that produces an arbitrarily shaped tensor of logits.
+    A head that produces an arbitrarily shaped tensor.
     """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralLogitHead, self).__init__(name, GeneralLogitTarget())
+    def __init__(self, target: LearningTarget, name: str, c_in: int, c_hidden: int, n_hidden: int,
+                 shape: Shape):
+        super(GeneralHead, self).__init__(name, target)
 
         self.shape = shape
 
@@ -594,6 +600,18 @@ class GeneralLogitHead(Head):
         out = self.linear2(out)  # (N, *)
 
         return out.view(N, *self.shape)  # (N, *shape)
+
+
+class GeneralLogitHead(GeneralHead):
+    """
+    A head that produces an arbitrarily shaped tensor of logits.
+
+    These logits are not intended to be normalized with softmax. Instead, they are intended to be
+    interpreted as independent binary classification logits.
+    """
+    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), name, c_in, c_hidden, n_hidden,
+                                               shape)
 
 
 MODULE_MAP = {
@@ -741,7 +759,7 @@ class Model(nn.Module):
         for target in self.loss_weights:
             assert target in targets, f'Missing target {target}'
 
-    def save_model(self, filename: str):
+    def save_model(self, filename: str, n_primary_targets: int):
         """
         Saves this network to disk in ONNX format.
         """
@@ -751,7 +769,7 @@ class Model(nn.Module):
 
         # 1) clone, strip extra heads, freeze
         clone = copy.deepcopy(self)
-        clone.heads = clone.heads[:3]  # 0=policy, 1=value, 2=action_value
+        clone.heads = clone.heads[:n_primary_targets]
         clone.cpu().eval()
 
         input_names = ["input"]

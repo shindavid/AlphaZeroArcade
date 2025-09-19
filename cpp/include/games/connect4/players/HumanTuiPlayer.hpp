@@ -14,7 +14,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   HumanTuiPlayer(bool cheat_mode);
   ~HumanTuiPlayer();
 
-  void start_game() override;
+  bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
 
  private:

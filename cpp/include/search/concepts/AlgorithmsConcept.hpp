@@ -3,18 +3,20 @@
 #include "search/Constants.hpp"
 
 #include <concepts>
+#include <ostream>
 
 namespace search {
 namespace concepts {
 
 // TODO: add detailed comments explaining what each method should do
-template <class A, class ValueArray, class SearchContext, class GeneralContext, class SearchResults,
-          class Node, class Edge>
+template <class A, class PolicyTensor, class ValueArray, class SearchContext, class GeneralContext,
+          class SearchResults, class Node, class Edge>
 concept Algorithms =
   requires(const SearchContext& const_context, SearchContext& non_const_context,
-           const ValueArray& value, GeneralContext& const_general_context,
-           GeneralContext& non_const_general_context, SearchResults& search_results,
-           const Node* node, const Node* root, const Edge* edge, search::RootInitPurpose purpose) {
+           const PolicyTensor& policy, const ValueArray& value,
+           GeneralContext& const_general_context, GeneralContext& non_const_general_context,
+           SearchResults& search_results, const Node* node, const Node* root, const Edge* edge,
+           search::RootInitPurpose purpose, std::ostream& ss, int n_rows_to_display) {
     { A::pure_backprop(non_const_context, value) };
     { A::virtual_backprop(non_const_context) };
     { A::undo_virtual_backprop(non_const_context) };
@@ -28,6 +30,7 @@ concept Algorithms =
     { A::load_evaluations(non_const_context) };
     { A::to_results(const_general_context, search_results) };
     { A::print_visit_info(const_context) };
+    { A::print_mcts_results(ss, policy, search_results, n_rows_to_display) };
   };
 
 }  // namespace concepts

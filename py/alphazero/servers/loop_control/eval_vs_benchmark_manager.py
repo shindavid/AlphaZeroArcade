@@ -131,6 +131,7 @@ class EvalVsBenchmarkManager(GamingManagerBase):
         super().__init__(controller, manager_config)
 
         logger.debug(f"init EvalVsBenchmarkManager with benchmark-tag: {benchmark_tag}")
+        self._paradigm = controller.search_paradigm
         self._indexed_agents: List[IndexedAgent] = []
         self._agent_lookup: Dict[Agent, IndexedAgent] = {}
         self._agent_lookup_db_id: Dict[int, IndexedAgent] = {}
@@ -206,7 +207,8 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             temp0 = True if gen > 0 else False
-            test_agent = MCTSAgent(gen, n_iters=self.n_iters, set_temp_zero=temp0, tag=self.tag)
+            test_agent = MCTSAgent(self._paradigm.value, gen, n_iters=self.n_iters,
+                                   set_temp_zero=temp0, tag=self.tag)
             test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index

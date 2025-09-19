@@ -10,10 +10,10 @@
 
 namespace blokus {
 
-inline void HumanTuiPlayer::start_game() {
+inline bool HumanTuiPlayer::start_game() {
   pending_poc_ = -1;
   passed_ = false;
-  base_t::start_game();
+  return base_t::start_game();
 }
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,

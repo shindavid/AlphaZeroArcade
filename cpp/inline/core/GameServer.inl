@@ -1,6 +1,7 @@
 #include "core/GameServer.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "core/LoopControllerClient.hpp"
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
@@ -93,14 +94,8 @@ auto GameServer<Game>::Params::make_options_description() {
 }
 
 template <concepts::Game Game>
-GameServer<Game>::SharedData::SharedData(
-  GameServer* server, const Params& params,
-  const TrainingDataWriterParams& training_data_writer_params)
+GameServer<Game>::SharedData::SharedData(GameServer* server, const Params& params)
     : server_(server), params_(params), yield_manager_(cv_, mutex_, queue_, pending_queue_count_) {
-  if (training_data_writer_params.enabled) {
-    training_data_writer_ = new TrainingDataWriter(server, training_data_writer_params);
-  }
-
   if (params_.alternating_mode == 0) {
     global_active_player_id_ = -1;
   } else if (params_.alternating_mode == 1) {
@@ -128,8 +123,6 @@ GameServer<Game>::SharedData::~SharedData() {
   for (GameSlot* slot : game_slots_) {
     delete slot;
   }
-
-  delete training_data_writer_;
 }
 
 template <concepts::Game Game>
@@ -339,7 +332,6 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 template <concepts::Game Game>
 bool GameServer<Game>::SharedData::request_game() {
   if (LoopControllerClient::deactivated()) return false;
-  if (training_data_writer_ && training_data_writer_->closed()) return false;
 
   mit::lock_guard<mit::mutex> guard(mutex_);
   if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return false;
@@ -722,6 +714,7 @@ void GameServer<Game>::GameSlot::pre_step() {
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
 
+  chance_action_ = -1;
   action_mode_ = Rules::get_action_mode(state_history_.current());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
   if (!Rules::is_chance_mode(action_mode_)) {
@@ -732,14 +725,21 @@ void GameServer<Game>::GameSlot::pre_step() {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
+  if (chance_action_ < 0) {
+    ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
+    chance_action_ = eigen_util::sample(chance_dist);
+    Rules::apply(state_history_, chance_action_);
+  }
+
   EnqueueRequest& enqueue_request = result.enqueue_request;
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChangeEventPreHandleRequest request(notification_unit);
-    ChanceEventPreHandleResponse response = player->prehandle_chance_event(request);
+    ChanceEventHandleRequest request(notification_unit, state_history_.current(), chance_action_);
 
-    switch (response.yield_instruction) {
+    core::yield_instruction_t response = player->handle_chance_event(request);
+
+    switch (response) {
       case kContinue: {
         mid_yield_ = false;
         break;
@@ -750,40 +750,24 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
         return false;
       }
       default: {
-        throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
+        throw util::Exception("Unexpected response: {}", response);
       }
     }
-
-    if (!noisy_mode_ && response.action_values) {
-      RELEASE_ASSERT(!chance_action_values_,
-                     "Clashing chance-event training info from different players");
-    }
-    chance_action_values_ = response.action_values;
   }
 
   CriticalSectionCheck check(in_critical_section_);
 
-  ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history_.current());
-  action_t action = eigen_util::sample(chance_dist);
-  if (game_log_) {
-    game_log_->add(state_history_.current(), action, active_seat_, nullptr, chance_action_values_,
-                   chance_action_values_);
-  }
+  step_chance_player_index_ = 0;  // reset for next chance event
 
-  // reset for next chance event:
-  step_chance_player_index_ = 0;
-  chance_action_values_ = nullptr;
-
-  Rules::apply(state_history_, action);
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state_history_.current(), action, &player_names_);
+    Game::IO::print_state(std::cout, state_history_.current(), chance_action_, &player_names_);
   }
   for (auto player2 : players_) {
-    player2->receive_state_change(active_seat_, state_history_.current(), action);
+    player2->receive_state_change(active_seat_, state_history_.current(), chance_action_);
   }
 
   ValueTensor outcome;
-  if (Game::Rules::is_terminal(state_history_.current(), active_seat_, action, outcome)) {
+  if (Game::Rules::is_terminal(state_history_.current(), active_seat_, chance_action_, outcome)) {
     handle_terminal(outcome, result);
     return false;
   }
@@ -833,11 +817,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   continue_hit_ = false;
   move_number_++;
   action_t action = response.action;
-  const TrainingInfo& training_info = response.training_info;
-  if (game_log_) {
-    game_log_->add(state_history_.current(), action, active_seat_, training_info.policy_target,
-                   training_info.action_values_target, training_info.use_for_training);
-  }
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     ValueTensor outcome = GameResults::win(active_seat_);
@@ -889,12 +868,6 @@ void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome, Ste
     player2->end_game(state_history_.current(), outcome);
   }
 
-  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
-  if (training_data_writer) {
-    game_log_->add_terminal(state_history_.current(), outcome);
-    training_data_writer->add(game_log_);
-  }
-
   if (params().announce_game_results) {
     std::stringstream ss;
     ss << std::format("Game {} complete.\n", game_id_);
@@ -928,10 +901,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   if (!shared_data_.request_game()) return false;
 
   game_id_ = detail::get_unique_game_id();
-  if (shared_data_.training_data_writer()) {
-    game_log_ = std::make_shared<GameWriteLog>(game_id_, util::ns_since_epoch());
-  }
-
   player_order_ = shared_data_.generate_player_order(instantiations_);
 
   for (int p = 0; p < kNumPlayers; ++p) {
@@ -940,8 +909,8 @@ bool GameServer<Game>::GameSlot::start_game() {
   }
 
   for (int p = 0; p < kNumPlayers; ++p) {
-    players_[p]->init_game(game_id_, player_names_, p, game_log_);
-    players_[p]->start_game();
+    players_[p]->init_game(game_id_, player_names_, p);
+    if (!players_[p]->start_game()) return false;
   }
 
   if (params().mean_noisy_moves) {
@@ -1040,11 +1009,8 @@ void GameServer<Game>::handle_alternating_mode_recommendation() {
 }
 
 template <concepts::Game Game>
-GameServer<Game>::GameServer(const Params& params,
-                             const TrainingDataWriterParams& training_data_writer_params)
-    : PerfStatsClient(),
-      GameServerBase(params.num_game_threads),
-      shared_data_(this, params, training_data_writer_params) {
+GameServer<Game>::GameServer(const Params& params)
+    : PerfStatsClient(), GameServerBase(params.num_game_threads), shared_data_(this, params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient* client = LoopControllerClient::get();
     client->add_listener(this);
@@ -1154,11 +1120,6 @@ void GameServer<Game>::run() {
   launch_threads();
   join_threads();
   time_point_t end_time = std::chrono::steady_clock::now();
-
-  if (shared_data_.training_data_writer()) {
-    LOG_DEBUG("GameServer> Waiting until batch empty...");
-    shared_data_.training_data_writer()->wait_until_batch_empty();
-  }
 
   int num_games = shared_data_.num_games_started();
   duration_t duration = end_time - start_time;

@@ -42,7 +42,7 @@ WebPlayer<Game>::~WebPlayer() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::start_game() {
+bool WebPlayer<Game>::start_game() {
   action_ = -1;
   resign_ = false;
 
@@ -66,6 +66,7 @@ void WebPlayer<Game>::start_game() {
     ready_for_new_game_ = false;
   }
   send_start_game();
+  return true;
 }
 
 template <core::concepts::Game Game>

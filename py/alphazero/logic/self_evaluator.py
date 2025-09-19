@@ -4,6 +4,7 @@ from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
+from shared.net_modules import SearchParadigm
 from util.index_set import IndexSet
 
 import numpy as np
@@ -50,7 +51,7 @@ class SelfEvaluator:
         self._arena.load_agents_from_db(self.db, role=AgentRole.BENCHMARK)
         self._arena.load_matches_from_db(self.db, type=MatchType.BENCHMARK)
 
-    def get_next_matches(self, n_iters, target_elo_gap, n_games,
+    def get_next_matches(self, paradigm: SearchParadigm, n_iters, target_elo_gap, n_games,
                          excluded_indices: IndexSet) -> List[Match]:
         """
         The algorithm for selecting the next batch of matches is as follows:
@@ -65,9 +66,9 @@ class SelfEvaluator:
         """
         if self.has_no_matches():
             logger.debug("arena has no matches.")
-            gen0_agent = self.build_agent(0, n_iters)
+            gen0_agent = self.build_agent(paradigm, 0, n_iters)
             last_gen = self._organizer.get_latest_model_generation()
-            last_gen_agent = self.build_agent(last_gen, n_iters)
+            last_gen_agent = self.build_agent(paradigm, last_gen, n_iters)
             self._arena.add_agent(gen0_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self.db)
             self._arena.add_agent(last_gen_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
                                   db=self.db)
@@ -86,7 +87,7 @@ class SelfEvaluator:
             logger.debug('Adding new gen: %d, gap [%d, %d]: %f', next_gen, gap.left_gen,
                          gap.right_gen, gap.elo_diff)
 
-        next_agent = self.build_agent(next_gen, n_iters)
+        next_agent = self.build_agent(paradigm, next_gen, n_iters)
         next_iagent = self._arena.add_agent(next_agent, {AgentRole.BENCHMARK}, expand_matrix=True,
                                             db=self.db)
         matches = self.get_unplayed_matches(next_iagent, n_games, excluded_indices)
@@ -173,16 +174,12 @@ class SelfEvaluator:
         logger.debug('No gaps found')
         return None
 
-    def build_agent(self, gen: int, n_iters):
-        if gen == 0:
-            return MCTSAgent(gen=gen,
-                             n_iters=n_iters,
-                             tag=self._organizer.tag)
-        else:
-            return MCTSAgent(gen=gen,
-                             n_iters=n_iters,
-                             set_temp_zero=True,
-                             tag=self._organizer.tag)
+    def build_agent(self, paradigm: SearchParadigm, gen: int, n_iters):
+        return MCTSAgent(paradigm=paradigm.value,
+                         gen=gen,
+                         n_iters=n_iters,
+                         set_temp_zero=(gen > 0),
+                         tag=self._organizer.tag)
 
     @staticmethod
     def select_committee(elos: np.ndarray, target_elo_gap: float) -> IndexSet:

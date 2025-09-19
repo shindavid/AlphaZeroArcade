@@ -1,5 +1,4 @@
 #include "alphazero/ManagerParams.hpp"
-#include "alphazero/Node.hpp"
 #include "core/tests/Common.hpp"
 #include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"

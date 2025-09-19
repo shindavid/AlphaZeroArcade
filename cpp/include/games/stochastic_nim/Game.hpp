@@ -8,7 +8,7 @@
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "games/GameRulesBase.hpp"
+#include "core/GameRulesBase.hpp"
 #include "games/stochastic_nim/Constants.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -44,7 +44,7 @@ struct Game {
   using Symmetries = core::TrivialSymmetries;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
-  struct Rules : public game_base::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     static core::action_mode_t get_action_mode(const State& state);

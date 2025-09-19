@@ -1,14 +1,15 @@
 #pragma once
 
+#include "alphazero/Traits.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/players/HumanTuiPlayerGenerator.hpp"
 #include "games/tictactoe/players/PerfectPlayerGenerator.hpp"
 #include "games/tictactoe/players/WebPlayer.hpp"
-#include "generic_players/MctsPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
+#include "generic_players/alpha0/PlayerGenerator.hpp"
 
 namespace tictactoe {
 
@@ -22,13 +23,14 @@ class PlayerFactory : public core::PlayerFactory<Game> {
 
  private:
   static player_subfactory_vec_t make_subfactories() {
-    return {new core::PlayerSubfactory<tictactoe::HumanTuiPlayerGenerator>(),
-            new core::PlayerSubfactory<tictactoe::PerfectPlayerGenerator>(),
-            new core::PlayerSubfactory<generic::WebPlayerGenerator<tictactoe::WebPlayer>>(),
-            new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<AlphaZeroTraits>>(),
-            new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<AlphaZeroTraits>>(),
-            new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
-            new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
+    return {
+      new core::PlayerSubfactory<tictactoe::HumanTuiPlayerGenerator>(),
+      new core::PlayerSubfactory<tictactoe::PerfectPlayerGenerator>(),
+      new core::PlayerSubfactory<generic::WebPlayerGenerator<tictactoe::WebPlayer>>(),
+      new core::PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<AlphaZeroTraits>>(),
+      new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
+      new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
+      new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }
 };
 

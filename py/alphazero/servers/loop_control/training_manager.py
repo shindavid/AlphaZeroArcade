@@ -38,13 +38,14 @@ class TrainingManager:
         self._controller = controller
         self._lock = threading.Lock()
 
-        paradigm = controller.game_spec.model_configs[controller.params.model_cfg].search_paradigm
+        paradigm = controller.search_paradigm
         self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params,
                                               controller.params.cuda_device, paradigm)
 
         self._trainer = None
         self._net = None
         self._opt = None
+        self._n_primary_targets = None  # initialized lazily
         self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
 
@@ -249,14 +250,36 @@ class TrainingManager:
 
         game_spec = self._controller.game_spec
         shape_info_dict = self._game_log_reader.shape_info_dict
-        generator = game_spec.model_configs[self._controller.params.model_cfg]
-        model_cfg = generator.generate(shape_info_dict)
+        model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
+        model_cfg = model_cfg_generator_type.generate(shape_info_dict)
+        gen_cls = model_cfg_generator_type.__name__
 
         if checkpoint_gen is None:
             self._net = Model(model_cfg)
             self._init_net_and_opt(model_cfg)
         else:
             self._load_last_checkpoint(model_cfg)
+
+        # Validate that network heads match c++ TrainingTargets
+        logger.info('Validating heads...')
+        self._n_primary_targets = sum(1 for info in shape_info_dict.values() if info.primary)
+        n_primary_heads = 0
+        for h, head in enumerate(self._net.heads):
+            name = head.name
+            shape_info = shape_info_dict.get(name, None)
+            if shape_info is None:
+                raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
+                                 f'({name} not found)')
+
+            t = shape_info.target_index
+            n_primary_heads += 1 if shape_info.primary else 0
+            if shape_info.primary and h != t:
+                raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
+                                 f'({h} != {t}) for {name})')
+        if n_primary_heads != self._n_primary_targets:
+            raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
+                             f'({n_primary_heads} != {self._n_primary_targets})')
+        logger.info('Validation complete!')
 
         return self._net, self._opt
 
@@ -422,7 +445,7 @@ class TrainingManager:
         torch.save(checkpoint, tmp_checkpoint_filename)
 
         logger.debug('Calling save_model()...')
-        net.save_model(tmp_model_filename)
+        net.save_model(tmp_model_filename, self._n_primary_targets)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

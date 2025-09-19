@@ -1,6 +1,6 @@
-#include "core/FfiMacro.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
+#include "search/FfiMacro.hpp"
 
 using State = stochastic_nim::Game::State;
 FFI_MACRO(stochastic_nim::Game);

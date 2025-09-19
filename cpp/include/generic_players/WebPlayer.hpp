@@ -29,7 +29,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   WebPlayer();
   ~WebPlayer();
 
-  void start_game() override;
+  bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const ValueTensor&) override;

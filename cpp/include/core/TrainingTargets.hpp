@@ -1,8 +1,7 @@
 #pragma once
 
 #include "core/concepts/GameConcept.hpp"
-
-#include <unsupported/Eigen/CXX11/Tensor>
+#include "util/EigenUtil.hpp"
 
 namespace core {
 
@@ -21,8 +20,8 @@ struct TargetBase {
   // this is that we need to left/right-rotate them based on the active seat.
   static constexpr bool kValueBased = false;
 
-   // Some network heads output values in the logit space. This function transforms the values
-   // into a more usable space. The default implementation is a no-op.
+  // Some network heads output values in the logit space. This function transforms the values
+  // into a more usable space. The default implementation is a no-op.
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&) {}
 
@@ -35,10 +34,9 @@ template <core::concepts::Game Game>
 struct PolicyTarget : public TargetBase {
   static constexpr const char* kName = "policy";
   static constexpr bool kPolicyBased = true;
-
   using Tensor = Game::Types::PolicyTensor;
-  using GameLogView = Game::Types::GameLogView;
 
+  template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
 
   template <typename Derived>
@@ -54,10 +52,9 @@ template <core::concepts::Game Game>
 struct ValueTarget : public TargetBase {
   static constexpr const char* kName = "value";
   static constexpr bool kValueBased = true;
-
   using Tensor = Game::Types::ValueTensor;
-  using GameLogView = Game::Types::GameLogView;
 
+  template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
 
   template <typename Derived>
@@ -70,10 +67,40 @@ struct ValueTarget : public TargetBase {
 template <core::concepts::Game Game>
 struct ActionValueTarget : public TargetBase {
   static constexpr const char* kName = "action_value";
-  using Tensor = Game::Types::ActionValueTensor;
-  using GameLogView = Game::Types::GameLogView;
   static constexpr bool kPolicyBased = true;
+  using Tensor = Game::Types::ActionValueTensor;
 
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
+};
+
+template <core::concepts::Game Game>
+struct ValueUncertaintyTarget : public TargetBase {
+  static constexpr const char* kName = "value_uncertainty";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+
+  template <typename Derived>
+  static void transform(Eigen::TensorBase<Derived>&);
+
+  template <typename Derived>
+  static void uniform_init(Eigen::TensorBase<Derived>&);
+};
+
+template <core::concepts::Game Game>
+struct ActionValueUncertaintyTarget : public TargetBase {
+  static constexpr const char* kName = "action_value_uncertainty";
+  using Tensor = Game::Types::ActionValueTensor;
+
+  template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
 
   template <typename Derived>
@@ -87,8 +114,8 @@ template <core::concepts::Game Game>
 struct OppPolicyTarget : public TargetBase {
   static constexpr const char* kName = "opp_policy";
   using Tensor = Game::Types::PolicyTensor;
-  using GameLogView = Game::Types::GameLogView;
 
+  template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
 };
 

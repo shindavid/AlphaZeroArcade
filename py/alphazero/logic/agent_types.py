@@ -1,3 +1,4 @@
+from shared.net_modules import SearchParadigm
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
@@ -37,6 +38,7 @@ class Agent(ABC):
 
 @dataclass(frozen=True)
 class MCTSAgent(Agent):
+    paradigm: str = SearchParadigm.AlphaZero.value
     gen: int = 0
     n_iters: Optional[int] = None
     set_temp_zero: bool = False
@@ -45,7 +47,8 @@ class MCTSAgent(Agent):
     model: Optional[str] = None
 
     def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
-        name_tokens = ['MCTS', str(self.gen)]
+        paradigm = self.paradigm
+        name_tokens = [paradigm, str(self.gen)]
         if self.n_iters is not None:
             name_tokens.append(str(self.n_iters))
         name = '-'.join(name_tokens)
@@ -53,7 +56,7 @@ class MCTSAgent(Agent):
             name += suffix
 
         player_args = {
-            '--type': 'MCTS-C',
+            '--type': f'{paradigm}-C',
             '--name': name,
             '-n': 1,
         }
@@ -79,6 +82,7 @@ class MCTSAgent(Agent):
         return {
             'type': 'MCTS',
             'data': {
+                'paradigm': self.paradigm,
                 'gen': self.gen,
                 'n_iters': self.n_iters,
                 'set_temp_zero': self.set_temp_zero,
@@ -90,6 +94,10 @@ class MCTSAgent(Agent):
 
     def __str__(self) -> str:
         return f'MCTSAgent-gen-{self.gen}'
+
+    @property
+    def name(self) -> str:
+        return f'{self.paradigm}-{self.gen}'
 
     @property
     def level(self) -> int:

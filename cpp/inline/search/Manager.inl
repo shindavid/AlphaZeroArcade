@@ -151,12 +151,15 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchReq
 
 /*
  * Here, we do a skimmed-down version of Manager::search()
+ *
+ * TODO: dispatch to Algorithms:: here, since different paradigms want to fill in training_info
+ * differently.
  */
 template <search::concepts::Traits Traits>
 core::yield_instruction_t Manager<Traits>::load_root_action_values(
-  const core::YieldNotificationUnit& notification_unit, ActionValueTensor& action_values) {
+  const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
+  TrainingInfo& training_info) {
   if (!mid_load_root_action_values_) {
-    action_values.setZero();
     Algorithms::init_root_info(general_context_, kToLoadRootActionValues);
 
     // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
@@ -169,7 +172,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     mid_load_root_action_values_ = true;
   }
 
-  SearchRequest request(notification_unit);
+  SearchRequest request(chance_request.notification_unit);
   SearchResponse response = search(request);
   if (response.yield_instruction == core::kYield) return core::kYield;
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
@@ -181,6 +184,9 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   group::element_t sym = root_info()->canonical_sym;
 
   RELEASE_ASSERT(Rules::is_chance_mode(mode));
+
+  ActionValueTensor& action_values = training_info.action_values_target;
+  action_values.setZero();
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
@@ -196,6 +202,12 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     }
     i++;
   }
+
+  training_info.state = chance_request.state;
+  training_info.action = chance_request.chance_action;
+  training_info.use_for_training = true;
+  training_info.active_seat = seat;
+  training_info.action_values_target_valid = true;
 
   mid_load_root_action_values_ = false;
   return core::kContinue;
@@ -730,7 +742,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
     // - At a minimum we want to slide E and adjusted_base_prob, and then mark the edge as defunct,
     //   so that PUCT will not select it.
     // - We can easily mutex-protect the writes, by doing this under the parent's mutex. For the
-    //   reads in ActionSelector, we can probably be unsafe. I think a reasonable order would be:
+    //   reads in PuctCalculator, we can probably be unsafe. I think a reasonable order would be:
     //
     //   edge1->merged_edge_index = edge2_index;
     //   edge2->adjusted_base_prob += edge1->adjusted_base_prob;
@@ -738,9 +750,9 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
     //   edge2->E += edge1->E;
     //   edge1->E = 0;
     //
-    //   We just have to reason carefully about the order of the reads in ActionSelector. Choosing
+    //   We just have to reason carefully about the order of the reads in PuctCalculator. Choosing
     //   which edge merges into which edge can also give us more control over possible races, as
-    //   ActionSelector iterates over the edges in a specific order. More careful analysis is
+    //   PuctCalculator iterates over the edges in a specific order. More careful analysis is
     //   needed here.
     //
     //   Wherever we increment an edge->E, we can check, under the parent-mutex, if

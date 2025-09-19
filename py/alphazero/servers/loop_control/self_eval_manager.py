@@ -4,8 +4,8 @@ from .gpu_contention_table import GpuContentionTable
 
 from alphazero.logic.agent_types import AgentRole, IndexedAgent, Match, MatchType
 from alphazero.logic.self_evaluator import BenchmarkRatingData, SelfEvaluator
-from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
-    Generation, ServerStatus
+from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, Generation, \
+    ServerStatus
 from alphazero.logic.ratings import WinLossDrawCounts
 from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
     ServerAuxBase, WorkerAux
@@ -211,8 +211,8 @@ class SelfEvalManager(GamingManagerBase):
             conn.aux.ix = None
 
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                    self.n_iters, self.target_elo_gap, self.n_games,
-                    excluded_indices=self.excluded_agent_indices)
+                self._controller.search_paradigm, self.n_iters, self.target_elo_gap, self.n_games,
+                excluded_indices=self.excluded_agent_indices)
             if not matches:
                 conn.aux.ready_for_latest_gen = True
 
@@ -227,7 +227,8 @@ class SelfEvalManager(GamingManagerBase):
             return
         if ready_for_latest_gen:
             latest_gen = self._controller.organizer.get_latest_model_generation()
-            latest_agent = self._self_evaluator.build_agent(latest_gen, self.n_iters)
+            latest_agent = self._self_evaluator.build_agent(self._controller.search_paradigm,
+                                                            latest_gen, self.n_iters)
             latest_iagent = self._self_evaluator._arena.add_agent(
                 latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._self_evaluator.db)
 
@@ -238,8 +239,8 @@ class SelfEvalManager(GamingManagerBase):
 
         else:
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                    self.n_iters, self.target_elo_gap, self.n_games,
-                    excluded_indices=self.excluded_agent_indices)
+                self._controller.search_paradigm,  self.n_iters, self.target_elo_gap, self.n_games,
+                excluded_indices=self.excluded_agent_indices)
 
         if not matches:
             self._update_committee()
@@ -269,63 +270,17 @@ class SelfEvalManager(GamingManagerBase):
         self.set_priority()
 
     def _compose_match_request(self, gen, opponent_gen, ix, opponent_ix):
-        game = self._controller._run_params.game
-        tag = self._controller._run_params.tag
-
-        binary_path = self._controller._get_binary_path()
-        binary = FileToTransfer.from_src_scratch_path(
-            source_path=binary_path,
-            scratch_path=f'bin/{game}',
-            asset_path_mode='hash')
-
-        files_required = [binary]
-        model1 = None
-        if gen > 0:
-            model1 = FileToTransfer.from_src_scratch_path(
-                source_path=self._controller._organizer.get_model_filename(gen),
-                scratch_path=f'benchmark-models/{tag}/gen-{gen}.onnx',
-                asset_path_mode='scratch'
-            )
-            files_required.append(model1)
-
-        model2 = None
-        if opponent_gen > 0:
-            model2 = FileToTransfer.from_src_scratch_path(
-                source_path=self._controller._organizer.get_model_filename(opponent_gen),
-                scratch_path=f'benchmark-models/{tag}/gen-{opponent_gen}.onnx',
-                asset_path_mode='scratch'
-            )
-            files_required.append(model2)
-
         data = {
             'type': 'match-request',
-            'agent1': {
-                'type': 'MCTS',
-                'data': {
-                    'gen': gen,
-                    'n_iters': self.n_iters,
-                    'set_temp_zero': True if gen > 0 else False,
-                    'tag': tag,
-                    'binary': binary.scratch_path,
-                    'model': model1.scratch_path if model1 else None
-                    }
-                },
-            'agent2': {
-                'type': 'MCTS',
-                'data': {
-                    'gen': opponent_gen,
-                    'n_iters': self.n_iters,
-                    'set_temp_zero': True if opponent_gen > 0 else False,
-                    'tag': tag,
-                    'binary': binary.scratch_path,
-                    'model': model2.scratch_path if model2 else None
-                    }
-                },
             'ix1': ix,
             'ix2': opponent_ix,
             'n_games': self.n_games,
-            'files_required': [f.to_dict() for f in files_required],
             }
+
+        self._add_mcts_agent(data, 'agent1', gen, gen > 0, 'hash', 'benchmark-models')
+        self._add_mcts_agent(data, 'agent2', opponent_gen, opponent_gen > 0, 'hash',
+                             'benchmark-models')
+
         logger.info(f"Self-evaluating request ix: {data['ix1']} vs {data['ix2']}, "
                     f"gen: {data['agent1']['data']['gen']} vs {data['agent2']['data']['gen']}, "
                     f"n_games: {data['n_games']}")
@@ -362,8 +317,8 @@ class SelfEvalManager(GamingManagerBase):
             return False
         else:
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                    self.n_iters, self.target_elo_gap, self.n_games,
-                    excluded_indices=self.excluded_agent_indices)
+                self._controller.search_paradigm,  self.n_iters, self.target_elo_gap, self.n_games,
+                excluded_indices=self.excluded_agent_indices)
             logger.debug(f"matches: {matches}")
             if len(matches) > 0:
                 return False

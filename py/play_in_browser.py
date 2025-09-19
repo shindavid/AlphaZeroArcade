@@ -50,14 +50,11 @@ def main():
 
     num_mcts_iters = args.num_mcts_iters
 
-    # cmd:
-    #
-    # {bin} --player "--type=web" --player "--type=MCTS-C -m {model_filename} -i {num_mcts_iters}"
-
+    # TODO: figure out whether to use alpha0 or some other paradigm somehow
     cmd = [
         bin,
         '--player', '"--type=web"',
-        '--player', f'"--type=MCTS-C -m {model_filename} -i {num_mcts_iters}"'
+        '--player', f'"--type=alpha0-C -m {model_filename} -i {num_mcts_iters}"'
     ]
 
     cmd = ' '.join(cmd)

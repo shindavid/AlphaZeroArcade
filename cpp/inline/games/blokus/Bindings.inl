@@ -2,10 +2,11 @@
 
 namespace blokus::alpha0 {
 
+template <typename GameLogView>
 inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
-  const Game::State& state = *view.final_pos;
-  color_t cp = Game::Rules::get_current_player(*view.cur_pos);
+  const Game::State& state = view.final_pos;
+  color_t cp = Game::Rules::get_current_player(view.cur_pos);
 
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -28,10 +29,11 @@ inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view, Ten
   return true;
 }
 
+template <typename GameLogView>
 inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
-  const Game::State& state = *view.final_pos;
-  color_t cp = Game::Rules::get_current_player(*view.cur_pos);
+  const Game::State& state = view.final_pos;
+  color_t cp = Game::Rules::get_current_player(view.cur_pos);
 
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
@@ -50,11 +52,12 @@ inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view,
   return true;
 }
 
+template <typename GameLogView>
 inline bool TrainingTargets::UnplayedPiecesTarget::tensorize(const GameLogView& view,
                                                              Tensor& tensor) {
   tensor.setZero();
-  const Game::State& state = *view.final_pos;
-  color_t cp = Game::Rules::get_current_player(*view.cur_pos);
+  const Game::State& state = view.final_pos;
+  color_t cp = Game::Rules::get_current_player(view.cur_pos);
 
   for (color_t c = 0; c < kNumColors; ++c) {
     const PieceMask& mask = state.aux.played_pieces[c];

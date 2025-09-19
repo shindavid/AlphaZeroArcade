@@ -3,10 +3,12 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
-#include "core/YieldManager.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
+#include "search/LookupTable.hpp"
+#include "search/NNEvaluationServiceBase.hpp"
+#include "search/NNEvaluationServiceFactory.hpp"
 #include "search/SearchContext.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
@@ -31,21 +33,25 @@ template <search::concepts::Traits Traits>
 class Manager {
  public:
   using EvalSpec = Traits::EvalSpec;
-  using Node = Traits::Node;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
+  using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
-  using EvalServiceBase = Traits::EvalServiceBase;
-  using EvalServiceFactory = Traits::EvalServiceFactory;
+  using EvalServiceBase = search::NNEvaluationServiceBase<Traits>;
+  using EvalServiceFactory = search::NNEvaluationServiceFactory<Traits>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
+
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
-  using LookupTable = TraitsTypes::LookupTable;
+  using Node = TraitsTypes::Node;
+
+  using LookupTable = search::LookupTable<Traits>;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;
@@ -70,11 +76,12 @@ class Manager {
 
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
 
   using post_visit_func_t = std::function<void()>;
 
-  static_assert(search::concepts::Algorithms<Algorithms, ValueArray, SearchContext, GeneralContext,
-                                             SearchResults, Node, Edge>);
+  static_assert(search::concepts::Algorithms<Algorithms, PolicyTensor, ValueArray, SearchContext,
+                                             GeneralContext, SearchResults, Node, Edge>);
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
@@ -164,8 +171,9 @@ class Manager {
 
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
-  core::yield_instruction_t load_root_action_values(const core::YieldNotificationUnit&,
-                                                    ActionValueTensor& action_values);
+  core::yield_instruction_t load_root_action_values(const ChanceEventHandleRequest&,
+                                                    core::seat_index_t seat, TrainingInfo&);
+
   const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
   const RootInfo* root_info() const { return &general_context_.root_info; }
   LookupTable* lookup_table() { return &general_context_.lookup_table; }

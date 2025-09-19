@@ -7,7 +7,7 @@
 #include "core/SimpleStateHistory.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "games/GameRulesBase.hpp"
+#include "core/GameRulesBase.hpp"
 #include "games/connect4/Constants.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -65,7 +65,7 @@ struct Game {
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
-  struct Rules : public game_base::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }

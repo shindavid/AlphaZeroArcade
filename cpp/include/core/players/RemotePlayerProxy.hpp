@@ -16,7 +16,7 @@ namespace core {
  * In a server-client setup, the server process will create a RemotePlayerProxy to act as a proxy
  * for remote players. The RemotePlayerProxy will communicate with the remote player over a socket.
  *
- * TODO: add override for prehandle_chance_event(), and add corresponding handling GameServerProxy.
+ * TODO: add override for handle_chance_event(), and add corresponding handling GameServerProxy.
  */
 template <concepts::Game Game>
 class RemotePlayerProxy : public AbstractPlayer<Game> {
@@ -59,7 +59,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
   RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_slot_index_t game_slot_index);
 
-  void start_game() override;
+  bool start_game() override;
   void receive_state_change(seat_index_t, const State&, action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const ValueTensor&) override;

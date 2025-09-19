@@ -236,7 +236,7 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 
   Node* node = context.visit_node;
   bool is_root = (node == lookup_table.get_node(root_info.node_index));
-  ActionSelector action_selector(lookup_table, manager_params, search_params, node, is_root);
+  PuctCalculator action_selector(lookup_table, manager_params, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
@@ -316,6 +316,121 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
+void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
+                                                TrainingInfo& training_info) {
+  const SearchResults* mcts_results = params.mcts_results;
+  bool use_for_training = params.use_for_training;
+  bool previous_used_for_training = params.previous_used_for_training;
+  core::seat_index_t seat = params.seat;
+
+  training_info.state = params.state;
+  training_info.active_seat = seat;
+  training_info.action = params.action;
+  training_info.use_for_training = use_for_training;
+
+  if (use_for_training || previous_used_for_training) {
+    training_info.policy_target_valid =
+      extract_policy_target(mcts_results, training_info.policy_target);
+  }
+  if (use_for_training) {
+    training_info.action_values_target = mcts_results->action_values;
+    training_info.action_values_target_valid = true;
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
+                                   GameLogFullRecord& full_record) {
+  full_record.position = training_info.state;
+
+  if (training_info.policy_target_valid) {
+    full_record.policy_target = training_info.policy_target;
+  } else {
+    full_record.policy_target.setZero();
+  }
+
+  if (training_info.action_values_target_valid) {
+    full_record.action_values = training_info.action_values_target;
+  } else {
+    full_record.action_values.setZero();
+  }
+
+  full_record.action = training_info.action;
+  full_record.active_seat = training_info.active_seat;
+  full_record.use_for_training = training_info.use_for_training;
+  full_record.policy_target_valid = training_info.policy_target_valid;
+  full_record.action_values_valid = training_info.action_values_target_valid;
+}
+
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
+                                          std::vector<char>& buf) {
+  GameLogCompactRecord compact_record;
+  compact_record.position = full_record.position;
+  compact_record.active_seat = full_record.active_seat;
+  compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
+  compact_record.action = full_record.action;
+
+  TensorData policy(full_record.policy_target_valid, full_record.policy_target);
+  TensorData action_values(full_record.action_values_valid, full_record.action_values);
+
+  search::GameLogCommon::write_section(buf, &compact_record, 1, false);
+  policy.write_to(buf);
+  action_values.write_to(buf);
+}
+
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
+  const GameLogCompactRecord* record = params.record;
+  const GameLogCompactRecord* next_record = params.next_record;
+  const State* cur_pos = params.cur_pos;
+  const State* final_pos = params.final_pos;
+  const ValueTensor* outcome = params.outcome;
+  group::element_t sym = params.sym;
+
+  core::seat_index_t active_seat = record->active_seat;
+  core::action_mode_t mode = record->action_mode;
+
+  const char* addr = reinterpret_cast<const char*>(record);
+
+  const char* policy_data_addr = addr + sizeof(GameLogCompactRecord);
+  const TensorData* policy_data = reinterpret_cast<const TensorData*>(policy_data_addr);
+
+  const char* action_values_data_addr = policy_data_addr + policy_data->size();
+  const TensorData* action_values_data =
+    reinterpret_cast<const TensorData*>(action_values_data_addr);
+
+  view.policy_valid = policy_data->load(view.policy);
+  view.action_values_valid = action_values_data->load(view.action_values);
+
+  if (view.policy_valid) {
+    Game::Symmetries::apply(view.policy, sym, mode);
+  }
+
+  if (view.action_values_valid) {
+    Game::Symmetries::apply(view.action_values, sym, mode);
+  }
+
+  view.next_policy_valid = false;
+  if (next_record) {
+    const char* next_addr = reinterpret_cast<const char*>(next_record);
+
+    const char* next_policy_data_addr = next_addr + sizeof(GameLogCompactRecord);
+    const TensorData* next_policy_data = reinterpret_cast<const TensorData*>(next_policy_data_addr);
+
+    view.next_policy_valid = next_policy_data->load(view.next_policy);
+    if (view.next_policy_valid) {
+      Game::Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+    }
+  }
+
+  view.cur_pos = *cur_pos;
+  view.final_pos = *final_pos;
+  view.game_result = *outcome;
+  view.active_seat = active_seat;
+}
+
+template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -376,6 +491,73 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
+void Algorithms<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
+                                            const SearchResults& results, int n_rows_to_display) {
+  std::cout << std::endl << "CPU pos eval:" << std::endl;
+  const auto& valid_actions = results.valid_actions;
+  const auto& mcts_counts = results.counts;
+  const auto& net_policy = results.policy_prior;
+  const auto& win_rates = results.win_rates;
+  const auto& net_value = results.value_prior;
+  core::action_mode_t mode = results.action_mode;
+
+  eigen_util::PrintArrayFormatMap fmt_map{
+    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
+    {"action", [&](float x) { return IO::action_to_str(x, mode); }},
+  };
+
+  Game::GameResults::print_array(net_value, win_rates, &fmt_map);
+
+  if (Game::Rules::is_chance_mode(results.action_mode)) return;
+
+  int num_valid = valid_actions.count();
+  LocalPolicyArray actions_arr(num_valid);
+  LocalPolicyArray net_policy_arr(num_valid);
+  LocalPolicyArray action_policy_arr(num_valid);
+  LocalPolicyArray mcts_counts_arr(num_valid);
+  LocalPolicyArray posterior_arr(num_valid);
+
+  float total_count = 0;
+  for (int a : bitset_util::on_indices(valid_actions)) {
+    total_count += mcts_counts(a);
+  }
+
+  int r = 0;
+  for (int a : bitset_util::on_indices(valid_actions)) {
+    actions_arr(r) = a;
+    net_policy_arr(r) = net_policy(a);
+    action_policy_arr(r) = action_policy(a);
+    mcts_counts_arr(r) = mcts_counts(a);
+    r++;
+  }
+
+  int num_rows = std::min(num_valid, n_rows_to_display);
+
+  posterior_arr = mcts_counts_arr / total_count;
+  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
+  auto data = eigen_util::sort_rows(
+    eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
+                                    action_policy_arr),
+    3, false);
+
+  eigen_util::print_array(std::cout, data.topRows(num_rows), columns, &fmt_map);
+
+  if (num_valid > num_rows) {
+    int x = num_valid - num_rows;
+    if (x == 1) {
+      std::cout << "... 1 row not displayed" << std::endl;
+    } else {
+      std::cout << "... " << x << " rows not displayed" << std::endl;
+    }
+  } else {
+    for (int i = 0; i < n_rows_to_display - num_rows + 1; i++) {
+      std::cout << std::endl;
+    }
+  }
+  std::cout << "******************************" << std::endl;
+}
+
+template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
 void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
                                       MutexProtectedFunc&& func) {
@@ -397,8 +579,11 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
   auto& stable_data = node->stable_data();
   auto& stats = node->stats();
 
+  int num_valid_actions = stable_data.num_valid_actions;
+  core::seat_index_t seat = stable_data.active_seat;
+
   if (stable_data.is_chance_node) {
-    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+    for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
 
@@ -413,7 +598,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
     }
-    if (N == stable_data.num_valid_actions) {
+    if (N == num_valid_actions) {
       lock.lock();
 
       stats.Q = Q_sum;
@@ -421,16 +606,13 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
     }
-
   } else {
-    core::seat_index_t seat = stable_data.active_seat;
-
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
     int num_children = 0;
 
     bool skipped = false;
-    for (int i = 0; i < stable_data.num_valid_actions; i++) {
+    for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
       if (!child) {
@@ -473,7 +655,7 @@ void Algorithms<Traits>::update_stats(Node* node, LookupTable& lookup_table,
     stats.Q = Q;
     stats.Q_sq = Q_sq;
     stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
-                               cp_has_winning_move, stable_data);
+                               cp_has_winning_move, num_valid_actions, seat);
 
     if (N) {
       eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
@@ -626,7 +808,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
   if (manager_params.no_model) return;
 
   const Node* root = lookup_table.get_node(root_info.node_index);
-  ActionSelector action_selector(lookup_table, manager_params, search_params, root, true);
+  PuctCalculator action_selector(lookup_table, manager_params, search_params, root, true);
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;
@@ -643,7 +825,7 @@ void Algorithms<Traits>::prune_policy_target(group::element_t inv_sym,
   auto mE_max = mE.maxCoeff(&mE_max_index);
 
   auto PUCT_max = PUCT(mE_max_index);
-  auto sqrt_mE = sqrt(mE_sum + ActionSelector::eps);
+  auto sqrt_mE = sqrt(mE_sum + PuctCalculator::eps);
 
   LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / (PUCT_max - 2 * Q) - 1;
 
@@ -711,7 +893,7 @@ void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::print_action_selection_details(const SearchContext& context,
-                                                        const ActionSelector& selector,
+                                                        const PuctCalculator& selector,
                                                         int argmax_index) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   Node* node = context.visit_node;
@@ -795,6 +977,22 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
     }
 
     LOG_INFO(ss.str());
+  }
+}
+
+template <search::concepts::Traits Traits>
+bool Algorithms<Traits>::extract_policy_target(const SearchResults* mcts_results,
+                                               PolicyTensor& target) {
+  target = mcts_results->policy_target;
+
+  float sum = eigen_util::sum(target);
+  if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
+    // python training code will ignore these rows for policy training.
+    return false;
+  } else {
+    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = target / eigen_util::sum(target);
+    return true;
   }
 }
 

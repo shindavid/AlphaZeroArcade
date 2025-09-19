@@ -8,13 +8,14 @@
 namespace generic {
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::start_game() {
+inline bool HumanTuiPlayer<Game>::start_game() {
   last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
 
   util::clearscreen();
+  return true;
 }
 
 template <core::concepts::Game Game>

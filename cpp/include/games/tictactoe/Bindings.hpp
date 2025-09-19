@@ -24,7 +24,8 @@ struct TrainingTargets {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
-    static bool tensorize(const Game::Types::GameLogView& view, Tensor&);
+    template <typename GameLogView>
+    static bool tensorize(const GameLogView& view, Tensor&);
   };
 
   using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
