@@ -15,6 +15,9 @@ def residual_scale(n_layers: int) -> float:
 
 
 class MAGating(nn.Module):
+    """
+    (T, D) -> (T, D) with per-position learned affine gating
+    """
     def __init__(self, T: int, D: int):
         super().__init__()
         self.pos_add = nn.Parameter(torch.zeros(T, D))
@@ -39,7 +42,16 @@ class RMSNorm(nn.Module):
 
 
 class Smolgen(nn.Module):
-    """Dynamic, state-conditioned supplemental logits: (B,Hh,T,T)"""
+    """
+    Dynamic, state-conditioned supplemental logits:
+    (B, T, Dm) -> (B, Hh, T, T)
+    1. Project tokens to lower-dim (e.g. 32)
+    2. Project flattened (T,32) to shared dim (e.g. 256)
+    3. Per-head expansion to (Hh, shared_dim)
+    4. Token tensor is now of shape (B, Hh, shared_dim)
+    5. Apply a shared linear layer to (T*T) logits per head
+    6. Return (B, Hh, T, T) logits scaled by a learned gate parameter
+    """
     def __init__(self, Dm: int, Hh: int, T: int, compress_dim: int = 32, shared_dim: int = 256,
                  shared_layer: nn.Linear | None = None):
         super().__init__()
@@ -70,14 +82,13 @@ class Smolgen(nn.Module):
 class MultiheadAttentionWithExtras(nn.Module):
     """
     MHA with:
-      - QKV no bias
-      - optional Static Bias B (H,T,T)
-      - optional Shaw pairwise (aQ,aK,aV) in logits/values
-      - optional Smolgen supplemental logits S(x)
+      - QKV
+      - optional Static Bias
+      - optional RPE Bias
+      - optional Smolgen Bias
     """
     def __init__(self, Dm: int, Hh: int, T: int,
                  use_static_bias: bool = True,
-                 use_shaw: bool = True,
                  use_rpe: bool = False,
                  rpe_factorizer: Optional[torch.Tensor] = None,
                  use_smolgen: bool = True,
@@ -101,20 +112,11 @@ class MultiheadAttentionWithExtras(nn.Module):
         self.Wo = nn.Linear(Dm, Dm, bias=True)  # keep bias after attention
 
         self.use_static = use_static_bias
-        self.use_shaw   = use_shaw
-        self.use_rpe    = use_rpe
-        self.use_smol   = use_smolgen
+        self.use_rpe = use_rpe
+        self.use_smolgen = use_smolgen
 
         if self.use_static:
             self.static_bias = nn.Parameter(torch.zeros(Hh, T, T))  # (Hh,T,T)
-
-        if self.use_shaw:
-            # Full pairwise (Hh,T,T,dh)
-            self.aQ = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
-            self.aK = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
-            self.aV = nn.Parameter(torch.zeros(Hh, T, T, self.dh))
-            for p in (self.aQ, self.aK, self.aV):
-                nn.init.trunc_normal_(p, std=0.02)
 
         if self.use_rpe:
             assert rpe_factorizer is not None, "rpe_factorizer must be provided if use_rpe is True"
@@ -123,7 +125,6 @@ class MultiheadAttentionWithExtras(nn.Module):
             num_bins = rpe_factorizer.size(0)
             Hd = Hh * self.dh
 
-            # already have:
             self.rpe_q = nn.Parameter(torch.zeros(Hd, num_bins))
             self.rpe_k = nn.Parameter(torch.zeros(Hd, num_bins))
             self.rpe_v = nn.Parameter(torch.zeros(Hd, num_bins))
@@ -132,18 +133,24 @@ class MultiheadAttentionWithExtras(nn.Module):
             nn.init.trunc_normal_(self.rpe_v, std=0.02)
 
 
-        if self.use_smol:
+        if self.use_smolgen:
             self.smolgen = Smolgen(Dm=Dm, Hh=Hh, T=T, shared_layer=smolgen_shared,
                                    compress_dim=smolgen_compress_dim, shared_dim=smolgen_shared_dim)
 
         self.dropout = nn.Dropout(0.1)
 
     def _expand_rpe_logits(self, W_small: torch.Tensor) -> torch.Tensor:
-        # (Hh*dh, T*T)
+        """
+        project a small relative bias matrix to full size TxT board tensor
+        (Hd, num_bins) -> (Hh, T, T, dh)
+        """
         rpe_flat = torch.matmul(W_small, self.rpe_factorizer)
         return rpe_flat.view(self.Hh, self.dh, self.T, self.T).permute(0, 2, 3, 1)  # (Hh, T, T, dh)
 
-    def forward(self, x):  # x: (B,T,Dm)
+    def forward(self, x):
+        """
+        (B, T, Dm) -> (B, T, Dm)
+        """
         B, T, Dm = x.shape
         Hh, dh = self.Hh, self.dh
 
@@ -158,13 +165,6 @@ class MultiheadAttentionWithExtras(nn.Module):
         if self.use_static:
             logits = logits + self.static_bias.unsqueeze(0)  # (B,Hh,T,T)
 
-        # Shaw pairwise
-        if self.use_shaw:
-            logits = (logits
-                      + torch.einsum('bhtd,htsd->bhts', Q, self.aK) * self.scale
-                      + torch.einsum('htsd,bhsd->bhts', self.aQ, K) * self.scale
-                      + torch.einsum('htsd,htsd->hts',  self.aQ, self.aK).unsqueeze(0) * self.scale)
-
         # RPE
         if self.use_rpe:
             rpe_q = self._expand_rpe_logits(self.rpe_q)  # (Hh, T, T, dh)
@@ -174,15 +174,13 @@ class MultiheadAttentionWithExtras(nn.Module):
                       + torch.einsum('htsd,bhsd->bhts', rpe_q, K) * self.scale)
 
         # Smolgen dynamic bias
-        if self.use_smol:
+        if self.use_smolgen:
             logits = logits + self.smolgen(x)  # (B,Hh,T,T)
 
         attn = torch.softmax(logits, dim=-1)
         attn = self.dropout(attn)
 
         out = torch.matmul(attn, V)  # (B,Hh,T,dh)
-        if self.use_shaw:
-            out = out + torch.einsum('bhts,htsd->bhtd', attn, self.aV)
 
         if self.use_rpe:
             rpe_v = self._expand_rpe_logits(self.rpe_v)  # (Hh, dh, T, T)
@@ -195,6 +193,9 @@ class MultiheadAttentionWithExtras(nn.Module):
 
 class FFN(nn.Module):
     def __init__(self, Dm: int, Dff: int, n_layers: int):
+        """
+        (B, T, Dm) -> (B, T, Dff) -> (B, T, Dm)
+        """
         super().__init__()
         self.fc1 = nn.Linear(Dm, Dff, bias=True)
         self.act = Mish()
@@ -209,14 +210,13 @@ class FFN(nn.Module):
 
 class EncoderLayer(nn.Module):
     def __init__(self, Dm: int, Hh: int, T: int, Dff: int, n_layers: int,
-                 use_static_bias=True, use_shaw=True,
-                 use_rpe: bool = False, rpe_factorizer: Optional[torch.Tensor] = None,
+                 use_static_bias=True, use_rpe: bool = False,
+                 rpe_factorizer: Optional[torch.Tensor] = None,
                  use_smolgen=True, smolgen_shared=None,
                  smolgen_shared_dim: int = 256, smolgen_compress_dim: int = 32):
         super().__init__()
         self.mha = MultiheadAttentionWithExtras(Dm, Hh, T,
                                                 use_static_bias=use_static_bias,
-                                                use_shaw=use_shaw,
                                                 use_rpe=use_rpe,
                                                 rpe_factorizer=rpe_factorizer,
                                                 use_smolgen=use_smolgen,
@@ -236,7 +236,7 @@ class EncoderLayer(nn.Module):
 
 def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H*W))
     """
-    Build a binary factorizer matrix M for 2D relative position encoding on an H×W grid.
+    Build a binary factorizer matrix M for 2D relative position encoding on an HxW grid.
 
     Shape:
         M ∈ {0,1}^{(2H-1)*(2W-1) , (H*W)*(H*W)}
@@ -249,8 +249,8 @@ def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H
           dy ∈ [-(H-1), ..., H-1],  dx ∈ [-(W-1), ..., W-1].
           Total number of rows = (2H-1) * (2W-1).
 
-        • Columns correspond to all ordered query–key square pairs ((i, j), (k, l))
-          on the H×W grid. There are (H*W)² such pairs.
+        • Columns correspond to all ordered query-key square pairs ((i, j), (k, l))
+          on the HxW grid. There are (H*W)² such pairs.
 
     Indexing:
         • Let R_h = H - 1 and R_w = W - 1.
@@ -260,7 +260,7 @@ def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H
         • Column index = q_idx * (H*W) + k_idx.
 
     Entry:
-        M[row, col] = 1 means the query–key pair ((i, j), (k, l))
+        M[row, col] = 1 means the query-key pair ((i, j), (k, l))
                       has relative displacement (dy, dx).
         Each column has exactly one '1', selecting the unique relative-offset bin
         for that (query, key) pair.
@@ -307,14 +307,17 @@ class ChessformerBlock(nn.Module):
     def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
                  n_output_channels: int,
                  use_static_bias: bool = True,
-                 use_shaw: bool = True,
                  use_rpe: bool = False,
                  use_smolgen: bool = True,
                  smolgen_compress_dim: int = 32,
                  smolgen_shared_dim: int = 256,
                  ffn_multiplier: float = 1.0):
         """
-        input_shape: (C, H, W)
+        input_shape: (B, C, H, W)
+        1. Input embedding: (B, C, H, W) -> (B, T, Dm)
+        2. Transformer Encoder: (B, T, Dm) -> (B, T, Dm)
+        3. Output projection: (B, T, Dm) -> (B, T, n_output_channels)
+        4. Reshape to (B, n_output_channels, H, W)
         """
         super(ChessformerBlock, self).__init__()
 
@@ -338,7 +341,6 @@ class ChessformerBlock(nn.Module):
             layers.append(
                 EncoderLayer(Dm=embed_dim, Hh=Hh, T=self.board_size, Dff=Dff, n_layers=n_layers,
                              use_static_bias=use_static_bias,
-                             use_shaw=use_shaw,
                              use_rpe=use_rpe,
                              rpe_factorizer=rpe_factorizer,
                              use_smolgen=use_smolgen,
