@@ -3,6 +3,38 @@
 namespace beta0 {
 
 template <search::concepts::Traits Traits>
+void Algorithms<Traits>::load_evaluations(SearchContext& context) {
+  Base::load_evaluations(context);  // assumes that heads[:3] are [policy, value, action-value]
+
+  const LookupTable& lookup_table = context.general_context->lookup_table;
+  for (auto& item : context.eval_request.fresh_items()) {
+    Node* node = static_cast<Node*>(item.node());
+
+    auto& stable_data = node->stable_data();
+    auto eval = item.eval();
+
+    int n = stable_data.num_valid_actions;
+
+    using ValueUncertaintyTensor = EvalSpec::TrainingTargets::ValueUncertaintyTarget::Tensor;
+    ValueUncertaintyTensor U;
+    LocalActionValueArray child_U(n);
+
+    // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
+    //
+    // TODO: we should be able to verify this assumption at compile-time
+    std::copy_n(eval->data(3), U.size(), U.data());
+    std::copy_n(eval->data(4), child_U.size(), child_U.data());
+
+    stable_data.U = U(0);
+
+    for (int i = 0; i < n; ++i) {
+      Edge* edge = lookup_table.get_edge(node, i);
+      edge->child_U_estimate = child_U[i];
+    }
+  }
+}
+
+template <search::concepts::Traits Traits>
 void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
                                                 TrainingInfo& training_info) {
   Base::write_to_training_info(params, training_info);
@@ -89,6 +121,30 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
   view.Q_prior = record->Q_prior;
   view.Q_posterior = record->Q_posterior;
+}
+
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
+  Base::to_results(general_context, results);
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const Node* root = lookup_table.get_node(general_context.root_info.node_index);
+  auto& action_value_uncertainties = results.action_value_uncertainties;
+
+  action_value_uncertainties.setZero();
+  for (int i = 0; i < root->stable_data().num_valid_actions; i++) {
+    const Edge* edge = lookup_table.get_edge(root, i);
+    const Node* child = lookup_table.get_node(edge->child_index);
+    if (!child) continue;
+
+    core::action_t action = edge->action;
+    const auto& stable_data = child->stable_data();
+    action_value_uncertainties(action) = stable_data.U;
+  }
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = general_context.root_info.canonical_sym;
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
+  Game::Symmetries::apply(action_value_uncertainties, inv_sym, mode);
 }
 
 }  // namespace beta0
