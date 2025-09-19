@@ -218,12 +218,13 @@ class Chessformer(ModelConfigGenerator):
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
-        assert value_shape == (3,), value_shape
+        assert value_shape == (2,), value_shape
 
         embed_dim = 64
         n_heads = 8
-        n_layers = 8
+        n_layers = 3
         c_trunk = 128
+        c_mid = 128
 
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
@@ -237,33 +238,35 @@ class Chessformer(ModelConfigGenerator):
         return ModelConfig(
             shape_info_dict=shape_info_dict,
 
-            stem=ModuleSpec(type='ChessformerBlock', args=[
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+
+            blocks=[
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ChessformerBlock', args=[
                             input_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
-                            'use_static_bias': True,    # learned T×T per-head bias
-                            'use_shaw': True,           # pairwise aQ/aK/aV
-                            'use_smolgen': True,        # dynamic T×T logits (shared 256→T^2)
+                            'use_static_bias': True,
+                            'use_rpe': True,
+                            'use_smolgen': True,
                             'smolgen_compress_dim': smolgen_compress_dim,
                             'smolgen_shared_dim': smolgen_shared_dim,
-                            'ffn_multiplier': 1.0       # small FFN ≈ embed_dim),
-                        }),
-
-            blocks=[],
+                            'ffn_multiplier': 1.0
+                        })],
 
             neck=None,
 
             heads=[
                 ModuleSpec(type='PolicyHead',
                         args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinLossDrawValueHead',
+                ModuleSpec(type='WinLossValueHead',
                         args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
                 ModuleSpec(type='WinShareActionValueHead',
                         args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                              action_value_shape]),
+                                action_value_shape]),
                 ModuleSpec(type='PolicyHead',
-                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden,
-                              policy_shape]),
+                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
             ],
+
 
             loss_weights={
                 'policy': 1.0,
@@ -272,7 +275,7 @@ class Chessformer(ModelConfigGenerator):
                 'opp_policy': 0.15,
             },
 
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 1e-3, 'weight_decay': 6e-5}),
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
         )
 
 
