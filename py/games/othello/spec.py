@@ -125,7 +125,7 @@ class Chessformer(ModelConfigGenerator):
 
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
                 ModuleSpec(type='ChessformerBlock', args=[
                     cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                            kwargs={
@@ -165,7 +165,7 @@ class Chessformer(ModelConfigGenerator):
                 'ownership': 0.15,
             },
 
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-5, 'weight_decay': 6e-5}),
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
         )
 
 
