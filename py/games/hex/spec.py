@@ -88,8 +88,9 @@ class Chessformer(ModelConfigGenerator):
 
         embed_dim = 64
         n_heads = 8
-        n_layers = 8
+        n_layers = 3
         c_trunk = 128
+        c_mid = 128
 
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
@@ -97,24 +98,27 @@ class Chessformer(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
-        smolgen_compress_dim = 16
-        smolgen_shared_dim = 64
+        smolgen_compress_dim = 8
+        smolgen_shared_dim = 32
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
 
-            stem=ModuleSpec(type='ChessformerBlock', args=[
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+
+            blocks=[
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='ChessformerBlock', args=[
                             input_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
-                            'use_static_bias': True,    # learned T×T per-head bias
-                            'use_shaw': True,           # pairwise aQ/aK/aV
-                            'use_smolgen': True,        # dynamic T×T logits (shared 256→T^2)
+                            'use_static_bias': True,
+                            'use_rpe': True,
+                            'use_smolgen': True,
                             'smolgen_compress_dim': smolgen_compress_dim,
                             'smolgen_shared_dim': smolgen_shared_dim,
-                            'ffn_multiplier': 1.0       # small FFN ≈ embed_dim),
-                        }),
-
-            blocks=[],
+                            'ffn_multiplier': 1.0
+                        })],
 
             neck=None,
 
