@@ -45,7 +45,7 @@ void ValueTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
 template <core::concepts::Game Game>
 template <typename GameLogView>
 bool ActionValueTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (view.action_values_valid) return false;
+  if (!view.action_values_valid) return false;
   tensor = view.action_values;
   return true;
 }
@@ -86,7 +86,7 @@ void ValueUncertaintyTarget<Game>::uniform_init(Eigen::TensorBase<Derived>& dst)
 template <core::concepts::Game Game>
 template <typename GameLogView>
 bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (view.action_value_uncertainties_valid) return false;
+  if (!view.action_value_uncertainties_valid) return false;
   tensor = view.action_value_uncertainties;
   return true;
 }
