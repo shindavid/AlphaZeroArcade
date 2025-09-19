@@ -83,22 +83,12 @@ class GameReadLog : public GameLogBase<Traits> {
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;
 
-  // void replay() const;
   int num_sampled_positions() const { return metadata_.num_samples; }
 
  private:
   static constexpr int align(int offset) { return GameLogCommon::align(offset); }
 
   int num_positions() const { return metadata_.num_positions; }
-
-  // Populates passed-in tensor and returns true iff a valid tensor is available.
-  bool get_policy(mem_offset_t mem_offset, PolicyTensor&) const;
-
-  // Populates passed-in tensor and returns true iff a valid tensor is available.
-  bool get_action_values(mem_offset_t mem_offset, ActionValueTensor&) const;
-
-  // Populates passed-in tensor and returns true iff a valid tensor is available.
-  bool get_action_value_uncertainties(mem_offset_t mem_offset, ActionValueTensor&) const;
 
   const State& get_final_state() const;
   const ValueTensor& get_outcome() const;
