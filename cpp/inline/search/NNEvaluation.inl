@@ -14,7 +14,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
                                 core::action_mode_t mode) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
-  init_data_and_offsets(valid_actions);
+  float* data_ptr = init_data_and_offsets(valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Target = mp::TypeAt_t<PrimaryTargets, Index>;
@@ -33,7 +33,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
     if constexpr (Target::kPolicyBased) {
       arr[0] = valid_actions.count();
     }
-    DstMap dst(data(Index), arr);
+    DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Target::kPolicyBased) {
       Game::Symmetries::apply(src, inv_sym, mode);
@@ -48,11 +48,13 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
 
     Target::transform(dst);
   });
+
+  data_ = data_ptr;
 }
 
 template <search::concepts::Traits Traits>
 void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
-  init_data_and_offsets(valid_actions);
+  float* data_ptr = init_data_and_offsets(valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Target = mp::TypeAt_t<PrimaryTargets, Index>;
@@ -65,9 +67,11 @@ void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
     if constexpr (Target::kPolicyBased) {
       arr[0] = valid_actions.count();
     }
-    DstMap dst(data(Index), arr);
+    DstMap dst(data_helper(data_ptr, Index), arr);
     Target::uniform_init(dst);
   });
+
+  data_ = data_ptr;
 }
 
 template <search::concepts::Traits Traits>
@@ -93,7 +97,7 @@ void NNEvaluation<Traits>::clear() {
 }
 
 template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions) {
+float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
@@ -112,17 +116,15 @@ void NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions
     offset += padded_size;
   });
 
-  if (data_) {
-    ::operator delete[](data_, std::align_val_t{16});
-  }
+  RELEASE_ASSERT(!data_);
 
   // We want to do:
   //
-  // data_ = new float[offset];
+  // return new float[offset];
   //
   // But that doesn't guarantee 16-byte alignment. So we do this instead:
   std::size_t bytes = offset * sizeof(float);
-  data_ = static_cast<float*>(::operator new[](bytes, std::align_val_t{16}));
+  return static_cast<float*>(::operator new[](bytes, std::align_val_t{16}));
 }
 
 }  // namespace search

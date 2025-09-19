@@ -61,11 +61,14 @@ class NNEvaluation {
   void set_eval_sequence_id(core::nn_evaluation_sequence_id_t id) { eval_sequence_id_ = id; }
   core::nn_evaluation_sequence_id_t eval_sequence_id() const { return eval_sequence_id_; }
 
-  const float* data(int index) const { return data_ + (index == 0 ? 0 : offsets_[index - 1]); }
-  float* data(int index) { return data_ + (index == 0 ? 0 : offsets_[index - 1]); }
+  const float* data(int index) const { return data_helper(data_, index); }
+  float* data(int index) { return data_helper(data_, index); }
 
  protected:
-  void init_data_and_offsets(const ActionMask& valid_actions);
+  const float* data_helper(float* d, int i) const { return d + (i == 0 ? 0 : offsets_[i - 1]); }
+  float* data_helper(float* d, int i) { return d + (i == 0 ? 0 : offsets_[i - 1]); }
+
+  float* init_data_and_offsets(const ActionMask& valid_actions);
 
   float* data_ = nullptr;
   void* aux_ = nullptr;  // set to a NNEvaluationService-specific object
