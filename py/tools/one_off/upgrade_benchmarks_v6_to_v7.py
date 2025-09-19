@@ -21,7 +21,7 @@ Migration steps:
    - If both `--game` and `--tag` are provided, process only `/workspace/mount/v6/benchmarks/{game}/{tag}/`.
    - Otherwise, process all game directories under `/workspace/mount/v6/benchmarks/`.
 
-2. Copy all files into the corresponding v7 benchmark directory, excluding `../databases/benchmark.db`.
+2. Copy all files into the corresponding v7 benchmark directory, excluding `{game}/{tag}/databases/benchmark.db`.
 
 3. Create a new database in the v7 benchmark directory:
    - All tables are copied as-is, except for `mcts_agents`.
