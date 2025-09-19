@@ -250,9 +250,9 @@ class TrainingManager:
 
         game_spec = self._controller.game_spec
         shape_info_dict = self._game_log_reader.shape_info_dict
-        model_cfg_generator = game_spec.model_configs[self._controller.params.model_cfg]
-        model_cfg = model_cfg_generator.generate(shape_info_dict)
-        gen_cls = type(model_cfg_generator).__name__
+        model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
+        model_cfg = model_cfg_generator_type.generate(shape_info_dict)
+        gen_cls = model_cfg_generator_type.__name__
 
         if checkpoint_gen is None:
             self._net = Model(model_cfg)
@@ -277,7 +277,8 @@ class TrainingManager:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
                                  f'({h} != {t}) for {name})')
         if n_primary_heads != self._n_primary_targets:
-            raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets')
+            raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
+                             f'({n_primary_heads} != {self._n_primary_targets})')
         logger.info('Validation complete!')
 
         return self._net, self._opt
