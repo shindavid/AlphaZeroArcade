@@ -114,6 +114,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             neck=None,
 
             heads=[
+                # primary heads
                 ModuleSpec(type='PolicyHead',
                         args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
                 ModuleSpec(type='WinLossDrawValueHead',
@@ -121,20 +122,29 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 ModuleSpec(type='WinShareActionValueHead',
                         args=['action_value', board_size, c_trunk, c_action_value_hidden,
                               action_value_shape]),
-                ModuleSpec(type='GeneralSigmoidHead',
+                ModuleSpec(type='GeneralLogitHead',
                         args=['value_uncertainty', c_trunk, c_value_uncertainty_hidden,
                               n_value_uncertainty_hidden, (1, )]),
+                ModuleSpec(type='GeneralLogitHead',
+                        args=['action_value_uncertainty', c_trunk, c_value_uncertainty_hidden,
+                              n_value_uncertainty_hidden, action_value_shape]),
+
+                # auxiliary heads
                 ModuleSpec(type='PolicyHead',
                         args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden,
                               policy_shape]),
             ],
 
             loss_weights={
+                # primary heads
                 'policy': 1.0,
                 'value': 1.5,
                 'action_value': 1.0,
-                'opp_policy': 0.15,
                 'value_uncertainty': 1.0,
+                'action_value_uncertainty': 1.0,
+
+                # auxiliary heads
+                'opp_policy': 0.15,
             },
 
             opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),

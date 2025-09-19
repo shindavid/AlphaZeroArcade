@@ -139,8 +139,3 @@ class OwnershipTarget(LearningTarget):
 class GeneralLogitTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.BCEWithLogitsLoss()
-
-
-class GeneralSigmoidTarget(LearningTarget):
-    def loss_fn(self) -> nn.Module:
-        return nn.BCEWithLogitsLoss()

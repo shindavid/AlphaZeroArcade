@@ -15,8 +15,8 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-from shared.learning_targets import GeneralLogitTarget, GeneralSigmoidTarget, LearningTarget, \
-    OwnershipTarget, PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
+from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
+    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
 from util.torch_util import Shape
 
@@ -605,26 +605,19 @@ class GeneralHead(Head):
 class GeneralLogitHead(GeneralHead):
     """
     A head that produces an arbitrarily shaped tensor of logits.
+
+    These logits are not intended to be normalized with softmax. Instead, they are intended to be
+    interpreted as independent binary classification logits.
     """
     def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
         super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), name, c_in, c_hidden, n_hidden,
                                                shape)
 
 
-class GeneralSigmoidHead(GeneralHead):
-    """
-    A head that produces an arbitrarily shaped tensor of logits
-    """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralSigmoidHead, self).__init__(GeneralSigmoidTarget(), name, c_in, c_hidden,
-                                                 n_hidden, shape)
-
-
 MODULE_MAP = {
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'GeneralLogitHead': GeneralLogitHead,
-    'GeneralSigmoidHead': GeneralSigmoidHead,
     'KataGoNeck': KataGoNeck,
     'OwnershipHead': OwnershipHead,
     'ResBlock': ResBlock,
