@@ -105,7 +105,7 @@ def upgrade_benchmark(game: str, tag: str):
         print(f"Failed to upgrade benchmark {game}/{tag} to v7: {e}")
 
 
-def upgrade_game_benmarks(game: str):
+def upgrade_game_benchmarks(game: str):
     game_dir = V6_BENCHMARK_DIR / game
     if not game_dir.exists():
         raise Exception(f"Game directory {game_dir} does not exist.")
@@ -117,7 +117,7 @@ def upgrade_game_benmarks(game: str):
 def upgrade_all_benchmarks():
     for game_dir in V6_BENCHMARK_DIR.iterdir():
         if game_dir.is_dir():
-            upgrade_game_benmarks(game_dir.name)
+            upgrade_game_benchmarks(game_dir.name)
 
 
 def load_args():
@@ -136,7 +136,7 @@ def main():
     if run_params is None:
         upgrade_all_benchmarks()
     elif run_params.game and not run_params.tag:
-        upgrade_game_benmarks(run_params.game)
+        upgrade_game_benchmarks(run_params.game)
     elif run_params.game and run_params.tag:
         upgrade_benchmark(run_params.game, run_params.tag)
 
