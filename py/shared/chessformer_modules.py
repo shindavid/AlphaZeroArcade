@@ -303,7 +303,7 @@ class ChessformerBlock(nn.Module):
     def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
                  n_output_channels: int,
                  use_static_bias: bool = True,
-                 use_rpe: bool = False,
+                 use_rpe: bool = True,
                  use_smolgen: bool = True,
                  smolgen_compress_dim: int = 32,
                  smolgen_shared_dim: int = 256,
