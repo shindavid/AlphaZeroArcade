@@ -18,6 +18,7 @@ AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unforma
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
+from shared.chessformer_modules import ChessformerBlock
 from util.torch_util import Shape
 
 import onnx
@@ -629,6 +630,7 @@ MODULE_MAP = {
     'WinLossValueHead': WinLossValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
+    'ChessformerBlock': ChessformerBlock,
     }
 
 
@@ -788,7 +790,7 @@ class Model(nn.Module):
         torch.onnx.export(
             clone, example_input, buf,
             export_params=True,
-            opset_version=16,
+            opset_version=18,
             input_names=input_names,
             output_names=output_names,
             dynamic_axes=dynamic_axes,

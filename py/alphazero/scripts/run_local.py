@@ -49,6 +49,8 @@ Standard Usage Recipes:
 
     Once promoted, future runs will be rated relative to this run.
 
+3. Retrain a fork of an existing run:
+    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --task-mode --retrain
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -104,6 +106,7 @@ class Params:
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
     simulate_cloud: bool = default_loop_controller_params.simulate_cloud
     task_mode: bool = default_loop_controller_params.task_mode
+    retrain: bool = default_loop_controller_params.retrain
 
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
@@ -291,6 +294,9 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
 
     if params.task_mode:
         cmd.extend(['--task-mode'])
+
+    if params.retrain:
+        cmd.extend(['--retrain'])
 
     if benchmark_tag:
         cmd.extend(['--benchmark-tag', benchmark_tag])
