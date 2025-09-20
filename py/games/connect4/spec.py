@@ -208,7 +208,7 @@ class Transformer(ModelConfigGenerator):
         )
 
 
-class Chessformer(ModelConfigGenerator):
+class Transformer(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -243,15 +243,11 @@ class Chessformer(ModelConfigGenerator):
 
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ChessformerBlock', args=[
+                ModuleSpec(type='TransformerBlock', args=[
                             cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
-                            'use_static_bias': True,
-                            'use_rpe': True,
-                            'use_smolgen': True,
                             'smolgen_compress_dim': smolgen_compress_dim,
                             'smolgen_shared_dim': smolgen_shared_dim,
-                            'ffn_multiplier': 1.0
                         })],
 
             neck=None,
@@ -290,7 +286,7 @@ class Connect4Spec(GameSpec):
         'transformer': Transformer,
         'b7_c128_beta0': CNN_b7_c128_beta0,
         'beta0': CNN_b7_c128_beta0,
-        'chessformer': Chessformer,
+        'transformer': Transformer,
         'default': CNN_b7_c128,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)

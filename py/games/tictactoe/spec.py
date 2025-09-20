@@ -111,7 +111,7 @@ class Mini(ModelConfigGenerator):
         )
 
 
-class Chessformer(ModelConfigGenerator):
+class Transformer(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -146,7 +146,7 @@ class Chessformer(ModelConfigGenerator):
 
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ChessformerBlock', args=[
+                ModuleSpec(type='TransformerBlock', args=[
                             cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
                             kwargs={
                             'use_static_bias': True,
@@ -190,7 +190,7 @@ class TicTacToeSpec(GameSpec):
         'default': CNN_b3_c32,
         'b3_c32': CNN_b3_c32,
         'mini': Mini,
-        'chessformer': Chessformer,
+        'transformer': Transformer,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
 

@@ -299,7 +299,7 @@ def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H
     return M
 
 
-class ChessformerBlock(nn.Module):
+class TransformerBlock(nn.Module):
     def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
                  n_output_channels: int,
                  use_static_bias: bool = True,
@@ -315,7 +315,7 @@ class ChessformerBlock(nn.Module):
         3. Output projection: (B, T, Dm) -> (B, T, n_output_channels)
         4. Reshape to (B, n_output_channels, H, W)
         """
-        super(ChessformerBlock, self).__init__()
+        super(TransformerBlock, self).__init__()
 
         H, W = input_shape[1], input_shape[2]
         rpe_factorizer = build_rpe_factorizer_2d(H, W)
