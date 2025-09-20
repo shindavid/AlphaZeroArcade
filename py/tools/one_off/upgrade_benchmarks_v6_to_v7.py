@@ -97,6 +97,10 @@ def upgrade_benchmark(game: str, tag: str):
     if tag == 'reference.player':
         return
 
+    if (V7_BENCHMARK_DIR / game / tag).exists():
+            print(f"Benchmark {game}/{tag} already exists in v7. Skip copying.")
+            return
+
     try:
         copy_to_v7_dir(game, tag)
         create_v7_benchmark_db(game, tag)
