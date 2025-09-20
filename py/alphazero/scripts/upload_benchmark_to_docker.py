@@ -42,7 +42,7 @@ def main():
     args = load_args()
     logging_params = LoggingParams.create(args)
     run_params = RunParams.create(args)
-    configure_logger(params=logging_params, prefix='[upload_benchmark_to_s3]')
+    configure_logger(params=logging_params, prefix='[upload_benchmark_to_docker]')
     utc_key = datetime.now(timezone.utc).strftime(UTC_FORMAT)
     record = BenchmarkRecord(utc_key=utc_key, tag=run_params.tag, game=run_params.game)
 
