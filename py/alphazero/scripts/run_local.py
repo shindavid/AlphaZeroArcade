@@ -50,7 +50,7 @@ Standard Usage Recipes:
     Once promoted, future runs will be rated relative to this run.
 
 3. Retrain a fork of an existing run:
-    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --task-mode --retrain
+    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --retrain
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -374,27 +374,29 @@ def main():
                 procs.append(launch_self_play_server(params_dict, self_play_gpu))
 
         benchmark_data = BenchmarkData(run_params.game, benchmark_tag)
-        if params.task_mode:
-            if params.run_benchmark_server:
-                descs.append('Benchmark')
-                procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
-            if params.run_eval_server:
-                descs.append('Eval')
-                procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
-            if params.run_ratings_server:
+
+        if not params.retrain:
+            if params.task_mode:
+                if params.run_benchmark_server:
+                    descs.append('Benchmark')
+                    procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
+                if params.run_eval_server:
+                    descs.append('Eval')
+                    procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
+                if params.run_ratings_server:
+                    descs.append('Ratings')
+                    procs.append(launch_ratings_server(params_dict, ratings_gpu))
+            else:
+                if benchmark_data.valid():
+                    descs.append('Eval')
+                    procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
+                else:
+                    descs.append('Benchmark')
+                    procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
+
+            if params.run_ratings_server and game_spec.reference_player_family is not None:
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
-        else:
-            if benchmark_data.valid():
-                descs.append('Eval')
-                procs.append(launch_eval_vs_benchmark_server(params_dict, ratings_gpu, game_spec))
-            else:
-                descs.append('Benchmark')
-                procs.append(launch_self_eval_server(params_dict, ratings_gpu, game_spec))
-
-        if params.run_ratings_server and game_spec.reference_player_family is not None:
-            descs.append('Ratings')
-            procs.append(launch_ratings_server(params_dict, ratings_gpu))
 
         loop_control_proc = procs[descs.index('Loop-controller')]
         atexit.register(subprocess_util.terminate_processes, [loop_control_proc])
