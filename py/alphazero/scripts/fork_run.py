@@ -226,7 +226,7 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
     benchmark_rating_data = db.load_ratings(AgentRole.BENCHMARK)
     iagents = []
     ratings = []
-    is_committee = IndexSet()
+    committee = IndexSet()
     for i, data in enumerate(benchmark_rating_data):
         if data.agent_id not in db_id_map:
             continue
@@ -234,9 +234,9 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         iagent = arena.agent_lookup_db_id[new_db_id]
         iagents.append(iagent)
         ratings.append(data.rating)
-        is_committee.add(i)
+        committee.add(i)
     ratings = np.array(ratings)
-    new_db.commit_ratings(iagents, ratings, is_committee)
+    new_db.commit_ratings(iagents, ratings, committee)
 
 
 def main():
