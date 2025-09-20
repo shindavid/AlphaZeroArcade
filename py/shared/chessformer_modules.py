@@ -5,10 +5,6 @@ import torch.nn.functional as F
 
 from typing import Optional
 
-class Mish(nn.Module):
-    def forward(self, x):
-        return x * torch.tanh(F.softplus(x))
-
 
 def residual_scale(n_layers: int) -> float:
     return 1.0 / math.sqrt(2.0 * max(1, n_layers))
@@ -198,7 +194,7 @@ class FFN(nn.Module):
         """
         super().__init__()
         self.fc1 = nn.Linear(Dm, Dff, bias=True)
-        self.act = Mish()
+        self.act = nn.Mish()
         self.fc2 = nn.Linear(Dff, Dm, bias=True)
         self.dropout = nn.Dropout(0.1)
         self.res_scale = residual_scale(n_layers)
@@ -331,7 +327,7 @@ class ChessformerBlock(nn.Module):
         Dff = int(ffn_multiplier * embed_dim)
 
         self.input_embed = nn.Linear(n_input_channels, embed_dim, bias=True)
-        self.embed_act = Mish()
+        self.embed_act = nn.Mish()
         self.gating = MAGating(self.board_size, embed_dim)
 
         self.smolgen_shared = nn.Linear(smolgen_shared_dim, self.board_size * self.board_size, bias=False) if use_smolgen else None
