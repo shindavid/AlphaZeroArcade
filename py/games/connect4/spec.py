@@ -286,7 +286,6 @@ class Connect4Spec(GameSpec):
         'transformer': Transformer,
         'b7_c128_beta0': CNN_b7_c128_beta0,
         'beta0': CNN_b7_c128_beta0,
-        'transformer': Transformer,
         'default': CNN_b7_c128,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
