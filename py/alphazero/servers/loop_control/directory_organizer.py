@@ -54,10 +54,10 @@ import os
 import re
 import shutil
 import sqlite3
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
-Gen = int
 PathStr = str
 SELF_PLAY_DATA_FILE_REGEX = re.compile(r"^gen-(\d+)\.data$")
 
@@ -221,6 +221,18 @@ class DirectoryOrganizer:
             return default
         return PathInfo(subpaths[-1]).generation
 
+    @staticmethod
+    def get_gen_number(filepath: str) -> Generation:
+        """
+        Extracts the generation number from a filename.
+        filepath is expected to be like {path}/gen-123.{ext}
+        """
+        stem = Path(filepath).stem
+        left, right = stem.split('-', 1)
+        if left != 'gen' or not right.isdigit():
+            raise ValueError(f'Unexpected file: {filepath}')
+        return int(right)
+
     def get_last_checkpointed_generation(self, default=None) -> Optional[Generation]:
         return DirectoryOrganizer._get_latest_generation(self.checkpoints_dir, default=default)
 
@@ -258,23 +270,16 @@ class DirectoryOrganizer:
             return None
         return self.get_any_self_play_data_filename(gen - 1)
 
-
-    def _parse_self_play_data_filename(self, filename: str) -> Gen:
-        m = SELF_PLAY_DATA_FILE_REGEX.fullmatch(filename)
-        if not m:
-            raise ValueError(f'Unexpected file in self-play-data: {filename}')
-        return int(m.group(1))
-
     def _apply_to_self_play_data_dir(self, target: 'DirectoryOrganizer',
                                      func: Callable[[PathStr, PathStr], None],
                                      last_model_gen: Optional[Generation] = None):
-        for filename in os.listdir(self.self_play_data_dir):
-            gen = self._parse_self_play_data_filename(filename)
+        for genfile in os.listdir(self.self_play_data_dir):
+            gen = DirectoryOrganizer.get_gen_number(genfile)
 
             if last_model_gen is not None and gen >= last_model_gen:
                 continue
-            src = os.path.join(self.self_play_data_dir, filename)
-            dst = os.path.join(target.self_play_data_dir, filename)
+            src = os.path.join(self.self_play_data_dir, genfile)
+            dst = os.path.join(target.self_play_data_dir, genfile)
             func(src, dst)
 
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
