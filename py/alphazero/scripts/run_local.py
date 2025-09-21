@@ -397,6 +397,8 @@ def main():
             if params.run_ratings_server and game_spec.reference_player_family is not None:
                 descs.append('Ratings')
                 procs.append(launch_ratings_server(params_dict, ratings_gpu))
+        else:
+            assert organizer.requires_retraining(), "train-only mode can only be used on a forked run"
 
         loop_control_proc = procs[descs.index('Loop-controller')]
         atexit.register(subprocess_util.terminate_processes, [loop_control_proc])
