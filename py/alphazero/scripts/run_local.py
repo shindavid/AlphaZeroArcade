@@ -49,8 +49,8 @@ Standard Usage Recipes:
 
     Once promoted, future runs will be rated relative to this run.
 
-3. Retrain a fork of an existing run:
-    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --retrain
+3. Retrain a fork of an existing run created using --retrain-models:
+    ./py/alphazero/scripts/run_local.py -g {game} -t {new-tag} --train-only
 """
 
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -106,7 +106,7 @@ class Params:
     benchmark_tag: Optional[str] = default_loop_controller_params.benchmark_tag
     simulate_cloud: bool = default_loop_controller_params.simulate_cloud
     task_mode: bool = default_loop_controller_params.task_mode
-    retrain: bool = default_loop_controller_params.retrain
+    train_only: bool = default_loop_controller_params.train_only
 
     run_ratings_server: bool = False
     run_benchmark_server: bool = False
@@ -295,8 +295,8 @@ def launch_loop_controller(params_dict, cuda_device: int, benchmark_tag: Optiona
     if params.task_mode:
         cmd.extend(['--task-mode'])
 
-    if params.retrain:
-        cmd.extend(['--retrain'])
+    if params.train_only:
+        cmd.extend(['--train-only'])
 
     if benchmark_tag:
         cmd.extend(['--benchmark-tag', benchmark_tag])
@@ -375,7 +375,7 @@ def main():
 
         benchmark_data = BenchmarkData(run_params.game, benchmark_tag)
 
-        if not params.retrain:
+        if not params.train_only:
             if params.task_mode:
                 if params.run_benchmark_server:
                     descs.append('Benchmark')

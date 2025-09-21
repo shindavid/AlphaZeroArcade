@@ -18,7 +18,7 @@ class LoopControllerParams:
     ignore_sigint: bool = False
     simulate_cloud: bool = False
     task_mode: bool = False
-    retrain: bool = False
+    train_only: bool = False
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -56,8 +56,9 @@ class LoopControllerParams:
                            help='simulate cloud environment')
         group.add_argument('--task-mode', action='store_true', default=defaults.task_mode,
                            help='run without self-play/training; exit after task is done.')
-        group.add_argument('--retrain', action='store_true', default=False,
-                           help='retrain models for a forked run without running self-eval or eval-vs-benchmark.')
+        group.add_argument('--train-only', action='store_true', default=False,
+                           help='retrain a forked run using training only (no self-play or eval). \
+                               Intended for use with a forked run created using --retrain-models.')
 
 
     def add_to_cmd(self, cmd: List[str]):
