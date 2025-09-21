@@ -55,7 +55,7 @@ import re
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 PathStr = str
@@ -271,7 +271,7 @@ class DirectoryOrganizer:
         return self.get_any_self_play_data_filename(gen - 1)
 
     def _apply_to_self_play_data_dir(self, target: 'DirectoryOrganizer',
-                                     func: Callable[[PathStr, PathStr], None],
+                                     func: Callable[[PathStr, PathStr], Any],
                                      last_model_gen: Optional[Generation] = None):
         for genfile in os.listdir(self.self_play_data_dir):
             gen = DirectoryOrganizer.get_gen_number(genfile)
