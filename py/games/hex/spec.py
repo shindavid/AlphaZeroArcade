@@ -6,6 +6,7 @@ from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, Op
     ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
+from shared.transformer_modules import TransformerBlockParams
 
 
 class CNN_b11_c32(ModelConfigGenerator):
@@ -86,11 +87,9 @@ class Transformer(ModelConfigGenerator):
 
         assert value_shape == (2,), value_shape
 
-        embed_dim = 64
-        n_heads = 8
-        n_layers = 3
         c_trunk = 128
         c_mid = 128
+        cnn_output_shape  = (c_trunk, *board_shape)
 
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
@@ -98,9 +97,16 @@ class Transformer(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
-        smolgen_compress_dim = 8
-        smolgen_shared_dim = 32
-        cnn_output_shape  = (c_trunk, *board_shape)
+        transformer_block_params = TransformerBlockParams(
+            input_shape=cnn_output_shape,
+            embed_dim=64,
+            n_heads=8,
+            n_layers=3,
+            n_output_channels=c_trunk,
+            smolgen_compress_dim=8,
+            smolgen_shared_dim=32,
+            feed_forward_multiplier=1.0
+            )
 
         return ModelConfig(
             shape_info_dict=shape_info_dict,
@@ -110,12 +116,8 @@ class Transformer(ModelConfigGenerator):
             blocks=[
                 ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
                 ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='TransformerBlock', args=[
-                            cnn_output_shape, embed_dim, n_heads, n_layers, c_trunk],
-                            kwargs={
-                            'smolgen_compress_dim': smolgen_compress_dim,
-                            'smolgen_shared_dim': smolgen_shared_dim,
-                        })],
+                ModuleSpec(type='TransformerBlock', args=[transformer_block_params]),
+            ],
 
             neck=None,
 
