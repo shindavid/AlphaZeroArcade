@@ -3,7 +3,34 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from dataclasses import dataclass
 from typing import Optional
+
+
+@dataclass
+class AttentionShape:
+    Dm: int
+    Hh: int
+    T: int
+    n_layers: int = 1
+
+
+@dataclass
+class SmolgenParams:
+    compress_dim: int = 32
+    shared_dim: int = 256
+    shared_layer: Optional[nn.Linear] = None
+
+
+@dataclass
+class MultiheadAttentionParams:
+    attention_shape: AttentionShape
+    use_static_bias: bool = False
+    use_rpe: bool = False
+    use_smolgen: bool = False
+    rpe_factorizer: Optional[torch.Tensor] = None
+    smolgen_params: Optional[SmolgenParams] = None
+
 
 
 def residual_scale(n_layers: int) -> float:
@@ -48,9 +75,18 @@ class Smolgen(nn.Module):
     5. Apply a shared linear layer to (T*T) logits per head
     6. Return (B, Hh, T, T) logits scaled by a learned gate parameter
     """
-    def __init__(self, Dm: int, Hh: int, T: int, compress_dim: int = 32, shared_dim: int = 256,
-                 shared_layer: nn.Linear | None = None):
+    def __init__(self, attention_shape: AttentionShape,
+                 smolgen_params: SmolgenParams):
         super().__init__()
+
+        Dm = attention_shape.Dm
+        Hh = attention_shape.Hh
+        T = attention_shape.T
+
+        compress_dim = smolgen_params.compress_dim
+        shared_dim = smolgen_params.shared_dim
+        shared_layer = smolgen_params.shared_layer
+
         self.T, self.Hh = T, Hh
         self.proj_token  = nn.Linear(Dm, compress_dim, bias=True)
         self.proj_global = nn.Linear(T * compress_dim, shared_dim, bias=True)
@@ -83,22 +119,24 @@ class MultiheadAttentionWithExtras(nn.Module):
       - optional RPE Bias
       - optional Smolgen Bias
     """
-    def __init__(self, Dm: int, Hh: int, T: int,
-                 use_static_bias: bool = True,
-                 use_rpe: bool = False,
-                 rpe_factorizer: Optional[torch.Tensor] = None,
-                 use_smolgen: bool = True,
-                 smolgen_shared: Optional[nn.Linear] = None,
-                 smolgen_shared_dim: int = 256,
-                 smolgen_compress_dim: int = 32,
-                 n_layers: int = 1):
-
+    def __init__(self, params: MultiheadAttentionParams):
         super().__init__()
 
-        self.Dm, self.Hh, self.T = Dm, Hh, T
-        # assert int(Dm % Hh) == 0, f"Dm ({Dm}) must be divisible by Hh ({Hh})"
+        Dm = params.attention_shape.Dm
+        Hh = params.attention_shape.Hh
+        T = params.attention_shape.T
+        n_layers = params.attention_shape.n_layers
+        rpe_factorizer = params.rpe_factorizer
 
+        self.use_static_bias = params.use_static_bias
+        self.use_rpe = params.use_rpe
+        self.use_smolgen = params.use_smolgen
+
+        self.Dm, self.Hh, self.T = Dm, Hh, T
+
+        assert int(Dm % Hh) == 0, f"Dm ({Dm}) must be divisible by Hh ({Hh})"
         self.dh = Dm // Hh
+
         self.scale = 1.0 / math.sqrt(self.dh)
         self.res_scale = residual_scale(n_layers)
 
@@ -107,11 +145,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         self.Wv = nn.Linear(Dm, Dm, bias=False)
         self.Wo = nn.Linear(Dm, Dm, bias=True)  # keep bias after attention
 
-        self.use_static = use_static_bias
-        self.use_rpe = use_rpe
-        self.use_smolgen = use_smolgen
-
-        if self.use_static:
+        if self.use_static_bias:
             self.static_bias = nn.Parameter(torch.zeros(Hh, T, T))  # (Hh,T,T)
 
         if self.use_rpe:
@@ -130,8 +164,7 @@ class MultiheadAttentionWithExtras(nn.Module):
 
 
         if self.use_smolgen:
-            self.smolgen = Smolgen(Dm=Dm, Hh=Hh, T=T, shared_layer=smolgen_shared,
-                                   compress_dim=smolgen_compress_dim, shared_dim=smolgen_shared_dim)
+            self.smolgen = Smolgen(params.attention_shape, params.smolgen_params)
 
         self.dropout = nn.Dropout(0.1)
 
@@ -158,7 +191,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         logits = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # (B,Hh,T,T)
 
         # Static bias
-        if self.use_static:
+        if self.use_static_bias:
             logits = logits + self.static_bias.unsqueeze(0)  # (B,Hh,T,T)
 
         # RPE
@@ -187,7 +220,7 @@ class MultiheadAttentionWithExtras(nn.Module):
         return out
 
 
-class FFN(nn.Module):
+class FeedForwardNetwork(nn.Module):
     def __init__(self, Dm: int, Dff: int, n_layers: int):
         """
         (B, T, Dm) -> (B, T, Dff) -> (B, T, Dm)
@@ -205,22 +238,16 @@ class FFN(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, Dm: int, Hh: int, T: int, Dff: int, n_layers: int,
-                 use_static_bias=True, use_rpe: bool = False,
-                 rpe_factorizer: Optional[torch.Tensor] = None,
-                 use_smolgen=True, smolgen_shared=None,
-                 smolgen_shared_dim: int = 256, smolgen_compress_dim: int = 32):
+    def __init__(self, multi_head_attention_params: MultiheadAttentionParams,
+                 feed_forward_dim: int):
         super().__init__()
-        self.mha = MultiheadAttentionWithExtras(Dm, Hh, T,
-                                                use_static_bias=use_static_bias,
-                                                use_rpe=use_rpe,
-                                                rpe_factorizer=rpe_factorizer,
-                                                use_smolgen=use_smolgen,
-                                                smolgen_shared=smolgen_shared,
-                                                smolgen_shared_dim=smolgen_shared_dim,
-                                                smolgen_compress_dim=smolgen_compress_dim,
-                                                n_layers=n_layers)
-        self.ffn = FFN(Dm, Dff, n_layers)
+
+        Dm = multi_head_attention_params.attention_shape.Dm
+        n_layers = multi_head_attention_params.attention_shape.n_layers
+        Dff = feed_forward_dim
+
+        self.mha = MultiheadAttentionWithExtras(multi_head_attention_params)
+        self.ffn = FeedForwardNetwork(Dm, Dff, n_layers)
         self.norm1 = RMSNorm(Dm)
         self.norm2 = RMSNorm(Dm)
 
@@ -299,15 +326,23 @@ def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H
     return M
 
 
+@dataclass
+class TransformerBlockParams:
+    input_shape: tuple
+    embed_dim: int
+    n_heads: int
+    n_layers: int
+    n_output_channels: int
+    use_static_bias: bool = True
+    use_rpe: bool = True
+    use_smolgen: bool = True
+    smolgen_compress_dim: int = 32
+    smolgen_shared_dim: int = 256
+    feed_forward_multiplier: float = 4.0
+
+
 class TransformerBlock(nn.Module):
-    def __init__(self, input_shape, embed_dim: int, n_heads: int, n_layers: int,
-                 n_output_channels: int,
-                 use_static_bias: bool = True,
-                 use_rpe: bool = True,
-                 use_smolgen: bool = True,
-                 smolgen_compress_dim: int = 32,
-                 smolgen_shared_dim: int = 256,
-                 ffn_multiplier: float = 1.0):
+    def __init__(self, params: TransformerBlockParams):
         """
         input_shape: (B, C, H, W)
         1. Input embedding: (B, C, H, W) -> (B, T, Dm)
@@ -317,35 +352,45 @@ class TransformerBlock(nn.Module):
         """
         super(TransformerBlock, self).__init__()
 
-        H, W = input_shape[1], input_shape[2]
-        rpe_factorizer = build_rpe_factorizer_2d(H, W)
+        C, H, W = params.input_shape
+        T = H * W
 
-        self.H, self.W = H, W
-        self.board_size = H * W  # T
-        n_input_channels = input_shape[0]
-        Hh = n_heads
-        Dff = int(ffn_multiplier * embed_dim)
+        attention_shape = AttentionShape(Dm=params.embed_dim,
+                                         Hh=params.n_heads,
+                                         T=T,
+                                         n_layers=params.n_layers)
 
-        self.input_embed = nn.Linear(n_input_channels, embed_dim, bias=True)
+        multi_head_attention_params = MultiheadAttentionParams(
+            attention_shape=attention_shape,
+            use_static_bias=params.use_static_bias,
+            use_rpe=params.use_rpe,
+            use_smolgen=params.use_smolgen)
+
+        if params.use_rpe:
+            rpe_factorizer = build_rpe_factorizer_2d(H, W)
+            multi_head_attention_params.rpe_factorizer = rpe_factorizer
+
+        if params.use_smolgen:
+            self.smolgen_shared = nn.Linear(params.smolgen_shared_dim, T * T, bias=False)
+            smolgen_params = SmolgenParams(compress_dim=params.smolgen_compress_dim,
+                                           shared_dim=params.smolgen_shared_dim,
+                                           shared_layer=self.smolgen_shared)
+            multi_head_attention_params.smolgen_params = smolgen_params
+
+
+
+        self.input_embed = nn.Linear(C, params.embed_dim, bias=True)
         self.embed_act = nn.Mish()
-        self.gating = MAGating(self.board_size, embed_dim)
+        self.gating = MAGating(T, params.embed_dim)
 
-        self.smolgen_shared = nn.Linear(smolgen_shared_dim, self.board_size * self.board_size, bias=False) if use_smolgen else None
-
+        feed_forward_dim = int(params.feed_forward_multiplier * params.embed_dim)
         layers = []
-        for _ in range(n_layers):
+        for _ in range(params.n_layers):
             layers.append(
-                EncoderLayer(Dm=embed_dim, Hh=Hh, T=self.board_size, Dff=Dff, n_layers=n_layers,
-                             use_static_bias=use_static_bias,
-                             use_rpe=use_rpe,
-                             rpe_factorizer=rpe_factorizer,
-                             use_smolgen=use_smolgen,
-                             smolgen_compress_dim=smolgen_compress_dim,
-                             smolgen_shared_dim=smolgen_shared_dim,
-                             smolgen_shared=self.smolgen_shared)
+                EncoderLayer(multi_head_attention_params, feed_forward_dim)
             )
         self.transformer_encoder = nn.ModuleList(layers)
-        self.output_projection = nn.Linear(embed_dim, n_output_channels, bias=True)
+        self.output_projection = nn.Linear(params.embed_dim, params.n_output_channels, bias=True)
 
     def forward(self, x):
         """
