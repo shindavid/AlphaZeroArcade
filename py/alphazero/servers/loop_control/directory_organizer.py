@@ -53,9 +53,11 @@ import logging
 import os
 import shutil
 import sqlite3
-from typing import Callable, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+PathStr = str
 
 
 class PathInfo:
@@ -218,6 +220,18 @@ class DirectoryOrganizer:
             return default
         return PathInfo(subpaths[-1]).generation
 
+    @staticmethod
+    def get_gen_number(filepath: str) -> Generation:
+        """
+        Extracts the generation number from a filename.
+        filepath is expected to be like {path}/gen-123.{ext}
+        """
+        stem = Path(filepath).stem
+        left, right = stem.split('-', 1)
+        if left != 'gen' or not right.isdigit():
+            raise ValueError(f'Unexpected file: {filepath}')
+        return int(right)
+
     def get_last_checkpointed_generation(self, default=None) -> Optional[Generation]:
         return DirectoryOrganizer._get_latest_generation(self.checkpoints_dir, default=default)
 
@@ -255,27 +269,25 @@ class DirectoryOrganizer:
             return None
         return self.get_any_self_play_data_filename(gen - 1)
 
-    def copy_self_play_data(self, target: 'DirectoryOrganizer',
-                            last_model_gen: Optional[Generation] = None):
-        for filename in os.listdir(self.self_play_data_dir):
-            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
-            gen = int(filename.split('.')[0].split('-')[1])
+    def _apply_to_self_play_data_dir(self, target: 'DirectoryOrganizer',
+                                     func: Callable[[PathStr, PathStr], Any],
+                                     last_model_gen: Optional[Generation] = None):
+        for genfile in os.listdir(self.self_play_data_dir):
+            gen = DirectoryOrganizer.get_gen_number(genfile)
+
             if last_model_gen is not None and gen >= last_model_gen:
                 continue
-            src = os.path.join(self.self_play_data_dir, filename)
-            dst = os.path.join(target.self_play_data_dir, filename)
-            shutil.copyfile(src, dst)
+            src = os.path.join(self.self_play_data_dir, genfile)
+            dst = os.path.join(target.self_play_data_dir, genfile)
+            func(src, dst)
+
+    def copy_self_play_data(self, target: 'DirectoryOrganizer',
+                            last_model_gen: Optional[Generation] = None):
+        self._apply_to_self_play_data_dir(target, shutil.copyfile, last_model_gen)
 
     def soft_link_self_play_data(self, target: 'DirectoryOrganizer',
                                  last_model_gen: Optional[Generation] = None):
-        for filename in os.listdir(self.self_play_data_dir):
-            assert filename.startswith('gen-'), f'Unexpected subpath: {filename}'
-            gen = int(filename.split('.')[0].split('-')[1])
-            if last_model_gen is not None and gen >= last_model_gen:
-                continue
-            src = os.path.join(self.self_play_data_dir, filename)
-            dst = os.path.join(target.self_play_data_dir, filename)
-            os.symlink(src, dst)
+        self._apply_to_self_play_data_dir(target, os.symlink, last_model_gen)
 
     def copy_models_and_checkpoints(self, target: 'DirectoryOrganizer',
                                     last_gen: Optional[Generation] = None):

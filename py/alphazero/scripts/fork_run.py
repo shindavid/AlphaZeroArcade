@@ -79,6 +79,7 @@ from alphazero.servers.loop_control.base_dir import Workspace
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 from util.logging_util import LoggingParams, configure_logger
+from util.index_set import IndexSet
 from util import sqlite3_util
 
 import numpy as np
@@ -221,6 +222,21 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
         ratings.append(data.rating)
     ratings = np.array(ratings)
     new_db.commit_ratings(iagents, ratings)
+
+    benchmark_rating_data = db.load_ratings(AgentRole.BENCHMARK)
+    iagents = []
+    ratings = []
+    committee = IndexSet()
+    for i, data in enumerate(benchmark_rating_data):
+        if data.agent_id not in db_id_map:
+            continue
+        new_db_id = db_id_map[data.agent_id]
+        iagent = arena.agent_lookup_db_id[new_db_id]
+        iagents.append(iagent)
+        ratings.append(data.rating)
+        committee.add(i)
+    ratings = np.array(ratings)
+    new_db.commit_ratings(iagents, ratings, committee)
 
 
 def main():

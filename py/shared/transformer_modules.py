@@ -1,0 +1,413 @@
+import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class AttentionShape:
+    Dm: int
+    Hh: int
+    T: int
+    n_layers: int = 1
+
+
+@dataclass
+class SmolgenParams:
+    compress_dim: int = 32
+    shared_dim: int = 256
+    shared_layer: Optional[nn.Linear] = None
+
+
+@dataclass
+class MultiheadAttentionParams:
+    attention_shape: AttentionShape
+    use_static_bias: bool = False
+    use_rpe: bool = False
+    use_smolgen: bool = False
+    rpe_factorizer: Optional[torch.Tensor] = None
+    smolgen_params: Optional[SmolgenParams] = None
+
+
+
+def residual_scale(n_layers: int) -> float:
+    return 1.0 / math.sqrt(2.0 * max(1, n_layers))
+
+
+class MAGating(nn.Module):
+    """
+    (T, D) -> (T, D) with per-position learned affine gating
+    """
+    def __init__(self, T: int, D: int):
+        super().__init__()
+        self.pos_add = nn.Parameter(torch.zeros(T, D))
+        self.pos_mul = nn.Parameter(torch.zeros(T, D))
+        nn.init.trunc_normal_(self.pos_add, std=0.02)
+        nn.init.trunc_normal_(self.pos_mul, std=0.02)
+
+    def forward(self, U):
+        mult = F.softplus(1.0 + self.pos_mul)
+        return U * mult + self.pos_add
+
+
+class RMSNorm(nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-8):
+        super().__init__()
+        self.eps = eps
+        self.scale = nn.Parameter(torch.ones(dim))
+
+    def forward(self, x):  # x: (..., D)
+        norm = x.pow(2).mean(dim=-1, keepdim=True).add(self.eps).rsqrt()
+        return self.scale * x * norm
+
+
+class Smolgen(nn.Module):
+    """
+    Dynamic, state-conditioned supplemental logits:
+    (B, T, Dm) -> (B, Hh, T, T)
+    1. Project tokens to lower-dim (e.g. 32)
+    2. Project flattened (T,32) to shared dim (e.g. 256)
+    3. Per-head expansion to (Hh, shared_dim)
+    4. Token tensor is now of shape (B, Hh, shared_dim)
+    5. Apply a shared linear layer to (T*T) logits per head
+    6. Return (B, Hh, T, T) logits scaled by a learned gate parameter
+    """
+    def __init__(self, attention_shape: AttentionShape,
+                 smolgen_params: SmolgenParams):
+        super().__init__()
+
+        Dm = attention_shape.Dm
+        Hh = attention_shape.Hh
+        T = attention_shape.T
+
+        compress_dim = smolgen_params.compress_dim
+        shared_dim = smolgen_params.shared_dim
+        shared_layer = smolgen_params.shared_layer
+
+        self.T, self.Hh = T, Hh
+        self.proj_token  = nn.Linear(Dm, compress_dim, bias=True)
+        self.proj_global = nn.Linear(T * compress_dim, shared_dim, bias=True)
+        self.per_head    = nn.Linear(shared_dim, Hh * shared_dim, bias=True)
+        self.norm1 = nn.LayerNorm(shared_dim)
+        self.norm2 = nn.LayerNorm(shared_dim)
+        self.gate = nn.Parameter(torch.tensor(0.0))
+        self.shared = shared_layer if shared_layer is not None else nn.Linear(shared_dim, T * T, bias=False)
+
+    def forward(self, x):  # x: (B,T,Dm)
+        B = x.size(0)
+        z = self.proj_token(x)                     # (B,T,32)
+        g = self.proj_global(z.reshape(B, -1))     # (B,shared_dim)
+        g = F.silu(g)
+        g = self.norm1(g)
+
+        u = self.per_head(g)  # (B,Hh*shared_dim)
+        u = F.silu(u)
+        u = u.view(B, self.Hh, -1)  # (B,Hh,shared_dim)
+        u = self.norm2(u)
+        S = self.shared(u).view(B, self.Hh, self.T, self.T)  # (B,Hh,T,T)
+        return self.gate * S
+
+
+class MultiheadAttentionWithExtras(nn.Module):
+    """
+    MHA with:
+      - QKV
+      - optional Static Bias
+      - optional RPE Bias
+      - optional Smolgen Bias
+    """
+    def __init__(self, params: MultiheadAttentionParams):
+        super().__init__()
+
+        Dm = params.attention_shape.Dm
+        Hh = params.attention_shape.Hh
+        T = params.attention_shape.T
+        n_layers = params.attention_shape.n_layers
+        rpe_factorizer = params.rpe_factorizer
+
+        self.use_static_bias = params.use_static_bias
+        self.use_rpe = params.use_rpe
+        self.use_smolgen = params.use_smolgen
+
+        self.Dm, self.Hh, self.T = Dm, Hh, T
+
+        assert int(Dm % Hh) == 0, f"Dm ({Dm}) must be divisible by Hh ({Hh})"
+        self.dh = Dm // Hh
+
+        self.scale = 1.0 / math.sqrt(self.dh)
+        self.res_scale = residual_scale(n_layers)
+
+        self.Wq = nn.Linear(Dm, Dm, bias=False)
+        self.Wk = nn.Linear(Dm, Dm, bias=False)
+        self.Wv = nn.Linear(Dm, Dm, bias=False)
+        self.Wo = nn.Linear(Dm, Dm, bias=True)  # keep bias after attention
+
+        if self.use_static_bias:
+            self.static_bias = nn.Parameter(torch.zeros(Hh, T, T))  # (Hh,T,T)
+
+        if self.use_rpe:
+            assert rpe_factorizer is not None, "rpe_factorizer must be provided if use_rpe is True"
+            self.register_buffer('rpe_factorizer', rpe_factorizer)  # (num_bins, T*T)
+
+            num_bins = rpe_factorizer.size(0)
+            Hd = Hh * self.dh
+
+            self.rpe_q = nn.Parameter(torch.zeros(Hd, num_bins))
+            self.rpe_k = nn.Parameter(torch.zeros(Hd, num_bins))
+            self.rpe_v = nn.Parameter(torch.zeros(Hd, num_bins))
+            nn.init.trunc_normal_(self.rpe_q, std=0.02)
+            nn.init.trunc_normal_(self.rpe_k, std=0.02)
+            nn.init.trunc_normal_(self.rpe_v, std=0.02)
+
+
+        if self.use_smolgen:
+            self.smolgen = Smolgen(params.attention_shape, params.smolgen_params)
+
+        self.dropout = nn.Dropout(0.1)
+
+    def _expand_rpe_logits(self, W_small: torch.Tensor) -> torch.Tensor:
+        """
+        project a small relative bias matrix to full size TxT board tensor
+        (Hd, num_bins) -> (Hh, T, T, dh)
+        """
+        rpe_flat = torch.matmul(W_small, self.rpe_factorizer)
+        return rpe_flat.view(self.Hh, self.dh, self.T, self.T).permute(0, 2, 3, 1)  # (Hh, T, T, dh)
+
+    def forward(self, x):
+        """
+        (B, T, Dm) -> (B, T, Dm)
+        """
+        B, T, Dm = x.shape
+        Hh, dh = self.Hh, self.dh
+
+        Q = self.Wq(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+        K = self.Wk(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+        V = self.Wv(x).view(B, T, Hh, dh).transpose(1, 2)  # (B,Hh,T,dh)
+
+        # Base logits
+        logits = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # (B,Hh,T,T)
+
+        # Static bias
+        if self.use_static_bias:
+            logits = logits + self.static_bias.unsqueeze(0)  # (B,Hh,T,T)
+
+        # RPE
+        if self.use_rpe:
+            rpe_q = self._expand_rpe_logits(self.rpe_q)  # (Hh, T, T, dh)
+            rpe_k = self._expand_rpe_logits(self.rpe_k)  # (Hh, T, T, dh)
+            logits = (logits
+                      + torch.einsum('bhtd,htsd->bhts', Q, rpe_k) * self.scale
+                      + torch.einsum('htsd,bhsd->bhts', rpe_q, K) * self.scale)
+
+        # Smolgen dynamic bias
+        if self.use_smolgen:
+            logits = logits + self.smolgen(x)  # (B,Hh,T,T)
+
+        attn = torch.softmax(logits, dim=-1)
+        attn = self.dropout(attn)
+
+        out = torch.matmul(attn, V)  # (B,Hh,T,dh)
+
+        if self.use_rpe:
+            rpe_v = self._expand_rpe_logits(self.rpe_v)  # (Hh, dh, T, T)
+            out = out + torch.einsum('bhts,htsd->bhtd', attn, rpe_v)
+
+        out = out.transpose(1, 2).contiguous().view(B, T, Dm)  # (B,T,Dm)
+        out = self.dropout(self.Wo(out)) * self.res_scale
+        return out
+
+
+class FeedForwardNetwork(nn.Module):
+    def __init__(self, Dm: int, Dff: int, n_layers: int):
+        """
+        (B, T, Dm) -> (B, T, Dff) -> (B, T, Dm)
+        """
+        super().__init__()
+        self.fc1 = nn.Linear(Dm, Dff, bias=True)
+        self.act = nn.Mish()
+        self.fc2 = nn.Linear(Dff, Dm, bias=True)
+        self.dropout = nn.Dropout(0.1)
+        self.res_scale = residual_scale(n_layers)
+
+    def forward(self, x):
+        y = self.fc2(self.act(self.fc1(x)))
+        return self.dropout(y) * self.res_scale
+
+
+class EncoderLayer(nn.Module):
+    def __init__(self, multi_head_attention_params: MultiheadAttentionParams,
+                 feed_forward_dim: int):
+        super().__init__()
+
+        Dm = multi_head_attention_params.attention_shape.Dm
+        n_layers = multi_head_attention_params.attention_shape.n_layers
+        Dff = feed_forward_dim
+
+        self.mha = MultiheadAttentionWithExtras(multi_head_attention_params)
+        self.ffn = FeedForwardNetwork(Dm, Dff, n_layers)
+        self.norm1 = RMSNorm(Dm)
+        self.norm2 = RMSNorm(Dm)
+
+    def forward(self, x):  # x: (B,T,Dm)
+        x = self.norm1(x + self.mha(x))
+        x = self.norm2(x + self.ffn(x))
+        return x
+
+
+def build_rpe_factorizer_2d(H, W) -> torch.Tensor: # ((2*H-1)*(2*W-1) , (H*W)*(H*W))
+    """
+    Build a binary factorizer matrix M for 2D relative position encoding on an HxW grid.
+
+    Shape:
+        M ∈ {0,1}^{(2H-1)*(2W-1) , (H*W)*(H*W)}
+
+    Meaning:
+        • Rows correspond to all possible relative offsets (dy, dx) between two squares:
+              dy = i - k,   dx = j - l
+          where (i, j) is the query square (row i, column j)
+          and (k, l) is the key square (row k, column l).
+          dy ∈ [-(H-1), ..., H-1],  dx ∈ [-(W-1), ..., W-1].
+          Total number of rows = (2H-1) * (2W-1).
+
+        • Columns correspond to all ordered query-key square pairs ((i, j), (k, l))
+          on the HxW grid. There are (H*W)² such pairs.
+
+    Indexing:
+        • Let R_h = H - 1 and R_w = W - 1.
+        • Row index = (dy + R_h) * (2W - 1) + (dx + R_w).
+        • Query index: q_idx = i * W + j.
+        • Key index:   k_idx = k * W + l.
+        • Column index = q_idx * (H*W) + k_idx.
+
+    Entry:
+        M[row, col] = 1 means the query-key pair ((i, j), (k, l))
+                      has relative displacement (dy, dx).
+        Each column has exactly one '1', selecting the unique relative-offset bin
+        for that (query, key) pair.
+    """
+    assert H > 0 and W > 0, "H and W must be positive integers."
+
+    N = H * W
+    Rh, Rw = H - 1, W - 1
+    n_rows = (2 * H - 1) * (2 * W - 1)
+    n_cols = N * N
+
+    # Query and key coordinates
+    ys = torch.arange(H)
+    xs = torch.arange(W)
+    QY, QX = torch.meshgrid(ys, xs, indexing="ij")
+    KY, KX = QY, QX
+
+    QY = QY.reshape(-1)  # (N,)
+    QX = QX.reshape(-1)
+    KY = KY.reshape(-1)
+    KX = KX.reshape(-1)
+
+    # Relative displacements
+    dy = QY.unsqueeze(1) - KY.unsqueeze(0)  # (N, N)
+    dx = QX.unsqueeze(1) - KX.unsqueeze(0)  # (N, N)
+
+    # Row indices (for relative bins)
+    row_idx = (dy + Rh) * (2 * W - 1) + (dx + Rw)
+    row_idx = row_idx.reshape(-1).long()  # (N*N,)
+
+    # Column indices (for (q,k) pairs)
+    q_idx = torch.arange(N).unsqueeze(1).expand(N, N)
+    k_idx = torch.arange(N).unsqueeze(0).expand(N, N)
+    col_idx = (q_idx * N + k_idx).reshape(-1).long()  # (N*N,)
+
+    # Construct binary factorizer
+    M = torch.zeros(n_rows, n_cols)
+    M.index_put_((row_idx, col_idx), torch.ones_like(row_idx, dtype=M.dtype), accumulate=False)
+
+    return M
+
+
+@dataclass
+class TransformerBlockParams:
+    input_shape: tuple
+    embed_dim: int
+    n_heads: int
+    n_layers: int
+    n_output_channels: int
+    use_static_bias: bool = True
+    use_rpe: bool = True
+    use_smolgen: bool = True
+    smolgen_compress_dim: int = 32
+    smolgen_shared_dim: int = 256
+    feed_forward_multiplier: float = 4.0
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, params: TransformerBlockParams):
+        """
+        input_shape: (B, C, H, W)
+        1. Input embedding: (B, C, H, W) -> (B, T, Dm)
+        2. Transformer Encoder: (B, T, Dm) -> (B, T, Dm)
+        3. Output projection: (B, T, Dm) -> (B, T, n_output_channels)
+        4. Reshape to (B, n_output_channels, H, W)
+        """
+        super(TransformerBlock, self).__init__()
+
+        C, H, W = params.input_shape
+        T = H * W
+
+        attention_shape = AttentionShape(Dm=params.embed_dim,
+                                         Hh=params.n_heads,
+                                         T=T,
+                                         n_layers=params.n_layers)
+
+        multi_head_attention_params = MultiheadAttentionParams(
+            attention_shape=attention_shape,
+            use_static_bias=params.use_static_bias,
+            use_rpe=params.use_rpe,
+            use_smolgen=params.use_smolgen)
+
+        if params.use_rpe:
+            rpe_factorizer = build_rpe_factorizer_2d(H, W)
+            multi_head_attention_params.rpe_factorizer = rpe_factorizer
+
+        if params.use_smolgen:
+            self.smolgen_shared = nn.Linear(params.smolgen_shared_dim, T * T, bias=False)
+            smolgen_params = SmolgenParams(compress_dim=params.smolgen_compress_dim,
+                                           shared_dim=params.smolgen_shared_dim,
+                                           shared_layer=self.smolgen_shared)
+            multi_head_attention_params.smolgen_params = smolgen_params
+
+
+
+        self.input_embed = nn.Linear(C, params.embed_dim, bias=True)
+        self.embed_act = nn.Mish()
+        self.gating = MAGating(T, params.embed_dim)
+
+        feed_forward_dim = int(params.feed_forward_multiplier * params.embed_dim)
+        layers = []
+        for _ in range(params.n_layers):
+            layers.append(
+                EncoderLayer(multi_head_attention_params, feed_forward_dim)
+            )
+        self.transformer_encoder = nn.ModuleList(layers)
+        self.output_projection = nn.Linear(params.embed_dim, params.n_output_channels, bias=True)
+
+    def forward(self, x):
+        """
+          (B, C, H, W) -> (B, T, C) -> ... -> (B, T, n_out) -> (B, n_out, H, W)
+        """
+        (B, C, H, W) = x.shape
+
+        x = x.permute(0, 2, 3, 1).reshape(B, H * W, C)  # (B, T, C)
+
+        x = self.input_embed(x)  # (B, T, Dm)
+        x = self.embed_act(x)
+        x = self.gating(x)  # (B, T, Dm)
+
+        for layer in self.transformer_encoder:
+            x = layer(x)  # (B, T, Dm)
+
+        x = self.output_projection(x)  # (B, T, n_output_channels)
+        x = x.permute(0, 2, 1).contiguous().view(B, -1, H, W)
+
+        return x

@@ -6,6 +6,7 @@ from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, Op
     ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
+from shared.transformer_modules import TransformerBlockParams
 
 
 class CNN_b3_c32(ModelConfigGenerator):
@@ -111,6 +112,75 @@ class Mini(ModelConfigGenerator):
         )
 
 
+class Transformer(ModelConfigGenerator):
+    @staticmethod
+    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
+        input_shape = shape_info_dict['input'].shape
+        policy_shape = shape_info_dict['policy'].shape
+        value_shape = shape_info_dict['value'].shape
+        action_value_shape = shape_info_dict['action_value'].shape
+        board_shape = input_shape[1:]
+        board_size = math.prod(board_shape)
+
+        assert value_shape == (3,), value_shape
+
+        c_trunk = 128
+        c_mid = 128
+        cnn_output_shape  = (c_trunk, *board_shape)
+
+        c_policy_hidden = 2
+        c_opp_policy_hidden = 2
+        c_action_value_hidden = 2
+        c_value_hidden = 1
+        n_value_hidden = 256
+
+        transformer_block_params = TransformerBlockParams(
+            input_shape=cnn_output_shape,
+            embed_dim=64,
+            n_heads=8,
+            n_layers=3,
+            n_output_channels=c_trunk,
+            smolgen_compress_dim=8,
+            smolgen_shared_dim=32,
+            feed_forward_multiplier=1.0
+            )
+
+        return ModelConfig(
+            shape_info_dict=shape_info_dict,
+
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+
+            blocks=[
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='TransformerBlock', args=[transformer_block_params]),
+            ],
+
+            neck=None,
+
+            heads=[
+                ModuleSpec(type='PolicyHead',
+                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+                ModuleSpec(type='WinLossDrawValueHead',
+                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+                ModuleSpec(type='WinShareActionValueHead',
+                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                                action_value_shape]),
+                ModuleSpec(type='PolicyHead',
+                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
+            ],
+
+
+            loss_weights={
+                'policy': 1.0,
+                'value': 1.5,
+                'action_value': 1.0,
+                'opp_policy': 0.15,
+            },
+
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 1e-3, 'weight_decay': 6e-5}),
+        )
+
+
 @dataclass
 class TicTacToeSpec(GameSpec):
     name = 'tictactoe'
@@ -118,6 +188,7 @@ class TicTacToeSpec(GameSpec):
         'default': CNN_b3_c32,
         'b3_c32': CNN_b3_c32,
         'mini': Mini,
+        'transformer': Transformer,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
 

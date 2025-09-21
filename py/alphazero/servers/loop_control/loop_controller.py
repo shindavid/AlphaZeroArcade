@@ -575,4 +575,5 @@ class LoopController:
 
         if not self.params.task_mode:
             self._organizer.assert_not_frozen()
+            logger.info('Starting self-play and training threads...')
             threading.Thread(target=self._training_loop, name='main_loop', daemon=True).start()

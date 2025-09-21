@@ -6,6 +6,7 @@ from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, Op
     SearchParadigm, ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
+from shared.transformer_modules import TransformerBlockParams
 
 
 class CNN_b7_c128(ModelConfigGenerator):
@@ -163,10 +164,9 @@ class Transformer(ModelConfigGenerator):
 
         assert value_shape == (3,), value_shape
 
-        embed_dim = 64
-        n_heads = 8
-        n_layers = 8
         c_trunk = 128
+        c_mid = 128
+        cnn_output_shape  = (c_trunk, *board_shape)
 
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
@@ -174,13 +174,26 @@ class Transformer(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
+        transformer_block_params = TransformerBlockParams(
+            input_shape=cnn_output_shape,
+            embed_dim=64,
+            n_heads=8,
+            n_layers=3,
+            n_output_channels=c_trunk,
+            smolgen_compress_dim=8,
+            smolgen_shared_dim=32,
+            feed_forward_multiplier=1.0
+            )
+
         return ModelConfig(
             shape_info_dict=shape_info_dict,
 
-            stem=ModuleSpec(type='TransformerBlock', args=[
-                            input_shape, embed_dim, n_heads, n_layers, c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
-            blocks=[],
+            blocks=[
+                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+                ModuleSpec(type='TransformerBlock', args=[transformer_block_params]),
+            ],
 
             neck=None,
 
@@ -191,10 +204,9 @@ class Transformer(ModelConfigGenerator):
                         args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
                 ModuleSpec(type='WinShareActionValueHead',
                         args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                              action_value_shape]),
+                                action_value_shape]),
                 ModuleSpec(type='PolicyHead',
-                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden,
-                              policy_shape]),
+                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
             ],
 
             loss_weights={
@@ -204,7 +216,7 @@ class Transformer(ModelConfigGenerator):
                 'opp_policy': 0.15,
             },
 
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
+            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
         )
 
 
