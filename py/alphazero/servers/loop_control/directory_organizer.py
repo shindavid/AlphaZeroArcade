@@ -51,7 +51,6 @@ from natsort import natsorted
 import json
 import logging
 import os
-import re
 import shutil
 import sqlite3
 from pathlib import Path
@@ -59,7 +58,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 PathStr = str
-SELF_PLAY_DATA_FILE_REGEX = re.compile(r"^gen-(\d+)\.data$")
+
 
 class PathInfo:
     def __init__(self, path: str):
