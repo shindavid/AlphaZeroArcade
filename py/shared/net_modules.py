@@ -15,6 +15,7 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
+from shared.basic_types import SearchParadigm, ShapeInfoDict
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
@@ -29,7 +30,6 @@ from torch.nn import functional as F
 import abc
 import copy
 from dataclasses import dataclass, field
-from enum import Enum
 import hashlib
 import io
 import logging
@@ -39,26 +39,6 @@ from typing import Any, Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ShapeInfo:
-    name: str
-    target_index: int
-    primary: bool
-    shape: Shape
-
-
-class SearchParadigm(Enum):
-    AlphaZero = 'alpha0'
-    BetaZero = 'beta0'
-
-    @staticmethod
-    def is_valid(value: str) -> bool:
-        return value in {paradigm.value for paradigm in SearchParadigm}
-
-
-ShapeInfoDict = Dict[str, ShapeInfo]
 
 
 class GlobalPoolingLayer(nn.Module):

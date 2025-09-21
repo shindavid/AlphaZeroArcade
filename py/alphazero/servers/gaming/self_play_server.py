@@ -5,7 +5,7 @@ from alphazero.logic.signaling import register_standard_server_signals
 from alphazero.servers.gaming import platform_overrides
 from alphazero.servers.gaming.base_params import BaseParams
 from alphazero.servers.gaming.session_data import SessionData
-from shared.net_modules import SearchParadigm
+from shared.basic_types import SearchParadigm
 from util.logging_util import LoggingParams
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.str_util import make_args_str

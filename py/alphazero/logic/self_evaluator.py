@@ -4,7 +4,7 @@ from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.rating_db import RatingDB
-from shared.net_modules import SearchParadigm
+from shared.basic_types import SearchParadigm
 from util.index_set import IndexSet
 
 import numpy as np

@@ -2,7 +2,7 @@ from .build_params import BuildParams
 
 from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
-from shared.net_modules import SearchParadigm, ShapeInfo, ShapeInfoDict
+from shared.basic_types import SearchParadigm, ShapeInfo, ShapeInfoDict
 from util.repo_util import Repo
 
 import torch
