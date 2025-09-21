@@ -47,9 +47,9 @@ class LoopControllerParams:
         group.add_argument('-b', '--benchmark-tag', default=defaults.benchmark_tag,
                            help='the run tag whose benchmark.db will be used for evaluation.')
         group.add_argument('--self-eval-until-gen-gap', type=int,
-                            default=defaults.self_eval_until_gen_gap,
-                            help='number of generations to wait for self-evaluation '
-                            '(default: %(default)s)')
+                           default=defaults.self_eval_until_gen_gap,
+                           help='number of generations to wait for self-evaluation '
+                           '(default: %(default)s)')
         group.add_argument('--ignore-sigint', action='store_true', default=defaults.ignore_sigint,
                            help=argparse.SUPPRESS)
         group.add_argument('--simulate-cloud', action='store_true', default=defaults.simulate_cloud,
@@ -57,9 +57,8 @@ class LoopControllerParams:
         group.add_argument('--task-mode', action='store_true', default=defaults.task_mode,
                            help='run without self-play/training; exit after task is done.')
         group.add_argument('--train-only', action='store_true', default=False,
-                           help='retrain a forked run using training only (no self-play or eval). \
-                               Intended for use with a forked run created using --retrain-models.')
-
+                           help='retrain a forked run using training only (no self-play or eval)'
+                           'Intended for use with a forked run created using --retrain-models.')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
@@ -67,5 +66,5 @@ class LoopControllerParams:
             attr = getattr(self, f.name)
             if attr != getattr(defaults, f.name):
                 cmd.append('--' + f.name)
-                if type(attr) != bool:
+                if type(attr) is not bool:
                     cmd.append(str(getattr(self, f.name)))
