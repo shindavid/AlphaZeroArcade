@@ -21,7 +21,7 @@
  * [GameData...]          // one per game
  *
  * The GameData object doesn't correspond to a particular struct; it cannot, since some of the
- * fields are variable-sized. It consists of the following sections, each aligned to 8 bytes:
+ * fields are variable-sized. Its layout on disk looks like this:
  *
  *   [State]              // final state
  *   [ValueTensor]        // game result
@@ -34,6 +34,15 @@
  * The header tells us how many games are in the file, which allows us to compute the start of the
  * GameData section. Each GameLogMetadata gives us offset information that allows us to seek
  * directly to its corresponding GameData section.
+ *
+ * The DATA section is written to by Algorithms::serialize_record(), which is specialized per
+ * paradigm (e.g., alpha0, beta0). For alpha0, its layout looks like:
+ *
+ * [alpha0::GameLogCompactRecord]
+ * [TensorData]  // policy - variable-sized
+ * [TensorData]  // action_values - variable-sized
+ *
+ * See GameLogBase::TensorData for details on the TensorData encoding.
  */
 namespace search {
 
