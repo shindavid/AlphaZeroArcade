@@ -275,6 +275,7 @@ class GameServer
     void run_prelude(core::game_thread_id_t id);
     void increment_active_thread_count();
     void decrement_active_thread_count();
+    void set_num_initial_threads(int n) { num_initial_threads_ = n; }
 
     void increment_mcts_time_ns(int64_t ns) { mcts_time_ns_ += ns; }
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
@@ -332,6 +333,7 @@ class GameServer
 
     results_array_t results_array_;  // indexed by player_id
 
+    int num_initial_threads_ = 0;
     int active_thread_count_ = 0;
     int paused_thread_count_ = 0;
     int in_prelude_count_ = 0;

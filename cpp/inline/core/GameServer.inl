@@ -506,9 +506,15 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::increment_active_thread_count() {
   mit::unique_lock lock(mutex_);
   active_thread_count_++;
-  if (!state_thread_launched_) {
+
+  bool ready_to_launch_state_thread = active_thread_count_ == num_initial_threads_;
+  if (ready_to_launch_state_thread) {
     state_thread_launched_ = true;
     state_thread_ = mit::thread([&] { this->state_loop(); });
+    lock.unlock();
+    cv_.notify_all();
+  } else {
+    cv_.wait(lock, [&] { return state_thread_launched_; });
   }
 }
 
@@ -1162,6 +1168,7 @@ void GameServer<Game>::create_threads() {
 
 template <concepts::Game Game>
 void GameServer<Game>::launch_threads() {
+  shared_data_.set_num_initial_threads(threads_.size());
   for (auto thread : threads_) {
     thread->launch();
   }
