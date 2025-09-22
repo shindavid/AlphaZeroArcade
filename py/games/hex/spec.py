@@ -2,14 +2,14 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec
-from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, OptimizerSpec, \
+from shared.net_modules import ModelConfig, ModelGenerator, ModuleSpec, OptimizerSpec, \
     ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 from shared.transformer_modules import TransformerBlockParams
 
 
-class CNN_b11_c32(ModelConfigGenerator):
+class CNN_b11_c32(ModelGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -75,7 +75,7 @@ class CNN_b11_c32(ModelConfigGenerator):
         )
 
 
-class Transformer(ModelConfigGenerator):
+class Transformer(ModelGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape

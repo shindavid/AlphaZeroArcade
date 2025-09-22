@@ -45,7 +45,7 @@ class TrainingManager:
         self._trainer = None
         self._net = None
         self._opt = None
-        self._n_primary_targets = None  # initialized lazily
+        self._primary_targets = None  # initialized lazily
         self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
 
@@ -262,7 +262,7 @@ class TrainingManager:
 
         # Validate that network heads match c++ TrainingTargets
         logger.info('Validating heads...')
-        self._n_primary_targets = sum(1 for info in shape_info_dict.values() if info.primary)
+        self._primary_targets = {info.name for info in shape_info_dict.values() if info.primary}
         n_primary_heads = 0
         for h, head in enumerate(self._net.heads):
             name = head.name
@@ -276,9 +276,9 @@ class TrainingManager:
             if shape_info.primary and h != t:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
                                  f'({h} != {t}) for {name})')
-        if n_primary_heads != self._n_primary_targets:
+        if n_primary_heads != len(self._primary_targets):
             raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
-                             f'({n_primary_heads} != {self._n_primary_targets})')
+                             f'[{n_primary_heads} != len({self._primary_targets})]')
         logger.info('Validation complete!')
 
         return self._net, self._opt
@@ -445,7 +445,7 @@ class TrainingManager:
         torch.save(checkpoint, tmp_checkpoint_filename)
 
         logger.debug('Calling save_model()...')
-        net.save_model(tmp_model_filename, self._n_primary_targets)
+        net.save_model(tmp_model_filename, self._primary_targets)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
