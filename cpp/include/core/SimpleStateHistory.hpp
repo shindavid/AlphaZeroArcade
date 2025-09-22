@@ -70,10 +70,6 @@ class SimpleStateHistory {
    * Then, we need another +1 to support the undo() method.
    */
   static constexpr size_t kMaxSize = kNumPastStatesNeeded + 2;
-
-  // NOTE(dshin): I dislike that boost::circular_buffer dynamically allocates its storage. In our
-  // context, we know the capacity at compile-time. We could roll out our own, backed by std::array,
-  // but I'm not sure if it's worth the effort.
   using buffer_t = util::StaticCircularBuffer<State, kMaxSize>;
 
   buffer_t buf_;
