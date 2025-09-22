@@ -4,26 +4,23 @@
 
 namespace hex {
 
-void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State* state = &history.extend();
+void Game::Rules::apply(State& state, core::action_t action) {
   static constexpr auto B = Constants::kBoardDim;
-  auto cp = state->core.cur_player;
+  auto cp = state.core.cur_player;
 
   if (action == kSwap) {
-    DEBUG_ASSERT(cp == Constants::kBlue && !state->core.post_swap_phase,
+    DEBUG_ASSERT(cp == Constants::kBlue && !state.core.post_swap_phase,
                  "Swap action can only be applied by Blue before the swap phase");
 
-    core::action_t prev_action = state->core.find_occupied(Constants::kRed);
-    history.initialize(Rules{});
-    state = &history.extend();
-    state->core.cur_player = Constants::kSecondPlayer;
-    apply(history, compute_mirror_action(prev_action));
-    state = &history.current();
+    core::action_t prev_action = state.core.find_occupied(Constants::kRed);
+    Rules::init_state(state);
+    state.core.cur_player = Constants::kSecondPlayer;
+    apply(state, compute_mirror_action(prev_action));
   } else {
     int8_t row = action / B;
     int8_t col = action % B;
-    State::Core& core = state->core;
-    State::Aux& aux = state->aux;
+    State::Core& core = state.core;
+    State::Aux& aux = state.aux;
 
     DEBUG_ASSERT(!(core.rows[cp][row] & (mask_t(1) << col)),
                  "Cannot place a piece on an already occupied cell");
@@ -87,8 +84,8 @@ void Game::Rules::apply(StateHistory& history, core::action_t action) {
     }
   }
 
-  state->core.post_swap_phase |= (cp == Constants::kBlue);
-  state->core.cur_player = 1 - cp;
+  state.core.post_swap_phase |= (cp == Constants::kBlue);
+  state.core.cur_player = 1 - cp;
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,

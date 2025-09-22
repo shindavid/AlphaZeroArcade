@@ -20,12 +20,6 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
-  for (auto& it : history) {
-    apply(it, sym);
-  }
-}
-
 inline void Game::Symmetries::apply(Types::PolicyTensor& policy, group::element_t sym,
                                     core::action_mode_t) {
   constexpr int N = Constants::kBoardDim;
@@ -56,10 +50,6 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
 inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);
-}
-
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  return get_legal_moves(history.current());
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {

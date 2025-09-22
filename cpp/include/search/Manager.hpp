@@ -67,7 +67,8 @@ class Manager {
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
+  using StateHistory = TraitsTypes::StateHistory;
+  using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using InputTensorizor = core::InputTensorizor<Game>;
   static_assert(core::concepts::InputTensorizor<InputTensorizor, Game>);
 
@@ -77,6 +78,7 @@ class Manager {
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using SymmetryMask = Game::Types::SymmetryMask;
 
   using post_visit_func_t = std::function<void()>;
 
@@ -225,10 +227,11 @@ class Manager {
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);
-  void calc_canonical_state_data(SearchContext& context);
+  void set_leaf_canonical_history(SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
 
   void prune_policy_target(group::element_t inv_sym);
+  group::element_t get_random_symmetry(const StateHistory& history) const;
 
   static int next_instance_id_;
 

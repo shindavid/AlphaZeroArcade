@@ -5,7 +5,6 @@
 #include "generic_players/HumanTuiPlayer.hpp"
 
 #include <map>
-#include <vector>
 
 namespace blokus {
 
@@ -29,7 +28,6 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
 #pragma pack(pop)
 
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using flat_location_t = int;
   using inner_map_t = std::map<flat_location_t, value_t>;

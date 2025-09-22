@@ -13,8 +13,7 @@ inline void Game::Rules::init_state(State& state) {
   state.current_player = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
 
   for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
@@ -28,12 +27,11 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.current_player;
 }
 
-inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
+inline void Game::Rules::apply(State& state, core::action_t action) {
   if (action < 0 || action >= nim::kMaxStonesToTake) {
     throw std::invalid_argument("Invalid action: " + std::to_string(action));
   }
 
-  State& state = history.extend();
   state.stones_left -= action + 1;
   state.current_player = 1 - state.current_player;
 }

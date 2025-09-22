@@ -1,9 +1,6 @@
-#include "alphazero/ManagerParams.hpp"
 #include "core/tests/Common.hpp"
-#include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -23,19 +20,18 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = c4::Game;
 using State = Game::State;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 State make_init_state() {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  Rules::apply(history, 3);
-  Rules::apply(history, 4);
-  Rules::apply(history, 3);
-  return history.current();
+  Rules::apply(state, 3);
+  Rules::apply(state, 4);
+  Rules::apply(state, 3);
+  return state;
 }
 
 PolicyTensor make_policy(int move1, int move2) {

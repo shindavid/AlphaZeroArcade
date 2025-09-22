@@ -53,9 +53,6 @@ struct GameState {
     Location partial_move;
   };
 
-  // TODO: consider moving some of these members into StateHistory. The ones that support
-  // tensorization should stay here, but the ones that only facilitate rules-calculations can
-  // be moved to StateHistory to reduce the disk footprint of game logs.
   struct Aux {
     auto operator<=>(const Aux&) const = default;
     PieceMask played_pieces[kNumColors];

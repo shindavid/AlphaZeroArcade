@@ -14,11 +14,10 @@ namespace core {
 template <concepts::Game Game>
 struct DefaultKeys {
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
   using TransposeKey = State;
   using EvalKey = State;
 
-  static TransposeKey transpose_key(const StateHistory& history) { return history.current(); }
+  static TransposeKey transpose_key(const State& state) { return state; }
 
   template <util::concepts::RandomAccessIteratorOf<State> Iter>
   static EvalKey eval_key(Iter start, Iter cur) {

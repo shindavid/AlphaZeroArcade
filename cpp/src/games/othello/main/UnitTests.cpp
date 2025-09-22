@@ -20,17 +20,15 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = othello::Game;
 using State = Game::State;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 State make_init_state() {
-  StateHistory history;
-  history.initialize(Rules{});
-
-  Rules::apply(history, othello::kD3);
-  return history.current();
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, othello::kD3);
+  return state;
 }
 
 PolicyTensor make_policy(int move) {

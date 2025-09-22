@@ -7,7 +7,8 @@
 namespace c4 {
 
 struct InputTensorizor {
-  static constexpr int kDim0 = kNumPlayers * (1 + Game::Constants::kNumPreviousStatesToEncode);
+  static constexpr int kNumStatesToEncode = 1;
+  static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
 
   template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>

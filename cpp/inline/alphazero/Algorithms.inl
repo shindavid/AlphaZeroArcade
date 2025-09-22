@@ -204,13 +204,18 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
 
   root_info.add_noise = add_noise;
   if (root_info.node_index < 0 || add_noise) {
-    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
-    core::seat_index_t active_seat = Game::Rules::get_current_player(canonical_history.current());
+
+    StateHistory history = root_info.history;  // copy
+    for (auto& state : history) {
+      Symmetries::apply(state, root_info.canonical_sym);
+    }
+    State& cur_state = history.current();
+    core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
-    new (root) Node(lookup_table.get_random_mutex(), canonical_history, active_seat);
+    new (root) Node(lookup_table.get_random_mutex(), cur_state, active_seat);
   }
 
   Node* root2 = lookup_table.get_node(root_info.node_index);
@@ -221,7 +226,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
-    const auto& state = root_info.history_array[group::kIdentity].current();
+    const auto& state = root_info.history.current();
     IO::print_state(std::cout, state);
   }
 }

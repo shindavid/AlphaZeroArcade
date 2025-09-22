@@ -26,11 +26,11 @@ struct SearchContext {
   using Node = TraitsTypes::Node;
   using EvalRequest = search::NNEvaluationRequest<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
-  using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = std::vector<Visitation>;
 
-  using StateHistory = Game::StateHistory;
+  using StateHistory = TraitsTypes::StateHistory;
+  using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using SymmetryGroup = Game::SymmetryGroup;
 
   core::context_id_t id;
@@ -39,9 +39,9 @@ struct SearchContext {
   search_path_t search_path;
 
   EvalRequest eval_request;
-  StateHistory canonical_history;
-  StateHistoryArray root_history_array;
   StateHistory raw_history;
+  StateHistoryArray history_array;      // used in expand_all_children() only
+  StateHistory leaf_canonical_history;  // only initialized when needed for nn eval
   core::seat_index_t active_seat;
   group::element_t root_canonical_sym;
   group::element_t leaf_canonical_sym;
@@ -53,7 +53,6 @@ struct SearchContext {
   bool in_visit_loop = false;
 
   // node-initialization yield info
-  StateHistory* initialization_history;
   core::node_pool_index_t initialization_index = -1;
   core::node_pool_index_t inserted_node_index = -1;
   bool expanded_new_node = false;
@@ -61,8 +60,6 @@ struct SearchContext {
   // visit yield info
   Node* visit_node;
   Edge* visit_edge;
-  StateHistory* history;
-  group::element_t inv_canonical_sym;
   bool applied_action = false;
 
   // For kYield responses

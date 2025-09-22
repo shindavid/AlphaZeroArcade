@@ -28,7 +28,6 @@ class GameServerProxy : public core::GameServerBase {
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
@@ -79,7 +78,7 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    State current_state() const { return history_.current(); }
+    const State& state() const { return state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -97,7 +96,7 @@ class GameServerProxy : public core::GameServerBase {
     bool game_started_ = false;
 
     // Updated for each move
-    StateHistory history_;
+    State state_;
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;

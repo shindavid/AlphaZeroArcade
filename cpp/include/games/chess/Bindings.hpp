@@ -15,7 +15,7 @@ struct Keys {
   using EvalKey = Game::State;
 
   // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
-  static TransposeKey transpose_key(const Game::StateHistory& history) {
+  static TransposeKey transpose_key(const Game::State& state) {
     throw std::runtime_error("Not implemented");
   }
 

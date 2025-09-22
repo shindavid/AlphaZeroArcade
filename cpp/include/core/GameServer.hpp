@@ -69,7 +69,6 @@ class GameServer
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
@@ -179,7 +178,7 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    State current_state() const { return state_history_.current(); }
+    const State& state() const { return state_; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -207,7 +206,7 @@ class GameServer
     bool game_started_ = false;
 
     // Updated for each move
-    StateHistory state_history_;
+    State state_;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;

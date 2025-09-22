@@ -8,9 +8,10 @@ namespace hex {
 struct InputTensorizor {
   // TODO: add more feature planes
 
+  static constexpr int kNumStatesToEncode = 1;
+
   // +1 for swap-legality plane
-  static constexpr int kDim0 =
-    1 + Constants::kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
+  static constexpr int kDim0 = 1 + Constants::kNumPlayers * kNumStatesToEncode;
 
   using Shape = Eigen::Sizes<kDim0, Constants::kBoardDim, Constants::kBoardDim>;
   using Tensor = eigen_util::FTensor<Shape>;

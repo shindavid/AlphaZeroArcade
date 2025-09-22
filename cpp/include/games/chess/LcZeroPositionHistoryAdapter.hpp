@@ -7,9 +7,8 @@ namespace chess {
 /*
  * A thin-wrapper around lczero::PositionHistory.
  *
- * We require friend-access to lczero::PositionHistory to implement the GameStateHistory concept,
- * which is why we define this outside of the Game class, as c++ does not allow forward-declarations
- * of nested classes.
+ * TODO: we do not plan to use this class anymore, and will instead rely on specially customized
+ * machinery that meets the requirements of Game::Symmetries.
  */
 class LcZeroPositionHistoryAdapter {
  public:

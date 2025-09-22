@@ -12,12 +12,12 @@ template <core::concepts::EvalSpec EvalSpec>
 struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using Base = core::StableDataBaseImpl<EvalSpec>;
   using Game = EvalSpec::Game;
-  using StateHistory = Game::StateHistory;
+  using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
 
-  NodeStableData(const StateHistory&, core::seat_index_t active_seat);   // for non-terminal nodes
-  NodeStableData(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
+  NodeStableData(const State&, core::seat_index_t active_seat);   // for non-terminal nodes
+  NodeStableData(const State&, const ValueTensor& game_outcome);  // for terminal nodes
 
   ValueTensor VT;
   ActionMask valid_action_mask;

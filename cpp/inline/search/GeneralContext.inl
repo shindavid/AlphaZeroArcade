@@ -6,14 +6,11 @@ template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::RootInfo::clear() {
   node_index = -1;
 
-  for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    history_array[sym].initialize(Rules{});
-    State& state = history_array[sym].current();
-    Symmetries::apply(state, sym);
-  }
-
-  const State& raw_state = history_array[group::kIdentity].current();
-  canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
+  State state;
+  Rules::init_state(state);
+  history.clear();
+  history.update(state);
+  canonical_sym = Symmetries::get_canonical_symmetry(state);
 }
 
 template <search::concepts::Traits Traits>

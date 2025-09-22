@@ -65,7 +65,7 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
   payload.parse_player_names(player_names_);
 
   game_started_ = true;
-  history_.initialize(Rules{});
+  Rules::init_state(state_);
   mid_yield_ = false;
 
   Player* player = players_[payload.player_id];
@@ -79,14 +79,14 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat = Rules::get_current_player(history_.current());
+  seat_index_t seat = Rules::get_current_player(state_);
   ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.action;
-  Rules::apply(history_, action);
+  Rules::apply(state_, action);
 
   Player* player = players_[payload.player_id];
-  player->receive_state_change(seat, history_.current(), action);
+  player->receive_state_change(seat, state_, action);
 }
 
 template <concepts::Game Game>
@@ -115,7 +115,7 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
   ValueTensor* outcome = new (buffer) ValueTensor();  // Placement new
 
   Player* player = players_[payload.player_id];
-  player->end_game(history_.current(), *outcome);
+  player->end_game(state_, *outcome);
 }
 
 template <concepts::Game Game>
@@ -127,7 +127,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
-  core::action_mode_t mode = Rules::get_action_mode(history_.current());
+  core::action_mode_t mode = Rules::get_action_mode(state_);
 
   // If below assert gets hit, that means we need to add chance-mode support to GameServerProxy.
   // Should be similar to how it works in GameServer.
@@ -137,7 +137,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   RELEASE_ASSERT(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(history_.current(), valid_actions_, notification_unit);
+  ActionRequest request(state_, valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
@@ -315,7 +315,7 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
 
     if (mid_yield || continue_hit || in_critical_section) {
       std::ostringstream ss;
-      Game::IO::print_state(ss, slot->current_state());
+      Game::IO::print_state(ss, slot->state());
 
       Player* player = slot->prompted_player();
       LOG_WARN(
