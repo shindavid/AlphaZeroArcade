@@ -9,8 +9,7 @@ inline void Game::Rules::init_state(State& state) {
   state = lczero::Position(lczero::ChessBoard::kStartposBoard, 0, 1);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   std::vector<lczero::Move> move_list = state.GetBoard().GenerateLegalMoves();
   Types::ActionMask mask;
 
@@ -25,8 +24,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.IsBlackToMove() ? kBlack : kWhite;
 }
 
-inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  history.lc0_history().Append(lczero::MoveFromNNIndex(action, 0));
+inline void Game::Rules::apply(State& state, core::action_t action) {
   throw std::runtime_error("Not implemented");
 }
 

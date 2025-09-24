@@ -12,7 +12,6 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = stochastic_nim::Game;
 using State = Game::State;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using ActionRequest = Game::Types::ActionRequest;
 using ChanceDistribution = Game::Types::ChanceDistribution;
@@ -109,30 +108,27 @@ TEST_F(PerfectStrategyTest, verify_state_values) {
 }
 
 TEST(StochasticNimGameTest, InitialState) {
-  StateHistory history;
-  history.initialize(Rules{});
-  State state = history.current();
+  State state;
+  Rules::init_state(state);
 
   EXPECT_EQ(Rules::get_current_player(state), 0);
   EXPECT_EQ(state.stones_left, 21);  // Assuming the game starts with 21 stones
 }
 
 TEST(StochasticNimGameTest, MakeMove) {
-  StateHistory history;
-  history.initialize(Rules{});
-  Rules::apply(history, stochastic_nim::kTake3);
-  State state = history.current();
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, stochastic_nim::kTake3);
 
   EXPECT_EQ(state.stones_left, 18);
   EXPECT_EQ(Rules::get_current_player(state), 0);
 }
 
 TEST(StochasticNimGameTest, VerifyChanceStatus) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  Rules::apply(history, stochastic_nim::kTake3);
-  State state = history.current();
+  Rules::apply(state, stochastic_nim::kTake3);
   if (stochastic_nim::kChanceDistributionSize == 0) {
     EXPECT_EQ(state.current_mode, stochastic_nim::kPlayerMode);
     EXPECT_EQ(Rules::get_action_mode(state), 0);
@@ -145,21 +141,20 @@ TEST(StochasticNimGameTest, VerifyChanceStatus) {
 }
 
 TEST(StochasticNimGameTest, VerifyDistFailure) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  EXPECT_THROW(Rules::get_chance_distribution(history.current()), std::invalid_argument);
+  EXPECT_THROW(Rules::get_chance_distribution(state), std::invalid_argument);
 }
 
 TEST(StochasticNimGameTest, VerifyDist) {
   if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  Rules::apply(history, stochastic_nim::kTake3);
-  State state = history.current();
+  Rules::apply(state, stochastic_nim::kTake3);
 
   PolicyTensor dist = Rules::get_chance_distribution(state);
 
@@ -176,16 +171,16 @@ TEST(StochasticNimGameTest, ChanceMove) {
   int num_trials = 1000;
   float sum = 0;
   for (int i = 0; i < num_trials; i++) {
-    StateHistory history;
-    history.initialize(Rules{});
+    State state;
+    Rules::init_state(state);
 
-    Rules::apply(history, stochastic_nim::kTake3);
+    Rules::apply(state, stochastic_nim::kTake3);
 
-    PolicyTensor dist = Rules::get_chance_distribution(history.current());
+    PolicyTensor dist = Rules::get_chance_distribution(state);
     core::action_t chance_action = eigen_util::sample(dist);
-    Rules::apply(history, chance_action);
+    Rules::apply(state, chance_action);
 
-    sum += history.current().stones_left;
+    sum += state.stones_left;
   }
   float mean = 18 * 0.2 + 17 * 0.3 + 16 * 0.5;
   float sigma = std::sqrt(
@@ -195,64 +190,60 @@ TEST(StochasticNimGameTest, ChanceMove) {
 }
 
 TEST(StochasticNimGameTest, Player0Wins) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
   std::vector<core::action_t> actions = {
     stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
     stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3};
 
   for (core::action_t action : actions) {
-    Rules::apply(history, action);
+    Rules::apply(state, action);
     // chance action
-    Rules::apply(history, 0);
+    Rules::apply(state, 0);
   }
 
   core::action_t last_action = actions.back();
 
   GameResults::Tensor outcome;
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().current_player,
-                                     last_action, outcome);
+  bool terminal = Rules::is_terminal(state, 1 - state.current_player, last_action, outcome);
 
   EXPECT_TRUE(terminal);
   EXPECT_EQ(outcome[0], 1);
 }
 
 TEST(StochasticNimGameTest, Player1Wins) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
   std::vector<core::action_t> actions = {
     stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
     stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake1, stochastic_nim::kTake2};
 
   for (core::action_t action : actions) {
-    Rules::apply(history, action);
+    Rules::apply(state, action);
     // chance action
-    Rules::apply(history, 0);
+    Rules::apply(state, 0);
   }
 
   GameResults::Tensor outcome;
   core::action_t last_action = actions.back();
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().current_player,
-                                     last_action, outcome);
+  bool terminal = Rules::is_terminal(state, 1 - state.current_player, last_action, outcome);
 
   EXPECT_TRUE(terminal);
   EXPECT_EQ(outcome[1], 1);
 }
 
 TEST(StochasticNimGameTest, InvalidMove) {
-  StateHistory history;
-  history.initialize(Rules{});
-  EXPECT_THROW(Rules::apply(history, -1), std::invalid_argument);
-  EXPECT_THROW(Rules::apply(history, 3), std::invalid_argument);
+  State state;
+  Rules::init_state(state);
+  EXPECT_THROW(Rules::apply(state, -1), std::invalid_argument);
+  EXPECT_THROW(Rules::apply(state, 3), std::invalid_argument);
 }
 
 TEST(StochasticNimGameTest, MoveProbMass) {
-  StateHistory history;
   State state;
   state.stones_left = 1;
   state.current_player = 0;
   state.current_mode = stochastic_nim::kChanceMode;
-  history.update(state);
   ChanceDistribution dist = Rules::get_chance_distribution(state);
 
   EXPECT_NEAR(dist(0), 0.2, 1e-6);
@@ -261,14 +252,14 @@ TEST(StochasticNimGameTest, MoveProbMass) {
 }
 
 TEST(StochasticNimGameTest, tensorize) {
-  StateHistory history;
-  history.initialize(Rules{});
-  Rules::apply(history, stochastic_nim::kTake2);  // Player 0 removes 2 stones
-  Rules::apply(history, 0);                       // chance
-  Rules::apply(history, stochastic_nim::kTake1);  // Player 1 removes 1 stone
-  Rules::apply(history, 0);                       // chance
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, stochastic_nim::kTake2);  // Player 0 removes 2 stones
+  Rules::apply(state, 0);                       // chance
+  Rules::apply(state, stochastic_nim::kTake1);  // Player 1 removes 1 stone
+  Rules::apply(state, 0);                       // chance
 
-  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(history.begin(), history.end() - 1);
+  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(&state, &state);
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

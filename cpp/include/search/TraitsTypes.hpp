@@ -1,6 +1,8 @@
 #pragma once
 
+#include "core/InputTensorizor.hpp"
 #include "core/Node.hpp"
+#include "core/SimpleStateHistory.hpp"
 
 #include <array>
 
@@ -12,11 +14,12 @@ struct TraitsTypes {
   using NodeStats = Traits::NodeStats;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
 
-  using StateHistory = Game::StateHistory;
-  using SymmetryGroup = Game::SymmetryGroup;
-  using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using StateHistory = core::SimpleStateHistory<State, InputTensorizor::kNumStatesToEncode - 1>;
+  using StateHistoryArray = std::array<StateHistory, Game::SymmetryGroup::kOrder>;
 
   using Node = core::Node<NodeStableData, NodeStats>;
 

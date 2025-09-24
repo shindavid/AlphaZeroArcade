@@ -1,19 +1,17 @@
 #include "search/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
+#include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
 
 #include <boost/filesystem.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
-
-#include <iostream>
 
 namespace search {
 
@@ -86,32 +84,10 @@ template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
   group::element_t root_sym = root_info()->canonical_sym;
 
-  core::action_mode_t mode =
-    Rules::get_action_mode(root_info()->history_array[group::kIdentity].current());
+  State& raw_state = root_info()->history.extend();
+  core::action_mode_t mode = Rules::get_action_mode(raw_state);
+  Rules::apply(raw_state, action);
 
-  // TODO: this logic is currently not quite right. It assumes that the symmetry-set is constant,
-  // which is not true for games like chess where the symmetries of the game is dependent on the
-  // board state.
-  //
-  // To fix this, I think we need to track the intersection of the symmetry-set across the entire
-  // history.
-  //
-  // I also think that this loop needs to change to symmetrize the states, rather than the action.
-  // It makes no sense to symmetrize an action like a king-side-castle into 8 different versions.
-  // But we can symmetrize the state that results from the king-side-castle. By respecting the valid
-  // symmetry set that comes from the intersection, we won't actually use any of those symmetries
-  // that correspond to nonsensical states.
-  //
-  // As part of this, I think the get_canonical_symmetry() function needs to accept a history,
-  // rather than a state. The history object should probably be extended to easily compute the
-  // symmetry-set-intersection.
-  for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    core::action_t transformed_action = action;
-    Symmetries::apply(transformed_action, sym, mode);
-    Rules::apply(root_info()->history_array[sym], transformed_action);
-  }
-
-  const State& raw_state = root_info()->history_array[group::kIdentity].current();
   root_info()->canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
 
   general_context_.step();
@@ -346,16 +322,10 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
-  StateHistory& history = root_info.history_array[context.leaf_canonical_sym];
-
+  context.raw_history = root_info.history;
   context.root_canonical_sym = root_info.canonical_sym;
   context.leaf_canonical_sym = root_info.canonical_sym;
-  context.raw_history = root_info.history_array[group::kIdentity];
   context.active_seat = root_info.active_seat;
-  context.root_history_array = root_info.history_array;
-
-  context.canonical_history = history;
-  context.initialization_history = &context.canonical_history;
   context.initialization_index = root_index;
   return begin_node_initialization(context);
 }
@@ -374,7 +344,9 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
   LookupTable& lookup_table = general_context_.lookup_table;
   const ManagerParams& manager_params = general_context_.manager_params;
 
-  StateHistory* history = context.initialization_history;
+  set_leaf_canonical_history(context);
+  StateHistory& leaf_canonical_history = context.leaf_canonical_history;
+
   core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table.get_node(node_index);
 
@@ -387,12 +359,9 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().VT_valid) {
-      group::element_t sym = group::kIdentity;
-      if (manager_params.apply_random_symmetries) {
-        sym = bitset_util::choose_random_on_index(Symmetries::get_mask(history->current()));
-      }
+      group::element_t sym = get_random_symmetry(leaf_canonical_history);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
-      context.eval_request.emplace_back(node, *history, sym, incorporate);
+      context.eval_request.emplace_back(node, leaf_canonical_history, sym, incorporate);
     }
     if (eval_all_children) {
       expand_all_children(context, node);
@@ -413,7 +382,11 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
 
-  StateHistory* history = context.initialization_history;
+  State& state = context.leaf_canonical_history.current();
+
+  // TODO: remove this assert after testing
+  RELEASE_ASSERT(group::kIdentity == Symmetries::get_canonical_symmetry(state));
+
   core::node_pool_index_t node_index = context.initialization_index;
 
   Node* node = lookup_table.get_node(node_index);
@@ -423,7 +396,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
-    ChanceDistribution chance_dist = Rules::get_chance_distribution(history->current());
+    ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
       Edge* edge = lookup_table.get_edge(node, i);
       core::action_t action = edge->action;
@@ -431,7 +404,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     }
   }
 
-  auto transpose_key = Keys::transpose_key(*history);
+  auto transpose_key = Keys::transpose_key(state);
   bool overwrite = is_root;
   context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
@@ -446,9 +419,9 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
+  context.raw_history = root_info.history;
   context.root_canonical_sym = root_info.canonical_sym;
   context.leaf_canonical_sym = root_info.canonical_sym;
-  context.raw_history = root_info.history_array[group::kIdentity];
   context.active_seat = root_info.active_seat;
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
@@ -471,9 +444,9 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
+  context.raw_history = root_info.history;
   context.root_canonical_sym = root_info.canonical_sym;
   context.leaf_canonical_sym = root_info.canonical_sym;
-  context.raw_history = root_info.history_array[group::kIdentity];
   context.active_seat = root_info.active_seat;
   if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
@@ -509,7 +482,8 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_action = false;
-  context.inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
+
+  group::element_t inv_leaf_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
   if (edge->state != Edge::kExpanded) {
     // reread state under mutex in case of race-condition
     mit::unique_lock lock(node->mutex());
@@ -520,29 +494,25 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
       // reorient edge->action into raw-orientation
       core::action_t edge_action = edge->action;
-      Symmetries::apply(edge_action, context.inv_canonical_sym, node->action_mode());
+      Symmetries::apply(edge_action, inv_leaf_canonical_sym, node->action_mode());
 
       // apply raw-orientation action to raw-orientation leaf-state
-      Rules::apply(context.raw_history, edge_action);
+      State& leaf_state = context.raw_history.extend();
+      Rules::apply(leaf_state, edge_action);
 
       // determine canonical orientation of new leaf-state
-      group::element_t new_sym = Symmetries::get_canonical_symmetry(context.raw_history.current());
-      edge->sym = SymmetryGroup::compose(new_sym, context.inv_canonical_sym);
+      group::element_t leaf_sym = Symmetries::get_canonical_symmetry(leaf_state);
+      edge->sym = SymmetryGroup::compose(leaf_sym, inv_leaf_canonical_sym);
 
-      context.leaf_canonical_sym = new_sym;
+      context.leaf_canonical_sym = leaf_sym;
 
-      core::action_mode_t child_mode = Rules::get_action_mode(context.raw_history.current());
+      core::action_mode_t child_mode = Rules::get_action_mode(leaf_state);
       if (!Rules::is_chance_mode(child_mode)) {
-        context.active_seat = Rules::get_current_player(context.raw_history.current());
+        context.active_seat = Rules::get_current_player(leaf_state);
       }
       context.applied_action = true;
 
-      context.initialization_history = &context.raw_history;
-      if (context.leaf_canonical_sym != group::kIdentity) {
-        calc_canonical_state_data(context);
-        context.initialization_history = &context.canonical_history;
-      }
-
+      set_leaf_canonical_history(context);
       if (begin_expansion(context) == core::kYield) return core::kYield;
     } else if (edge->state == Edge::kMidExpansion) {
       add_pending_notification(context, edge);
@@ -608,12 +578,14 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
   if (!context.applied_action) {
     // reorient edge->action into raw-orientation
     core::action_t edge_action = edge->action;
-    Symmetries::apply(edge_action, context.inv_canonical_sym, node->action_mode());
+    group::element_t inv_leaf_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
+    Symmetries::apply(edge_action, inv_leaf_canonical_sym, node->action_mode());
 
-    Rules::apply(context.raw_history, edge_action);
-    core::action_mode_t child_mode = Rules::get_action_mode(context.raw_history.current());
+    State& state = context.raw_history.extend();
+    Rules::apply(state, edge_action);
+    core::action_mode_t child_mode = Rules::get_action_mode(state);
     if (!Rules::is_chance_mode(child_mode)) {
-      context.active_seat = Rules::get_current_player(context.raw_history.current());
+      context.active_seat = Rules::get_current_player(state);
     }
     context.leaf_canonical_sym = SymmetryGroup::compose(edge->sym, context.leaf_canonical_sym);
   }
@@ -631,11 +603,11 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
 
   context.mid_expansion = true;
 
-  StateHistory* history = context.initialization_history;
   Node* parent = context.visit_node;
   Edge* edge = context.visit_edge;
 
-  TransposeKey transpose_key = Keys::transpose_key(*history);
+  State& state = context.leaf_canonical_history.current();
+  TransposeKey transpose_key = Keys::transpose_key(state);
 
   // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
   // do a corresponding insert_node() call. This is analagous to:
@@ -661,13 +633,13 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     core::action_t last_action = edge->action;
     Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
-    bool terminal = Rules::is_terminal(history->current(), parent->stable_data().active_seat,
+    bool terminal = Rules::is_terminal(state, parent->stable_data().active_seat,
                                        last_action, game_outcome);
 
     if (terminal) {
-      new (child) Node(lookup_table.get_random_mutex(), *history, game_outcome);
+      new (child) Node(lookup_table.get_random_mutex(), state, game_outcome);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), *history, context.active_seat);
+      new (child) Node(lookup_table.get_random_mutex(), state, context.active_seat);
     }
 
     context.search_path.emplace_back(child, nullptr);
@@ -677,7 +649,6 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
       Algorithms::virtual_backprop(context);
     }
 
-    context.initialization_history = history;
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
   }
   return resume_expansion(context);
@@ -881,6 +852,11 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
   group::element_t inv_canonical_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
 
+  // keep track of which entries of context.history_array have been initialized
+  SymmetryMask history_array_initialized;
+
+  StateHistory raw_parent_history = context.raw_history;  // copy
+
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
@@ -893,9 +869,8 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     Symmetries::apply(raw_edge_action, inv_canonical_sym, node->action_mode());
 
     // apply raw-orientation action to raw-orientation child-state
-    Rules::apply(context.raw_history, raw_edge_action);
-
-    const State& raw_child_state = context.raw_history.current();
+    State& raw_child_state = context.raw_history.extend();
+    Rules::apply(raw_child_state, raw_edge_action);
 
     // compute active-seat as local-variable, so we don't need an undo later
     core::action_mode_t child_mode = Rules::get_action_mode(raw_child_state);
@@ -908,16 +883,26 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     group::element_t canonical_child_sym = Symmetries::get_canonical_symmetry(raw_child_state);
     edge->sym = SymmetryGroup::compose(canonical_child_sym, inv_canonical_sym);
 
-    StateHistory& canonical_history = context.root_history_array[canonical_child_sym];
+    if (!history_array_initialized.test(canonical_child_sym)) {
+      context.history_array[canonical_child_sym] = raw_parent_history;  // copy
+      for (State& state : context.history_array[canonical_child_sym]) {
+        Symmetries::apply(state, canonical_child_sym);
+      }
+      history_array_initialized.set(canonical_child_sym);
+    }
+
+    StateHistory& canonical_history = context.history_array[canonical_child_sym];
 
     core::action_t reoriented_action = raw_edge_action;
     Symmetries::apply(reoriented_action, canonical_child_sym, node->action_mode());
-    Rules::apply(canonical_history, reoriented_action);
+
+    State& canonical_child_state = canonical_history.extend();
+    Rules::apply(canonical_child_state, reoriented_action);
 
     expand_count++;
     set_edge_state(context, edge, Edge::kPreExpanded);
 
-    TransposeKey transpose_key = Keys::transpose_key(canonical_history);
+    TransposeKey transpose_key = Keys::transpose_key(canonical_child_state);
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
@@ -934,24 +919,20 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
     ValueTensor game_outcome;
     if (Rules::is_terminal(raw_child_state, parent_active_seat, raw_edge_action, game_outcome)) {
-      new (child) Node(lookup_table.get_random_mutex(), canonical_history, game_outcome);
+      new (child) Node(lookup_table.get_random_mutex(), canonical_child_state, game_outcome);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), canonical_history, child_active_seat);
+      new (child) Node(lookup_table.get_random_mutex(), canonical_child_state, child_active_seat);
     }
     initialize_edges(child);
     bool overwrite = false;
     lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
 
-    State canonical_child_state = canonical_history.current();
     canonical_history.undo();
     context.raw_history.undo();
 
     if (child->is_terminal()) continue;
 
-    group::element_t sym = group::kIdentity;
-    if (manager_params.apply_random_symmetries) {
-      sym = bitset_util::choose_random_on_index(Symmetries::get_mask(canonical_child_state));
-    }
+    group::element_t sym = get_random_symmetry(canonical_history);
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
     context.eval_request.emplace_back(child, canonical_history, canonical_child_state, sym,
                                       incorporate);
@@ -961,47 +942,12 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::calc_canonical_state_data(SearchContext& context) {
+void Manager<Traits>::set_leaf_canonical_history(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  const RootInfo& root_info = general_context_.root_info;
-
-  context.canonical_history = context.raw_history;
-
-  if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
-    using Group = SymmetryGroup;
-    context.canonical_history = root_info.history_array[context.leaf_canonical_sym];
-    group::element_t cur_canonical_sym = root_info.canonical_sym;
-    group::element_t leaf_canonical_sym = context.leaf_canonical_sym;
-    for (const Visitation& visitation : context.search_path) {
-      Edge* edge = visitation.edge;
-      core::action_mode_t mode = visitation.node->action_mode();
-      core::action_t action = edge->action;
-      group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
-      Symmetries::apply(action, sym, mode);
-      Rules::apply(context.canonical_history, action);
-      cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
-    }
-
-    RELEASE_ASSERT(cur_canonical_sym == leaf_canonical_sym,
-                   "cur_canonical_sym={} leaf_canonical_sym={}", cur_canonical_sym,
-                   leaf_canonical_sym);
-  } else {
-    Symmetries::apply(context.canonical_history, context.leaf_canonical_sym);
-  }
-
-  if (IS_DEFINED(DEBUG_BUILD)) {
-    State s = context.canonical_history.current();
-    Symmetries::apply(s, Symmetries::get_canonical_symmetry(s));
-    if (s != context.canonical_history.current()) {
-      std::cout << "ERROR! Bad Canonicalization!" << std::endl;
-      std::cout << "canonical_sym_: " << int(context.leaf_canonical_sym) << std::endl;
-      std::cout << "canonical_history.current():" << std::endl;
-      IO::print_state(std::cout, context.canonical_history.current());
-      std::cout << "Should be:" << std::endl;
-      IO::print_state(std::cout, s);
-      RELEASE_ASSERT(false);
-    }
+  context.leaf_canonical_history = context.raw_history;  // copy
+  for (auto& state : context.leaf_canonical_history) {
+    Symmetries::apply(state, context.leaf_canonical_sym);
   }
 }
 
@@ -1015,6 +961,22 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
     chance_dist[i] = lookup_table.get_edge(node, i)->chance_prob;
   }
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
+}
+
+template <search::concepts::Traits Traits>
+group::element_t Manager<Traits>::get_random_symmetry(const StateHistory& history) const {
+  group::element_t sym = group::kIdentity;
+  if (general_context_.manager_params.apply_random_symmetries) {
+    auto it = history.begin();
+    SymmetryMask mask = Symmetries::get_mask(*it);
+    it++;
+    while (it != history.end()) {
+      mask &= Symmetries::get_mask(*it);
+      ++it;
+    }
+    sym = bitset_util::choose_random_on_index(mask);
+  }
+  return sym;
 }
 
 }  // namespace search

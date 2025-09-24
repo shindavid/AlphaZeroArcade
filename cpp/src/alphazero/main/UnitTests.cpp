@@ -115,7 +115,6 @@ class ManagerTest : public testing::Test {
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using Node = TraitsTypes::Node;
   using Edge = Traits::Edge;
-  using StateHistory = Game::StateHistory;
   using action_t = core::action_t;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;

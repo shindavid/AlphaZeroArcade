@@ -37,6 +37,7 @@ class Algorithms {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using Node = TraitsTypes::Node;
+  using StateHistory = TraitsTypes::StateHistory;
 
   using LookupTable = search::LookupTable<Traits>;
 
@@ -52,7 +53,6 @@ class Algorithms {
   using GameResults = Game::GameResults;
   using IO = Game::IO;
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 

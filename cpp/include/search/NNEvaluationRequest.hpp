@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/InputTensorizor.hpp"
-#include "core/Node.hpp"
 #include "core/YieldManager.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TraitsTypes.hpp"
@@ -29,12 +28,13 @@ class NNEvaluationRequest {
  public:
   using Evaluation = search::NNEvaluation<Traits>;
   using Game = Traits::Game;
-  using Node = search::TraitsTypes<Traits>::Node;
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
+  using StateHistory = TraitsTypes::StateHistory;
   using InputTensorizor = core::InputTensorizor<Game>;
   using Keys = InputTensorizor::Keys;
 
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
   using EvalKey = Keys::EvalKey;
 
   struct CacheKey {

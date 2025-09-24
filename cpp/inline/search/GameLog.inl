@@ -63,7 +63,7 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
     next_record = &get_record(get_mem_offset(state_index + 1));
   }
 
-  int num_prev_states_to_cp = std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
+  int num_prev_states_to_cp = std::min(InputTensorizor::kNumStatesToEncode - 1, state_index);
   int num_states = num_prev_states_to_cp + 1;
 
   State states[num_states];

@@ -8,6 +8,7 @@ namespace stochastic_nim {
 
 struct InputTensorizor {
   // tensor is of the format {binary encoding of stones_left, current_mode}
+  static constexpr int kNumStatesToEncode = 1;
   constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
 

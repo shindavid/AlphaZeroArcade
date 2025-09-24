@@ -4,7 +4,6 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/SimpleStateHistory.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -39,17 +38,16 @@ struct Game {
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
-  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::TrivialGroup;
   using Symmetries = core::TrivialSymmetries;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
-    static Types::ActionMask get_legal_moves(const StateHistory& history);
+    static Types::ActionMask get_legal_moves(const State& state);
     static core::action_mode_t get_action_mode(const State& state);
     static core::seat_index_t get_current_player(const State& state);
-    static void apply(StateHistory& history, core::action_t action);
+    static void apply(State& state, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
     static bool is_chance_mode(const core::action_mode_t& mode);

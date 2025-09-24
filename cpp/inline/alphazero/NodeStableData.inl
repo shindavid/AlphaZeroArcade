@@ -3,22 +3,20 @@
 namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-NodeStableData<EvalSpec>::NodeStableData(const StateHistory& history, core::seat_index_t as)
-    : Base(history.current()) {
+NodeStableData<EvalSpec>::NodeStableData(const State& st, core::seat_index_t as) : Base(st) {
   VT.setZero();  // to be set lazily
   VT_valid = false;
-  valid_action_mask = Game::Rules::get_legal_moves(history);
+  valid_action_mask = Game::Rules::get_legal_moves(st);
   num_valid_actions = valid_action_mask.count();
-  action_mode = Game::Rules::get_action_mode(history.current());
+  action_mode = Game::Rules::get_action_mode(st);
   is_chance_node = Game::Rules::is_chance_mode(action_mode);
   active_seat = as;
   terminal = false;
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-NodeStableData<EvalSpec>::NodeStableData(const StateHistory& history,
-                                         const ValueTensor& game_outcome)
-    : Base(history.current()) {
+NodeStableData<EvalSpec>::NodeStableData(const State& st, const ValueTensor& game_outcome)
+    : Base(st) {
   VT = game_outcome;
   VT_valid = true;
   num_valid_actions = 0;

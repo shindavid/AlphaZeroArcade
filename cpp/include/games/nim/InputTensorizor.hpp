@@ -7,6 +7,8 @@
 namespace nim {
 
 struct InputTensorizor {
+  static constexpr int kNumStatesToEncode = 1;
+
   using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
 
   template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>

@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/SimpleStateHistory.hpp"
 #include "core/WinLossResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/GameRulesBase.hpp"
@@ -20,14 +19,12 @@ struct Game {
 
   using State = hex::GameState;
   using GameResults = core::WinLossResults;
-  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::C2;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State&) { return Types::SymmetryMask().set(); }
     static void apply(State& state, group::element_t sym);
-    static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t);
     static void apply(core::action_t& action, group::element_t sym, core::action_mode_t);
     static group::element_t get_canonical_symmetry(const State& state);
@@ -35,13 +32,12 @@ struct Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }
-    static Types::ActionMask get_legal_moves(const StateHistory&);
+    static Types::ActionMask get_legal_moves(const State&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_player; }
-    static void apply(StateHistory&, core::action_t action);
+    static void apply(State&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
-    static Types::ActionMask get_legal_moves(const State&);
 
    private:
     static core::action_t compute_mirror_action(core::action_t action);

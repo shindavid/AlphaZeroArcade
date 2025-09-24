@@ -24,10 +24,7 @@ std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) 
   return s;
 }
 
-// copied from edax-reversi repo - board_next()
-void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State& state = history.extend();
-
+void Game::Rules::apply(State& state, core::action_t action) {
   if (action == kPass) {
     std::swap(state.cur_player_mask, state.opponent_mask);
     state.cur_player = 1 - state.cur_player;

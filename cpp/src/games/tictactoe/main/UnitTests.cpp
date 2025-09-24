@@ -21,20 +21,19 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = tictactoe::Game;
 using State = Game::State;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 template <typename... Ts>
 State make_state(Ts... moves) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
   for (int move : {moves...}) {
-    Rules::apply(history, move);
+    Rules::apply(state, move);
   }
-  return history.current();
+  return state;
 }
 
 State make_init_state() { return make_state(7, 2); }

@@ -59,12 +59,6 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
-  for (auto& it : history) {
-    apply(it, sym);
-  }
-}
-
 inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym,
                                     core::action_mode_t) {
   using namespace eigen_util;
@@ -140,10 +134,6 @@ inline void Game::Rules::init_state(State& state) {
   state.cur_player_mask = kStartingBlackMask;
   state.cur_player = kStartingColor;
   state.pass_count = 0;
-}
-
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  return get_legal_moves(history.current());
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {

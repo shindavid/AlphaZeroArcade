@@ -47,12 +47,6 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
-  for (auto& it : history) {
-    apply(it, sym);
-  }
-}
-
 inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym,
                                     core::action_mode_t) {
   switch (sym) {
@@ -94,8 +88,7 @@ inline void Game::Rules::init_state(State& state) {
   state.cur_player_mask = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
 
   Types::ActionMask mask;
@@ -110,9 +103,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
 
-inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State& state = history.extend();
-
+inline void Game::Rules::apply(State& state, core::action_t action) {
   column_t col = action;
   mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
 

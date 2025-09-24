@@ -6,14 +6,14 @@
 
 namespace core::concepts {
 
-template <typename K, typename State, typename StateHistory>
-concept _KeysHelper = requires(const StateHistory& history, const State* start, const State* cur,
+template <typename K, typename State>
+concept _KeysHelper = requires(const State& state, const State* start, const State* cur,
                                std::vector<State>::const_iterator vec_start,
                                std::vector<State>::const_iterator vec_cur) {
   requires util::concepts::UsableAsHashMapKey<typename K::TransposeKey>;
   requires util::concepts::UsableAsHashMapKey<typename K::EvalKey>;
 
-  { K::transpose_key(history) } -> std::same_as<typename K::TransposeKey>;
+  { K::transpose_key(state) } -> std::same_as<typename K::TransposeKey>;
 
   // We actually require that K::eval_key() accepts arbitrary random-access iterators of
   // Game::State, but we can't express that directly in the concept. So we do a "poor-man's check"
@@ -23,7 +23,6 @@ concept _KeysHelper = requires(const StateHistory& history, const State* start, 
 };
 
 template <typename K, typename Game>
-concept Keys =
-  requires { requires _KeysHelper<K, typename Game::State, typename Game::StateHistory>; };
+concept Keys = requires { requires _KeysHelper<K, typename Game::State>; };
 
 }  // namespace core::concepts

@@ -21,7 +21,6 @@ using Game = hex::Game;
 using Constants = hex::Constants;
 using State = Game::State;
 using ActionMask = Game::Types::ActionMask;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
@@ -29,13 +28,13 @@ using Symmetries = Game::Symmetries;
 using GameResults = Game::GameResults;
 
 State make_init_state() {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  Rules::apply(history, 11);
-  Rules::apply(history, 101);
-  Rules::apply(history, 22);
-  return history.current();
+  Rules::apply(state, 11);
+  Rules::apply(state, 101);
+  Rules::apply(state, 22);
+  return state;
 }
 
 PolicyTensor make_policy(int move1, int move2) {
@@ -207,10 +206,9 @@ TEST(Symmetry, rotate) {
 }
 
 TEST(Rules, swap_start) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  State state = history.current();
   ActionMask valid_actions = Rules::get_legal_moves(state);
 
   EXPECT_FALSE(valid_actions[hex::kSwap]);
@@ -219,8 +217,7 @@ TEST(Rules, swap_start) {
   core::action_t move = hex::kC1;
   core::action_t mirrored_move = hex::kA3;
 
-  Rules::apply(history, move);
-  state = history.current();
+  Rules::apply(state, move);
   valid_actions = Rules::get_legal_moves(state);
   EXPECT_TRUE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[move]);
@@ -244,8 +241,7 @@ TEST(Rules, swap_start) {
 
   EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
 
-  Rules::apply(history, hex::kSwap);
-  state = history.current();
+  Rules::apply(state, hex::kSwap);
   valid_actions = Rules::get_legal_moves(state);
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[mirrored_move]);
@@ -271,21 +267,19 @@ TEST(Rules, swap_start) {
 }
 
 TEST(Rules, non_swap_start) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
 
-  State state = history.current();
   ActionMask valid_actions = Rules::get_legal_moves(state);
 
   core::action_t move = hex::kC1;
   core::action_t move2 = hex::kF8;
 
-  Rules::apply(history, move);
-  state = history.current();
+  Rules::apply(state, move);
   valid_actions = Rules::get_legal_moves(state);
 
-  Rules::apply(history, hex::kF8);
-  state = history.current();
+  Rules::apply(state, hex::kF8);
+  valid_actions = Rules::get_legal_moves(state);
   valid_actions = Rules::get_legal_moves(state);
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[move]);
@@ -294,8 +288,8 @@ TEST(Rules, non_swap_start) {
 }
 
 TEST(Rules, connections) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
   GameResults::Tensor outcome;
 
   constexpr int kNumMoves = 5;
@@ -305,19 +299,19 @@ TEST(Rules, connections) {
   RELEASE_ASSERT(red_moves.size() == kNumMoves && blue_moves.size() == kNumMoves);
 
   for (int i = 0; i < kNumMoves; ++i) {
-    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kRed);
-    EXPECT_TRUE(Rules::get_legal_moves(history.current())[red_moves[i]]);
-    Rules::apply(history, red_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kRed, red_moves[i], outcome));
+    EXPECT_EQ(Rules::get_current_player(state), Constants::kRed);
+    EXPECT_TRUE(Rules::get_legal_moves(state)[red_moves[i]]);
+    Rules::apply(state, red_moves[i]);
+    EXPECT_FALSE(Rules::is_terminal(state, Constants::kRed, red_moves[i], outcome));
 
-    EXPECT_EQ(Rules::get_current_player(history.current()), Constants::kBlue);
-    EXPECT_TRUE(Rules::get_legal_moves(history.current())[blue_moves[i]]);
-    Rules::apply(history, blue_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(history.current(), Constants::kBlue, blue_moves[i], outcome));
+    EXPECT_EQ(Rules::get_current_player(state), Constants::kBlue);
+    EXPECT_TRUE(Rules::get_legal_moves(state)[blue_moves[i]]);
+    Rules::apply(state, blue_moves[i]);
+    EXPECT_FALSE(Rules::is_terminal(state, Constants::kBlue, blue_moves[i], outcome));
   }
 
-  const auto& UF_red = history.current().aux.union_find[Constants::kRed];
-  const auto& UF_blue = history.current().aux.union_find[Constants::kBlue];
+  const auto& UF_red = state.aux.union_find[Constants::kRed];
+  const auto& UF_blue = state.aux.union_find[Constants::kBlue];
 
   using map_t = std::map<vertex_t, std::vector<vertex_t>>;
   map_t red_parent;
@@ -365,10 +359,10 @@ TEST(Rules, connections) {
     }
   }
 
-  Symmetries::apply(history, groups::C2::kRot180);
+  Symmetries::apply(state, groups::C2::kRot180);
 
-  const auto& UF_red2 = history.current().aux.union_find[Constants::kRed];
-  const auto& UF_blue2 = history.current().aux.union_find[Constants::kBlue];
+  const auto& UF_red2 = state.aux.union_find[Constants::kRed];
+  const auto& UF_blue2 = state.aux.union_find[Constants::kBlue];
 
   map_t red_parent2;
   map_t blue_parent2;
@@ -417,8 +411,8 @@ TEST(Rules, connections) {
 }
 
 TEST(Rules, terminal) {
-  StateHistory history;
-  history.initialize(Rules{});
+  State state;
+  Rules::init_state(state);
   GameResults::Tensor outcome;
 
   std::vector<core::action_t> moves = {hex::kA1, hex::kA2, hex::kB1, hex::kB2, hex::kC1, hex::kC2,
@@ -430,15 +424,15 @@ TEST(Rules, terminal) {
 
   for (int i = 0; i < num_moves; ++i) {
     core::action_t move = moves[i];
-    EXPECT_EQ(Rules::get_current_player(history.current()), i % 2);
-    EXPECT_TRUE(Rules::get_legal_moves(history.current())[move]);
-    Rules::apply(history, move);
+    EXPECT_EQ(Rules::get_current_player(state), i % 2);
+    EXPECT_TRUE(Rules::get_legal_moves(state)[move]);
+    Rules::apply(state, move);
 
     if (i < num_moves - 1) {
-      EXPECT_FALSE(Rules::is_terminal(history.current(), i % 2, move, outcome));
+      EXPECT_FALSE(Rules::is_terminal(state, i % 2, move, outcome));
     } else {
       // Last move should be terminal
-      EXPECT_TRUE(Rules::is_terminal(history.current(), i % 2, move, outcome));
+      EXPECT_TRUE(Rules::is_terminal(state, i % 2, move, outcome));
       EXPECT_EQ(outcome[Constants::kRed], 0);
       EXPECT_EQ(outcome[Constants::kBlue], 1);
     }

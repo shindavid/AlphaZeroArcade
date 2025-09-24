@@ -9,6 +9,7 @@
 #include "search/Manager.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
+#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -32,6 +33,8 @@ class PlayerTest : public ::testing::Test {
  protected:
   using Game = EvalSpec::Game;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using StateHistory = TraitsTypes::StateHistory;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
   using Player = generic::alpha0::Player<Traits>;
@@ -40,7 +43,6 @@ class PlayerTest : public ::testing::Test {
   using SearchResults = Traits::SearchResults;
   using SearchLog = ::search::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using StateHistory = Game::StateHistory;
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
@@ -72,12 +74,13 @@ class PlayerTest : public ::testing::Test {
 
   void start_manager(const std::vector<core::action_t>& initial_actions) {
     mcts_player_->start_game();
-    StateHistory history;
-    history.initialize(Rules{});
+
+    State state;
+    Rules::init_state(state);
     for (core::action_t action : initial_actions) {
-      core::seat_index_t seat = Rules::get_current_player(history.current());
-      Rules::apply(history, action);
-      mcts_player_->receive_state_change(seat, history.current(), action);
+      core::seat_index_t seat = Rules::get_current_player(state);
+      Rules::apply(state, action);
+      mcts_player_->receive_state_change(seat, state, action);
     }
     initial_actions_ = initial_actions;
   }
@@ -90,11 +93,11 @@ class PlayerTest : public ::testing::Test {
     init(service);
     start_manager(initial_actions);
 
-    const StateHistory& state_history =
-      mcts_player_->get_manager()->root_info()->history_array[group::kIdentity];
-    ActionMask valid_actions = Rules::get_legal_moves(state_history);
+    const StateHistory& state_history = mcts_player_->get_manager()->root_info()->history;
+    const State& state = state_history.current();
+    ActionMask valid_actions = Rules::get_legal_moves(state);
 
-    ActionRequest request(state_history.current(), valid_actions);
+    ActionRequest request(state, valid_actions);
     mcts_player_->init_search_mode(request);
     search::SearchRequest search_request;
     const SearchResults* search_results =

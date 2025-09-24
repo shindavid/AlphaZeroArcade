@@ -11,7 +11,6 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using namespace blokus;
 
 using State = Game::State;
-using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;

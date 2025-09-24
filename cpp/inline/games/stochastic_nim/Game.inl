@@ -14,8 +14,7 @@ inline size_t Game::State::hash() const {
   return hasher(tuple);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
@@ -39,9 +38,8 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
 }
 
 // current_player only switches AFTER a chance action
-inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  bool is_chance = is_chance_mode(history.current().current_mode);
-  State& state = history.extend();
+inline void Game::Rules::apply(State& state, core::action_t action) {
+  bool is_chance = is_chance_mode(state.current_mode);
 
   if (is_chance) {
     int outcome_stones = state.stones_left - action;

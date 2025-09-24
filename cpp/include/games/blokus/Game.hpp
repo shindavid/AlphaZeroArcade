@@ -4,7 +4,6 @@
 #include "core/ConstantsBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/SimpleStateHistory.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -32,7 +31,6 @@ class Game {
 
   using State = blokus::GameState;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
-  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
 
   /*
    * After the initial placement of the first piece, the rules of the game are symmetric. But the
@@ -46,10 +44,10 @@ class Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
-    static Types::ActionMask get_legal_moves(const StateHistory&);
+    static Types::ActionMask get_legal_moves(const State&);
     static core::action_mode_t get_action_mode(const State&);
     static core::seat_index_t get_current_player(const State&);
-    static void apply(StateHistory&, core::action_t action);
+    static void apply(State&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
 

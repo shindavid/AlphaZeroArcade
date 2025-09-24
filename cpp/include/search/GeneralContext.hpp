@@ -7,8 +7,6 @@
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
-#include <array>
-
 namespace search {
 
 // GeneralContext<Traits> contains data members that apply to the entire game tree.
@@ -24,18 +22,16 @@ struct GeneralContext {
 
   using Rules = Game::Rules;
   using State = Game::State;
-  using StateHistory = Game::StateHistory;
+  using StateHistory = TraitsTypes::StateHistory;
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
   using LookupTable = search::LookupTable<Traits>;
 
   struct RootInfo {
     void clear();
 
-    StateHistoryArray history_array;
-
+    StateHistory history;
     group::element_t canonical_sym = -1;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;

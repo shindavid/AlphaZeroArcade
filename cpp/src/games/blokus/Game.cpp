@@ -20,8 +20,7 @@ void Game::Rules::init_state(State& state) {
   }
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   const State::Core& core = state.core;
   const State::Aux& aux = state.aux;
 
@@ -80,9 +79,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history
   return valid_actions;
 }
 
-void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State& state = history.extend();
-
+void Game::Rules::apply(State& state, core::action_t action) {
   if (IS_DEFINED(DEBUG_BUILD)) {
     state.validate_aux();
   }
