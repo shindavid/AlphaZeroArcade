@@ -1,15 +1,15 @@
-from dataclasses import dataclass
-import math
-
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.net_modules import ModelConfig, ModelGenerator, ModuleSpec, OptimizerSpec, \
-    ShapeInfoDict
+from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 from shared.transformer_modules import TransformerBlockParams
 
+from dataclasses import dataclass
+import math
+from torch import optim
 
-class CNN_b9_c128(ModelGenerator):
+
+class CNN_b9_c128(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -36,8 +36,6 @@ class CNN_b9_c128(ModelGenerator):
         c_ownership_hidden = 64
 
         return ModelConfig(
-            shape_info_dict=shape_info_dict,
-
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
             blocks=[
@@ -71,21 +69,25 @@ class CNN_b9_c128(ModelGenerator):
                 ModuleSpec(type='OwnershipHead',
                         args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
             ],
-
-            loss_weights={
-                'policy': 1.0,
-                'value': 1.5,
-                'action_value': 2.0,
-                'opp_policy': 0.15,
-                'score_margin': 0.02,
-                'ownership': 0.15,
-            },
-
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
         )
 
+    @staticmethod
+    def loss_weights():
+        return {
+            'policy': 1.0,
+            'value': 1.5,
+            'action_value': 2.0,
+            'opp_policy': 0.15,
+            'score_margin': 0.02,
+            'ownership': 0.15,
+        }
 
-class Transformer(ModelGenerator):
+    @staticmethod
+    def optimizer(params) -> optim.Optimizer:
+        return optim.RAdam(params, lr=6e-5, weight_decay=6e-5)
+
+
+class Transformer(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -125,8 +127,6 @@ class Transformer(ModelGenerator):
             )
 
         return ModelConfig(
-            shape_info_dict=shape_info_dict,
-
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
             blocks=[
@@ -154,18 +154,22 @@ class Transformer(ModelGenerator):
                 ModuleSpec(type='OwnershipHead',
                         args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
             ],
-
-            loss_weights={
-                'policy': 1.0,
-                'value': 1.5,
-                'action_value': 2.0,
-                'opp_policy': 0.15,
-                'score_margin': 0.02,
-                'ownership': 0.15,
-            },
-
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 5e-4, 'weight_decay': 6e-5}),
         )
+
+    @staticmethod
+    def loss_weights():
+        return {
+            'policy': 1.0,
+            'value': 1.5,
+            'action_value': 2.0,
+            'opp_policy': 0.15,
+            'score_margin': 0.02,
+            'ownership': 0.15,
+        }
+
+    @staticmethod
+    def optimizer(params) -> optim.Optimizer:
+        return optim.RAdam(params, lr=5e-4, weight_decay=6e-5)
 
 
 @dataclass

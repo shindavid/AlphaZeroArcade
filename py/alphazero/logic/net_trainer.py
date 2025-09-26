@@ -8,7 +8,7 @@ from util.torch_util import apply_mask
 
 import logging
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class TrainingSubStats:
 
 class TrainingStats:
     def __init__(self, gen: Generation, minibatch_size: int, window_start: int,
-                 window_end: int, net: Model):
+                 window_end: int, net: Model, loss_weights: Dict[str, float]):
         self.gen = gen
         self.minibatch_size = minibatch_size
         self.window_start = window_start
@@ -80,7 +80,7 @@ class TrainingStats:
 
         self.n_minibatches_processed = 0
         self.n_samples = 0
-        self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
+        self.substats_list = [TrainingSubStats(head, loss_weights[head.name])
                               for head in net.heads]
 
     def update(self, results_list: List[EvaluationResults], n_samples):
@@ -121,7 +121,8 @@ class NetTrainer:
                           n_minibatches: int,
                           window_start: int,
                           window_end: int,
-                          gen: Generation) -> Optional[TrainingStats]:
+                          gen: Generation,
+                          loss_weights: Dict[str, float]) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -137,10 +138,10 @@ class NetTrainer:
             minibatch_size, n_minibatches, window_start, window_end, net.target_names, gen)
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
-        loss_weights = [net.loss_weights[head.name] for head in net.heads]
+        loss_weights_list = [loss_weights[head.name] for head in net.heads]
 
         n_samples = 0
-        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net)
+        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_weights)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
@@ -157,7 +158,7 @@ class NetTrainer:
             labels = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks, labels)]
             outputs = [apply_mask(y, mask) for mask, y in zip(masks, outputs)]
             losses = [f(y_hat, y) for f, y_hat, y in zip(loss_fns, outputs, labels)]
-            loss = sum([l * w for l, w in zip(losses, loss_weights)])
+            loss = sum([l * w for l, w in zip(losses, loss_weights_list)])
             results_list = [EvaluationResults(*x) for x in zip(labels, outputs, losses)]
 
             n_samples += len(inputs)

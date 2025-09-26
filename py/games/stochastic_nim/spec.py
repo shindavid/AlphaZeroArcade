@@ -1,14 +1,14 @@
-from dataclasses import dataclass
-import math
-
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.net_modules import ModelConfig, ModelGenerator, ModuleSpec, OptimizerSpec, \
-    ShapeInfoDict
+from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, ShapeInfoDict
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
+from dataclasses import dataclass
+import math
+from torch import optim
 
-class CNN_b3_c32(ModelGenerator):
+
+class CNN_b3_c32(ModelConfigGenerator):
     @staticmethod
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         input_shape = shape_info_dict['input'].shape
@@ -28,8 +28,6 @@ class CNN_b3_c32(ModelGenerator):
         n_value_hidden = 32
 
         return ModelConfig(
-            shape_info_dict=shape_info_dict,
-
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
             blocks=[
@@ -53,15 +51,19 @@ class CNN_b3_c32(ModelGenerator):
                         args=['action_value', board_size, c_trunk, c_action_value_hidden,
                                 action_value_shape]),
                 ],
-
-            loss_weights={
-                'policy': 1.0,
-                'value': 1.5,
-                'action_value': 1.0,
-            },
-
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
         )
+
+    @staticmethod
+    def loss_weights():
+        return {
+            'policy': 1.0,
+            'value': 1.5,
+            'action_value': 1.0,
+        }
+
+    @staticmethod
+    def optimizer(params) -> optim.Optimizer:
+        return optim.RAdam(params, lr=6e-5, weight_decay=6e-5)
 
 
 @dataclass

@@ -25,6 +25,7 @@ from util.torch_util import Shape
 import onnx
 import torch
 from torch import nn as nn
+from torch import optim
 from torch.nn import functional as F
 
 import abc
@@ -35,7 +36,7 @@ import io
 import logging
 import math
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 
 logger = logging.getLogger(__name__)
@@ -583,14 +584,10 @@ class OptimizerSpec:
 
 @dataclass
 class ModelConfig:
-    shape_info_dict: ShapeInfoDict
     stem: Optional[ModuleSpec]
     blocks: List[ModuleSpec]
     heads: List[ModuleSpec]
     neck: Optional[ModuleSpec]
-    loss_weights: Dict[str, float]
-    opt: OptimizerSpec
-    paradigm: SearchParadigm = SearchParadigm.AlphaZero
 
     def validate(self):
         for spec in [self.stem, self.neck] + self.blocks + self.heads:
@@ -606,6 +603,16 @@ class ModelConfigGenerator(abc.ABC):
     def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def loss_weights() -> Dict[str, float]:
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def optimizer(params) -> optim.Optimizer:
+        pass
+
 
 class Model(nn.Module):
     def __init__(self, config: ModelConfig):
@@ -618,9 +625,6 @@ class Model(nn.Module):
         self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
         self.neck = Model._construct_module(config.neck)
         self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
-        self.loss_weights = config.loss_weights
-
-        self.validate()
 
         self._model_architecture_signature = None
 
@@ -631,10 +635,6 @@ class Model(nn.Module):
         if self._model_architecture_signature is None:
             self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
         return self._model_architecture_signature
-
-    @property
-    def shape_info_dict(self) -> ShapeInfoDict:
-        return self.config.shape_info_dict
 
     @property
     def learning_targets(self) -> List[LearningTarget]:
@@ -675,7 +675,7 @@ class Model(nn.Module):
         cls = MODULE_MAP[spec.type]
         return cls(*spec.args, **spec.kwargs)
 
-    def validate(self):
+    def validate(self, shape_info_dict: ShapeInfoDict, loss_weights: Dict[str, float]):
         head_names = set()
         for head in self.heads:
             assert head.name not in head_names, f'Head with name {head.name} already exists'
@@ -685,17 +685,17 @@ class Model(nn.Module):
         assert self.heads[1].name == 'value', 'The second head must be the value head'
         assert self.heads[2].name == 'action_value', 'The third head must be the action_value head'
 
-        for name in self.loss_weights:
+        for name in loss_weights:
             assert name in head_names, f'Loss weight for unknown head {name}'
 
         for name in head_names:
-            assert name in self.loss_weights, f'Loss weight missing for head {name}'
+            assert name in loss_weights, f'Loss weight missing for head {name}'
 
-        targets = [t for t in self.shape_info_dict.keys() if t != 'input']
-        for target in self.loss_weights:
+        targets = [t for t in shape_info_dict.keys() if t != 'input']
+        for target in loss_weights:
             assert target in targets, f'Missing target {target}'
 
-    def save_model(self, filename: str, n_primary_targets: int):
+    def save_model(self, filename: str, shape_info_dict: ShapeInfoDict, primary_targets: Set[str]):
         """
         Saves this network to disk in ONNX format.
         """
@@ -705,7 +705,7 @@ class Model(nn.Module):
 
         # 1) clone, strip extra heads, freeze
         clone = copy.deepcopy(self)
-        clone.heads = clone.heads[:n_primary_targets]
+        clone.heads = nn.ModuleList(h for h in clone.heads if h.name in primary_targets)
         clone.cpu().eval()
 
         input_names = ["input"]
@@ -714,7 +714,7 @@ class Model(nn.Module):
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
-        example_shape = (batch_size, *self.shape_info_dict['input'].shape)
+        example_shape = (batch_size, *shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
         signature = self.get_model_architecture_signature(clone)

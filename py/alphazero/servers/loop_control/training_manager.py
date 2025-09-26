@@ -6,7 +6,7 @@ from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
-from shared.net_modules import Model, ModelConfig
+from shared.net_modules import Model, ModelConfig, ModelConfigGenerator
 from util.py_util import make_hidden_filename
 
 import torch
@@ -18,7 +18,7 @@ import shutil
 import tempfile
 import threading
 import time
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .loop_controller import LoopController
@@ -199,7 +199,8 @@ class TrainingManager:
             return Window(0, 0, 0)
         return Window(*row)
 
-    def _load_last_checkpoint(self, model_cfg: ModelConfig):
+    def _load_last_checkpoint(self, model_cfg_generator_type: Type[ModelConfigGenerator],
+                              model_cfg: ModelConfig):
         """
         If a prior checkpoint exists, does the following:
 
@@ -222,9 +223,10 @@ class TrainingManager:
             checkpoint = torch.load(tmp_checkpoint_filename, weights_only=False)
             self._net = Model.load_from_checkpoint(checkpoint)
 
-        self._init_net_and_opt(model_cfg)
+        self._init_net_and_opt(model_cfg_generator_type, model_cfg)
 
-    def _init_net_and_opt(self, model_cfg: ModelConfig):
+    def _init_net_and_opt(self, model_cfg_generator_type: Type[ModelConfigGenerator],
+                          model_cfg: ModelConfig):
         """
         Assumes that self._net has been initialized, and that self._opt has not.
 
@@ -235,9 +237,7 @@ class TrainingManager:
         self._net.cuda(device=self._controller.params.cuda_device)
         self._net.train()
 
-        opt_cls = getattr(optim, model_cfg.opt.type)
-        opt_kwargs = model_cfg.opt.kwargs
-        self._opt = opt_cls(self._net.parameters(), **opt_kwargs)
+        self._opt = model_cfg_generator_type.optimizer(self._net.parameters())
 
         # TODO: SWA, cyclic learning rate
 
@@ -256,9 +256,10 @@ class TrainingManager:
 
         if checkpoint_gen is None:
             self._net = Model(model_cfg)
-            self._init_net_and_opt(model_cfg)
+            self._net.validate(shape_info_dict, model_cfg_generator_type.loss_weights())
+            self._init_net_and_opt(model_cfg_generator_type, model_cfg)
         else:
-            self._load_last_checkpoint(model_cfg)
+            self._load_last_checkpoint(model_cfg_generator_type, model_cfg)
 
         # Validate that network heads match c++ TrainingTargets
         logger.info('Validating heads...')
@@ -362,9 +363,13 @@ class TrainingManager:
             net, optimizer = self._get_net_and_optimizer()
             self._dump_model_counts()
 
+            game_spec = self._controller.game_spec
+            model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
+            loss_weights = model_cfg_generator_type.loss_weights()
+
             self._stats = trainer.do_training_epoch(
                 self._game_log_reader, net, optimizer, minibatch_size, n_minibatches,
-                start, end, gen)
+                start, end, gen, loss_weights)
         except:
             if self._game_log_reader.closed():
                 # This is a shutdown race-condition, it's ok
@@ -444,8 +449,9 @@ class TrainingManager:
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
 
+        shape_info_dict = self._game_log_reader.shape_info_dict
         logger.debug('Calling save_model()...')
-        net.save_model(tmp_model_filename, self._primary_targets)
+        net.save_model(tmp_model_filename, shape_info_dict, self._primary_targets)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

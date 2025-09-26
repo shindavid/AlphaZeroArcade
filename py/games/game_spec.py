@@ -2,7 +2,7 @@ import abc
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Type
 
-from shared.net_modules import ModelGenerator
+from shared.net_modules import ModelConfigGenerator
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 
@@ -61,7 +61,7 @@ class GameSpec(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def model_configs(self) -> Dict[str, Type[ModelGenerator]]:
+    def model_configs(self) -> Dict[str, Type[ModelConfigGenerator]]:
         """
         Dictionary of model configurations for this game.
 
