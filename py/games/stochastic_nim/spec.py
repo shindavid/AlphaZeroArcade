@@ -27,30 +27,33 @@ class CNN_b3_c32(ModelConfigGenerator):
         c_value_hidden = 2
         n_value_hidden = 32
 
-        return ModelConfig(
+        return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            trunk=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=3,
+                parent='stem'
+            ),
 
-            blocks=[
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block5', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
-                ],
-
-            neck=None,
-
-            heads=[
-                ModuleSpec(type='PolicyHead',
-                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinShareValueHead',
-                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                                value_shape]),
-                ModuleSpec(type='WinShareActionValueHead',
-                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                                action_value_shape]),
-                ],
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            value=ModuleSpec(
+                type='WinShareValueHead',
+                args=[board_size, c_trunk, c_value_hidden, n_value_hidden, value_shape],
+                head=True,
+                parent='trunk'
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                head=True,
+                parent='trunk'
+            ),
         )
 
     @staticmethod

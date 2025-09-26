@@ -34,58 +34,87 @@ class CNN_b20_c128(ModelConfigGenerator):
         c_unplayed_pieces_hidden = 32
         n_unplayed_pieces_hidden = 32
 
-        return ModelConfig(
+        return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            trunk1=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parent='stem'
+            ),
+            trunk2=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parent='trunk1'
+            ),
+            trunk3=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parent='trunk2'
+            ),
+            trunk4=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parent='trunk3'
+            ),
+            trunk5=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parent='trunk4'
+            ),
+            trunk6=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parent='trunk5'
+            ),
+            trunk=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=5,
+                parent='trunk6'
+            ),
 
-            blocks=[
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block5', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block10', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block15', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block20', c_trunk, c_mid]),
-            ],
-
-            neck=None,
-
-            heads=[
-                ModuleSpec(type='PolicyHead',
-                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinShareValueHead',
-                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                                value_shape]),
-                ModuleSpec(type='WinShareActionValueHead',
-                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                                action_value_shape]),
-                ModuleSpec(type='ScoreHead',
-                        args=['score', c_trunk, c_score_margin_hidden,
-                                n_score_margin_hidden, score_shape]),
-                ModuleSpec(type='OwnershipHead',
-                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
-                ModuleSpec(type='GeneralLogitHead',
-                        args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
-                                n_unplayed_pieces_hidden, unplayed_pieces_shape]),
-            ],
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            value=ModuleSpec(
+                type='WinShareValueHead',
+                args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
+                      value_shape],
+                head=True,
+                parent='trunk'
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                      action_value_shape],
+                head=True,
+                parent='trunk'
+            ),
+            score=ModuleSpec(
+                type='ScoreHead',
+                args=['score', c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_shape],
+                head=True,
+                parent='trunk'
+            ),
+            ownership=ModuleSpec(
+                type='OwnershipHead',
+                args=['ownership', c_trunk, c_ownership_hidden, ownership_shape],
+                head=True,
+                parent='trunk'
+            ),
+            unplayed_pieces=ModuleSpec(
+                type='GeneralLogitHead',
+                args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
+                      n_unplayed_pieces_hidden, unplayed_pieces_shape],
+                head=True,
+                parent='trunk'
+            ),
         )
 
     @staticmethod

@@ -265,8 +265,7 @@ class TrainingManager:
         logger.info('Validating heads...')
         self._primary_targets = {info.name for info in shape_info_dict.values() if info.primary}
         n_primary_heads = 0
-        for h, head in enumerate(self._net.heads):
-            name = head.name
+        for h, name in enumerate(self._net.target_names):
             shape_info = shape_info_dict.get(name, None)
             if shape_info is None:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '

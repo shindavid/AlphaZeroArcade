@@ -27,8 +27,8 @@ class EvaluationResults:
 class TrainingSubStats:
     max_descr_len = 0
 
-    def __init__(self, head: Head, loss_weight: float):
-        self.head = head
+    def __init__(self, name: str, loss_weight: float):
+        self.name = name
         self.loss_weight = loss_weight
         self.loss_num = 0.0
         self.den = 0
@@ -36,12 +36,8 @@ class TrainingSubStats:
         TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(self.descr))
 
     @property
-    def name(self) -> str:
-        return self.head.name
-
-    @property
     def descr(self) -> str:
-        return self.head.name
+        return self.name
 
     def update(self, results: EvaluationResults):
         n = len(results)
@@ -80,8 +76,8 @@ class TrainingStats:
 
         self.n_minibatches_processed = 0
         self.n_samples = 0
-        self.substats_list = [TrainingSubStats(head, loss_weights[head.name])
-                              for head in net.heads]
+        self.substats_list = [TrainingSubStats(name, loss_weights[name])
+                              for name in net.target_names]
 
     def update(self, results_list: List[EvaluationResults], n_samples):
         self.n_samples += n_samples
@@ -135,10 +131,10 @@ class NetTrainer:
         train_time = 0.0
 
         data_batches = reader.create_data_batches(
-            minibatch_size, n_minibatches, window_start, window_end, net.target_names, gen)
+            minibatch_size, n_minibatches, window_start, window_end, net._target_names, gen)
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
-        loss_weights_list = [loss_weights[head.name] for head in net.heads]
+        loss_weights_list = [loss_weights[name] for name in net.target_names]
 
         n_samples = 0
         stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_weights)

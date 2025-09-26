@@ -35,40 +35,62 @@ class CNN_b9_c128(ModelConfigGenerator):
         n_score_margin_hidden = 32
         c_ownership_hidden = 64
 
-        return ModelConfig(
+        return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            trunk1=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parent='stem'
+            ),
+            trunk2=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parent='trunk1'
+            ),
+            trunk=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parent='trunk2'
+            ),
 
-            blocks=[
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling', args=['block5', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-            ],
-
-            neck=None,
-
-            heads=[
-                ModuleSpec(type='PolicyHead',
-                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinLossDrawValueHead',
-                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
-                ModuleSpec(type='WinShareActionValueHead',
-                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                                action_value_shape]),
-                ModuleSpec(type='PolicyHead',
-                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
-                ModuleSpec(type='ScoreHead',
-                        args=['score_margin', c_trunk, c_score_margin_hidden,
-                                n_score_margin_hidden, score_margin_shape]),
-                ModuleSpec(type='OwnershipHead',
-                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
-            ],
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            value=ModuleSpec(
+                type='WinLossDrawValueHead',
+                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                head=True,
+                parent='trunk'
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                head=True,
+                parent='trunk'
+            ),
+            opp_policy=ModuleSpec(
+                type='PolicyHead',
+                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            score_margin=ModuleSpec(
+                type='ScoreHead',
+                args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
+                head=True,
+                parent='trunk'
+            ),
+            ownership=ModuleSpec(
+                type='OwnershipHead',
+                args=[c_trunk, c_ownership_hidden, ownership_shape],
+                head=True,
+                parent='trunk'
+            ),
         )
 
     @staticmethod
@@ -126,34 +148,56 @@ class Transformer(ModelConfigGenerator):
             feed_forward_multiplier=1.0
             )
 
-        return ModelConfig(
+        return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            pre_trunk=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=2,
+                parent='stem'
+            ),
+            trunk=ModuleSpec(
+                type='TransformerBlock',
+                args=[transformer_block_params],
+                parent='pre_trunk'
+            ),
 
-            blocks=[
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='TransformerBlock', args=[transformer_block_params]),
-            ],
-
-            neck=None,
-
-            heads=[
-                ModuleSpec(type='PolicyHead',
-                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinLossDrawValueHead',
-                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
-                ModuleSpec(type='WinShareActionValueHead',
-                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                              action_value_shape]),
-                ModuleSpec(type='PolicyHead',
-                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden,
-                              policy_shape]),
-                ModuleSpec(type='ScoreHead',
-                        args=['score_margin', c_trunk, c_score_margin_hidden,
-                                n_score_margin_hidden, score_margin_shape]),
-                ModuleSpec(type='OwnershipHead',
-                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
-            ],
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            value=ModuleSpec(
+                type='WinLossDrawValueHead',
+                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                head=True,
+                parent='trunk'
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                head=True,
+                parent='trunk'
+            ),
+            opp_policy=ModuleSpec(
+                type='PolicyHead',
+                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                head=True,
+                parent='trunk'
+            ),
+            score_margin=ModuleSpec(
+                type='ScoreHead',
+                args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
+                head=True,
+                parent='trunk'
+            ),
+            ownership=ModuleSpec(
+                type='OwnershipHead',
+                args=[c_trunk, c_ownership_hidden, ownership_shape],
+                head=True,
+                parent='trunk'
+            ),
         )
 
     @staticmethod

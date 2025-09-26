@@ -7,7 +7,35 @@ Unless otherwise stated, graphs are represented as square numpy arrays of shape 
 import numpy as np
 
 
-AdjMatrix = np.ndarray
+AdjMatrix = np.ndarray  # shape (n, n), dtype=bool
+
+
+def topological_sort(G: AdjMatrix) -> np.ndarray:
+    """
+    Computes a topological sort of a directed acyclic graph (DAG).
+
+    :param G: a DAG
+    :return: an array of node indices in topological order
+    """
+    n = G.shape[0]
+    assert G.shape == (n, n)
+
+    in_degree = np.sum(G, axis=0)
+    zero_in_degree = [i for i in range(n) if in_degree[i] == 0]
+
+    topo_order = []
+    while zero_in_degree:
+        u = zero_in_degree.pop()
+        topo_order.append(u)
+        for v in np.where(G[u])[0]:
+            in_degree[v] -= 1
+            if in_degree[v] == 0:
+                zero_in_degree.append(v)
+
+    if len(topo_order) != n:
+        raise ValueError("Graph is not a DAG")
+
+    return np.array(topo_order)
 
 
 def transitive_closure(G: AdjMatrix) -> AdjMatrix:

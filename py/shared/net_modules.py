@@ -20,8 +20,10 @@ from shared.learning_targets import GeneralLogitTarget, LearningTarget, Ownershi
     PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
     WinShareActionValueTarget, WinShareValueTarget
 from shared.transformer_modules import TransformerBlock
+from util.graph_util import AdjMatrix, topological_sort
 from util.torch_util import Shape
 
+import numpy as np
 import onnx
 import torch
 from torch import nn as nn
@@ -173,9 +175,8 @@ class ResBlock(nn.Module):
     Both the KataGo paper and the AlphaGo Zero paper effectively describe this block as a
     composition of two ConvBlocks with a skip connection.
     """
-    def __init__(self, name: str, c_in_out: int, c_mid: int):
+    def __init__(self, c_in_out: int, c_mid: int):
         super(ResBlock, self).__init__()
-        self.name = name
         self.conv1 = ConvBlock(c_in_out, c_mid)
         self.conv2 = ConvBlock(c_mid, c_in_out)
 
@@ -191,10 +192,9 @@ class ResBlockWithGlobalPooling(nn.Module):
     This corresponds to ResBlock with c_gpool!=None in the KataGo codebase. This has no
     analog in the AlphaGo Zero paper.
     """
-    def __init__(self, name: str, c_in_out: int, c_mid_total: int, c_mid_gp: int):
+    def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
         super(ResBlockWithGlobalPooling, self).__init__()
         assert 0 < c_mid_gp < c_mid_total
-        self.name = name
         self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
         self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
 
@@ -224,10 +224,8 @@ class PositionalEncoding(nn.Module):
 
 
 class Head(nn.Module):
-    def __init__(self, name: str, target: LearningTarget):
+    def __init__(self, target: LearningTarget):
         super(Head, self).__init__()
-
-        self.name = name
         self.target = target
 
 
@@ -269,8 +267,8 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(PolicyHead, self).__init__(name, PolicyTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super(PolicyHead, self).__init__(PolicyTarget())
 
         self.output_shape = output_shape
         self.act = F.relu
@@ -319,8 +317,8 @@ class WinLossDrawValueHead(Head):
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossDrawValueHead, self).__init__(name, WinLossDrawValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super(WinLossDrawValueHead, self).__init__(WinLossDrawValueTarget())
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -345,8 +343,8 @@ class WinLossValueHead(Head):
 
     This is based off WinLossDrawValueHead.
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossValueHead, self).__init__(name, WinLossValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super(WinLossValueHead, self).__init__(WinLossValueTarget())
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -371,8 +369,8 @@ class WinShareActionValueHead(Head):
     into a win-share array. This is the case for WinShareValueHead, WinLossDrawValueHead, and
     WinLossValueHead
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super(WinShareActionValueHead, self).__init__(WinShareActionValueTarget())
 
         self.output_shape = output_shape
         self.act = F.relu
@@ -416,9 +414,8 @@ class WinShareValueHead(Head):
     output shape.
     """
 
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 shape: Shape):
-        super(WinShareValueHead, self).__init__(name, WinShareValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(WinShareValueHead, self).__init__(WinShareValueTarget())
 
         (n_players, ) = shape
         self.act = F.relu
@@ -444,8 +441,8 @@ class ScoreHead(Head):
     I attempt to match what is described in the KataGo paper, but it didn't seem to learn well.
     So I modified it to a design I felt made more sense.
     """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(ScoreHead, self).__init__(name, ScoreTarget())
+    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(ScoreHead, self).__init__(ScoreTarget())
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
@@ -485,8 +482,8 @@ class OwnershipHead(Head):
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
     """
 
-    def __init__(self, name: str, c_in: int, c_hidden: int, shape: Shape):
-        super(OwnershipHead, self).__init__(name, OwnershipTarget())
+    def __init__(self, c_in: int, c_hidden: int, shape: Shape):
+        super(OwnershipHead, self).__init__(OwnershipTarget())
 
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
@@ -508,9 +505,9 @@ class GeneralHead(Head):
     """
     A head that produces an arbitrarily shaped tensor.
     """
-    def __init__(self, target: LearningTarget, name: str, c_in: int, c_hidden: int, n_hidden: int,
+    def __init__(self, target: LearningTarget, c_in: int, c_hidden: int, n_hidden: int,
                  shape: Shape):
-        super(GeneralHead, self).__init__(name, target)
+        super(GeneralHead, self).__init__(target)
 
         self.shape = shape
 
@@ -546,8 +543,8 @@ class GeneralLogitHead(GeneralHead):
     These logits are not intended to be normalized with softmax. Instead, they are intended to be
     interpreted as independent binary classification logits.
     """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), name, c_in, c_hidden, n_hidden,
+    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), c_in, c_hidden, n_hidden,
                                                shape)
 
 
@@ -574,25 +571,84 @@ class ModuleSpec:
     type: str
     args: list = field(default_factory=list)
     kwargs: dict = field(default_factory=dict)
+    head: bool = False
+    repeat: int = 1  # number of times to repeat this module sequentially
+    parent: Optional[str] = None  # name of module that feeds this one. If None, is fed input
 
-
-@dataclass
-class OptimizerSpec:
-    type: str
-    kwargs: dict = field(default_factory=dict)
+    def to_module(self) -> nn.Module:
+        assert self.type in MODULE_MAP, f'Unknown module type {self.type}'
+        cls = MODULE_MAP[self.type]
+        modules = [cls(*self.args, **self.kwargs) for _ in range(self.repeat)]
+        if self.repeat == 1:
+            return modules[0]
+        else:
+            return nn.Sequential(*modules)
 
 
 @dataclass
 class ModelConfig:
-    stem: Optional[ModuleSpec]
-    blocks: List[ModuleSpec]
-    heads: List[ModuleSpec]
-    neck: Optional[ModuleSpec]
+    parts: Dict[str, ModuleSpec]
 
-    def validate(self):
-        for spec in [self.stem, self.neck] + self.blocks + self.heads:
-            if spec is not None:
-                assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
+    def __post_init__(self):
+        self._validate()
+
+    @staticmethod
+    def create(**parts: ModuleSpec) -> 'ModelConfig':
+        return ModelConfig(dict(parts))
+
+    def trim(self, keep_heads: Set[str]) -> 'ModelConfig':
+        """
+        Returns a copy of this ModelConfig with only the heads in keep_heads retained. All other
+        heads are removed, and any modules that are no longer used are also removed.
+        """
+        assert keep_heads, 'keep_heads is empty'
+        for head in keep_heads:
+            assert head in self.parts, f'Unknown head {head}'
+            assert self.parts[head].head, f'Not a head: {head}'
+
+        parts = dict(self.parts)
+
+        # First remove heads we don't want to keep
+        names = list(parts.keys())
+        for name in names:
+            if parts[name].head and name not in keep_heads:
+                del parts[name]
+
+        # Now remove any modules that are no longer used
+        used = {k for k, v in parts.items() if v.head}
+
+        while True:
+            n_used = len(used)
+            for key, value in parts.items():
+                if key in used and value.parent is not None:
+                    used.add(value.parent)
+            if len(used) == n_used:
+                break
+
+        for key in list(parts.keys()):
+            if key not in used:
+                del parts[key]
+
+        return ModelConfig.create(**parts)
+
+    def _validate(self):
+        input_seen = False
+        used = set()
+        for key, value in self.parts.items():
+            assert isinstance(value, ModuleSpec), f'{key}={type(value)}'
+            assert value.type in MODULE_MAP, f'Unknown module type {value.type} for {key}'
+            assert value.repeat >= 1, f'Invalid repeat {value.repeat} for {key}'
+            if value.head:
+                used.add(key)
+            if value.parent is None:
+                input_seen = True
+            else:
+                used.add(value.parent)
+                assert value.parent in self.parts, f'Unknown parent {value.parent} for {key}'
+        assert input_seen, 'No input module found'
+
+        for key in self.parts:
+            assert key in used, f'Module {key} is not used. Either remove it or set head=True'
 
 
 class ModelConfigGenerator(abc.ABC):
@@ -618,72 +674,78 @@ class Model(nn.Module):
     def __init__(self, config: ModelConfig):
         super(Model, self).__init__()
 
-        config.validate()
+        self._config = config
+        self._n = len(config.parts)
+        self._module_dict = nn.ModuleDict({k: v.to_module() for k, v in config.parts.items()})
+        self._module_list = list(self._module_dict.values())
+        self._target_names = [k for k, v in config.parts.items() if v.head]
+        self._parent_indices = self._compute_parent_indices()
+        self._adj_matrix = self._compute_adj_matrix()
+        self._dag_indices = topological_sort(self._adj_matrix)
+        self._head_indices = [i for i, v in enumerate(config.parts.values()) if v.head]
 
-        self.config = config
-        self.stem = Model._construct_module(config.stem)
-        self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
-        self.neck = Model._construct_module(config.neck)
-        self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
+        self._clone_dict = {}
+        self._model_architecture_signature = self._compute_model_architecture_signature()
 
-        self._model_architecture_signature = None
+    def _compute_parent_indices(self) -> List[List[int]]:
+        parent_indices = [list() for _ in range(self._n)]
+        inv_module_dict = {k: i for i, k in enumerate(self._module_dict.keys())}
+        for i, c in enumerate(self._config.parts.values()):
+            if c.parent is not None:
+                j = inv_module_dict[c.parent]
+                parent_indices[i].append(j)
+        return parent_indices
 
-    def get_model_architecture_signature(self, clone: 'Model'):
-        # We compute the signature from the *clone*, not from *self*, because self still has the
-        # auxiliary heads, while clone has them stripped. We don't need to include the auxiliary
-        # heads in the signature.
-        if self._model_architecture_signature is None:
-            self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
-        return self._model_architecture_signature
+    def _compute_adj_matrix(self) -> AdjMatrix:
+        adj_matrix: AdjMatrix = np.zeros((self._n, self._n), dtype=bool)
+
+        for i, ps in enumerate(self._parent_indices):
+            for p in ps:
+                adj_matrix[p, i] = True
+
+        return adj_matrix
+
+    def _compute_model_architecture_signature(self):
+        s = str(self)
+        logger.debug('Computing model architecture signature: %s', s)
+        return hashlib.md5(s.encode()).hexdigest()
 
     @property
-    def learning_targets(self) -> List[LearningTarget]:
-        return [head.target for head in self.heads]
+    def heads(self) -> List[Head]:
+        return [self._module_list[i] for i in self._head_indices]
 
     @property
     def target_names(self) -> List[str]:
-        return [head.name for head in self.heads]
+        return self._target_names
 
     def get_parameter_counts(self) -> Dict[str, int]:
         """
         Returns a dictionary mapping module names to the number of parameters in that module.
         """
-        counts = {}
-        if self.stem is not None:
-            counts['stem'] = sum(p.numel() for p in self.stem.parameters())
-        counts['blocks'] = sum(p.numel() for block in self.blocks for p in block.parameters())
-        if self.neck is not None:
-            counts['neck'] = sum(p.numel() for p in self.neck.parameters())
-        for head in self.heads:
-            counts[head.name] = sum(p.numel() for p in head.parameters())
-        return counts
+        return {k: sum(p.numel() for p in v.parameters()) for k, v in self._module_dict.items()}
 
     def forward(self, x):
-        out = x
-        if self.stem is not None:
-            out = self.stem(out)
-        for block in self.blocks:
-            out = block(out)
-        if self.neck is not None:
-            out = self.neck(out)
-        return tuple(head(out) for head in self.heads)
+        y = [None] * self._n
+        for i in self._dag_indices:
+            parents = self._parent_indices[i]
+            if not parents:
+                y[i] = self._module_list[i](x)
+            else:
+                args = [y[p] for p in parents]
+                y[i] = self._module_list[i](*args)
 
-    @staticmethod
-    def _construct_module(spec: Optional[ModuleSpec]) -> Optional[nn.Module]:
-        if spec is None:
-            return None
-        cls = MODULE_MAP[spec.type]
-        return cls(*spec.args, **spec.kwargs)
+        return tuple(y[i] for i in self._head_indices)
 
     def validate(self, shape_info_dict: ShapeInfoDict, loss_weights: Dict[str, float]):
         head_names = set()
-        for head in self.heads:
-            assert head.name not in head_names, f'Head with name {head.name} already exists'
-            head_names.add(head.name)
+        for head in self._target_names:
+            assert head not in head_names, f'Head with name {head} already exists'
+            head_names.add(head)
 
-        assert self.heads[0].name == 'policy', 'The first head must be the policy head'
-        assert self.heads[1].name == 'value', 'The second head must be the value head'
-        assert self.heads[2].name == 'action_value', 'The third head must be the action_value head'
+        # TODO: rm these asserts here, and instead do dynamic index assignment in the c++
+        assert self._target_names[0] == 'policy', 'The first head must be policy'
+        assert self._target_names[1] == 'value', 'The second head must be value'
+        assert self._target_names[2] == 'action_value', 'The third head must be action_value'
 
         for name in loss_weights:
             assert name in head_names, f'Loss weight for unknown head {name}'
@@ -704,20 +766,23 @@ class Model(nn.Module):
             os.makedirs(output_dir, exist_ok=True)
 
         # 1) clone, strip extra heads, freeze
-        clone = copy.deepcopy(self)
-        clone.heads = nn.ModuleList(h for h in clone.heads if h.name in primary_targets)
+        clone_dict_key = frozenset(primary_targets)
+        clone = self._clone_dict.get(clone_dict_key, None)
+        if clone is None:
+            trimmed_config = self._config.trim(primary_targets)
+            clone = Model(trimmed_config)
+            self._clone_dict[clone_dict_key] = clone
+        clone.load_state_dict(self.state_dict(), strict=False)
         clone.cpu().eval()
 
         input_names = ["input"]
-        output_names = [head.name for head in clone.heads]
+        output_names = clone._target_names
         dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
         example_shape = (batch_size, *shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
-
-        signature = self.get_model_architecture_signature(clone)
 
         # 3) Export to a temporary in-memory buffer
         buf = io.BytesIO()
@@ -735,7 +800,7 @@ class Model(nn.Module):
         model = onnx.load_from_string(buf.getvalue())
         kv = model.metadata_props.add()
         kv.key = 'model-architecture-signature'
-        kv.value = signature
+        kv.value = clone._model_architecture_signature
 
         onnx.save(model, filename)
 
@@ -757,5 +822,5 @@ class Model(nn.Module):
         """
         checkpoint.update({
             'model.state_dict': self.state_dict(),
-            'model.config': self.config,
+            'model.config': self._config,
         })
