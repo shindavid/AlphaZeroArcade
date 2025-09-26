@@ -21,6 +21,25 @@ TEST(StableDiscs, corners) {
   EXPECT_EQ(stable, 0x8100000000000081ULL);
 }
 
+TEST(StableDiscs, edges) {
+  // Two adjacent discs in the bottom-right corner
+  mask_t cur_player_mask = 0x0000000000000003ULL;
+  mask_t opponent_mask = 0x0000000000000000ULL;
+  mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
+  EXPECT_EQ(stable, 0x0000000000000003ULL);
+
+  // Full bottom row
+  cur_player_mask = 0x00000000000000FFULL;
+  opponent_mask = 0x0000000000000000ULL;
+  stable = compute_stable_discs(cur_player_mask, opponent_mask);
+  EXPECT_EQ(stable, 0x00000000000000FFULL);
+
+  // A1 A2
+  cur_player_mask = 0x8080000000000000ULL;
+  opponent_mask = 0x0000000000000000ULL;
+  stable = compute_stable_discs(cur_player_mask, opponent_mask);
+  EXPECT_EQ(stable, 0x8080000000000000ULL);
+}
 
 
 } // namespace othello
