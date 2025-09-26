@@ -383,14 +383,11 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   LookupTable& lookup_table = general_context_.lookup_table;
 
   State& state = context.leaf_canonical_history.current();
-
-  // TODO: remove this assert after testing
-  RELEASE_ASSERT(group::kIdentity == Symmetries::get_canonical_symmetry(state));
-
   core::node_pool_index_t node_index = context.initialization_index;
-
   Node* node = lookup_table.get_node(node_index);
   bool is_root = (node_index == root_info.node_index);
+
+  DEBUG_ASSERT(group::kIdentity == Symmetries::get_canonical_symmetry(state));
 
   Algorithms::load_evaluations(context);
   context.eval_request.mark_all_as_stale();

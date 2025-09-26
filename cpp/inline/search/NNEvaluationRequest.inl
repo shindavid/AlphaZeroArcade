@@ -14,7 +14,7 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const
       split_history_(true),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {
-  RELEASE_ASSERT(Game::Symmetries::get_canonical_symmetry(state) == group::kIdentity);
+  DEBUG_ASSERT(Game::Symmetries::get_canonical_symmetry(state) == group::kIdentity);
 }
 
 template <search::concepts::Traits Traits>
@@ -26,7 +26,7 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group
       split_history_(false),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {
-  RELEASE_ASSERT(Game::Symmetries::get_canonical_symmetry(history.current()) == group::kIdentity);
+  DEBUG_ASSERT(Game::Symmetries::get_canonical_symmetry(history.current()) == group::kIdentity);
 }
 
 template <search::concepts::Traits Traits>
