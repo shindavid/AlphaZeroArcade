@@ -1,3 +1,4 @@
+#include "games/othello/aux_features/StableDiscs.hpp"
 #include "games/othello/GameState.hpp"
 
 namespace othello {
@@ -11,6 +12,10 @@ inline size_t GameState::hash() const {
 
 inline int GameState::get_count(core::seat_index_t seat) const {
   return std::popcount(seat == core.cur_player ? core.cur_player_mask : core.opponent_mask);
+}
+
+inline void GameState::compute_aux() {
+  aux.stable_discs = compute_stable_discs(core.cur_player_mask, core.opponent_mask);
 }
 
 }  // namespace othello

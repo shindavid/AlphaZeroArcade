@@ -11,6 +11,9 @@ struct GameState {
   int get_count(core::seat_index_t seat) const;
   core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
 
+  void compute_aux();
+  void validate_aux() const {}
+
   struct Core {
     auto operator<=>(const Core& other) const = default;
     bool operator==(const Core& other) const = default;
@@ -19,7 +22,9 @@ struct GameState {
     core::seat_index_t cur_player;
     int8_t pass_count;};
 
-  struct Aux {};
+  struct Aux {
+    mask_t stable_discs;
+  };
   Core core;
   Aux aux;
 };
