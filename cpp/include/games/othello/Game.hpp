@@ -8,6 +8,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "core/GameRulesBase.hpp"
 #include "games/othello/Constants.hpp"
+#include "games/othello/GameState.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -34,18 +35,7 @@ class Game {
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
   };
 
-  struct State {
-    auto operator<=>(const State& other) const = default;
-    size_t hash() const;
-    int get_count(core::seat_index_t seat) const;
-    core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
-
-    mask_t opponent_mask;    // spaces occupied by either player
-    mask_t cur_player_mask;  // spaces occupied by current player
-    core::seat_index_t cur_player;
-    int8_t pass_count;
-  };
-
+  using State = othello::GameState;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;

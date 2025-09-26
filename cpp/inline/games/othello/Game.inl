@@ -9,24 +9,6 @@
 
 namespace othello {
 
-inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count);
-  std::hash<decltype(tuple)> hasher;
-  return hasher(tuple);
-}
-
-inline int Game::State::get_count(core::seat_index_t seat) const {
-  return std::popcount(seat == cur_player ? cur_player_mask : opponent_mask);
-}
-
-inline core::seat_index_t Game::State::get_player_at(int row, int col) const {
-  int cp = Rules::get_current_player(*this);
-  int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
-  bool occupied_by_opponent = (mask_t(1) << index) & opponent_mask;
-  return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
-}
-
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
@@ -41,19 +23,19 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
     case D4::kIdentity:
       return;
     case D4::kRot90:
-      return rot90_clockwise(s.cur_player_mask, s.opponent_mask);
+      return rot90_clockwise(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kRot180:
-      return rot180(s.cur_player_mask, s.opponent_mask);
+      return rot180(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kRot270:
-      return rot270_clockwise(s.cur_player_mask, s.opponent_mask);
+      return rot270_clockwise(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kFlipVertical:
-      return flip_vertical(s.cur_player_mask, s.opponent_mask);
+      return flip_vertical(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kFlipMainDiag:
-      return flip_main_diag(s.cur_player_mask, s.opponent_mask);
+      return flip_main_diag(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kMirrorHorizontal:
-      return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
+      return mirror_horizontal(s.core.cur_player_mask, s.core.opponent_mask);
     case D4::kFlipAntiDiag:
-      return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
+      return flip_anti_diag(s.core.cur_player_mask, s.core.opponent_mask);
     default:
       throw util::Exception("Unknown group element: {}", sym);
   }
@@ -130,14 +112,14 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& st
 }
 
 inline void Game::Rules::init_state(State& state) {
-  state.opponent_mask = kStartingWhiteMask;
-  state.cur_player_mask = kStartingBlackMask;
-  state.cur_player = kStartingColor;
-  state.pass_count = 0;
+  state.core.opponent_mask = kStartingWhiteMask;
+  state.core.cur_player_mask = kStartingBlackMask;
+  state.core.cur_player = kStartingColor;
+  state.core.pass_count = 0;
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return state.cur_player;
+  return state.core.cur_player;
 }
 
 // copied from edax-reversi repo

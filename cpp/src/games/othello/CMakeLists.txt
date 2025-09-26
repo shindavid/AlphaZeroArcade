@@ -1,6 +1,7 @@
 set(COMMON_SOURCES
     EdaxOracle.cpp
     Game.cpp
+    GameState.cpp
     flip_sse.cpp
 )
 
