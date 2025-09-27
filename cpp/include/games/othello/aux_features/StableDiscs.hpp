@@ -6,9 +6,8 @@ namespace othello {
 
   mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask);
 
-  mask_t corner_stable_discs(mask_t cur_player_mask);
-
-  mask_t edge_stable_discs(mask_t cur_player_mask);
+  inline mask_t corner_stable_discs(mask_t mask) { return kCornersMask & mask; };
+  mask_t edge_stable_discs(mask_t mask);
 
 } // namespace othello
 

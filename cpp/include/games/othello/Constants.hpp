@@ -116,6 +116,16 @@ const int kStartingBlack2 = kD5;
 const mask_t kStartingWhiteMask = 1ULL << kStartingWhite1 | 1ULL << kStartingWhite2;
 const mask_t kStartingBlackMask = 1ULL << kStartingBlack1 | 1ULL << kStartingBlack2;
 
+constexpr mask_t kA1Mask = 1ULL << kA1;
+constexpr mask_t kA8Mask = 1ULL << kA8;
+constexpr mask_t kH1Mask = 1ULL << kH1;
+constexpr mask_t kH8Mask = 1ULL << kH8;
+constexpr mask_t kCornersMask = kA1Mask | kA8Mask | kH1Mask | kH8Mask;
+constexpr mask_t kRank1Mask = 0x00000000000000FFULL;
+constexpr mask_t kRank8Mask = 0xFF00000000000000ULL;
+constexpr mask_t kFileAMask = 0x0101010101010101ULL;
+constexpr mask_t kFileHMask = 0x8080808080808080ULL;
+
 /*
  * +1 for the pass move.
  *
