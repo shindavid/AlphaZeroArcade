@@ -116,7 +116,7 @@ TEST(StableDiscs, edges) {
   EXPECT_EQ(stable, 0x8080000000000000ULL);
 
 
-  /*
+/*
    A B C D E F G H            A B C D E F G H
  1| | | | | |X|X|X|         1| | | | | |*|*|*|
  2| | | | | | | |O|         2| | | | | | | | |
