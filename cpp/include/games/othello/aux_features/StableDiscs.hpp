@@ -9,14 +9,14 @@ namespace othello {
   inline mask_t corner_stable_discs(mask_t mask) { return kCornersMask & mask; };
   mask_t edge_stable_discs(mask_t mask);
 
-  inline constexpr auto step_east = [](mask_t m) { return m << 1; };
-  inline constexpr auto step_west = [](mask_t m) { return m >> 1; };
-  inline constexpr auto step_north = [](mask_t m) { return m >> 8; };
-  inline constexpr auto step_south = [](mask_t m) { return m << 8; };
-  inline constexpr auto step_northeast = [](mask_t m) { return m >> 7; };
-  inline constexpr auto step_northwest = [](mask_t m) { return m >> 9; };
-  inline constexpr auto step_southeast = [](mask_t m) { return m << 9; };
-  inline constexpr auto step_southwest = [](mask_t m) { return m << 7; };
+  inline mask_t step_east(mask_t m) { return (m & ~kFileHMask) << 1; }
+  inline mask_t step_west(mask_t m) { return (m & ~kFileAMask) >> 1; }
+  inline mask_t step_north(mask_t m) { return m >> 8; };
+  inline mask_t step_south(mask_t m) { return m << 8; };
+  inline mask_t step_northeast(mask_t m) { return (m & ~kFileHMask) >> 7; }
+  inline mask_t step_northwest(mask_t m) { return (m & ~kFileAMask) >> 9; }
+  inline mask_t step_southeast(mask_t m) { return (m & ~kFileHMask) << 9; }
+  inline mask_t step_southwest(mask_t m) { return (m & ~kFileAMask) << 7; }
 
 } // namespace othello
 
