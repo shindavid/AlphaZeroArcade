@@ -135,4 +135,53 @@ TEST(StableDiscs, edges) {
   EXPECT_EQ(stable, 0x01010101010000E0ULL);
 }
 
+TEST(StableDiscs, interior_one_side_protected) {
+
+/*
+   A B C D E F G H            A B C D E F G H
+ 1|O|O|O| | |X|X|X|         1|*|*|*| | |*|*|*|
+ 2|O|O| | | | |O|O|         2|*|*| | | | | | |
+ 3| | | | | | | |O|         3| | | | | | | | |
+ 4| | | | | | | | |   -->   4| | | | | | | | |
+ 5| | | | | | | | |         5| | | | | | | | |
+ 6| | | | | | | | |         6| | | | | | | | |
+ 7| | | | | | | | |         7| | | | | | | | |
+ 8| | | | | | | | |         8| | | | | | | | |
+
+  Stable discs are A1, A2, B1, B2, C1, F1, G1, H1
+*/
+
+mask_t cur_player_mask = (1ULL << kF1) | (1ULL << kG1) | (1ULL << kH1);
+mask_t opponent_mask = (1ULL << kA1) | (1ULL << kA2) | (1ULL << kB1) | (1ULL << kB2) |
+                     (1ULL << kC1) | (1ULL << kG2) | (1ULL << kH2) | (1ULL << kH3);
+mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
+mask_t expected_stable = (1ULL << kA1) | (1ULL << kA2) | (1ULL << kB1) | (1ULL << kB2) |
+                         (1ULL << kC1) | (1ULL << kF1) | (1ULL << kG1) | (1ULL << kH1);
+EXPECT_EQ(stable, expected_stable);
+}
+
+TEST(StableDiscs, full_edge) {
+/*
+   A B C D E F G H            A B C D E F G H
+ 1|O|O|O|X|O|X|X|X|         1|*|*|*|*|*|*|*|*|
+ 2| | | | | | | | |         2| | | | | | | | |
+ 3| | | | | | | | |         3| | | | | | | | |
+ 4| | | | | | | | |   -->   4| | | | | | | | |
+ 5| | | | | | | | |         5| | | | | | | | |
+ 6| | | | | | | | |         6| | | | | | | | |
+ 7| | | | | | | | |         7| | | | | | | | |
+ 8| | | | | | | | |         8| | | | | | | | |
+
+  Stable discs are A1, A2, A3, B1, B2, B3, C1, C2, C3, D1, E1, F1, G1, H1
+*/
+
+mask_t cur_player_mask = (1ULL << kD1) | (1ULL << kF1) | (1ULL << kG1) | (1ULL << kH1);
+mask_t opponent_mask = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kE1);
+mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
+mask_t expected_stable = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kD1) |
+                         (1ULL << kE1) | (1ULL << kF1) | (1ULL << kG1) | (1ULL << kH1);
+EXPECT_EQ(stable, expected_stable);
+}
+
+
 } // namespace othello
