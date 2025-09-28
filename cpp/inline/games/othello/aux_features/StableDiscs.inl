@@ -16,7 +16,7 @@ inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask)
 
 inline mask_t edge_stable_discs(mask_t mask) {
   auto grow = [&](auto shift) {
-    return [&](mask_t start_bit, mask_t line_mask) {
+    return [&, shift](mask_t start_bit, mask_t line_mask) {
       mask_t run = 0;
       mask_t m = start_bit;
       while (m & line_mask & mask) {
@@ -27,10 +27,10 @@ inline mask_t edge_stable_discs(mask_t mask) {
     };
   };
 
-  auto grow_east = grow([&](mask_t m) { return m << 1; });
-  auto grow_west = grow([&](mask_t m) { return m >> 1; });
-  auto grow_north = grow([&](mask_t m) { return m >> 8; });
-  auto grow_south = grow([&](mask_t m) { return m << 8; });
+  auto grow_east = grow(step_east);
+  auto grow_west = grow(step_west);
+  auto grow_north = grow(step_north);
+  auto grow_south = grow(step_south);
 
   mask_t stable = 0;
 
