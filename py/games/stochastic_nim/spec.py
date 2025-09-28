@@ -1,11 +1,15 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, ShapeInfoDict
+from shared.basic_types import ShapeInfoDict
+from shared.loss_term import BasicLossTerm, LossTerm
+from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
+from torch import optim
+
 from dataclasses import dataclass
 import math
-from torch import optim
+from typing import List
 
 
 class CNN_b3_c32(ModelConfigGenerator):
@@ -39,30 +43,27 @@ class CNN_b3_c32(ModelConfigGenerator):
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                head=True,
                 parent='trunk'
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden, value_shape],
-                head=True,
                 parent='trunk'
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                head=True,
                 parent='trunk'
             ),
         )
 
     @staticmethod
-    def loss_weights():
-        return {
-            'policy': 1.0,
-            'value': 1.5,
-            'action_value': 1.0,
-        }
+    def loss_terms() -> List[LossTerm]:
+        return [
+            BasicLossTerm('policy', 1.0),
+            BasicLossTerm('value', 1.5),
+            BasicLossTerm('action_value', 1.0),
+        ]
 
     @staticmethod
     def optimizer(params) -> optim.Optimizer:

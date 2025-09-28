@@ -6,7 +6,8 @@ from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
-from shared.net_modules import Model, ModelConfig, ModelConfigGenerator
+from shared.model import Model
+from shared.model_config import ModelConfig, ModelConfigGenerator
 from util.py_util import make_hidden_filename
 
 import torch
@@ -45,6 +46,7 @@ class TrainingManager:
         self._trainer = None
         self._net = None
         self._opt = None
+        self._loss_terms = None
         self._primary_targets = None  # initialized lazily
         self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
@@ -199,14 +201,7 @@ class TrainingManager:
             return Window(0, 0, 0)
         return Window(*row)
 
-    def _load_last_checkpoint(self, model_cfg_generator_type: Type[ModelConfigGenerator],
-                              model_cfg: ModelConfig):
-        """
-        If a prior checkpoint exists, does the following:
-
-        - Sets self._net
-        - Sets self._opt
-        """
+    def _load_last_checkpoint(self, model_cfg_generator_type: Type[ModelConfigGenerator]):
         organizer = self._controller.organizer
         gen = organizer.get_last_checkpointed_generation()
         if gen is None:
@@ -223,49 +218,31 @@ class TrainingManager:
             checkpoint = torch.load(tmp_checkpoint_filename, weights_only=False)
             self._net = Model.load_from_checkpoint(checkpoint)
 
-        self._init_net_and_opt(model_cfg_generator_type, model_cfg)
-
-    def _init_net_and_opt(self, model_cfg_generator_type: Type[ModelConfigGenerator],
-                          model_cfg: ModelConfig):
+    def _post_init(self, model_cfg_generator_type: Type[ModelConfigGenerator]):
         """
-        Assumes that self._net has been initialized, and that self._opt has not.
+        Performs some post-initialization that can only be performed after self._net has been
+        created (either from scratch or from a checkpoint).
 
-        Moves self._net to cuda device and puts it in train mode.
-
-        Initializes self._opt.
+        - Moves self._net to cuda device and puts it in train mode.
+        - Initializes self.{_net, _opt, _loss_terms}.
         """
         self._net.cuda(device=self._controller.params.cuda_device)
         self._net.train()
 
         self._opt = model_cfg_generator_type.optimizer(self._net.parameters())
 
-        # TODO: SWA, cyclic learning rate
-
-    def _get_net_and_optimizer(self) -> Tuple[Model, optim.Optimizer]:
-        if self._net is not None:
-            return self._net, self._opt
-
-        organizer = self._controller.organizer
-        checkpoint_gen = organizer.get_last_checkpointed_generation()
-
-        game_spec = self._controller.game_spec
-        shape_info_dict = self._game_log_reader.shape_info_dict
-        model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
-        model_cfg = model_cfg_generator_type.generate(shape_info_dict)
-        gen_cls = model_cfg_generator_type.__name__
-
-        if checkpoint_gen is None:
-            self._net = Model(model_cfg)
-            self._net.validate(shape_info_dict, model_cfg_generator_type.loss_weights())
-            self._init_net_and_opt(model_cfg_generator_type, model_cfg)
-        else:
-            self._load_last_checkpoint(model_cfg_generator_type, model_cfg)
+        self._loss_terms = model_cfg_generator_type.loss_terms()
+        for term in self._loss_terms:
+            term.post_init(self._net)
 
         # Validate that network heads match c++ TrainingTargets
-        logger.info('Validating heads...')
+        logger.debug('Validating heads...')
+        shape_info_dict = self._game_log_reader.shape_info_dict
+        gen_cls = model_cfg_generator_type.__name__
+
         self._primary_targets = {info.name for info in shape_info_dict.values() if info.primary}
         n_primary_heads = 0
-        for h, name in enumerate(self._net.target_names):
+        for h, name in enumerate(self._net.head_names):
             shape_info = shape_info_dict.get(name, None)
             if shape_info is None:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
@@ -279,9 +256,28 @@ class TrainingManager:
         if n_primary_heads != len(self._primary_targets):
             raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
                              f'[{n_primary_heads} != len({self._primary_targets})]')
-        logger.info('Validation complete!')
+        logger.debug('Validation complete!')
 
-        return self._net, self._opt
+        # TODO: SWA, cyclic learning rate
+
+    def _init_net_if_necessary(self):
+        if self._net is not None:
+            return
+
+        organizer = self._controller.organizer
+        checkpoint_gen = organizer.get_last_checkpointed_generation()
+
+        game_spec = self._controller.game_spec
+        shape_info_dict = self._game_log_reader.shape_info_dict
+        model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
+        model_cfg = model_cfg_generator_type.generate(shape_info_dict)
+
+        if checkpoint_gen is None:
+            self._net = Model(model_cfg)
+        else:
+            self._load_last_checkpoint(model_cfg_generator_type)
+
+        self._post_init(model_cfg_generator_type)
 
     def _train_step_helper(self, table: GpuContentionTable, subgen=None):
         self._controller.spawn_log_sync_thread()
@@ -359,16 +355,12 @@ class TrainingManager:
                 start = max(0, n - w)
                 end = n
 
-            net, optimizer = self._get_net_and_optimizer()
+            self._init_net_if_necessary()
             self._dump_model_counts()
 
-            game_spec = self._controller.game_spec
-            model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
-            loss_weights = model_cfg_generator_type.loss_weights()
-
             self._stats = trainer.do_training_epoch(
-                self._game_log_reader, net, optimizer, minibatch_size, n_minibatches,
-                start, end, gen, loss_weights)
+                self._game_log_reader, self._net, self._opt, minibatch_size, n_minibatches,
+                start, end, gen, self._loss_terms)
         except:
             if self._game_log_reader.closed():
                 # This is a shutdown race-condition, it's ok

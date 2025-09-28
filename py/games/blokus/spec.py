@@ -1,11 +1,15 @@
 from games.game_spec import GameSpec
-from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, ShapeInfoDict
+from shared.basic_types import ShapeInfoDict
+from shared.loss_term import BasicLossTerm, LossTerm
+from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
+from torch import optim
+
 from dataclasses import dataclass
 import math
-from torch import optim
+from typing import List
 
 
 class CNN_b20_c128(ModelConfigGenerator):
@@ -79,54 +83,48 @@ class CNN_b20_c128(ModelConfigGenerator):
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape],
-                head=True,
                 parent='trunk'
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
                 args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                       value_shape],
-                head=True,
                 parent='trunk'
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=['action_value', board_size, c_trunk, c_action_value_hidden,
                       action_value_shape],
-                head=True,
                 parent='trunk'
             ),
             score=ModuleSpec(
                 type='ScoreHead',
                 args=['score', c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_shape],
-                head=True,
                 parent='trunk'
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
                 args=['ownership', c_trunk, c_ownership_hidden, ownership_shape],
-                head=True,
                 parent='trunk'
             ),
             unplayed_pieces=ModuleSpec(
                 type='GeneralLogitHead',
                 args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
                       n_unplayed_pieces_hidden, unplayed_pieces_shape],
-                head=True,
                 parent='trunk'
             ),
         )
 
     @staticmethod
-    def loss_weights():
-        return {
-            'policy': 1.0,
-            'value': 1.5,
-            'action_value': 1.0,
-            'score': 0.02,
-            'ownership': 0.15,
-            'unplayed_pieces': 0.3,
-        }
+    def loss_terms() -> List[LossTerm]:
+        return [
+            BasicLossTerm('policy', 1.0),
+            BasicLossTerm('value', 1.5),
+            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('score', 0.02),
+            BasicLossTerm('ownership', 0.15),
+            BasicLossTerm('unplayed_pieces', 0.3),
+        ]
 
     @staticmethod
     def optimizer(params) -> optim.Optimizer:

@@ -1,7 +1,10 @@
+from util.torch_util import Shape
+
+import torch
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict
-from util.torch_util import Shape
 
 
 @dataclass
@@ -10,6 +13,9 @@ class ShapeInfo:
     target_index: int
     primary: bool
     shape: Shape
+
+
+ShapeInfoDict = Dict[str, ShapeInfo]
 
 
 class SearchParadigm(Enum):
@@ -21,4 +27,4 @@ class SearchParadigm(Enum):
         return value in {paradigm.value for paradigm in SearchParadigm}
 
 
-ShapeInfoDict = Dict[str, ShapeInfo]
+HeadValuesDict = Dict[str, torch.Tensor]

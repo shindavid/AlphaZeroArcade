@@ -3,12 +3,13 @@ from torch import optim
 
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.game_log_reader import GameLogReader
-from shared.net_modules import Head, Model
+from shared.loss_term import LossTerm
+from shared.model import Model
 from util.torch_util import apply_mask
 
 import logging
 import time
-from typing import Dict, Optional
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
@@ -27,9 +28,9 @@ class EvaluationResults:
 class TrainingSubStats:
     max_descr_len = 0
 
-    def __init__(self, name: str, loss_weight: float):
-        self.name = name
-        self.loss_weight = loss_weight
+    def __init__(self, term: LossTerm):
+        self.name = term.name
+        self.loss_weight = term.weight
         self.loss_num = 0.0
         self.den = 0
 
@@ -67,7 +68,7 @@ class TrainingSubStats:
 
 class TrainingStats:
     def __init__(self, gen: Generation, minibatch_size: int, window_start: int,
-                 window_end: int, net: Model, loss_weights: Dict[str, float]):
+                 window_end: int, net: Model, loss_terms: List[LossTerm]):
         self.gen = gen
         self.minibatch_size = minibatch_size
         self.window_start = window_start
@@ -76,8 +77,7 @@ class TrainingStats:
 
         self.n_minibatches_processed = 0
         self.n_samples = 0
-        self.substats_list = [TrainingSubStats(name, loss_weights[name])
-                              for name in net.target_names]
+        self.substats_list = [TrainingSubStats(term) for term in loss_terms]
 
     def update(self, results_list: List[EvaluationResults], n_samples):
         self.n_samples += n_samples
@@ -118,7 +118,7 @@ class NetTrainer:
                           window_start: int,
                           window_end: int,
                           gen: Generation,
-                          loss_weights: Dict[str, float]) -> Optional[TrainingStats]:
+                          loss_terms: List[LossTerm]) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -130,14 +130,13 @@ class NetTrainer:
         t0 = time.time()
         train_time = 0.0
 
-        data_batches = reader.create_data_batches(
-            minibatch_size, n_minibatches, window_start, window_end, net._target_names, gen)
+        loss_weights = [term.weight for term in loss_terms]
 
-        loss_fns = [head.target.loss_fn() for head in net.heads]
-        loss_weights_list = [loss_weights[name] for name in net.target_names]
+        data_batches = reader.create_data_batches(
+            minibatch_size, n_minibatches, window_start, window_end, net._head_names, gen)
 
         n_samples = 0
-        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_weights)
+        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_terms)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
@@ -153,8 +152,12 @@ class NetTrainer:
 
             labels = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks, labels)]
             outputs = [apply_mask(y, mask) for mask, y in zip(masks, outputs)]
-            losses = [f(y_hat, y) for f, y_hat, y in zip(loss_fns, outputs, labels)]
-            loss = sum([l * w for l, w in zip(losses, loss_weights_list)])
+
+            labels_dict = {head: y_hat for head, y_hat in zip(net.head_names, labels)}
+            outputs_dict = {head: y for head, y in zip(net.head_names, outputs)}
+
+            losses = [term.compute_loss(outputs_dict, labels_dict) for term in loss_terms]
+            loss = sum([l * w for l, w in zip(losses, loss_weights)])
             results_list = [EvaluationResults(*x) for x in zip(labels, outputs, losses)]
 
             n_samples += len(inputs)

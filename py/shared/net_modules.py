@@ -15,33 +15,24 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-from shared.basic_types import SearchParadigm, ShapeInfoDict
-from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
-    WinShareActionValueTarget, WinShareValueTarget
 from shared.transformer_modules import TransformerBlock
-from util.graph_util import AdjMatrix, topological_sort
-from util.torch_util import Shape
+from util.torch_util import LossFunction, Shape
 
-import numpy as np
-import onnx
 import torch
 from torch import nn as nn
-from torch import optim
 from torch.nn import functional as F
 
-import abc
-import copy
-from dataclasses import dataclass, field
-import hashlib
-import io
 import logging
 import math
-import os
-from typing import Any, Dict, List, Optional, Set
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
+
+
+class Head(nn.Module):
+    def default_loss_function(self) -> Optional[LossFunction]:
+        return None
 
 
 class GlobalPoolingLayer(nn.Module):
@@ -223,12 +214,6 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class Head(nn.Module):
-    def __init__(self, target: LearningTarget):
-        super(Head, self).__init__()
-        self.target = target
-
-
 class PolicyHead(Head):
     """
     This maps to the main subhead of PolicyHead in the KataGo codebase.
@@ -268,12 +253,15 @@ class PolicyHead(Head):
     logit probabilities for all intersections and the pass move
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(PolicyHead, self).__init__(PolicyTarget())
+        super(PolicyHead, self).__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -318,12 +306,15 @@ class WinLossDrawValueHead(Head):
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossDrawValueHead, self).__init__(WinLossDrawValueTarget())
+        super(WinLossDrawValueHead, self).__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 3)
+
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -344,12 +335,15 @@ class WinLossValueHead(Head):
     This is based off WinLossDrawValueHead.
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossValueHead, self).__init__(WinLossValueTarget())
+        super(WinLossValueHead, self).__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 2)
+
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -370,12 +364,15 @@ class WinShareActionValueHead(Head):
     WinLossValueHead
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(WinShareActionValueHead, self).__init__(WinShareActionValueTarget())
+        super(WinShareActionValueHead, self).__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return nn.BCEWithLogitsLoss()
 
     def forward(self, x):
         out = x
@@ -415,13 +412,20 @@ class WinShareValueHead(Head):
     """
 
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(WinShareValueHead, self).__init__(WinShareValueTarget())
+        super(WinShareValueHead, self).__init__()
 
         (n_players, ) = shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_players)
+
+    def default_loss_function(self):
+        # TODO: change this to use KL-Divergence loss, as advertised above.
+        #
+        # (dshin) I briefly experimented with nn.KLDivLoss, but it didn't seem to work well. I think
+        # I must have been using it incorrectly.
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -438,11 +442,18 @@ class ScoreHead(Head):
     """
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
-    I attempt to match what is described in the KataGo paper, but it didn't seem to learn well.
-    So I modified it to a design I felt made more sense.
+    It outputs a (2, N) tensor, where the first row is a PDF (probability distribution function) and
+    the second row is a CDF (cumulative distribution function).
+
+    N represents the number of discrete score buckets.
+
+    The loss is computed as the sum of a cross-entropy loss on the PDF and a mean-squared error loss
+    on the CDF.
+
+    See Section 4.1 of the KataGo paper for details.
     """
     def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(ScoreHead, self).__init__(ScoreTarget())
+        super(ScoreHead, self).__init__()
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
@@ -458,6 +469,31 @@ class ScoreHead(Head):
         n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
         self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
         self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+
+    def default_loss_function(self):
+        pdf_loss_fn = nn.CrossEntropyLoss()
+        cdf_loss_fn = nn.MSELoss()
+
+        def loss(output: torch.Tensor, target: torch.Tensor):
+            """
+            Tensors are of shape (B, D, C, aux...), where:
+
+            B = batch-size
+            D = num distribution types (2: PDF, CDF)
+            C = number of classes (i.e., number of possible scores)
+            aux... = any number of additional dimensions
+
+            aux... might be nonempty if for example we're predicting for multiple players
+            """
+            assert output.shape == target.shape, (output.shape, target.shape)
+            assert output.shape[1] == 2, output.shape  # PDF, CDF
+
+            pdf_loss = pdf_loss_fn(output[:, 0], target[:, 0])
+            cdf_loss = cdf_loss_fn(output[:, 1], target[:, 1])
+
+            return pdf_loss + cdf_loss
+
+        return loss
 
     def forward(self, x):
         N = x.shape[0]
@@ -483,7 +519,7 @@ class OwnershipHead(Head):
     """
 
     def __init__(self, c_in: int, c_hidden: int, shape: Shape):
-        super(OwnershipHead, self).__init__(OwnershipTarget())
+        super(OwnershipHead, self).__init__()
 
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
@@ -493,6 +529,9 @@ class OwnershipHead(Head):
         self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=True)
 
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
+
     def forward(self, x):
         out = x
         out = self.conv1(out)
@@ -501,13 +540,15 @@ class OwnershipHead(Head):
         return out
 
 
-class GeneralHead(Head):
+class GeneralLogitHead(Head):
     """
-    A head that produces an arbitrarily shaped tensor.
+    A head that produces an arbitrarily shaped tensor, unrelated to the input spatial dimensions.
+
+    The outputs are interpeted as independent logits, which should be passed through a sigmoid to
+    convert to independent probabilities.
     """
-    def __init__(self, target: LearningTarget, c_in: int, c_hidden: int, n_hidden: int,
-                 shape: Shape):
-        super(GeneralHead, self).__init__(target)
+    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(GeneralLogitHead, self).__init__()
 
         self.shape = shape
 
@@ -519,6 +560,9 @@ class GeneralHead(Head):
         n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
         self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
         self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+
+    def default_loss_function(self):
+        return nn.BCEWithLogitsLoss()
 
     def forward(self, x):
         N = x.shape[0]
@@ -534,18 +578,6 @@ class GeneralHead(Head):
         out = self.linear2(out)  # (N, *)
 
         return out.view(N, *self.shape)  # (N, *shape)
-
-
-class GeneralLogitHead(GeneralHead):
-    """
-    A head that produces an arbitrarily shaped tensor of logits.
-
-    These logits are not intended to be normalized with softmax. Instead, they are intended to be
-    interpreted as independent binary classification logits.
-    """
-    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), c_in, c_hidden, n_hidden,
-                                               shape)
 
 
 MODULE_MAP = {
@@ -564,263 +596,3 @@ MODULE_MAP = {
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
     }
-
-
-@dataclass
-class ModuleSpec:
-    type: str
-    args: list = field(default_factory=list)
-    kwargs: dict = field(default_factory=dict)
-    head: bool = False
-    repeat: int = 1  # number of times to repeat this module sequentially
-    parent: Optional[str] = None  # name of module that feeds this one. If None, is fed input
-
-    def to_module(self) -> nn.Module:
-        assert self.type in MODULE_MAP, f'Unknown module type {self.type}'
-        cls = MODULE_MAP[self.type]
-        modules = [cls(*self.args, **self.kwargs) for _ in range(self.repeat)]
-        if self.repeat == 1:
-            return modules[0]
-        else:
-            return nn.Sequential(*modules)
-
-
-@dataclass
-class ModelConfig:
-    parts: Dict[str, ModuleSpec]
-
-    def __post_init__(self):
-        self._validate()
-
-    @staticmethod
-    def create(**parts: ModuleSpec) -> 'ModelConfig':
-        return ModelConfig(dict(parts))
-
-    def trim(self, keep_heads: Set[str]) -> 'ModelConfig':
-        """
-        Returns a copy of this ModelConfig with only the heads in keep_heads retained. All other
-        heads are removed, and any modules that are no longer used are also removed.
-        """
-        assert keep_heads, 'keep_heads is empty'
-        for head in keep_heads:
-            assert head in self.parts, f'Unknown head {head}'
-            assert self.parts[head].head, f'Not a head: {head}'
-
-        parts = dict(self.parts)
-
-        # First remove heads we don't want to keep
-        names = list(parts.keys())
-        for name in names:
-            if parts[name].head and name not in keep_heads:
-                del parts[name]
-
-        # Now remove any modules that are no longer used
-        used = {k for k, v in parts.items() if v.head}
-
-        while True:
-            n_used = len(used)
-            for key, value in parts.items():
-                if key in used and value.parent is not None:
-                    used.add(value.parent)
-            if len(used) == n_used:
-                break
-
-        for key in list(parts.keys()):
-            if key not in used:
-                del parts[key]
-
-        return ModelConfig.create(**parts)
-
-    def _validate(self):
-        input_seen = False
-        used = set()
-        for key, value in self.parts.items():
-            assert isinstance(value, ModuleSpec), f'{key}={type(value)}'
-            assert value.type in MODULE_MAP, f'Unknown module type {value.type} for {key}'
-            assert value.repeat >= 1, f'Invalid repeat {value.repeat} for {key}'
-            if value.head:
-                used.add(key)
-            if value.parent is None:
-                input_seen = True
-            else:
-                used.add(value.parent)
-                assert value.parent in self.parts, f'Unknown parent {value.parent} for {key}'
-        assert input_seen, 'No input module found'
-
-        for key in self.parts:
-            assert key in used, f'Module {key} is not used. Either remove it or set head=True'
-
-
-class ModelConfigGenerator(abc.ABC):
-    search_paradigm: SearchParadigm = SearchParadigm.AlphaZero
-
-    @staticmethod
-    @abc.abstractmethod
-    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def loss_weights() -> Dict[str, float]:
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def optimizer(params) -> optim.Optimizer:
-        pass
-
-
-class Model(nn.Module):
-    def __init__(self, config: ModelConfig):
-        super(Model, self).__init__()
-
-        self._config = config
-        self._n = len(config.parts)
-        self._module_dict = nn.ModuleDict({k: v.to_module() for k, v in config.parts.items()})
-        self._module_list = list(self._module_dict.values())
-        self._target_names = [k for k, v in config.parts.items() if v.head]
-        self._parent_indices = self._compute_parent_indices()
-        self._adj_matrix = self._compute_adj_matrix()
-        self._dag_indices = topological_sort(self._adj_matrix)
-        self._head_indices = [i for i, v in enumerate(config.parts.values()) if v.head]
-
-        self._clone_dict = {}
-        self._model_architecture_signature = self._compute_model_architecture_signature()
-
-    def _compute_parent_indices(self) -> List[List[int]]:
-        parent_indices = [list() for _ in range(self._n)]
-        inv_module_dict = {k: i for i, k in enumerate(self._module_dict.keys())}
-        for i, c in enumerate(self._config.parts.values()):
-            if c.parent is not None:
-                j = inv_module_dict[c.parent]
-                parent_indices[i].append(j)
-        return parent_indices
-
-    def _compute_adj_matrix(self) -> AdjMatrix:
-        adj_matrix: AdjMatrix = np.zeros((self._n, self._n), dtype=bool)
-
-        for i, ps in enumerate(self._parent_indices):
-            for p in ps:
-                adj_matrix[p, i] = True
-
-        return adj_matrix
-
-    def _compute_model_architecture_signature(self):
-        s = str(self)
-        logger.debug('Computing model architecture signature: %s', s)
-        return hashlib.md5(s.encode()).hexdigest()
-
-    @property
-    def heads(self) -> List[Head]:
-        return [self._module_list[i] for i in self._head_indices]
-
-    @property
-    def target_names(self) -> List[str]:
-        return self._target_names
-
-    def get_parameter_counts(self) -> Dict[str, int]:
-        """
-        Returns a dictionary mapping module names to the number of parameters in that module.
-        """
-        return {k: sum(p.numel() for p in v.parameters()) for k, v in self._module_dict.items()}
-
-    def forward(self, x):
-        y = [None] * self._n
-        for i in self._dag_indices:
-            parents = self._parent_indices[i]
-            if not parents:
-                y[i] = self._module_list[i](x)
-            else:
-                args = [y[p] for p in parents]
-                y[i] = self._module_list[i](*args)
-
-        return tuple(y[i] for i in self._head_indices)
-
-    def validate(self, shape_info_dict: ShapeInfoDict, loss_weights: Dict[str, float]):
-        head_names = set()
-        for head in self._target_names:
-            assert head not in head_names, f'Head with name {head} already exists'
-            head_names.add(head)
-
-        # TODO: rm these asserts here, and instead do dynamic index assignment in the c++
-        assert self._target_names[0] == 'policy', 'The first head must be policy'
-        assert self._target_names[1] == 'value', 'The second head must be value'
-        assert self._target_names[2] == 'action_value', 'The third head must be action_value'
-
-        for name in loss_weights:
-            assert name in head_names, f'Loss weight for unknown head {name}'
-
-        for name in head_names:
-            assert name in loss_weights, f'Loss weight missing for head {name}'
-
-        targets = [t for t in shape_info_dict.keys() if t != 'input']
-        for target in loss_weights:
-            assert target in targets, f'Missing target {target}'
-
-    def save_model(self, filename: str, shape_info_dict: ShapeInfoDict, primary_targets: Set[str]):
-        """
-        Saves this network to disk in ONNX format.
-        """
-        output_dir = os.path.split(filename)[0]
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-
-        # 1) clone, strip extra heads, freeze
-        clone_dict_key = frozenset(primary_targets)
-        clone = self._clone_dict.get(clone_dict_key, None)
-        if clone is None:
-            trimmed_config = self._config.trim(primary_targets)
-            clone = Model(trimmed_config)
-            self._clone_dict[clone_dict_key] = clone
-        clone.load_state_dict(self.state_dict(), strict=False)
-        clone.cpu().eval()
-
-        input_names = ["input"]
-        output_names = clone._target_names
-        dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
-
-        # 2) make an example‐input and ONNX‐export it
-        batch_size = 1
-        example_shape = (batch_size, *shape_info_dict['input'].shape)
-        example_input = torch.zeros(example_shape, dtype=torch.float32)
-
-        # 3) Export to a temporary in-memory buffer
-        buf = io.BytesIO()
-        torch.onnx.export(
-            clone, example_input, buf,
-            export_params=True,
-            opset_version=18,
-            input_names=input_names,
-            output_names=output_names,
-            dynamic_axes=dynamic_axes,
-            do_constant_folding=True,
-        )
-
-        # 4) Add metadata
-        model = onnx.load_from_string(buf.getvalue())
-        kv = model.metadata_props.add()
-        kv.key = 'model-architecture-signature'
-        kv.value = clone._model_architecture_signature
-
-        onnx.save(model, filename)
-
-    @staticmethod
-    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
-        """
-        Load a model from a checkpoint. Inverse of add_to_checkpoint().
-        """
-        model_state_dict = checkpoint['model.state_dict']
-        config = checkpoint['model.config']
-        model = Model(config)
-        model.load_state_dict(model_state_dict)
-        return model
-
-    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
-        """
-        Save the current state of this neural net to a checkpoint, so that it can be loaded later
-        via load_from_checkpoint().
-        """
-        checkpoint.update({
-            'model.state_dict': self.state_dict(),
-            'model.config': self._config,
-        })
