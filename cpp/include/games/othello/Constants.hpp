@@ -117,10 +117,10 @@ const mask_t kStartingWhiteMask = 1ULL << kStartingWhite1 | 1ULL << kStartingWhi
 const mask_t kStartingBlackMask = 1ULL << kStartingBlack1 | 1ULL << kStartingBlack2;
 
 constexpr mask_t kA1Mask = 1ULL << kA1;
-constexpr mask_t kA8Mask = 1ULL << kA8;
 constexpr mask_t kH1Mask = 1ULL << kH1;
+constexpr mask_t kA8Mask = 1ULL << kA8;
 constexpr mask_t kH8Mask = 1ULL << kH8;
-constexpr mask_t kCornersMask = kA1Mask | kA8Mask | kH1Mask | kH8Mask;
+
 constexpr mask_t kRank1Mask = 0x00000000000000FFULL;
 constexpr mask_t kRank8Mask = 0xFF00000000000000ULL;
 constexpr mask_t kFileAMask = 0x0101010101010101ULL;
@@ -147,5 +147,76 @@ const int kTypicalNumMovesPerGame = kNumCells - kNumStartingPieces;
 const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
+
+// A1 = (file=0, rank=0) = bit 0; file→ +1, rank↑ +8
+constexpr int idx(int f, int r) { return r * 8 + f; }
+constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r < 8; }
+constexpr mask_t bit(int f, int r) { return mask_t{1} << idx(f, r); }
+
+// -------- Single-line builders --------
+constexpr mask_t rank_mask(int r) {
+  mask_t m = 0;
+  for (int f = 0; f < 8; ++f) m |= bit(f, r);
+  return m;
+}
+constexpr mask_t file_mask(int f) {
+  mask_t m = 0;
+  for (int r = 0; r < 8; ++r) m |= bit(f, r);
+  return m;
+}
+
+// from A1 to H8
+constexpr mask_t diagSE_from(int f0, int r0) {
+  mask_t m = 0;
+  for (int f = f0, r = r0; in_bounds(f, r); ++f, ++r) m |= bit(f, r);
+  return m;
+}
+
+// from H1 to A8
+constexpr mask_t diagSW_from(int f0, int r0) {
+  mask_t m = 0;
+  for (int f = f0, r = r0; in_bounds(f, r); --f, ++r) m |= bit(f, r);
+  return m;
+}
+
+// -------- Array builders --------
+constexpr std::array<mask_t, 8> make_ranks() {
+  std::array<mask_t, 8> a{};
+  for (int r = 0; r < 8; ++r) a[r] = rank_mask(r);
+  return a;
+}
+constexpr std::array<mask_t, 8> make_files() {
+  std::array<mask_t, 8> a{};
+  for (int f = 0; f < 8; ++f) a[f] = file_mask(f);
+  return a;
+}
+constexpr std::array<mask_t, 15> make_diagSE() {
+  std::array<mask_t, 15> a{};
+  int k = 0;
+  // starts on bottom row A1..H1
+  for (int f = 0; f < 8; ++f) a[k++] = diagSE_from(f, 0);
+  // starts on left column A2..A8
+  for (int r = 1; r < 8; ++r) a[k++] = diagSE_from(0, r);
+  return a;
+}
+constexpr std::array<mask_t, 15> make_diagSW() {
+  std::array<mask_t, 15> a{};
+  int k = 0;
+  // starts on bottom row H1..A1
+  for (int f = 7; f >= 0; --f) a[k++] = diagSW_from(f, 0);
+  // starts on right column H2..H8
+  for (int r = 1; r < 8; ++r) a[k++] = diagSW_from(7, r);
+  return a;
+}
+
+inline constexpr auto kRanks = make_ranks();
+inline constexpr auto kFiles = make_files();
+inline constexpr auto kDiagSE = make_diagSE();
+inline constexpr auto kDiagSW = make_diagSW();
+
+static_assert(kRanks[0] == kRank1Mask);
+static_assert(kRanks[7] == kRank8Mask);
+static_assert(kFiles[0] == kFileAMask);
+static_assert(kFiles[7] == kFileHMask);
 
 }  // namespace othello

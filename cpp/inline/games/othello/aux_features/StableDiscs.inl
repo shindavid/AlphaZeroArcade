@@ -15,6 +15,8 @@ inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask)
   stable_oppo |= stable_discs_protected_by_axes(opponent_mask, stable_oppo);
   mask_t stable = stable_curr | stable_oppo;
 
+  stable |= full_axes_stable_discs(cur_player_mask|opponent_mask);
+
   return stable;
 }
 
@@ -69,8 +71,6 @@ inline mask_t edge_stable_discs(mask_t mask) {
 }
 
 inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable) {
-  std::cout << "Initial stable: ";
-  std::cout << std::hex << stable << std::dec << "\n";
   auto ray_grow = [&](auto shift) {
     mask_t out = 0;
     mask_t frontier = stable;
@@ -103,9 +103,28 @@ inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable) {
     if (!newS) break;
     stable |= newS;
   }
-  std::cout << "Final stable: ";
-  std::cout << std::hex << stable << std::dec << "\n";
   return stable;
+}
+
+template <size_t N>
+inline mask_t union_of_full_lines(mask_t mask, const std::array<mask_t, N>& lines) {
+  mask_t out = 0;
+  for (size_t i = 0; i < N; ++i) {
+    mask_t line = lines[i];
+    mask_t fullMask = -((mask & line) == line);
+    out |= (line & fullMask);
+  }
+  return out;
+}
+
+inline mask_t full_axes_stable_discs(mask_t mask) {
+  const mask_t ranksFull = union_of_full_lines(mask, kRanks);
+  const mask_t filesFull = union_of_full_lines(mask, kFiles);
+  const mask_t seFull = union_of_full_lines(mask, kDiagSE);
+  const mask_t swFull = union_of_full_lines(mask, kDiagSW);
+
+  const mask_t all_axes_full = ranksFull & filesFull & seFull & swFull;
+  return all_axes_full;
 }
 
 }  // namespace othello

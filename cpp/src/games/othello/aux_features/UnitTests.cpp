@@ -234,25 +234,28 @@ TEST(StableDiscs, full_axes) {
    A B C D E F G H            A B C D E F G H
  1|O|O|O| | | | | |         1|*|*|*| | | | | |
  2|X|X|O|O|X|X|O|X|         2| |*| | | | | | |
- 3|X| |X| | | | | |         3| | | | | | | | |
- 4| | | |O| | | | |   -->   4| | | | | | | | |
- 5| | | | |O| | | |         5| | | | | | | | |
- 6| | | | | |X| | |         6| | | | | | | | |
- 7| | | | | | |X| |         7| | | | | | | | |
- 8| | | | | | | |X|         8| | | | | | | | |
+ 3|X|O|X| | | | | |         3| | | | | | | | |
+ 4| |O| |O| | | | |   -->   4| | | | | | | | |
+ 5| |O| | |O| | | |         5| | | | | | | | |
+ 6| |O| | | |X| | |         6| | | | | | | | |
+ 7| |O| | | | |X| |         7| | | | | | | | |
+ 8| |O| | | | | |X|         8| | | | | | | |*|
 
     Stable discs are A1, B1, C1, B2
 */
 
-mask_t cur_player_mask = (1ULL << kA2) | (1ULL << kA3) | (1ULL << kC3) | (1ULL << kE2) |
-                         (1ULL << kF2) | (1ULL << kF6) | (1ULL << kG7) | (1ULL << kH2) |
-                         (1ULL << kH8);
+mask_t cur_player_mask = (1ULL << kA2) | (1ULL << kA3) | (1ULL) << kB2 | (1ULL << kC3) |
+                         (1ULL << kE2) | (1ULL << kF2) | (1ULL << kF6) | (1ULL << kG7) |
+                         (1ULL << kH2) | (1ULL << kH8);
 
-mask_t opponent_mask = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kC2) |
-                       (1ULL << kD2) | (1ULL << kD4) | (1ULL << kE5) | (1ULL << kG2);
+mask_t opponent_mask = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kB3) | (1ULL << kB4) |
+                       (1ULL << kB5) | (1ULL << kB6) | (1ULL << kB7) | (1ULL << kB8) |
+                       (1ULL << kC1) | (1ULL << kC2) | (1ULL << kD2) | (1ULL << kD4) |
+                       (1ULL << kE5) | (1ULL << kG2);
 
 mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
-mask_t expected_stable = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kB2);
+mask_t expected_stable =
+  (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kB2) | (1ULL << kH8);
 EXPECT_EQ(stable, expected_stable);
 }
 
