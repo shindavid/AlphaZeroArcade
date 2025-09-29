@@ -5,19 +5,19 @@
 namespace othello {
 
 inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask) {
-
-  mask_t stable_curr = edge_stable_discs(cur_player_mask);
-  mask_t stable_oppo = edge_stable_discs(opponent_mask);
+  mask_t stable_curr = 0;
+  mask_t stable_oppo = 0;
 
   full_edge_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
+  full_axes_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
 
-  stable_curr |= stable_discs_protected_by_axes(cur_player_mask, stable_curr);
-  stable_oppo |= stable_discs_protected_by_axes(opponent_mask, stable_oppo);
-  mask_t stable = stable_curr | stable_oppo;
+  stable_curr |= edge_stable_discs(cur_player_mask);
+  stable_oppo |= edge_stable_discs(opponent_mask);
 
-  stable |= full_axes_stable_discs(cur_player_mask|opponent_mask);
+  stable_curr |= extend_stable_frontier(cur_player_mask, stable_curr);
+  stable_oppo |= extend_stable_frontier(opponent_mask, stable_oppo);
 
-  return stable;
+  return stable_curr | stable_oppo;
 }
 
 inline void full_edge_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
@@ -70,7 +70,7 @@ inline mask_t edge_stable_discs(mask_t mask) {
   return stable;
 }
 
-inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable) {
+inline mask_t extend_stable_frontier(mask_t mask, mask_t stable) {
   auto ray_grow = [&](auto shift) {
     mask_t out = 0;
     mask_t frontier = stable;
@@ -82,10 +82,10 @@ inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable) {
   };
 
   while (true) {
-    const mask_t e  = ray_grow(step_east);
-    const mask_t w  = ray_grow(step_west);
-    const mask_t n  = ray_grow(step_north);
-    const mask_t s  = ray_grow(step_south);
+    const mask_t e = ray_grow(step_east);
+    const mask_t w = ray_grow(step_west);
+    const mask_t n = ray_grow(step_north);
+    const mask_t s = ray_grow(step_south);
     const mask_t ne = ray_grow(step_northeast);
     const mask_t sw = ray_grow(step_southwest);
     const mask_t nw = ray_grow(step_northwest);
@@ -117,14 +117,17 @@ inline mask_t union_of_full_lines(mask_t mask, const std::array<mask_t, N>& line
   return out;
 }
 
-inline mask_t full_axes_stable_discs(mask_t mask) {
+inline void full_axes_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
+                                     mask_t& stable_curr, mask_t& stable_oppo) {
+  mask_t mask = cur_player_mask | opponent_mask;
   const mask_t ranksFull = union_of_full_lines(mask, kRanks);
   const mask_t filesFull = union_of_full_lines(mask, kFiles);
   const mask_t seFull = union_of_full_lines(mask, kDiagSE);
   const mask_t swFull = union_of_full_lines(mask, kDiagSW);
 
   const mask_t all_axes_full = ranksFull & filesFull & seFull & swFull;
-  return all_axes_full;
+  stable_curr |= all_axes_full & cur_player_mask;
+  stable_oppo |= all_axes_full & opponent_mask;
 }
 
 }  // namespace othello

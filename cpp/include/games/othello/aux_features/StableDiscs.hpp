@@ -6,11 +6,14 @@ namespace othello {
 
   mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask);
 
-  mask_t edge_stable_discs(mask_t mask);
+
   void full_edge_stable_discs(mask_t cur_player_mask, mask_t opponent_mask, mask_t& stable_curr,
                               mask_t& stable_oppo);
-  mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable);
-  mask_t full_axes_stable_discs(mask_t mask);
+  void full_axes_stable_discs(mask_t cur_player_mask, mask_t opponent_mask, mask_t& stable_curr,
+                              mask_t& stable_oppo);
+  mask_t edge_stable_discs(mask_t mask);
+  mask_t extend_stable_frontier(mask_t mask, mask_t stable);
+
 
   inline mask_t step_east(mask_t m) { return (m & ~kFileHMask) << 1; }
   inline mask_t step_west(mask_t m) { return (m & ~kFileAMask) >> 1; }
