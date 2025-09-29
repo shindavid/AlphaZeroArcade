@@ -16,7 +16,7 @@ class ModuleSpec:
     args: list = field(default_factory=list)
     kwargs: dict = field(default_factory=dict)
     repeat: int = 1  # number of times to repeat this module sequentially
-    parent: Optional[str] = None  # name of module that feeds this one. If None, is fed input
+    parents: List[str] = field(default_factory=list)  # names of parent modules
 
     def to_module(self) -> nn.Module:
         assert self.type in MODULE_MAP, f'Unknown module type {self.type}'
@@ -37,7 +37,7 @@ class ModelConfig:
     The key method to create a ModelConfig is the static create() method, which takes
     keyword arguments mapping module names to ModuleSpec's.
 
-    The topological structure is specified by the parent field of each ModuleSpec.
+    The topological structure is specified by the parents field of each ModuleSpec.
     """
     parts: Dict[str, ModuleSpec]
 
@@ -61,10 +61,14 @@ class ModelConfig:
 
         # add all ancestors of parts in keep_set
         for part in list(keep_set):
-            parent = self.parts[part].parent
-            while parent is not None and parent not in keep_set:
-                keep_set.add(parent)
-                parent = self.parts[parent].parent
+            parents = self.parts[part].parents
+            while parents:
+                new_parents = []
+                for parent in parents:
+                    if parent not in keep_set:
+                        keep_set.add(parent)
+                        new_parents.extend(self.parts[parent].parents)
+                parents = new_parents
 
         trimmed_parts = {k: v for k, v in self.parts.items() if k in keep_set}
         return ModelConfig.create(**trimmed_parts)
@@ -76,11 +80,12 @@ class ModelConfig:
             assert isinstance(value, ModuleSpec), f'{key}={type(value)}'
             assert value.type in MODULE_MAP, f'Unknown module type {value.type} for {key}'
             assert value.repeat >= 1, f'Invalid repeat {value.repeat} for {key}'
-            if value.parent is None:
+            if not value.parents:
                 input_seen = True
             else:
-                parents.add(value.parent)
-                assert value.parent in self.parts, f'Unknown parent {value.parent} for {key}'
+                parents.update(value.parents)
+                for parent in value.parents:
+                    assert parent in self.parts, f'Unknown parent {parent} for {key}'
 
         assert input_seen, 'No modules process the input tensor!'
 

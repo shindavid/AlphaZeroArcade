@@ -45,49 +45,49 @@ class CNN_b9_c128(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=4,
-                parent='stem'
+                parents=['stem']
             ),
             trunk2=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
                 args=[c_trunk, c_mid, c_gpool],
-                parent='trunk1'
+                parents=['trunk1']
             ),
             trunk=ModuleSpec(
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=4,
-                parent='trunk2'
+                parents=['trunk2']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             score_margin=ModuleSpec(
                 type='ScoreHead',
                 args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
                 args=[c_trunk, c_ownership_hidden, ownership_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 
@@ -152,43 +152,43 @@ class Transformer(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=2,
-                parent='stem'
+                parents=['stem']
             ),
             trunk=ModuleSpec(
                 type='TransformerBlock',
                 args=[transformer_block_params],
-                parent='pre_trunk'
+                parents=['pre_trunk']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             score_margin=ModuleSpec(
                 type='ScoreHead',
                 args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
                 args=[c_trunk, c_ownership_hidden, ownership_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 

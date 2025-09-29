@@ -40,8 +40,8 @@ class Model(nn.Module):
         parent_indices = [list() for _ in range(self._n)]
         inv_module_dict = {k: i for i, k in enumerate(self._module_dict.keys())}
         for i, c in enumerate(self._config.parts.values()):
-            if c.parent is not None:
-                j = inv_module_dict[c.parent]
+            for parent in c.parents:
+                j = inv_module_dict[parent]
                 parent_indices[i].append(j)
         return parent_indices
 

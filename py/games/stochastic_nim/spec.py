@@ -37,23 +37,23 @@ class CNN_b3_c32(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=3,
-                parent='stem'
+                parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden, value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 

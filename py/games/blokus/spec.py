@@ -44,74 +44,74 @@ class CNN_b20_c128(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=4,
-                parent='stem'
+                parents=['stem']
             ),
             trunk2=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
                 args=[c_trunk, c_mid, c_gpool],
-                parent='trunk1'
+                parents=['trunk1']
             ),
             trunk3=ModuleSpec(
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=4,
-                parent='trunk2'
+                parents=['trunk2']
             ),
             trunk4=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
                 args=[c_trunk, c_mid, c_gpool],
-                parent='trunk3'
+                parents=['trunk3']
             ),
             trunk5=ModuleSpec(
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=4,
-                parent='trunk4'
+                parents=['trunk4']
             ),
             trunk6=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
                 args=[c_trunk, c_mid, c_gpool],
-                parent='trunk5'
+                parents=['trunk5']
             ),
             trunk=ModuleSpec(
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=5,
-                parent='trunk6'
+                parents=['trunk6']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
                 args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                       value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=['action_value', board_size, c_trunk, c_action_value_hidden,
                       action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             score=ModuleSpec(
                 type='ScoreHead',
                 args=['score', c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
                 args=['ownership', c_trunk, c_ownership_hidden, ownership_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             unplayed_pieces=ModuleSpec(
                 type='GeneralLogitHead',
                 args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
                       n_unplayed_pieces_hidden, unplayed_pieces_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 

@@ -39,28 +39,28 @@ class CNN_b7_c128(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=7,
-                parent='stem'
+                parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 
@@ -108,39 +108,39 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 type='ResBlock',
                 args=[c_trunk, c_mid],
                 repeat=7,
-                parent='stem'
+                parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value_uncertainty=ModuleSpec(
-                type='GeneralLogitHead',
+                type='WinLossDrawValueUncertaintyHead',
                 args=[c_trunk, c_value_uncertainty_hidden, n_value_uncertainty_hidden, (1, )],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value_uncertainty=ModuleSpec(
                 type='GeneralLogitHead',
                 args=[c_trunk, c_value_uncertainty_hidden, n_value_uncertainty_hidden,
                       action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 
@@ -198,33 +198,33 @@ class Transformer(ModelConfigGenerator):
             pre_trunk=ModuleSpec(
                 type='ResBlock',
                 args=[c_trunk, c_mid],
-                parent='stem'
+                parents=['stem']
             ),
             trunk=ModuleSpec(
                 type='TransformerBlock',
                 args=[transformer_block_params],
-                parent='pre_trunk'
+                parents=['pre_trunk']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
                 args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
-                parent='trunk'
+                parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
                 args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
                 args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
-                parent='trunk'
+                parents=['trunk']
             ),
         )
 
