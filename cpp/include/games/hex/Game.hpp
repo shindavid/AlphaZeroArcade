@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/WinLossResults.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "core/GameRulesBase.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
 #include "util/FiniteGroups.hpp"

@@ -147,16 +147,16 @@ struct FfiFunctions {
     FfiFunctions::merge_game_log_files(input_filenames, n_input_filenames, output_filename);      \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_input_shapes(const char* paradigm) {                                 \
-    return FfiFunctions::get_input_shapes(paradigm);                                          \
+  search::ShapeInfo* get_input_shapes(const char* paradigm) {                                     \
+    return FfiFunctions::get_input_shapes(paradigm);                                              \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_target_shapes(const char* paradigm) {                                 \
-    return FfiFunctions::get_target_shapes(paradigm);                                          \
+  search::ShapeInfo* get_target_shapes(const char* paradigm) {                                    \
+    return FfiFunctions::get_target_shapes(paradigm);                                             \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_head_shapes(const char* paradigm) {                                 \
-    return FfiFunctions::get_head_shapes(paradigm);                                          \
+  search::ShapeInfo* get_head_shapes(const char* paradigm) {                                      \
+    return FfiFunctions::get_head_shapes(paradigm);                                               \
   }                                                                                               \
                                                                                                   \
   void free_shape_info_array(search::ShapeInfo* info) {                                           \

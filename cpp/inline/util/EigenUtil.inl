@@ -404,7 +404,6 @@ void right_rotate(Array& array, int n) {
   std::rotate(data, data + N - n, data + N);
 }
 
-
 template <concepts::FTensor Tensor>
 void left_rotate(Tensor& tensor, int n) {
   constexpr int rank = Tensor::Dimensions::count;

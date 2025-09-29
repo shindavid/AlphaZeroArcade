@@ -119,22 +119,19 @@ struct IndexOf<TypeList<Head, Tails...>, T> {
 // IndexWhere - find the unique index of the type that satisfies the predicate
 // If no type or multiple types satisfy the predicate, value is -1.
 
-template <typename TList, template <typename> class Pred,
-          int I = 0, int Found = -1, int Count = 0>
+template <typename TList, template <typename> class Pred, int I = 0, int Found = -1, int Count = 0>
 struct IndexWhereImpl;
 
 template <template <typename> class Pred, int I, int Found, int Count>
 struct IndexWhereImpl<mp::TypeList<>, Pred, I, Found, Count>
     : std::integral_constant<int, (Count == 1 ? Found : -1)> {};
 
-template <template <typename> class Pred, int I, int Found, int Count,
-          typename Head, typename... Tail>
+template <template <typename> class Pred, int I, int Found, int Count, typename Head,
+          typename... Tail>
 struct IndexWhereImpl<mp::TypeList<Head, Tail...>, Pred, I, Found, Count>
-    : IndexWhereImpl<
-          mp::TypeList<Tail...>, Pred,
-          I + 1,
-          (Pred<Head>::value ? (Found == -1 ? I : Found) : Found),
-          (Count + (Pred<Head>::value ? 1 : 0))> {};
+    : IndexWhereImpl<mp::TypeList<Tail...>, Pred, I + 1,
+                     (Pred<Head>::value ? (Found == -1 ? I : Found) : Found),
+                     (Count + (Pred<Head>::value ? 1 : 0))> {};
 
 template <typename TList, template <typename> class Pred>
 struct IndexWhere : IndexWhereImpl<TList, Pred> {};

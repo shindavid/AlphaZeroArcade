@@ -12,7 +12,7 @@ namespace core {
 namespace concepts {
 
 template <typename T, typename Game>
-concept NetworkHead = requires (typename T::Tensor& tensor) {
+concept NetworkHead = requires(typename T::Tensor& tensor) {
   // Head name, which must match name used in python.
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
 

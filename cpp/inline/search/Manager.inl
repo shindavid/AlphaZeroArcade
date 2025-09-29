@@ -630,8 +630,8 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     core::action_t last_action = edge->action;
     Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
-    bool terminal = Rules::is_terminal(state, parent->stable_data().active_seat,
-                                       last_action, game_outcome);
+    bool terminal =
+      Rules::is_terminal(state, parent->stable_data().active_seat, last_action, game_outcome);
 
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), state, game_outcome);
