@@ -1,5 +1,7 @@
 #include "games/othello/aux_features/StableDiscs.hpp"
 
+#include <iostream>
+
 namespace othello {
 
 inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask) {
@@ -7,18 +9,28 @@ inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask)
   mask_t stable_curr = edge_stable_discs(cur_player_mask);
   mask_t stable_oppo = edge_stable_discs(opponent_mask);
 
-  mask_t filled = (cur_player_mask | opponent_mask) & kRank1Mask;
-  mask_t fullMask = -(filled == kRank1Mask);
-  stable_curr |= fullMask & kRank1Mask & cur_player_mask;
-  stable_oppo |= fullMask & kRank1Mask & opponent_mask;
+  full_edge_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
 
   stable_curr |= stable_discs_protected_by_axes(cur_player_mask, stable_curr);
   stable_oppo |= stable_discs_protected_by_axes(opponent_mask, stable_oppo);
   mask_t stable = stable_curr | stable_oppo;
-  stable |= stable_discs_protected_by_axes(cur_player_mask, stable, true);
-  stable |= stable_discs_protected_by_axes(opponent_mask, stable, true);
 
   return stable;
+}
+
+inline void full_edge_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
+                                   mask_t& stable_curr, mask_t& stable_oppo) {
+  auto edge_full_mask = [&](mask_t edge_mask) {
+    mask_t filled = (cur_player_mask | opponent_mask) & edge_mask;
+    mask_t fullMask = -(filled == edge_mask);
+    stable_curr |= fullMask & edge_mask & cur_player_mask;
+    stable_oppo |= fullMask & edge_mask & opponent_mask;
+  };
+
+  edge_full_mask(kRank1Mask);
+  edge_full_mask(kRank8Mask);
+  edge_full_mask(kFileAMask);
+  edge_full_mask(kFileHMask);
 }
 
 inline mask_t edge_stable_discs(mask_t mask) {
@@ -56,7 +68,9 @@ inline mask_t edge_stable_discs(mask_t mask) {
   return stable;
 }
 
-inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable, bool both_ends) {
+inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable) {
+  std::cout << "Initial stable: ";
+  std::cout << std::hex << stable << std::dec << "\n";
   auto ray_grow = [&](auto shift) {
     mask_t out = 0;
     mask_t frontier = stable;
@@ -79,23 +93,18 @@ inline mask_t stable_discs_protected_by_axes(mask_t mask, mask_t stable, bool bo
 
     mask_t horiz, vert, diag1, diag2;
 
-    if (both_ends) {
-      horiz = e & w;
-      vert = n & s;
-      diag1 = ne & sw;
-      diag2 = nw & se;
-    } else {
-      horiz = e | w;
-      vert = n | s;
-      diag1 = ne | sw;
-      diag2 = nw | se;
-    }
+    horiz = e | w;
+    vert = n | s;
+    diag1 = ne | sw;
+    diag2 = nw | se;
 
     const mask_t candidates = horiz & vert & diag1 & diag2;
     const mask_t newS = candidates & ~stable;
     if (!newS) break;
     stable |= newS;
   }
+  std::cout << "Final stable: ";
+  std::cout << std::hex << stable << std::dec << "\n";
   return stable;
 }
 
