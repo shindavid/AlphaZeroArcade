@@ -47,7 +47,6 @@ class TrainingManager:
         self._net = None
         self._opt = None
         self._loss_terms = None
-        self._primary_targets = None  # initialized lazily
         self._stats: Optional[TrainingStats] = None
         self._model_counts_dumped = False
 
@@ -237,25 +236,19 @@ class TrainingManager:
 
         # Validate that network heads match c++ TrainingTargets
         logger.debug('Validating heads...')
-        shape_info_dict = self._game_log_reader.shape_info_dict
+        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
         gen_cls = model_cfg_generator_type.__name__
 
-        self._primary_targets = {info.name for info in shape_info_dict.values() if info.primary}
-        n_primary_heads = 0
         for h, name in enumerate(self._net.head_names):
-            shape_info = shape_info_dict.get(name, None)
+            shape_info = head_shape_info_dict.get(name, None)
             if shape_info is None:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
                                  f'({name} not found)')
 
             t = shape_info.target_index
-            n_primary_heads += 1 if shape_info.primary else 0
-            if shape_info.primary and h != t:
+            if h != t:
                 raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
                                  f'({h} != {t}) for {name})')
-        if n_primary_heads != len(self._primary_targets):
-            raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
-                             f'[{n_primary_heads} != len({self._primary_targets})]')
         logger.debug('Validation complete!')
 
         # TODO: SWA, cyclic learning rate
@@ -268,9 +261,9 @@ class TrainingManager:
         checkpoint_gen = organizer.get_last_checkpointed_generation()
 
         game_spec = self._controller.game_spec
-        shape_info_dict = self._game_log_reader.shape_info_dict
+        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
         model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
-        model_cfg = model_cfg_generator_type.generate(shape_info_dict)
+        model_cfg = model_cfg_generator_type.generate(head_shape_info_dict)
 
         if checkpoint_gen is None:
             self._net = Model(model_cfg)
@@ -440,9 +433,11 @@ class TrainingManager:
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
 
-        shape_info_dict = self._game_log_reader.shape_info_dict
+        input_shape_info_dict = self._game_log_reader.input_shape_info_dict
+        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
+        head_names = set(head_shape_info_dict.keys())
         logger.debug('Calling save_model()...')
-        net.save_model(tmp_model_filename, shape_info_dict, self._primary_targets)
+        net.save_model(tmp_model_filename, input_shape_info_dict, head_names)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

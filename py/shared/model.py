@@ -55,7 +55,7 @@ class Model(nn.Module):
         return adj_matrix
 
     def _compute_model_architecture_signature(self):
-        s = str(self)
+        s = str(self) + '\n\n' + str(self._dag_indices)
         logger.debug('Computing model architecture signature: %s', s)
         return hashlib.md5(s.encode()).hexdigest()
 
@@ -102,7 +102,7 @@ class Model(nn.Module):
 
         return tuple(y[i] for i in self._head_indices)
 
-    def save_model(self, filename: str, shape_info_dict: ShapeInfoDict, primary_targets: Set[str]):
+    def save_model(self, filename: str, input_shape_info_dict: ShapeInfoDict, head_names: Set[str]):
         """
         Saves this network to disk in ONNX format.
         """
@@ -111,10 +111,10 @@ class Model(nn.Module):
             os.makedirs(output_dir, exist_ok=True)
 
         # 1) clone, strip extra heads, freeze
-        clone_dict_key = frozenset(primary_targets)
+        clone_dict_key = frozenset(head_names)
         clone = self._clone_dict.get(clone_dict_key, None)
         if clone is None:
-            trimmed_config = self._config.trim(primary_targets)
+            trimmed_config = self._config.trim(head_names)
             clone = Model(trimmed_config)
             self._clone_dict[clone_dict_key] = clone
         clone.load_state_dict(self.state_dict(), strict=False)
@@ -126,7 +126,7 @@ class Model(nn.Module):
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
-        example_shape = (batch_size, *shape_info_dict['input'].shape)
+        example_shape = (batch_size, *input_shape_info_dict['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
         # 3) Export to a temporary in-memory buffer

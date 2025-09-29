@@ -327,6 +327,25 @@ class WinLossDrawValueHead(Head):
         return out
 
 
+class WinLossDrawValueUncertaintyHead(Head):
+    """
+    A head that produces a length-1 logit vector, usable for 2-player games that permit draws.
+
+    This is an uncertainty head that can be used in conjunction with WinLossDrawValueHead to
+    represent uncertainty in the value prediction. The output is interpreted as logit(delta^2),
+    where delta is the difference between the value prediction (converted from W/L/D to win-shared)
+    and the true value.
+
+    See the "Uncertainty-Weighted MCTS Playouts" section here:
+
+    https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md
+    """
+    def __init__(self):
+        # TODO: this head will take as input the output of a WinLossDrawValueHead, along with
+        # the trunk output, and will combine them in some way before producing its final output.
+        pass
+
+
 class WinLossValueHead(Head):
     """
     A head that produces a length-2 logit vector, usable for 2-player games that do NOT permit
@@ -592,6 +611,7 @@ MODULE_MAP = {
     'ScoreHead': ScoreHead,
     'TransformerBlock': TransformerBlock,
     'WinLossDrawValueHead': WinLossDrawValueHead,
+    'WinLossDrawValueUncertaintyHead': WinLossDrawValueUncertaintyHead,
     'WinLossValueHead': WinLossValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,

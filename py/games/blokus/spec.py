@@ -14,14 +14,14 @@ from typing import List
 
 class CNN_b20_c128(ModelConfigGenerator):
     @staticmethod
-    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = shape_info_dict['input'].shape
-        policy_shape = shape_info_dict['policy'].shape
-        value_shape = shape_info_dict['value'].shape
-        action_value_shape = shape_info_dict['action_value'].shape
-        ownership_shape = shape_info_dict['ownership'].shape
-        score_shape = shape_info_dict['score'].shape
-        unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
+    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
+        input_shape = head_shape_info_dict['input'].shape
+        policy_shape = head_shape_info_dict['policy'].shape
+        value_shape = head_shape_info_dict['value'].shape
+        action_value_shape = head_shape_info_dict['action_value'].shape
+        ownership_shape = head_shape_info_dict['ownership'].shape
+        score_shape = head_shape_info_dict['score'].shape
+        unplayed_pieces_shape = head_shape_info_dict['unplayed_pieces'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 

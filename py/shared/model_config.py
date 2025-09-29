@@ -102,7 +102,7 @@ class ModelConfigGenerator(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
+    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
         pass
 
     @staticmethod

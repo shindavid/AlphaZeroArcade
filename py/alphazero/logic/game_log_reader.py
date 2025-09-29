@@ -40,7 +40,9 @@ class GameLogReader:
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._lib.init()
-        self._shape_info_dict: Optional[ShapeInfoDict] = None
+        self._input_shape_info_dict: Optional[ShapeInfoDict] = None
+        self._target_shape_info_dict: Optional[ShapeInfoDict] = None
+        self._head_shape_info_dict: Optional[ShapeInfoDict] = None
         self._data_loader = None
         self._closed = False
 
@@ -67,10 +69,22 @@ class GameLogReader:
                                                num_prefetch_threads, paradigm_str_c)
 
     @property
-    def shape_info_dict(self) -> ShapeInfoDict:
-        if self._shape_info_dict is None:
-            self._shape_info_dict = self._load_shape_info_dict()
-        return self._shape_info_dict
+    def input_shape_info_dict(self) -> ShapeInfoDict:
+        if self._input_shape_info_dict is None:
+            self._input_shape_info_dict = self._load_shape_info_dict('get_input_shapes')
+        return self._input_shape_info_dict
+
+    @property
+    def target_shape_info_dict(self) -> ShapeInfoDict:
+        if self._target_shape_info_dict is None:
+            self._target_shape_info_dict = self._load_shape_info_dict('get_target_shapes')
+        return self._target_shape_info_dict
+
+    @property
+    def head_shape_info_dict(self) -> ShapeInfoDict:
+        if self._head_shape_info_dict is None:
+            self._head_shape_info_dict = self._load_shape_info_dict('get_head_shapes')
+        return self._head_shape_info_dict
 
     def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
         ffi = self._ffi
@@ -116,8 +130,8 @@ class GameLogReader:
         n_samples = minibatch_size * n_minibatches
         n_targets = len(target_names)
 
-        input_shape_info = self.shape_info_dict['input']
-        target_shape_infos = [self.shape_info_dict[name] for name in target_names]
+        input_shape_info = self.input_shape_info_dict['input']
+        target_shape_infos = [self.target_shape_info_dict[name] for name in target_names]
 
         input_shape = input_shape_info.shape
         target_shapes = [info.shape for info in target_shape_infos]
@@ -190,10 +204,13 @@ class GameLogReader:
                 int* dims;
                 int num_dims;
                 int target_index;
-                int is_primary;
             };
 
-            struct ShapeInfo* get_shape_info_array(const char* paradigm);
+            struct ShapeInfo* get_input_shapes(const char* paradigm);
+
+            struct ShapeInfo* get_target_shapes(const char* paradigm);
+
+            struct ShapeInfo* get_head_shapes(const char* paradigm);
 
             void free_shape_info_array(struct ShapeInfo* info);
 
@@ -226,12 +243,12 @@ class GameLogReader:
         assert os.path.isfile(shared_lib), f'Could not find shared lib: {shared_lib}'
         return self._ffi.dlopen(shared_lib)
 
-    def _load_shape_info_dict(self) -> ShapeInfoDict:
+    def _load_shape_info_dict(self, func: str) -> ShapeInfoDict:
         ffi = self._ffi
         lib = self._lib
 
         paradigm_str_c = ffi.new('char[]', self._paradigm.value.encode('utf-8'))
-        shape_info_arr = lib.get_shape_info_array(paradigm_str_c)
+        shape_info_arr = getattr(lib, func)(paradigm_str_c)
 
         shape_info_dict = {}
         i = 0
