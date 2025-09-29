@@ -9,12 +9,12 @@ template <core::concepts::Game Game>
 struct TrainingInfo : public alpha0::TrainingInfo<Game> {
   using Base = alpha0::TrainingInfo<Game>;
   using ActionValueTensor = Base::ActionValueTensor;
+  using ValueTensor = Game::Types::ValueTensor;
 
   void clear() { *this = TrainingInfo(); }
 
   ActionValueTensor action_value_uncertainties_target;
-  float Q_prior = 0;
-  float Q_posterior = 0;
+  ValueTensor Q_posterior;
   bool action_value_uncertainties_target_valid = false;
 };
 

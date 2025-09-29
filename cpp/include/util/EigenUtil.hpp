@@ -336,6 +336,12 @@ void left_rotate(Array& array, int n);
 template <concepts::FArray Array>
 void right_rotate(Array& array, int n);
 
+// same as above for 1D tensors
+template <concepts::FTensor Tensor>
+void left_rotate(Tensor& tensor, int n);
+template <concepts::FTensor Tensor>
+void right_rotate(Tensor& tensor, int n);
+
 /*
  * The below functions all accept a flat 1D tensor as input, and interpret the first Dim**2
  * elements as entries of a square Dim x Dim board using row-major order. For Dim=8, this looks like

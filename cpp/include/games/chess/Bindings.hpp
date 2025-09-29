@@ -3,10 +3,10 @@
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
+#include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/InputTensorizor.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace chess {
 
@@ -27,17 +27,8 @@ struct Keys {
 
 namespace alpha0 {
 
-struct TrainingTargets {
-  using BoardShape = Eigen::Sizes<kBoardDim, kBoardDim>;
-
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
-  using AuxList = mp::TypeList<OppPolicyTarget>;
-};
+using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
@@ -58,6 +49,7 @@ template <>
 struct EvalSpec<chess::Game, core::kParadigmAlphaZero> {
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
+  using NetworkHeads = chess::alpha0::NetworkHeads;
   using MctsConfiguration = chess::alpha0::MctsConfiguration;
 };
 
@@ -66,6 +58,7 @@ template <>
 struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
+  using NetworkHeads = chess::alpha0::NetworkHeads;
   using MctsConfiguration = chess::alpha0::MctsConfiguration;
 };
 

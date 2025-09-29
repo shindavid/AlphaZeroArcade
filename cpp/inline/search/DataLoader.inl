@@ -578,10 +578,10 @@ void DataLoader<Traits>::init_load_instructions(const LoadParams& params) {
 
   load_instructions_.row_size = InputTensorizor::Tensor::Dimensions::total_size;
 
-  constexpr size_t N = mp::Length_v<AllTargets>;
+  constexpr size_t N = mp::Length_v<TrainingTargets>;
   for (int target_index : load_instructions_.target_indices) {
     util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
-      using Target = mp::TypeAt_t<AllTargets, t>;
+      using Target = mp::TypeAt_t<TrainingTargets, t>;
       using Tensor = Target::Tensor;
       constexpr int kSize = Tensor::Dimensions::total_size;
       load_instructions_.row_size += kSize;

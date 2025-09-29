@@ -4,6 +4,7 @@
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
+#include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/blokus/InputTensorizor.hpp"
@@ -17,11 +18,7 @@ struct TrainingTargets {
   using ScoreShape = Eigen::Sizes<2, kVeryBadScore + 1, kNumPlayers>;  // pdf/cdf, score, player
   using UnplayedPiecesShape = Eigen::Sizes<kNumPlayers, kNumPieces>;
 
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-
-  struct ScoreTarget : public core::TargetBase {
+  struct ScoreTarget {
     static constexpr const char* kName = "score";
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
@@ -32,7 +29,7 @@ struct TrainingTargets {
   /*
    * Who owns which square at the end of the game.
    */
-  struct OwnershipTarget : public core::TargetBase {
+  struct OwnershipTarget {
     static constexpr const char* kName = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
@@ -43,7 +40,7 @@ struct TrainingTargets {
   /*
    * Which pieces are unplayed at the end of the game.
    */
-  struct UnplayedPiecesTarget : public core::TargetBase {
+  struct UnplayedPiecesTarget {
     static constexpr const char* kName = "unplayed_pieces";
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
@@ -57,9 +54,11 @@ struct TrainingTargets {
   // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
   //                               before the current player's next move.
 
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
   using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<Game>, AuxList>;
 };
+
+using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
@@ -78,6 +77,7 @@ template <>
 struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
+  using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
@@ -86,6 +86,7 @@ template <>
 struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
+  using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 

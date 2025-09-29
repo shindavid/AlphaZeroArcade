@@ -366,9 +366,7 @@ class DataLoader : public search::DataLoaderBase {
  public:
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
-  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
-  using AuxTargets = EvalSpec::TrainingTargets::AuxList;
-  using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
+  using TrainingTargets = EvalSpec::TrainingTargets::List;
 
   using InputTensorizor = core::InputTensorizor<Game>;
   using GameReadLog = search::GameReadLog<Traits>;

@@ -14,13 +14,13 @@ namespace core {
 
 namespace detail {
 
-template <typename Target>
+template <typename Head>
 struct ExtractTensor {
-  using type = Target::Tensor;
+  using type = Head::Tensor;
 };
 
 template <typename Tensor>
-struct ExtractDimensions {
+struct ExtractShape {
   using type = Tensor::Dimensions;
 };
 
@@ -40,13 +40,13 @@ template <core::concepts::EvalSpec EvalSpec>
 struct TensorTypes {
   using Game = EvalSpec::Game;
   using InputTensorizor = core::InputTensorizor<Game>;
-  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
+  using NetworkHeads = EvalSpec::NetworkHeads::List;
 
   using InputTensor = InputTensorizor::Tensor;
-  using OutputTensors = mp::Apply_t<PrimaryTargets, detail::ExtractTensor>;
+  using OutputTensors = mp::Apply_t<NetworkHeads, detail::ExtractTensor>;
 
   using InputShape = InputTensor::Dimensions;
-  using OutputShapes = mp::Apply_t<OutputTensors, detail::ExtractDimensions>;
+  using OutputShapes = mp::Apply_t<OutputTensors, detail::ExtractShape>;
 
   using OutputTensorMaps = mp::Apply_t<OutputTensors, detail::ToTensorMap>;
 

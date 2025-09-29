@@ -19,7 +19,7 @@ class NNEvaluation {
   using EvalSpec = Traits::EvalSpec;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = core::InputTensorizor<Game>;
-  using PrimaryTargets = Traits::EvalSpec::TrainingTargets::PrimaryList;
+  using NetworkHeads = Traits::EvalSpec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
 

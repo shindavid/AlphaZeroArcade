@@ -4,24 +4,15 @@
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
+#include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/InputTensorizor.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace hex::alpha0 {
 
-struct TrainingTargets {
-  using BoardShape = Eigen::Sizes<Constants::kBoardDim, Constants::kBoardDim>;
-
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
-  using AuxList = mp::TypeList<OppPolicyTarget>;
-};
+using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 8;
@@ -40,6 +31,7 @@ template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
+  using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;
 };
 
@@ -48,6 +40,7 @@ template <>
 struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
+  using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;
 };
 

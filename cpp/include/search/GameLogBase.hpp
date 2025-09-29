@@ -9,15 +9,14 @@
 namespace search {
 
 struct ShapeInfo {
-  template <eigen_util::concepts::FTensor Tensor>
-  void init(const char* nm, int target_idx, bool primary);
+  template <eigen_util::concepts::Shape Shape>
+  void init(const char* nm, int target_idx);
   ~ShapeInfo();
 
   const char* name = nullptr;
   int* dims = nullptr;
   int num_dims = 0;
   int target_index = -1;
-  int is_primary = false;
 };
 
 struct GameLogFileHeader {

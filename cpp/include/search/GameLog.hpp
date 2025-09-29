@@ -6,7 +6,6 @@
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -52,9 +51,8 @@ class GameReadLog : public GameLogBase<Traits> {
   using Game = Traits::Game;
   using GameLogView = Traits::GameLogView;
   using EvalSpec = Traits::EvalSpec;
-  using PrimaryTargets = EvalSpec::TrainingTargets::PrimaryList;
-  using AuxTargets = EvalSpec::TrainingTargets::AuxList;
-  using AllTargets = mp::Concat_t<PrimaryTargets, AuxTargets>;
+  using TrainingTargets = EvalSpec::TrainingTargets::List;
+  using NetworkHeads = EvalSpec::NetworkHeads::List;
   using Algorithms = search::AlgorithmsForT<Traits>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
@@ -87,7 +85,9 @@ class GameReadLog : public GameLogBase<Traits> {
   GameReadLog(const char* filename, int game_index, const GameLogMetadata& metadata,
               const char* buffer);
 
-  static ShapeInfo* get_shape_info_array();
+  static ShapeInfo* get_input_shapes();
+  static ShapeInfo* get_target_shapes();
+  static ShapeInfo* get_head_shapes();
 
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;

@@ -9,14 +9,12 @@
 
 namespace search {
 
-template <eigen_util::concepts::FTensor Tensor>
-void ShapeInfo::init(const char* nm, int target_idx, bool primary) {
-  using Shape = Tensor::Dimensions;
+template <eigen_util::concepts::Shape Shape>
+void ShapeInfo::init(const char* nm, int target_idx) {
   this->name = nm;
   this->dims = new int[Shape::count];
   this->num_dims = Shape::count;
   this->target_index = target_idx;
-  this->is_primary = primary;
 
   Shape shape;
   for (int i = 0; i < Shape::count; ++i) {

@@ -15,7 +15,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     int n = stable_data.num_valid_actions;
 
-    using ValueUncertaintyTensor = EvalSpec::TrainingTargets::ValueUncertaintyTarget::Tensor;
+    using ValueUncertaintyTensor = EvalSpec::NetworkHeads::ValueUncertaintyHead::Tensor;
     ValueUncertaintyTensor U;
     LocalActionValueArray child_U(n);
 
@@ -40,10 +40,10 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   Base::write_to_training_info(params, training_info);
 
   const SearchResults* mcts_results = params.mcts_results;
-  core::seat_index_t seat = params.seat;
 
-  training_info.Q_prior = Game::GameResults::to_value_array(mcts_results->value_prior)[seat];
-  training_info.Q_posterior = mcts_results->win_rates(seat);
+  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+    training_info.Q_posterior(p) = mcts_results->win_rates[p];
+  }
 
   if (params.use_for_training) {
     training_info.action_value_uncertainties_target = mcts_results->action_value_uncertainties;
@@ -56,7 +56,6 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
                                    GameLogFullRecord& full_record) {
   Base::to_record(training_info, full_record);
 
-  full_record.Q_prior = training_info.Q_prior;
   full_record.Q_posterior = training_info.Q_posterior;
 
   if (training_info.action_value_uncertainties_target_valid) {
@@ -73,7 +72,6 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
                                           std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
-  compact_record.Q_prior = full_record.Q_prior;
   compact_record.Q_posterior = full_record.Q_posterior;
   compact_record.active_seat = full_record.active_seat;
   compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
@@ -119,7 +117,6 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
     Game::Symmetries::apply(view.action_value_uncertainties, sym, mode);
   }
 
-  view.Q_prior = record->Q_prior;
   view.Q_posterior = record->Q_posterior;
 }
 
