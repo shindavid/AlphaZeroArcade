@@ -23,19 +23,19 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
     case D4::kIdentity:
       return;
     case D4::kRot90:
-      return rot90_clockwise(s.core.cur_player_mask, s.core.opponent_mask);
+      return rot90_clockwise(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kRot180:
-      return rot180(s.core.cur_player_mask, s.core.opponent_mask);
+      return rot180(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kRot270:
-      return rot270_clockwise(s.core.cur_player_mask, s.core.opponent_mask);
+      return rot270_clockwise(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kFlipVertical:
-      return flip_vertical(s.core.cur_player_mask, s.core.opponent_mask);
+      return flip_vertical(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kFlipMainDiag:
-      return flip_main_diag(s.core.cur_player_mask, s.core.opponent_mask);
+      return flip_main_diag(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kMirrorHorizontal:
-      return mirror_horizontal(s.core.cur_player_mask, s.core.opponent_mask);
+      return mirror_horizontal(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     case D4::kFlipAntiDiag:
-      return flip_anti_diag(s.core.cur_player_mask, s.core.opponent_mask);
+      return flip_anti_diag(s.core.cur_player_mask, s.core.opponent_mask, s.aux.stable_discs);
     default:
       throw util::Exception("Unknown group element: {}", sym);
   }

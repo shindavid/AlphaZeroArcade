@@ -37,6 +37,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
     state.core.cur_player_mask = cur_player_mask;
     state.core.cur_player = 1 - state.core.cur_player;
     state.core.pass_count = 0;
+    state.compute_aux();
   }
 }
 
