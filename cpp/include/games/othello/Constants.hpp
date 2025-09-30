@@ -222,62 +222,62 @@ static_assert(kFiles[7] == kFileHMask);
 constexpr uint8_t bit8(int x){ return uint8_t(1u<<x); }
 
 constexpr uint8_t find_edge_stable(uint8_t old_P, uint8_t old_O, uint8_t stable) {
-    const uint8_t E = uint8_t(~(old_P | old_O));
-    stable = uint8_t(stable & old_P);
-    if (!stable || !E) return stable;
+  const uint8_t E = uint8_t(~(old_P | old_O));
+  stable = uint8_t(stable & old_P);
+  if (!stable || !E) return stable;
 
-    for (int x = 0; x < 8; ++x)
-      if (E & bit8(x)) {
-        // player plays
-        {
-          uint8_t P = uint8_t(old_P | bit8(x)), O = old_O;
-          if (x > 1) {
-            int y = x - 1;
-            while (y > 0 && (O & bit8(y))) --y;
-            if (P & bit8(y))
-              for (y = x - 1; y > 0 && (O & bit8(y)); --y) {
-                O ^= bit8(y);
-                P ^= bit8(y);
-              }
-          }
-          if (x < 6) {
-            int y = x + 1;
-            while (y < 8 && (O & bit8(y))) ++y;
-            if (P & bit8(y))
-              for (y = x + 1; y < 8 && (O & bit8(y)); ++y) {
-                O ^= bit8(y);
-                P ^= bit8(y);
-              }
-          }
-          stable = find_edge_stable(P, O, stable);
-          if (!stable) return 0;
+  for (int x = 0; x < 8; ++x)
+    if (E & bit8(x)) {
+      // player plays
+      {
+        uint8_t P = uint8_t(old_P | bit8(x)), O = old_O;
+        if (x > 1) {
+          int y = x - 1;
+          while (y > 0 && (O & bit8(y))) --y;
+          if (P & bit8(y))
+            for (y = x - 1; y > 0 && (O & bit8(y)); --y) {
+              O ^= bit8(y);
+              P ^= bit8(y);
+            }
         }
-        // opponent plays
-        {
-          uint8_t P = old_P, O = uint8_t(old_O | bit8(x));
-          if (x > 1) {
-            int y = x - 1;
-            while (y > 0 && (P & bit8(y))) --y;
-            if (O & bit8(y))
-              for (y = x - 1; y > 0 && (P & bit8(y)); --y) {
-                O ^= bit8(y);
-                P ^= bit8(y);
-              }
-          }
-          if (x < 6) {
-            int y = x + 1;
-            while (y < 8 && (P & bit8(y))) ++y;
-            if (O & bit8(y))
-              for (y = x + 1; y < 8 && (P & bit8(y)); ++y) {
-                O ^= bit8(y);
-                P ^= bit8(y);
-              }
-          }
-          stable = find_edge_stable(P, O, stable);
-          if (!stable) return 0;
+        if (x < 6) {
+          int y = x + 1;
+          while (y < 8 && (O & bit8(y))) ++y;
+          if (P & bit8(y))
+            for (y = x + 1; y < 8 && (O & bit8(y)); ++y) {
+              O ^= bit8(y);
+              P ^= bit8(y);
+            }
         }
+        stable = find_edge_stable(P, O, stable);
+        if (!stable) return 0;
       }
-    return stable;
+      // opponent plays
+      {
+        uint8_t P = old_P, O = uint8_t(old_O | bit8(x));
+        if (x > 1) {
+          int y = x - 1;
+          while (y > 0 && (P & bit8(y))) --y;
+          if (O & bit8(y))
+            for (y = x - 1; y > 0 && (P & bit8(y)); --y) {
+              O ^= bit8(y);
+              P ^= bit8(y);
+            }
+        }
+        if (x < 6) {
+          int y = x + 1;
+          while (y < 8 && (P & bit8(y))) ++y;
+          if (O & bit8(y))
+            for (y = x + 1; y < 8 && (P & bit8(y)); ++y) {
+              O ^= bit8(y);
+              P ^= bit8(y);
+            }
+        }
+        stable = find_edge_stable(P, O, stable);
+        if (!stable) return 0;
+      }
+    }
+  return stable;
 }
 
 inline constexpr auto EDGE_STABILITY = [] {
