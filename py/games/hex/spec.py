@@ -73,7 +73,7 @@ class CNN_b11_c32(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 1.0),
-            BasicLossTerm('opp_policy', 0.15),
+            BasicLossTerm('opp_policy', 0.03),
         ]
 
     @staticmethod
@@ -159,7 +159,7 @@ class Transformer(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 1.0),
-            BasicLossTerm('opp_policy', 0.15),
+            BasicLossTerm('opp_policy', 0.03),
         ]
 
     @staticmethod
