@@ -33,7 +33,8 @@ struct GameState {
     mask_t opponent_mask;    // spaces occupied by either player
     mask_t cur_player_mask;  // spaces occupied by current player
     core::seat_index_t cur_player;
-    int8_t pass_count;};
+    int8_t pass_count;
+  };
 
   struct Aux {
     mask_t stable_discs;
