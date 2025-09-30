@@ -159,22 +159,17 @@ static inline uint64_t unpack_file_middle(uint8_t m, int file) {
 
 // Convenience: table lookup for one 8-square edge
 static inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8) {
-    return EDGE_STABILITY[static_cast<unsigned>(p8) * 256u + o8];
+    return edge_stability_table()[static_cast<unsigned>(p8) * 256u + o8];
 }
 
 static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
     uint64_t stable = 0;
-    std::cout << "get_stable_edge_scalar: P=" << std::hex << P << " O=" << O << std::dec << "\n";
-    std::cout << "STABILITY[256*255]=" << (int)EDGE_STABILITY[256*255] << "\n";
     // Rank 1: bits 0..7
     {
         uint8_t p8 = static_cast<uint8_t>(P & 0xFF);
         uint8_t o8 = static_cast<uint8_t>(O & 0xFF);
-        std::cout << " rank1 p8=" << std::hex << (int)p8 << " o8=" << (int)o8 << std::dec << "\n";
         stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8));
     }
-
-    std::cout << " after rank1 stable=" << std::hex << stable << std::dec << "\n";
 
     // Rank 8: bits 56..63
     {
@@ -182,8 +177,6 @@ static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
         uint8_t o8 = static_cast<uint8_t>((O >> 56) & 0xFF);
         stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8)) << 56;
     }
-
-    std::cout << " after rank8 stable=" << std::hex << stable << std::dec << "\n";
 
     // File A (file = 0), excluding corners (A1/A8)
     {
@@ -193,8 +186,6 @@ static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
         stable |= unpack_file_middle(m, 0);
     }
 
-    std::cout << " after fileA stable=" << std::hex << stable << std::dec << "\n";
-
     // File H (file = 7), excluding corners (H1/H8)
     {
         uint8_t p8 = pack_file(P, 7);
@@ -202,8 +193,6 @@ static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
         uint8_t m  = edge_stable_lookup(p8, o8);
         stable |= unpack_file_middle(m, 7);
     }
-
-    std::cout << " after fileH stable=" << std::hex << stable << std::dec << "\n";
 
     return stable;
 }
