@@ -66,14 +66,7 @@ class BuildParams:
         if self.ffi_lib_path:
             return self.ffi_lib_path
 
-        # TODO[dshin]: The ffi-debug build does not work. This is due to some hairy issues with
-        # libtorch and dynamic library loading. For now, we will just use the Release build.
-        #
-        # My hope is to eventually retire the libtorch-dependency in favor of something like
-        # onnxruntime, in which case this problem should disappear. So I'm punting on a proper fix
-        # for now.
-        build = 'Release'
-        # build = self.build_type
+        build = self.build_type
         return f'target/{build}/lib/lib{game}.so'
 
     @staticmethod
