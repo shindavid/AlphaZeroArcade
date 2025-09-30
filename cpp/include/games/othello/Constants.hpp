@@ -147,35 +147,42 @@ const int kTypicalNumMovesPerGame = kNumCells - kNumStartingPieces;
 const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
+} // namespace othello
 
-// A1 = (file=0, rank=0) = bit 0; file→ +1, rank↑ +8
+namespace detail {
+
 constexpr int idx(int f, int r) { return r * 8 + f; }
 constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r < 8; }
-constexpr mask_t bit(int f, int r) { return mask_t{1} << idx(f, r); }
+constexpr othello::mask_t bit(int f, int r) { return othello::mask_t{1} << idx(f, r); }
+
+} // namespace detail
+
+namespace othello {
 
 // -------- Single-line builders --------
 constexpr mask_t rank_mask(int r) {
   mask_t m = 0;
-  for (int f = 0; f < 8; ++f) m |= bit(f, r);
+  for (int f = 0; f < 8; ++f) m |= detail::bit(f, r);
   return m;
 }
+
 constexpr mask_t file_mask(int f) {
   mask_t m = 0;
-  for (int r = 0; r < 8; ++r) m |= bit(f, r);
+  for (int r = 0; r < 8; ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from A1 to H8
 constexpr mask_t diagSE_from(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); ++f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); ++f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from H1 to A8
 constexpr mask_t diagSW_from(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); --f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); --f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
@@ -185,11 +192,13 @@ constexpr std::array<mask_t, 8> make_ranks() {
   for (int r = 0; r < 8; ++r) a[r] = rank_mask(r);
   return a;
 }
+
 constexpr std::array<mask_t, 8> make_files() {
   std::array<mask_t, 8> a{};
   for (int f = 0; f < 8; ++f) a[f] = file_mask(f);
   return a;
 }
+
 constexpr std::array<mask_t, 15> make_diagSE() {
   std::array<mask_t, 15> a{};
   int k = 0;
@@ -199,6 +208,7 @@ constexpr std::array<mask_t, 15> make_diagSE() {
   for (int r = 1; r < 8; ++r) a[k++] = diagSE_from(0, r);
   return a;
 }
+
 constexpr std::array<mask_t, 15> make_diagSW() {
   std::array<mask_t, 15> a{};
   int k = 0;
@@ -219,61 +229,70 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-constexpr uint8_t bit8(int x){ return uint8_t(1u<<x); }
+} // namespace othello
 
-constexpr uint8_t find_edge_stable(uint8_t old_P, uint8_t old_O, uint8_t stable) {
+namespace detail {
+
+constexpr uint8_t bit8(int x) { return uint8_t(1u << x); }
+
+} // namespace detail
+
+
+namespace othello {
+
+constexpr uint8_t find_stable_edge(uint8_t old_P, uint8_t old_O, uint8_t stable) {
   const uint8_t E = uint8_t(~(old_P | old_O));
   stable = uint8_t(stable & old_P);
   if (!stable || !E) return stable;
 
   for (int x = 0; x < 8; ++x)
-    if (E & bit8(x)) {
+    if (E & detail::bit8(x)) {
       // player plays
       {
-        uint8_t P = uint8_t(old_P | bit8(x)), O = old_O;
+        uint8_t P = uint8_t(old_P | detail::bit8(x)), O = old_O;
         if (x > 1) {
           int y = x - 1;
-          while (y > 0 && (O & bit8(y))) --y;
-          if (P & bit8(y))
-            for (y = x - 1; y > 0 && (O & bit8(y)); --y) {
-              O ^= bit8(y);
-              P ^= bit8(y);
+          while (y > 0 && (O & detail::bit8(y))) --y;
+          if (P & detail::bit8(y))
+            for (y = x - 1; y > 0 && (O & detail::bit8(y)); --y) {
+              O ^= detail::bit8(y);
+              P ^= detail::bit8(y);
             }
         }
         if (x < 6) {
           int y = x + 1;
-          while (y < 8 && (O & bit8(y))) ++y;
-          if (P & bit8(y))
-            for (y = x + 1; y < 8 && (O & bit8(y)); ++y) {
-              O ^= bit8(y);
-              P ^= bit8(y);
+          while (y < 8 && (O & detail::bit8(y))) ++y;
+          if (P & detail::bit8(y))
+            for (y = x + 1; y < 8 && (O & detail::bit8(y)); ++y) {
+              O ^= detail::bit8(y);
+              P ^= detail::bit8(y);
             }
         }
-        stable = find_edge_stable(P, O, stable);
+        stable = find_stable_edge(P, O, stable);
         if (!stable) return 0;
       }
       // opponent plays
       {
-        uint8_t P = old_P, O = uint8_t(old_O | bit8(x));
+        uint8_t P = old_P, O = uint8_t(old_O | detail::bit8(x));
         if (x > 1) {
           int y = x - 1;
-          while (y > 0 && (P & bit8(y))) --y;
-          if (O & bit8(y))
-            for (y = x - 1; y > 0 && (P & bit8(y)); --y) {
-              O ^= bit8(y);
-              P ^= bit8(y);
+          while (y > 0 && (P & detail::bit8(y))) --y;
+          if (O & detail::bit8(y))
+            for (y = x - 1; y > 0 && (P & detail::bit8(y)); --y) {
+              O ^= detail::bit8(y);
+              P ^= detail::bit8(y);
             }
         }
         if (x < 6) {
           int y = x + 1;
-          while (y < 8 && (P & bit8(y))) ++y;
-          if (O & bit8(y))
-            for (y = x + 1; y < 8 && (P & bit8(y)); ++y) {
-              O ^= bit8(y);
-              P ^= bit8(y);
+          while (y < 8 && (P & detail::bit8(y))) ++y;
+          if (O & detail::bit8(y))
+            for (y = x + 1; y < 8 && (P & detail::bit8(y)); ++y) {
+              O ^= detail::bit8(y);
+              P ^= detail::bit8(y);
             }
         }
-        stable = find_edge_stable(P, O, stable);
+        stable = find_stable_edge(P, O, stable);
         if (!stable) return 0;
       }
     }
@@ -285,7 +304,7 @@ inline constexpr auto EDGE_STABILITY = [] {
   for (int P = 0; P < 256; ++P)
     for (int O = 0; O < 256; ++O)
       t[size_t(P) * 256u + size_t(O)] =
-        (P & O) ? 0u : find_edge_stable(uint8_t(P), uint8_t(O), uint8_t(P));
+        (P & O) ? 0u : find_stable_edge(uint8_t(P), uint8_t(O), uint8_t(P));
   return t;
 }();
 
