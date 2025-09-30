@@ -259,4 +259,30 @@ mask_t expected_stable =
 EXPECT_EQ(stable, expected_stable);
 }
 
+TEST(StableDiscs, edge_with_empty_space) {
+/*
+   A B C D E F G H            A B C D E F G H
+ 1|O|O|X|O| |O|X|O|         1|*|*|*| | | |*|*|
+ 2| | | | | | | | |         2| | | | | | | | |
+ 3| | | | | | | | |         3| | | | | | | | |
+ 4| | | | | | | | |   -->   4| | | | | | | | |
+ 5| | | | | | | | |         5| | | | | | | | |
+ 6| | | | | | | | |         6| | | | | | | | |
+ 7| | | | | | | | |         7| | | | | | | | |
+ 8| | | | | | | | |         8| | | | | | | | |
+
+    Stable discs are A1, B1, C1, G1, H1
+*/
+
+mask_t cur_player_mask = (1ULL << kC1) | (1ULL << kE1);
+
+mask_t opponent_mask =
+  (1ULL << kA1) | (1ULL << kB1) | (1ULL << kD1) | (1ULL << kF1) | (1ULL << kH1);
+
+mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
+mask_t expected_stable =
+  (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kG1) | (1ULL << kH1);
+EXPECT_EQ(stable, expected_stable);
+}
+
 } // namespace othello
