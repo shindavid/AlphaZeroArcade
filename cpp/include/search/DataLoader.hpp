@@ -4,7 +4,6 @@
 #include "core/InputTensorizor.hpp"
 #include "search/GameLog.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
