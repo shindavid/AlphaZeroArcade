@@ -173,14 +173,14 @@ constexpr mask_t file_mask(int f) {
 }
 
 // from A1 to H8
-constexpr mask_t diagSE_from(int f0, int r0) {
+constexpr mask_t SE_diag_mask(int f0, int r0) {
   mask_t m = 0;
   for (int f = f0, r = r0; detail::in_bounds(f, r); ++f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from H1 to A8
-constexpr mask_t diagSW_from(int f0, int r0) {
+constexpr mask_t SW_diag_mask(int f0, int r0) {
   mask_t m = 0;
   for (int f = f0, r = r0; detail::in_bounds(f, r); --f, ++r) m |= detail::bit(f, r);
   return m;
@@ -199,30 +199,30 @@ constexpr std::array<mask_t, 8> make_files() {
   return a;
 }
 
-constexpr std::array<mask_t, 15> make_diagSE() {
+constexpr std::array<mask_t, 15> make_SE_diags() {
   std::array<mask_t, 15> a{};
   int k = 0;
   // starts on bottom row A1..H1
-  for (int f = 0; f < 8; ++f) a[k++] = diagSE_from(f, 0);
+  for (int f = 0; f < 8; ++f) a[k++] = SE_diag_mask(f, 0);
   // starts on left column A2..A8
-  for (int r = 1; r < 8; ++r) a[k++] = diagSE_from(0, r);
+  for (int r = 1; r < 8; ++r) a[k++] = SE_diag_mask(0, r);
   return a;
 }
 
-constexpr std::array<mask_t, 15> make_diagSW() {
+constexpr std::array<mask_t, 15> make_SW_diags() {
   std::array<mask_t, 15> a{};
   int k = 0;
   // starts on bottom row H1..A1
-  for (int f = 7; f >= 0; --f) a[k++] = diagSW_from(f, 0);
+  for (int f = 7; f >= 0; --f) a[k++] = SW_diag_mask(f, 0);
   // starts on right column H2..H8
-  for (int r = 1; r < 8; ++r) a[k++] = diagSW_from(7, r);
+  for (int r = 1; r < 8; ++r) a[k++] = SW_diag_mask(7, r);
   return a;
 }
 
 inline constexpr auto kRanks = make_ranks();
 inline constexpr auto kFiles = make_files();
-inline constexpr auto kDiagSE = make_diagSE();
-inline constexpr auto kDiagSW = make_diagSW();
+inline constexpr auto kDiagSE = make_SE_diags();
+inline constexpr auto kDiagSW = make_SW_diags();
 
 static_assert(kRanks[0] == kRank1Mask);
 static_assert(kRanks[7] == kRank8Mask);
