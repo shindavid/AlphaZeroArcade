@@ -1,16 +1,39 @@
 from __future__ import annotations
 
 from shared.basic_types import HeadValuesDict
+from util.torch_util import apply_mask
 
 import torch
 from torch import nn as nn
 
 import abc
-from typing import TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 
 
 if TYPE_CHECKING:
     from shared.model import Model
+
+
+class Masker:
+    def __init__(self, mask_dict, y_dict, y_hat_dict):
+        self.mask_dict = mask_dict
+        self.y_dict = y_dict
+        self.y_hat_dict = y_hat_dict
+
+    def get_y_and_y_hat(self, y_names: List[str], y_hat_names: List[str]):
+        ys = [self.y_dict[name] for name in y_names]
+        y_hats = [self.y_hat_dict[name] for name in y_hat_names]
+        if not y_hat_names:
+            return ys, y_hats
+
+        masks = [self.mask_dict[name] for name in y_hat_names]
+        mask = masks[0]
+        for m in masks[1:]:
+            mask = mask | m
+
+        ys = [apply_mask(y, mask) for y in ys]
+        y_hats = [apply_mask(y_hat, mask) for y_hat in y_hats]
+        return ys, y_hats
 
 
 class LossTerm:
@@ -26,7 +49,10 @@ class LossTerm:
         pass
 
     @abc.abstractmethod
-    def compute_loss(self, y: HeadValuesDict, y_hat: HeadValuesDict) -> torch.Tensor:
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        """
+        Return the loss, and the number of samples that contributed to the loss.
+        """
         pass
 
 
@@ -45,8 +71,11 @@ class BasicLossTerm(LossTerm):
     def post_init(self, model: Model):
         self._loss_fn = model.get_head(self.name).default_loss_function()
 
-    def compute_loss(self, y: HeadValuesDict, y_hat: HeadValuesDict) -> torch.Tensor:
-        return self._loss_fn(y[self.name], y_hat[self.name])
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        y, y_hat = masker.get_y_and_y_hat([self.name], [self.name])
+        y = y[0]
+        y_hat = y_hat[0]
+        return self._loss_fn(y, y_hat), len(y)
 
 
 class ValueUncertaintyLossTerm(LossTerm):
@@ -80,10 +109,16 @@ class ValueUncertaintyLossTerm(LossTerm):
     def post_init(self, model: Model):
         self._value_head = model.get_head(self._value_name)
 
-    def compute_loss(self, y: HeadValuesDict, y_hat: HeadValuesDict) -> torch.Tensor:
-        Q_prior = self._value_head.to_win_share(y[self._value_name])  # (B, 2)
-        Q_posterior = y_hat[self._Q_posterior_target_name]  # (B, 2)
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        y_names = [self.name, self._value_name]
+        y_hat_names = [self._Q_posterior_target_name]
+        y, y_hat = masker.get_y_and_y_hat(y_names, y_hat_names)
+
+        predicted_Dsq, win_value = y
+        Q_posterior = y_hat[0]  # (B, 2)
+
+        Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
         D = Q_posterior - Q_prior  # (B, 2)
         D1 = D[:, :1]  # (B, 1)
-        Dsq = D1 * D1  # (B, 1)
-        return self._loss_fn(y[self.name], Dsq)
+        actual_Dsq = D1 * D1  # (B, 1)
+        return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)

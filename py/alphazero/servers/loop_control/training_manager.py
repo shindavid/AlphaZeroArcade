@@ -336,7 +336,7 @@ class TrainingManager:
 
             self._stats = trainer.do_training_epoch(
                 self._game_log_reader, self._net, self._opt, minibatch_size, n_minibatches,
-                start, end, gen, self._loss_terms)
+                start, end, self._loss_terms)
         except:
             if self._game_log_reader.closed():
                 # This is a shutdown race-condition, it's ok

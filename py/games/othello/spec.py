@@ -18,13 +18,14 @@ class CNN_b9_c128(ModelConfigGenerator):
     def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
         input_shapes = head_shape_info_collection.input_shapes
         head_shapes = head_shape_info_collection.head_shapes
+        target_shapes = head_shape_info_collection.target_shapes
 
         input_shape = input_shapes['input'].shape
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
         action_value_shape = head_shapes['action_value'].shape
-        ownership_shape = head_shapes['ownership'].shape
-        score_margin_shape = head_shapes['score_margin'].shape
+        ownership_shape = target_shapes['ownership'].shape
+        score_margin_shape = target_shapes['score_margin'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
@@ -115,13 +116,14 @@ class Transformer(ModelConfigGenerator):
     def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
         input_shapes = head_shape_info_collection.input_shapes
         head_shapes = head_shape_info_collection.head_shapes
+        target_shapes = head_shape_info_collection.target_shapes
 
         input_shape = input_shapes['input'].shape
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
         action_value_shape = head_shapes['action_value'].shape
-        score_margin_shape = head_shapes['score_margin'].shape
-        ownership_shape = head_shapes['ownership'].shape
+        score_margin_shape = target_shapes['score_margin'].shape
+        ownership_shape = target_shapes['ownership'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
