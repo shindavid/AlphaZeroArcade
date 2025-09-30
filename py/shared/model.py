@@ -1,4 +1,4 @@
-from shared.basic_types import ShapeInfoDict
+from shared.basic_types import ShapeInfoCollection
 from shared.model_config import ModelConfig
 from shared.net_modules import Head
 from util.graph_util import AdjMatrix, topological_sort
@@ -102,7 +102,7 @@ class Model(nn.Module):
 
         return tuple(y[i] for i in self._head_indices)
 
-    def save_model(self, filename: str, input_shape_info_dict: ShapeInfoDict, head_names: Set[str]):
+    def save_model(self, filename: str, shape_info_collection: ShapeInfoCollection):
         """
         Saves this network to disk in ONNX format.
         """
@@ -110,8 +110,12 @@ class Model(nn.Module):
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
+        input_shapes = shape_info_collection.input_shapes
+        head_shapes = shape_info_collection.head_shapes
+        head_names = frozenset(head_shapes.keys())
+
         # 1) clone, strip extra heads, freeze
-        clone_dict_key = frozenset(head_names)
+        clone_dict_key = head_names
         clone = self._clone_dict.get(clone_dict_key, None)
         if clone is None:
             trimmed_config = self._config.trim(head_names)
@@ -126,7 +130,7 @@ class Model(nn.Module):
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
-        example_shape = (batch_size, *input_shape_info_dict['input'].shape)
+        example_shape = (batch_size, *input_shapes['input'].shape)
         example_input = torch.zeros(example_shape, dtype=torch.float32)
 
         # 3) Export to a temporary in-memory buffer

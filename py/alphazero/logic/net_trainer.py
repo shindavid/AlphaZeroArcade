@@ -132,8 +132,10 @@ class NetTrainer:
 
         loss_weights = [term.weight for term in loss_terms]
 
+        head_names = list(reader.shape_info_collection.head_shapes.keys())
+        target_names = list(reader.shape_info_collection.target_shapes.keys())
         data_batches = reader.create_data_batches(
-            minibatch_size, n_minibatches, window_start, window_end, net._head_names, gen)
+            minibatch_size, n_minibatches, window_start, window_end, target_names)
 
         n_samples = 0
         stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_terms)
@@ -153,8 +155,8 @@ class NetTrainer:
             labels = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks, labels)]
             outputs = [apply_mask(y, mask) for mask, y in zip(masks, outputs)]
 
-            labels_dict = {head: y_hat for head, y_hat in zip(net.head_names, labels)}
-            outputs_dict = {head: y for head, y in zip(net.head_names, outputs)}
+            labels_dict = {target: y_hat for target, y_hat in zip(target_names, labels)}
+            outputs_dict = {head: y for head, y in zip(head_names, outputs)}
 
             losses = [term.compute_loss(outputs_dict, labels_dict) for term in loss_terms]
             loss = sum([l * w for l, w in zip(losses, loss_weights)])

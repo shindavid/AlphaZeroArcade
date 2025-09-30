@@ -2,7 +2,7 @@ from .build_params import BuildParams
 
 from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
-from shared.basic_types import SearchParadigm, ShapeInfo, ShapeInfoDict
+from shared.basic_types import SearchParadigm, ShapeInfo, ShapeInfoCollection, ShapeInfoDict
 from util.repo_util import Repo
 
 import torch
@@ -40,9 +40,7 @@ class GameLogReader:
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._lib.init()
-        self._input_shape_info_dict: Optional[ShapeInfoDict] = None
-        self._target_shape_info_dict: Optional[ShapeInfoDict] = None
-        self._head_shape_info_dict: Optional[ShapeInfoDict] = None
+        self._shape_info_collection: Optional[ShapeInfoCollection] = None
         self._data_loader = None
         self._closed = False
 
@@ -69,22 +67,10 @@ class GameLogReader:
                                                num_prefetch_threads, paradigm_str_c)
 
     @property
-    def input_shape_info_dict(self) -> ShapeInfoDict:
-        if self._input_shape_info_dict is None:
-            self._input_shape_info_dict = self._load_shape_info_dict('get_input_shapes')
-        return self._input_shape_info_dict
-
-    @property
-    def target_shape_info_dict(self) -> ShapeInfoDict:
-        if self._target_shape_info_dict is None:
-            self._target_shape_info_dict = self._load_shape_info_dict('get_target_shapes')
-        return self._target_shape_info_dict
-
-    @property
-    def head_shape_info_dict(self) -> ShapeInfoDict:
-        if self._head_shape_info_dict is None:
-            self._head_shape_info_dict = self._load_shape_info_dict('get_head_shapes')
-        return self._head_shape_info_dict
+    def shape_info_collection(self) -> ShapeInfoCollection:
+        if self._shape_info_collection is None:
+            self._shape_info_collection = self._load_shape_info_collection()
+        return self._shape_info_collection
 
     def merge_game_log_files(self, input_filenames: List[str], output_filename: str):
         ffi = self._ffi
@@ -122,16 +108,20 @@ class GameLogReader:
         self._lib.DataLoader_add_gen(self._data_loader, gen, num_rows, file_size)
 
     def create_data_batches(self, minibatch_size: int, n_minibatches: int, window_start: int,
-                            window_end: int, target_names: List[str], gen: Generation,
+                            window_end: int, target_names: List[str],
                             apply_symmetry=True) -> Iterable[DataBatch]:
         ffi = self._ffi
         lib = self._lib
 
         n_samples = minibatch_size * n_minibatches
+
+        input_shape_info_dict = self.shape_info_collection.input_shapes
+        target_shape_info_dict = self.shape_info_collection.target_shapes
+
         n_targets = len(target_names)
 
-        input_shape_info = self.input_shape_info_dict['input']
-        target_shape_infos = [self.target_shape_info_dict[name] for name in target_names]
+        input_shape_info = input_shape_info_dict['input']
+        target_shape_infos = [target_shape_info_dict[name] for name in target_names]
 
         input_shape = input_shape_info.shape
         target_shapes = [info.shape for info in target_shape_infos]
@@ -243,6 +233,16 @@ class GameLogReader:
         assert os.path.isfile(shared_lib), f'Could not find shared lib: {shared_lib}'
         return self._ffi.dlopen(shared_lib)
 
+    def _load_shape_info_collection(self) -> ShapeInfoCollection:
+        input_shapes = self._load_shape_info_dict('get_input_shapes')
+        target_shapes = self._load_shape_info_dict('get_target_shapes')
+        head_shapes = self._load_shape_info_dict('get_head_shapes')
+        return ShapeInfoCollection(
+            input_shapes=input_shapes,
+            target_shapes=target_shapes,
+            head_shapes=head_shapes
+        )
+
     def _load_shape_info_dict(self, func: str) -> ShapeInfoDict:
         ffi = self._ffi
         lib = self._lib
@@ -258,8 +258,7 @@ class GameLogReader:
                 break
             name = ffi.string(info.name).decode('utf-8')
             shape = tuple([info.dims[j] for j in range(info.num_dims)])
-            shape_info = ShapeInfo(name=name, target_index=info.target_index,
-                                   primary=bool(info.is_primary), shape=shape)
+            shape_info = ShapeInfo(name=name, target_index=info.target_index, shape=shape)
             shape_info_dict[name] = shape_info
             logger.debug('ShapeInfo: %s -> %s', name, shape_info)
             i += 1

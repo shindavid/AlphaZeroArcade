@@ -1,6 +1,6 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.basic_types import SearchParadigm, ShapeInfoDict
-from shared.loss_term import BasicLossTerm, LossTerm
+from shared.basic_types import SearchParadigm, ShapeInfoCollection
+from shared.loss_term import BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
@@ -15,11 +15,14 @@ from typing import List
 
 class CNN_b7_c128(ModelConfigGenerator):
     @staticmethod
-    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = head_shape_info_dict['input'].shape
-        policy_shape = head_shape_info_dict['policy'].shape
-        value_shape = head_shape_info_dict['value'].shape
-        action_value_shape = head_shape_info_dict['action_value'].shape
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        action_value_shape = head_shapes['action_value'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
@@ -82,11 +85,16 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
     search_paradigm: SearchParadigm = SearchParadigm.BetaZero
 
     @staticmethod
-    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = head_shape_info_dict['input'].shape
-        policy_shape = head_shape_info_dict['policy'].shape
-        value_shape = head_shape_info_dict['value'].shape
-        action_value_shape = head_shape_info_dict['action_value'].shape
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        action_value_shape = head_shapes['action_value'].shape
+        value_uncertainty_shape = head_shapes['value_uncertainty'].shape
+        action_value_uncertainty_shape = head_shapes['action_value_uncertainty'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
@@ -100,7 +108,10 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
         c_value_uncertainty_hidden = 1
+        c_action_value_uncertainty_hidden = 2
         n_value_uncertainty_hidden = 256
+
+        trunk_shape = (c_trunk, *board_shape)
 
         return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
@@ -127,14 +138,15 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 parents=['trunk']
             ),
             value_uncertainty=ModuleSpec(
-                type='WinLossDrawValueUncertaintyHead',
-                args=[c_trunk, c_value_uncertainty_hidden, n_value_uncertainty_hidden, (1, )],
-                parents=['trunk']
+                type='ValueUncertaintyHead',
+                args=[c_value_uncertainty_hidden, n_value_uncertainty_hidden,
+                      trunk_shape, value_shape, value_uncertainty_shape],
+                parents=['trunk', 'value']
             ),
             action_value_uncertainty=ModuleSpec(
-                type='GeneralLogitHead',
-                args=[c_trunk, c_value_uncertainty_hidden, n_value_uncertainty_hidden,
-                      action_value_shape],
+                type='ActionValueUncertaintyHead',
+                args=[c_action_value_uncertainty_hidden, trunk_shape,
+                      action_value_uncertainty_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
@@ -150,7 +162,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 1.0),
-            BasicLossTerm('value_uncertainty', 1.0),
+            ValueUncertaintyLossTerm('value_uncertainty', 'value', 'Q_posterior', 1.0),
             BasicLossTerm('action_value_uncertainty', 1.0),
             BasicLossTerm('opp_policy', 0.15),
         ]
@@ -162,11 +174,14 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
 
 class Transformer(ModelConfigGenerator):
     @staticmethod
-    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = head_shape_info_dict['input'].shape
-        policy_shape = head_shape_info_dict['policy'].shape
-        value_shape = head_shape_info_dict['value'].shape
-        action_value_shape = head_shape_info_dict['action_value'].shape
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        action_value_shape = head_shapes['action_value'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 

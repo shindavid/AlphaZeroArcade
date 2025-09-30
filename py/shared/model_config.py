@@ -1,4 +1,4 @@
-from shared.basic_types import SearchParadigm, ShapeInfoDict
+from shared.basic_types import SearchParadigm, ShapeInfoCollection
 from shared.loss_term import LossTerm
 from shared.net_modules import Head, MODULE_MAP
 
@@ -7,7 +7,7 @@ from torch import optim
 
 import abc
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 
 @dataclass
@@ -102,7 +102,7 @@ class ModelConfigGenerator(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
         pass
 
     @staticmethod

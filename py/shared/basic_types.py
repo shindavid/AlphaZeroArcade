@@ -11,11 +11,17 @@ from typing import Dict
 class ShapeInfo:
     name: str
     target_index: int
-    primary: bool
     shape: Shape
 
 
 ShapeInfoDict = Dict[str, ShapeInfo]
+
+
+@dataclass
+class ShapeInfoCollection:
+    input_shapes: ShapeInfoDict
+    target_shapes: ShapeInfoDict
+    head_shapes: ShapeInfoDict
 
 
 class SearchParadigm(Enum):

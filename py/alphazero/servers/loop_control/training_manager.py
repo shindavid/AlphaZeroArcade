@@ -234,23 +234,6 @@ class TrainingManager:
         for term in self._loss_terms:
             term.post_init(self._net)
 
-        # Validate that network heads match c++ TrainingTargets
-        logger.debug('Validating heads...')
-        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
-        gen_cls = model_cfg_generator_type.__name__
-
-        for h, name in enumerate(self._net.head_names):
-            shape_info = head_shape_info_dict.get(name, None)
-            if shape_info is None:
-                raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
-                                 f'({name} not found)')
-
-            t = shape_info.target_index
-            if h != t:
-                raise ValueError(f'{gen_cls} heads do not match c++ TrainingTargets '
-                                 f'({h} != {t}) for {name})')
-        logger.debug('Validation complete!')
-
         # TODO: SWA, cyclic learning rate
 
     def _init_net_if_necessary(self):
@@ -261,9 +244,9 @@ class TrainingManager:
         checkpoint_gen = organizer.get_last_checkpointed_generation()
 
         game_spec = self._controller.game_spec
-        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
+        shape_info_collection = self._game_log_reader.shape_info_collection
         model_cfg_generator_type = game_spec.model_configs[self._controller.params.model_cfg]
-        model_cfg = model_cfg_generator_type.generate(head_shape_info_dict)
+        model_cfg = model_cfg_generator_type.generate(shape_info_collection)
 
         if checkpoint_gen is None:
             self._net = Model(model_cfg)
@@ -433,11 +416,9 @@ class TrainingManager:
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
 
-        input_shape_info_dict = self._game_log_reader.input_shape_info_dict
-        head_shape_info_dict = self._game_log_reader.head_shape_info_dict
-        head_names = set(head_shape_info_dict.keys())
+        shape_info_collection = self._game_log_reader.shape_info_collection
         logger.debug('Calling save_model()...')
-        net.save_model(tmp_model_filename, input_shape_info_dict, head_names)
+        net.save_model(tmp_model_filename, shape_info_collection)
 
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

@@ -1,5 +1,5 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.basic_types import ShapeInfoDict
+from shared.basic_types import ShapeInfoCollection
 from shared.loss_term import BasicLossTerm, LossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
@@ -14,11 +14,14 @@ from typing import List
 
 class CNN_b3_c32(ModelConfigGenerator):
     @staticmethod
-    def generate(head_shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = head_shape_info_dict['input'].shape
-        policy_shape = head_shape_info_dict['policy'].shape
-        value_shape = head_shape_info_dict['value'].shape
-        action_value_shape = head_shape_info_dict['action_value'].shape
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        action_value_shape = head_shapes['action_value'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 

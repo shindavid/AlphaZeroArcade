@@ -22,6 +22,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
+import abc
 import logging
 import math
 from typing import Optional
@@ -53,7 +54,7 @@ class GlobalPoolingLayer(nn.Module):
     NUM_CHANNELS = 2  # for KataGo this is 3, see above
 
     def __init__(self):
-        super(GlobalPoolingLayer, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         g_mean = torch.mean(x, keepdim=True, dim=(2, 3))
@@ -80,7 +81,7 @@ class ConvBlock(nn.Module):
     """
 
     def __init__(self, c_in: int, c_out: int):
-        super(ConvBlock, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_out, kernel_size=3, padding=1, bias=False)
@@ -100,7 +101,7 @@ class KataGoNeck(nn.Module):
     hypothesis for why this is the case.
     """
     def __init__(self, c_in: int):
-        super(KataGoNeck, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.act = F.relu
 
@@ -133,7 +134,7 @@ class ConvBlockWithGlobalPooling(nn.Module):
     global pooling bias structure. Here, that class is effectively merged into this one.
     """
     def __init__(self, c_in: int, c_out: int, c_gpool: int):
-        super(ConvBlockWithGlobalPooling, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.norm_g = nn.BatchNorm2d(c_gpool)
         self.act = F.relu
@@ -167,7 +168,7 @@ class ResBlock(nn.Module):
     composition of two ConvBlocks with a skip connection.
     """
     def __init__(self, c_in_out: int, c_mid: int):
-        super(ResBlock, self).__init__()
+        super().__init__()
         self.conv1 = ConvBlock(c_in_out, c_mid)
         self.conv2 = ConvBlock(c_mid, c_in_out)
 
@@ -184,7 +185,7 @@ class ResBlockWithGlobalPooling(nn.Module):
     analog in the AlphaGo Zero paper.
     """
     def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
-        super(ResBlockWithGlobalPooling, self).__init__()
+        super().__init__()
         assert 0 < c_mid_gp < c_mid_total
         self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
         self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
@@ -198,7 +199,7 @@ class ResBlockWithGlobalPooling(nn.Module):
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, board_size, dropout=0.):
-        super(PositionalEncoding, self).__init__()
+        super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         pe = torch.zeros(board_size, d_model)
@@ -253,7 +254,7 @@ class PolicyHead(Head):
     logit probabilities for all intersections and the pass move
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(PolicyHead, self).__init__()
+        super().__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
@@ -273,7 +274,29 @@ class PolicyHead(Head):
         return out
 
 
-class WinLossDrawValueHead(Head):
+class ValueHeadBase(Head, abc.ABC):
+    """
+    Base class for value heads.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @abc.abstractmethod
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        """
+        Convert the raw output of the value head to win-share values.
+
+        The input y is the raw output of the value head, of shape (B, value_dim), where value_dim
+        is specific to the particular value head implementation.
+
+        The output is of shape (B, n_players), where n_players is the number of players in the game.
+        The k'th entry in the last dimension is the predicted win-share for the k'th player. The
+        entries should be nonnegative and sum to 1.
+        """
+        pass
+
+
+class WinLossDrawValueHead(ValueHeadBase):
     """
     A head that produces a length-3 logit vector, usable for 2-player games that permit draws.
 
@@ -306,7 +329,7 @@ class WinLossDrawValueHead(Head):
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossDrawValueHead, self).__init__()
+        super().__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -326,8 +349,12 @@ class WinLossDrawValueHead(Head):
         out = self.linear2(out)
         return out
 
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        wld = y.softmax(dim=-1)  # (B, 3)
+        return wld[:, :2] + 0.5 * wld[:, 2:]
 
-class WinLossDrawValueUncertaintyHead(Head):
+
+class ValueUncertaintyHead(Head):
     """
     A head that produces a length-1 logit vector, usable for 2-player games that permit draws.
 
@@ -339,14 +366,70 @@ class WinLossDrawValueUncertaintyHead(Head):
     See the "Uncertainty-Weighted MCTS Playouts" section here:
 
     https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md
+
+    NOTE: although for zero-sum 2-player games, a single scalar suffices to represent uncertainty, a
+    single scalar is not appropriate for multiplayer games. For example, in a 4-player game, player
+    1 might be very certain that they will lose, while players 2, 3, and 4 might be very uncertain
+    about their outcomes. In general, in a zero-sum p-player game, the space of possible
+    uncertainties is (p-1)-dimensional. I haven't come up with a good way to represent this yet.
     """
-    def __init__(self):
-        # TODO: this head will take as input the output of a WinLossDrawValueHead, along with
-        # the trunk output, and will combine them in some way before producing its final output.
-        pass
+    def __init__(
+        self,
+        c_hidden: int,
+        n_hidden: int,
+        trunk_shape: Shape,
+        value_shape: Shape,
+        output_shape: Shape,
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+        assert len(value_shape) == 1, "value_shape must be 1D (e.g., (3,), (2,), (N,))"
+        assert output_shape == (1,), "Only scalar uncertainty output is currently supported"
+
+        c_trunk, H, W = trunk_shape
+        self.value_dim = value_shape[0]
+        self.out_dim = output_shape[0]
+        self.eps = eps
+        self.act = F.relu
+
+        # Trunk → compact vector
+        self.trunk_proj = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.fc_trunk = nn.Linear(c_hidden, n_hidden)
+
+        # Value logits → compact vector
+        self.fc_value = nn.Linear(self.value_dim, n_hidden)
+
+        # Fuse → predict
+        self.fc_fuse = nn.Linear(2 * n_hidden, n_hidden)
+        self.fc_out = nn.Linear(n_hidden, self.out_dim)
+
+    def forward(self, trunk: torch.Tensor, value_logits: torch.Tensor) -> torch.Tensor:
+        """
+        trunk:        (B, C_trunk, H, W)
+        value_logits: (B, value_dim)
+        Returns:
+            (B, out_dim) with nonnegative values
+        """
+        # Trunk path
+        t = self.trunk_proj(trunk)          # (B, c_hidden, H, W)
+        t = self.act(t)
+        t = t.mean(dim=(2, 3))              # global average pool → (B, c_hidden)
+        t = self.act(self.fc_trunk(t))      # (B, n_hidden)
+
+        # Value path (stop-grad so uncertainty loss doesn't backprop)
+        v = value_logits.detach()           # (B, value_dim)
+        v = self.act(self.fc_value(v))      # (B, n_hidden)
+
+        # Fuse
+        h = torch.cat([t, v], dim=-1)       # (B, 2*n_hidden)
+        h = self.act(self.fc_fuse(h))
+
+        # Predict nonnegative uncertainty
+        out = self.fc_out(h)                # (B, out_dim)
+        return F.softplus(out) + self.eps
 
 
-class WinLossValueHead(Head):
+class WinLossValueHead(ValueHeadBase):
     """
     A head that produces a length-2 logit vector, usable for 2-player games that do NOT permit
     draws.
@@ -354,7 +437,7 @@ class WinLossValueHead(Head):
     This is based off WinLossDrawValueHead.
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossValueHead, self).__init__()
+        super().__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -374,6 +457,9 @@ class WinLossValueHead(Head):
         out = self.linear2(out)
         return out
 
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        return y.softmax(dim=-1)
+
 
 class WinShareActionValueHead(Head):
     """
@@ -383,7 +469,7 @@ class WinShareActionValueHead(Head):
     WinLossValueHead
     """
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(WinShareActionValueHead, self).__init__()
+        super().__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
@@ -403,7 +489,7 @@ class WinShareActionValueHead(Head):
         return out
 
 
-class WinShareValueHead(Head):
+class WinShareValueHead(ValueHeadBase):
     """
     A head that produces a length-p logit vector, where p is the number of players in the game,
     usable for zero-sum games with p players for any p>=2. The k'th entry predicts the expected
@@ -431,7 +517,7 @@ class WinShareValueHead(Head):
     """
 
     def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(WinShareValueHead, self).__init__()
+        super().__init__()
 
         (n_players, ) = shape
         self.act = F.relu
@@ -456,6 +542,9 @@ class WinShareValueHead(Head):
         out = self.linear2(out)
         return out
 
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        return y.softmax(dim=-1)
+
 
 class ScoreHead(Head):
     """
@@ -472,7 +561,7 @@ class ScoreHead(Head):
     See Section 4.1 of the KataGo paper for details.
     """
     def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(ScoreHead, self).__init__()
+        super().__init__()
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
@@ -538,7 +627,7 @@ class OwnershipHead(Head):
     """
 
     def __init__(self, c_in: int, c_hidden: int, shape: Shape):
-        super(OwnershipHead, self).__init__()
+        super().__init__()
 
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
@@ -559,50 +648,38 @@ class OwnershipHead(Head):
         return out
 
 
-class GeneralLogitHead(Head):
+class ActionValueUncertaintyHead(Head):
     """
-    A head that produces an arbitrarily shaped tensor, unrelated to the input spatial dimensions.
-
-    The outputs are interpeted as independent logits, which should be passed through a sigmoid to
-    convert to independent probabilities.
+    A head that produces action value uncertainty logits. It aims to predict what the
+    ValueUncertaintyHead would predict for the game state that would result after taking each
+    action.
     """
-    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralLogitHead, self).__init__()
+    def __init__(self, c_hidden: int, trunk_shape: Shape, output_shape: Shape):
+        super().__init__()
+        c_trunk, H, W = trunk_shape
 
-        self.shape = shape
-
+        self.output_shape = output_shape
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-
-        self.gpool = GlobalPoolingLayer()
-
-        n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
-        self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
-        self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * H * W, math.prod(output_shape))
 
     def default_loss_function(self):
         return nn.BCEWithLogitsLoss()
 
     def forward(self, x):
-        N = x.shape[0]
-
-        out = x  # (N, C_in, H, W)
-        out = self.conv(out)  # (N, C_hidden, H, W)
-        out = self.act(out)  # (N, C_hidden, H, W)
-        out = self.gpool(out)  # (N, n_gpool, 1, 1)
-        out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
-
-        out = self.linear1(out)  # (N, n_hidden)
-        out = self.act(out)  # (N, n_hidden)
-        out = self.linear2(out)  # (N, *)
-
-        return out.view(N, *self.shape)  # (N, *shape)
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.output_shape)
+        return out
 
 
 MODULE_MAP = {
+    'ActionValueUncertaintyHead': ActionValueUncertaintyHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
-    'GeneralLogitHead': GeneralLogitHead,
     'KataGoNeck': KataGoNeck,
     'OwnershipHead': OwnershipHead,
     'ResBlock': ResBlock,
@@ -610,8 +687,8 @@ MODULE_MAP = {
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
     'TransformerBlock': TransformerBlock,
+    'ValueUncertaintyHead': ValueUncertaintyHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,
-    'WinLossDrawValueUncertaintyHead': WinLossDrawValueUncertaintyHead,
     'WinLossValueHead': WinLossValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
