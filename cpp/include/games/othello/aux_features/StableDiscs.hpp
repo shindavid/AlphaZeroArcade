@@ -14,6 +14,10 @@ namespace othello {
   mask_t edge_stable_discs(mask_t mask);
   mask_t extend_stable_frontier(mask_t mask, mask_t stable);
 
+  static inline uint64_t bit64(int i);
+  static inline uint64_t unpack_file_middle(uint8_t m, int file);
+  static inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8);
+  static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O);
 
   inline mask_t step_east(mask_t m) { return (m & ~kFileHMask) << 1; }
   inline mask_t step_west(mask_t m) { return (m & ~kFileAMask) >> 1; }

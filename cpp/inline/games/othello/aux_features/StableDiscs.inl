@@ -8,7 +8,10 @@ inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask)
   mask_t stable_curr = 0;
   mask_t stable_oppo = 0;
 
-  full_edge_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
+  // full_edge_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
+  stable_curr |= get_stable_edge_scalar(cur_player_mask, opponent_mask);
+  stable_oppo |= get_stable_edge_scalar(opponent_mask, cur_player_mask);
+
   full_axes_stable_discs(cur_player_mask, opponent_mask, stable_curr, stable_oppo);
 
   stable_curr |= edge_stable_discs(cur_player_mask);
@@ -128,6 +131,81 @@ inline void full_axes_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
   const mask_t all_axes_full = ranksFull & filesFull & seFull & swFull;
   stable_curr |= all_axes_full & cur_player_mask;
   stable_oppo |= all_axes_full & opponent_mask;
+}
+
+// Assumes EDGE_STABILITY[256*256] has been filled by edge_stability_init().
+
+static inline uint64_t bit64(int i) { return 1ULL << i; }
+
+// Pack a file (0 = A … 7 = H) into an 8-bit mask: rank 1→bit0, …, rank 8→bit7
+static uint8_t pack_file(uint64_t bb, int file) {
+    uint8_t m = 0;
+    for (int r = 0; r < 8; ++r) {              // r = rank index (0..7) == (row)
+        int sq = r * 8 + file;                 // square index on that file
+        if (bb & bit64(sq)) m |= (1u << r);
+    }
+    return m;
+}
+
+// Unpack an 8-bit mask back onto a file, BUT only rows 2..7 (r=1..6) to avoid corners.
+// (Corners came from the rank lookups already.)
+static inline uint64_t unpack_file_middle(uint8_t m, int file) {
+    uint64_t out = 0;
+    for (int r = 1; r <= 6; ++r) {             // exclude r=0 (rank1) and r=7 (rank8)
+        if (m & (1u << r)) out |= bit64(r * 8 + file);
+    }
+    return out;
+}
+
+// Convenience: table lookup for one 8-square edge
+static inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8) {
+    return EDGE_STABILITY[static_cast<unsigned>(p8) * 256u + o8];
+}
+
+static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
+    uint64_t stable = 0;
+    std::cout << "get_stable_edge_scalar: P=" << std::hex << P << " O=" << O << std::dec << "\n";
+    std::cout << "STABILITY[256*255]=" << (int)EDGE_STABILITY[256*255] << "\n";
+    // Rank 1: bits 0..7
+    {
+        uint8_t p8 = static_cast<uint8_t>(P & 0xFF);
+        uint8_t o8 = static_cast<uint8_t>(O & 0xFF);
+        std::cout << " rank1 p8=" << std::hex << (int)p8 << " o8=" << (int)o8 << std::dec << "\n";
+        stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8));
+    }
+
+    std::cout << " after rank1 stable=" << std::hex << stable << std::dec << "\n";
+
+    // Rank 8: bits 56..63
+    {
+        uint8_t p8 = static_cast<uint8_t>((P >> 56) & 0xFF);
+        uint8_t o8 = static_cast<uint8_t>((O >> 56) & 0xFF);
+        stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8)) << 56;
+    }
+
+    std::cout << " after rank8 stable=" << std::hex << stable << std::dec << "\n";
+
+    // File A (file = 0), excluding corners (A1/A8)
+    {
+        uint8_t p8 = pack_file(P, 0);
+        uint8_t o8 = pack_file(O, 0);
+        uint8_t m  = edge_stable_lookup(p8, o8);
+        stable |= unpack_file_middle(m, 0);
+    }
+
+    std::cout << " after fileA stable=" << std::hex << stable << std::dec << "\n";
+
+    // File H (file = 7), excluding corners (H1/H8)
+    {
+        uint8_t p8 = pack_file(P, 7);
+        uint8_t o8 = pack_file(O, 7);
+        uint8_t m  = edge_stable_lookup(p8, o8);
+        stable |= unpack_file_middle(m, 7);
+    }
+
+    std::cout << " after fileH stable=" << std::hex << stable << std::dec << "\n";
+
+    return stable;
 }
 
 }  // namespace othello

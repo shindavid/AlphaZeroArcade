@@ -219,4 +219,82 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
+static uint8_t EDGE_STABILITY[256 * 256];
+
+static inline uint8_t x_to_bit(int x) {
+    return 1u << x;
+}
+
+static int find_edge_stable(const int old_P, const int old_O, int stable);
+
+void inline edge_stability_init(void)
+{
+	int P, O;
+
+	for (P = 0; P < 256; ++P)
+	for (O = 0; O < 256; ++O) {
+		if (P & O) { // illegal positions
+			EDGE_STABILITY[P * 256 + O] = 0;
+		} else {
+			EDGE_STABILITY[P * 256 + O] = find_edge_stable(P, O, P);
+		}
+	}
+}
+
+static int find_edge_stable(const int old_P, const int old_O, int stable)
+{
+	int P, O, x, y;
+	const int E = ~(old_P | old_O); // empties
+
+	stable &= old_P; // mask stable squares with remaining player squares.
+	if (!stable || E == 0) return stable;
+
+	for (x = 0; x < 8; ++x) {
+		if (E & x_to_bit(x)) { //is x an empty square ?
+			O = old_O;
+			P = old_P | x_to_bit(x); // player plays on it
+			if (x > 1) { // flip left discs
+				for (y = x - 1; y > 0 && (O & x_to_bit(y)); --y) ;
+				if (P & x_to_bit(y)) {
+					for (y = x - 1; y > 0 && (O & x_to_bit(y)); --y) {
+						O ^= x_to_bit(y); P ^= x_to_bit(y);
+					}
+				}
+			}
+			if (x < 6) { // flip right discs
+				for (y = x + 1; y < 8 && (O & x_to_bit(y)); ++y) ;
+				if (P & x_to_bit(y)) {
+					for (y = x + 1; y < 8 && (O & x_to_bit(y)); ++y) {
+						O ^= x_to_bit(y); P ^= x_to_bit(y);
+					}
+				}
+			}
+			stable = find_edge_stable(P, O, stable); // next move
+			if (!stable) return stable;
+
+			P = old_P;
+			O = old_O | x_to_bit(x); // opponent plays on it
+			if (x > 1) {
+				for (y = x - 1; y > 0 && (P & x_to_bit(y)); --y) ;
+				if (O & x_to_bit(y)) {
+					for (y = x - 1; y > 0 && (P & x_to_bit(y)); --y) {
+						O ^= x_to_bit(y); P ^= x_to_bit(y);
+					}
+				}
+			}
+			if (x < 6) {
+				for (y = x + 1; y < 8 && (P & x_to_bit(y)); ++y) ;
+				if (O & x_to_bit(y)) {
+					for (y = x + 1; y < 8 && (P & x_to_bit(y)); ++y) {
+						O ^= x_to_bit(y); P ^= x_to_bit(y);
+					}
+				}
+			}
+			stable = find_edge_stable(P, O, stable); // next move
+			if (!stable) return stable;
+		}
+	}
+  return stable;
+}
+
 }  // namespace othello

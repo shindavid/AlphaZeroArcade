@@ -174,7 +174,6 @@ TEST(StableDiscs, full_rank1) {
 
   Stable discs are A1, A2, A3, B1, B2, B3, C1, C2, C3, D1, E1, F1, G1, H1
 */
-
 mask_t cur_player_mask = (1ULL << kD1) | (1ULL << kF1) | (1ULL << kG1) | (1ULL << kH1);
 mask_t opponent_mask = (1ULL << kA1) | (1ULL << kB1) | (1ULL << kC1) | (1ULL << kE1);
 mask_t stable = compute_stable_discs(cur_player_mask, opponent_mask);
@@ -274,7 +273,7 @@ TEST(StableDiscs, edge_with_empty_space) {
     Stable discs are A1, B1, C1, G1, H1
 */
 
-mask_t cur_player_mask = (1ULL << kC1) | (1ULL << kE1);
+mask_t cur_player_mask = (1ULL << kC1) | (1ULL << kG1);
 
 mask_t opponent_mask =
   (1ULL << kA1) | (1ULL << kB1) | (1ULL << kD1) | (1ULL << kF1) | (1ULL << kH1);
