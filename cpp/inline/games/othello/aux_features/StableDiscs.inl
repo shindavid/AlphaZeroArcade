@@ -159,7 +159,7 @@ static inline uint64_t unpack_file_middle(uint8_t m, int file) {
 
 // Convenience: table lookup for one 8-square edge
 static inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8) {
-    return edge_stability_table()[static_cast<unsigned>(p8) * 256u + o8];
+    return EDGE_STABILITY[static_cast<unsigned>(p8) * 256u + o8];
 }
 
 static inline uint64_t get_stable_edge_scalar(uint64_t P, uint64_t O) {
