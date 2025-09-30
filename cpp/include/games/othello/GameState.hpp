@@ -3,7 +3,20 @@
 #include "games/othello/Constants.hpp"
 
 namespace othello {
-
+/*
+ * GameState is split internally into two parts: Core and Aux.
+ *
+ * Core contains the bare minimum of information needed to apply the rules of the game.
+ * Aux is intended to contain values derived from Core that accelerate rule calculations.
+ *
+ * In Othello, however, Aux currently holds data such as `stable_discs` that
+ * do not assist with Rules. Instead, they leak details about input
+ * tensorization into GameState.
+ *
+ * If InputTensorizor were reworked into a stateful object, rather than a  collection of static
+ * methods,`stable_discs` could be moved out, and this Core/Aux split would no longer be
+ * appropriate.
+ */
 struct GameState {
   auto operator<=>(const GameState& other) const { return core <=> other.core; }
   bool operator==(const GameState& other) const { return core == other.core; }
