@@ -103,17 +103,17 @@ constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t
   for (int x = 0; (x < 8); ++x) {
     if (!(empty_spaces & bit8(x))) continue;
     // player plays
-    line_mask_t player_mask_after_move = curr_player_mask | bit8(x);
-    line_mask_t opponent_mask_after_move = opponent_mask;
-    move_and_flip(x, player_mask_after_move, opponent_mask_after_move);
-    stable = find_stable_edge(player_mask_after_move, opponent_mask_after_move, stable);
+    line_mask_t player_mask_after = curr_player_mask | bit8(x);
+    line_mask_t opponent_mask_after = opponent_mask;
+    move_and_flip(x, player_mask_after, opponent_mask_after);
+    stable = find_stable_edge(player_mask_after, opponent_mask_after, stable);
     if (!stable) return 0;
 
     // opponent plays
-    line_mask_t player_mask_after_move2 = curr_player_mask;
-    line_mask_t opponent_mask_after_move2 = opponent_mask | bit8(x);
-    move_and_flip(x, opponent_mask_after_move2, player_mask_after_move2);
-    stable = find_stable_edge(player_mask_after_move2, opponent_mask_after_move2, stable);
+    line_mask_t player_mask_after2 = curr_player_mask;
+    line_mask_t opponent_mask_after2 = opponent_mask | bit8(x);
+    move_and_flip(x, opponent_mask_after2, player_mask_after2);
+    stable = find_stable_edge(player_mask_after2, opponent_mask_after2, stable);
     if (!stable) return 0;
 
     return stable;
