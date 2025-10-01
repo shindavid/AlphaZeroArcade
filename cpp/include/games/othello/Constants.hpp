@@ -164,7 +164,7 @@ inline constexpr auto EDGE_STABILITY = [] {
   for (int P = 0; P < 256; ++P)
     for (int O = 0; O < 256; ++O)
       t[size_t(P) * 256u + size_t(O)] =
-        (P & O) ? 0u : detail::find_stable_edge(uint8_t(P), uint8_t(O), uint8_t(P));
+        (P & O) ? 0u : detail::find_stable_edge(uint8_t(P), uint8_t(O));
   return t;
 }();
 

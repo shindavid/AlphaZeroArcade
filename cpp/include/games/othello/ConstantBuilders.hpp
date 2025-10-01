@@ -94,7 +94,7 @@ constexpr void move_and_flip(int x, line_mask_t& curr_player, line_mask_t& oppon
   }
 }
 
-constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask,
+constexpr line_mask_t _find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask,
                                        line_mask_t stable) {
   line_mask_t empty_spaces = ~(curr_player_mask | opponent_mask);
   stable = stable & curr_player_mask;
@@ -106,19 +106,39 @@ constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t
     line_mask_t player_mask_after = curr_player_mask | bit8(x);
     line_mask_t opponent_mask_after = opponent_mask;
     move_and_flip(x, player_mask_after, opponent_mask_after);
-    stable = find_stable_edge(player_mask_after, opponent_mask_after, stable);
+    stable = _find_stable_edge(player_mask_after, opponent_mask_after, stable);
     if (!stable) return 0;
 
     // opponent plays
     line_mask_t player_mask_after2 = curr_player_mask;
     line_mask_t opponent_mask_after2 = opponent_mask | bit8(x);
     move_and_flip(x, opponent_mask_after2, player_mask_after2);
-    stable = find_stable_edge(player_mask_after2, opponent_mask_after2, stable);
+    stable = _find_stable_edge(player_mask_after2, opponent_mask_after2, stable);
     if (!stable) return 0;
 
     return stable;
   }
 }
+
+constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
+/*
+ * Recursively determines the subset of `stable` discs that remain stable
+ * along a single edge (rank or file).
+ *
+ * - `curr_player_mask` : current player’s discs on this edge
+ * - `opponent_mask`    : opponent’s discs on this edge
+ *
+ * At each recursion step, the function explores all possible moves
+ * (both current player and opponent), applies flips, and propagates
+ * stability forward. Only discs that remain stable under *all*
+ * sequences of moves are returned.
+ *
+ * Returns: mask of stable discs for the current player only
+ */
+  return _find_stable_edge(curr_player_mask, opponent_mask, curr_player_mask);
+}
+
+
 
 }  // namespace detail
 
