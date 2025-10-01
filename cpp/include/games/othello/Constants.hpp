@@ -147,7 +147,6 @@ const int kTypicalNumMovesPerGame = kNumCells - kNumStartingPieces;
 const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
-} // namespace othello
 
 namespace detail {
 
@@ -156,8 +155,6 @@ constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r <
 constexpr othello::mask_t bit(int f, int r) { return othello::mask_t{1} << idx(f, r); }
 
 } // namespace detail
-
-namespace othello {
 
 // -------- Single-line builders --------
 constexpr mask_t rank_mask(int r) {
@@ -229,16 +226,11 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-} // namespace othello
-
 namespace detail {
 
 constexpr uint8_t bit8(int x) { return uint8_t(1u << x); }
 
 } // namespace detail
-
-
-namespace othello {
 
 constexpr uint8_t find_stable_edge(uint8_t old_P, uint8_t old_O, uint8_t stable) {
   const uint8_t E = uint8_t(~(old_P | old_O));
