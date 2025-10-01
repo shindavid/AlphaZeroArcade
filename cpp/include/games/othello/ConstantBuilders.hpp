@@ -73,6 +73,27 @@ constexpr std::array<mask_t, 15> make_SW_diags() {
   return a;
 }
 
+constexpr void move_and_flip(int x, line_mask_t& curr_player, line_mask_t& opponent) {
+  if (x > 1) {
+    int y = x - 1;
+    while (y > 0 && (opponent & bit8(y))) --y;
+    if (curr_player & bit8(y))
+      for (y = x - 1; y > 0 && (opponent & bit8(y)); --y) {
+        opponent ^= bit8(y);
+        curr_player ^= bit8(y);
+      }
+  }
+  if (x < 6) {
+    int y = x + 1;
+    while (y < 8 && (opponent & bit8(y))) ++y;
+    if (curr_player & bit8(y))
+      for (y = x + 1; y < 8 && (opponent & bit8(y)); ++y) {
+        opponent ^= bit8(y);
+        curr_player ^= bit8(y);
+      }
+  }
+}
+
 constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask,
                                        line_mask_t stable) {
   line_mask_t empty_spaces = ~(curr_player_mask | opponent_mask);
@@ -82,53 +103,19 @@ constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t
   for (int x = 0; (x < 8); ++x) {
     if (!(empty_spaces & bit8(x))) continue;
     // player plays
-    {
-      uint8_t P = uint8_t(curr_player_mask | bit8(x)), O = opponent_mask;
-      if (x > 1) {
-        int y = x - 1;
-        while (y > 0 && (O & bit8(y))) --y;
-        if (P & bit8(y))
-          for (y = x - 1; y > 0 && (O & bit8(y)); --y) {
-            O ^= bit8(y);
-            P ^= bit8(y);
-          }
-      }
-      if (x < 6) {
-        int y = x + 1;
-        while (y < 8 && (O & bit8(y))) ++y;
-        if (P & bit8(y))
-          for (y = x + 1; y < 8 && (O & bit8(y)); ++y) {
-            O ^= bit8(y);
-            P ^= bit8(y);
-          }
-      }
-      stable = find_stable_edge(P, O, stable);
-      if (!stable) return 0;
-    }
+    line_mask_t player_mask_after_move = curr_player_mask | bit8(x);
+    line_mask_t opponent_mask_after_move = opponent_mask;
+    move_and_flip(x, player_mask_after_move, opponent_mask_after_move);
+    stable = find_stable_edge(player_mask_after_move, opponent_mask_after_move, stable);
+    if (!stable) return 0;
+
     // opponent plays
-    {
-      uint8_t P = curr_player_mask, O = uint8_t(opponent_mask | bit8(x));
-      if (x > 1) {
-        int y = x - 1;
-        while (y > 0 && (P & bit8(y))) --y;
-        if (O & bit8(y))
-          for (y = x - 1; y > 0 && (P & bit8(y)); --y) {
-            O ^= bit8(y);
-            P ^= bit8(y);
-          }
-      }
-      if (x < 6) {
-        int y = x + 1;
-        while (y < 8 && (P & bit8(y))) ++y;
-        if (O & bit8(y))
-          for (y = x + 1; y < 8 && (P & bit8(y)); ++y) {
-            O ^= bit8(y);
-            P ^= bit8(y);
-          }
-      }
-      stable = find_stable_edge(P, O, stable);
-      if (!stable) return 0;
-    }
+    line_mask_t player_mask_after_move2 = curr_player_mask;
+    line_mask_t opponent_mask_after_move2 = opponent_mask | bit8(x);
+    move_and_flip(x, opponent_mask_after_move2, player_mask_after_move2);
+    stable = find_stable_edge(player_mask_after_move2, opponent_mask_after_move2, stable);
+    if (!stable) return 0;
+
     return stable;
   }
 }
