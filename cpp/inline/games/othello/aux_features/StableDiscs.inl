@@ -4,9 +4,10 @@
 
 namespace othello {
 
-inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask) {
-  mask_t stable_curr = 0;
-  mask_t stable_oppo = 0;
+inline mask_t compute_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
+                                   const mask_t& stable = 0) {
+  mask_t stable_curr = cur_player_mask & stable;
+  mask_t stable_oppo = opponent_mask & stable;
 
   stable_curr |= get_stable_edge(cur_player_mask, opponent_mask);
   stable_oppo |= get_stable_edge(opponent_mask, cur_player_mask);

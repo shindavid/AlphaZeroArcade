@@ -15,7 +15,8 @@ inline int GameState::get_count(core::seat_index_t seat) const {
 }
 
 inline void GameState::compute_aux() {
-  aux.stable_discs = compute_stable_discs(core.cur_player_mask, core.opponent_mask);
+  aux.stable_discs =
+    compute_stable_discs(core.cur_player_mask, core.opponent_mask, aux.stable_discs);
 }
 
 }  // namespace othello
