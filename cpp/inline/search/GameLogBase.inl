@@ -179,10 +179,19 @@ GameLogBase<Traits>::TensorData::TensorData(bool valid, const PolicyTensor& tens
 
 template <search::concepts::Traits Traits>
 int GameLogBase<Traits>::TensorData::write_to(std::vector<char>& buf) const {
+  int b = base_size();
   int s = size();
   const char* bytes = reinterpret_cast<const char*>(this);
-  buf.insert(buf.end(), bytes, bytes + s);
+  buf.insert(buf.end(), bytes, bytes + b);
+  for (int i = b; i < s; ++i) {
+    buf.push_back(0);
+  }
   return s;
+}
+
+template <search::concepts::Traits Traits>
+int GameLogBase<Traits>::TensorData::size() const {
+  return math::round_up_to_nearest_multiple(base_size(), GameLogCommon::kAlignment);
 }
 
 template <search::concepts::Traits Traits>

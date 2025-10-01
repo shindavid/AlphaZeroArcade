@@ -100,7 +100,8 @@ struct GameLogBase : public GameLogCommon {
 
     TensorData(bool valid, const PolicyTensor&);
     int write_to(std::vector<char>& buf) const;
-    int size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+    int base_size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+    int size() const;
     bool load(PolicyTensor&) const;  // return true if valid tensor
 
     struct DenseData {
