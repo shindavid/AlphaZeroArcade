@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "games/othello/BasicTypes.hpp"
+#include "games/othello/ConstantBuilders.hpp"
 
 #include <cstdint>
 
@@ -34,7 +36,6 @@ namespace othello {
 
 using column_t = int8_t;
 using row_t = int8_t;
-using mask_t = uint64_t;
 
 const int kNumPlayers = 2;
 const int kBoardDimension = 8;
@@ -148,14 +149,6 @@ const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
 
-namespace detail {
-
-constexpr int idx(int f, int r) { return r * 8 + f; }
-constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r < 8; }
-constexpr othello::mask_t bit(int f, int r) { return othello::mask_t{1} << idx(f, r); }
-
-} // namespace detail
-
 // -------- Single-line builders --------
 constexpr mask_t rank_mask(int r) {
   mask_t m = 0;
@@ -225,12 +218,6 @@ static_assert(kRanks[0] == kRank1Mask);
 static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
-
-namespace detail {
-
-constexpr uint8_t bit8(int x) { return uint8_t(1u << x); }
-
-} // namespace detail
 
 constexpr uint8_t find_stable_edge(uint8_t old_P, uint8_t old_O, uint8_t stable) {
   const uint8_t E = uint8_t(~(old_P | old_O));
