@@ -40,21 +40,9 @@ void ActionValueNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst)
 
 template <core::concepts::Game Game>
 template <typename Derived>
-void ValueUncertaintyNetworkHead<Game>::transform(Eigen::TensorBase<Derived>& dst) {
-  eigen_util::sigmoid_in_place(dst);
-}
-
-template <core::concepts::Game Game>
-template <typename Derived>
 void ValueUncertaintyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
   constexpr float p = 1.0f / Game::Constants::kNumPlayers;
   dst.setConstant(p * (1 - p));
-}
-
-template <core::concepts::Game Game>
-template <typename Derived>
-void ActionValueUncertaintyNetworkHead<Game>::transform(Eigen::TensorBase<Derived>& dst) {
-  eigen_util::sigmoid_in_place(dst);
 }
 
 template <core::concepts::Game Game>

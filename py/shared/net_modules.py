@@ -356,12 +356,12 @@ class WinLossDrawValueHead(ValueHeadBase):
 
 class ValueUncertaintyHead(Head):
     """
-    A head that produces a length-1 logit vector, usable for 2-player games that permit draws.
+    A head that produces a length-1 vector, usable for 2-player games that permit draws.
 
     This is an uncertainty head that can be used in conjunction with WinLossDrawValueHead to
-    represent uncertainty in the value prediction. The output is interpreted as logit(delta^2),
-    where delta is the difference between the value prediction (converted from W/L/D to win-shared)
-    and the true value.
+    represent uncertainty in the value prediction. The output is interpreted as delta^2, where delta
+    is the difference between the value prediction (converted from W/L/D to win-shares) and the true
+    value.
 
     See the "Uncertainty-Weighted MCTS Playouts" section here:
 
@@ -379,8 +379,7 @@ class ValueUncertaintyHead(Head):
         n_hidden: int,
         trunk_shape: Shape,
         value_shape: Shape,
-        output_shape: Shape,
-        eps: float = 1e-6,
+        output_shape: Shape
     ):
         super().__init__()
         assert len(value_shape) == 1, "value_shape must be 1D (e.g., (3,), (2,), (N,))"
@@ -389,18 +388,12 @@ class ValueUncertaintyHead(Head):
         c_trunk, H, W = trunk_shape
         self.value_dim = value_shape[0]
         self.out_dim = output_shape[0]
-        self.eps = eps
         self.act = F.relu
 
-        # Trunk → compact vector
+        assert n_hidden > self.value_dim, "n_hidden must be greater than value_dim"
+
         self.trunk_proj = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
-        self.fc_trunk = nn.Linear(c_hidden, n_hidden)
-
-        # Value logits → compact vector
-        self.fc_value = nn.Linear(self.value_dim, n_hidden)
-
-        # Fuse → predict
-        self.fc_fuse = nn.Linear(2 * n_hidden, n_hidden)
+        self.fc_trunk = nn.Linear(c_hidden, n_hidden - self.value_dim)
         self.fc_out = nn.Linear(n_hidden, self.out_dim)
 
     def forward(self, trunk: torch.Tensor, value_logits: torch.Tensor) -> torch.Tensor:
@@ -414,19 +407,15 @@ class ValueUncertaintyHead(Head):
         t = self.trunk_proj(trunk)          # (B, c_hidden, H, W)
         t = self.act(t)
         t = t.mean(dim=(2, 3))              # global average pool → (B, c_hidden)
-        t = self.act(self.fc_trunk(t))      # (B, n_hidden)
+        t = self.act(self.fc_trunk(t))      # (B, n_hidden - value_dim)
 
         # Value path (stop-grad so uncertainty loss doesn't backprop)
         v = value_logits.detach()           # (B, value_dim)
-        v = self.act(self.fc_value(v))      # (B, n_hidden)
 
-        # Fuse
-        h = torch.cat([t, v], dim=-1)       # (B, 2*n_hidden)
-        h = self.act(self.fc_fuse(h))
-
-        # Predict nonnegative uncertainty
-        out = self.fc_out(h)                # (B, out_dim)
-        return F.softplus(out) + self.eps
+        # Fuse and predict
+        h = torch.cat([t, v], dim=-1)       # (B, n_hidden)
+        h = self.fc_out(h)                  # (B, out_dim)
+        return torch.sigmoid(h)             # constrain to [0, 1]
 
 
 class WinLossValueHead(ValueHeadBase):
@@ -650,7 +639,7 @@ class OwnershipHead(Head):
 
 class ActionValueUncertaintyHead(Head):
     """
-    A head that produces action value uncertainty logits. It aims to predict what the
+    A head that produces action value uncertainty values. It aims to predict what the
     ValueUncertaintyHead would predict for the game state that would result after taking each
     action.
     """
@@ -664,7 +653,7 @@ class ActionValueUncertaintyHead(Head):
         self.linear = nn.Linear(c_hidden * H * W, math.prod(output_shape))
 
     def default_loss_function(self):
-        return nn.BCEWithLogitsLoss()
+        return nn.HuberLoss()
 
     def forward(self, x):
         out = x
@@ -673,7 +662,7 @@ class ActionValueUncertaintyHead(Head):
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
         out = out.view(-1, *self.output_shape)
-        return out
+        return torch.sigmoid(out)  # constrain to [0, 1]
 
 
 MODULE_MAP = {

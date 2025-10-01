@@ -77,7 +77,7 @@ struct ValueUncertaintyNetworkHead {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
 
   template <typename Derived>
-  static void transform(Eigen::TensorBase<Derived>&);
+  static void transform(Eigen::TensorBase<Derived>&) {}
 
   template <typename Derived>
   static void uniform_init(Eigen::TensorBase<Derived>&);
@@ -90,7 +90,7 @@ struct ActionValueUncertaintyNetworkHead {
   using Tensor = Game::Types::ActionValueTensor;
 
   template <typename Derived>
-  static void transform(Eigen::TensorBase<Derived>&);
+  static void transform(Eigen::TensorBase<Derived>&) {}
 
   template <typename Derived>
   static void uniform_init(Eigen::TensorBase<Derived>&);
