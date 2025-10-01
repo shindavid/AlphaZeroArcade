@@ -11,7 +11,7 @@ namespace detail {
 constexpr int idx(int f, int r) { return r * 8 + f; }
 constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r < 8; }
 constexpr mask_t bit(int f, int r) { return mask_t{1} << idx(f, r); }
-constexpr uint8_t bit8(int x) { return uint8_t(1u << x); }
+constexpr line_mask_t bit8(int x) { return line_mask_t{1} << x; }
 
 // -------- Single-line builders --------
 constexpr mask_t rank_mask(int r) {
@@ -73,16 +73,18 @@ constexpr std::array<mask_t, 15> make_SW_diags() {
   return a;
 }
 
-constexpr uint8_t find_stable_edge(uint8_t old_P, uint8_t old_O, uint8_t stable) {
-  const uint8_t E = uint8_t(~(old_P | old_O));
-  stable = uint8_t(stable & old_P);
+
+
+constexpr uint8_t find_stable_edge(uint8_t curr_player_mask, uint8_t opponent_mask, uint8_t stable) {
+  const uint8_t E = uint8_t(~(curr_player_mask | opponent_mask));
+  stable = uint8_t(stable & curr_player_mask);
   if (!stable || !E) return stable;
 
   for (int x = 0; x < 8; ++x)
     if (E & bit8(x)) {
       // player plays
       {
-        uint8_t P = uint8_t(old_P | bit8(x)), O = old_O;
+        uint8_t P = uint8_t(curr_player_mask | bit8(x)), O = opponent_mask;
         if (x > 1) {
           int y = x - 1;
           while (y > 0 && (O & bit8(y))) --y;
@@ -106,7 +108,7 @@ constexpr uint8_t find_stable_edge(uint8_t old_P, uint8_t old_O, uint8_t stable)
       }
       // opponent plays
       {
-        uint8_t P = old_P, O = uint8_t(old_O | bit8(x));
+        uint8_t P = curr_player_mask, O = uint8_t(opponent_mask | bit8(x));
         if (x > 1) {
           int y = x - 1;
           while (y > 0 && (P & bit8(y))) --y;
