@@ -153,6 +153,12 @@ constexpr void to_binary_masks(int ternary, line_mask_t& curr_player_mask,
   }
 }
 
+/*
+ * We construct a lookup table that maps every possible configuration along a single board edge to
+ * its corresponding stability mask. Each configuration is represented as an 8-digit ternary number
+ * {0, 1, 2}. To reduce redundancy, we only store cases where the most significant digit is 0 or 1,
+ * leveraging the symmetry between the two players. As a result, the table size is 2 * 3^7 = 4,374.
+ */
 constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
 
 constexpr std::array<uint8_t, kMax> build_stability_array() {

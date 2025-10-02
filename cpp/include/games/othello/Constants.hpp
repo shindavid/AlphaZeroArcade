@@ -36,9 +36,6 @@
  */
 namespace othello {
 
-using column_t = int8_t;
-using row_t = int8_t;
-
 const int kNumPlayers = 2;
 const int kBoardDimension = 8;
 const int kNumCells = kBoardDimension * kBoardDimension;
@@ -161,6 +158,6 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-inline std::array<uint8_t, kMax> EDGE_STABILITY = build_stability_array();
+inline std::array<line_mask_t, kMax> EDGE_STABILITY = build_stability_array();
 
 }  // namespace othello
