@@ -1,5 +1,6 @@
 #include "util/AllocPool.hpp"
 #include "util/BoostUtil.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/CudaUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -792,5 +793,443 @@ TEST(TensorRtUtil, get_version_tag) {
   const char* version_tag = trt_util::get_version_tag();
   EXPECT_STREQ(version_tag, "10.11.0");
 }
+
+/////////////////////////////
+// Tests for CompactBitSet //
+/////////////////////////////
+
+// helper: collect a range of indices into a vector<int>
+template <class Range>
+std::vector<int> collect(Range&& r) {
+  std::vector<int> v;
+  for (auto i : r) v.push_back(static_cast<int>(i));
+  return v;
+}
+
+// Helper: bounds checker for “roughly uniform” counts.
+// Ensures each count is within +/-tol_frac of expectation.
+static void ExpectRoughlyUniform(const std::vector<int>& counts, int total_trials,
+                                 double tol_frac) {
+  ASSERT_GT(total_trials, 0);
+  ASSERT_FALSE(counts.empty());
+  const double expected = static_cast<double>(total_trials) / counts.size();
+  for (size_t i = 0; i < counts.size(); ++i) {
+    double c = static_cast<double>(counts[i]);
+    double lo = expected * (1.0 - tol_frac);
+    double hi = expected * (1.0 + tol_frac);
+    EXPECT_LE(lo, c) << "bucket " << i << " too low; got " << c << " expected ~ " << expected;
+    EXPECT_GE(hi, c) << "bucket " << i << " too high; got " << c << " expected ~ " << expected;
+  }
+}
+
+// --------------------- One-word cases (N <= 64 by your layout) ---------------------
+
+TEST(CompactBitSet, SizeAndDefaultState_OneWord) {
+  using BS = util::CompactBitSet<10>;
+  BS bs;
+  EXPECT_EQ(BS::size(), 10u);
+  EXPECT_TRUE(bs.none());
+  EXPECT_FALSE(bs.any());
+  EXPECT_FALSE(bs.all());
+  EXPECT_EQ(bs.count(), 0u);
+}
+
+TEST(CompactBitSet, SetResetAndTest_OneWord) {
+  using BS = util::CompactBitSet<12>;
+  BS bs;
+  // set a few bits
+  bs.set(0).set(5).set(11);
+  EXPECT_TRUE(bs.test(0));
+  EXPECT_TRUE(bs[5]);
+  EXPECT_TRUE(bs.test(11));
+  EXPECT_EQ(bs.count(), 3u);
+
+  // reset a bit
+  bs.reset(5);
+  EXPECT_FALSE(bs.test(5));
+  EXPECT_EQ(bs.count(), 2u);
+
+  // set all / reset all
+  bs.set();
+  EXPECT_TRUE(bs.all());
+  EXPECT_EQ(bs.count(), BS::size());
+  bs.reset();
+  EXPECT_TRUE(bs.none());
+}
+
+TEST(CompactBitSet, BitwiseOps_OneWord) {
+  using BS = util::CompactBitSet<16>;
+  BS a, b;
+
+  // a = 0001 0010 0000 0001 (bits 0,5,12)
+  a.set(0).set(5).set(12);
+  // b = 0000 0010 0001 0001 (bits 0,4,12)
+  b.set(0).set(4).set(12);
+
+  BS c_and = a & b;  // bits 0,12
+  BS c_or = a | b;   // bits 0,4,5,12
+  BS c_xor = a ^ b;  // bits 4,5
+
+  EXPECT_TRUE(c_and.test(0));
+  EXPECT_TRUE(c_and.test(12));
+  EXPECT_FALSE(c_and.test(4));
+  EXPECT_FALSE(c_and.test(5));
+
+  EXPECT_TRUE(c_or.test(4));
+  EXPECT_TRUE(c_or.test(5));
+  EXPECT_TRUE(c_or.test(12));
+  EXPECT_TRUE(c_or.test(0));
+
+  EXPECT_TRUE(c_xor.test(4));
+  EXPECT_TRUE(c_xor.test(5));
+  EXPECT_FALSE(c_xor.test(0));
+  EXPECT_FALSE(c_xor.test(12));
+
+  // ~ obeys N (tail masked)
+  BS zero;
+  BS all = ~zero;
+  EXPECT_TRUE(all.all());
+  EXPECT_EQ(all.count(), BS::size());
+}
+
+TEST(CompactBitSet, IterationOnOff_OneWord) {
+  using BS = util::CompactBitSet<10>;
+  BS bs;
+  bs.set(0).set(1).set(2).set(4).set(7);
+
+  auto on = collect(bs.on_indices());
+  auto off = collect(bs.off_indices());
+
+  std::vector<int> want_on = {0, 1, 2, 4, 7};
+  std::vector<int> want_off = {3, 5, 6, 8, 9};
+
+  EXPECT_EQ(on, want_on);
+  EXPECT_EQ(off, want_off);
+}
+
+TEST(CompactBitSet, RankSelectAndPrefixCount_OneWord) {
+  using BS = util::CompactBitSet<20>;
+  BS bs;
+  // set bits: 0,2,3,10,15
+  bs.set(0).set(2).set(3).set(10).set(15);
+
+  // get_nth_on_index (within range)
+  EXPECT_EQ(bs.get_nth_on_index(0), 0);
+  EXPECT_EQ(bs.get_nth_on_index(1), 2);
+  EXPECT_EQ(bs.get_nth_on_index(2), 3);
+  EXPECT_EQ(bs.get_nth_on_index(3), 10);
+  EXPECT_EQ(bs.get_nth_on_index(4), 15);
+
+  // count_on_indices_before
+  EXPECT_EQ(bs.count_on_indices_before(0), 0);
+  EXPECT_EQ(bs.count_on_indices_before(1), 1);   // only bit 0
+  EXPECT_EQ(bs.count_on_indices_before(2), 1);   // still only bit 0
+  EXPECT_EQ(bs.count_on_indices_before(3), 2);   // bits 0,2
+  EXPECT_EQ(bs.count_on_indices_before(4), 3);   // bits 0,2,3
+  EXPECT_EQ(bs.count_on_indices_before(11), 4);  // + bit 10
+  EXPECT_EQ(bs.count_on_indices_before(20), 5);  // all five
+}
+
+TEST(CompactBitSet, ToStringNatural_OneWord) {
+  using BS = util::CompactBitSet<8>;
+  BS bs;
+  bs.set(0).set(3).set(7);
+  // s[k] is bit k ('0'/'1')
+  EXPECT_EQ(bs.to_string_natural(), std::string("10010001"));
+}
+
+// --------------------- Multi-word cases (N > 64) ---------------------
+
+TEST(CompactBitSet, SizeAndDefaultState_MultiWord) {
+  using BS = util::CompactBitSet<70>;
+  BS bs;
+  EXPECT_EQ(BS::size(), 70u);
+  EXPECT_TRUE(bs.none());
+  EXPECT_EQ(bs.count(), 0u);
+}
+
+TEST(CompactBitSet, SetResetAndTest_MultiWord) {
+  using BS = util::CompactBitSet<70>;
+  BS bs;
+  // Cross the 64-bit boundary
+  bs.set(0).set(1).set(2).set(64).set(65).set(69);
+  EXPECT_TRUE(bs.test(0));
+  EXPECT_TRUE(bs.test(64));
+  EXPECT_TRUE(bs.test(69));
+  EXPECT_EQ(bs.count(), 6u);
+
+  bs.reset(65);
+  EXPECT_FALSE(bs.test(65));
+  EXPECT_EQ(bs.count(), 5u);
+}
+
+TEST(CompactBitSet, BitwiseOpsAndTailMask_MultiWord) {
+  using BS = util::CompactBitSet<70>;
+  BS zero;
+  BS all = ~zero;  // should set exactly 70 bits
+  EXPECT_TRUE(all.any());
+  EXPECT_TRUE(all.all());
+  EXPECT_EQ(all.count(), 70u);
+
+  BS bs;
+  bs.set(0).set(64).set(69);
+  BS mask;
+  mask.set();  // all ones in the logical 70-bit domain
+  BS anded = bs & mask;
+  EXPECT_EQ(anded.count(), 3u);
+  EXPECT_TRUE(anded.test(0));
+  EXPECT_TRUE(anded.test(64));
+  EXPECT_TRUE(anded.test(69));
+
+  // |= and ^= should not disturb tail if writers keep the invariant
+  BS x, y;
+  x.set(69);
+  y.set(64);
+  x |= y;
+  EXPECT_TRUE(x.test(64));
+  EXPECT_TRUE(x.test(69));
+  x ^= y;
+  EXPECT_FALSE(x.test(64));
+  EXPECT_TRUE(x.test(69));
+}
+
+TEST(CompactBitSet, IterationOnOff_MultiWord) {
+  using BS = util::CompactBitSet<70>;
+  BS bs;
+  // Set a few on both sides of the boundary
+  bs.set(0).set(3).set(4).set(64).set(66).set(69);
+
+  auto on = collect(bs.on_indices());
+  auto off = collect(bs.off_indices());
+
+  std::vector<int> want_on = {0, 3, 4, 64, 66, 69};
+  EXPECT_EQ(on, want_on);
+
+  // spot-check OFF contains boundary-adjacent indices and last few
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 1));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 2));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 65));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 68));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 67));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 63));
+  EXPECT_TRUE(std::binary_search(off.begin(), off.end(), 62));
+}
+
+TEST(CompactBitSet, RankSelectAndPrefixCount_MultiWord) {
+  using BS = util::CompactBitSet<70>;
+  BS bs;
+  // Put some bits across both words
+  // ON at: 0, 2, 3, 10, 64, 66, 69
+  bs.set(0).set(2).set(3).set(10).set(64).set(66).set(69);
+
+  // rank-select
+  EXPECT_EQ(bs.get_nth_on_index(0), 0);
+  EXPECT_EQ(bs.get_nth_on_index(1), 2);
+  EXPECT_EQ(bs.get_nth_on_index(2), 3);
+  EXPECT_EQ(bs.get_nth_on_index(3), 10);
+  EXPECT_EQ(bs.get_nth_on_index(4), 64);
+  EXPECT_EQ(bs.get_nth_on_index(5), 66);
+  EXPECT_EQ(bs.get_nth_on_index(6), 69);
+
+  // prefix counts
+  EXPECT_EQ(bs.count_on_indices_before(0), 0);
+  EXPECT_EQ(bs.count_on_indices_before(1), 1);   // bit 0
+  EXPECT_EQ(bs.count_on_indices_before(4), 3);   // 0,2,3
+  EXPECT_EQ(bs.count_on_indices_before(11), 4);  // +10
+  EXPECT_EQ(bs.count_on_indices_before(64), 4);  // none across boundary yet
+  EXPECT_EQ(bs.count_on_indices_before(65), 5);  // +64
+  EXPECT_EQ(bs.count_on_indices_before(70), 7);  // all seven
+}
+
+TEST(CompactBitSet, EqualityAcrossWords) {
+  using BS = util::CompactBitSet<70>;
+  BS a, b;
+  a.set(0).set(64).set(69);
+  b.set(69).set(0).set(64);
+  EXPECT_TRUE(a == b);
+  b.reset(64);
+  EXPECT_FALSE(a == b);
+}
+
+// Random methods of CompactBitSet
+
+// --------------------- choose_random_on_index ---------------------
+
+TEST(CompactBitSet_Random, ChooseRandomOnIndex_OneWord_BasicAndUniform) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<20>;
+  BS bs;
+  // ON at: 0, 3, 7, 12, 15
+  std::vector<int> on = {0, 3, 7, 12, 15};
+  for (int k : on) bs.set(k);
+
+  // Basic sanity: always returns an ON index in range.
+  const int trials = 20000;
+  std::vector<int> hist(on.size(), 0);
+
+  for (int t = 0; t < trials; ++t) {
+    int idx = bs.choose_random_on_index();
+    ASSERT_GE(idx, 0);
+    ASSERT_LT(idx, static_cast<int>(BS::size()));
+    ASSERT_TRUE(bs.test(static_cast<size_t>(idx)));
+
+    // bucketize
+    auto it = std::find(on.begin(), on.end(), idx);
+    ASSERT_NE(it, on.end());
+    ++hist[static_cast<int>(std::distance(on.begin(), it))];
+  }
+
+  // Rough uniformity check (±12%)
+  ExpectRoughlyUniform(hist, trials, 0.12);
+}
+
+TEST(CompactBitSet_Random, ChooseRandomOnIndex_MultiWord_BasicAndUniform) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<70>;
+  BS bs;
+  // ON spanning the 64-boundary: 0, 2, 3, 10, 64, 66, 69
+  std::vector<int> on = {0, 2, 3, 10, 64, 66, 69};
+  for (int k : on) bs.set(k);
+
+  const int trials = 28000;
+  std::vector<int> hist(on.size(), 0);
+
+  for (int t = 0; t < trials; ++t) {
+    int idx = bs.choose_random_on_index();
+    ASSERT_GE(idx, 0);
+    ASSERT_LT(idx, static_cast<int>(BS::size()));
+    ASSERT_TRUE(bs.test(static_cast<size_t>(idx)));
+
+    auto it = std::find(on.begin(), on.end(), idx);
+    ASSERT_NE(it, on.end());
+    ++hist[static_cast<int>(std::distance(on.begin(), it))];
+  }
+
+  // Rough uniformity check (±10%)
+  ExpectRoughlyUniform(hist, trials, 0.10);
+}
+
+// --------------------- randomly_zero_out ---------------------
+
+TEST(CompactBitSet_Random, RandomlyZeroOut_OneWord_CountAndMembership) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<24>;
+  BS bs;
+  // ON at 0..15 (16 bits on)
+  for (int i = 0; i < 16; ++i) bs.set(i);
+
+  // Copy to capture original ON set
+  BS original = bs;
+
+  // Remove 5 at random
+  bs.randomly_zero_out(5);
+
+  // Count decreased by 5
+  EXPECT_EQ(bs.count(), original.count() - 5);
+
+  // The cleared bits are a subset of the original ON set
+  int cleared = 0;
+  for (int i = 0; i < 16; ++i) {
+    if (original.test(i) && !bs.test(i)) ++cleared;
+  }
+  EXPECT_EQ(cleared, 5);
+}
+
+TEST(CompactBitSet_Random, RandomlyZeroOut_OneWord_UniformSingles) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<20>;
+  // Initial ON at: 0..9 (10 choices)
+  std::vector<int> base_on(10);
+  std::iota(base_on.begin(), base_on.end(), 0);
+
+  const int choices = static_cast<int>(base_on.size());
+  const int trials = 20000;
+  std::vector<int> hist(choices, 0);
+
+  for (int t = 0; t < trials; ++t) {
+    BS bs;
+    for (int k : base_on) bs.set(k);
+
+    // Zero out exactly one bit at random
+    bs.randomly_zero_out(1);
+
+    // Find which bit was cleared
+    int cleared = -1;
+    for (int k : base_on) {
+      if (!bs.test(static_cast<size_t>(k))) {
+        cleared = k;
+        break;
+      }
+    }
+    ASSERT_NE(cleared, -1);
+
+    ++hist[cleared];
+  }
+
+  // Rough uniformity (±12%)
+  ExpectRoughlyUniform(hist, trials, 0.12);
+}
+
+TEST(CompactBitSet_Random, RandomlyZeroOut_MultiWord_CountAndUniformSingles) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<70>;
+  // ON at: 0..31 and 64..69 (total 38 choices)
+  std::vector<int> base_on;
+  for (int i = 0; i < 32; ++i) base_on.push_back(i);
+  for (int i = 64; i < 70; ++i) base_on.push_back(i);
+
+  const int choices = static_cast<int>(base_on.size());
+  const int trials = 38000;
+  std::vector<int> hist(choices, 0);
+
+  for (int t = 0; t < trials; ++t) {
+    BS bs;
+    for (int k : base_on) bs.set(k);
+    BS original = bs;
+
+    // Remove 1 at random
+    bs.randomly_zero_out(1);
+
+    // Count decreased by 1
+    EXPECT_EQ(bs.count(), original.count() - 1);
+
+    // Identify which bit cleared
+    int cleared_idx = -1;
+    for (int i = 0; i < choices; ++i) {
+      int k = base_on[i];
+      if (original.test(static_cast<size_t>(k)) && !bs.test(static_cast<size_t>(k))) {
+        cleared_idx = i;
+        break;
+      }
+    }
+    ASSERT_NE(cleared_idx, -1);
+    ++hist[cleared_idx];
+  }
+
+  // Rough uniformity across all 38 choices (±10%)
+  ExpectRoughlyUniform(hist, trials, 0.10);
+}
+
+TEST(CompactBitSet_Random, RandomlyZeroOut_AllBits) {
+  util::Random::set_seed(1);
+
+  using BS = util::CompactBitSet<33>;  // crosses 32->64 word boundary policy
+  BS bs;
+  for (size_t i = 0; i < BS::size(); ++i) bs.set(i);
+  const auto before = bs.count();
+
+  bs.randomly_zero_out(static_cast<int>(before));
+  EXPECT_TRUE(bs.none());
+  EXPECT_EQ(bs.count(), 0u);
+}
+
+/////////////////////////////////
+// End tests for CompactBitSet //
+/////////////////////////////////
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
