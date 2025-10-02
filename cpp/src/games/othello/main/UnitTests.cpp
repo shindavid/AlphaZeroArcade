@@ -1,6 +1,7 @@
 #include "core/tests/Common.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -23,6 +24,7 @@ using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
+using mask_t = othello::mask_t;
 
 State make_init_state() {
   State state;
@@ -321,5 +323,425 @@ TEST(Symmetry, flip_anti_diag) {
 }
 
 TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
+
+struct Masks {
+  mask_t cur_player = 0;
+  mask_t opponent = 0;
+  mask_t stable = 0;
+};
+
+constexpr int index(int row, int col) { return row * 8 + col; }
+
+inline Masks parse_board(const std::string& ascii_board) {
+  Masks m;
+  std::istringstream iss(ascii_board);
+  std::string line;
+  int row = 0;
+
+  std::getline(iss, line);  // skip header line "  A B C D E F G H"
+  while (std::getline(iss, line)) {
+    int row_idx = line[0] - '1';  // '1' -> row 0
+
+    int col = 0;
+    for (size_t i = 2; i < line.size() && col < 8; i += 2) {
+      char ch = line[i];
+      int bit = index(row_idx, col);
+      mask_t mask = 1ULL << bit;
+
+      switch (ch) {
+        case 'X':
+          m.cur_player |= mask;
+          break;
+        case 'O':
+          m.opponent |= mask;
+          break;
+        case '*':
+          m.stable |= mask;
+          break;
+        default:
+          break;
+      }
+      ++col;
+    }
+    ++row;
+  }
+  return m;
+}
+
+TEST(StableDiscs, from_string) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O|O|O| | | | | |\n"
+    "2|X|X|O|O|X|X|O|X|\n"
+    "3|X|O|X| | | | | |\n"
+    "4| |O| |O| | | | |\n"
+    "5| |O| | |O| | | |\n"
+    "6| |O| | | |X| | |\n"
+    "7| |O| | | | |X| |\n"
+    "8| |O| | | | | |X|\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*|*|*| | | | | |\n"
+    "2| |*| | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | |*|\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, corners) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O| | |O| | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | |X| | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | |X|\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*| | | | | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | |*|\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, interior_one_side_protected) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O|O|O| | |X|X|X|\n"
+    "2|O|O| | | | |O|O|\n"
+    "3| | | | | | | |O|\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*|*|*| | |*|*|*|\n"
+    "2|*|*| | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, edge_with_one_empty_space) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O|O|X|O| |O|X|O|\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*|*|*| | | |*|*|\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, edge_with_two_empty_spaces) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O|O|X|O| | |X|O|\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*|*| | | | | |*|\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, file_with_one_empty_spaces) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|O|O|X|O| | |X|O|\n"
+    "2|X| | | | | | | |\n"
+    "3|X| | | | | | | |\n"
+    "4|O| | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6|O| | | | | | | |\n"
+    "7|O| | | | | | | |\n"
+    "8|O| | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1|*|*| | | | | |*|\n"
+    "2|*| | | | | | | |\n"
+    "3|*| | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6|*| | | | | | | |\n"
+    "7|*| | | | | | | |\n"
+    "8|*| | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| |O|X|O|X|X|X| |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1| | |*|*| | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners_left_edge) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| | | | | | | | |\n"
+    "2|X| | | | | | | |\n"
+    "3|O| | | | | | | |\n"
+    "4|X| | | | | | | |\n"
+    "5|O| | | | | | | |\n"
+    "6|X| | | | | | | |\n"
+    "7|O| | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    " A B C D E F G H\n"
+    "1| | | | | | | | |\n"
+    "2| | | | | | | | |\n"
+    "3|*| | | | | | | |\n"
+    "4|*| | | | | | | |\n"
+    "5|*| | | | | | | |\n"
+    "6|*| | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners_bottom) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| | | | | | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | |X|O|X|O|X| |\n";
+
+  const char* expected_stable =
+    "  A B C D E F G H\n"
+    "1| | | | | | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | |*|*| | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners_top) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| | |X|O|X|O|X| |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    "  A B C D E F G H\n"
+    "1| | | | |*|*| | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners_top2) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| |O|X|O|X|O| | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    "  A B C D E F G H\n"
+    "1| | |*|*| | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, unoccupied_corners_top3) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1| |X|O|X|O|X| | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  const char* expected_stable =
+    "  A B C D E F G H\n"
+    "1| | |*|*| | | | |\n"
+    "2| | | | | | | | |\n"
+    "3| | | | | | | | |\n"
+    "4| | | | | | | | |\n"
+    "5| | | | | | | | |\n"
+    "6| | | | | | | | |\n"
+    "7| | | | | | | | |\n"
+    "8| | | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(StableDiscs, full_edge_with_opponent_A8) {
+  const char* board =
+    "  A B C D E F G H\n"
+    "1|X|X| | | | | | |\n"
+    "2|X|X| | | | | | |\n"
+    "3|X| | | | | | | |\n"
+    "4|O| | | | | | | |\n"
+    "5|X| | | | | | | |\n"
+    "6|O| | | | | | | |\n"
+    "7|X| | | | | | | |\n"
+    "8|O| | | | | | | |\n";
+
+  const char* expected_stable =
+    "  A B C D E F G H\n"
+    "1|*|*| | | | | | |\n"
+    "2|*|*| | | | | | |\n"
+    "3|*| | | | | | | |\n"
+    "4|*| | | | | | | |\n"
+    "5|*| | | | | | | |\n"
+    "6|*| | | | | | | |\n"
+    "7|*| | | | | | | |\n"
+    "8|*| | | | | | | |\n";
+
+  Masks m = parse_board(board);
+  Masks expected = parse_board(expected_stable);
+  mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
+  EXPECT_EQ(stable, expected.stable);
+}
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

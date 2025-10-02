@@ -1,8 +1,12 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "games/othello/BasicTypes.hpp"
+#include "games/othello/ConstantBuilders.hpp"
 
+#include <cmath>
 #include <cstdint>
+#include <iostream>
 
 /*
  * Bit order encoding for the board:
@@ -31,10 +35,6 @@
  * look at on the web appears to go with the above representation.
  */
 namespace othello {
-
-using column_t = int8_t;
-using row_t = int8_t;
-using mask_t = uint64_t;
 
 const int kNumPlayers = 2;
 const int kBoardDimension = 8;
@@ -116,6 +116,16 @@ const int kStartingBlack2 = kD5;
 const mask_t kStartingWhiteMask = 1ULL << kStartingWhite1 | 1ULL << kStartingWhite2;
 const mask_t kStartingBlackMask = 1ULL << kStartingBlack1 | 1ULL << kStartingBlack2;
 
+constexpr mask_t kA1Mask = 1ULL << kA1;
+constexpr mask_t kH1Mask = 1ULL << kH1;
+constexpr mask_t kA8Mask = 1ULL << kA8;
+constexpr mask_t kH8Mask = 1ULL << kH8;
+
+constexpr mask_t kRank1Mask = 0x00000000000000FFULL;
+constexpr mask_t kRank8Mask = 0xFF00000000000000ULL;
+constexpr mask_t kFileAMask = 0x0101010101010101ULL;
+constexpr mask_t kFileHMask = 0x8080808080808080ULL;
+
 /*
  * +1 for the pass move.
  *
@@ -137,5 +147,17 @@ const int kTypicalNumMovesPerGame = kNumCells - kNumStartingPieces;
 const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
+
+inline constexpr auto kRanks = make_ranks();
+inline constexpr auto kFiles = make_files();
+inline constexpr auto kDiagSE = make_SE_diags();
+inline constexpr auto kDiagSW = make_SW_diags();
+
+static_assert(kRanks[0] == kRank1Mask);
+static_assert(kRanks[7] == kRank8Mask);
+static_assert(kFiles[0] == kFileAMask);
+static_assert(kFiles[7] == kFileHMask);
+
+inline std::array<line_mask_t, kMax> EDGE_STABILITY = build_stability_array();
 
 }  // namespace othello

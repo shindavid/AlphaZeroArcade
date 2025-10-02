@@ -26,28 +26,29 @@ std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) 
 
 void Game::Rules::apply(State& state, core::action_t action) {
   if (action == kPass) {
-    std::swap(state.cur_player_mask, state.opponent_mask);
-    state.cur_player = 1 - state.cur_player;
-    state.pass_count++;
+    std::swap(state.core.cur_player_mask, state.core.opponent_mask);
+    state.core.cur_player = 1 - state.core.cur_player;
+    state.core.pass_count++;
   } else {
-    mask_t flipped = flip[action](state.cur_player_mask, state.opponent_mask);
-    mask_t cur_player_mask = state.opponent_mask ^ flipped;
+    mask_t flipped = flip[action](state.core.cur_player_mask, state.core.opponent_mask);
+    mask_t cur_player_mask = state.core.opponent_mask ^ flipped;
 
-    state.opponent_mask = state.cur_player_mask ^ (flipped | (1ULL << action));
-    state.cur_player_mask = cur_player_mask;
-    state.cur_player = 1 - state.cur_player;
-    state.pass_count = 0;
+    state.core.opponent_mask = state.core.cur_player_mask ^ (flipped | (1ULL << action));
+    state.core.cur_player_mask = cur_player_mask;
+    state.core.cur_player = 1 - state.core.cur_player;
+    state.core.pass_count = 0;
+    state.compute_aux();
   }
 }
 
 bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                               core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.pass_count == kNumPlayers) {
+  if (state.core.pass_count == kNumPlayers) {
     outcome = compute_outcome(state);
     return true;
   }
 
-  if ((state.opponent_mask | state.cur_player_mask) == kCompleteBoardMask) {
+  if ((state.core.opponent_mask | state.core.cur_player_mask) == kCompleteBoardMask) {
     outcome = compute_outcome(state);
     return true;
   }
@@ -56,7 +57,7 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
 }
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
+  uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
   Types::ActionMask valid_actions;
   uint64_t u = mask;
   while (u) {
@@ -93,11 +94,13 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
                     row == blink_row ? blink_col : -1);
   }
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
-  int opponent_disc_count = std::popcount(state.opponent_mask);
-  int cur_player_disc_count = std::popcount(state.cur_player_mask);
+  int opponent_disc_count = std::popcount(state.core.opponent_mask);
+  int cur_player_disc_count = std::popcount(state.core.cur_player_mask);
 
-  int black_disc_count = state.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
-  int white_disc_count = state.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
+  int black_disc_count =
+    state.core.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
+  int white_disc_count =
+    state.core.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
 
   cx += snprintf(buffer + cx, buf_size - cx, "Score: Player\n");
   cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s%s%s", black_disc_count, ansi::kBlue(""),
@@ -124,19 +127,19 @@ void Game::IO::write_edax_board_str(char* buf, const State& state) {
   // if cur_player == 0 (X), then chars should be ".XO"
   // if cur_player == 1 (O), then chars should be ".OX"
   chars[0] = '.';
-  chars[state.cur_player + 1] = 'X';
-  chars[2 - state.cur_player] = 'O';
+  chars[state.core.cur_player + 1] = 'X';
+  chars[2 - state.core.cur_player] = 'O';
 
   int cx = 0;
   cx += snprintf(buf + cx, 76, "setboard ");
   for (int i = 0; i < 64; ++i) {
-    int cur = (state.cur_player_mask >> i) & 1;
-    int opp = (state.opponent_mask >> i) & 1;
+    int cur = (state.core.cur_player_mask >> i) & 1;
+    int opp = (state.core.opponent_mask >> i) & 1;
     int x = 2 * opp + cur;  // 0 = empty, 1 = cur, 2 = opp
     buf[cx++] = chars[x];
   }
   buf[cx++] = ' ';
-  buf[cx++] = (state.cur_player == kBlack) ? 'X' : 'O';
+  buf[cx++] = (state.core.cur_player == kBlack) ? 'X' : 'O';
   buf[cx++] = '\n';
   DEBUG_ASSERT(cx == 76, "Unexpected error ({} != {})", cx, 76);
 }
@@ -157,8 +160,8 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
     bool valid = valid_actions[index];
-    bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
-    bool occupied_by_opp_player = (1UL << index) & state.opponent_mask;
+    bool occupied_by_cur_player = (1UL << index) & state.core.cur_player_mask;
+    bool occupied_by_opp_player = (1UL << index) & state.core.opponent_mask;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
 
     const char* color =
@@ -174,12 +177,12 @@ int Game::IO::print_row(char* buf, int n, const State& state,
 }
 
 Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
-  int opponent_count = std::popcount(state.opponent_mask);
-  int cur_player_count = std::popcount(state.cur_player_mask);
+  int opponent_count = std::popcount(state.core.opponent_mask);
+  int cur_player_count = std::popcount(state.core.cur_player_mask);
   if (cur_player_count > opponent_count) {
-    return core::WinLossDrawResults::win(state.cur_player);
+    return core::WinLossDrawResults::win(state.core.cur_player);
   } else if (opponent_count > cur_player_count) {
-    return core::WinLossDrawResults::win(1 - state.cur_player);
+    return core::WinLossDrawResults::win(1 - state.core.cur_player);
   } else {
     return core::WinLossDrawResults::draw();
   }
