@@ -80,55 +80,55 @@ inline void full_axes_stable_discs(mask_t cur_player_mask, mask_t opponent_mask,
   stable_oppo |= all_axes_full & opponent_mask;
 }
 
-inline uint8_t pack_file(uint64_t bb, int file) {
+inline line_mask_t pack_file(mask_t bb, int file) {
   // Pack a file (0 = A … 7 = H) into an 8-bit mask: rank 1→bit0, …, rank 8→bit7
-  uint8_t m = 0;
+  mask_t m = 0;
   for (int r = 0; r < 8; ++r) {  // r = rank index (0..7) == (row)
     int sq = r * 8 + file;       // square index on that file
-    if (bb & bit64(sq)) m |= (1u << r);
+    if (bb & detail::bit64(sq)) m |= (1u << r);
   }
     return m;
 }
 
-inline uint64_t unpack_file_middle(uint8_t m, int file) {
+inline mask_t unpack_file_middle(line_mask_t m, int file) {
   // Unpack an 8-bit mask back onto a file, BUT only rows 2..7 (r=1..6) to avoid corners.
   // (Corners came from the rank lookups already.)
-  uint64_t out = 0;
+  mask_t out = 0;
   for (int r = 1; r <= 6; ++r) {  // exclude r=0 (rank1) and r=7 (rank8)
-    if (m & (1u << r)) out |= bit64(r * 8 + file);
+    if (m & (1u << r)) out |= detail::bit64(r * 8 + file);
   }
   return out;
 }
 
-inline uint64_t get_stable_edge(uint64_t P, uint64_t O) {
-  uint64_t stable = 0;
+inline mask_t get_stable_edge(mask_t P, mask_t O) {
+  mask_t stable = 0;
   // Rank 1: bits 0..7
   {
-    uint8_t p8 = static_cast<uint8_t>(P & 0xFF);
-    uint8_t o8 = static_cast<uint8_t>(O & 0xFF);
-    stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8));
+    line_mask_t p8 = static_cast<line_mask_t>(P & 0xFF);
+    line_mask_t o8 = static_cast<line_mask_t>(O & 0xFF);
+    stable |= static_cast<mask_t>(edge_stable_lookup(p8, o8));
   }
 
   // Rank 8: bits 56..63
   {
-    uint8_t p8 = static_cast<uint8_t>((P >> 56) & 0xFF);
-    uint8_t o8 = static_cast<uint8_t>((O >> 56) & 0xFF);
-    stable |= static_cast<uint64_t>(edge_stable_lookup(p8, o8)) << 56;
+    line_mask_t p8 = static_cast<line_mask_t>((P >> 56) & 0xFF);
+    line_mask_t o8 = static_cast<line_mask_t>((O >> 56) & 0xFF);
+    stable |= static_cast<mask_t>(edge_stable_lookup(p8, o8)) << 56;
   }
 
   // File A (file = 0), excluding corners (A1/A8)
   {
-    uint8_t p8 = pack_file(P, 0);
-    uint8_t o8 = pack_file(O, 0);
-    uint8_t m = edge_stable_lookup(p8, o8);
+    line_mask_t p8 = pack_file(P, 0);
+    line_mask_t o8 = pack_file(O, 0);
+    line_mask_t m = edge_stable_lookup(p8, o8);
     stable |= unpack_file_middle(m, 0);
   }
 
   // File H (file = 7), excluding corners (H1/H8)
   {
-    uint8_t p8 = pack_file(P, 7);
-    uint8_t o8 = pack_file(O, 7);
-    uint8_t m = edge_stable_lookup(p8, o8);
+    line_mask_t p8 = pack_file(P, 7);
+    line_mask_t o8 = pack_file(O, 7);
+    line_mask_t m = edge_stable_lookup(p8, o8);
     stable |= unpack_file_middle(m, 7);
   }
 
@@ -175,7 +175,7 @@ inline int to_ternary_value(line_mask_t curr_player_mask, line_mask_t opponent_m
   return ternary_int_value(digits);
 }
 
-inline uint8_t edge_stable_lookup(uint8_t curr_player_mask, uint8_t opponent_mask) {
+inline line_mask_t edge_stable_lookup(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
   return EDGE_STABILITY[to_ternary_value(curr_player_mask, opponent_mask)];
 }
 

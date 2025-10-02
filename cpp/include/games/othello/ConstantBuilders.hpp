@@ -11,6 +11,7 @@ namespace detail {
 constexpr int idx(int f, int r) { return r * 8 + f; }
 constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r < 8; }
 constexpr mask_t bit(int f, int r) { return mask_t{1} << idx(f, r); }
+constexpr mask_t bit64(int x) { return mask_t{1} << x; }
 constexpr line_mask_t bit8(int x) { return line_mask_t{1} << x; }
 
 } // namespace detail
