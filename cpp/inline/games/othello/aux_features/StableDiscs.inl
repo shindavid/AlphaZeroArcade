@@ -135,4 +135,5 @@ inline uint64_t get_stable_edge(uint64_t P, uint64_t O) {
   return stable;
 }
 
+
 }  // namespace othello

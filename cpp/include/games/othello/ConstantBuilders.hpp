@@ -13,30 +13,32 @@ constexpr bool in_bounds(int f, int r) { return (unsigned)f < 8 && (unsigned)r <
 constexpr mask_t bit(int f, int r) { return mask_t{1} << idx(f, r); }
 constexpr line_mask_t bit8(int x) { return line_mask_t{1} << x; }
 
+} // namespace detail
+
 // -------- Single-line builders --------
 constexpr mask_t rank_mask(int r) {
   mask_t m = 0;
-  for (int f = 0; f < 8; ++f) m |= bit(f, r);
+  for (int f = 0; f < 8; ++f) m |= detail::bit(f, r);
   return m;
 }
 
 constexpr mask_t file_mask(int f) {
   mask_t m = 0;
-  for (int r = 0; r < 8; ++r) m |= bit(f, r);
+  for (int r = 0; r < 8; ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from A1 to H8
 constexpr mask_t SE_diag_mask(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); ++f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); ++f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from H1 to A8
 constexpr mask_t SW_diag_mask(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); --f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); --f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
@@ -76,20 +78,20 @@ constexpr std::array<mask_t, 15> make_SW_diags() {
 constexpr void move_and_flip(int x, line_mask_t& curr_player, line_mask_t& opponent) {
   if (x > 1) {
     int y = x - 1;
-    while (y > 0 && (opponent & bit8(y))) --y;
-    if (curr_player & bit8(y))
-      for (y = x - 1; y > 0 && (opponent & bit8(y)); --y) {
-        opponent ^= bit8(y);
-        curr_player ^= bit8(y);
+    while (y > 0 && (opponent & detail::bit8(y))) --y;
+    if (curr_player & detail::bit8(y))
+      for (y = x - 1; y > 0 && (opponent & detail::bit8(y)); --y) {
+        opponent ^= detail::bit8(y);
+        curr_player ^= detail::bit8(y);
       }
   }
   if (x < 6) {
     int y = x + 1;
-    while (y < 8 && (opponent & bit8(y))) ++y;
-    if (curr_player & bit8(y))
-      for (y = x + 1; y < 8 && (opponent & bit8(y)); ++y) {
-        opponent ^= bit8(y);
-        curr_player ^= bit8(y);
+    while (y < 8 && (opponent & detail::bit8(y))) ++y;
+    if (curr_player & detail::bit8(y))
+      for (y = x + 1; y < 8 && (opponent & detail::bit8(y)); ++y) {
+        opponent ^= detail::bit8(y);
+        curr_player ^= detail::bit8(y);
       }
   }
 }
@@ -101,9 +103,9 @@ constexpr line_mask_t _find_stable_edge(line_mask_t curr_player_mask, line_mask_
   if (!stable || !empty_spaces) return stable;
 
   for (int x = 0; (x < 8); ++x) {
-    if (!(empty_spaces & bit8(x))) continue;
+    if (!(empty_spaces & detail::bit8(x))) continue;
     // player plays
-    line_mask_t player_mask_after = curr_player_mask | bit8(x);
+    line_mask_t player_mask_after = curr_player_mask | detail::bit8(x);
     line_mask_t opponent_mask_after = opponent_mask;
     move_and_flip(x, player_mask_after, opponent_mask_after);
     stable = _find_stable_edge(player_mask_after, opponent_mask_after, stable);
@@ -111,7 +113,7 @@ constexpr line_mask_t _find_stable_edge(line_mask_t curr_player_mask, line_mask_
 
     // opponent plays
     line_mask_t player_mask_after2 = curr_player_mask;
-    line_mask_t opponent_mask_after2 = opponent_mask | bit8(x);
+    line_mask_t opponent_mask_after2 = opponent_mask | detail::bit8(x);
     move_and_flip(x, opponent_mask_after2, player_mask_after2);
     stable = _find_stable_edge(player_mask_after2, opponent_mask_after2, stable);
     if (!stable) return 0;
@@ -137,9 +139,5 @@ constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t
  */
   return _find_stable_edge(curr_player_mask, opponent_mask, curr_player_mask);
 }
-
-
-
-}  // namespace detail
 
 } // namespace othello

@@ -149,22 +149,24 @@ const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
 const core::seat_index_t kStartingColor = kBlack;
 
-inline constexpr auto kRanks = detail::make_ranks();
-inline constexpr auto kFiles = detail::make_files();
-inline constexpr auto kDiagSE = detail::make_SE_diags();
-inline constexpr auto kDiagSW = detail::make_SW_diags();
+inline constexpr auto kRanks = make_ranks();
+inline constexpr auto kFiles = make_files();
+inline constexpr auto kDiagSE = make_SE_diags();
+inline constexpr auto kDiagSW = make_SW_diags();
 
 static_assert(kRanks[0] == kRank1Mask);
 static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
+constexpr int kMax = 2 * 3 ^ 7;
+
 inline constexpr auto EDGE_STABILITY = [] {
-  std::array<uint8_t, 256 * 256> t{};
+  std::array<uint8_t, 256*256> t{};
   for (int P = 0; P < 256; ++P)
     for (int O = 0; O < 256; ++O)
       t[size_t(P) * 256u + size_t(O)] =
-        (P & O) ? 0u : detail::find_stable_edge(uint8_t(P), uint8_t(O));
+        (P & O) ? 0u : find_stable_edge(uint8_t(P), uint8_t(O));
   return t;
 }();
 
