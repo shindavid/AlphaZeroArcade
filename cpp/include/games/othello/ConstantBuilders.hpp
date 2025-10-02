@@ -60,43 +60,43 @@ constexpr line_mask_t find_stable_edge_helper(line_mask_t curr_player_mask,
   return stable;
 }
 
+}  // namespace detail
+
 constexpr mask_t rank_mask(int r) {
   mask_t m = 0;
-  for (int f = 0; f < 8; ++f) m |= bit(f, r);
+  for (int f = 0; f < 8; ++f) m |= detail::bit(f, r);
   return m;
 }
 
 constexpr mask_t file_mask(int f) {
   mask_t m = 0;
-  for (int r = 0; r < 8; ++r) m |= bit(f, r);
+  for (int r = 0; r < 8; ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from A1 to H8
 constexpr mask_t SE_diag_mask(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); ++f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); ++f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
 // from H1 to A8
 constexpr mask_t SW_diag_mask(int f0, int r0) {
   mask_t m = 0;
-  for (int f = f0, r = r0; in_bounds(f, r); --f, ++r) m |= bit(f, r);
+  for (int f = f0, r = r0; detail::in_bounds(f, r); --f, ++r) m |= detail::bit(f, r);
   return m;
 }
 
-}  // namespace detail
-
 constexpr std::array<mask_t, 8> make_ranks() {
   std::array<mask_t, 8> a{};
-  for (int r = 0; r < 8; ++r) a[r] = detail::rank_mask(r);
+  for (int r = 0; r < 8; ++r) a[r] = rank_mask(r);
   return a;
 }
 
 constexpr std::array<mask_t, 8> make_files() {
   std::array<mask_t, 8> a{};
-  for (int f = 0; f < 8; ++f) a[f] = detail::file_mask(f);
+  for (int f = 0; f < 8; ++f) a[f] = file_mask(f);
   return a;
 }
 
@@ -104,9 +104,9 @@ constexpr std::array<mask_t, 15> make_SE_diags() {
   std::array<mask_t, 15> a{};
   int k = 0;
   // starts on bottom row A1..H1
-  for (int f = 0; f < 8; ++f) a[k++] = detail::SE_diag_mask(f, 0);
+  for (int f = 0; f < 8; ++f) a[k++] = SE_diag_mask(f, 0);
   // starts on left column A2..A8
-  for (int r = 1; r < 8; ++r) a[k++] = detail::SE_diag_mask(0, r);
+  for (int r = 1; r < 8; ++r) a[k++] = SE_diag_mask(0, r);
   return a;
 }
 
@@ -114,9 +114,9 @@ constexpr std::array<mask_t, 15> make_SW_diags() {
   std::array<mask_t, 15> a{};
   int k = 0;
   // starts on bottom row H1..A1
-  for (int f = 7; f >= 0; --f) a[k++] = detail::SW_diag_mask(f, 0);
+  for (int f = 7; f >= 0; --f) a[k++] = SW_diag_mask(f, 0);
   // starts on right column H2..H8
-  for (int r = 1; r < 8; ++r) a[k++] = detail::SW_diag_mask(7, r);
+  for (int r = 1; r < 8; ++r) a[k++] = SW_diag_mask(7, r);
   return a;
 }
 
