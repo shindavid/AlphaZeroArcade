@@ -87,7 +87,7 @@ inline line_mask_t pack_file(mask_t bb, int file) {
     int sq = r * 8 + file;       // square index on that file
     if (bb & detail::bit64(sq)) m |= (1u << r);
   }
-    return m;
+  return m;
 }
 
 inline mask_t unpack_file_middle(line_mask_t m, int file) {

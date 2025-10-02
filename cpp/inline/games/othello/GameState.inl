@@ -1,5 +1,5 @@
-#include "games/othello/aux_features/StableDiscs.hpp"
 #include "games/othello/GameState.hpp"
+#include "games/othello/aux_features/StableDiscs.hpp"
 
 namespace othello {
 

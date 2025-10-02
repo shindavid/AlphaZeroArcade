@@ -35,8 +35,8 @@ constexpr void move_and_flip(int x, line_mask_t& curr_player, line_mask_t& oppon
   }
 }
 
-constexpr line_mask_t find_stable_edge_helper(line_mask_t curr_player_mask, line_mask_t opponent_mask,
-                                       line_mask_t stable) {
+constexpr line_mask_t find_stable_edge_helper(line_mask_t curr_player_mask,
+                                              line_mask_t opponent_mask, line_mask_t stable) {
   line_mask_t empty_spaces = ~(curr_player_mask | opponent_mask);
   stable = stable & curr_player_mask;
   if (!stable || !empty_spaces) return stable;
@@ -86,8 +86,7 @@ constexpr mask_t SW_diag_mask(int f0, int r0) {
   return m;
 }
 
-} // namespace detail
-
+}  // namespace detail
 
 constexpr std::array<mask_t, 8> make_ranks() {
   std::array<mask_t, 8> a{};
@@ -120,7 +119,6 @@ constexpr std::array<mask_t, 15> make_SW_diags() {
   for (int r = 1; r < 8; ++r) a[k++] = detail::SW_diag_mask(7, r);
   return a;
 }
-
 
 constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
   /*
@@ -168,4 +166,4 @@ constexpr std::array<uint8_t, kMax> build_stability_array() {
   return a;
 }
 
-} // namespace othello
+}  // namespace othello

@@ -97,8 +97,10 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   int opponent_disc_count = std::popcount(state.core.opponent_mask);
   int cur_player_disc_count = std::popcount(state.core.cur_player_mask);
 
-  int black_disc_count = state.core.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
-  int white_disc_count = state.core.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
+  int black_disc_count =
+    state.core.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
+  int white_disc_count =
+    state.core.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
 
   cx += snprintf(buffer + cx, buf_size - cx, "Score: Player\n");
   cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s%s%s", black_disc_count, ansi::kBlue(""),

@@ -4,9 +4,9 @@
 #include "games/othello/BasicTypes.hpp"
 #include "games/othello/ConstantBuilders.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <iostream>
-#include <cmath>
 
 /*
  * Bit order encoding for the board:

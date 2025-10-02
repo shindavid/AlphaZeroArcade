@@ -45,6 +45,6 @@ struct GameState {
   Aux aux;
 };
 
-} // namespace othello
+}  // namespace othello
 
 #include "inline/games/othello/GameState.inl"

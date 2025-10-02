@@ -1,7 +1,7 @@
 #include "core/tests/Common.hpp"
-#include "games/othello/aux_features/StableDiscs.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -715,4 +715,4 @@ TEST(StableDiscs, unoccupied_corners_top3) {
   EXPECT_EQ(stable, expected.stable);
 }
 
-  int main(int argc, char** argv) { return launch_gtest(argc, argv); }
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }
