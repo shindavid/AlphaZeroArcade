@@ -156,7 +156,7 @@ constexpr void to_binary_masks(int ternary, line_mask_t& curr_player_mask,
 
 constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
 
-constexpr auto build_stability_array() {
+constexpr std::array<uint8_t, kMax> build_stability_array() {
   std::array<uint8_t, kMax> a{};
   line_mask_t curr_player;
   line_mask_t opponent;
