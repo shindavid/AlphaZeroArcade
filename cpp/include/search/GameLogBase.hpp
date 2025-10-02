@@ -20,9 +20,12 @@ struct ShapeInfo {
 };
 
 struct GameLogFileHeader {
+  static constexpr uint16_t kCurrentVersion = 1;
+
   uint32_t num_games = 0;
   uint32_t num_rows = 0;
-  uint64_t reserved = 0;
+  uint16_t version = kCurrentVersion;
+  uint8_t reserved[6] = {0};
 };
 static_assert(sizeof(GameLogFileHeader) == 16);
 

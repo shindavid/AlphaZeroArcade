@@ -144,8 +144,19 @@ class GameLogReader:
         gen_range_tensor = torch.empty(2, dtype=torch.int32)
         gen_range_value_c = ffi.cast('int*', gen_range_tensor.data_ptr())
 
+        version_check_tensor = -torch.ones(2, dtype=torch.int32)
+        version_check_value_c = ffi.cast('int*', version_check_tensor.data_ptr())
+
         lib.DataLoader_load(self._data_loader, window_start, window_end, n_samples, apply_symmetry,
-                            n_targets, output_values_c, target_indices_c, gen_range_value_c)
+                            n_targets, output_values_c, target_indices_c, gen_range_value_c,
+                            version_check_value_c)
+
+        if version_check_tensor[0] >= 0:
+            code_version = version_check_tensor[0].item()
+            file_version = version_check_tensor[1].item()
+            raise RuntimeError(f'Self-play data was created with version {file_version}, but the '
+                               f'c++ code version has changed to {code_version}. This data can no '
+                               f'longer be read. Please start a new run with a new tag.')
 
         start_gen = gen_range_tensor[0].item()
         end_gen = gen_range_tensor[1].item()
@@ -217,7 +228,8 @@ class GameLogReader:
 
             void DataLoader_load(struct DataLoader* loader, int64_t window_start,
                 int64_t window_end, int n_samples, bool apply_symmetry, int n_targets,
-                float* output_data_array, int* target_indices_array, int* gen_range);
+                float* output_data_array, int* target_indices_array, int* gen_range,
+                int* version_check);
 
             void merge_game_log_files(const char** input_filenames, int n_input_filenames,
                 const char* output_filename);

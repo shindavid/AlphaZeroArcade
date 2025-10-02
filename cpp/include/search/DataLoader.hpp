@@ -92,6 +92,7 @@ struct DataLoaderBase {
     float* output_array;        // preallocated array to write output into
     int* target_indices_array;  // array of target indices, length n_targets
     int* gen_range;             // output parameter: [min_gen, max_gen] of files used
+    int* version_check;         // output parameter: [code-version, file-version]
   };
 
   class DataFile {
@@ -300,7 +301,8 @@ struct DataLoaderBase {
     virtual ~WorkerThreadBase();
 
     void quit();
-    void schedule_work(const LoadInstructions& load_instructions, const WorkUnit& unit);
+    void schedule_work(const LoadParams& params, const LoadInstructions& load_instructions,
+                       const WorkUnit& unit);
 
    protected:
     void loop();
@@ -316,6 +318,7 @@ struct DataLoaderBase {
     mutable mit::mutex mutex_;
     mutable mit::condition_variable cv_;
     mit::thread thread_;
+    const LoadParams* load_params_;
     const LoadInstructions* load_instructions_;
     WorkUnit unit_;
     bool quitting_ = false;
@@ -334,7 +337,8 @@ struct DataLoaderBase {
 
     // Processes the list of work units. Pops work units from the front, assigns to a worker, until
     // the list is empty. Returns when all work units have been processed.
-    void process(const LoadInstructions& load_instructions, work_unit_deque_t& work_units);
+    void process(const LoadParams& params, const LoadInstructions& load_instructions,
+                 work_unit_deque_t& work_units);
 
    private:
     std::vector<WorkerThread*> workers_;

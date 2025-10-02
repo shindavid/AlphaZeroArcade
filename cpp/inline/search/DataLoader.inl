@@ -432,8 +432,9 @@ inline void DataLoaderBase::WorkerThreadBase::quit() {
 }
 
 inline void DataLoaderBase::WorkerThreadBase::schedule_work(
-  const LoadInstructions& load_instructions, const WorkUnit& unit) {
+  const LoadParams& params, const LoadInstructions& load_instructions, const WorkUnit& unit) {
   mit::unique_lock lock(mutex_);
+  load_params_ = &params;
   load_instructions_ = &load_instructions;
   unit_ = unit;
   has_work_ = true;
@@ -473,6 +474,13 @@ void DataLoaderBase::WorkerThreadBase::do_work_helper() {
   int row_size = load_instructions_->row_size;
 
   GameLogFileReader reader(buffer);
+  int code_version = GameLogFileHeader::kCurrentVersion;
+  int file_version = reader.header().version;
+  if (file_version != code_version) {
+    load_params_->version_check[0] = code_version;
+    load_params_->version_check[1] = file_version;
+    return;
+  }
 
   int num_games = reader.num_games();
 
@@ -516,12 +524,13 @@ DataLoaderBase::WorkManager<WorkerThread>::~WorkManager() {
 }
 
 template <typename WorkerThread>
-void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadInstructions& load_instructions,
+void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadParams& params,
+                                                        const LoadInstructions& load_instructions,
                                                         work_unit_deque_t& work_units) {
   while (!work_units.empty()) {
     thread_id_t id = thread_table_.allocate_thread();
     WorkerThread* worker = workers_[id];
-    worker->schedule_work(load_instructions, work_units.front());
+    worker->schedule_work(params, load_instructions, work_units.front());
     work_units.pop_front();
   }
 
@@ -553,7 +562,7 @@ void DataLoader<Traits>::load(const LoadParams& params) {
   init_load_instructions(params);
   sampling_manager_.sample(&work_units_, files, file_manager_.n_total_rows(), params);
   file_manager_.sort_work_units_and_prepare_files(work_units_, gen_range);
-  work_manager_.process(load_instructions_, work_units_);
+  work_manager_.process(params, load_instructions_, work_units_);
   file_manager_.reset_prefetch_loop();
   shuffle_output(n_samples);
 }

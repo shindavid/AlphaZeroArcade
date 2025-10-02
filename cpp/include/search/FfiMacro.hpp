@@ -56,10 +56,11 @@ struct FfiFunctions {
 
   static void DataLoader_load(DataLoader* loader, int64_t window_start, int64_t window_end,
                               int n_samples, bool apply_symmetry, int n_targets,
-                              float* output_data_array, int* target_indices_array, int* gen_range) {
+                              float* output_data_array, int* target_indices_array, int* gen_range,
+                              int* version_check) {
     DataLoader::LoadParams params{window_start,         window_end, n_samples,
                                   apply_symmetry,       n_targets,  output_data_array,
-                                  target_indices_array, gen_range};
+                                  target_indices_array, gen_range,  version_check};
     loader->load(params);
   }
 
@@ -136,10 +137,11 @@ struct FfiFunctions {
                                                                                                   \
   void DataLoader_load(DataLoader* loader, int64_t window_start, int64_t window_end,              \
                        int n_samples, bool apply_symmetry, int n_targets,                         \
-                       float* output_data_array, int* target_indices_array, int* gen_range) {     \
+                       float* output_data_array, int* target_indices_array, int* gen_range,       \
+                       int* version_check) {                                                      \
     return FfiFunctions::DataLoader_load(loader, window_start, window_end, n_samples,             \
                                          apply_symmetry, n_targets, output_data_array,            \
-                                         target_indices_array, gen_range);                        \
+                                         target_indices_array, gen_range, version_check);         \
   }                                                                                               \
                                                                                                   \
   void merge_game_log_files(const char** input_filenames, int n_input_filenames,                  \
