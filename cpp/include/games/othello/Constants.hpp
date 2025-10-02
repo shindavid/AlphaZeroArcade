@@ -163,7 +163,7 @@ static_assert(kFiles[7] == kFileHMask);
 
 constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
 
-inline constexpr auto EDGE_STABILITY = [] {
+inline auto EDGE_STABILITY = [] {
   std::array<uint8_t, kMax> a{};
   line_mask_t curr_player;
   line_mask_t opponent;

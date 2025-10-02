@@ -117,9 +117,8 @@ constexpr line_mask_t _find_stable_edge(line_mask_t curr_player_mask, line_mask_
     move_and_flip(x, opponent_mask_after2, player_mask_after2);
     stable = _find_stable_edge(player_mask_after2, opponent_mask_after2, stable);
     if (!stable) return 0;
-
-    return stable;
   }
+  return stable;
 }
 
 constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
