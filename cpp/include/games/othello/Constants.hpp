@@ -169,7 +169,7 @@ inline constexpr auto EDGE_STABILITY = [] {
   line_mask_t opponent;
   for (int t = 0; t < kMax; ++t) {
     to_binary_masks(t, curr_player, opponent);
-    a[t] = find_stable_edge(curr_player, opponent) | find_stable_edge(opponent, curr_player);
+    a[t] = find_stable_edge(curr_player, opponent);
   }
   return a;
 }();

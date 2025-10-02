@@ -123,21 +123,22 @@ constexpr line_mask_t _find_stable_edge(line_mask_t curr_player_mask, line_mask_
 }
 
 constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
-/*
- * Recursively determines the subset of `stable` discs that remain stable
- * along a single edge (rank or file).
- *
- * - `curr_player_mask` : current player’s discs on this edge
- * - `opponent_mask`    : opponent’s discs on this edge
- *
- * At each recursion step, the function explores all possible moves
- * (both current player and opponent), applies flips, and propagates
- * stability forward. Only discs that remain stable under *all*
- * sequences of moves are returned.
- *
- * Returns: mask of stable discs for the current player only
- */
-  return _find_stable_edge(curr_player_mask, opponent_mask, curr_player_mask);
+  /*
+   * Recursively determines the subset of `stable` discs that remain stable
+   * along a single edge (rank or file).
+   *
+   * - `curr_player_mask` : current player’s discs on this edge
+   * - `opponent_mask`    : opponent’s discs on this edge
+   *
+   * At each recursion step, the function explores all possible moves
+   * (both current player and opponent), applies flips, and propagates
+   * stability forward. Only discs that remain stable under *all*
+   * sequences of moves are returned.
+   *
+   * Returns: mask of stable discs
+   */
+  return _find_stable_edge(curr_player_mask, opponent_mask, curr_player_mask) |
+         _find_stable_edge(opponent_mask, curr_player_mask, opponent_mask);
 }
 
 constexpr void to_binary_masks(int ternary, line_mask_t& curr_player_mask,
