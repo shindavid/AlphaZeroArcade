@@ -4,7 +4,9 @@
 
 namespace othello {
 /*
- * GameState is split internally into two parts: Core and Aux.
+ * We split GameState into Core and Aux so that operator(<=>/==) and hashing can be defined entirely
+ * in terms of Core. This way, GameState just dispatches its operators to the automatically
+ * generated ones on Core.
  *
  * Core contains the bare minimum of information needed to apply the rules of the game.
  * Aux is intended to contain values derived from Core that accelerate rule calculations.
