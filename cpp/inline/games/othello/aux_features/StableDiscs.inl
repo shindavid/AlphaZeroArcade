@@ -135,6 +135,8 @@ inline mask_t get_stable_edge(mask_t P, mask_t O) {
   return stable;
 }
 
+namespace detail {
+
 inline void fill_ternary_digits(line_mask_t curr_player_mask, line_mask_t opponent_mask,
                                 int digits[8]) {
   for (int i = 0; i < 8; ++i) {
@@ -158,7 +160,7 @@ inline int ternary_int_value(const int digits[8]) {
 
 inline int to_ternary_value(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
   int digits[8];
-  if (curr_player_mask & detail::bit8(7)) {
+  if (curr_player_mask & bit8(7)) {
     fill_ternary_digits(curr_player_mask, opponent_mask, digits);
   } else {
     fill_ternary_digits(opponent_mask, curr_player_mask, digits);
@@ -166,8 +168,10 @@ inline int to_ternary_value(line_mask_t curr_player_mask, line_mask_t opponent_m
   return ternary_int_value(digits);
 }
 
+}  // namespace detail
+
 inline line_mask_t edge_stable_lookup(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
-  return EDGE_STABILITY[to_ternary_value(curr_player_mask, opponent_mask)];
+  return EDGE_STABILITY[detail::to_ternary_value(curr_player_mask, opponent_mask)];
 }
 
 }  // namespace othello
