@@ -80,8 +80,12 @@ class ConvBlock(nn.Module):
     3. A rectifier non-linearity
     """
 
-    def __init__(self, c_in: int, c_out: int):
+    def __init__(self, input_shape: Shape, output_shape: Shape):
         super().__init__()
+
+        c_in = input_shape[0]
+        c_out = output_shape[0]
+
         self.norm = nn.BatchNorm2d(c_in)
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_out, kernel_size=3, padding=1, bias=False)
@@ -133,8 +137,12 @@ class ConvBlockWithGlobalPooling(nn.Module):
     The KataGo codebase has an intermediate class called KataConvAndGPool corresponding to this
     global pooling bias structure. Here, that class is effectively merged into this one.
     """
-    def __init__(self, c_in: int, c_out: int, c_gpool: int):
+    def __init__(self, in_shape: Shape, c_gpool: int, out_shape: Shape):
         super().__init__()
+
+        c_in = in_shape[0]
+        c_out = out_shape[0]
+
         self.norm = nn.BatchNorm2d(c_in)
         self.norm_g = nn.BatchNorm2d(c_gpool)
         self.act = F.relu
@@ -167,10 +175,11 @@ class ResBlock(nn.Module):
     Both the KataGo paper and the AlphaGo Zero paper effectively describe this block as a
     composition of two ConvBlocks with a skip connection.
     """
-    def __init__(self, c_in_out: int, c_mid: int):
+    def __init__(self, shape: Shape, mid_shape: Shape):
         super().__init__()
-        self.conv1 = ConvBlock(c_in_out, c_mid)
-        self.conv2 = ConvBlock(c_mid, c_in_out)
+
+        self.conv1 = ConvBlock(shape, mid_shape)
+        self.conv2 = ConvBlock(mid_shape, shape)
 
     def forward(self, x):
         out = x
@@ -184,11 +193,18 @@ class ResBlockWithGlobalPooling(nn.Module):
     This corresponds to ResBlock with c_gpool!=None in the KataGo codebase. This has no
     analog in the AlphaGo Zero paper.
     """
-    def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
+    def __init__(self, shape: Shape, c_mid_gp: int, mid_shape: Shape):
         super().__init__()
-        assert 0 < c_mid_gp < c_mid_total
-        self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
-        self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
+
+        c = shape[0]
+        c_mid = mid_shape[0]
+
+        assert 0 < c_mid_gp < c_mid
+
+        mid_shape_adjusted = (c_mid - c_mid_gp, *mid_shape[1:])
+
+        self.conv1 = ConvBlockWithGlobalPooling(shape, c_mid_gp, mid_shape_adjusted)
+        self.conv2 = ConvBlock(mid_shape_adjusted, shape)
 
     def forward(self, x):
         out = x
@@ -253,12 +269,15 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, output_shape: Shape):
         super().__init__()
+
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
 
         self.output_shape = output_shape
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
 
     def default_loss_function(self):
@@ -328,11 +347,14 @@ class WinLossDrawValueHead(ValueHeadBase):
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
-    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, n_hidden: int):
         super().__init__()
 
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
+
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 3)
 
@@ -375,10 +397,10 @@ class ValueUncertaintyHead(Head):
     """
     def __init__(
         self,
-        c_hidden: int,
-        n_hidden: int,
         trunk_shape: Shape,
         value_shape: Shape,
+        c_hidden: int,
+        n_hidden: int,
         output_shape: Shape
     ):
         super().__init__()
@@ -425,11 +447,14 @@ class WinLossValueHead(ValueHeadBase):
 
     This is based off WinLossDrawValueHead.
     """
-    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, n_hidden: int):
         super().__init__()
 
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
+
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 2)
 
@@ -457,12 +482,15 @@ class WinShareActionValueHead(Head):
     into a win-share array. This is the case for WinShareValueHead, WinLossDrawValueHead, and
     WinLossValueHead
     """
-    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, output_shape: Shape):
         super().__init__()
+
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
 
         self.output_shape = output_shape
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
 
     def default_loss_function(self):
@@ -505,12 +533,15 @@ class WinShareValueHead(ValueHeadBase):
     output shape.
     """
 
-    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, n_hidden: int, shape: Shape):
         super().__init__()
+
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
 
         (n_players, ) = shape
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_players)
 
@@ -549,8 +580,10 @@ class ScoreHead(Head):
 
     See Section 4.1 of the KataGo paper for details.
     """
-    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, n_hidden: int, shape: Shape):
         super().__init__()
+
+        c_trunk = trunk_shape[0]
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
@@ -559,7 +592,7 @@ class ScoreHead(Head):
         self.shape = shape
 
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
 
         self.gpool = GlobalPoolingLayer()
 
@@ -615,15 +648,17 @@ class OwnershipHead(Head):
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
     """
 
-    def __init__(self, c_in: int, c_hidden: int, shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, shape: Shape):
         super().__init__()
+
+        c_trunk = trunk_shape[0]
 
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
         n_categories = shape[0]
 
         self.act = F.relu
-        self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv1 = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=True)
 
     def default_loss_function(self):
@@ -643,7 +678,7 @@ class ActionValueUncertaintyHead(Head):
     ValueUncertaintyHead would predict for the game state that would result after taking each
     action.
     """
-    def __init__(self, c_hidden: int, trunk_shape: Shape, output_shape: Shape):
+    def __init__(self, trunk_shape: Shape, c_hidden: int, output_shape: Shape):
         super().__init__()
         c_trunk, H, W = trunk_shape
 

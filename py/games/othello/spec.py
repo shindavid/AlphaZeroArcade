@@ -26,8 +26,6 @@ class CNN_b9_c128(ModelConfigGenerator):
         action_value_shape = head_shapes['action_value'].shape
         ownership_shape = target_shapes['ownership'].shape
         score_margin_shape = target_shapes['score_margin'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (3,), value_shape
 
@@ -39,58 +37,63 @@ class CNN_b9_c128(ModelConfigGenerator):
         c_action_value_hidden = 2
         c_value_hidden = 1
         n_value_hidden = 256
-        c_score_margin_hidden = 32
-        n_score_margin_hidden = 32
+        c_score_hidden = 32
+        n_score_hidden = 32
         c_ownership_hidden = 64
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk1=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=4,
                 parents=['stem']
             ),
             trunk2=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
-                args=[c_trunk, c_mid, c_gpool],
+                args=[trunk_shape, c_gpool, res_mid_shape],
                 parents=['trunk1']
             ),
             trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=4,
                 parents=['trunk2']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             score_margin=ModuleSpec(
                 type='ScoreHead',
-                args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
+                args=[trunk_shape, c_score_hidden, n_score_hidden,
+                      score_margin_shape],
                 parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
-                args=[c_trunk, c_ownership_hidden, ownership_shape],
+                args=[trunk_shape, c_ownership_hidden, ownership_shape],
                 parents=['trunk']
             ),
         )
@@ -124,27 +127,26 @@ class Transformer(ModelConfigGenerator):
         action_value_shape = head_shapes['action_value'].shape
         score_margin_shape = target_shapes['score_margin'].shape
         ownership_shape = target_shapes['ownership'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (3,), value_shape
 
         c_trunk = 128
         c_mid = 128
-        cnn_output_shape = (c_trunk, *board_shape)
-
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
         c_action_value_hidden = 2
         c_value_hidden = 1
         n_value_hidden = 256
-
-        c_score_margin_hidden = 32
-        n_score_margin_hidden = 32
+        c_score_hidden = 32
+        n_score_hidden = 32
         c_ownership_hidden = 64
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         transformer_block_params = TransformerBlockParams(
-            input_shape=cnn_output_shape,
+            input_shape=trunk_shape,
             embed_dim=64,
             n_heads=8,
             n_layers=3,
@@ -155,10 +157,10 @@ class Transformer(ModelConfigGenerator):
             )
 
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             pre_trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=2,
                 parents=['stem']
             ),
@@ -170,32 +172,32 @@ class Transformer(ModelConfigGenerator):
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             score_margin=ModuleSpec(
                 type='ScoreHead',
-                args=[c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_margin_shape],
+                args=[trunk_shape, c_score_hidden, n_score_hidden, score_margin_shape],
                 parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
-                args=[c_trunk, c_ownership_hidden, ownership_shape],
+                args=[trunk_shape, c_ownership_hidden, ownership_shape],
                 parents=['trunk']
             ),
         )

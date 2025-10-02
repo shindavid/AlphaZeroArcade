@@ -26,8 +26,6 @@ class CNN_b20_c128(ModelConfigGenerator):
         ownership_shape = target_shapes['ownership'].shape
         score_shape = target_shapes['score'].shape
         unplayed_pieces_shape = target_shapes['unplayed_pieces'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         c_trunk = 128
         c_mid = 128
@@ -42,79 +40,82 @@ class CNN_b20_c128(ModelConfigGenerator):
         c_unplayed_pieces_hidden = 32
         n_unplayed_pieces_hidden = 32
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk1=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=4,
                 parents=['stem']
             ),
             trunk2=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
-                args=[c_trunk, c_mid, c_gpool],
+                args=[trunk_shape, c_gpool, res_mid_shape],
                 parents=['trunk1']
             ),
             trunk3=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=4,
                 parents=['trunk2']
             ),
             trunk4=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
-                args=[c_trunk, c_mid, c_gpool],
+                args=[trunk_shape, c_gpool, res_mid_shape],
                 parents=['trunk3']
             ),
             trunk5=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=4,
                 parents=['trunk4']
             ),
             trunk6=ModuleSpec(
                 type='ResBlockWithGlobalPooling',
-                args=[c_trunk, c_mid, c_gpool],
+                args=[trunk_shape, c_gpool, res_mid_shape],
                 parents=['trunk5']
             ),
             trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=5,
                 parents=['trunk6']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
-                args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                      value_shape],
+                args=[trunk_shape, c_value_hidden, n_value_hidden, value_shape],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                      action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             score=ModuleSpec(
                 type='ScoreHead',
-                args=['score', c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_shape],
+                args=[trunk_shape, c_score_margin_hidden, n_score_margin_hidden, score_shape],
                 parents=['trunk']
             ),
             ownership=ModuleSpec(
                 type='OwnershipHead',
-                args=['ownership', c_trunk, c_ownership_hidden, ownership_shape],
+                args=[trunk_shape, c_ownership_hidden, ownership_shape],
                 parents=['trunk']
             ),
             unplayed_pieces=ModuleSpec(
+                # TODO: GeneralLogitHead doesn't exist anymore - fix this
                 type='GeneralLogitHead',
-                args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
-                      n_unplayed_pieces_hidden, unplayed_pieces_shape],
+                args=[trunk_shape, c_unplayed_pieces_hidden, n_unplayed_pieces_hidden,
+                      unplayed_pieces_shape],
                 parents=['trunk']
             ),
         )

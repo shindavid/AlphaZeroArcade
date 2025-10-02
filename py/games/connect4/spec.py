@@ -23,8 +23,6 @@ class CNN_b7_c128(ModelConfigGenerator):
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
         action_value_shape = head_shapes['action_value'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (3,), value_shape
 
@@ -36,33 +34,37 @@ class CNN_b7_c128(ModelConfigGenerator):
         c_value_hidden = 1
         n_value_hidden = 256
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=7,
                 parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
         )
@@ -95,8 +97,6 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         action_value_shape = head_shapes['action_value'].shape
         value_uncertainty_shape = head_shapes['value_uncertainty'].shape
         action_value_uncertainty_shape = head_shapes['action_value_uncertainty'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (3,), value_shape
 
@@ -111,47 +111,49 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         c_action_value_uncertainty_hidden = 2
         n_value_uncertainty_hidden = 256
 
+        board_shape = input_shape[1:]
         trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
 
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=7,
                 parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             value_uncertainty=ModuleSpec(
                 type='ValueUncertaintyHead',
-                args=[c_value_uncertainty_hidden, n_value_uncertainty_hidden,
-                      trunk_shape, value_shape, value_uncertainty_shape],
+                args=[trunk_shape, value_shape, c_value_uncertainty_hidden,
+                      n_value_uncertainty_hidden, value_uncertainty_shape],
                 parents=['trunk', 'value']
             ),
             action_value_uncertainty=ModuleSpec(
                 type='ActionValueUncertaintyHead',
-                args=[c_action_value_uncertainty_hidden, trunk_shape,
+                args=[trunk_shape, c_action_value_uncertainty_hidden,
                       action_value_uncertainty_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
         )
@@ -182,23 +184,23 @@ class Transformer(ModelConfigGenerator):
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
         action_value_shape = head_shapes['action_value'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (3,), value_shape
 
         c_trunk = 128
         c_mid = 128
-        cnn_output_shape  = (c_trunk, *board_shape)
-
         c_policy_hidden = 2
         c_opp_policy_hidden = 2
         c_action_value_hidden = 2
         c_value_hidden = 1
         n_value_hidden = 256
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         transformer_block_params = TransformerBlockParams(
-            input_shape=cnn_output_shape,
+            input_shape=trunk_shape,
             embed_dim=64,
             n_heads=8,
             n_layers=3,
@@ -209,10 +211,10 @@ class Transformer(ModelConfigGenerator):
             )
 
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             pre_trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 parents=['stem']
             ),
             trunk=ModuleSpec(
@@ -223,22 +225,22 @@ class Transformer(ModelConfigGenerator):
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinLossDrawValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden],
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
             opp_policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_opp_policy_hidden, policy_shape],
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
         )

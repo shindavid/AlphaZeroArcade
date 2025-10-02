@@ -22,8 +22,6 @@ class CNN_b3_c32(ModelConfigGenerator):
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
         action_value_shape = head_shapes['action_value'].shape
-        board_shape = input_shape[1:]
-        board_size = math.prod(board_shape)
 
         assert value_shape == (2,), value_shape
 
@@ -34,28 +32,32 @@ class CNN_b3_c32(ModelConfigGenerator):
         c_value_hidden = 2
         n_value_hidden = 32
 
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
         return ModelConfig.create(
-            stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk=ModuleSpec(
                 type='ResBlock',
-                args=[c_trunk, c_mid],
+                args=[trunk_shape, res_mid_shape],
                 repeat=3,
                 parents=['stem']
             ),
 
             policy=ModuleSpec(
                 type='PolicyHead',
-                args=[board_size, c_trunk, c_policy_hidden, policy_shape],
+                args=[trunk_shape, c_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
             value=ModuleSpec(
                 type='WinShareValueHead',
-                args=[board_size, c_trunk, c_value_hidden, n_value_hidden, value_shape],
+                args=[trunk_shape, c_value_hidden, n_value_hidden, value_shape],
                 parents=['trunk']
             ),
             action_value=ModuleSpec(
                 type='WinShareActionValueHead',
-                args=[board_size, c_trunk, c_action_value_hidden, action_value_shape],
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
         )
