@@ -136,21 +136,12 @@ inline mask_t get_stable_edge(mask_t P, mask_t O) {
 }
 
 inline void fill_ternary_digits(line_mask_t curr_player_mask, line_mask_t opponent_mask,
-                                int digits[8], bool curr_player_is_one) {
-  int curr_player_value, opponent_value;
-  if (curr_player_is_one) {
-    curr_player_value = 1;
-    opponent_value = 2;
-  } else {
-    curr_player_value = 2;
-    opponent_value = 1;
-  }
-
+                                int digits[8]) {
   for (int i = 0; i < 8; ++i) {
     if (curr_player_mask & detail::bit8(i)) {
-      digits[i] = curr_player_value;
+      digits[i] = 1;
     } else if (opponent_mask & detail::bit8(i)) {
-      digits[i] = opponent_value;
+      digits[i] = 2;
     } else {
       digits[i] = 0;
     }
@@ -168,9 +159,9 @@ inline int ternary_int_value(const int digits[8]) {
 inline int to_ternary_value(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
   int digits[8];
   if (curr_player_mask & detail::bit8(7)) {
-    fill_ternary_digits(curr_player_mask, opponent_mask, digits, true);
+    fill_ternary_digits(curr_player_mask, opponent_mask, digits);
   } else {
-    fill_ternary_digits(curr_player_mask, opponent_mask, digits, false);
+    fill_ternary_digits(opponent_mask, curr_player_mask, digits);
   }
   return ternary_int_value(digits);
 }
