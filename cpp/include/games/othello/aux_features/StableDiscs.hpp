@@ -13,7 +13,7 @@ void full_axes_stable_discs(mask_t cur_player_mask, mask_t opponent_mask, mask_t
 mask_t extend_stable_frontier(mask_t mask, mask_t stable);
 
 inline uint64_t bit64(int i) { return 1ULL << i; }
-inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8) { return EDGE_STABILITY[p8 * 256 + o8]; }
+inline uint8_t edge_stable_lookup(uint8_t p8, uint8_t o8);
 inline uint8_t pack_file(uint64_t bb, int file);
 inline uint64_t unpack_file_middle(uint8_t m, int file);
 

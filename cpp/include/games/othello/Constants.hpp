@@ -5,6 +5,8 @@
 #include "games/othello/ConstantBuilders.hpp"
 
 #include <cstdint>
+#include <iostream>
+#include <cmath>
 
 /*
  * Bit order encoding for the board:
@@ -159,15 +161,17 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-constexpr int kMax = 2 * 3 ^ 7;
+constexpr int kMax = std::pow(3, 8);
 
 inline constexpr auto EDGE_STABILITY = [] {
-  std::array<uint8_t, 256*256> t{};
-  for (int P = 0; P < 256; ++P)
-    for (int O = 0; O < 256; ++O)
-      t[size_t(P) * 256u + size_t(O)] =
-        (P & O) ? 0u : find_stable_edge(uint8_t(P), uint8_t(O));
-  return t;
+  std::array<uint8_t, kMax> a{};
+  line_mask_t curr_player;
+  line_mask_t opponent;
+  for (int t = 0; t < kMax; ++t) {
+    to_binary_masks(t, curr_player, opponent);
+    a[t] = find_stable_edge(curr_player, opponent);
+  }
+  return a;
 }();
 
 }  // namespace othello

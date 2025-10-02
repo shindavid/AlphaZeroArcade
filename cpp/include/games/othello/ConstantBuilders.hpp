@@ -140,4 +140,18 @@ constexpr line_mask_t find_stable_edge(line_mask_t curr_player_mask, line_mask_t
   return _find_stable_edge(curr_player_mask, opponent_mask, curr_player_mask);
 }
 
+constexpr void to_binary_masks(int ternary, line_mask_t& curr_player_mask,
+                               line_mask_t& opponent_mask) {
+  curr_player_mask = 0;
+  opponent_mask = 0;
+  for (int i = 0; i < 8; ++i) {
+    int d = ternary % 3;
+    ternary /= 3;
+    if (d == 1)
+      curr_player_mask |= detail::bit8(i);
+    else if (d == 2)
+      opponent_mask |= detail::bit8(i);
+  }
+}
+
 } // namespace othello
