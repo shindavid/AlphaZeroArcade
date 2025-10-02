@@ -2,11 +2,11 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
+#include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "core/GameRulesBase.hpp"
 #include "games/tictactoe/Constants.hpp"
 #include "util/FiniteGroups.hpp"
 

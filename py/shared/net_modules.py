@@ -15,50 +15,25 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinLossValueTarget, \
-    WinShareActionValueTarget, WinShareValueTarget
 from shared.transformer_modules import TransformerBlock
-from util.torch_util import Shape
+from util.torch_util import LossFunction, Shape
 
-import onnx
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 import abc
-import copy
-from dataclasses import dataclass, field
-from enum import Enum
-import hashlib
-import io
 import logging
 import math
-import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ShapeInfo:
-    name: str
-    target_index: int
-    primary: bool
-    shape: Shape
-
-
-class SearchParadigm(Enum):
-    AlphaZero = 'alpha0'
-    BetaZero = 'beta0'
-
-    @staticmethod
-    def is_valid(value: str) -> bool:
-        return value in {paradigm.value for paradigm in SearchParadigm}
-
-
-ShapeInfoDict = Dict[str, ShapeInfo]
+class Head(nn.Module):
+    def default_loss_function(self) -> Optional[LossFunction]:
+        return None
 
 
 class GlobalPoolingLayer(nn.Module):
@@ -79,7 +54,7 @@ class GlobalPoolingLayer(nn.Module):
     NUM_CHANNELS = 2  # for KataGo this is 3, see above
 
     def __init__(self):
-        super(GlobalPoolingLayer, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         g_mean = torch.mean(x, keepdim=True, dim=(2, 3))
@@ -106,7 +81,7 @@ class ConvBlock(nn.Module):
     """
 
     def __init__(self, c_in: int, c_out: int):
-        super(ConvBlock, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_out, kernel_size=3, padding=1, bias=False)
@@ -126,7 +101,7 @@ class KataGoNeck(nn.Module):
     hypothesis for why this is the case.
     """
     def __init__(self, c_in: int):
-        super(KataGoNeck, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.act = F.relu
 
@@ -159,7 +134,7 @@ class ConvBlockWithGlobalPooling(nn.Module):
     global pooling bias structure. Here, that class is effectively merged into this one.
     """
     def __init__(self, c_in: int, c_out: int, c_gpool: int):
-        super(ConvBlockWithGlobalPooling, self).__init__()
+        super().__init__()
         self.norm = nn.BatchNorm2d(c_in)
         self.norm_g = nn.BatchNorm2d(c_gpool)
         self.act = F.relu
@@ -192,9 +167,8 @@ class ResBlock(nn.Module):
     Both the KataGo paper and the AlphaGo Zero paper effectively describe this block as a
     composition of two ConvBlocks with a skip connection.
     """
-    def __init__(self, name: str, c_in_out: int, c_mid: int):
-        super(ResBlock, self).__init__()
-        self.name = name
+    def __init__(self, c_in_out: int, c_mid: int):
+        super().__init__()
         self.conv1 = ConvBlock(c_in_out, c_mid)
         self.conv2 = ConvBlock(c_mid, c_in_out)
 
@@ -210,10 +184,9 @@ class ResBlockWithGlobalPooling(nn.Module):
     This corresponds to ResBlock with c_gpool!=None in the KataGo codebase. This has no
     analog in the AlphaGo Zero paper.
     """
-    def __init__(self, name: str, c_in_out: int, c_mid_total: int, c_mid_gp: int):
-        super(ResBlockWithGlobalPooling, self).__init__()
+    def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
+        super().__init__()
         assert 0 < c_mid_gp < c_mid_total
-        self.name = name
         self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
         self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
 
@@ -226,7 +199,7 @@ class ResBlockWithGlobalPooling(nn.Module):
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, board_size, dropout=0.):
-        super(PositionalEncoding, self).__init__()
+        super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         pe = torch.zeros(board_size, d_model)
@@ -240,14 +213,6 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
-
-
-class Head(nn.Module):
-    def __init__(self, name: str, target: LearningTarget):
-        super(Head, self).__init__()
-
-        self.name = name
-        self.target = target
 
 
 class PolicyHead(Head):
@@ -288,13 +253,16 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(PolicyHead, self).__init__(name, PolicyTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super().__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -306,7 +274,29 @@ class PolicyHead(Head):
         return out
 
 
-class WinLossDrawValueHead(Head):
+class ValueHeadBase(Head, abc.ABC):
+    """
+    Base class for value heads.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @abc.abstractmethod
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        """
+        Convert the raw output of the value head to win-share values.
+
+        The input y is the raw output of the value head, of shape (B, value_dim), where value_dim
+        is specific to the particular value head implementation.
+
+        The output is of shape (B, n_players), where n_players is the number of players in the game.
+        The k'th entry in the last dimension is the predicted win-share for the k'th player. The
+        entries should be nonnegative and sum to 1.
+        """
+        pass
+
+
+class WinLossDrawValueHead(ValueHeadBase):
     """
     A head that produces a length-3 logit vector, usable for 2-player games that permit draws.
 
@@ -338,14 +328,17 @@ class WinLossDrawValueHead(Head):
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossDrawValueHead, self).__init__(name, WinLossDrawValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super().__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 3)
 
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
+
     def forward(self, x):
         out = x
         out = self.conv(out)
@@ -356,21 +349,92 @@ class WinLossDrawValueHead(Head):
         out = self.linear2(out)
         return out
 
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        wld = y.softmax(dim=-1)  # (B, 3)
+        return wld[:, :2] + 0.5 * wld[:, 2:]
 
-class WinLossValueHead(Head):
+
+class ValueUncertaintyHead(Head):
+    """
+    A head that produces a length-1 vector, usable for 2-player games that permit draws.
+
+    This is an uncertainty head that can be used in conjunction with WinLossDrawValueHead to
+    represent uncertainty in the value prediction. The output is interpreted as delta^2, where delta
+    is the difference between the value prediction (converted from W/L/D to win-shares) and the true
+    value.
+
+    See the "Uncertainty-Weighted MCTS Playouts" section here:
+
+    https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md
+
+    NOTE: although for zero-sum 2-player games, a single scalar suffices to represent uncertainty, a
+    single scalar is not appropriate for multiplayer games. For example, in a 4-player game, player
+    1 might be very certain that they will lose, while players 2, 3, and 4 might be very uncertain
+    about their outcomes. In general, in a zero-sum p-player game, the space of possible
+    uncertainties is (p-1)-dimensional. I haven't come up with a good way to represent this yet.
+    """
+    def __init__(
+        self,
+        c_hidden: int,
+        n_hidden: int,
+        trunk_shape: Shape,
+        value_shape: Shape,
+        output_shape: Shape
+    ):
+        super().__init__()
+        assert len(value_shape) == 1, "value_shape must be 1D (e.g., (3,), (2,), (N,))"
+        assert output_shape == (1,), "Only scalar uncertainty output is currently supported"
+
+        c_trunk, H, W = trunk_shape
+        self.value_dim = value_shape[0]
+        self.out_dim = output_shape[0]
+        self.act = F.relu
+
+        assert n_hidden > self.value_dim, "n_hidden must be greater than value_dim"
+
+        self.trunk_proj = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.fc_trunk = nn.Linear(c_hidden, n_hidden - self.value_dim)
+        self.fc_out = nn.Linear(n_hidden, self.out_dim)
+
+    def forward(self, trunk: torch.Tensor, value_logits: torch.Tensor) -> torch.Tensor:
+        """
+        trunk:        (B, C_trunk, H, W)
+        value_logits: (B, value_dim)
+        Returns:
+            (B, out_dim) with nonnegative values
+        """
+        # Trunk path
+        t = self.trunk_proj(trunk)          # (B, c_hidden, H, W)
+        t = self.act(t)
+        t = t.mean(dim=(2, 3))              # global average pool → (B, c_hidden)
+        t = self.act(self.fc_trunk(t))      # (B, n_hidden - value_dim)
+
+        # Value path (stop-grad so uncertainty loss doesn't backprop)
+        v = value_logits.detach()           # (B, value_dim)
+
+        # Fuse and predict
+        h = torch.cat([t, v], dim=-1)       # (B, n_hidden)
+        h = self.fc_out(h)                  # (B, out_dim)
+        return torch.sigmoid(h)             # constrain to [0, 1]
+
+
+class WinLossValueHead(ValueHeadBase):
     """
     A head that produces a length-2 logit vector, usable for 2-player games that do NOT permit
     draws.
 
     This is based off WinLossDrawValueHead.
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
-        super(WinLossValueHead, self).__init__(name, WinLossValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super().__init__()
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 2)
+
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -381,6 +445,9 @@ class WinLossValueHead(Head):
         out = self.act(out)
         out = self.linear2(out)
         return out
+
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        return y.softmax(dim=-1)
 
 
 class WinShareActionValueHead(Head):
@@ -390,13 +457,16 @@ class WinShareActionValueHead(Head):
     into a win-share array. This is the case for WinShareValueHead, WinLossDrawValueHead, and
     WinLossValueHead
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super().__init__()
 
         self.output_shape = output_shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return nn.BCEWithLogitsLoss()
 
     def forward(self, x):
         out = x
@@ -408,7 +478,7 @@ class WinShareActionValueHead(Head):
         return out
 
 
-class WinShareValueHead(Head):
+class WinShareValueHead(ValueHeadBase):
     """
     A head that produces a length-p logit vector, where p is the number of players in the game,
     usable for zero-sum games with p players for any p>=2. The k'th entry predicts the expected
@@ -435,15 +505,21 @@ class WinShareValueHead(Head):
     output shape.
     """
 
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 shape: Shape):
-        super(WinShareValueHead, self).__init__(name, WinShareValueTarget())
+    def __init__(self, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super().__init__()
 
         (n_players, ) = shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_players)
+
+    def default_loss_function(self):
+        # TODO: change this to use KL-Divergence loss, as advertised above.
+        #
+        # (dshin) I briefly experimented with nn.KLDivLoss, but it didn't seem to work well. I think
+        # I must have been using it incorrectly.
+        return nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = x
@@ -455,16 +531,26 @@ class WinShareValueHead(Head):
         out = self.linear2(out)
         return out
 
+    def to_win_share(self, y: torch.Tensor) -> torch.Tensor:
+        return y.softmax(dim=-1)
+
 
 class ScoreHead(Head):
     """
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
-    I attempt to match what is described in the KataGo paper, but it didn't seem to learn well.
-    So I modified it to a design I felt made more sense.
+    It outputs a (2, N) tensor, where the first row is a PDF (probability distribution function) and
+    the second row is a CDF (cumulative distribution function).
+
+    N represents the number of discrete score buckets.
+
+    The loss is computed as the sum of a cross-entropy loss on the PDF and a mean-squared error loss
+    on the CDF.
+
+    See Section 4.1 of the KataGo paper for details.
     """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(ScoreHead, self).__init__(name, ScoreTarget())
+    def __init__(self, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super().__init__()
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
@@ -480,6 +566,31 @@ class ScoreHead(Head):
         n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
         self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
         self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+
+    def default_loss_function(self):
+        pdf_loss_fn = nn.CrossEntropyLoss()
+        cdf_loss_fn = nn.MSELoss()
+
+        def loss(output: torch.Tensor, target: torch.Tensor):
+            """
+            Tensors are of shape (B, D, C, aux...), where:
+
+            B = batch-size
+            D = num distribution types (2: PDF, CDF)
+            C = number of classes (i.e., number of possible scores)
+            aux... = any number of additional dimensions
+
+            aux... might be nonempty if for example we're predicting for multiple players
+            """
+            assert output.shape == target.shape, (output.shape, target.shape)
+            assert output.shape[1] == 2, output.shape  # PDF, CDF
+
+            pdf_loss = pdf_loss_fn(output[:, 0], target[:, 0])
+            cdf_loss = cdf_loss_fn(output[:, 1], target[:, 1])
+
+            return pdf_loss + cdf_loss
+
+        return loss
 
     def forward(self, x):
         N = x.shape[0]
@@ -504,8 +615,8 @@ class OwnershipHead(Head):
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
     """
 
-    def __init__(self, name: str, c_in: int, c_hidden: int, shape: Shape):
-        super(OwnershipHead, self).__init__(name, OwnershipTarget())
+    def __init__(self, c_in: int, c_hidden: int, shape: Shape):
+        super().__init__()
 
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
@@ -515,6 +626,9 @@ class OwnershipHead(Head):
         self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=True)
 
+    def default_loss_function(self):
+        return nn.CrossEntropyLoss()
+
     def forward(self, x):
         out = x
         out = self.conv1(out)
@@ -523,57 +637,38 @@ class OwnershipHead(Head):
         return out
 
 
-class GeneralHead(Head):
+class ActionValueUncertaintyHead(Head):
     """
-    A head that produces an arbitrarily shaped tensor.
+    A head that produces action value uncertainty values. It aims to predict what the
+    ValueUncertaintyHead would predict for the game state that would result after taking each
+    action.
     """
-    def __init__(self, target: LearningTarget, name: str, c_in: int, c_hidden: int, n_hidden: int,
-                 shape: Shape):
-        super(GeneralHead, self).__init__(name, target)
+    def __init__(self, c_hidden: int, trunk_shape: Shape, output_shape: Shape):
+        super().__init__()
+        c_trunk, H, W = trunk_shape
 
-        self.shape = shape
-
+        self.output_shape = output_shape
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * H * W, math.prod(output_shape))
 
-        self.gpool = GlobalPoolingLayer()
-
-        n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
-        self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
-        self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+    def default_loss_function(self):
+        return nn.HuberLoss()
 
     def forward(self, x):
-        N = x.shape[0]
-
-        out = x  # (N, C_in, H, W)
-        out = self.conv(out)  # (N, C_hidden, H, W)
-        out = self.act(out)  # (N, C_hidden, H, W)
-        out = self.gpool(out)  # (N, n_gpool, 1, 1)
-        out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
-
-        out = self.linear1(out)  # (N, n_hidden)
-        out = self.act(out)  # (N, n_hidden)
-        out = self.linear2(out)  # (N, *)
-
-        return out.view(N, *self.shape)  # (N, *shape)
-
-
-class GeneralLogitHead(GeneralHead):
-    """
-    A head that produces an arbitrarily shaped tensor of logits.
-
-    These logits are not intended to be normalized with softmax. Instead, they are intended to be
-    interpreted as independent binary classification logits.
-    """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
-        super(GeneralLogitHead, self).__init__(GeneralLogitTarget(), name, c_in, c_hidden, n_hidden,
-                                               shape)
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.output_shape)
+        return torch.sigmoid(out)  # constrain to [0, 1]
 
 
 MODULE_MAP = {
+    'ActionValueUncertaintyHead': ActionValueUncertaintyHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
-    'GeneralLogitHead': GeneralLogitHead,
     'KataGoNeck': KataGoNeck,
     'OwnershipHead': OwnershipHead,
     'ResBlock': ResBlock,
@@ -581,201 +676,9 @@ MODULE_MAP = {
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
     'TransformerBlock': TransformerBlock,
+    'ValueUncertaintyHead': ValueUncertaintyHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,
     'WinLossValueHead': WinLossValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
     }
-
-
-@dataclass
-class ModuleSpec:
-    type: str
-    args: list = field(default_factory=list)
-    kwargs: dict = field(default_factory=dict)
-
-
-@dataclass
-class OptimizerSpec:
-    type: str
-    kwargs: dict = field(default_factory=dict)
-
-
-@dataclass
-class ModelConfig:
-    shape_info_dict: ShapeInfoDict
-    stem: Optional[ModuleSpec]
-    blocks: List[ModuleSpec]
-    heads: List[ModuleSpec]
-    neck: Optional[ModuleSpec]
-    loss_weights: Dict[str, float]
-    opt: OptimizerSpec
-    paradigm: SearchParadigm = SearchParadigm.AlphaZero
-
-    def validate(self):
-        for spec in [self.stem, self.neck] + self.blocks + self.heads:
-            if spec is not None:
-                assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
-
-
-class ModelConfigGenerator(abc.ABC):
-    search_paradigm: SearchParadigm = SearchParadigm.AlphaZero
-
-    @staticmethod
-    @abc.abstractmethod
-    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        pass
-
-
-class Model(nn.Module):
-    def __init__(self, config: ModelConfig):
-        super(Model, self).__init__()
-
-        config.validate()
-
-        self.config = config
-        self.stem = Model._construct_module(config.stem)
-        self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
-        self.neck = Model._construct_module(config.neck)
-        self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
-        self.loss_weights = config.loss_weights
-
-        self.validate()
-
-        self._model_architecture_signature = None
-
-    def get_model_architecture_signature(self, clone: 'Model'):
-        # We compute the signature from the *clone*, not from *self*, because self still has the
-        # auxiliary heads, while clone has them stripped. We don't need to include the auxiliary
-        # heads in the signature.
-        if self._model_architecture_signature is None:
-            self._model_architecture_signature = hashlib.md5(str(clone).encode()).hexdigest()
-        return self._model_architecture_signature
-
-    @property
-    def shape_info_dict(self) -> ShapeInfoDict:
-        return self.config.shape_info_dict
-
-    @property
-    def learning_targets(self) -> List[LearningTarget]:
-        return [head.target for head in self.heads]
-
-    @property
-    def target_names(self) -> List[str]:
-        return [head.name for head in self.heads]
-
-    def get_parameter_counts(self) -> Dict[str, int]:
-        """
-        Returns a dictionary mapping module names to the number of parameters in that module.
-        """
-        counts = {}
-        if self.stem is not None:
-            counts['stem'] = sum(p.numel() for p in self.stem.parameters())
-        counts['blocks'] = sum(p.numel() for block in self.blocks for p in block.parameters())
-        if self.neck is not None:
-            counts['neck'] = sum(p.numel() for p in self.neck.parameters())
-        for head in self.heads:
-            counts[head.name] = sum(p.numel() for p in head.parameters())
-        return counts
-
-    def forward(self, x):
-        out = x
-        if self.stem is not None:
-            out = self.stem(out)
-        for block in self.blocks:
-            out = block(out)
-        if self.neck is not None:
-            out = self.neck(out)
-        return tuple(head(out) for head in self.heads)
-
-    @staticmethod
-    def _construct_module(spec: Optional[ModuleSpec]) -> Optional[nn.Module]:
-        if spec is None:
-            return None
-        cls = MODULE_MAP[spec.type]
-        return cls(*spec.args, **spec.kwargs)
-
-    def validate(self):
-        head_names = set()
-        for head in self.heads:
-            assert head.name not in head_names, f'Head with name {head.name} already exists'
-            head_names.add(head.name)
-
-        assert self.heads[0].name == 'policy', 'The first head must be the policy head'
-        assert self.heads[1].name == 'value', 'The second head must be the value head'
-        assert self.heads[2].name == 'action_value', 'The third head must be the action_value head'
-
-        for name in self.loss_weights:
-            assert name in head_names, f'Loss weight for unknown head {name}'
-
-        for name in head_names:
-            assert name in self.loss_weights, f'Loss weight missing for head {name}'
-
-        targets = [t for t in self.shape_info_dict.keys() if t != 'input']
-        for target in self.loss_weights:
-            assert target in targets, f'Missing target {target}'
-
-    def save_model(self, filename: str, n_primary_targets: int):
-        """
-        Saves this network to disk in ONNX format.
-        """
-        output_dir = os.path.split(filename)[0]
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-
-        # 1) clone, strip extra heads, freeze
-        clone = copy.deepcopy(self)
-        clone.heads = clone.heads[:n_primary_targets]
-        clone.cpu().eval()
-
-        input_names = ["input"]
-        output_names = [head.name for head in clone.heads]
-        dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
-
-        # 2) make an example‐input and ONNX‐export it
-        batch_size = 1
-        example_shape = (batch_size, *self.shape_info_dict['input'].shape)
-        example_input = torch.zeros(example_shape, dtype=torch.float32)
-
-        signature = self.get_model_architecture_signature(clone)
-
-        # 3) Export to a temporary in-memory buffer
-        buf = io.BytesIO()
-        torch.onnx.export(
-            clone, example_input, buf,
-            export_params=True,
-            opset_version=18,
-            input_names=input_names,
-            output_names=output_names,
-            dynamic_axes=dynamic_axes,
-            do_constant_folding=True,
-        )
-
-        # 4) Add metadata
-        model = onnx.load_from_string(buf.getvalue())
-        kv = model.metadata_props.add()
-        kv.key = 'model-architecture-signature'
-        kv.value = signature
-
-        onnx.save(model, filename)
-
-    @staticmethod
-    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
-        """
-        Load a model from a checkpoint. Inverse of add_to_checkpoint().
-        """
-        model_state_dict = checkpoint['model.state_dict']
-        config = checkpoint['model.config']
-        model = Model(config)
-        model.load_state_dict(model_state_dict)
-        return model
-
-    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
-        """
-        Save the current state of this neural net to a checkpoint, so that it can be loaded later
-        via load_from_checkpoint().
-        """
-        checkpoint.update({
-            'model.state_dict': self.state_dict(),
-            'model.config': self.config,
-        })

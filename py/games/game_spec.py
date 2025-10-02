@@ -2,7 +2,7 @@ import abc
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Type
 
-from shared.net_modules import ModelConfigGenerator
+from shared.model_config import ModelConfigGenerator
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 

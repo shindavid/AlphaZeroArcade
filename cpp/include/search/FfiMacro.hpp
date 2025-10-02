@@ -56,10 +56,11 @@ struct FfiFunctions {
 
   static void DataLoader_load(DataLoader* loader, int64_t window_start, int64_t window_end,
                               int n_samples, bool apply_symmetry, int n_targets,
-                              float* output_data_array, int* target_indices_array, int* gen_range) {
+                              float* output_data_array, int* target_indices_array, int* gen_range,
+                              int* version_check) {
     DataLoader::LoadParams params{window_start,         window_end, n_samples,
                                   apply_symmetry,       n_targets,  output_data_array,
-                                  target_indices_array, gen_range};
+                                  target_indices_array, gen_range,  version_check};
     loader->load(params);
   }
 
@@ -68,13 +69,37 @@ struct FfiFunctions {
     search::GameLogCommon::merge_files(input_filenames, n_input_filenames, output_filename);
   }
 
-  static search::ShapeInfo* get_shape_info_array(const char* paradigm) {
+  static search::ShapeInfo* get_input_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     switch (p) {
       case core::kParadigmAlphaZero:
-        return AlphaZeroGameReadLog::get_shape_info_array();
+        return AlphaZeroGameReadLog::get_input_shapes();
       case core::kParadigmBetaZero:
-        return BetaZeroGameReadLog::get_shape_info_array();
+        return BetaZeroGameReadLog::get_input_shapes();
+      default:
+        throw util::Exception("Unknown search paradigm '{}'", paradigm);
+    }
+  }
+
+  static search::ShapeInfo* get_target_shapes(const char* paradigm) {
+    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
+    switch (p) {
+      case core::kParadigmAlphaZero:
+        return AlphaZeroGameReadLog::get_target_shapes();
+      case core::kParadigmBetaZero:
+        return BetaZeroGameReadLog::get_target_shapes();
+      default:
+        throw util::Exception("Unknown search paradigm '{}'", paradigm);
+    }
+  }
+
+  static search::ShapeInfo* get_head_shapes(const char* paradigm) {
+    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
+    switch (p) {
+      case core::kParadigmAlphaZero:
+        return AlphaZeroGameReadLog::get_head_shapes();
+      case core::kParadigmBetaZero:
+        return BetaZeroGameReadLog::get_head_shapes();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -112,10 +137,11 @@ struct FfiFunctions {
                                                                                                   \
   void DataLoader_load(DataLoader* loader, int64_t window_start, int64_t window_end,              \
                        int n_samples, bool apply_symmetry, int n_targets,                         \
-                       float* output_data_array, int* target_indices_array, int* gen_range) {     \
+                       float* output_data_array, int* target_indices_array, int* gen_range,       \
+                       int* version_check) {                                                      \
     return FfiFunctions::DataLoader_load(loader, window_start, window_end, n_samples,             \
                                          apply_symmetry, n_targets, output_data_array,            \
-                                         target_indices_array, gen_range);                        \
+                                         target_indices_array, gen_range, version_check);         \
   }                                                                                               \
                                                                                                   \
   void merge_game_log_files(const char** input_filenames, int n_input_filenames,                  \
@@ -123,8 +149,16 @@ struct FfiFunctions {
     FfiFunctions::merge_game_log_files(input_filenames, n_input_filenames, output_filename);      \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_shape_info_array(const char* paradigm) {                                 \
-    return FfiFunctions::get_shape_info_array(paradigm);                                          \
+  search::ShapeInfo* get_input_shapes(const char* paradigm) {                                     \
+    return FfiFunctions::get_input_shapes(paradigm);                                              \
+  }                                                                                               \
+                                                                                                  \
+  search::ShapeInfo* get_target_shapes(const char* paradigm) {                                    \
+    return FfiFunctions::get_target_shapes(paradigm);                                             \
+  }                                                                                               \
+                                                                                                  \
+  search::ShapeInfo* get_head_shapes(const char* paradigm) {                                      \
+    return FfiFunctions::get_head_shapes(paradigm);                                               \
   }                                                                                               \
                                                                                                   \
   void free_shape_info_array(search::ShapeInfo* info) {                                           \

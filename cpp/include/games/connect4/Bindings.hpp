@@ -4,22 +4,15 @@
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
+#include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputTensorizor.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace c4::alpha0 {
 
-struct TrainingTargets {
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
-  using AuxList = mp::TypeList<OppPolicyTarget>;
-};
+using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
@@ -29,19 +22,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace c4::beta0 {
 
-struct TrainingTargets {
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-  using ValueUncertaintyTarget = core::ValueUncertaintyTarget<Game>;
-  using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget,
-                                   ValueUncertaintyTarget, ActionValueUncertaintyTarget>;
-  using AuxList = mp::TypeList<OppPolicyTarget>;
-};
-
+using TrainingTargets = core::beta0::StandardTrainingTargets<Game>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<Game>;
 using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace c4::beta0
@@ -59,6 +41,7 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
 
   using TrainingTargets = c4::alpha0::TrainingTargets;
+  using NetworkHeads = c4::alpha0::NetworkHeads;
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
 
@@ -69,6 +52,7 @@ struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
 
   using TrainingTargets = c4::beta0::TrainingTargets;
+  using NetworkHeads = c4::beta0::NetworkHeads;
   using MctsConfiguration = c4::beta0::MctsConfiguration;
 };
 

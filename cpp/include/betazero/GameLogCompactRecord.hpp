@@ -7,8 +7,8 @@ namespace beta0 {
 
 template <core::concepts::Game Game>
 struct GameLogCompactRecord : public alpha0::GameLogCompactRecord<Game> {
-  float Q_prior;
-  float Q_posterior;
+  using ValueTensor = Game::Types::ValueTensor;
+  ValueTensor Q_posterior;
 };
 
 }  // namespace beta0

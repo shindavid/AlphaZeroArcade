@@ -2,12 +2,12 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
+#include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/TrivialSymmetries.hpp"
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "core/GameRulesBase.hpp"
 #include "games/stochastic_nim/Constants.hpp"
 #include "util/FiniteGroups.hpp"
 

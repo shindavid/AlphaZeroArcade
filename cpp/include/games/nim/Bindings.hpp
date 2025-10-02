@@ -4,22 +4,15 @@
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
+#include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/nim/Game.hpp"
 #include "games/nim/InputTensorizor.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace nim::alpha0 {
 
-struct TrainingTargets {
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
-  using PrimaryList = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget>;
-  using AuxList = mp::TypeList<OppPolicyTarget>;
-};
+using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 3;
@@ -38,6 +31,7 @@ template <>
 struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
   using Game = nim::Game;
   using TrainingTargets = nim::alpha0::TrainingTargets;
+  using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
 };
 
@@ -46,6 +40,7 @@ template <>
 struct EvalSpec<nim::Game, core::kParadigmBetaZero> {
   using Game = nim::Game;
   using TrainingTargets = nim::alpha0::TrainingTargets;
+  using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
 };
 

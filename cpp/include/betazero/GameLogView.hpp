@@ -9,10 +9,10 @@ template <core::concepts::Game Game>
 struct GameLogView : public alpha0::GameLogView<Game> {
   using Base = alpha0::GameLogView<Game>;
   using ActionValueTensor = Base::ActionValueTensor;
+  using ValueTensor = Base::ValueTensor;
 
   ActionValueTensor action_value_uncertainties;
-  float Q_prior;
-  float Q_posterior;
+  ValueTensor Q_posterior;
   bool action_value_uncertainties_valid;
 };
 

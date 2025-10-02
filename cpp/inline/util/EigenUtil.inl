@@ -404,6 +404,24 @@ void right_rotate(Array& array, int n) {
   std::rotate(data, data + N - n, data + N);
 }
 
+template <concepts::FTensor Tensor>
+void left_rotate(Tensor& tensor, int n) {
+  constexpr int rank = Tensor::Dimensions::count;
+  static_assert(rank == 1, "left_rotate only supports 1D tensors");
+  constexpr int N = Tensor::Dimensions::total_size;
+  auto* data = tensor.data();
+  std::rotate(data, data + n, data + N);
+}
+
+template <concepts::FTensor Tensor>
+void right_rotate(Tensor& tensor, int n) {
+  constexpr int rank = Tensor::Dimensions::count;
+  static_assert(rank == 1, "right_rotate only supports 1D tensors");
+  constexpr int N = Tensor::Dimensions::total_size;
+  auto* data = tensor.data();
+  std::rotate(data, data + N - n, data + N);
+}
+
 namespace detail {
 
 template <int Dim, concepts::FTensor Tensor>

@@ -3,9 +3,12 @@ from torch import optim
 
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.game_log_reader import GameLogReader
-from shared.net_modules import Head, Model
-from util.torch_util import apply_mask
+from shared.loss_term import LossTerm, Masker
+from shared.model import Model
 
+import torch
+
+from dataclasses import dataclass
 import logging
 import time
 from typing import Optional
@@ -14,37 +17,29 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class EvaluationResults:
-    def __init__(self, labels, outputs, loss):
-        self.labels = labels
-        self.outputs = outputs
-        self.loss = loss
-
-    def __len__(self):
-        return len(self.labels)
+    loss: torch.Tensor
+    count: int
 
 
 class TrainingSubStats:
     max_descr_len = 0
 
-    def __init__(self, head: Head, loss_weight: float):
-        self.head = head
-        self.loss_weight = loss_weight
+    def __init__(self, term: LossTerm):
+        self.name = term.name
+        self.loss_weight = term.weight
         self.loss_num = 0.0
         self.den = 0
 
         TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(self.descr))
 
     @property
-    def name(self) -> str:
-        return self.head.name
-
-    @property
     def descr(self) -> str:
-        return self.head.name
+        return self.name
 
     def update(self, results: EvaluationResults):
-        n = len(results)
+        n = results.count
         self.loss_num += float(results.loss.item()) * n
         self.den += n
 
@@ -71,7 +66,7 @@ class TrainingSubStats:
 
 class TrainingStats:
     def __init__(self, gen: Generation, minibatch_size: int, window_start: int,
-                 window_end: int, net: Model):
+                 window_end: int, net: Model, loss_terms: List[LossTerm]):
         self.gen = gen
         self.minibatch_size = minibatch_size
         self.window_start = window_start
@@ -80,8 +75,7 @@ class TrainingStats:
 
         self.n_minibatches_processed = 0
         self.n_samples = 0
-        self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
-                              for head in net.heads]
+        self.substats_list = [TrainingSubStats(term) for term in loss_terms]
 
     def update(self, results_list: List[EvaluationResults], n_samples):
         self.n_samples += n_samples
@@ -121,7 +115,7 @@ class NetTrainer:
                           n_minibatches: int,
                           window_start: int,
                           window_end: int,
-                          gen: Generation) -> Optional[TrainingStats]:
+                          loss_terms: List[LossTerm]) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -133,32 +127,38 @@ class NetTrainer:
         t0 = time.time()
         train_time = 0.0
 
-        data_batches = reader.create_data_batches(
-            minibatch_size, n_minibatches, window_start, window_end, net.target_names, gen)
+        loss_weights = [term.weight for term in loss_terms]
 
-        loss_fns = [head.target.loss_fn() for head in net.heads]
-        loss_weights = [net.loss_weights[head.name] for head in net.heads]
+        head_names = net.head_names
+        target_names = list(reader.shape_info_collection.target_shapes.keys())
+        data_batches = reader.create_data_batches(
+            minibatch_size, n_minibatches, window_start, window_end, target_names)
 
         n_samples = 0
-        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net)
+        stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_terms)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
 
             t1 = time.time()
             inputs = batch.input_tensor
-            labels = batch.target_tensors
+            y_hats = batch.target_tensors
             masks = batch.target_masks
 
             optimizer.zero_grad()
-            outputs = net(inputs)
-            assert len(outputs) == len(labels)
+            ys = net(inputs)
+            assert len(head_names) == len(ys), (head_names, len(ys))
 
-            labels = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks, labels)]
-            outputs = [apply_mask(y, mask) for mask, y in zip(masks, outputs)]
-            losses = [f(y_hat, y) for f, y_hat, y in zip(loss_fns, outputs, labels)]
+            mask_dict = {target: mask for target, mask in zip(target_names, masks)}
+            y_hat_dict = {target: y_hat for target, y_hat in zip(target_names, y_hats)}
+            y_dict = {head: y for head, y in zip(head_names, ys)}
+
+            masker = Masker(mask_dict, y_dict, y_hat_dict)
+
+            loss_tuples = [term.compute_loss(masker) for term in loss_terms]
+            losses, _ = zip(*loss_tuples)
             loss = sum([l * w for l, w in zip(losses, loss_weights)])
-            results_list = [EvaluationResults(*x) for x in zip(labels, outputs, losses)]
+            results_list = [EvaluationResults(*t) for t in loss_tuples]
 
             n_samples += len(inputs)
             stats.update(results_list, len(inputs))

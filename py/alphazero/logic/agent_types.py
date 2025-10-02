@@ -1,4 +1,4 @@
-from shared.net_modules import SearchParadigm
+from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 

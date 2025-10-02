@@ -9,21 +9,23 @@
 namespace search {
 
 struct ShapeInfo {
-  template <eigen_util::concepts::FTensor Tensor>
-  void init(const char* nm, int target_idx, bool primary);
+  template <eigen_util::concepts::Shape Shape>
+  void init(const char* nm, int target_idx);
   ~ShapeInfo();
 
   const char* name = nullptr;
   int* dims = nullptr;
   int num_dims = 0;
   int target_index = -1;
-  int is_primary = false;
 };
 
 struct GameLogFileHeader {
+  static constexpr uint16_t kCurrentVersion = 1;
+
   uint32_t num_games = 0;
   uint32_t num_rows = 0;
-  uint64_t reserved = 0;
+  uint16_t version = kCurrentVersion;
+  uint8_t reserved[6] = {0};
 };
 static_assert(sizeof(GameLogFileHeader) == 16);
 
@@ -101,7 +103,8 @@ struct GameLogBase : public GameLogCommon {
 
     TensorData(bool valid, const PolicyTensor&);
     int write_to(std::vector<char>& buf) const;
-    int size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+    int base_size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+    int size() const;
     bool load(PolicyTensor&) const;  // return true if valid tensor
 
     struct DenseData {

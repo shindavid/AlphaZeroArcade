@@ -17,25 +17,27 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
   float* data_ptr = init_data_and_offsets(valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Target = mp::TypeAt_t<PrimaryTargets, Index>;
-    using Tensor = Target::Tensor;
+    using Head = mp::TypeAt_t<NetworkHeads, Index>;
+    using Tensor = Head::Tensor;
     using Shape = Tensor::Dimensions;
+    constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
+    constexpr bool kValueBased = Head::kType == core::NetworkHeadType::kValueBasedHead;
 
     auto& src = std::get<Index>(outputs);
 
-    if constexpr (Target::kValueBased) {
+    if constexpr (kValueBased) {
       Game::GameResults::right_rotate(src, active_seat);
     }
 
-    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
+    using Dst = std::conditional_t<kPolicyBased, LocalPolicyTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
-    if constexpr (Target::kPolicyBased) {
+    if constexpr (kPolicyBased) {
       arr[0] = valid_actions.count();
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
 
-    if constexpr (Target::kPolicyBased) {
+    if constexpr (kPolicyBased) {
       Game::Symmetries::apply(src, inv_sym, mode);
 
       int i = 0;
@@ -46,7 +48,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
       dst = src;
     }
 
-    Target::transform(dst);
+    Head::transform(dst);
   });
 
   data_ = data_ptr;
@@ -57,18 +59,20 @@ void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
   float* data_ptr = init_data_and_offsets(valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Target = mp::TypeAt_t<PrimaryTargets, Index>;
-    using Tensor = Target::Tensor;
+    using Head = mp::TypeAt_t<NetworkHeads, Index>;
+    using Tensor = Head::Tensor;
     using Shape = Tensor::Dimensions;
+    constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
 
-    using Dst = std::conditional_t<Target::kPolicyBased, LocalPolicyTensor, Tensor>;
+    using Dst = std::conditional_t<kPolicyBased, LocalPolicyTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
+
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
-    if constexpr (Target::kPolicyBased) {
+    if constexpr (kPolicyBased) {
       arr[0] = valid_actions.count();
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
-    Target::uniform_init(dst);
+    Head::uniform_init(dst);
   });
 
   data_ = data_ptr;
@@ -101,10 +105,11 @@ float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actio
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
-    using Target = mp::TypeAt_t<PrimaryTargets, i>;
+    using Head = mp::TypeAt_t<NetworkHeads, i>;
+    constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
 
-    int size = Target::Tensor::Dimensions::total_size;
-    if (Target::kPolicyBased) {
+    int size = Head::Tensor::Dimensions::total_size;
+    if constexpr (kPolicyBased) {
       size = valid_actions.count();
     }
 

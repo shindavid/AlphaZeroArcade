@@ -38,6 +38,8 @@ struct GameTypes {
   using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
   using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
+  using QShape = Eigen::Sizes<GameConstants::kNumPlayers>;
+  using QTensor = eigen_util::FTensor<QShape>;
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;

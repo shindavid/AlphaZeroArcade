@@ -9,14 +9,12 @@
 
 namespace search {
 
-template <eigen_util::concepts::FTensor Tensor>
-void ShapeInfo::init(const char* nm, int target_idx, bool primary) {
-  using Shape = Tensor::Dimensions;
+template <eigen_util::concepts::Shape Shape>
+void ShapeInfo::init(const char* nm, int target_idx) {
   this->name = nm;
   this->dims = new int[Shape::count];
   this->num_dims = Shape::count;
   this->target_index = target_idx;
-  this->is_primary = primary;
 
   Shape shape;
   for (int i = 0; i < Shape::count; ++i) {
@@ -181,10 +179,19 @@ GameLogBase<Traits>::TensorData::TensorData(bool valid, const PolicyTensor& tens
 
 template <search::concepts::Traits Traits>
 int GameLogBase<Traits>::TensorData::write_to(std::vector<char>& buf) const {
+  int b = base_size();
   int s = size();
   const char* bytes = reinterpret_cast<const char*>(this);
-  buf.insert(buf.end(), bytes, bytes + s);
+  buf.insert(buf.end(), bytes, bytes + b);
+  for (int i = b; i < s; ++i) {
+    buf.push_back(0);
+  }
   return s;
+}
+
+template <search::concepts::Traits Traits>
+int GameLogBase<Traits>::TensorData::size() const {
+  return math::round_up_to_nearest_multiple(base_size(), GameLogCommon::kAlignment);
 }
 
 template <search::concepts::Traits Traits>

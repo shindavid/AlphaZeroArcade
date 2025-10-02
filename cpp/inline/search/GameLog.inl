@@ -1,5 +1,6 @@
 #include "search/GameLog.hpp"
 
+#include "core/TrainingTargets.hpp"
 #include "util/Asserts.hpp"
 #include "util/BitSet.hpp"
 #include "util/IndexedDispatcher.hpp"
@@ -30,19 +31,44 @@ GameReadLog<Traits>::GameReadLog(const char* filename, int game_index,
 }
 
 template <search::concepts::Traits Traits>
-ShapeInfo* GameReadLog<Traits>::get_shape_info_array() {
-  constexpr int n_primary_targets = mp::Length_v<PrimaryTargets>;
-  constexpr int n_targets = mp::Length_v<AllTargets>;
-  constexpr int n = n_targets + 2;  // 1 for input, 1 for terminator
+ShapeInfo* GameReadLog<Traits>::get_input_shapes() {
+  constexpr int n_inputs = 1;
+  constexpr int n = n_inputs + 1;  // +1 for terminator
+  using InputShape = InputTensor::Dimensions;
 
   ShapeInfo* info_array = new ShapeInfo[n];
-  info_array[0].template init<InputTensor>("input", -1, false);
+  info_array[0].template init<InputShape>("input", 0);
+
+  return info_array;
+}
+
+template <search::concepts::Traits Traits>
+ShapeInfo* GameReadLog<Traits>::get_target_shapes() {
+  constexpr int n_targets = mp::Length_v<TrainingTargets>;
+  constexpr int n = n_targets + 1;  // +1 for terminator
+
+  ShapeInfo* info_array = new ShapeInfo[n];
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
-    using Target = mp::TypeAt_t<AllTargets, a>;
-    using Tensor = Target::Tensor;
-    bool primary = (a < n_primary_targets);
-    info_array[1 + a].template init<Tensor>(Target::kName, a, primary);
+    using Target = mp::TypeAt_t<TrainingTargets, a>;
+    using Shape = Target::Tensor::Dimensions;
+    info_array[a].template init<Shape>(Target::kName, a);
+  });
+
+  return info_array;
+}
+
+template <search::concepts::Traits Traits>
+ShapeInfo* GameReadLog<Traits>::get_head_shapes() {
+  constexpr int n_heads = mp::Length_v<NetworkHeads>;
+  constexpr int n = n_heads + 1;  // +1 for terminator
+
+  ShapeInfo* info_array = new ShapeInfo[n];
+
+  mp::constexpr_for<0, n_heads, 1>([&](auto a) {
+    using Head = mp::TypeAt_t<NetworkHeads, a>;
+    using Shape = Head::Tensor::Dimensions;
+    info_array[a].template init<Shape>(Head::kName, a);
   });
 
   return info_array;
@@ -102,10 +128,10 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
 
-  constexpr size_t N = mp::Length_v<AllTargets>;
+  constexpr size_t N = mp::Length_v<TrainingTargets>;
   for (int target_index : target_indices) {
     util::IndexedDispatcher<N>::call(target_index, [&](auto t) {
-      using Target = mp::TypeAt_t<AllTargets, t>;
+      using Target = mp::TypeAt_t<TrainingTargets, t>;
       using Tensor = Target::Tensor;
       constexpr int kSize = Tensor::Dimensions::total_size;
 

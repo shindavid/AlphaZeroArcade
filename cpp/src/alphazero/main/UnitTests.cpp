@@ -4,7 +4,6 @@
 #include "core/Constants.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"

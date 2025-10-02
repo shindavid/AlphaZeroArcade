@@ -1,23 +1,31 @@
-from dataclasses import dataclass
-import math
-
 from games.game_spec import GameSpec
-from shared.net_modules import ModelConfig, ModelConfigGenerator, ModuleSpec, OptimizerSpec, \
-    ShapeInfoDict
+from shared.basic_types import ShapeInfoCollection
+from shared.loss_term import BasicLossTerm, LossTerm
+from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
+
+from torch import optim
+
+from dataclasses import dataclass
+import math
+from typing import List
 
 
 class CNN_b20_c128(ModelConfigGenerator):
     @staticmethod
-    def generate(shape_info_dict: ShapeInfoDict) -> ModelConfig:
-        input_shape = shape_info_dict['input'].shape
-        policy_shape = shape_info_dict['policy'].shape
-        value_shape = shape_info_dict['value'].shape
-        action_value_shape = shape_info_dict['action_value'].shape
-        ownership_shape = shape_info_dict['ownership'].shape
-        score_shape = shape_info_dict['score'].shape
-        unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+        target_shapes = head_shape_info_collection.target_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        action_value_shape = head_shapes['action_value'].shape
+        ownership_shape = target_shapes['ownership'].shape
+        score_shape = target_shapes['score'].shape
+        unplayed_pieces_shape = target_shapes['unplayed_pieces'].shape
         board_shape = input_shape[1:]
         board_size = math.prod(board_shape)
 
@@ -34,72 +42,97 @@ class CNN_b20_c128(ModelConfigGenerator):
         c_unplayed_pieces_hidden = 32
         n_unplayed_pieces_hidden = 32
 
-        return ModelConfig(
-            shape_info_dict=shape_info_dict,
-
+        return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
+            trunk1=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parents=['stem']
+            ),
+            trunk2=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parents=['trunk1']
+            ),
+            trunk3=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parents=['trunk2']
+            ),
+            trunk4=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parents=['trunk3']
+            ),
+            trunk5=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=4,
+                parents=['trunk4']
+            ),
+            trunk6=ModuleSpec(
+                type='ResBlockWithGlobalPooling',
+                args=[c_trunk, c_mid, c_gpool],
+                parents=['trunk5']
+            ),
+            trunk=ModuleSpec(
+                type='ResBlock',
+                args=[c_trunk, c_mid],
+                repeat=5,
+                parents=['trunk6']
+            ),
 
-            blocks=[
-                ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block5', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block10', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlockWithGlobalPooling',
-                           args=['block15', c_trunk, c_mid, c_gpool]),
-
-                ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
-                ModuleSpec(type='ResBlock', args=['block20', c_trunk, c_mid]),
-            ],
-
-            neck=None,
-
-            heads=[
-                ModuleSpec(type='PolicyHead',
-                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-                ModuleSpec(type='WinShareValueHead',
-                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                                value_shape]),
-                ModuleSpec(type='WinShareActionValueHead',
-                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                                action_value_shape]),
-                ModuleSpec(type='ScoreHead',
-                        args=['score', c_trunk, c_score_margin_hidden,
-                                n_score_margin_hidden, score_shape]),
-                ModuleSpec(type='OwnershipHead',
-                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
-                ModuleSpec(type='GeneralLogitHead',
-                        args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
-                                n_unplayed_pieces_hidden, unplayed_pieces_shape]),
-            ],
-
-            loss_weights={
-                'policy': 1.0,
-                'value': 1.5,
-                'action_value': 1.0,
-                'score': 0.02,
-                'ownership': 0.15,
-                'unplayed_pieces': 0.3,
-            },
-
-            opt=OptimizerSpec(type='RAdam', kwargs={'lr': 6e-5, 'weight_decay': 6e-5}),
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape],
+                parents=['trunk']
+            ),
+            value=ModuleSpec(
+                type='WinShareValueHead',
+                args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
+                      value_shape],
+                parents=['trunk']
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                      action_value_shape],
+                parents=['trunk']
+            ),
+            score=ModuleSpec(
+                type='ScoreHead',
+                args=['score', c_trunk, c_score_margin_hidden, n_score_margin_hidden, score_shape],
+                parents=['trunk']
+            ),
+            ownership=ModuleSpec(
+                type='OwnershipHead',
+                args=['ownership', c_trunk, c_ownership_hidden, ownership_shape],
+                parents=['trunk']
+            ),
+            unplayed_pieces=ModuleSpec(
+                type='GeneralLogitHead',
+                args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
+                      n_unplayed_pieces_hidden, unplayed_pieces_shape],
+                parents=['trunk']
+            ),
         )
+
+    @staticmethod
+    def loss_terms() -> List[LossTerm]:
+        return [
+            BasicLossTerm('policy', 1.0),
+            BasicLossTerm('value', 1.5),
+            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('score', 0.02),
+            BasicLossTerm('ownership', 0.15),
+            BasicLossTerm('unplayed_pieces', 0.3),
+        ]
+
+    @staticmethod
+    def optimizer(params) -> optim.Optimizer:
+        return optim.RAdam(params, lr=6e-5, weight_decay=6e-5)
 
 
 @dataclass
