@@ -161,7 +161,7 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-constexpr int kMax = std::pow(3, 8);
+constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
 
 inline constexpr auto EDGE_STABILITY = [] {
   std::array<uint8_t, kMax> a{};
@@ -169,7 +169,7 @@ inline constexpr auto EDGE_STABILITY = [] {
   line_mask_t opponent;
   for (int t = 0; t < kMax; ++t) {
     to_binary_masks(t, curr_player, opponent);
-    a[t] = find_stable_edge(curr_player, opponent);
+    a[t] = find_stable_edge(curr_player, opponent) | find_stable_edge(opponent, curr_player);
   }
   return a;
 }();
