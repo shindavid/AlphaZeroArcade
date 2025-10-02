@@ -161,17 +161,6 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
-
-inline auto EDGE_STABILITY = [] {
-  std::array<uint8_t, kMax> a{};
-  line_mask_t curr_player;
-  line_mask_t opponent;
-  for (int t = 0; t < kMax; ++t) {
-    to_binary_masks(t, curr_player, opponent);
-    a[t] = find_stable_edge(curr_player, opponent);
-  }
-  return a;
-}();
+inline std::array<uint8_t, kMax> EDGE_STABILITY = build_stability_array();
 
 }  // namespace othello
