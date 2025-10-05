@@ -369,7 +369,7 @@ class LoopController:
             benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
             benchmark_tag = benchmark_data.setup_rundir()
             self._copy_eval_db(benchmark_tag)
-            self._eval_managers[tag] = EvalVsBenchmarkManager(self, benchmark_tag)
+            self._eval_managers[tag] = EvalVsBenchmarkManager(self, benchmark_tag, tag)
         return self._eval_managers[tag]
 
     def _copy_eval_db(self, benchmark_tag: str):
