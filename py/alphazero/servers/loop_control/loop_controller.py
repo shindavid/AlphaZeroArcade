@@ -17,7 +17,7 @@ from alphazero.logic import constants
 from alphazero.logic.benchmark_record import BenchmarkData
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, Domain, \
-    EvalTag, Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
+     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.rating_db import RatingDB
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
@@ -98,7 +98,7 @@ class LoopController:
         self._log_syncer = LogSyncer(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
-        self._eval_managers: Dict[EvalTag, EvalVsBenchmarkManager] = {}
+        self._eval_managers: Dict[RatingTag, EvalVsBenchmarkManager] = {}
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._self_eval_manager: Optional[SelfEvalManager] = None
         self._gpu_contention_manager = GpuContentionManager(self)
@@ -364,7 +364,7 @@ class LoopController:
             self._ratings_managers[tag] = RatingsManager(self, tag)
         return self._ratings_managers[tag]
 
-    def _get_eval_manager(self, tag: EvalTag) -> EvalVsBenchmarkManager:
+    def _get_eval_manager(self, tag: RatingTag) -> EvalVsBenchmarkManager:
         if tag not in self._eval_managers:
             benchmark_data = BenchmarkData(self.game_spec.name, self.params.benchmark_tag)
             benchmark_tag = benchmark_data.setup_rundir()
