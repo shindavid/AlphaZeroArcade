@@ -144,6 +144,7 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating_tag TEXT,
             agent_id1 INT,
             agent_id2 INT,
             agent1_wins INT,
@@ -165,8 +166,8 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS evaluator_ratings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            agent_id INT UNIQUE,
             rating_tag TEXT,
+            agent_id INT UNIQUE,
             rating FLOAT
             )""",
 
