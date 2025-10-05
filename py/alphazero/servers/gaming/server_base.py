@@ -110,7 +110,9 @@ class ServerBase:
         self._session_data.init_socket()
 
     def _send_handshake(self):
-        self._session_data.send_handshake(self._config.server_role)
+        additional_data = {'rating_tag': self._rating_params.rating_tag}
+        self._session_data.send_handshake(self._config.server_role,
+                                          additional_data=additional_data)
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(self._config.server_role)
