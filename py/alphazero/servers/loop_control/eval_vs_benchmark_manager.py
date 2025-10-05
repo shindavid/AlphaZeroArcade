@@ -147,8 +147,10 @@ class EvalVsBenchmarkManager(GamingManagerBase):
         self._rating_tag = rating_tag
 
     def set_priority(self):
-        dict_len = len([ix for ix, data in self._eval_status_dict.items() if data.complete()])
-        rating_in_progress = any(data.requested() for data in self._eval_status_dict.values())
+        dict_len = len([ix for ix, data in self._eval_status_dict.items() if
+                        data.rating_tag_matches(self._rating_tag) and data.complete()])
+        rating_in_progress = any(data.requested() for data in self._eval_status_dict.values()
+                                 if data.rating_tag_matches(self._rating_tag))
         self._set_domain_priority(dict_len, rating_in_progress)
 
     def load_past_data(self):
@@ -272,14 +274,15 @@ class EvalVsBenchmarkManager(GamingManagerBase):
 
     def _load_matches_from_db(self):
         for result in self._db.fetch_match_results():
-            if result.type != MatchType.EVALUATE:
+            if result.type != MatchType.EVALUATE or result.rating_tag != self._rating_tag:
                 continue
             indexed_agent1 = self._agent_lookup_db_id[result.agent_id1]
             indexed_agent2 = self._agent_lookup_db_id[result.agent_id2]
 
             if indexed_agent1.index not in self._eval_status_dict:
                 self._eval_status_dict[indexed_agent1.index] = EvalStatus(
-                    mcts_gen=indexed_agent1.agent.gen, owner=None, status=EvalRequestStatus.FAILED)
+                    mcts_gen=indexed_agent1.agent.gen, owner=None, status=EvalRequestStatus.FAILED,
+                    rating_tag=self._rating_tag)
 
             match_status = MatchStatus(opponent_level=indexed_agent2.agent.level,
                                        n_games=result.counts.n_games,
@@ -302,6 +305,8 @@ class EvalVsBenchmarkManager(GamingManagerBase):
     def _load_elos_from_db(self):
         ratings: List[DBAgentRating] = self._db.load_ratings(AgentRole.TEST)
         for db_rating in ratings:
+            if db_rating.rating_tag != self._rating_tag:
+                continue
             indexed_agent = self._agent_lookup_db_id[db_rating.agent_id]
             self._eval_status_dict[indexed_agent.index].elo = db_rating.rating
             self._eval_status_dict[indexed_agent.index].status = EvalRequestStatus.COMPLETE
@@ -540,7 +545,7 @@ class EvalVsBenchmarkManager(GamingManagerBase):
     def _update_match_results(self, ix1: int, ix2: int, counts: WinLossDrawCounts):
         db_id1 = self._indexed_agents[ix1].db_id
         db_id2 = self._indexed_agents[ix2].db_id
-        self._db.commit_counts(db_id1, db_id2, counts, MatchType.EVALUATE)
+        self._db.commit_counts(db_id1, db_id2, counts, MatchType.EVALUATE, self._rating_tag)
         self._eval_status_dict[ix1].ix_match_status[ix2].result = counts
         self._eval_status_dict[ix1].ix_match_status[ix2].status = MatchRequestStatus.COMPLETE
 
@@ -570,6 +575,8 @@ class EvalVsBenchmarkManager(GamingManagerBase):
     def _task_finished(self) -> None:
         latest_gen = self._controller._organizer.get_latest_model_generation()
         rated_percent = self.num_evaluated_gens() / latest_gen
+        logger.debug(f"number of evaluated gens: {self.num_evaluated_gens()}, "
+                    f"latest gen: {latest_gen}, rated percent: {rated_percent:.2%}")
         return rated_percent >= self._controller.params.target_rating_rate
 
     @property
