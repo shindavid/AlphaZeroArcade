@@ -32,8 +32,9 @@ class DBAgentRating:
     agent_id: AgentDBId
     rating: float
     is_committee: Optional[bool] = None
-    tag: Optional[str] = None
+    agent_tag: Optional[str] = None
     level: Optional[str] = None
+    rating_tag: Optional[str] = None
 
 
 class RatingDB:
@@ -121,9 +122,13 @@ class RatingDB:
                 WHERE agents.subtype = 'mcts';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, is_committee, tag, gen = row
+                agent_id, rating, is_committee, agent_tag, gen = row
                 is_committee = bool(is_committee)
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, is_committee, tag, gen))
+                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                      rating=rating,
+                                                      is_committee=is_committee,
+                                                      agent_tag=agent_tag,
+                                                      level=gen))
 
             c.execute('''
                 SELECT
@@ -138,15 +143,20 @@ class RatingDB:
                 WHERE agents.subtype = 'ref';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, is_committee, tag, strength = row
+                agent_id, rating, is_committee, agent_tag, strength = row
                 is_committee = bool(is_committee)
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, is_committee, tag, strength))
+                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                      rating=rating,
+                                                      is_committee=is_committee,
+                                                      agent_tag=agent_tag,
+                                                      level=strength))
 
         elif role == AgentRole.TEST:
             c.execute('''
                 SELECT
                     evaluator_ratings.agent_id,
                     evaluator_ratings.rating,
+                    evaluator_ratings.rating_tag,
                     mcts_agents.tag,
                     mcts_agents.gen
                 FROM evaluator_ratings
@@ -155,13 +165,18 @@ class RatingDB:
                 WHERE agents.subtype = 'mcts';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, tag, gen = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag, gen))
+                agent_id, rating, rating_tag, agent_tag, gen = row
+                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                      rating=rating,
+                                                      agent_tag=agent_tag,
+                                                      level=gen,
+                                                      rating_tag=rating_tag))
 
             c.execute('''
                 SELECT
                     evaluator_ratings.agent_id,
                     evaluator_ratings.rating,
+                    evaluator_ratings.rating_tag,
                     ref_agents.tag,
                     ref_agents.strength
                 FROM evaluator_ratings
@@ -170,8 +185,12 @@ class RatingDB:
                 WHERE agents.subtype = 'ref';
                 ''')
             for row in c.fetchall():
-                agent_id, rating, tag, strength = row
-                db_agent_ratings.append(DBAgentRating(agent_id, rating, None, tag, strength))
+                agent_id, rating, rating_tag, agent_tag, strength = row
+                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                      rating=rating,
+                                                      agent_tag=agent_tag,
+                                                      level=strength,
+                                                      rating_tag=rating_tag))
 
         return db_agent_ratings
 
@@ -185,7 +204,7 @@ class RatingDB:
         conn.commit()
 
     def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
-                       committee: Optional[IndexSet] = None):
+                       committee: Optional[IndexSet] = None, rating_tag: Optional[str] = None):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
@@ -197,12 +216,12 @@ class RatingDB:
             if AgentRole.BENCHMARK in iagent.roles and committee is not None:
                 benchmark_tuples.append((iagent.db_id, rating, int(committee[i])))
             if AgentRole.TEST in iagent.roles:
-                evaluator_tuples.append((iagent.db_id, rating))
+                evaluator_tuples.append((iagent.db_id, rating, rating_tag))
 
         c.executemany('''REPLACE INTO benchmark_ratings (agent_id, rating, is_committee)
                       VALUES (?, ?, ?)''', benchmark_tuples)
-        c.executemany('''REPLACE INTO evaluator_ratings (agent_id, rating)
-                      VALUES (?, ?)''', evaluator_tuples)
+        c.executemany('''REPLACE INTO evaluator_ratings (agent_id, rating, rating_tag)
+                      VALUES (?, ?, ?)''', evaluator_tuples)
         conn.commit()
 
     def commit_agent(self, iagent: IndexedAgent):
