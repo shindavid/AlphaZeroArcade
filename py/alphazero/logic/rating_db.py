@@ -1,6 +1,7 @@
 from alphazero.logic import constants
 from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
         MatchType, MCTSAgent, ReferenceAgent
+from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
@@ -25,6 +26,7 @@ class MatchResult:
     agent_id2: AgentDBId
     counts: WinLossDrawCounts
     type: MatchType
+    rating_tag: RatingTag
 
 
 @dataclass
@@ -93,15 +95,15 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        query = '''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type
+        query = '''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type, rating_tag
                      FROM matches
                   '''
 
         c.execute(query)
         for row in c:
-            match_id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type = row
+            match_id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type, rating_tag = row
             counts = WinLossDrawCounts(agent1_wins, agent2_wins, draws)
-            match = MatchResult(agent_id1, agent_id2, counts, MatchType(type))
+            match = MatchResult(agent_id1, agent_id2, counts, MatchType(type), rating_tag)
             yield match
 
     def load_ratings(self, role: AgentRole) -> List[DBAgentRating]:
@@ -195,12 +197,12 @@ class RatingDB:
         return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts,
-                      type: MatchType):
+                      type: MatchType, rating_tag: RatingTag):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw, type.value)
+        match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw, type.value, rating_tag)
         c.execute('''INSERT INTO matches (agent_id1, agent_id2, agent1_wins, agent2_wins, draws,
-            type) VALUES (?, ?, ?, ?, ?, ?)''', match_tuple)
+            type, rating_tag) VALUES (?, ?, ?, ?, ?, ?, ?)''', match_tuple)
         conn.commit()
 
     def commit_ratings(self, iagents: List[IndexedAgent], ratings: np.ndarray,
