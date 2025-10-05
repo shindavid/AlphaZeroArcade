@@ -12,8 +12,6 @@ Generation = int
 ClientId = int
 ThreadId = int
 RatingTag = str
-EvalTag = str
-
 
 @dataclass(frozen=True)
 class Version:
