@@ -233,7 +233,7 @@ class Manager {
   void prune_policy_target(group::element_t inv_sym);
   group::element_t get_random_symmetry(const StateHistory& history) const;
 
-  static int next_instance_id_;
+  static inline int next_instance_id_ = 0;
 
   const int manager_id_ = -1;
 

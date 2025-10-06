@@ -1,6 +1,5 @@
 #include "util/BoostUtil.hpp"
 
-#include "util/Asserts.hpp"
 #include "util/Random.hpp"
 
 #include <format>
@@ -166,11 +165,5 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
       break;
   }
 }
-
-namespace program_options {
-
-bool Settings::help_full = false;
-
-}  // namespace program_options
 
 }  // namespace boost_util

@@ -6,7 +6,6 @@ add_library(util_core_objs OBJECT
   util/BoostUtil.cpp
   util/CudaUtil.cpp
   util/GTestUtil.cpp
-  util/LoggingUtil.cpp
   util/Math.cpp
   util/SocketUtil.cpp
 )

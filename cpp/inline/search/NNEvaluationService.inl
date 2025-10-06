@@ -30,9 +30,6 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
 }  // namespace detail
 
 template <search::concepts::Traits Traits>
-int NNEvaluationService<Traits>::instance_count_ = 0;
-
-template <search::concepts::Traits Traits>
 inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServiceParams& params,
                                                         core::GameServerBase* server)
     : core::PerfStatsClient(),

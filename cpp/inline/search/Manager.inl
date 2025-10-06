@@ -15,9 +15,6 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-int Manager<Traits>::next_instance_id_ = 0;
-
-template <search::concepts::Traits Traits>
 Manager<Traits>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
                          core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                          core::GameServerBase* server, EvalServiceBase_sptr service)

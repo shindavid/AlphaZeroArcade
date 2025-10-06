@@ -60,7 +60,7 @@ struct Logging {
 
   static void init(const Params&);
 
-  static int kTimestampPrefixLength;
+  static inline int kTimestampPrefixLength;
 };  // Logging
 
 }  // namespace util

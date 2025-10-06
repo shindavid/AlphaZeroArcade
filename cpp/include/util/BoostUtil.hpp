@@ -68,7 +68,7 @@ auto default_value(std::format_string<T> fmt, T* dest) {
 }
 
 struct Settings {
-  static bool help_full;
+  static inline bool help_full = false;
 };
 
 /*

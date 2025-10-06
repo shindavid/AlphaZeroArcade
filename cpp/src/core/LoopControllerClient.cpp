@@ -13,8 +13,6 @@
 
 namespace core {
 
-LoopControllerClient* LoopControllerClient::instance_ = nullptr;
-
 void LoopControllerClient::init(const Params& params) {
   if (instance_) {
     throw util::Exception("LoopControllerClient already initialized");

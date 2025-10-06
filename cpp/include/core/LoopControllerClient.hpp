@@ -98,7 +98,7 @@ class LoopControllerClient : public PerfStatsClient {
   void wait_for_unpause_receipts();
   void loop();
 
-  static LoopControllerClient* instance_;
+  static inline LoopControllerClient* instance_ = nullptr;
 
   const Params params_;
   const int64_t proc_start_ts_;

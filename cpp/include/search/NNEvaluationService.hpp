@@ -348,7 +348,7 @@ class NNEvaluationService
   void pause() override;
   void unpause() override;
 
-  static int instance_count_;
+  static inline int instance_count_ = 0;
 
   const int instance_id_;
   const NNEvaluationServiceParams params_;
