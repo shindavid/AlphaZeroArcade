@@ -3,8 +3,8 @@
 #include "games/tictactoe/PerfectStrategyLookupTable.hpp"
 #include "util/Random.hpp"
 
-#include <bitset>
 #include <bit>
+#include <bitset>
 
 namespace tictactoe {
 
