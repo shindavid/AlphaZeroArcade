@@ -7,16 +7,25 @@ from torch import optim
 
 import abc
 from dataclasses import dataclass, field
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 
-@dataclass
-class ModuleSpec:
-    type: str
-    args: list = field(default_factory=list)
-    kwargs: dict = field(default_factory=dict)
-    repeat: int = 1  # number of times to repeat this module sequentially
-    parents: List[str] = field(default_factory=list)  # names of parent modules
+class ModuleSpecBase(abc.ABC):
+    def __init__(self, type: Optional[str], args=None, kwargs=None, repeat=1, parents=None):
+        self.type = type
+        self.args = args if args is not None else []
+        self.kwargs = kwargs if kwargs is not None else {}
+        self.repeat = repeat
+        self.parents = parents if parents is not None else []
+
+    @abc.abstractmethod
+    def to_module(self) -> nn.Module:
+        pass
+
+
+class ModuleSpec(ModuleSpecBase):
+    def __init__(self, type: str, args=None, kwargs=None, repeat=1, parents=None):
+        super().__init__(type, args, kwargs, repeat, parents)
 
     def to_module(self) -> nn.Module:
         assert self.type in MODULE_MAP, f'Unknown module type {self.type}'
@@ -26,6 +35,15 @@ class ModuleSpec:
             return modules[0]
         else:
             return nn.Sequential(*modules)
+
+
+class ModuleSequenceSpec(ModuleSpecBase):
+    def __init__(self, *specs: ModuleSpecBase, parents=None):
+        super().__init__(None, parents=parents)
+        self.specs = list(specs)
+
+    def to_module(self) -> nn.Module:
+        return nn.Sequential(*(spec.to_module() for spec in self.specs))
 
 
 @dataclass
@@ -39,13 +57,13 @@ class ModelConfig:
 
     The topological structure is specified by the parents field of each ModuleSpec.
     """
-    parts: Dict[str, ModuleSpec]
+    parts: Dict[str, ModuleSpecBase]
 
     def __post_init__(self):
         self._validate()
 
     @staticmethod
-    def create(**parts: ModuleSpec) -> 'ModelConfig':
+    def create(**parts: ModuleSpecBase) -> 'ModelConfig':
         return ModelConfig(dict(parts))
 
     def trim(self, keep_set: Set[str]) -> 'ModelConfig':
@@ -75,11 +93,24 @@ class ModelConfig:
 
     def _validate(self):
         input_seen = False
+        types = set()
         parents = set()
+
+        specs = set(self.parts.values())
+        while specs:
+            spec = specs.pop()
+            if isinstance(spec, ModuleSequenceSpec):
+                specs.update(spec.specs)
+            else:
+                assert isinstance(spec, ModuleSpec), f'Invalid spec {spec}'
+                assert spec.repeat >= 1, f'Invalid repeat {spec.repeat} for {spec}'
+                assert spec.type is not None, f'ModuleSpec {spec} has no type'
+                types.add(spec.type)
+
+        for spec_type in types:
+            assert spec_type in MODULE_MAP, f'Unknown module type {spec_type}'
+
         for key, value in self.parts.items():
-            assert isinstance(value, ModuleSpec), f'{key}={type(value)}'
-            assert value.type in MODULE_MAP, f'Unknown module type {value.type} for {key}'
-            assert value.repeat >= 1, f'Invalid repeat {value.repeat} for {key}'
             if not value.parents:
                 input_seen = True
             else:
@@ -91,7 +122,9 @@ class ModelConfig:
 
         heads = set(self.parts.keys()) - parents
         for head_name in heads:
-            head_type = MODULE_MAP[self.parts[head_name].type]
+            head_type_str = self.parts[head_name].type
+            assert head_type_str is not None, f'Head {head_name} has no type'
+            head_type = MODULE_MAP[head_type_str]
             if not issubclass(head_type, Head):
                 raise Exception(f'Module {head_name} has no children, but is of '
                                 f'type {head_type}, which is not derived from Head')

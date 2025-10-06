@@ -1,7 +1,7 @@
 from games.game_spec import GameSpec
 from shared.basic_types import ShapeInfoCollection
 from shared.loss_term import BasicLossTerm, LossTerm
-from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
+from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSequenceSpec, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
 
@@ -46,44 +46,40 @@ class CNN_b20_c128(ModelConfigGenerator):
 
         return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
-            trunk1=ModuleSpec(
-                type='ResBlock',
-                args=[trunk_shape, res_mid_shape],
-                repeat=4,
+            trunk=ModuleSequenceSpec(
+                ModuleSpec(
+                    type='ResBlock',
+                    args=[trunk_shape, res_mid_shape],
+                    repeat=4,
+                ),
+                ModuleSpec(
+                    type='ResBlockWithGlobalPooling',
+                    args=[trunk_shape, c_gpool, res_mid_shape],
+                ),
+                ModuleSpec(
+                    type='ResBlock',
+                    args=[trunk_shape, res_mid_shape],
+                    repeat=4,
+                ),
+                ModuleSpec(
+                    type='ResBlockWithGlobalPooling',
+                    args=[trunk_shape, c_gpool, res_mid_shape],
+                ),
+                ModuleSpec(
+                    type='ResBlock',
+                    args=[trunk_shape, res_mid_shape],
+                    repeat=4,
+                ),
+                ModuleSpec(
+                    type='ResBlockWithGlobalPooling',
+                    args=[trunk_shape, c_gpool, res_mid_shape],
+                ),
+                ModuleSpec(
+                    type='ResBlock',
+                    args=[trunk_shape, res_mid_shape],
+                    repeat=5,
+                ),
                 parents=['stem']
-            ),
-            trunk2=ModuleSpec(
-                type='ResBlockWithGlobalPooling',
-                args=[trunk_shape, c_gpool, res_mid_shape],
-                parents=['trunk1']
-            ),
-            trunk3=ModuleSpec(
-                type='ResBlock',
-                args=[trunk_shape, res_mid_shape],
-                repeat=4,
-                parents=['trunk2']
-            ),
-            trunk4=ModuleSpec(
-                type='ResBlockWithGlobalPooling',
-                args=[trunk_shape, c_gpool, res_mid_shape],
-                parents=['trunk3']
-            ),
-            trunk5=ModuleSpec(
-                type='ResBlock',
-                args=[trunk_shape, res_mid_shape],
-                repeat=4,
-                parents=['trunk4']
-            ),
-            trunk6=ModuleSpec(
-                type='ResBlockWithGlobalPooling',
-                args=[trunk_shape, c_gpool, res_mid_shape],
-                parents=['trunk5']
-            ),
-            trunk=ModuleSpec(
-                type='ResBlock',
-                args=[trunk_shape, res_mid_shape],
-                repeat=5,
-                parents=['trunk6']
             ),
 
             policy=ModuleSpec(
