@@ -1,7 +1,6 @@
 #include "games/stochastic_nim/players/HumanTuiPlayer.hpp"
 
 #include "util/Asserts.hpp"
-#include "util/BitSet.hpp"
 
 #include <iostream>
 #include <string>
@@ -12,7 +11,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
                                                         const ActionMask& valid_actions) {
   int a = -1;
   int b = -1;
-  for (int i : bitset_util::on_indices(valid_actions)) {
+  for (int i : valid_actions.on_indices()) {
     if (a == -1) a = i;
     b = i;
   }

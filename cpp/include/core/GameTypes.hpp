@@ -5,13 +5,13 @@
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/GameResultsConcept.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
 
 #include <array>
-#include <bitset>
 #include <string>
 
 namespace core {
@@ -25,9 +25,9 @@ struct GameTypes {
   static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
 
-  using ActionMask = std::bitset<kMaxNumActions>;
+  using ActionMask = util::CompactBitSet<kMaxNumActions>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
-  using player_bitset_t = std::bitset<GameConstants::kNumPlayers>;
+  using player_bitset_t = util::CompactBitSet<GameConstants::kNumPlayers>;
 
   using PolicyShape = Eigen::Sizes<kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
@@ -41,7 +41,7 @@ struct GameTypes {
   using QShape = Eigen::Sizes<GameConstants::kNumPlayers>;
   using QTensor = eigen_util::FTensor<QShape>;
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
-  using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;
+  using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
   using LocalPolicyTensor = Eigen::Tensor<float, 1, Eigen::RowMajor>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;

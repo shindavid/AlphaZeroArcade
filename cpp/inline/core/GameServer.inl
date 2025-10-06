@@ -5,8 +5,8 @@
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
-#include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/KeyValueDumper.hpp"
@@ -179,14 +179,14 @@ void GameServer<Game>::SharedData::init_progress_bar() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_random_seat_indices() {
-  std::bitset<kNumPlayers> fixed_seat_indices;
+  util::CompactBitSet<kNumPlayers> fixed_seat_indices;
   for (PlayerRegistration& reg : registrations_) {
     if (reg.seat >= 0) {
       fixed_seat_indices.set(reg.seat);
     }
   }
 
-  for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
+  for (seat_index_t random_seat : fixed_seat_indices.off_indices()) {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
 
@@ -664,7 +664,7 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
-  std::bitset<kNumPlayers> human_tui_indices;
+  util::CompactBitSet<kNumPlayers> human_tui_indices;
   bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -673,7 +673,7 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
   }
 
   for (int p = 0; p < kNumPlayers; ++p) {
-    std::bitset<kNumPlayers> human_tui_indices_copy(human_tui_indices);
+    util::CompactBitSet<kNumPlayers> human_tui_indices_copy(human_tui_indices);
     human_tui_indices_copy[p] = false;
     if (human_tui_indices_copy.any()) {
       instantiations_[p].player->set_facing_human_tui_player();

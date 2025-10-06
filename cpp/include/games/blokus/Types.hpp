@@ -2,10 +2,9 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/blokus/Constants.hpp"
-#include "util/FiniteGroups.hpp"
+#include "util/CompactBitSet.hpp"
 
 #include <bit>
-#include <bitset>
 #include <cstdint>
 
 /*
@@ -130,7 +129,7 @@ class BitBoard {
   void unset(const Board&);
 
   auto get_set_locations() const;
-  void write_to(std::bitset<kNumCells>& bitset) const;
+  void write_to(util::CompactBitSet<kNumCells>& bitset) const;
   corner_constraint_t get_corner_constraint(Location loc) const;
 
   template <concepts::BitBoardLike Board>

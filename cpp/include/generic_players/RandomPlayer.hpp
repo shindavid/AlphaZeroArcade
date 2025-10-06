@@ -2,7 +2,6 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "util/BitSet.hpp"
 
 namespace generic {
 
@@ -16,7 +15,7 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
   using ActionResponse = Game::Types::ActionResponse;
 
   ActionResponse get_action_response(const ActionRequest& request) override {
-    return bitset_util::choose_random_on_index(request.valid_actions);
+    return request.valid_actions.choose_random_on_index();
   }
 };
 

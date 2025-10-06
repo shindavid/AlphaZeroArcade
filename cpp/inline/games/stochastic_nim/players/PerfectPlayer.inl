@@ -1,7 +1,5 @@
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 
-#include "util/BitSet.hpp"
-
 namespace stochastic_nim {
 
 inline auto PerfectPlayer::Params::make_options_description() {
@@ -23,7 +21,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
   if (params_.strength == 0) {
-    return bitset_util::choose_random_on_index(valid_actions);
+    return valid_actions.choose_random_on_index();
   }
   return strategy_->get_optimal_action(state.stones_left);
 }

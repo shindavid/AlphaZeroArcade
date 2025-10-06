@@ -2,7 +2,6 @@
 
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"
-#include "util/BitSet.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
@@ -455,7 +454,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   core::action_t actions[stable_data.num_valid_actions];
 
   int i = 0;
-  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
+  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
     Symmetries::apply(action, inv_sym, mode);
     results.valid_actions.set(action, true);
     actions[i] = action;
@@ -516,19 +515,21 @@ void Algorithms<Traits>::print_mcts_results(std::ostream& ss, const PolicyTensor
   if (Game::Rules::is_chance_mode(results.action_mode)) return;
 
   int num_valid = valid_actions.count();
-  LocalPolicyArray actions_arr(num_valid);
-  LocalPolicyArray net_policy_arr(num_valid);
-  LocalPolicyArray action_policy_arr(num_valid);
-  LocalPolicyArray mcts_counts_arr(num_valid);
-  LocalPolicyArray posterior_arr(num_valid);
+
+  // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
+  LocalPolicyArray actions_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray net_policy_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray action_policy_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray mcts_counts_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray posterior_arr = LocalPolicyArray::Zero(num_valid);
 
   float total_count = 0;
-  for (int a : bitset_util::on_indices(valid_actions)) {
+  for (int a : valid_actions.on_indices()) {
     total_count += mcts_counts(a);
   }
 
   int r = 0;
-  for (int a : bitset_util::on_indices(valid_actions)) {
+  for (int a : valid_actions.on_indices()) {
     actions_arr(r) = a;
     net_policy_arr(r) = net_policy(a);
     action_policy_arr(r) = action_policy(a);

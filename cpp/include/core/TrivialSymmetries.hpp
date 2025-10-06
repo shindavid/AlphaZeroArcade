@@ -1,14 +1,17 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace core {
 
 struct TrivialSymmetries {
   template <typename T>
-  static std::bitset<1> get_mask(const T&) {
-    return std::bitset<1>(1);
+  static util::CompactBitSet<1> get_mask(const T&) {
+    util::CompactBitSet<1> mask;
+    mask.set(0);
+    return mask;
   }
 
   template <typename T>

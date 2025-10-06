@@ -1,6 +1,5 @@
 #include "search/SearchLog.hpp"
 
-#include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 
 namespace search {
@@ -18,8 +17,8 @@ inline boost::json::object SearchLog<Traits>::LogNode::to_json() const {
   node_json["Q"] = Q_array;
 
   node_json["state"] = state;
-  node_json["provably_winning"] = bitset_util::to_string(provably_winning);
-  node_json["provably_losing"] = bitset_util::to_string(provably_losing);
+  node_json["provably_winning"] = provably_winning.to_string_natural();
+  node_json["provably_losing"] = provably_losing.to_string_natural();
   node_json["active_seat"] = active_seat;
   return node_json;
 }

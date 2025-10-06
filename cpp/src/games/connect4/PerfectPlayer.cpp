@@ -1,7 +1,5 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
 
-#include "util/BitSet.hpp"
-
 #include <iostream>
 
 namespace c4 {
@@ -52,13 +50,13 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
     std::cout << "best_score: " << result.best_score << std::endl;
     std::cout << "my_strength: " << params_.strength << std::endl;
     std::cout << "candidates:";
-    for (int j : bitset_util::on_indices(candidates)) {
+    for (int j : candidates.on_indices()) {
       std::cout << " " << (j + 1);
     }
     std::cout << std::endl;
   }
 
-  response.action = bitset_util::choose_random_on_index(candidates);
+  response.action = candidates.choose_random_on_index();
   return response;
 }
 

@@ -1,7 +1,6 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"
@@ -156,7 +155,7 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
-  for (int i : bitset_util::on_indices(valid_actions)) {
+  for (int i : valid_actions.on_indices()) {
     legal_move_indices.push_back(i);
   }
 

@@ -1,7 +1,6 @@
 #include "games/blokus/players/HumanTuiPlayer.hpp"
 
 #include "games/blokus/Constants.hpp"
-#include "util/BitSet.hpp"
 
 #include <iostream>
 #include <map>
@@ -167,7 +166,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_pass() {
 
 inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
                                          const ActionMask& valid_actions) const {
-  for (core::action_t action : bitset_util::on_indices(valid_actions)) {
+  for (core::action_t action : valid_actions.on_indices()) {
     // std::cout << "DBG action=" << int(action) << std::endl;
     RELEASE_ASSERT(action < kPass);
     Location loc = Location::unflatten(action);
@@ -177,7 +176,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
     Game::Rules::apply(state_copy, action);
     ActionMask valid_actions2 = Game::Rules::get_legal_moves(state_copy);
     RELEASE_ASSERT(valid_actions2.any());
-    for (core::action_t action2 : bitset_util::on_indices(valid_actions2)) {
+    for (core::action_t action2 : valid_actions2.on_indices()) {
       // std::cout << "DBG   action2=" << int(action2) << std::endl;
       PieceOrientationCorner poc = PieceOrientationCorner::from_action(action2);
       Piece p = poc.to_piece();

@@ -1,6 +1,5 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
 
-#include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/RepoUtil.hpp"

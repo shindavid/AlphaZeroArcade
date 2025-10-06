@@ -172,6 +172,12 @@ bool CompactBitSet<N>::operator[](size_t pos) const {
 }
 
 template <size_t N>
+typename CompactBitSet<N>::reference CompactBitSet<N>::operator[](std::size_t pos) noexcept {
+  bounds_check(pos);
+  return reference(*this, pos);
+}
+
+template <size_t N>
 bool CompactBitSet<N>::test(size_t pos) const {
   bounds_check(pos);
   if constexpr (M == 1) {

@@ -2,7 +2,6 @@
 
 #include "core/TrainingTargets.hpp"
 #include "util/Asserts.hpp"
-#include "util/BitSet.hpp"
 #include "util/IndexedDispatcher.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -105,7 +104,7 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
 
   group::element_t sym = 0;
   if (apply_symmetry) {
-    sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
+    sym = Game::Symmetries::get_mask(*cur_pos).choose_random_on_index();
   }
 
   for (int i = 0; i < num_states; ++i) {

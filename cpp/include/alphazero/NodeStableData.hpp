@@ -20,8 +20,8 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   NodeStableData(const State&, const ValueTensor& game_outcome);  // for terminal nodes
 
   ValueTensor VT;
-  ActionMask valid_action_mask;
   int num_valid_actions;
+  ActionMask valid_action_mask;
   core::action_mode_t action_mode;
 
   // active_seat is usually the current player, who is about to make a move

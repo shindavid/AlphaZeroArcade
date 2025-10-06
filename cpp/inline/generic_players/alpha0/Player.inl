@@ -3,7 +3,6 @@
 #include "core/Constants.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/Asserts.hpp"
-#include "util/BitSet.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/KeyValueDumper.hpp"
@@ -186,11 +185,11 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
-    bitset_util::randomly_zero_out(valid_actions_subset, valid_actions_subset.count() / 2);
+    valid_actions_subset.randomly_zero_out(valid_actions_subset.count() / 2);
 
     policy.setConstant(0);
 
-    for (int a : bitset_util::on_indices(valid_actions_subset)) {
+    for (int a : valid_actions_subset.on_indices()) {
       policy(a) = mcts_results->policy_prior(a);
     }
   } else if (search_params_[search_mode_].tree_size_limit <= 1) {
@@ -246,7 +245,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
 
       // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
       // min_{i in S} {LCB(i)}
-      for (int a : bitset_util::on_indices(valid_actions)) {
+      for (int a : valid_actions.on_indices()) {
         float p = policy(a);
         if (p <= 0) continue;
 
@@ -269,7 +268,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
 
         if (search::kEnableSearchDebug) {
           int visited_actions = 0;
-          for (int a : bitset_util::on_indices(valid_actions)) {
+          for (int a : valid_actions.on_indices()) {
             if (counts(a)) visited_actions++;
           }
 
@@ -283,7 +282,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
           LocalPolicyArray policy_masked_arr(visited_actions);
 
           int r = 0;
-          for (int a : bitset_util::on_indices(valid_actions)) {
+          for (int a : valid_actions.on_indices()) {
             if (counts(a) == 0) continue;
 
             actions_arr(r) = a;
@@ -325,7 +324,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
     policy.setConstant(0);
-    for (int a : bitset_util::on_indices(valid_actions)) {
+    for (int a : valid_actions.on_indices()) {
       policy(a) = 1;
     }
     eigen_util::normalize(policy);

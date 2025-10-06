@@ -4,7 +4,6 @@
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
-#include "util/BitSet.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
@@ -165,7 +164,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   action_values.setZero();
 
   int i = 0;
-  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
+  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
     auto* edge = lookup_table()->get_edge(root, i);
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
@@ -744,7 +743,7 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node
   // NOTE: this can be switched to use binary search if we'd like
   const LookupTable& lookup_table = general_context_.lookup_table;
   int i = 0;
-  for (core::action_t a : bitset_util::on_indices(node->stable_data().valid_action_mask)) {
+  for (core::action_t a : node->stable_data().valid_action_mask.on_indices()) {
     if (a == action) {
       return lookup_table.get_edge(node, i)->child_index;
     }
@@ -779,7 +778,7 @@ void Manager<Traits>::initialize_edges(Node* node) {
   node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
 
   int i = 0;
-  for (core::action_t action : bitset_util::on_indices(node->stable_data().valid_action_mask)) {
+  for (core::action_t action : node->stable_data().valid_action_mask.on_indices()) {
     Edge* edge = lookup_table.get_edge(node, i);
     new (edge) Edge();
     edge->action = action;
@@ -971,7 +970,7 @@ group::element_t Manager<Traits>::get_random_symmetry(const StateHistory& histor
       mask &= Symmetries::get_mask(*it);
       ++it;
     }
-    sym = bitset_util::choose_random_on_index(mask);
+    sym = mask.choose_random_on_index();
   }
   return sym;
 }

@@ -1,5 +1,6 @@
 #include "games/blokus/Game.hpp"
 #include "games/blokus/Types.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
@@ -234,11 +235,11 @@ TEST(BitBoard, all) {
 
   // write_to()
 
-  std::bitset<kNumCells> expected_bitset;
+  util::CompactBitSet<kNumCells> expected_bitset;
   for (i = 0; i < kNumExpectedLocations; ++i) {
     expected_bitset[expected_locations[i].flatten()] = true;
   }
-  std::bitset<kNumCells> actual_bitset;
+  util::CompactBitSet<kNumCells> actual_bitset;
   board3.write_to(actual_bitset);
   EXPECT_EQ(actual_bitset, expected_bitset);
 

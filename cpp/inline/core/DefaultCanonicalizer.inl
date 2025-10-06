@@ -1,7 +1,5 @@
 #include "core/DefaultCanonicalizer.hpp"
 
-#include "util/BitSet.hpp"
-
 namespace core {
 
 template <concepts::Game Game>
@@ -10,7 +8,7 @@ group::element_t DefaultCanonicalizer<Game>::get(const State& state) {
   State best_state = state;
 
   auto mask = Game::Symmetries::get_mask(state);
-  for (group::element_t sym : bitset_util::on_indices(mask)) {
+  for (group::element_t sym : mask.on_indices()) {
     State transformed_state = state;
     Game::Symmetries::apply(transformed_state, sym);
     if (transformed_state < best_state) {

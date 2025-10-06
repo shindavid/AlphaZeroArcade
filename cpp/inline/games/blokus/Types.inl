@@ -356,7 +356,7 @@ inline void BitBoard::unset(const Board& other) {
 
 inline auto BitBoard::get_set_locations() const { return detail::BitBoardRange(this); }
 
-inline void BitBoard::write_to(std::bitset<kNumCells>& bitset) const {
+inline void BitBoard::write_to(util::CompactBitSet<kNumCells>& bitset) const {
   // TODO: optimize this
   for (Location loc : get_set_locations()) {
     bitset[loc.row * kBoardDimension + loc.col] = true;

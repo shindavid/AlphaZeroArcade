@@ -32,7 +32,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
   int num_valid_actions = valid_actions.count();
 
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    core::action_t action = bitset_util::get_nth_on_index(valid_actions, 0);
+    core::action_t action = valid_actions.get_nth_on_index(0);
     return action;
   }
 

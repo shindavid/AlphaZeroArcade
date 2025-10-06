@@ -34,8 +34,30 @@ class CompactBitSet {
   constexpr void mask_tail() noexcept;
 
  public:
+  // ------------------------------
+  // Mutable bit reference proxy
+  // ------------------------------
+  class reference {
+    friend class CompactBitSet;
+    CompactBitSet& bs_;
+    std::size_t pos_;
+    reference(CompactBitSet& bs, std::size_t pos) noexcept : bs_(bs), pos_(pos) {}
+
+   public:
+    reference& operator=(bool value) noexcept {
+      bs_.set(pos_, value);
+      return *this;
+    }
+    reference& operator=(const reference& other) noexcept {
+      return *this = static_cast<bool>(other);
+    }
+    operator bool() const noexcept { return bs_.test(pos_); }
+    void flip() noexcept { bs_.set(pos_, !bs_.test(pos_)); }
+  };
+
   static constexpr size_t size() noexcept;
   bool operator[](size_t pos) const;
+  reference operator[](std::size_t pos) noexcept;
   bool test(size_t pos) const;
   bool any() const noexcept;
   bool none() const noexcept;

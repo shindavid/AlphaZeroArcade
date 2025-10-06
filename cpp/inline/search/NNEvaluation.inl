@@ -1,6 +1,5 @@
 #include "search/NNEvaluation.hpp"
 
-#include "util/BitSet.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -41,8 +40,12 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
       Game::Symmetries::apply(src, inv_sym, mode);
 
       int i = 0;
-      for (core::action_t a : bitset_util::on_indices(valid_actions)) {
+      for (core::action_t a : valid_actions.on_indices()) {
+        // We resort to a pragma here to silence an overzealous gcc warning
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
         dst(i++) = src(a);
+#pragma GCC diagnostic pop
       }
     } else {
       dst = src;
