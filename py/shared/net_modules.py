@@ -25,14 +25,23 @@ from torch.nn import functional as F
 import abc
 import logging
 import math
-from typing import Optional
+from typing import Optional, Type
 
 
 logger = logging.getLogger(__name__)
 
 
 class Head(nn.Module):
-    def default_loss_function(self) -> Optional[LossFunction]:
+    def requires_policy_scaling(self) -> bool:
+        """
+        If True, then the loss term for this head should be scaled by A / B, where:
+
+        - A is the number of legal actions for the position
+        - B is the total number of actions in the action space
+        """
+        return False
+
+    def default_loss_function(self) -> Optional[Type[LossFunction]]:
         return None
 
 
@@ -281,7 +290,7 @@ class PolicyHead(Head):
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
 
     def default_loss_function(self):
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss
 
     def forward(self, x):
         out = x
@@ -359,7 +368,7 @@ class WinLossDrawValueHead(ValueHeadBase):
         self.linear2 = nn.Linear(n_hidden, 3)
 
     def default_loss_function(self):
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss
 
     def forward(self, x):
         out = x
@@ -459,7 +468,7 @@ class WinLossValueHead(ValueHeadBase):
         self.linear2 = nn.Linear(n_hidden, 2)
 
     def default_loss_function(self):
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss
 
     def forward(self, x):
         out = x
@@ -493,8 +502,11 @@ class WinShareActionValueHead(Head):
         self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
 
+    def requires_policy_scaling(self) -> bool:
+        return True
+
     def default_loss_function(self):
-        return nn.BCEWithLogitsLoss()
+        return nn.BCEWithLogitsLoss
 
     def forward(self, x):
         out = x
@@ -550,7 +562,7 @@ class WinShareValueHead(ValueHeadBase):
         #
         # (dshin) I briefly experimented with nn.KLDivLoss, but it didn't seem to work well. I think
         # I must have been using it incorrectly.
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss
 
     def forward(self, x):
         out = x
@@ -604,26 +616,27 @@ class ScoreHead(Head):
         pdf_loss_fn = nn.CrossEntropyLoss()
         cdf_loss_fn = nn.MSELoss()
 
-        def loss(output: torch.Tensor, target: torch.Tensor):
-            """
-            Tensors are of shape (B, D, C, aux...), where:
+        class Loss:
+            def __call__(self, output: torch.Tensor, target: torch.Tensor):
+                """
+                Tensors are of shape (B, D, C, aux...), where:
 
-            B = batch-size
-            D = num distribution types (2: PDF, CDF)
-            C = number of classes (i.e., number of possible scores)
-            aux... = any number of additional dimensions
+                B = batch-size
+                D = num distribution types (2: PDF, CDF)
+                C = number of classes (i.e., number of possible scores)
+                aux... = any number of additional dimensions
 
-            aux... might be nonempty if for example we're predicting for multiple players
-            """
-            assert output.shape == target.shape, (output.shape, target.shape)
-            assert output.shape[1] == 2, output.shape  # PDF, CDF
+                aux... might be nonempty if for example we're predicting for multiple players
+                """
+                assert output.shape == target.shape, (output.shape, target.shape)
+                assert output.shape[1] == 2, output.shape  # PDF, CDF
 
-            pdf_loss = pdf_loss_fn(output[:, 0], target[:, 0])
-            cdf_loss = cdf_loss_fn(output[:, 1], target[:, 1])
+                pdf_loss = pdf_loss_fn(output[:, 0], target[:, 0])
+                cdf_loss = cdf_loss_fn(output[:, 1], target[:, 1])
 
-            return pdf_loss + cdf_loss
+                return pdf_loss + cdf_loss
 
-        return loss
+        return Loss
 
     def forward(self, x):
         N = x.shape[0]
@@ -662,7 +675,7 @@ class OwnershipHead(Head):
         self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=True)
 
     def default_loss_function(self):
-        return nn.CrossEntropyLoss()
+        return nn.CrossEntropyLoss
 
     def forward(self, x):
         out = x
@@ -687,8 +700,11 @@ class ActionValueUncertaintyHead(Head):
         self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * H * W, math.prod(output_shape))
 
+    def requires_policy_scaling(self) -> bool:
+        return True
+
     def default_loss_function(self):
-        return nn.HuberLoss()
+        return nn.HuberLoss
 
     def forward(self, x):
         out = x

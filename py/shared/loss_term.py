@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from shared.basic_types import HeadValuesDict
+from shared.net_modules import Head
 from util.torch_util import apply_mask
 
 import torch
 from torch import nn as nn
 
 import abc
-from typing import List, TYPE_CHECKING, Tuple
+from typing import List, Optional, TYPE_CHECKING, Tuple
 
 
 if TYPE_CHECKING:
@@ -66,16 +66,42 @@ class BasicLossTerm(LossTerm):
     """
     def __init__(self, head: str, weight: float):
         super().__init__(head, weight)
+        self._head: Optional[Head] = None
+        self._use_policy_scaling = False
         self._loss_fn = None  # initialized lazily in post_init()
 
     def post_init(self, model: Model):
-        self._loss_fn = model.get_head(self.name).default_loss_function()
+        self._head = model.get_head(self.name)
+        self._use_policy_scaling = self._head.requires_policy_scaling()
+        loss_fn_type = self._head.default_loss_function()
+        if self._use_policy_scaling:
+            self._loss_fn = loss_fn_type(reduction='none')
+        else:
+            self._loss_fn = loss_fn_type()
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
-        y, y_hat = masker.get_y_and_y_hat([self.name], [self.name])
-        y = y[0]
-        y_hat = y_hat[0]
-        return self._loss_fn(y, y_hat), len(y)
+        y_names = [self.name]
+        y_hat_names = [self.name]
+
+        if self._use_policy_scaling:
+            y_hat_names.append('valid_actions')
+
+        y_list, y_hat_list = masker.get_y_and_y_hat(y_names, y_hat_names)
+        y = y_list[0]
+        y_hat = y_hat_list[0]
+        loss = self._loss_fn(y, y_hat)
+
+        if self._use_policy_scaling:
+            # loss has not been reduced yet
+            valid_actions = y_hat_list[1]
+            denominator = valid_actions.sum()
+            if denominator == 0:
+                loss = 0
+            else:
+                unreduced_loss = loss * valid_actions      # mask out invalid actions
+                loss = unreduced_loss.sum() / denominator  # reduce here
+
+        return loss, len(y)
 
 
 class ValueUncertaintyLossTerm(LossTerm):

@@ -63,6 +63,15 @@ struct ActionValueUncertaintyTarget {
 };
 
 template <core::concepts::Game Game>
+struct ValidActionsTarget {
+  static constexpr const char* kName = "valid_actions";
+  using Tensor = Game::Types::PolicyTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
+template <core::concepts::Game Game>
 struct OppPolicyTarget {
   static constexpr const char* kName = "opp_policy";
   using Tensor = Game::Types::PolicyTensor;
@@ -78,9 +87,11 @@ struct StandardTrainingTargets {
   using PolicyTarget = core::PolicyTarget<Game>;
   using ValueTarget = core::ValueTarget<Game>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
+  using ValidActionsTarget = core::ValidActionsTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+  using List =
+    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ValidActionsTarget, OppPolicyTarget>;
 };
 
 template <core::concepts::Game Game>
@@ -92,15 +103,12 @@ namespace beta0 {
 
 template <core::concepts::Game Game>
 struct StandardTrainingTargets {
-  using PolicyTarget = core::PolicyTarget<Game>;
-  using ValueTarget = core::ValueTarget<Game>;
-  using ActionValueTarget = core::ActionValueTarget<Game>;
   using QPosteriorTarget = core::QPosteriorTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
-                            QPosteriorTarget, ActionValueUncertaintyTarget>;
+  using List1 = alpha0::StandardTrainingTargets<Game>::List;
+  using List2 = mp::TypeList<QPosteriorTarget, ActionValueUncertaintyTarget>;
+  using List = mp::Concat_t<List1, List2>;
 };
 
 template <core::concepts::Game Game>
