@@ -13,6 +13,10 @@ inline uint64_t splitmix64(uint64_t x) {
   return x ^ (x >> 31);
 }
 
+constexpr inline uint64_t constexpr_pow(uint64_t base, uint32_t exp) {
+  return (exp == 0) ? 1 : base * constexpr_pow(base, exp - 1);
+}
+
 /*
  * We frequently want to decay some parameter from A to B, using a half-life specified in moves.
  * This class is used to facilitate such calculations in an efficient manner using a clear

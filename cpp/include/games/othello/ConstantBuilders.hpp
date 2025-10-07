@@ -1,8 +1,10 @@
 #pragma once
 
 #include "games/othello/BasicTypes.hpp"
+#include "util/Math.hpp"
 
 #include <array>
+#include <cmath>
 
 namespace othello {
 
@@ -159,13 +161,15 @@ constexpr void to_binary_masks(int ternary, line_mask_t& curr_player_mask,
  * {0, 1, 2}. To reduce redundancy, we only store cases where the most significant digit is 0 or 1,
  * leveraging the symmetry between the two players. As a result, the table size is 2 * 3^7 = 4,374.
  */
-constexpr int kMax = 2 * std::pow(3, 7);  // 2 * 3^7 = 4374
+constexpr int kNumUniqueLineMasks = 2 * math::constexpr_pow(3, 7);  // 2 * 3^7 = 4374
+static_assert(kNumUniqueLineMasks == 4374);
+using LineMaskArray = std::array<uint8_t, kNumUniqueLineMasks>;
 
-constexpr std::array<uint8_t, kMax> build_stability_array() {
-  std::array<uint8_t, kMax> a{};
+constexpr LineMaskArray build_stability_array() {
+  LineMaskArray a{};
   line_mask_t curr_player;
   line_mask_t opponent;
-  for (int t = 0; t < kMax; ++t) {
+  for (int t = 0; t < kNumUniqueLineMasks; ++t) {
     to_binary_masks(t, curr_player, opponent);
     a[t] = find_stable_edge(curr_player, opponent);
   }

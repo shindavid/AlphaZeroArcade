@@ -5,8 +5,6 @@
 #include "games/othello/ConstantBuilders.hpp"
 
 #include <cmath>
-#include <cstdint>
-#include <iostream>
 
 /*
  * Bit order encoding for the board:
@@ -158,6 +156,6 @@ static_assert(kRanks[7] == kRank8Mask);
 static_assert(kFiles[0] == kFileAMask);
 static_assert(kFiles[7] == kFileHMask);
 
-inline std::array<line_mask_t, kMax> EDGE_STABILITY = build_stability_array();
+inline LineMaskArray kStabilityLookUpArray = build_stability_array();
 
 }  // namespace othello

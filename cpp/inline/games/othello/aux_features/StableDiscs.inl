@@ -171,7 +171,7 @@ inline int to_ternary_value(line_mask_t curr_player_mask, line_mask_t opponent_m
 }  // namespace detail
 
 inline line_mask_t edge_stable_lookup(line_mask_t curr_player_mask, line_mask_t opponent_mask) {
-  return EDGE_STABILITY[detail::to_ternary_value(curr_player_mask, opponent_mask)];
+  return kStabilityLookUpArray[detail::to_ternary_value(curr_player_mask, opponent_mask)];
 }
 
 }  // namespace othello
