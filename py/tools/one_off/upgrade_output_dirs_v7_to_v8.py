@@ -128,13 +128,13 @@ def upgrade_single_output_dir(game: str, tag: str):
         print(f"v8 output directory {V8_OUTPUT_DIR / game / tag} already exists. Skipping creation.")
         return
 
-    # try:
-    print(f"Upgrading {game}/{tag} to v8...")
-    copy_to_v8_dir(game, tag)
-    create_evaluation_dir(game, tag)
-    print(f"Successfully upgraded {game}/{tag} to v8.")
-    # except Exception as e:
-    #     print(f"Failed to upgrade {game}/{tag} to v8: {e}")
+    try:
+        print(f"Upgrading {game}/{tag} to v8...")
+        copy_to_v8_dir(game, tag)
+        create_evaluation_dir(game, tag)
+        print(f"Successfully upgraded {game}/{tag} to v8.")
+    except Exception as e:
+        print(f"Failed to upgrade {game}/{tag} to v8: {e}")
 
 
 def upgrade_game_output_dirs(game: str):
