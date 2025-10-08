@@ -189,6 +189,7 @@ class ServerBase:
             '--client-role': self._config.worker_role.value,
             '--manager-id': self._session_data.client_id,
             '--cuda-device': self._params.cuda_device,
+            '--ratings-tag': self._rating_params.rating_tag,
             '--do-not-report-metrics': None,
         }
 
