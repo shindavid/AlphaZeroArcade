@@ -189,9 +189,11 @@ class ServerBase:
             '--client-role': self._config.worker_role.value,
             '--manager-id': self._session_data.client_id,
             '--cuda-device': self._params.cuda_device,
-            '--ratings-tag': self._rating_params.rating_tag,
             '--do-not-report-metrics': None,
         }
+
+        if self._rating_params.rating_tag:
+            args['--rating-tag'] = self._rating_params.rating_tag
 
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
