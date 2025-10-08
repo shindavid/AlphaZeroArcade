@@ -193,7 +193,7 @@ class ServerBase:
         }
 
         if self._rating_params.rating_tag:
-            args['--rating-tag'] = self._rating_params.rating_tag
+            args['--ratings-tag'] = self._rating_params.rating_tag
 
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)
