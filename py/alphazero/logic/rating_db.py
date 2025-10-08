@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import json
 from typing import Dict, List, Iterable, Optional, Set
 
+Condition = str
 
 @dataclass
 class DBAgent:
@@ -84,7 +85,14 @@ class RatingDB:
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
-    def fetch_match_results(self) -> Iterable[MatchResult]:
+    def fetch_match_results(self, rating_tag: Optional[str] = None) -> Iterable[MatchResult]:
+        if rating_tag is None:
+            return self._fetch_match_results_table('')
+        else:
+            clause = f' WHERE rating_tag="{rating_tag}"'
+            return self._fetch_match_results_table(clause)
+
+    def _fetch_match_results_table(self, where_clause) -> Iterable[MatchResult]:
         """
         Fetches rows from the matches table and creates Match objects from them.
 
@@ -95,8 +103,8 @@ class RatingDB:
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
 
-        query = '''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type, rating_tag
-                     FROM matches
+        query = f'''SELECT id, agent_id1, agent_id2, agent1_wins, agent2_wins, draws, type, rating_tag
+                     FROM matches{where_clause}
                   '''
 
         c.execute(query)
@@ -106,94 +114,110 @@ class RatingDB:
             match = MatchResult(agent_id1, agent_id2, counts, MatchType(type), rating_tag)
             yield match
 
-    def load_ratings(self, role: AgentRole) -> List[DBAgentRating]:
+    def load_ratings(self, role: AgentRole, rating_tag: Optional[str] = None) -> List[DBAgentRating]:
+        if role == AgentRole.BENCHMARK:
+            assert rating_tag is None, "rating_tag should be None when role is BENCHMARK"
+            return self._load_benchmark_ratings_table()
+        elif role == AgentRole.TEST:
+            if rating_tag is None:
+                return self._load_eval_ratings_table('')
+            else:
+                clause = f' AND evaluator_ratings.rating_tag="{rating_tag}"'
+                return self._load_eval_ratings_table(clause)
+        raise ValueError(f'Unknown role: {role}')
+
+    def _load_benchmark_ratings_table(self) -> List[DBAgentRating]:
         db_agent_ratings = []
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
-        if role == AgentRole.BENCHMARK:
-            c.execute('''
-                SELECT
-                    benchmark_ratings.agent_id,
-                    benchmark_ratings.rating,
-                    benchmark_ratings.is_committee,
-                    mcts_agents.tag,
-                    mcts_agents.gen
-                FROM benchmark_ratings
-                JOIN agents ON benchmark_ratings.agent_id = agents.id
-                JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
-                WHERE agents.subtype = 'mcts';
-                ''')
-            for row in c.fetchall():
-                agent_id, rating, is_committee, agent_tag, gen = row
-                is_committee = bool(is_committee)
-                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
-                                                      rating=rating,
-                                                      is_committee=is_committee,
-                                                      agent_tag=agent_tag,
-                                                      level=gen))
 
-            c.execute('''
-                SELECT
-                    benchmark_ratings.agent_id,
-                    benchmark_ratings.rating,
-                    benchmark_ratings.is_committee,
-                    ref_agents.tag,
-                    ref_agents.strength
-                FROM benchmark_ratings
-                JOIN agents ON benchmark_ratings.agent_id = agents.id
-                JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
-                WHERE agents.subtype = 'ref';
-                ''')
-            for row in c.fetchall():
-                agent_id, rating, is_committee, agent_tag, strength = row
-                is_committee = bool(is_committee)
-                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
-                                                      rating=rating,
-                                                      is_committee=is_committee,
-                                                      agent_tag=agent_tag,
-                                                      level=strength))
+        c.execute('''
+            SELECT
+                benchmark_ratings.agent_id,
+                benchmark_ratings.rating,
+                benchmark_ratings.is_committee,
+                mcts_agents.tag,
+                mcts_agents.gen
+            FROM benchmark_ratings
+            JOIN agents ON benchmark_ratings.agent_id = agents.id
+            JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
+            WHERE agents.subtype = 'mcts';
+            ''')
+        for row in c.fetchall():
+            agent_id, rating, is_committee, agent_tag, gen = row
+            is_committee = bool(is_committee)
+            db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                  rating=rating,
+                                                  is_committee=is_committee,
+                                                  agent_tag=agent_tag,
+                                                  level=gen))
 
-        elif role == AgentRole.TEST:
-            c.execute('''
-                SELECT
-                    evaluator_ratings.agent_id,
-                    evaluator_ratings.rating,
-                    evaluator_ratings.rating_tag,
-                    mcts_agents.tag,
-                    mcts_agents.gen
-                FROM evaluator_ratings
-                JOIN agents ON evaluator_ratings.agent_id = agents.id
-                JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
-                WHERE agents.subtype = 'mcts';
-                ''')
-            for row in c.fetchall():
-                agent_id, rating, rating_tag, agent_tag, gen = row
-                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
-                                                      rating=rating,
-                                                      agent_tag=agent_tag,
-                                                      level=gen,
-                                                      rating_tag=rating_tag))
+        c.execute('''
+            SELECT
+                benchmark_ratings.agent_id,
+                benchmark_ratings.rating,
+                benchmark_ratings.is_committee,
+                ref_agents.tag,
+                ref_agents.strength
+            FROM benchmark_ratings
+            JOIN agents ON benchmark_ratings.agent_id = agents.id
+            JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
+            WHERE agents.subtype = 'ref';
+            ''')
+        for row in c.fetchall():
+            agent_id, rating, is_committee, agent_tag, strength = row
+            is_committee = bool(is_committee)
+            db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                  rating=rating,
+                                                  is_committee=is_committee,
+                                                  agent_tag=agent_tag,
+                                                  level=strength))
+        return db_agent_ratings
 
-            c.execute('''
-                SELECT
-                    evaluator_ratings.agent_id,
-                    evaluator_ratings.rating,
-                    evaluator_ratings.rating_tag,
-                    ref_agents.tag,
-                    ref_agents.strength
-                FROM evaluator_ratings
-                JOIN agents ON evaluator_ratings.agent_id = agents.id
-                JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
-                WHERE agents.subtype = 'ref';
-                ''')
-            for row in c.fetchall():
-                agent_id, rating, rating_tag, agent_tag, strength = row
-                db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
-                                                      rating=rating,
-                                                      agent_tag=agent_tag,
-                                                      level=strength,
-                                                      rating_tag=rating_tag))
+    def _load_eval_ratings_table(self, additional_where_clause: Condition) -> List[DBAgentRating]:
+        db_agent_ratings = []
+        conn = self.db_conn_pool.get_connection()
+        c = conn.cursor()
 
+        c.execute(f'''
+            SELECT
+                evaluator_ratings.agent_id,
+                evaluator_ratings.rating,
+                evaluator_ratings.rating_tag,
+                mcts_agents.tag,
+                mcts_agents.gen
+            FROM evaluator_ratings
+            JOIN agents ON evaluator_ratings.agent_id = agents.id
+            JOIN mcts_agents ON agents.subtype = 'mcts' AND agents.sub_id = mcts_agents.id
+            WHERE agents.subtype = 'mcts'{additional_where_clause};
+            ''')
+        for row in c.fetchall():
+            agent_id, rating, rating_tag, agent_tag, gen = row
+            db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                rating=rating,
+                                                agent_tag=agent_tag,
+                                                level=gen,
+                                                rating_tag=rating_tag))
+
+        c.execute(f'''
+            SELECT
+                evaluator_ratings.agent_id,
+                evaluator_ratings.rating,
+                evaluator_ratings.rating_tag,
+                ref_agents.tag,
+                ref_agents.strength
+            FROM evaluator_ratings
+            JOIN agents ON evaluator_ratings.agent_id = agents.id
+            JOIN ref_agents ON agents.subtype = 'ref' AND agents.sub_id = ref_agents.id
+            WHERE agents.subtype = 'ref'{additional_where_clause};
+            ''')
+        for row in c.fetchall():
+            agent_id, rating, rating_tag, agent_tag, strength = row
+            db_agent_ratings.append(DBAgentRating(agent_id=agent_id,
+                                                rating=rating,
+                                                agent_tag=agent_tag,
+                                                level=strength,
+                                                rating_tag=rating_tag))
         return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts,
