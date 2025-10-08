@@ -73,11 +73,11 @@ class MatchStatus:
 @dataclass
 class EvalStatus:
     mcts_gen: Generation
+    rating_tag: str
     owner: Optional[ClientId] = None
     ix_match_status: Dict[int, MatchStatus] = field(default_factory=dict)  # ix -> MatchStatus
     status: Optional[EvalRequestStatus] = None
     elo: Optional[float] = None
-    rating_tag: str = ''
 
     def complete(self) -> bool:
         return self.status == EvalRequestStatus.COMPLETE
