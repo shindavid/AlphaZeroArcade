@@ -53,7 +53,7 @@ class ClientConnectionManager:
 
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
-        rating_tag = msg.get('rating_tag', 'default')
+        rating_tag = msg.get('rating_tag', '')
         manager_id = msg.get('manager_id', None)
         client_id = None #self._manager_id_to_worker_id_map.get(manager_id, None)
 
