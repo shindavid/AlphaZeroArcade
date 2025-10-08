@@ -38,7 +38,7 @@ class RatingParams:
 
     target_elo_gap: Optional[float] = None
     use_remote_play: bool = False
-    rating_tag: str = 'default'
+    rating_tag: str = ''
 
     def __post_init__(self):
         assert self.n_games_per_self_evaluation > 0, "Must have >0 games per benchmark"
