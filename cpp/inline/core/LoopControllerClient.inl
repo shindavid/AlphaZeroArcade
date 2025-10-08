@@ -44,7 +44,7 @@ inline auto LoopControllerClient::Params::make_options_description() {
       "loop controller client role")
     .template add_hidden_option<"ratings-tag">(
       po::value<std::string>(&ratings_tag)->default_value(ratings_tag),
-      "ratings tag (only relevant if client_role == ratings-worker)")
+      "ratings tag (only relevant if client_role == ratings-worker, eval-vs-benchmark-worker)")
     .template add_hidden_option<"output-base-dir">(
       po::value<std::string>(&output_base_dir)->default_value(output_base_dir),
       "output base directory (needed for direct-game-log-write optimization)")

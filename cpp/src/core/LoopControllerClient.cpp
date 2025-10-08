@@ -121,6 +121,11 @@ void LoopControllerClient::send_handshake() {
   msg["role"] = role();
   msg["start_timestamp"] = proc_start_ts_;
   msg["cuda_device"] = cuda_device();
+
+  if (role() == "eval-vs-benchmark-worker") {
+    msg["rating_tag"] = ratings_tag();
+  }
+
   if (role() == "ratings-worker") {
     boost::json::object aux;
     aux["tag"] = ratings_tag();
