@@ -32,7 +32,7 @@ import pandas as pd
 
 import os
 import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class RatingData:
@@ -154,7 +154,7 @@ class BenchmarkData(RatingData):
 
 
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: Optional[BenchmarkData]):
         if not data_list:
             if benchmark_data is None:
                 self.figure = None
