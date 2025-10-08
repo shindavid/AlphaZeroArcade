@@ -36,20 +36,20 @@ from typing import Dict, List
 
 
 class RatingData:
+    def __init__(self, tag: str, rating_tag: str):
+        self.tag = tag
+        self.rating_tag = rating_tag
+
     @property
     def label(self):
-        if not self.tag:
-            raise ValueError("tag is not set")
-
         if self.rating_tag:
             return f'{self.tag}: {self.rating_tag}'
         return self.tag
 
 class EvaluationData(RatingData):
     def __init__(self, run_params: RunParams, benchmark_tag: str, rating_tag: str):
-        self.tag = run_params.tag
+        super().__init__(run_params.tag, rating_tag)
         self.benchmark_tag = benchmark_tag
-        self.rating_tag = rating_tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         self.benchmark_elos = {}
@@ -116,9 +116,9 @@ def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[E
 
 class BenchmarkData(RatingData):
     def __init__(self, organizer: DirectoryOrganizer):
+        super().__init__(organizer.tag, '')
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
-        self.tag = organizer.tag
 
         x_df = make_x_df(organizer)
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
