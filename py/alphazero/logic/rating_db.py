@@ -36,7 +36,7 @@ class DBAgentRating:
     is_committee: Optional[bool] = None
     agent_tag: Optional[str] = None
     level: Optional[str] = None
-    rating_tag: Optional[str] = None
+    rating_tag: str = ''
 
 
 class RatingDB:
