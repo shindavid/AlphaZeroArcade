@@ -154,6 +154,7 @@ class UpgraderBase:
 
         print(f"Upgrading {game}/{tag} to v{self.TO_VERSION}...")
 
+        error_list = []
         for root, _, files in os.walk(from_dir):
             rel_path = os.path.relpath(root, from_dir)
             dest_dir = to_dir / rel_path
@@ -164,12 +165,20 @@ class UpgraderBase:
                 dest_file_path = dest_dir / file
 
                 creation_func = self.get_creation_func(src_file_path)
-                if creation_func is not None:
-                    creation_func(dest_file_path)
-                else:
-                    shutil.copy2(src_file_path, dest_file_path)
+                try:
+                    if creation_func is not None:
+                        creation_func(dest_file_path)
+                    else:
+                        shutil.copy2(src_file_path, dest_file_path)
+                except Exception as e:
+                    error_list.append((src_file_path, str(e)))
 
-        print(f"Successfully upgraded {game}/{tag} to v{self.TO_VERSION}.")
+        if error_list:
+            print("The following errors were encountered during upgrade:")
+            for file_path, err_msg in error_list:
+                print(f"  {file_path}: {err_msg}")
+        else:
+            print(f"Upgrade of {game}/{tag} to v{self.TO_VERSION} completed successfully.")
 
     def get_creation_func(self, file: str) -> Optional[callable]:
         return None
