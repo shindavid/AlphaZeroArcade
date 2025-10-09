@@ -124,3 +124,14 @@ def copy_db(source_filename: str, target_filename: str, where_clause: str):
     conn.close()
 
     logger.info('Database copy complete.')
+
+
+def escape_value(value):
+    if value is None:
+        return "NULL"
+    if isinstance(value, (int, float)):
+        return str(value)
+
+    # For strings, double up single quotes per SQL standard
+    escaped = str(value).replace("'", "''")
+    return f"'{escaped}'"
