@@ -12,23 +12,7 @@ Upgrade output directories from version 7 to version 8.
 
 Key change in v8:
 - The `matches` and 'evaluator_ratings` tables in the evaluation/ database now include a new column: `rating_tag`.
-
-Migration steps:
-1. Identify output directories in v7
-    - If `--game` / `-g` is provided, process all directories under `/workspace/mount/v7/output/{game}/`.
-    - If both `--game` and `--tag` are provided, process only `/workspace/mount/v7/output/{game}/{tag}/`.
-    - Otherwise, process all game directories under `/workspace/mount/v7/output/`.
-
-2. Copy all files into the corresponding v8 output directory, excluding `{game}/{tag}/databases/evaluation/{benchmark_tag}.db`.
-
-3. Create new evaluation databases in the v8 output directory:
-    - All tables are copied as-is, except for `matches` and `evaluator_ratings`.
-    - The `matches` and `evaluator_ratings` tables are recreated with the additional `rating_tag` column.
-    - All rows are migrated, with `rating_tag` set to 'default' for every row.
 """
-
-V7_OUTPUT_DIR = Path('/workspace/mount/v7/output')
-V8_OUTPUT_DIR = Path('/workspace/mount/v8/output')
 
 
 def load_args():

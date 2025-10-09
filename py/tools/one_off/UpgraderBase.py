@@ -8,6 +8,14 @@ import shutil
 
 
 class DatabaseTable:
+    """
+    Represents a single table being migrated or transformed from one SQLite database file to another.
+
+    A `DatabaseTable` is constructed with the table's name and the source and destination database
+    paths. It provides utility methods to copy data or to copy data while adding a new column with
+    a constant value. These methods are intended to be scheduled by an upgrader as part of a schema
+    migration between different output versions.
+    """
     def __init__(self, name: str, src_db_path: Path, dest_db_path: Path):
         assert src_db_path.suffix == '.db', "DatabaseTable path must point to a .db file"
         assert dest_db_path.suffix == '.db', "DatabaseTable path must point to a .db file"
@@ -99,6 +107,24 @@ class DatabaseTable:
 
 
 class UpgraderBase:
+    """
+    Base class for upgrading versioned output directories.
+
+    The upgrader copies files from a source output directory tree(determined by `FROM_VERSION`)
+    into a target output directory tree (determined by `TO_VERSION`). It traverses games and tags
+    under the source directory and creates a mirrored structure in the target. By default, all
+    files are copied verbatim; subclasses can override `get_creation_func` to provide custom
+    creation logic for specific files (e.g., rebuilding databases with a modified schema).
+
+    Typical usage is to subclass this base and set `FROM_VERSION` and`TO_VERSION` to concrete
+    values. The subclass implements `get_creation_func(file)` to return a function that knows
+    how to build the corresponding file in the target directory. If `None` is returned, the file
+    is copied with `shutil.copy2`.
+
+    Please refer to `upgrade_output_dirs_v7_to_v8.py` for an example subclass that adds a new
+    column to specific tables in evaluation databases.
+    """
+
     FROM_VERSION: int = -1
     TO_VERSION: int = -1
 
