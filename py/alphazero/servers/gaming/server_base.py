@@ -110,7 +110,9 @@ class ServerBase:
         self._session_data.init_socket()
 
     def _send_handshake(self):
-        self._session_data.send_handshake(self._config.server_role)
+        additional_data = {'rating_tag': self._rating_params.rating_tag}
+        self._session_data.send_handshake(self._config.server_role,
+                                          additional_data=additional_data)
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(self._config.server_role)
@@ -189,6 +191,9 @@ class ServerBase:
             '--cuda-device': self._params.cuda_device,
             '--do-not-report-metrics': None,
         }
+
+        if self._rating_params.rating_tag:
+            args['--ratings-tag'] = self._rating_params.rating_tag
 
         platform_overrides.update_cpp_bin_args(args)
         result = self._eval_match(match, args)

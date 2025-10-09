@@ -38,6 +38,7 @@ class RatingParams:
 
     target_elo_gap: Optional[float] = None
     use_remote_play: bool = False
+    rating_tag: str = ''
 
     def __post_init__(self):
         assert self.n_games_per_self_evaluation > 0, "Must have >0 games per benchmark"
@@ -61,6 +62,7 @@ class RatingParams:
             n_games_per_self_evaluation=args.n_games_per_self_evaluation,
             n_games_per_evaluation=args.n_games_per_evaluation,
             use_remote_play=args.use_remote_play,
+            rating_tag=args.rating_tag,
             )
 
     @staticmethod
@@ -87,6 +89,11 @@ class RatingParams:
                            help='number of games per evaluation (default: %(default)d)')
         group.add_argument('--use-remote-play', action='store_true', default=defaults.use_remote_play,
                            help='use remote play (multiple binaries).')
+        group.add_argument('--rating-tag', default=defaults.rating_tag,
+                           help='Loop controller collates ratings by this str. It is '
+                           'the responsibility of the user to make sure that the same '
+                           'binary/params are used across different RatingsServer processes '
+                           'sharing the same rating-tag. (default: "%(default)s")')
 
 
     def add_to_cmd(self, cmd: List[str], loop_controller=False, server=False):
@@ -99,3 +106,5 @@ class RatingParams:
                 cmd.extend(['--num-search-threads', str(self.rating_player_options.num_search_threads)])
             if self.use_remote_play:
                 cmd.append('--use-remote-play')
+            if self.rating_tag:
+                cmd.extend(['--rating-tag', self.rating_tag])

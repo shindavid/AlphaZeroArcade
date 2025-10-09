@@ -28,26 +28,39 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Slider, Span
 from bokeh.layouts import column, row
 import numpy as np
-import os
 import pandas as pd
-from typing import Dict, List
+
+import os
+import sqlite3
+from typing import Dict, List, Optional
 
 
-class EvaluationData:
-    def __init__(self, run_params: RunParams, benchmark_tag: str):
-        self.tag = run_params.tag
+class RatingData:
+    def __init__(self, tag: str, rating_tag: str):
+        self.tag = tag
+        self.rating_tag = rating_tag
+
+    @property
+    def label(self):
+        if self.rating_tag:
+            return f'{self.tag}: {self.rating_tag}'
+        return self.tag
+
+class EvaluationData(RatingData):
+    def __init__(self, run_params: RunParams, benchmark_tag: str, rating_tag: str):
+        super().__init__(run_params.tag, rating_tag)
         self.benchmark_tag = benchmark_tag
 
         organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
         self.benchmark_elos = {}
-        self.df = self.make_df(organizer, benchmark_tag)
+        self.df = self.make_df(organizer, benchmark_tag, rating_tag)
 
         if self.df is not None:
             x_df = make_x_df(organizer)
             self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
             self.valid = len(self.df) > 0
 
-    def make_df(self, organizer: DirectoryOrganizer, benchmark_tag: str):
+    def make_df(self, organizer: DirectoryOrganizer, benchmark_tag: str, rating_tag: str):
         try:
             db = RatingDB(organizer.eval_db_filename(benchmark_tag))
             eval_ratings: List[DBAgentRating] = db.load_ratings(AgentRole.TEST)
@@ -57,7 +70,8 @@ class EvaluationData:
                 for data in benchmark_ratings:
                     self.benchmark_elos[data.level] = data.rating
 
-            evaluated_gens, evaluated_ratings = zip(*[(data.level, data.rating) for data in eval_ratings])
+            gen_ratings = [(data.level, data.rating) for data in eval_ratings if data.rating_tag == rating_tag]
+            evaluated_gens, evaluated_ratings = zip(*gen_ratings)
             evaluated_gens = np.array(evaluated_gens, dtype=int)
             evaluated_ratings = np.array(evaluated_ratings, dtype=float)
             sorted_ix = np.argsort(evaluated_gens)
@@ -74,21 +88,37 @@ class EvaluationData:
         return df
 
 
+def make_eval_data_list(run_params: RunParams, benchmark_tag: str) -> List[EvaluationData]:
+    organizer = DirectoryOrganizer(run_params, base_dir_root=Workspace)
+    db_filename = organizer.eval_db_filename(benchmark_tag)
+    if not os.path.exists(db_filename):
+        return []
+
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+
+    res = cursor.execute('SELECT DISTINCT rating_tag FROM evaluator_ratings')
+    rating_tags = [r[0] for r in res.fetchall()]
+    conn.close()
+
+    data_list = [EvaluationData(run_params, benchmark_tag, t) for t in rating_tags]
+    return [d for d in data_list if d.valid]
+
+
 def get_eval_data_list(game: str, benchmark_tag: str, tags: List[str]) -> List[EvaluationData]:
     data_list = []
     for tag in tags:
         run_params = RunParams(game=game, tag=tag)
-        data = EvaluationData(run_params, benchmark_tag)
-        if data.valid:
-            data_list.append(data)
+        data_list.extend(make_eval_data_list(run_params, benchmark_tag))
+
     return data_list
 
 
-class BenchmarkData:
+class BenchmarkData(RatingData):
     def __init__(self, organizer: DirectoryOrganizer):
+        super().__init__(organizer.tag, '')
         self.benchmark_elos = {}
         self.df = self.make_df(organizer)
-        self.tag = organizer.tag
 
         x_df = make_x_df(organizer)
         self.df = self.df.merge(x_df, left_on="mcts_gen", right_index=True, how="left")
@@ -124,8 +154,11 @@ class BenchmarkData:
 
 
 class Plotter:
-    def __init__(self, data_list: List[EvaluationData], benchmark_data: BenchmarkData):
+    def __init__(self, data_list: List[EvaluationData], benchmark_data: Optional[BenchmarkData]):
         if not data_list:
+            if benchmark_data is None:
+                self.figure = None
+                return
             data_list = [benchmark_data]
             self.benchmark_tag = benchmark_data.tag
         else:
@@ -147,7 +180,7 @@ class Plotter:
             source = ColumnDataSource(df)
             source.data['y'] = df['rating']
             self.x_selector.init_source(source)
-            self.sources[data.tag] = source
+            self.sources[data.label] = source
             self.max_y = max(self.max_y, max(df['rating']))
             self.min_y = min(self.min_y, min(df['rating']))
 
@@ -160,7 +193,7 @@ class Plotter:
         n = len(data_list)
         colors = bokeh_util.get_colors(n+1)
         for data, color in zip(data_list, colors):
-            label = data.tag
+            label = data.label
             if label in self.plotted_labels:
                 continue
             self.plotted_labels.add(label)

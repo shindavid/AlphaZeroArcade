@@ -122,7 +122,6 @@ class Params:
     @staticmethod
     def add_args(parser):
         LoopControllerParams.add_args(parser, include_cuda_device=False)
-        RatingsServerParams.add_args(parser, omit_base=True)
 
         group = parser.add_argument_group('run_local.py options')
 

@@ -144,6 +144,7 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating_tag TEXT,
             agent_id1 INT,
             agent_id2 INT,
             agent1_wins INT,
@@ -152,7 +153,7 @@ ARENA_TABLE_CREATE_CMDS = [
             type TEXT
             )""",
 
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (agent_id1, agent_id2, type)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (rating_tag, agent_id1, agent_id2, type)""",
 
     """CREATE TABLE IF NOT EXISTS benchmark_ratings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,9 +166,10 @@ ARENA_TABLE_CREATE_CMDS = [
 
     """CREATE TABLE IF NOT EXISTS evaluator_ratings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating_tag TEXT,
             agent_id INT UNIQUE,
             rating FLOAT
             )""",
 
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON evaluator_ratings (agent_id)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON evaluator_ratings (rating_tag, agent_id)""",
 ]
