@@ -34,16 +34,16 @@ class DatabaseTable:
         dest_conn = dest_pool.get_connection()
         cur = dest_conn.cursor()
 
-        # attach source db to the destination connection
         cur.execute("ATTACH DATABASE ? AS src", (str(self.src_db_path),))
 
-        # source column order
         src_cols = [r[1] for r in cur.execute(f"PRAGMA src.table_info({table})")]
         if not src_cols:
             cur.execute("DETACH DATABASE src")
             return
 
-        # ensure destination has the extra column
+        if new_column_name in src_cols:
+            raise Exception(f"Source database {self.src_db_path} table {table} already has column {new_column_name}")
+
         dest_cols = [r[1] for r in cur.execute(f"PRAGMA main.table_info({table})")]
         if new_column_name not in dest_cols:
             raise Exception(f"Destination database {self.dest_db_path} table {table} is missing column {new_column_name}")
@@ -53,7 +53,6 @@ class DatabaseTable:
 
         dest_conn.execute("BEGIN")
         try:
-            # copy rows and append the constant
             sql = (
                 f'INSERT INTO {table} ({dst_csv}) '
                 f'SELECT {src_csv}, ? FROM src.{table}'
@@ -79,20 +78,17 @@ class DatabaseTable:
         dest_conn = dest_pool.get_connection()
         cur = dest_conn.cursor()
 
-        # Attach source database to this connection
         cur.execute("ATTACH DATABASE ? AS src", (str(self.src_db_path),))
 
         try:
-            # Get column list from source table (preserve order)
             src_cols = [r[1] for r in cur.execute(f"PRAGMA src.table_info({table})")]
             if not src_cols:
-                return  # nothing to copy
+                return
 
             cols_csv = ", ".join(c for c in src_cols)
 
             dest_conn.execute("BEGIN")
             try:
-                # Copy rows
                 sql = (
                     f'INSERT INTO {table} ({cols_csv}) '
                     f'SELECT {cols_csv} FROM src.{table}'
