@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from alphazero.logic import constants
 from alphazero.logic.run_params import RunParams
-from tools.one_off.UpgraderBase import DatabaseTable, UpgraderBase
+from tools.one_off.upgrader_base import DatabaseTable, UpgraderBase
 from util.py_util import CustomHelpFormatter
 from util.sqlite3_util import DatabaseConnectionPool
 
