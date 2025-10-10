@@ -27,6 +27,7 @@ class AlgorithmsBase {
  public:
   using Game = Traits::Game;
   using Edge = Traits::Edge;
+  using NodeStats = Traits::NodeStats;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
   using TrainingInfo = Traits::TrainingInfo;
@@ -90,8 +91,9 @@ class AlgorithmsBase {
 
  private:
   template <typename MutexProtectedFunc>
-  static void update_stats(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
+  static void backprop_helper(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
 
+  static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds

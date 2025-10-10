@@ -32,7 +32,7 @@ void AlgorithmsBase<Traits, Derived>::pure_backprop(SearchContext& context,
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Derived::update_stats(last_node, lookup_table, [&] {
+  Derived::backprop_helper(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, true);
     stats.RN++;
@@ -43,7 +43,7 @@ void AlgorithmsBase<Traits, Derived>::pure_backprop(SearchContext& context,
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    Derived::update_stats(node, lookup_table, [&] {
+    Derived::backprop_helper(node, lookup_table, [&] {
       edge->E++;
       node->stats().RN++;  // thread-safe because executed under mutex
     });
@@ -62,7 +62,7 @@ void AlgorithmsBase<Traits, Derived>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Derived::update_stats(last_node, lookup_table, [&] {
+  Derived::backprop_helper(last_node, lookup_table, [&] {
     last_node->stats().VN++;  // thread-safe because executed under mutex
   });
 
@@ -71,7 +71,7 @@ void AlgorithmsBase<Traits, Derived>::virtual_backprop(SearchContext& context) {
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    Derived::update_stats(node, lookup_table, [&] {
+    Derived::backprop_helper(node, lookup_table, [&] {
       edge->E++;
       node->stats().VN++;  // thread-safe because executed under mutex
     });
@@ -97,7 +97,7 @@ void AlgorithmsBase<Traits, Derived>::undo_virtual_backprop(SearchContext& conte
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    Derived::update_stats(node, lookup_table, [&] {
+    Derived::backprop_helper(node, lookup_table, [&] {
       edge->E--;
       node->stats().VN--;  // thread-safe because executed under mutex
     });
@@ -118,7 +118,7 @@ void AlgorithmsBase<Traits, Derived>::standard_backprop(SearchContext& context, 
 
   LookupTable& lookup_table = context.general_context->lookup_table;
 
-  Derived::update_stats(last_node, lookup_table, [&] {
+  Derived::backprop_helper(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
     stats.init_q(value, false);
     stats.RN++;
@@ -130,7 +130,7 @@ void AlgorithmsBase<Traits, Derived>::standard_backprop(SearchContext& context, 
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    Derived::update_stats(node, lookup_table, [&] {
+    Derived::backprop_helper(node, lookup_table, [&] {
       edge->E += !undo_virtual;
       auto& stats = node->stats();  // thread-safe because executed under mutex
       stats.RN++;
@@ -154,7 +154,7 @@ void AlgorithmsBase<Traits, Derived>::short_circuit_backprop(SearchContext& cont
     Node* node = context.search_path[i].node;
 
     // NOTE: always update the edge first, then the parent node
-    Derived::update_stats(node, lookup_table, [&] {
+    Derived::backprop_helper(node, lookup_table, [&] {
       edge->E++;
       node->stats().RN++;  // thread-safe because executed under mutex
     });
@@ -569,12 +569,23 @@ void AlgorithmsBase<Traits, Derived>::print_mcts_results(std::ostream& ss,
 
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& lookup_table,
-                                                   MutexProtectedFunc&& func) {
+void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, LookupTable& lookup_table,
+                                                      MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
+  auto stats = node->stats();  // make a copy
   lock.unlock();
 
+  Derived::update_stats(stats, node, lookup_table);
+
+  lock.lock();
+  node->stats() = stats;  // copy back
+  lock.unlock();
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node* node,
+                                                   LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -586,8 +597,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
   all_provably_winning.set();
   all_provably_losing.set();
 
-  auto& stable_data = node->stable_data();
-  auto& stats = node->stats();
+  const auto& stable_data = node->stable_data();
 
   int num_valid_actions = stable_data.num_valid_actions;
   core::seat_index_t seat = stable_data.active_seat;
@@ -609,8 +619,6 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
       all_provably_losing &= child_stats.provably_losing;
     }
     if (N == num_valid_actions) {
-      lock.lock();
-
       stats.Q = Q_sum;
       stats.Q_sq = Q_sq_sum;
       stats.provably_winning = all_provably_winning;
@@ -659,8 +667,6 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
 
     auto Q = N ? (Q_sum / N) : Q_sum;
     auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
-
-    lock.lock();
 
     stats.Q = Q;
     stats.Q_sq = Q_sq;
