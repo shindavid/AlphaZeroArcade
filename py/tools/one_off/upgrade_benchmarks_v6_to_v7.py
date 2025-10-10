@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-from tools.one_off.upgrader_base import UpgraderBase, DatabaseTable
+from tools.one_off.upgrader_base import ColumnAdditionInstruction, UpgraderBase
 
 
 class Upgrader(UpgraderBase):
     FROM_VERSION = 6
     TO_VERSION = 7
 
-    def rewrite_db_table(self, table: DatabaseTable):
-        if table.db_file.name.endswith('databases/benchmark.db'):
-            if table.name == 'mcts_agents':
-                table.schedule_column_add('paradigm', 'alpha0')
+    def get_instructions(self):
+        return [ColumnAdditionInstruction(
+            filename_glob='**/databases/benchmark.db',
+            table_name='mcts_agents',
+            column_name='paradigm',
+            column_value='alpha0'
+        )]
 
 
 def main():

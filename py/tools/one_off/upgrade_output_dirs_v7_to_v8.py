@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-from tools.one_off.upgrader_base import UpgraderBase, DatabaseTable
+from tools.one_off.upgrader_base import ColumnAdditionInstruction, UpgraderBase
 
 
 class Upgrader(UpgraderBase):
     FROM_VERSION = 7
     TO_VERSION = 8
 
-    def rewrite_db_table(self, table: DatabaseTable):
-        if table.is_evaluation_db():
-            if table.name in ('matches', 'evaluator_ratings'):
-                table.schedule_column_add('rating_tag', '')
+    def get_instructions(self):
+        return [ColumnAdditionInstruction(
+            filename_glob='**/databases/evaluation/*.db',
+            table_name=t,
+            column_name='rating_tag',
+            column_value=''
+        ) for t in ('matches', 'evaluator_ratings')]
 
 
 def main():

@@ -3,7 +3,9 @@ from alphazero.servers.loop_control.base_dir import VERSION
 from util.py_util import CustomHelpFormatter
 from util.sqlite3_util import escape_value
 
+import abc
 import argparse
+from collections import defaultdict
 import os
 from pathlib import Path
 import shutil
@@ -15,6 +17,30 @@ def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     RunParams.add_args(parser)
     return parser.parse_args()
+
+
+class TableAlterationInstruction(abc.ABC):
+    def __init__(self, filename_glob: str):
+        self.filename_glob = filename_glob
+
+    def applies_to(self, db_file: Path) -> bool:
+        return db_file.match(self.filename_glob)
+
+    @abc.abstractmethod
+    def get_cmd(self) -> str:
+        pass
+
+
+class ColumnAdditionInstruction(TableAlterationInstruction):
+    def __init__(self, filename_glob: str, table_name: str, column_name: str, column_value):
+        super().__init__(filename_glob)
+        self.table_name = table_name
+        self.column_name = column_name
+        self.column_value = column_value
+
+    def get_cmd(self) -> str:
+        value = escape_value(self.column_value)
+        return f"ALTER TABLE {self.table_name} ADD COLUMN {self.column_name} DEFAULT {value}"
 
 
 class DatabaseTable:
@@ -96,25 +122,26 @@ class UpgraderBase:
         if not from_dir.exists():
             raise Exception(f"Source directory {from_dir} does not exist.")
 
-        print(f"Upgrading {game}/{tag} to v{self.TO_VERSION}...")
+        print(f"Copying {from_dir} to {to_dir}...")
+        shutil.copytree(from_dir, to_dir)
+        print(f"Copy complete!")
+
+        instructions = self.get_instructions()
+        instr_map = defaultdict(list)  # path -> list of instructions
+
+        for root, _, files in os.walk(to_dir):
+            for file in files:
+                file_path = Path(root) / file
+                for instr in instructions:
+                    if instr.applies_to(file_path):
+                        instr_map[file_path].append(instr)
 
         error_list = []
-        for root, _, files in os.walk(from_dir):
-            rel_path = os.path.relpath(root, from_dir)
-            dest_dir = to_dir / rel_path
-            dest_dir.mkdir(parents=True, exist_ok=True)
-
-            for file in files:
-                src_file_path = Path(root) / file
-                dest_file_path = dest_dir / file
-
-                try:
-                    shutil.copy2(src_file_path, dest_file_path)
-                    extension = os.path.splitext(file)[1].lower()
-                    if extension == '.db':
-                        self.upgrade_db_file(dest_file_path)
-                except Exception as e:
-                    error_list.append((src_file_path, str(e)))
+        for db_file, instrs in instr_map.items():
+            try:
+                self.upgrade_db_file(db_file, instrs)
+            except Exception as e:
+                error_list.append((db_file, str(e)))
 
         if error_list:
             print("The following errors were encountered during upgrade:")
@@ -123,39 +150,17 @@ class UpgraderBase:
         else:
             print(f"Upgrade of {game}/{tag} to v{self.TO_VERSION} completed successfully.")
 
-    def upgrade_db_file(self, db_file: Path):
+    def upgrade_db_file(self, db_file: Path, instructions: list[TableAlterationInstruction]):
+        cmds = [instr.get_cmd() for instr in instructions]
+
         conn = sqlite3.connect(db_file)
         cur = conn.cursor()
-
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cur.fetchall()]
-
-        cmds = []
-        for table_name in tables:
-            db_table = DatabaseTable(table_name, db_file)
-            self.rewrite_db_table(db_table)
-            if db_table.pending_column_adds:
-                for name, value in db_table.pending_column_adds:
-                    cmd = f"ALTER TABLE {table_name} ADD COLUMN {name} DEFAULT {value}"
-                    cmds.append(cmd)
-
-        if not cmds:
-            return
-
         print(f"Upgrading database {db_file}:")
         for cmd in cmds:
             print(f"  {cmd}")
             cur.execute(cmd)
         conn.commit()
         conn.close()
-
-    def rewrite_db_table(self, table: DatabaseTable):
-        """
-        Override this method in subclasses to provide custom logic for rewriting specific
-        database tables during the upgrade process. The default implementation does nothing,
-        meaning that all database tables are copied verbatim.
-        """
-        pass
 
     def run(self):
         if self._run_params is None:
