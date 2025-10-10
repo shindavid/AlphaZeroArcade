@@ -9,6 +9,13 @@ namespace search {
 namespace concepts {
 
 // TODO: add detailed comments explaining what each method should do
+//
+// TODO: add some signatures to concepts::Algorithms:
+//
+// - write_to_training_info()
+// - to_record()
+// - compactify_record()
+// - to_view()
 template <class A, class PolicyTensor, class ValueArray, class SearchContext, class GeneralContext,
           class SearchResults, class Node, class Edge>
 concept Algorithms =

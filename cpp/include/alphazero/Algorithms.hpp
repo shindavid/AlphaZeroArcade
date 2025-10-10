@@ -16,14 +16,14 @@
 
 namespace alpha0 {
 
-// TODO: add some signatures to concepts::Algorithms:
+// CRTP base class
 //
-// - write_to_training_info()
-// - to_record()
-// - compactify_record()
-// - to_view()
-template <search::concepts::Traits Traits>
-class Algorithms {
+// This allows us to effectively have alpha0::Algorithms methods invoke beta0::Algorithms methods.
+//
+// To make this work, we need to follow the discipline of always invoking Derived::func() rather
+// than simply func() within alpha0::Algorithms methods.
+template <search::concepts::Traits Traits, typename Derived>
+class AlgorithmsBase {
  public:
   using Game = Traits::Game;
   using Edge = Traits::Edge;
@@ -105,6 +105,9 @@ class Algorithms {
                                              const PuctCalculator& selector, int argmax_index);
   static bool extract_policy_target(const SearchResults* mcts_results, PolicyTensor& target);
 };
+
+template <search::concepts::Traits Traits>
+struct Algorithms : public AlgorithmsBase<Traits, Algorithms<Traits>> {};
 
 }  // namespace alpha0
 
