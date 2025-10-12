@@ -43,30 +43,6 @@ class ColumnAdditionInstruction(TableAlterationInstruction):
         return f"ALTER TABLE {self.table_name} ADD COLUMN {self.column_name} DEFAULT {value}"
 
 
-class DatabaseTable:
-    def __init__(self, name: str, db_file: Path):
-        self.name = name
-        self.db_file = db_file
-        self.pending_column_adds = []  # List of (column_name, column_value)
-
-    def is_evaluation_db(self) -> bool:
-        """
-        Whether filename looks like ".../databases/evaluation/*.db"
-        """
-        parts = self.db_file.parts
-        if len(parts) < 3:
-            return False
-        return parts[-3] == 'databases' and parts[-2] == 'evaluation'
-
-    def schedule_column_add(self, new_column_name: str, new_column_value):
-        """
-        Schedule adding a new column with a constant value to all rows in this table.
-        The actual operation will be performed later by the upgrader.
-        """
-
-        self.pending_column_adds.append((new_column_name, escape_value(new_column_value)))
-
-
 class UpgraderBase:
     """
     Base class for upgrading versioned output directories.
