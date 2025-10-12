@@ -315,6 +315,8 @@ float min(const Eigen::TensorBase<Derived>& tensor);
 template <concepts::FTensor Tensor>
 bool any(const Tensor& tensor);
 template <concepts::FTensor Tensor>
+bool all(const Tensor& tensor);
+template <concepts::FTensor Tensor>
 int count(const Tensor& tensor);
 
 template <concepts::FTensor Tensor>

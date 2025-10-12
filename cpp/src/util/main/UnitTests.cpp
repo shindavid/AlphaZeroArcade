@@ -519,6 +519,20 @@ TEST(eigen_util, any) {
   EXPECT_FALSE(eigen_util::any(tensorAllZero));
 }
 
+TEST(eigen_util, all) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensorHasZero;
+  tensorHasZero.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  Tensor tensorAllNonZero;
+  tensorAllNonZero.setValues({{1, 2, 3, 4}, {5, 6, 7, 8}});
+
+  EXPECT_TRUE(eigen_util::all(tensorAllNonZero));
+  EXPECT_FALSE(eigen_util::all(tensorHasZero));
+}
+
 TEST(eigen_util, count) {
   constexpr int M = 2;
   constexpr int N = 4;

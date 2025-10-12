@@ -376,6 +376,15 @@ bool any(const Tensor& tensor) {
 }
 
 template <concepts::FTensor Tensor>
+bool all(const Tensor& tensor) {
+  const auto* data = tensor.data();
+  for (int i = 0; i < tensor.size(); ++i) {
+    if (!data[i]) return false;
+  }
+  return true;
+}
+
+template <concepts::FTensor Tensor>
 int count(const Tensor& tensor) {
   int c = 0;
   for (int i = 0; i < tensor.size(); ++i) {
