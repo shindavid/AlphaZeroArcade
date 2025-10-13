@@ -79,12 +79,12 @@ class AlgorithmsBase {
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
 
+  static void to_results(const GeneralContext&, SearchResults&);
   static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord&, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
 
-  static void to_results(const GeneralContext&, SearchResults&);
   static void print_visit_info(const SearchContext&);
   static void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                                  const SearchResults& results, int n_rows_to_display);

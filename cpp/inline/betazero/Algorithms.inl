@@ -49,6 +49,39 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
+  Base::to_results(general_context, results);
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const Node* root = lookup_table.get_node(general_context.root_info.node_index);
+  auto& action_value_uncertainties = results.action_value_uncertainties;
+  core::seat_index_t seat = root->stable_data().active_seat;
+
+  action_value_uncertainties.setZero();
+  for (int i = 0; i < root->stable_data().num_valid_actions; i++) {
+    const Edge* edge = lookup_table.get_edge(root, i);
+    const Node* child = lookup_table.get_node(edge->child_index);
+    if (!child) continue;
+
+    core::action_t action = edge->action;
+    const auto& stable_data = child->stable_data();
+    action_value_uncertainties(action) = stable_data.U(seat);
+  }
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = general_context.root_info.canonical_sym;
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
+  Game::Symmetries::apply(action_value_uncertainties, inv_sym, mode);
+
+  const auto& stats = root->stats();  // thread-safe since single-threaded here
+  results.min_win_rates = stats.Q_min;
+  results.max_win_rates = stats.Q_max;
+
+  check_values(results.min_win_rates, __LINE__);
+  check_values(results.max_win_rates, __LINE__);
+  check_values(results.action_value_uncertainties, __LINE__);
+}
+
+template <search::concepts::Traits Traits>
 void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
                                                 TrainingInfo& training_info) {
   Base::write_to_training_info(params, training_info);
@@ -157,40 +190,6 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   check_values(view.Q_max, __LINE__);
   check_values(view.action_value_uncertainties, __LINE__);
 }
-
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
-  Base::to_results(general_context, results);
-  const LookupTable& lookup_table = general_context.lookup_table;
-  const Node* root = lookup_table.get_node(general_context.root_info.node_index);
-  auto& action_value_uncertainties = results.action_value_uncertainties;
-  core::seat_index_t seat = root->stable_data().active_seat;
-
-  action_value_uncertainties.setZero();
-  for (int i = 0; i < root->stable_data().num_valid_actions; i++) {
-    const Edge* edge = lookup_table.get_edge(root, i);
-    const Node* child = lookup_table.get_node(edge->child_index);
-    if (!child) continue;
-
-    core::action_t action = edge->action;
-    const auto& stable_data = child->stable_data();
-    action_value_uncertainties(action) = stable_data.U(seat);
-  }
-
-  core::action_mode_t mode = root->action_mode();
-  group::element_t sym = general_context.root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-  Game::Symmetries::apply(action_value_uncertainties, inv_sym, mode);
-
-  const auto& stats = root->stats();  // thread-safe since single-threaded here
-  results.min_win_rates = stats.Q_min;
-  results.max_win_rates = stats.Q_max;
-
-  check_values(results.min_win_rates, __LINE__);
-  check_values(results.max_win_rates, __LINE__);
-  check_values(results.action_value_uncertainties, __LINE__);
-}
-
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {

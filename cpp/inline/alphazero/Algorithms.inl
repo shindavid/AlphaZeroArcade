@@ -321,6 +321,58 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
+                                                 SearchResults& results) {
+  const RootInfo& root_info = general_context.root_info;
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  const Node* root = lookup_table.get_node(root_info.node_index);
+  const auto& stable_data = root->stable_data();
+  const auto& stats = root->stats();  // thread-safe since single-threaded here
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = root_info.canonical_sym;
+  group::element_t inv_sym = SymmetryGroup::inverse(sym);
+
+  results.valid_actions.reset();
+  results.policy_prior.setZero();
+
+  core::action_t actions[stable_data.num_valid_actions];
+
+  int i = 0;
+  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
+    Symmetries::apply(action, inv_sym, mode);
+    results.valid_actions.set(action, true);
+    actions[i] = action;
+
+    auto* edge = lookup_table.get_edge(root, i);
+    results.policy_prior(action) = edge->policy_prior_prob;
+
+    i++;
+  }
+
+  Derived::load_action_symmetries(general_context, root, &actions[0], results);
+  Derived::write_results(general_context, root, inv_sym, results);
+  results.policy_target = results.counts;
+  results.provably_lost = stats.provably_losing[stable_data.active_seat];
+  results.trivial = root->trivial();
+  if (manager_params.forced_playouts && root_info.add_noise) {
+    Derived::prune_policy_target(inv_sym, general_context, results);
+  }
+
+  Symmetries::apply(results.counts, inv_sym, mode);
+  Symmetries::apply(results.policy_target, inv_sym, mode);
+  Symmetries::apply(results.Q, inv_sym, mode);
+  Symmetries::apply(results.Q_sq, inv_sym, mode);
+  Symmetries::apply(results.action_values, inv_sym, mode);
+
+  results.win_rates = stats.Q;
+  results.value_prior = stable_data.VT;
+  results.action_mode = mode;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoParams& params,
                                                              TrainingInfo& training_info) {
   const SearchResults* mcts_results = params.mcts_results;
@@ -433,58 +485,6 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.final_pos = *final_pos;
   view.game_result = *outcome;
   view.active_seat = active_seat;
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
-                                                 SearchResults& results) {
-  const RootInfo& root_info = general_context.root_info;
-  const LookupTable& lookup_table = general_context.lookup_table;
-  const ManagerParams& manager_params = general_context.manager_params;
-
-  const Node* root = lookup_table.get_node(root_info.node_index);
-  const auto& stable_data = root->stable_data();
-  const auto& stats = root->stats();  // thread-safe since single-threaded here
-
-  core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = SymmetryGroup::inverse(sym);
-
-  results.valid_actions.reset();
-  results.policy_prior.setZero();
-
-  core::action_t actions[stable_data.num_valid_actions];
-
-  int i = 0;
-  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    Symmetries::apply(action, inv_sym, mode);
-    results.valid_actions.set(action, true);
-    actions[i] = action;
-
-    auto* edge = lookup_table.get_edge(root, i);
-    results.policy_prior(action) = edge->policy_prior_prob;
-
-    i++;
-  }
-
-  Derived::load_action_symmetries(general_context, root, &actions[0], results);
-  Derived::write_results(general_context, root, inv_sym, results);
-  results.policy_target = results.counts;
-  results.provably_lost = stats.provably_losing[stable_data.active_seat];
-  results.trivial = root->trivial();
-  if (manager_params.forced_playouts && root_info.add_noise) {
-    Derived::prune_policy_target(inv_sym, general_context, results);
-  }
-
-  Symmetries::apply(results.counts, inv_sym, mode);
-  Symmetries::apply(results.policy_target, inv_sym, mode);
-  Symmetries::apply(results.Q, inv_sym, mode);
-  Symmetries::apply(results.Q_sq, inv_sym, mode);
-  Symmetries::apply(results.action_values, inv_sym, mode);
-
-  results.win_rates = stats.Q;
-  results.value_prior = stable_data.VT;
-  results.action_mode = mode;
 }
 
 template <search::concepts::Traits Traits, typename Derived>

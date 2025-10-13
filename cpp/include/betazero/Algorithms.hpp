@@ -31,12 +31,11 @@ class Algorithms : public alpha0::Algorithms<Traits> {
 
   static void load_evaluations(SearchContext& context);
 
+  static void to_results(const GeneralContext&, SearchResults&);
   static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
-
-  static void to_results(const GeneralContext&, SearchResults&);
 
  protected:
   static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
