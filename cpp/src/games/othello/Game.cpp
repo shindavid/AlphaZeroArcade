@@ -195,7 +195,7 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
 }
 
 boost::json::value Game::IO::state_to_json(const State& state) {
-  char buf[kBoardDimension * kBoardDimension+1];
+  char buf[kBoardDimension * kBoardDimension + 1];
   const char* syms = ".*0";
 
   int c = 0;
