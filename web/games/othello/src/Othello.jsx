@@ -54,7 +54,6 @@ export default class OthelloApp extends GameAppBase {
         cls += ' \(' + r + ',' + c + '\):';
         if (v === '*' || v === '0') cls += ' ' + v;
         if (legal) cls += ' legal-move';
-        if (lastAction === idx) cls += ' last-move';
 
         cells.push(
           <div
