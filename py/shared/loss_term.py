@@ -27,9 +27,9 @@ class Masker:
             return ys, y_hats
 
         masks = [self.mask_dict[name] for name in y_hat_names]
-        mask = masks[0]
+        mask = masks[0].clone()
         for m in masks[1:]:
-            mask = mask | m
+            mask = mask & m
 
         ys = [apply_mask(y, mask) for y in ys]
         y_hats = [apply_mask(y_hat, mask) for y_hat in y_hats]
