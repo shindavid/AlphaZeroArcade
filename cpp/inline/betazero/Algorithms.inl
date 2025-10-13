@@ -1,9 +1,13 @@
 #include "betazero/Algorithms.hpp"
 
+#include  "util/CppUtil.hpp"
+
 namespace beta0 {
 
 template <typename T>
 void check_values(const T& t, int line) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
+
   auto data = t.data();
   int n = t.size();
   for (int i = 0; i < n; ++i) {
