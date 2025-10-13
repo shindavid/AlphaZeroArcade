@@ -71,7 +71,6 @@ export default class OthelloApp extends GameAppBase {
     }
 
     const passEnabled = legalMoves.includes(PASS_MOVE) ?? false;
-    console.log('legalMoves:', legalMoves, 'passEnabled:', passEnabled);
 
     return (
       <div className="board-wrapper">
