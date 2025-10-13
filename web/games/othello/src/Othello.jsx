@@ -5,6 +5,7 @@ import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
 const N = 8; // 8x8 board
+const PASS_MOVE = 64; // index for "pass" move
 
 export default class OthelloApp extends GameAppBase {
   constructor(props) {
@@ -28,13 +29,15 @@ export default class OthelloApp extends GameAppBase {
     this.sendMove(idx);                        // or this.sendMove({ row, col }) per protocol
   };
 
-  handleActionRequest(payload) {
-    super.handleActionRequest(payload);
-    if (payload.legal_moves.includes(64)) {
-      console.log("No legal moves, sending idx=64 (pass)");
-      this.sendMove(64);
-    }
-  }
+  renderPassButton = () => (
+    <button
+      className="pass-btn"
+      onClick={() => this.sendMove(PASS_MOVE)}
+      title="Pass turn"
+    >
+      Pass
+    </button>
+  );
 
   renderBoard() {
     const { board, legalMoves, lastAction } = this.state;
@@ -66,6 +69,15 @@ export default class OthelloApp extends GameAppBase {
         );
       }
     }
-    return <div className="board">{cells}</div>;
+
+    const passEnabled = legalMoves.includes(PASS_MOVE) ?? false;
+    console.log('legalMoves:', legalMoves, 'passEnabled:', passEnabled);
+
+    return (
+      <div className="board-wrapper">
+        <div className="board">{cells}</div>
+        {passEnabled && this.renderPassButton()}
+      </div>
+    );
   }
 }

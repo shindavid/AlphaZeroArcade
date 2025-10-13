@@ -42,3 +42,19 @@
 
 .disc.B { background: #111; }
 .disc.W { background: #fafafa; }
+
+.pass-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 1.5em;
+  gap: 2.5em;
+  font-size: 1.2rem;
+  color: #0a5a2b;
+  background-color: #ffd54f;
+}
+.pass-btn:hover { background: #bbb; }
+
+.board-wrapper { position: relative; }
