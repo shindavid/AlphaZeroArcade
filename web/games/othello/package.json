@@ -1,0 +1,10 @@
+{
+  "__generated_by": "./py/tools/make_scaffold_for_web_game.py -g Othello",
+  "name": "othello",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  }
+}

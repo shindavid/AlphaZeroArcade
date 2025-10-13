@@ -1,0 +1,60 @@
+/* Auto-generated via: ./py/tools/make_scaffold_for_web_game.py -g Othello */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 48px);
+  grid-template-rows: repeat(8, 48px);
+  gap: 4px;
+  background: #0a5a2b;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.cell {
+  width: 48px;
+  height: 48px;
+  background: #2e7d32;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #1b5e20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+}
+
+.cell.legal-move {
+  outline: 2px dashed #ffd54f;
+  cursor: pointer;
+}
+
+.cell.last-move {
+  box-shadow: 0 0 0 3px #ffca28 inset;
+}
+
+.disc {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.disc.B { background: #111; }
+.disc.W { background: #fafafa; }
+
+.pass-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 1.5em;
+  gap: 2.5em;
+  font-size: 1.2rem;
+  color: #111;
+  background-color: #ffd54f;
+}
+.pass-btn:hover { background: #bbb; }
+
+.board-wrapper { position: relative; }
