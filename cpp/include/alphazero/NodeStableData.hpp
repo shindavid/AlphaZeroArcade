@@ -14,12 +14,12 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using Game = EvalSpec::Game;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   NodeStableData(const State&, core::seat_index_t active_seat);   // for non-terminal nodes
-  NodeStableData(const State&, const ValueTensor& game_outcome);  // for terminal nodes
+  NodeStableData(const State&, const GameResultTensor& game_outcome);  // for terminal nodes
 
-  ValueTensor VT;
+  GameResultTensor R;
   int num_valid_actions;
   ActionMask valid_action_mask;
   core::action_mode_t action_mode;

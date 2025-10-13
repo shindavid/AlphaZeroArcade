@@ -12,7 +12,7 @@ template <search::concepts::Traits Traits>
 GameReadLog<Traits>::DataLayout::DataLayout(const GameLogMetadata& m) {
   final_state = 0;
   outcome = align(final_state + sizeof(State));
-  sampled_indices_start = align(outcome + sizeof(ValueTensor));
+  sampled_indices_start = align(outcome + sizeof(GameResultTensor));
   mem_offsets_start = align(sampled_indices_start + sizeof(pos_index_t) * m.num_samples);
   records_start = align(mem_offsets_start + sizeof(mem_offset_t) * m.num_positions);
 }
@@ -148,8 +148,8 @@ const typename GameReadLog<Traits>::State& GameReadLog<Traits>::get_final_state(
 }
 
 template <search::concepts::Traits Traits>
-const typename GameReadLog<Traits>::ValueTensor& GameReadLog<Traits>::get_outcome() const {
-  return *reinterpret_cast<const ValueTensor*>(buffer_ + layout_.outcome);
+const typename GameReadLog<Traits>::GameResultTensor& GameReadLog<Traits>::get_outcome() const {
+  return *reinterpret_cast<const GameResultTensor*>(buffer_ + layout_.outcome);
 }
 
 template <search::concepts::Traits Traits>
@@ -196,7 +196,7 @@ void GameWriteLog<Traits>::add(const TrainingInfo& training_info) {
 }
 
 template <search::concepts::Traits Traits>
-void GameWriteLog<Traits>::add_terminal(const State& state, const ValueTensor& outcome) {
+void GameWriteLog<Traits>::add_terminal(const State& state, const GameResultTensor& outcome) {
   terminal_added_ = true;
   final_state_ = state;
   outcome_ = outcome;

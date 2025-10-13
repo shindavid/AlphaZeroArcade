@@ -50,7 +50,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   using State = Game::State;
   using Base = search::SimpleNNEvaluationService<Traits>;
   using NNEvaluation = search::NNEvaluation<Traits>;
-  using ValueTensor = GameTypes::ValueTensor;
+  using GameResultTensor = GameTypes::GameResultTensor;
   using PolicyTensor = GameTypes::PolicyTensor;
   using ActionValueTensor = GameTypes::ActionValueTensor;
   using ActionMask = GameTypes::ActionMask;
@@ -61,7 +61,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   }
 
   void init_eval(NNEvaluation* eval, const Item& item) {
-    ValueTensor value;
+    GameResultTensor value;
     PolicyTensor policy;
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;

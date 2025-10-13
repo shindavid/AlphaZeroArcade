@@ -14,7 +14,7 @@ struct SearchResults {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   ActionMask valid_actions;
   PolicyTensor counts;
@@ -24,7 +24,7 @@ struct SearchResults {
   PolicyTensor Q_sq;
   ActionValueTensor action_values;
   ValueArray win_rates;
-  ValueTensor value_prior;
+  GameResultTensor value_prior;
   ActionSymmetryTable action_symmetry_table;
   core::action_mode_t action_mode;
   bool trivial;  // all actions are symmetrically equivalent

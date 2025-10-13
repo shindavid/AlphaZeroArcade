@@ -132,7 +132,7 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
 }
 
 Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
-  Game::Types::ValueTensor tensor;
+  Game::Types::GameResultTensor tensor;
 
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {

@@ -170,7 +170,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
       action_values(action) = edge->child_V_estimate;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
-      action_values(action) = child->stable_data().VT(stable_data.active_seat);
+      action_values(action) = child->stable_data().R(stable_data.active_seat);
     }
     i++;
   }
@@ -458,7 +458,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    Algorithms::pure_backprop(context, GameResults::to_value_array(stable_data.VT));
+    Algorithms::pure_backprop(context, GameResults::to_value_array(stable_data.R));
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -622,7 +622,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     context.initialization_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(context.initialization_index);
 
-    ValueTensor game_outcome;
+    GameResultTensor game_outcome;
     core::action_t last_action = edge->action;
     Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
@@ -683,7 +683,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       child_index = edge->child_index;
     } else {
       if (terminal) {
-        Algorithms::pure_backprop(context, GameResults::to_value_array(child->stable_data().VT));
+        Algorithms::pure_backprop(context, GameResults::to_value_array(child->stable_data().R));
       } else {
         Algorithms::standard_backprop(context, do_virtual);
       }
@@ -910,7 +910,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     core::seat_index_t parent_active_seat = node->stable_data().active_seat;
     DEBUG_ASSERT(parent_active_seat == context.active_seat);
 
-    ValueTensor game_outcome;
+    GameResultTensor game_outcome;
     if (Rules::is_terminal(raw_child_state, parent_active_seat, raw_edge_action, game_outcome)) {
       new (child) Node(lookup_table.get_random_mutex(), canonical_child_state, game_outcome);
     } else {

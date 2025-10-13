@@ -23,7 +23,7 @@
  * fields are variable-sized. Its layout on disk looks like this:
  *
  *   [State]              // final state
- *   [ValueTensor]        // game result
+ *   [GameResultTensor]        // game result
  *   [pos_index_t...]     // indices of sampled positions
  *   [mem_offset_t...]    // memory-offsets into the DATA region
  *   [DATA]               // differently-sized sections of data
@@ -69,7 +69,7 @@ class GameReadLog : public GameLogBase<Traits> {
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   // indicates offsets relative to the start of the GameData region
   struct DataLayout {
@@ -100,7 +100,7 @@ class GameReadLog : public GameLogBase<Traits> {
   int num_positions() const { return metadata_.num_positions; }
 
   const State& get_final_state() const;
-  const ValueTensor& get_outcome() const;
+  const GameResultTensor& get_outcome() const;
   pos_index_t get_pos_index(int sample_index) const;
   const GameLogCompactRecord& get_record(mem_offset_t mem_offset) const;
   mem_offset_t get_mem_offset(int state_index) const;
@@ -132,7 +132,7 @@ class GameWriteLog : public GameLogBase<Traits> {
   using TrainingInfo = Traits::TrainingInfo;
   using Rules = Game::Rules;
   using State = Game::State;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using Algorithms = search::AlgorithmsForT<Traits>;
@@ -142,7 +142,7 @@ class GameWriteLog : public GameLogBase<Traits> {
 
   void add(const TrainingInfo&);
 
-  void add_terminal(const State& state, const ValueTensor& outcome);
+  void add_terminal(const State& state, const GameResultTensor& outcome);
   bool was_previous_entry_used_for_policy_training() const;
   int sample_count() const { return sample_count_; }
   core::game_id_t id() const { return id_; }
@@ -151,7 +151,7 @@ class GameWriteLog : public GameLogBase<Traits> {
  private:
   full_record_vec_t full_records_;
   State final_state_;
-  ValueTensor outcome_;
+  GameResultTensor outcome_;
   const core::game_id_t id_;
   const int64_t start_timestamp_;
   int sample_count_ = 0;

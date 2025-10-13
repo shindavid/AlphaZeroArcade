@@ -10,11 +10,11 @@ struct GameLogView {
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   State cur_pos;
   State final_pos;
-  ValueTensor game_result;
+  GameResultTensor game_result;
   PolicyTensor policy;
   PolicyTensor next_policy;
   ActionValueTensor action_values;

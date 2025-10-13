@@ -96,7 +96,7 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
+void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
   boost::json::object msg;
   msg["type"] = "game_end";
   msg["payload"] = make_result_msg(state, outcome);
@@ -126,7 +126,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
-                                                     const ValueTensor& outcome) {
+                                                     const GameResultTensor& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;

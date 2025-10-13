@@ -32,7 +32,7 @@ class GameServerProxy : public core::GameServerBase {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;
@@ -83,7 +83,7 @@ class GameServerProxy : public core::GameServerBase {
    private:
     const Params& params() const { return shared_data_.params(); }
 
-    void handle_terminal(const ValueTensor& outcome);
+    void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
     SharedData& shared_data_;

@@ -16,7 +16,7 @@ struct GameLogViewParams {
   const GameLogCompactRecord* next_record = nullptr;
   const Game::State* cur_pos = nullptr;
   const Game::State* final_pos = nullptr;
-  const Game::Types::ValueTensor* outcome = nullptr;
+  const Game::Types::GameResultTensor* outcome = nullptr;
   group::element_t sym = group::kIdentity;
 };
 

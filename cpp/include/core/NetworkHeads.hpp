@@ -60,7 +60,7 @@ template <core::concepts::Game Game>
 struct ValueNetworkHead {
   static constexpr const char* kName = "value";
   static constexpr NetworkHeadType kType = NetworkHeadType::kValueBasedHead;
-  using Tensor = Game::Types::ValueTensor;
+  using Tensor = Game::Types::GameResultTensor;
 
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&);

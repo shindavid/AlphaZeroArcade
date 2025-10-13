@@ -175,7 +175,7 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::end_game(const State& state, const ValueTensor& outcome) {
+void RemotePlayerProxy<Game>::end_game(const State& state, const GameResultTensor& outcome) {
   Packet<EndGame> packet;
   packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;

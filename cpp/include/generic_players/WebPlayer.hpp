@@ -22,7 +22,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   static_assert(core::concepts::WebGameIO<IO, GameTypes>, "IO must satisfy WebGameIO");
 
@@ -32,7 +32,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const ValueTensor&) override;
+  void end_game(const State&, const GameResultTensor&) override;
   bool disable_progress_bar() const override { return true; }
 
  protected:
@@ -61,7 +61,7 @@ class WebPlayer : public core::AbstractPlayer<Game> {
   //
   // In a game like chess, we might specialize by adding detail about why the game ended (e.g.,
   // stalemate, threefold repetition, etc.).
-  virtual boost::json::object make_result_msg(const State& state, const ValueTensor& outcome);
+  virtual boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
 
   // Optional: override this to provide a game-specific action request msg.
   // By default, it returns something like:

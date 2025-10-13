@@ -60,7 +60,7 @@ class GameServer
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using GameResults = Game::GameResults;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
@@ -191,7 +191,7 @@ class GameServer
     // request to the appropriate value.
     bool step_non_chance(context_id_t context, StepResult& result);
 
-    void handle_terminal(const ValueTensor& outcome, StepResult& result);
+    void handle_terminal(const GameResultTensor& outcome, StepResult& result);
 
     SharedData& shared_data_;
     const game_slot_index_t id_;

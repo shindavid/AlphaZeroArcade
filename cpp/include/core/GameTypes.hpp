@@ -31,8 +31,7 @@ struct GameTypes {
 
   using PolicyShape = Eigen::Sizes<kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
-  using ValueTensor = GameResults::Tensor;
-  using ValueShape = ValueTensor::Dimensions;
+  using GameResultTensor = GameResults::Tensor;
   using WinShareShape = Eigen::Sizes<GameConstants::kNumPlayers>;
   using WinShareTensor = eigen_util::FTensor<WinShareShape>;
   using ActionValueShape = Eigen::Sizes<kMaxNumActions>;

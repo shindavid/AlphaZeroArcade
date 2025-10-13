@@ -108,7 +108,7 @@ void AlgorithmsBase<Traits, Derived>::undo_virtual_backprop(SearchContext& conte
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
-  auto value = GameResults::to_value_array(last_node->stable_data().VT);
+  auto value = GameResults::to_value_array(last_node->stable_data().R);
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -283,7 +283,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     auto& stats = node->stats();
 
     int n = stable_data.num_valid_actions;
-    ValueTensor VT;
+    GameResultTensor R;
 
     LocalPolicyArray P_raw(n);
     LocalActionValueArray child_V(n);
@@ -294,13 +294,13 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     //
     // TODO: we should be able to verify this assumption at compile-time
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
-    std::copy_n(eval->data(1), VT.size(), VT.data());
+    std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), child_V.size(), child_V.data());
 
     LocalPolicyArray P_adjusted = P_raw;
     Derived::transform_policy(context, P_adjusted);
 
-    stable_data.VT = VT;
+    stable_data.R = R;
     stable_data.VT_valid = true;
 
     // No need to worry about thread-safety when modifying edges or stats below, since no other
@@ -312,11 +312,11 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->child_V_estimate = child_V[i];
     }
 
-    ValueArray VA = Game::GameResults::to_value_array(VT);
-    Derived::update_q(stats, VA);
-    stats.Q_sq = VA * VA;
+    ValueArray V = Game::GameResults::to_value_array(R);
+    Derived::update_q(stats, V);
+    stats.Q_sq = V * V;
 
-    eigen_util::debug_assert_is_valid_prob_distr(VA);
+    eigen_util::debug_assert_is_valid_prob_distr(V);
   }
 }
 
@@ -368,7 +368,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   Symmetries::apply(results.action_values, inv_sym, mode);
 
   results.win_rates = stats.Q;
-  results.value_prior = stable_data.VT;
+  results.value_prior = stable_data.R;
   results.action_mode = mode;
 }
 
@@ -442,7 +442,7 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   const GameLogCompactRecord* next_record = params.next_record;
   const State* cur_pos = params.cur_pos;
   const State* final_pos = params.final_pos;
-  const ValueTensor* outcome = params.outcome;
+  const GameResultTensor* outcome = params.outcome;
   group::element_t sym = params.sym;
 
   core::seat_index_t active_seat = record->active_seat;
@@ -663,12 +663,12 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
     }
 
     if (stable_data.VT_valid) {
-      ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
-      Q_sum += VA;
-      Q_sq_sum += VA * VA;
+      ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+      Q_sum += V;
+      Q_sq_sum += V * V;
       N++;
 
-      eigen_util::debug_assert_is_valid_prob_distr(VA);
+      eigen_util::debug_assert_is_valid_prob_distr(V);
     }
 
     auto Q = N ? (Q_sum / N) : Q_sum;
@@ -741,8 +741,8 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
 
     const auto& stable_data = child->stable_data();
     RELEASE_ASSERT(stable_data.VT_valid);
-    ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
-    action_values(action) = VA(seat);
+    ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+    action_values(action) = V(seat);
   }
 }
 

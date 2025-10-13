@@ -53,7 +53,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::end_game(const State& state, const ValueTensor& outcome) {
+inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
 

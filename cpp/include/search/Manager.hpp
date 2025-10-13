@@ -74,7 +74,7 @@ class Manager {
   using Keys = InputTensorizor::Keys;
   using TransposeKey = Keys::TransposeKey;
 
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using SymmetryMask = Game::Types::SymmetryMask;

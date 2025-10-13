@@ -62,7 +62,7 @@ class AlgorithmsBase {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

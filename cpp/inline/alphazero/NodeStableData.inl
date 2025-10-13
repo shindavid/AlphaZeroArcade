@@ -4,7 +4,7 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 NodeStableData<EvalSpec>::NodeStableData(const State& st, core::seat_index_t as) : Base(st) {
-  VT.setZero();  // to be set lazily
+  R.setZero();  // to be set lazily
   VT_valid = false;
   valid_action_mask = Game::Rules::get_legal_moves(st);
   num_valid_actions = valid_action_mask.count();
@@ -15,9 +15,9 @@ NodeStableData<EvalSpec>::NodeStableData(const State& st, core::seat_index_t as)
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-NodeStableData<EvalSpec>::NodeStableData(const State& st, const ValueTensor& game_outcome)
+NodeStableData<EvalSpec>::NodeStableData(const State& st, const GameResultTensor& game_outcome)
     : Base(st) {
-  VT = game_outcome;
+  R = game_outcome;
   VT_valid = true;
   num_valid_actions = 0;
   action_mode = -1;

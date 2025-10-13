@@ -772,7 +772,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     player2->receive_state_change(active_seat_, state_, chance_action_);
   }
 
-  ValueTensor outcome;
+  GameResultTensor outcome;
   if (Game::Rules::is_terminal(state_, active_seat_, chance_action_, outcome)) {
     handle_terminal(outcome, result);
     return false;
@@ -825,7 +825,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   action_t action = response.action;
 
   if (response.victory_guarantee && params().respect_victory_hints) {
-    ValueTensor outcome = GameResults::win(active_seat_);
+    GameResultTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,
                player->get_name(), active_seat_);
@@ -838,7 +838,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
         "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
         player->get_name(), active_seat_, kNumPlayers);
     }
-    ValueTensor outcome = GameResults::win(!active_seat_);
+    GameResultTensor outcome = GameResults::win(!active_seat_);
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
                player->get_name(), active_seat_);
@@ -858,7 +858,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       player2->receive_state_change(active_seat_, state_, action);
     }
 
-    ValueTensor outcome;
+    GameResultTensor outcome;
     if (Game::Rules::is_terminal(state_, active_seat_, action, outcome)) {
       handle_terminal(outcome, result);
       return false;
@@ -868,7 +868,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::handle_terminal(const ValueTensor& outcome, StepResult& result) {
+void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome, StepResult& result) {
   ValueArray array = GameResults::to_value_array(outcome);
   for (auto player2 : players_) {
     player2->end_game(state_, outcome);

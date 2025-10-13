@@ -21,7 +21,7 @@ class DataExportingPlayer : public BasePlayer {
   using Game = BasePlayer::Game;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = Game::Types::ActionRequest;
@@ -45,7 +45,7 @@ class DataExportingPlayer : public BasePlayer {
 
   core::yield_instruction_t handle_chance_event(const ChanceEventHandleRequest&) override;
   bool start_game() override;
-  void end_game(const State&, const ValueTensor&) override;
+  void end_game(const State&, const GameResultTensor&) override;
 
  protected:
   ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;

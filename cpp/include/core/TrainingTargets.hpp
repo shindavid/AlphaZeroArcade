@@ -18,7 +18,7 @@ struct PolicyTarget {
 template <core::concepts::Game Game>
 struct ValueTarget {
   static constexpr const char* kName = "value";
-  using Tensor = Game::Types::ValueTensor;
+  using Tensor = Game::Types::GameResultTensor;
 
   template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);

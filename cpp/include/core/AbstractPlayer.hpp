@@ -37,7 +37,7 @@ template <concepts::Game Game>
 class AbstractPlayer {
  public:
   using State = Game::State;
-  using ValueTensor = Game::Types::ValueTensor;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
@@ -79,7 +79,7 @@ class AbstractPlayer {
    * The State passed in here is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual void end_game(const State&, const ValueTensor&) {}
+  virtual void end_game(const State&, const GameResultTensor&) {}
 
   /*
    * Some extra virtual functions that most subclasses can ignore.

@@ -42,7 +42,7 @@ bool DataExportingPlayer<BasePlayer>::start_game() {
 }
 
 template <typename BasePlayer>
-void DataExportingPlayer<BasePlayer>::end_game(const State& state, const ValueTensor& outcome) {
+void DataExportingPlayer<BasePlayer>::end_game(const State& state, const GameResultTensor& outcome) {
   BasePlayer::end_game(state, outcome);
   if (!game_log_ || !this->owns_shared_data_) return;
   game_log_->add_terminal(state, outcome);
