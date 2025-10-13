@@ -1,6 +1,6 @@
 #include "betazero/Algorithms.hpp"
 
-#include  "util/CppUtil.hpp"
+#include "util/CppUtil.hpp"
 
 namespace beta0 {
 
@@ -16,8 +16,8 @@ void check_values(const T& t, int line) {
   }
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::load_evaluations(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   Base::load_evaluations(context);  // assumes that heads[:3] are [policy, value, action-value]
 
   const LookupTable& lookup_table = context.general_context->lookup_table;
@@ -48,8 +48,9 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   }
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
+                                                 SearchResults& results) {
   Base::to_results(general_context, results);
   const LookupTable& lookup_table = general_context.lookup_table;
   const Node* root = lookup_table.get_node(general_context.root_info.node_index);
@@ -81,9 +82,9 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   check_values(results.action_value_uncertainties, __LINE__);
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
-                                                TrainingInfo& training_info) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoParams& params,
+                                                             TrainingInfo& training_info) {
   Base::write_to_training_info(params, training_info);
 
   const SearchResults* mcts_results = params.mcts_results;
@@ -104,9 +105,9 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   }
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
-                                   GameLogFullRecord& full_record) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_info,
+                                                GameLogFullRecord& full_record) {
   Base::to_record(training_info, full_record);
 
   full_record.Q_posterior = training_info.Q_posterior;
@@ -126,9 +127,9 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   check_values(full_record.action_value_uncertainties, __LINE__);
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
-                                          std::vector<char>& buf) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& full_record,
+                                                       std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
   compact_record.Q_posterior = full_record.Q_posterior;
@@ -153,8 +154,8 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
   action_value_uncertainties.write_to(buf);
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, GameLogView& view) {
   Base::to_view(params, view);
 
   const GameLogCompactRecord* record = params.record;
@@ -191,13 +192,13 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   check_values(view.action_value_uncertainties, __LINE__);
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {
   stats.init_q(value, pure);
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::update_q(NodeStats& stats, const ValueArray& value) {
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_q(NodeStats& stats, const ValueArray& value) {
   stats.update_q(value);
 }
 

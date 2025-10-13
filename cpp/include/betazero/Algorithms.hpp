@@ -5,11 +5,18 @@
 
 namespace beta0 {
 
-// For now, we piggy-back alpha0::Algorithms for most of beta0::Algorithms
-template <search::concepts::Traits Traits>
-class Algorithms : public alpha0::Algorithms<Traits> {
+// CRTP base class
+//
+// This allows us to effectively have other Algorithms classes methods invoke beta0::Algorithms
+// methods.
+//
+// To make this work, we need to follow the discipline of always invoking Derived::func() rather
+// than simply func() within beta0::Algorithms methods.
+template <search::concepts::Traits Traits, typename Derived>
+class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
  public:
-  using Base = alpha0::Algorithms<Traits>;
+  using Base = alpha0::AlgorithmsBase<Traits, Derived>;
+  friend class alpha0::AlgorithmsBase<Traits, Derived>;
 
   using Edge = Base::Edge;
   using Game = Base::Game;
@@ -41,6 +48,9 @@ class Algorithms : public alpha0::Algorithms<Traits> {
   static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
   static void update_q(NodeStats& stats, const ValueArray& value);
 };
+
+template <search::concepts::Traits Traits>
+struct Algorithms : public AlgorithmsBase<Traits, Algorithms<Traits>> {};
 
 }  // namespace beta0
 
