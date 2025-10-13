@@ -414,7 +414,6 @@ class ValueUncertaintyHead(Head):
     ):
         super().__init__()
         assert len(value_shape) == 1, "value_shape must be 1D (e.g., (3,), (2,), (N,))"
-        assert output_shape == (1,), "Only scalar uncertainty output is currently supported"
 
         c_trunk, H, W = trunk_shape
         self.value_dim = value_shape[0]

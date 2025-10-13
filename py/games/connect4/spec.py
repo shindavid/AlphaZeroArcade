@@ -99,6 +99,8 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         action_value_uncertainty_shape = head_shapes['action_value_uncertainty'].shape
 
         assert value_shape == (3,), value_shape
+        assert value_uncertainty_shape == (2,), value_uncertainty_shape
+        assert action_value_uncertainty_shape == (7,), action_value_uncertainty_shape
 
         c_trunk = 128
         c_mid = 128
@@ -164,7 +166,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 1.0),
-            ValueUncertaintyLossTerm('value_uncertainty', 'value', 'Q_posterior', 5.0),
+            ValueUncertaintyLossTerm('value_uncertainty', 'value', 'Q_min', 'Q_max', 5.0),
             BasicLossTerm('action_value_uncertainty', 5.0),
             BasicLossTerm('opp_policy', 0.03),
         ]

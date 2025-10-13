@@ -108,27 +108,28 @@ class ValueUncertaintyLossTerm(LossTerm):
     """
     A LossTerm for a ValueUncertaintyHead.
 
-    The ValueUncertaintyHead predicts D^2, where D is the difference between the Q_posterior target
-    and the value head's output (converted from logit space to probability space). Technically, in a
-    p-player game, D should be a length-p vector. If the game is zero-sum, then the space of
-    possible D vectors is only (p-1)-dimensional. For now, ValueUncertaintyLossTerm assumes the game
-    is 2-player zero-sum, so it predicts D as a scalar.
+    The ValueUncertaintyHead predicts a size-P tensor, T, where P is the number of players. For the
+    p'th player, let Q_min(p) and Q_max(p) be the minimum and maximum values of Q ever observed for
+    that player during MCTS search. Then T(p) corresponds to the larger of (V(p) - Q_min(p))^2 and
+    (Q_max(p) - V(p))^2, where V(p) is the value head's output (converted from logit space to
+    probability space).
 
-    Following KataGo, the loss term is computed as the Huber loss between the predicted D^2 and the
-    actual D^2. This is quadratic in D; Huber is used rather than MSE to reduce sensitivity to
-    outliers.
+    Following KataGo, the loss term is computed using Huber loss to reduce sensitivity to outliers.
     """
-    def __init__(self, name: str, value_name: str, Q_posterior_target_name: str, weight: float):
+    def __init__(self, name: str, value_name: str, Q_min_target_name: str, Q_max_target_name: str,
+                 weight: float):
         """
         Args:
             name: the name of the ValueUncertaintyHead module
             value_name: the name of the head/target that provides the value prediction
-            Q_posterior_target_name: the name of the head that provides the target Q posterior
+            Q_min_target_name: the name of the head that provides the target Q_min
+            Q_max_target_name: the name of the head that provides the target Q_max
             weight: the weight to assign to this loss term
         """
         super().__init__(name, weight)
         self._value_name = value_name
-        self._Q_posterior_target_name = Q_posterior_target_name
+        self._Q_min_target_name = Q_min_target_name
+        self._Q_max_target_name = Q_max_target_name
         self._value_head = None  # initialized lazily in post_init()
         self._loss_fn = nn.HuberLoss()
 
@@ -137,14 +138,13 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_names = [self.name, self._value_name]
-        y_hat_names = [self._Q_posterior_target_name]
+        y_hat_names = [self._Q_min_target_name, self._Q_max_target_name]
         y, y_hat = masker.get_y_and_y_hat(y_names, y_hat_names)
 
         predicted_Dsq, win_value = y
-        Q_posterior = y_hat[0]  # (B, 2)
+        Q_min = y_hat[0]  # (B, 2)
+        Q_max = y_hat[1]  # (B, 2)
 
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
-        D = Q_posterior - Q_prior  # (B, 2)
-        D1 = D[:, :1]  # (B, 1)
-        actual_Dsq = D1 * D1  # (B, 1)
+        actual_Dsq = torch.max((Q_prior - Q_min) ** 2, (Q_max - Q_prior) ** 2)  # (B, 2)
         return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
