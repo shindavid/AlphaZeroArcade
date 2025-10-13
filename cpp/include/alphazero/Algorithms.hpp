@@ -96,7 +96,7 @@ class AlgorithmsBase {
   static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
   static void update_q(NodeStats& stats, const ValueArray& value);
 
-  static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
+  static void update_stats(Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds

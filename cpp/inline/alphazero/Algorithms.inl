@@ -573,14 +573,9 @@ void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, LookupTable& l
                                                       MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
-  auto stats = node->stats();  // make a copy
   lock.unlock();
 
-  Derived::update_stats(stats, node, lookup_table);
-
-  lock.lock();
-  node->stats() = stats;  // copy back
-  lock.unlock();
+  Derived::update_stats(node, lookup_table);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -594,8 +589,7 @@ void AlgorithmsBase<Traits, Derived>::update_q(NodeStats& stats, const ValueArra
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node* node,
-                                                   LookupTable& lookup_table) {
+void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -607,6 +601,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
   all_provably_winning.set();
   all_provably_losing.set();
 
+  auto& stats = node->stats();
   const auto& stable_data = node->stable_data();
 
   int num_valid_actions = stable_data.num_valid_actions;
@@ -629,6 +624,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
       all_provably_losing &= child_stats.provably_losing;
     }
     if (N == num_valid_actions) {
+      mit::unique_lock lock(node->mutex());
       Derived::update_q(stats, Q_sum);
       stats.Q_sq = Q_sq_sum;
       stats.provably_winning = all_provably_winning;
@@ -678,6 +674,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
     auto Q = N ? (Q_sum / N) : Q_sum;
     auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
 
+    mit::unique_lock lock(node->mutex());
     Derived::update_q(stats, Q);
     stats.Q_sq = Q_sq;
     stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
