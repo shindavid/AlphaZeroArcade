@@ -1,6 +1,5 @@
 #include "search/GameLog.hpp"
 
-#include "core/TrainingTargets.hpp"
 #include "util/Asserts.hpp"
 #include "util/IndexedDispatcher.hpp"
 #include "util/MetaProgramming.hpp"

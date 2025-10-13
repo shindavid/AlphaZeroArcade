@@ -89,7 +89,7 @@ class AlgorithmsBase {
   static void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
                                  const SearchResults& results, int n_rows_to_display);
 
- private:
+ protected:
   template <typename MutexProtectedFunc>
   static void backprop_helper(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
 

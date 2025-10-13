@@ -33,13 +33,13 @@ struct GameTypes {
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueTensor = GameResults::Tensor;
   using ValueShape = ValueTensor::Dimensions;
+  using WinShareShape = Eigen::Sizes<GameConstants::kNumPlayers>;
+  using WinShareTensor = eigen_util::FTensor<WinShareShape>;
   using ActionValueShape = Eigen::Sizes<kMaxNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
   using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
   using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
-  using QShape = Eigen::Sizes<GameConstants::kNumPlayers>;
-  using QTensor = eigen_util::FTensor<QShape>;
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;

@@ -45,7 +45,27 @@ struct ActionValueTarget {
 template <core::concepts::Game Game>
 struct QPosteriorTarget {
   static constexpr const char* kName = "Q_posterior";
-  using Tensor = Game::Types::QTensor;
+  using Tensor = Game::Types::WinShareTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
+// QMinTarget is used to train the ValueUncertainty head.
+template <core::concepts::Game Game>
+struct QMinTarget {
+  static constexpr const char* kName = "Q_min";
+  using Tensor = Game::Types::WinShareTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
+// QMinTarget is used to train the ValueUncertainty head.
+template <core::concepts::Game Game>
+struct QMaxTarget {
+  static constexpr const char* kName = "Q_max";
+  using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
@@ -104,10 +124,13 @@ namespace beta0 {
 template <core::concepts::Game Game>
 struct StandardTrainingTargets {
   using QPosteriorTarget = core::QPosteriorTarget<Game>;
+  using QMinTarget = core::QMinTarget<Game>;
+  using QMaxTarget = core::QMaxTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
 
   using List1 = alpha0::StandardTrainingTargets<Game>::List;
-  using List2 = mp::TypeList<QPosteriorTarget, ActionValueUncertaintyTarget>;
+  using List2 =
+    mp::TypeList<QPosteriorTarget, QMinTarget, QMaxTarget, ActionValueUncertaintyTarget>;
   using List = mp::Concat_t<List1, List2>;
 };
 

@@ -21,11 +21,13 @@ class Algorithms : public alpha0::Algorithms<Traits> {
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
+  using NodeStats = Base::NodeStats;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using TrainingInfo = Base::TrainingInfo;
   using TensorData = Base::TensorData;
+  using ValueArray = Base::ValueArray;
 
   static void load_evaluations(SearchContext& context);
 
@@ -36,9 +38,8 @@ class Algorithms : public alpha0::Algorithms<Traits> {
 
   static void to_results(const GeneralContext&, SearchResults&);
 
- private:
-  static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
-                            SearchResults& results);
+ protected:
+  static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
 };
 
 }  // namespace beta0

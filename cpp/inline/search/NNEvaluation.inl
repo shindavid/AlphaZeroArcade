@@ -21,11 +21,15 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
     using Shape = Tensor::Dimensions;
     constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
     constexpr bool kValueBased = Head::kType == core::NetworkHeadType::kValueBasedHead;
+    constexpr bool kWinShareBased = Head::kType == core::NetworkHeadType::kWinShareBasedHead;
 
     auto& src = std::get<Index>(outputs);
 
     if constexpr (kValueBased) {
       Game::GameResults::right_rotate(src, active_seat);
+    }
+    if constexpr (kWinShareBased) {
+      eigen_util::right_rotate(src, active_seat);
     }
 
     using Dst = std::conditional_t<kPolicyBased, LocalPolicyTensor, Tensor>;
