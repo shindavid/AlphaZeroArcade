@@ -52,7 +52,7 @@
   margin-bottom: 1.5em;
   gap: 2.5em;
   font-size: 1.2rem;
-  color: #0a5a2b;
+  color: #111;
   background-color: #ffd54f;
 }
 .pass-btn:hover { background: #bbb; }
