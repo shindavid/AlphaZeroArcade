@@ -24,9 +24,9 @@ export default class OthelloApp extends GameAppBase {
 
   handleCellClick = (row, col) => {
     if (!this.gameActive()) return;
-    const idx = row * N + col;                 // adjust if engine uses {row,col} instead
+    const idx = row * N + col;
     if (!this.state.legalMoves.includes(idx)) return;
-    this.sendMove(idx);                        // or this.sendMove({ row, col }) per protocol
+    this.sendMove(idx);
   };
 
   renderPassButton = () => (
@@ -47,7 +47,7 @@ export default class OthelloApp extends GameAppBase {
     for (let r = 0; r < N; r++) {
       for (let c = 0; c < N; c++) {
         const idx = r * N + c;
-        const v = board[idx];                  // '.', 'B', 'W'
+        const v = board[idx];
         const legal = this.gameActive() && legalMoves.includes(idx);
 
         let cls = 'cell';
