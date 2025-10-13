@@ -36,18 +36,18 @@ class AlgorithmsBase {
   using GameLogView = Traits::GameLogView;
 
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using Visitation = TraitsTypes::Visitation;
+
+  using GameLogViewParams = search::GameLogViewParams<Traits>;
   using Node = TraitsTypes::Node;
   using StateHistory = TraitsTypes::StateHistory;
+  using Visitation = TraitsTypes::Visitation;
 
-  using LookupTable = search::LookupTable<Traits>;
-
-  using PuctCalculator = search::PuctCalculator<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
+  using LookupTable = search::LookupTable<Traits>;
+  using PuctCalculator = search::PuctCalculator<Traits>;
   using SearchContext = search::SearchContext<Traits>;
-  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
   using TensorData = search::GameLogBase<Traits>::TensorData;
-  using GameLogViewParams = search::GameLogViewParams<Traits>;
+  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
 
   using RootInfo = GeneralContext::RootInfo;
 
@@ -57,12 +57,12 @@ class AlgorithmsBase {
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueTensor = Game::Types::ValueTensor;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
-  using LocalActionValueArray = Game::Types::LocalActionValueArray;
-  using ValueArray = Game::Types::ValueArray;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
@@ -92,6 +92,9 @@ class AlgorithmsBase {
  protected:
   template <typename MutexProtectedFunc>
   static void backprop_helper(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
+
+  static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
+  static void update_q(NodeStats& stats, const ValueArray& value);
 
   static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,

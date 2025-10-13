@@ -25,7 +25,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     int n = stable_data.num_valid_actions;
 
-    using ValueUncertaintyTensor = EvalSpec::NetworkHeads::ValueUncertaintyHead::Tensor;
+    using ValueUncertaintyTensor = Traits::EvalSpec::NetworkHeads::ValueUncertaintyHead::Tensor;
     ValueUncertaintyTensor U;
     LocalActionValueArray child_U(n);
 
@@ -187,18 +187,15 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   check_values(results.action_value_uncertainties, __LINE__);
 }
 
+
 template <search::concepts::Traits Traits>
-void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
-                                      LookupTable& lookup_table) {
-  ValueArray Q = stats.Q;
-  Base::update_stats(stats, node, lookup_table);
+void Algorithms<Traits>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {
+  stats.init_q(value, pure);
+}
 
-  // element-wise min and max update
-  stats.Q_min = Q.min(stats.Q_min);
-  stats.Q_max = Q.max(stats.Q_max);
-
-  check_values(stats.Q_min, __LINE__);
-  check_values(stats.Q_max, __LINE__);
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_q(NodeStats& stats, const ValueArray& value) {
+  stats.update_q(value);
 }
 
 }  // namespace beta0

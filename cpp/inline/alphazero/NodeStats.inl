@@ -17,6 +17,11 @@ void NodeStats<EvalSpec>::init_q(const ValueArray& value, bool pure) {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
+void NodeStats<EvalSpec>::update_q(const ValueArray& value) {
+  Q = value;
+}
+
+template <core::concepts::EvalSpec EvalSpec>
 void NodeStats<EvalSpec>::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
                                                const player_bitset_t& all_actions_provably_losing,
                                                int num_expanded_children, bool cp_has_winning_move,

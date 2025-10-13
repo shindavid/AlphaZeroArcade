@@ -10,23 +10,23 @@ template <search::concepts::Traits Traits>
 class Algorithms : public alpha0::Algorithms<Traits> {
  public:
   using Base = alpha0::Algorithms<Traits>;
-  using EvalSpec = Traits::EvalSpec;
+
+  using Edge = Base::Edge;
   using Game = Base::Game;
   using GameLogCompactRecord = Base::GameLogCompactRecord;
   using GameLogFullRecord = Base::GameLogFullRecord;
   using GameLogView = Base::GameLogView;
   using GameLogViewParams = Base::GameLogViewParams;
   using GeneralContext = Base::GeneralContext;
-  using Edge = Base::Edge;
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
-  using TrainingInfoParams = Base::TrainingInfoParams;
-  using TrainingInfo = Base::TrainingInfo;
   using TensorData = Base::TensorData;
+  using TrainingInfo = Base::TrainingInfo;
+  using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;
 
   static void load_evaluations(SearchContext& context);
@@ -39,7 +39,8 @@ class Algorithms : public alpha0::Algorithms<Traits> {
   static void to_results(const GeneralContext&, SearchResults&);
 
  protected:
-  static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
+  static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
+  static void update_q(NodeStats& stats, const ValueArray& value);
 };
 
 }  // namespace beta0
