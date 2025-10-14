@@ -3,6 +3,7 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
+#include "generic_players/alpha0/VerboseData.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
@@ -101,14 +102,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
   void normalize(const ActionMask&, PolicyTensor& policy) const;
 
-  struct VerboseData : public VerboseDataBase {
-    PolicyTensor action_policy;
-    SearchResults mcts_results;
-
-    boost::json::object to_json() const override { return boost::json::object(); }
-    void to_terminal_text(std::ostream& ss, int n_rows_to_display) const;
-  };
-
   core::SearchMode get_random_search_mode() const;
   void verbose_dump() const;
 
@@ -117,7 +110,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   const search::SearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   SharedData_sptr shared_data_;
-  VerboseData* verbose_info_ = nullptr;
+  VerboseData<Traits>* verbose_info_ = nullptr;
   const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
 
