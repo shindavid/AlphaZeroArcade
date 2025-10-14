@@ -10,19 +10,12 @@ NodeStats<EvalSpec>::NodeStats() {
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-void NodeStats<EvalSpec>::init_q(const ValueArray& value, bool pure) {
-  Base::init_q(value, pure);
-  Q_min = value;
-  Q_max = value;
-}
-
-template <core::concepts::EvalSpec EvalSpec>
-void NodeStats<EvalSpec>::update_q(const ValueArray& value) {
-  Base::update_q(value);
+void NodeStats<EvalSpec>::update_q(const ValueArray& q, const ValueArray& q_sq, bool pure) {
+  Base::update_q(q, q_sq, pure);
 
   // element-wise min and max update
-  Q_min = Q_min.min(value);
-  Q_max = Q_max.max(value);
+  Q_min = Q_min.min(this->Q);
+  Q_max = Q_max.max(this->Q);
 }
 
 }  // namespace beta0

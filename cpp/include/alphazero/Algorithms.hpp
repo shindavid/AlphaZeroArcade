@@ -93,9 +93,6 @@ class AlgorithmsBase {
   template <typename MutexProtectedFunc>
   static void backprop_helper(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
 
-  static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
-  static void update_q(NodeStats& stats, const ValueArray& value);
-
   static void update_stats(Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);

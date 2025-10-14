@@ -34,7 +34,7 @@ void AlgorithmsBase<Traits, Derived>::pure_backprop(SearchContext& context,
 
   Derived::backprop_helper(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    Derived::init_q(stats, value, true);
+    stats.update_q(value, value * value, true);
     stats.RN++;
   });
 
@@ -120,7 +120,7 @@ void AlgorithmsBase<Traits, Derived>::standard_backprop(SearchContext& context, 
 
   Derived::backprop_helper(last_node, lookup_table, [&] {
     auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    Derived::init_q(stats, value, false);
+    stats.update_q(value, value * value, false);
     stats.RN++;
     stats.VN -= undo_virtual;
   });
@@ -313,10 +313,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     }
 
     ValueArray V = Game::GameResults::to_value_array(R);
-    Derived::update_q(stats, V);
-    stats.Q_sq = V * V;
-
-    eigen_util::debug_assert_is_valid_prob_distr(V);
+    stats.update_q(V, V * V, false);
   }
 }
 
@@ -579,16 +576,6 @@ void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, LookupTable& l
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {
-  stats.init_q(value, pure);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_q(NodeStats& stats, const ValueArray& value) {
-  stats.update_q(value);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
@@ -625,8 +612,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
     }
     if (N == num_valid_actions) {
       mit::unique_lock lock(node->mutex());
-      Derived::update_q(stats, Q_sum);
-      stats.Q_sq = Q_sq_sum;
+      stats.update_q(Q_sum, Q_sq_sum, false);
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
     }
@@ -675,8 +661,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& look
     auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
 
     mit::unique_lock lock(node->mutex());
-    Derived::update_q(stats, Q);
-    stats.Q_sq = Q_sq;
+    stats.update_q(Q, Q_sq, false);
     stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
                                cp_has_winning_move, num_valid_actions, seat);
 

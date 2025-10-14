@@ -43,10 +43,6 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
-
- protected:
-  static void init_q(NodeStats& stats, const ValueArray& value, bool pure);
-  static void update_q(NodeStats& stats, const ValueArray& value);
 };
 
 template <search::concepts::Traits Traits>

@@ -3,22 +3,17 @@
 namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-void NodeStats<EvalSpec>::init_q(const ValueArray& value, bool pure) {
-  Q = value;
-  Q_sq = value * value;
+void NodeStats<EvalSpec>::update_q(const ValueArray& q, const ValueArray& q_sq, bool pure) {
+  Q = q;
+  Q_sq = q_sq;
   if (pure) {
     for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-      provably_winning[p] = value(p) >= Game::GameResults::kMaxValue;
-      provably_losing[p] = value(p) <= Game::GameResults::kMinValue;
+      provably_winning[p] = Q(p) >= Game::GameResults::kMaxValue;
+      provably_losing[p] = Q(p) <= Game::GameResults::kMinValue;
     }
   }
 
   eigen_util::debug_assert_is_valid_prob_distr(Q);
-}
-
-template <core::concepts::EvalSpec EvalSpec>
-void NodeStats<EvalSpec>::update_q(const ValueArray& value) {
-  Q = value;
 }
 
 template <core::concepts::EvalSpec EvalSpec>

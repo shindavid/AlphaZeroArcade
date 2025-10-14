@@ -192,14 +192,4 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   check_values(view.action_value_uncertainties, __LINE__);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_q(NodeStats& stats, const ValueArray& value, bool pure) {
-  stats.init_q(value, pure);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_q(NodeStats& stats, const ValueArray& value) {
-  stats.update_q(value);
-}
-
 }  // namespace beta0
