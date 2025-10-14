@@ -42,4 +42,13 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
   return policy;
 }
 
+template <search::concepts::Traits Traits>
+inline void Player<Traits>::verbose_dump() const {
+  if (!verbose_info_->initialized) return;
+
+  const auto& action_policy = verbose_info_->action_policy;
+  const auto& mcts_results = verbose_info_->mcts_results;
+  int num_rows_to_display = params_.verbose_num_rows_to_display;
+}
+
 }  // namespace generic::beta0

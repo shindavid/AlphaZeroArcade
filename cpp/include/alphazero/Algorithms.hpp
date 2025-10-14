@@ -92,8 +92,6 @@ class AlgorithmsBase {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
   static void print_visit_info(const SearchContext&);
-  static void print_mcts_results(std::ostream& ss, const PolicyTensor& action_policy,
-                                 const SearchResults& results, int n_rows_to_display);
 
  protected:
   static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table);
