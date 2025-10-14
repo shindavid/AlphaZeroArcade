@@ -16,7 +16,7 @@ struct NodeStats : public alpha0::NodeStats<EvalSpec> {
 
   ValueArray Q_min;  // for each player, the minimum value of Q ever observed for that player
   ValueArray Q_max;  // for each player, the maximum value of Q ever observed for that player
-  float W = 0;       // uncertainty
+  ValueArray W;      // uncertainty
 };
 
 }  // namespace beta0
