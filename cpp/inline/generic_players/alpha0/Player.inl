@@ -172,6 +172,9 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
     verbose_info_->action_policy = modified_policy;
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
+
+    auto& manager = VerboseManager::get_instance();
+    manager.set(verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
   RELEASE_ASSERT(request.valid_actions[action]);
@@ -359,7 +362,8 @@ inline void Player<Traits>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   int num_rows_to_display = params_.verbose_num_rows_to_display;
-  verbose_info_->to_terminal_text(std::cout, num_rows_to_display);
+  auto& manager = VerboseManager::get_instance();
+  manager.verbose_data()->to_terminal_text(std::cout, num_rows_to_display);
 }
 
 template <search::concepts::Traits Traits>
