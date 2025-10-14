@@ -5,6 +5,10 @@
 
 namespace math {
 
+inline float normal_cdf(float x) {
+  return 0.5f * erfc(-x * M_SQRT1_2);
+}
+
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 inline uint64_t splitmix64(uint64_t x) {
   x += 0x9e3779b97f4a7c15ULL;

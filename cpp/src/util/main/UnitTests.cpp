@@ -778,6 +778,14 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
+TEST(math, normal_cdf) {
+  EXPECT_NEAR(math::normal_cdf(0), 0.5, 1e-6);
+  EXPECT_NEAR(math::normal_cdf(1), 0.8413447, 1e-6);
+  EXPECT_NEAR(math::normal_cdf(-1), 0.1586553, 1e-6);
+  EXPECT_NEAR(math::normal_cdf(2), 0.9772499, 1e-6);
+  EXPECT_NEAR(math::normal_cdf(-2), 0.0227501, 1e-6);
+}
+
 TEST(math, splitmix64) {
   constexpr int log2_num_buckets = 3;
   constexpr int num_buckets = 1 << log2_num_buckets;
