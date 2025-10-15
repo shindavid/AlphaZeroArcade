@@ -1,6 +1,17 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
+function VerbosePanel({ data }) {
+  if (!data) return null;
+  return (
+    <div className="verbose-panel">
+      <div className="verbose-title">Verbose</div>
+      <pre className="verbose-pre">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    </div>
+  );
+}
 
 export class GameAppBase extends React.Component {
   constructor(props) {
@@ -15,6 +26,7 @@ export class GameAppBase extends React.Component {
       playerNames: null,
       resultCodes: null,
       mySeat: null,
+      verboseInfo: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -74,10 +86,12 @@ export class GameAppBase extends React.Component {
   }
 
   handleStateUpdate(payload) {
+    console.log('State update:', payload);
     this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : null,
     });
   }
 
@@ -148,23 +162,28 @@ export class GameAppBase extends React.Component {
     let resultCodes = this.state.resultCodes;
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
+    let verboseInfo = this.state.verboseInfo;
 
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
     return (
-      <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-        <StatusBar
-          resultCodes={resultCodes}
-          playerNames={playerNames}
-          seatAssignments={seatAssignmentsHtml}
-        />
-        {this.renderBoard()}
-        <ActionButtons
-          onResign={this.handleResign}
-          onNewGame={this.handleNewGame}
-          midGame={midGame}
-          loading={this.state.loading}
-        />
+      <div className="container two-col">
+        <div className="left-col">
+          <StatusBar
+            resultCodes={resultCodes}
+            playerNames={playerNames}
+            seatAssignments={seatAssignmentsHtml}
+          />
+          {this.renderBoard()}
+          <ActionButtons
+            onResign={this.handleResign}
+            onNewGame={this.handleNewGame}
+            midGame={midGame}
+            loading={this.state.loading}
+          />
+        </div>
+
+        <VerbosePanel data={this.state.verboseInfo} />
       </div>
     );
   }

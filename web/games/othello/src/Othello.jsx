@@ -39,6 +39,9 @@ export default class OthelloApp extends GameAppBase {
     </button>
   );
 
+
+
+
   renderBoard() {
     const { board, legalMoves, lastAction } = this.state;
     if (!board) return null;
