@@ -7,6 +7,7 @@
 #include "generic_players/DataExportingPlayer.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "search/Constants.hpp"
+#include "search/VerboseManager.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>

@@ -167,9 +167,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 
   if (verbose_info_) {
     verbose_info_->set(modified_policy, *mcts_results);
-
-    VerboseManager* manager = VerboseManager::get_instance();
-    manager->set(verbose_info_);
+    VerboseManager::get_instance()->set(verbose_info_, params_.verbose_num_rows_to_display);
   }
   core::action_t action = eigen_util::sample(modified_policy);
   RELEASE_ASSERT(request.valid_actions[action]);
