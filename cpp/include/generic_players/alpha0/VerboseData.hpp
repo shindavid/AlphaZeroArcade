@@ -30,7 +30,7 @@ struct VerboseData : public VerboseDataBase {
   void to_terminal_text(std::ostream& ss, int n_rows_to_display) const;
 
  private:
-  struct Common {
+  struct Table {
     std::vector<VerboseRow> rows_sorted;
     int omitted_rows = 0;
     core::action_mode_t action_mode{};
@@ -38,7 +38,7 @@ struct VerboseData : public VerboseDataBase {
     std::vector<float> win_rates_v;
   };
 
-  Common build_common_(int n_rows_to_display) const;
+  Table build_table_(int n_rows_to_display) const;
 };
 
 }  // namespace generic::alpha0
