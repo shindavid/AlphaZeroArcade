@@ -175,6 +175,10 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(core::seat_index_t se
   payload["board"] = IO::state_to_json(state);
   payload["seat"] = IO::player_to_str(seat);
   payload["last_action"] = IO::action_to_str(last_action, last_mode);
+
+  const auto manager = VerboseManager::get_instance();
+  payload["verbose_info"] = manager.verbose_data()->to_json();
+
   return payload;
 }
 

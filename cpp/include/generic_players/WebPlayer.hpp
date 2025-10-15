@@ -3,6 +3,7 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "search/VerboseManager.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/asio.hpp>
