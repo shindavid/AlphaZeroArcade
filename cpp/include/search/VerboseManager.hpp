@@ -5,12 +5,12 @@
 namespace generic {
 
 struct VerboseManager {
+  ~VerboseManager() { delete verbose_data_; }
+
   static VerboseManager* get_instance() {
     static VerboseManager instance;
     return &instance;
   }
-
-  ~VerboseManager() { delete verbose_data_; }
 
   void set(VerboseDataBase* verbose_data, int num_rows_to_display) {
     verbose_data_ = verbose_data;
