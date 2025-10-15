@@ -26,7 +26,7 @@ struct VerboseData : public VerboseDataBase {
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
-  boost::json::object to_json(int n_rows_to_display) const { return boost::json::object(); }
+  boost::json::object to_json(int n_rows_to_display) const;
   void to_terminal_text(std::ostream& ss, int n_rows_to_display) const;
 
  private:

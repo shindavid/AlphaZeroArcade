@@ -93,5 +93,36 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
   ss << "******************************\n";
 }
 
+template <search::concepts::Traits Traits>
+boost::json::object VerboseData<Traits>::to_json(int n_rows_to_display) const {
+  const auto table = build_table_(n_rows_to_display);
+
+  boost::json::object obj;
+  obj["action_mode"] = static_cast<int>(table.action_mode);
+
+  // cpu pos eval
+  boost::json::object eval;
+  eval["net_value"] = boost::json::array(table.net_value_v.begin(), table.net_value_v.end());
+  eval["win_rates"] = boost::json::array(table.win_rates_v.begin(), table.win_rates_v.end());
+  obj["cpu_pos_eval"] = std::move(eval);
+
+  // actions
+  boost::json::array rows;
+  rows.reserve(table.rows_sorted.size());
+  for (const auto& r : table.rows_sorted) {
+    boost::json::object row;
+    row["action_id"] = r.action;
+    row["action_str"] = IO::action_to_str(r.action, table.action_mode);
+    row["prior"] = r.prior;
+    row["posterior"] = r.posterior;
+    row["counts"] = r.counts;
+    row["modified"] = r.modified;
+    rows.push_back(std::move(row));
+  }
+  obj["actions"] = std::move(rows);
+  obj["omitted_rows"] = table.omitted_rows;
+
+  return obj;
+}
 
 }  // namespace generic::alpha0
