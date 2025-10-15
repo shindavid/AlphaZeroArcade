@@ -103,7 +103,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void normalize(const ActionMask&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
-  void verbose_dump() const;
 
   const Params params_;
 

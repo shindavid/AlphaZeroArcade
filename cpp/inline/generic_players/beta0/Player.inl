@@ -118,7 +118,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
     if (facing_human_tui_player_) {
       util::clearscreen();
     }
-    verbose_dump();
+
     if (!facing_human_tui_player_) {
       IO::print_state(std::cout, state, action, &this->get_player_names());
     }
@@ -189,15 +189,6 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
 
   this->normalize(valid_actions, policy);
   return policy;
-}
-
-template <search::concepts::Traits Traits>
-inline void Player<Traits>::verbose_dump() const {
-  if (!verbose_info_->initialized) return;
-
-  const auto& action_policy = verbose_info_->action_policy;
-  const auto& mcts_results = verbose_info_->mcts_results;
-  int num_rows_to_display = params_.verbose_num_rows_to_display;
 }
 
 }  // namespace generic::beta0
