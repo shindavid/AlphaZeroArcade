@@ -3,81 +3,71 @@ import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
 function VerbosePanel({ data }) {
   if (!data) return null;
-  const { action_mode, cpu_pos_eval, actions, ...rest } = data;
-
   return (
     <div className="verbose-panel">
-      <h3>Verbose</h3>
-
-      {/* Scalars */}
-      {action_mode !== undefined && (
-        <div className="verbose-section">
-          <h4>action_mode</h4>
-          <div className="kv-line"><span className="k">action_mode</span><span className="v">{action_mode}</span></div>
-        </div>
-      )}
-
-      {/* cpu_pos_eval: object of arrays */}
-      {cpu_pos_eval && (
-        <div className="verbose-section">
-          <h4>cpu_pos_eval</h4>
-          {renderObjectOfArrays(cpu_pos_eval)}
-        </div>
-      )}
-
-      {/* actions: array of objects -> table */}
-      {Array.isArray(actions) && actions.length > 0 && (
-        <div className="verbose-section">
-          <h4>actions</h4>
-          {renderArrayOfObjects(actions)}
-        </div>
-      )}
-
-      {/* any other leftover keys */}
-      {Object.keys(rest).length > 0 && (
-        <div className="verbose-section">
-          <h4>other</h4>
-          <pre className="verbose-pre">{JSON.stringify(rest, null, 2)}</pre>
-        </div>
-      )}
+      {Object.entries(data).map(([section, value]) => {
+        const rows = normalizeToRows(value);
+        if (!rows.length) return null;
+        return (
+          <div key={section} className="verbose-section">
+            <h4>{section}</h4>
+            {renderArrayOfObjects(rows)}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// obj: { key: array | scalar }
-function renderObjectOfArrays(obj) {
-  const cols = Object.keys(obj);
-  const rowCount = Math.max(...cols.map(k => (Array.isArray(obj[k]) ? obj[k].length : 1)));
-  return (
-    <table className="verbose-table">
-      <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-      <tbody>
-        {Array.from({ length: rowCount }).map((_, r) => (
-          <tr key={r}>
-            {cols.map(c => (
-              <td key={c}>
-                {Array.isArray(obj[c]) ? fmt(obj[c][r]) : fmt(obj[c])}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+// Make a uniform [{...}, {...}] from any value
+function normalizeToRows(v) {
+  if (v == null) return [];
+
+  // already array of objects
+  if (Array.isArray(v) && v.every(x => x && typeof x === 'object' && !Array.isArray(x))) {
+    return v;
+  }
+
+  // object of arrays or scalars -> pivot to rows
+  if (!Array.isArray(v) && typeof v === 'object') {
+    const keys = Object.keys(v);
+    if (!keys.length) return [];
+    const len = Math.max(...keys.map(k => (Array.isArray(v[k]) ? v[k].length : 1)));
+    const rows = [];
+    for (let i = 0; i < len; i++) {
+      const row = {};
+      for (const k of keys) {
+        row[k] = Array.isArray(v[k]) ? v[k][i] : v[k];
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  // array of scalars -> one-column table
+  if (Array.isArray(v)) {
+    return v.map(x => ({ value: x }));
+  }
+
+  // scalar -> single row
+  return [{ value: v }];
 }
 
-// rows: [{...}]
 function renderArrayOfObjects(rows) {
-  const cols = Array.from(
-    rows.reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set())
-  );
+  const cols = Array.from(rows.reduce((s, r) => {
+    Object.keys(r).forEach(k => s.add(k));
+    return s;
+  }, new Set()));
+
   return (
     <table className="verbose-table">
-      <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+      <thead>
+        <tr>{cols.map(c => <th key={c}>{c}</th>)}</tr>
+      </thead>
       <tbody>
-        {rows.map((row, i) => (
+        {rows.map((r, i) => (
           <tr key={i}>
-            {cols.map(c => <td key={c}>{fmt(row[c])}</td>)}
+            {cols.map(c => <td key={c}>{fmt(r[c])}</td>)}
           </tr>
         ))}
       </tbody>
@@ -86,11 +76,12 @@ function renderArrayOfObjects(rows) {
 }
 
 function fmt(v) {
-  if (v === undefined) return '';
+  if (v == null) return '';
   if (typeof v === 'number') return Number.isInteger(v) ? v : v.toFixed(6);
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
+
 
 
 export class GameAppBase extends React.Component {
