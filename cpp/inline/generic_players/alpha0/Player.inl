@@ -125,7 +125,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
     if (facing_human_tui_player_) {
       util::ScreenClearer::clear_once();
     }
-    verbose_dump();
+
     if (!facing_human_tui_player_) {
       IO::print_state(std::cout, state, action, &this->get_player_names());
     }
@@ -353,15 +353,6 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
   }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
-}
-
-template <search::concepts::Traits Traits>
-inline void Player<Traits>::verbose_dump() const {
-  if (!verbose_info_->initialized) return;
-
-  int num_rows_to_display = params_.verbose_num_rows_to_display;
-  auto& manager = VerboseManager::get_instance();
-  manager.verbose_data()->to_terminal_text(std::cout, num_rows_to_display);
 }
 
 }  // namespace generic::alpha0
