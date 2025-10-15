@@ -58,3 +58,21 @@
 .pass-btn:hover { background: #bbb; }
 
 .board-wrapper { position: relative; }
+
+.board {
+  width: fit-content;
+  border: 2px solid #333;
+}
+
+.cell, .label-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.label-cell {
+  font-weight: bold;
+  background: #0a5a2b;
+}
