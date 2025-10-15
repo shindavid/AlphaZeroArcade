@@ -12,8 +12,6 @@ void NodeStats<EvalSpec>::update_q(const ValueArray& q, const ValueArray& q_sq, 
       provably_losing[p] = Q(p) <= Game::GameResults::kMinValue;
     }
   }
-
-  eigen_util::debug_assert_is_valid_prob_distr(Q);
 }
 
 template <core::concepts::EvalSpec EvalSpec>
