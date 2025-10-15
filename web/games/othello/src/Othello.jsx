@@ -87,6 +87,8 @@ export default class OthelloApp extends GameAppBase {
       }
     }
 
+    const passEnabled = legalMoves.includes(PASS_MOVE) ?? false;
+
     return (
       <div className="board-wrapper">
         <div
@@ -99,7 +101,9 @@ export default class OthelloApp extends GameAppBase {
         >
           {cells}
         </div>
+        {passEnabled && this.renderPassButton()}
       </div>
+
     );
   }
 
