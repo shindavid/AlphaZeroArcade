@@ -5,9 +5,9 @@
 namespace generic {
 
 struct VerboseManager {
-  static VerboseManager& get_instance() {
+  static VerboseManager* get_instance() {
     static VerboseManager instance;
-    return instance;
+    return &instance;
   }
 
   void set(VerboseDataBase* verbose_data) { verbose_data_ = verbose_data; }

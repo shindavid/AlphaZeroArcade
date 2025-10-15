@@ -33,9 +33,9 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
 
   util::ScreenClearer::clear_once();
   print_state(state, false);
-  VerboseManager& manager = VerboseManager::get_instance();
-  if (manager.verbose_data()) {
-    manager.verbose_data()->to_terminal_text(std::cout, 10);
+  const VerboseManager* manager = VerboseManager::get_instance();
+  if (manager->verbose_data()) {
+    manager->verbose_data()->to_terminal_text(std::cout, 10);
   }
 
   bool complain = false;
