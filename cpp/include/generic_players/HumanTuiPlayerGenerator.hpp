@@ -20,6 +20,7 @@ class HumanTuiPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   std::string get_description() const override { return "Human player"; }
   virtual core::AbstractPlayer<Game>* generate(core::game_slot_index_t) override = 0;
   int max_simultaneous_games() const override { return 1; }
+  void start_session() override { VerboseManager::get_instance()->register_tui_player(); }
 };
 
 }  // namespace generic
