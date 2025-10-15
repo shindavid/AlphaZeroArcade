@@ -28,18 +28,4 @@ inline void clearscreen() {
   }
 }
 
-inline void ScreenClearer::clear_once() {
-  if (instance().ready_) {
-    clearscreen();
-    instance().ready_ = false;
-  }
-}
-
-inline void ScreenClearer::reset() { instance().ready_ = true; }
-
-inline ScreenClearer& ScreenClearer::instance() {
-  static ScreenClearer instance;
-  return instance;
-}
-
 }  // namespace util

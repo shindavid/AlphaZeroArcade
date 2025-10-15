@@ -31,7 +31,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 
-  util::ScreenClearer::clear_once();
+  util::clearscreen();
   print_state(state, false);
   const VerboseManager* manager = VerboseManager::get_instance();
   if (manager->verbose_data()) {
@@ -53,13 +53,12 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
     break;
   }
 
-  util::ScreenClearer::reset();
   return my_action;
 }
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
-  util::ScreenClearer::clear_once();
+  util::clearscreen();
   print_state(state, true);
 
   auto array = Game::GameResults::to_value_array(outcome);
