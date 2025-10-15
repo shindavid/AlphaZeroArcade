@@ -3,7 +3,9 @@
 namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits>
-typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_() const {
+void VerboseData<Traits>::build_table() const {
+  table_.clear();
+
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.policy_prior;
@@ -11,20 +13,17 @@ typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_() const {
   const auto& net_value = mcts_results.value_prior;
   const auto action_mode = mcts_results.action_mode;
 
-  Table table;
-  table.action_mode = action_mode;
+  table_.action_mode = action_mode;
 
-  // flatten net_value and win_rates (assumed Eigen arrays) to std::vector<float>
-  table.net_value_v.assign(net_value.data(), net_value.data() + net_value.size());
-  table.win_rates_v.assign(win_rates.data(), win_rates.data() + win_rates.size());
+  table_.net_value_v.assign(net_value.data(), net_value.data() + net_value.size());
+  table_.win_rates_v.assign(win_rates.data(), win_rates.data() + win_rates.size());
 
   if (Game::Rules::is_chance_mode(action_mode)) {
-    table.rows_sorted.clear();
-    return table;
+    table_.rows_sorted.clear();
   }
 
   int num_valid = valid_actions.count();
-  table.rows_sorted.reserve(num_valid);
+  table_.rows_sorted.reserve(num_valid);
 
   float total_count = 0.0f;
   for (int a : valid_actions.on_indices()) total_count += mcts_counts(a);
@@ -37,13 +36,12 @@ typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_() const {
     r.posterior = mcts_counts(a) / denom;
     r.counts = mcts_counts(a);
     r.modified = action_policy(a);
-    table.rows_sorted.push_back(r);
+    table_.rows_sorted.push_back(r);
   }
 
-  std::sort(table.rows_sorted.begin(), table.rows_sorted.end(),
+  std::sort(table_.rows_sorted.begin(), table_.rows_sorted.end(),
             [](const VerboseRow& x, const VerboseRow& y){ return x.counts > y.counts; });
 
-  return table;
 }
 
 template <search::concepts::Traits Traits>
@@ -57,12 +55,10 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
 
   Game::GameResults::print_array(mcts_results.value_prior, mcts_results.win_rates, &fmt_map);
 
-  const auto table = build_table_();
+  const int num_rows = std::min<int>(n_rows_to_display, static_cast<int>(table_.rows_sorted.size()));
+  int omitted_rows = table_.rows_sorted.size() - num_rows;
 
-  const int num_rows = std::min<int>(n_rows_to_display, static_cast<int>(table.rows_sorted.size()));
-  int omitted_rows = table.rows_sorted.size() - num_rows;
-
-  if (Game::Rules::is_chance_mode(table.action_mode)) {
+  if (Game::Rules::is_chance_mode(table_.action_mode)) {
     ss << "******************************\n";
     return;
   }
@@ -74,8 +70,8 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
   ss << "\n";
 
   for (int i = 0; i < num_rows; ++i) {
-    const VerboseRow& r = table.rows_sorted[i];
-    ss << std::setw(10) << IO::action_to_str(r.action, table.action_mode)
+    const VerboseRow& r = table_.rows_sorted[i];
+    ss << std::setw(10) << IO::action_to_str(r.action, table_.action_mode)
        << std::setw(10) << r.prior
        << std::setw(10) << r.posterior
        << std::setw(10) << r.counts
@@ -86,7 +82,7 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
     ss << "... " << omitted_rows
        << (omitted_rows == 1 ? " row not displayed\n" : " rows not displayed\n");
   } else {
-    for (int i = 0; i < std::max(0, n_rows_to_display - static_cast<int>(table.rows_sorted.size()) + 1); ++i)
+    for (int i = 0; i < std::max(0, n_rows_to_display - static_cast<int>(table_.rows_sorted.size()) + 1); ++i)
       ss << "\n";
   }
   ss << "******************************\n";
@@ -94,24 +90,22 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
 
 template <search::concepts::Traits Traits>
 boost::json::object VerboseData<Traits>::to_json() const {
-  const auto table = build_table_();
-
   boost::json::object obj;
-  obj["action_mode"] = static_cast<int>(table.action_mode);
+  obj["action_mode"] = static_cast<int>(table_.action_mode);
 
   // cpu pos eval
   boost::json::object eval;
-  eval["net_value"] = boost::json::array(table.net_value_v.begin(), table.net_value_v.end());
-  eval["win_rates"] = boost::json::array(table.win_rates_v.begin(), table.win_rates_v.end());
+  eval["net_value"] = boost::json::array(table_.net_value_v.begin(), table_.net_value_v.end());
+  eval["win_rates"] = boost::json::array(table_.win_rates_v.begin(), table_.win_rates_v.end());
   obj["cpu_pos_eval"] = std::move(eval);
 
   // actions
   boost::json::array rows;
-  rows.reserve(table.rows_sorted.size());
-  for (const auto& r : table.rows_sorted) {
+  rows.reserve(table_.rows_sorted.size());
+  for (const auto& r : table_.rows_sorted) {
     boost::json::object row;
     row["action_id"] = r.action;
-    row["action_str"] = IO::action_to_str(r.action, table.action_mode);
+    row["action_str"] = IO::action_to_str(r.action, table_.action_mode);
     row["prior"] = r.prior;
     row["posterior"] = r.posterior;
     row["counts"] = r.counts;
@@ -121,6 +115,14 @@ boost::json::object VerboseData<Traits>::to_json() const {
   obj["actions"] = std::move(rows);
 
   return obj;
+}
+
+template <search::concepts::Traits Traits>
+void VerboseData<Traits>::set(const PolicyTensor& policy, const SearchResults& results) {
+  action_policy = policy;
+  mcts_results = results;
+  build_table();
+  initialized = true;
 }
 
 }  // namespace generic::alpha0

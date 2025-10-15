@@ -169,9 +169,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 
   if (verbose_info_) {
-    verbose_info_->action_policy = modified_policy;
-    verbose_info_->mcts_results = *mcts_results;
-    verbose_info_->initialized = true;
+    verbose_info_->set(modified_policy, *mcts_results);
 
     auto& manager = VerboseManager::get_instance();
     manager.set(verbose_info_);
