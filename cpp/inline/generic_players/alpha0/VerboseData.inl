@@ -3,7 +3,7 @@
 namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits>
-typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_(int n_rows_to_display) const {
+typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_() const {
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.policy_prior;
@@ -20,7 +20,6 @@ typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_(int n_rows
 
   if (Game::Rules::is_chance_mode(action_mode)) {
     table.rows_sorted.clear();
-    table.omitted_rows = 0;
     return table;
   }
 
@@ -44,10 +43,6 @@ typename VerboseData<Traits>::Table VerboseData<Traits>::build_table_(int n_rows
   std::sort(table.rows_sorted.begin(), table.rows_sorted.end(),
             [](const VerboseRow& x, const VerboseRow& y){ return x.counts > y.counts; });
 
-  const int num_rows = std::min<int>(n_rows_to_display, static_cast<int>(table.rows_sorted.size()));
-  table.omitted_rows = table.rows_sorted.size() - num_rows;
-  table.rows_sorted.resize(num_rows);
-
   return table;
 }
 
@@ -62,7 +57,10 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
 
   Game::GameResults::print_array(mcts_results.value_prior, mcts_results.win_rates, &fmt_map);
 
-  const auto table = build_table_(n_rows_to_display);
+  const auto table = build_table_();
+
+  const int num_rows = std::min<int>(n_rows_to_display, static_cast<int>(table.rows_sorted.size()));
+  int omitted_rows = table.rows_sorted.size() - num_rows;
 
   if (Game::Rules::is_chance_mode(table.action_mode)) {
     ss << "******************************\n";
@@ -75,7 +73,8 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
   }
   ss << "\n";
 
-  for (const auto& r : table.rows_sorted) {
+  for (int i = 0; i < num_rows; ++i) {
+    const VerboseRow& r = table.rows_sorted[i];
     ss << std::setw(10) << IO::action_to_str(r.action, table.action_mode)
        << std::setw(10) << r.prior
        << std::setw(10) << r.posterior
@@ -83,9 +82,9 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
        << std::setw(10) << r.modified << "\n";
   }
 
-  if (table.omitted_rows > 0) {
-    ss << "... " << table.omitted_rows
-       << (table.omitted_rows == 1 ? " row not displayed\n" : " rows not displayed\n");
+  if (omitted_rows > 0) {
+    ss << "... " << omitted_rows
+       << (omitted_rows == 1 ? " row not displayed\n" : " rows not displayed\n");
   } else {
     for (int i = 0; i < std::max(0, n_rows_to_display - static_cast<int>(table.rows_sorted.size()) + 1); ++i)
       ss << "\n";
@@ -94,8 +93,8 @@ void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_displ
 }
 
 template <search::concepts::Traits Traits>
-boost::json::object VerboseData<Traits>::to_json(int n_rows_to_display) const {
-  const auto table = build_table_(n_rows_to_display);
+boost::json::object VerboseData<Traits>::to_json() const {
+  const auto table = build_table_();
 
   boost::json::object obj;
   obj["action_mode"] = static_cast<int>(table.action_mode);
@@ -120,7 +119,6 @@ boost::json::object VerboseData<Traits>::to_json(int n_rows_to_display) const {
     rows.push_back(std::move(row));
   }
   obj["actions"] = std::move(rows);
-  obj["omitted_rows"] = table.omitted_rows;
 
   return obj;
 }

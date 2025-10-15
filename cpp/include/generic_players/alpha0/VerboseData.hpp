@@ -26,19 +26,18 @@ struct VerboseData : public VerboseDataBase {
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
-  boost::json::object to_json(int n_rows_to_display) const;
+  boost::json::object to_json() const;
   void to_terminal_text(std::ostream& ss, int n_rows_to_display) const;
 
  private:
   struct Table {
     std::vector<VerboseRow> rows_sorted;
-    int omitted_rows = 0;
     core::action_mode_t action_mode{};
     std::vector<float> net_value_v;
     std::vector<float> win_rates_v;
   };
 
-  Table build_table_(int n_rows_to_display) const;
+  Table build_table_() const;
 };
 
 }  // namespace generic::alpha0
