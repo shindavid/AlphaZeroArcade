@@ -11,8 +11,10 @@ template <core::concepts::Game Game>
 struct SearchResults : alpha0::SearchResults<Game> {
   using Base = alpha0::SearchResults<Game>;
   using ActionValueTensor = Base::ActionValueTensor;
+  using PolicyTensor = Base::PolicyTensor;
   using ValueArray = Base::ValueArray;
 
+  PolicyTensor policy_posterior;
   ActionValueTensor action_value_uncertainties;
 
   // For each player, the min and max win-rate ever observed during search.

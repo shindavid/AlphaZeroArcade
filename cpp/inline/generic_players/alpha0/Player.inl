@@ -121,7 +121,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
   if (owns_shared_data_) {
     get_manager()->receive_state_change(seat, state, action);
   }
-  if (base_t::get_my_seat() == seat && params_.verbose) {
+  if (this->get_my_seat() == seat && params_.verbose) {
     if (facing_human_tui_player_) {
       util::ScreenClearer::clear_once();
     }
@@ -184,14 +184,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
   PolicyTensor policy;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
-    ActionMask valid_actions_subset = valid_actions;
-    valid_actions_subset.randomly_zero_out(valid_actions_subset.count() / 2);
-
-    policy.setConstant(0);
-
-    for (int a : valid_actions_subset.on_indices()) {
-      policy(a) = mcts_results->policy_prior(a);
-    }
+    raw_init(mcts_results, valid_actions, policy);
   } else if (search_params_[search_mode_].tree_size_limit <= 1) {
     policy = mcts_results->policy_prior;
   } else {
@@ -200,41 +193,44 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
 
   if (search_mode_ != core::kRawPolicy && search_params_[search_mode_].tree_size_limit > 1) {
     policy = mcts_results->action_symmetry_table.collapse(policy);
-    float temp = move_temperature_.value();
-    if (temp != 0) {
-      eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
-      policy = policy.pow(1.0 / temp);
-    } else {
-      /*
-       * This is awkward, but I couldn't get a simpler incantation to work. I want to do:
-       *
-       * policy = (policy == policy.maximum()).template cast<float>();
-       *
-       * But the above doesn't work.
-       */
-      float policy_max = eigen_util::max(policy);
-      if (policy_max > 0) {
-        PolicyTensor policy_max_broadcasted;
-        policy_max_broadcasted.setConstant(policy_max);
-        policy = (policy == policy_max_broadcasted).template cast<float>();
-      }
-    }
+    apply_temperature(policy);
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
     if (params_.LCB_z_score) {
       apply_LCB(mcts_results, valid_actions, policy);
     }
   }
 
-  if (!eigen_util::normalize(policy)) {
-    // This can happen if MCTS proves that the position is losing. In this case we just choose a
-    // random valid action.
-    policy.setConstant(0);
-    for (int a : valid_actions.on_indices()) {
-      policy(a) = 1;
-    }
-    eigen_util::normalize(policy);
-  }
+  normalize(valid_actions, policy);
   return policy;
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::raw_init(const SearchResults* mcts_results, const ActionMask& valid_actions,
+                              PolicyTensor& policy) const {
+  ActionMask valid_actions_subset = valid_actions;
+  valid_actions_subset.randomly_zero_out(valid_actions_subset.count() / 2);
+
+  policy.setConstant(0);
+
+  for (int a : valid_actions_subset.on_indices()) {
+    policy(a) = mcts_results->policy_prior(a);
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::apply_temperature(PolicyTensor& policy) const {
+  float temp = move_temperature_.value();
+  if (temp != 0) {
+    eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
+    policy = policy.pow(1.0 / temp);
+  } else {
+    float policy_max = eigen_util::max(policy);
+    if (policy_max > 0) {
+      PolicyTensor policy_max_broadcasted;
+      policy_max_broadcasted.setConstant(policy_max);
+      policy = (policy == policy_max_broadcasted).template cast<float>();
+    }
+  }
 }
 
 template <search::concepts::Traits Traits>
@@ -333,6 +329,19 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
     }
 
     policy = policy_masked;
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::normalize(const ActionMask& valid_actions, PolicyTensor& policy) const {
+  if (!eigen_util::normalize(policy)) {
+    // This can happen if MCTS proves that the position is losing. In this case we just choose a
+    // random valid action.
+    policy.setConstant(0);
+    for (int a : valid_actions.on_indices()) {
+      policy(a) = 1;
+    }
+    eigen_util::normalize(policy);
   }
 }
 

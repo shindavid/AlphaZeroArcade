@@ -27,9 +27,9 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using GeneralContext = Base::GeneralContext;
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LookupTable = Base::LookupTable;
-  using ManagerParams = Base::ManagerParams;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
+  using RootInfo = Base::RootInfo;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
   using TensorData = Base::TensorData;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/SearchResults.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
@@ -31,7 +29,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using Traits = Traits_;
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
-  using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
     Params(search::Mode);
@@ -52,8 +49,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   using Algorithms = search::AlgorithmsForT<Traits>;
   using Manager = search::Manager<Traits>;
-  using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
-  using SearchResults = ::alpha0::SearchResults<Game>;
+  using SearchResults = Traits::SearchResults;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
@@ -93,12 +89,15 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void clear_search_mode();
   void init_search_mode(const ActionRequest&);
 
-  auto get_action_policy(const SearchResults*, const ActionMask&) const;
-
-  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
-
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
+
+  auto get_action_policy(const SearchResults*, const ActionMask&) const;
+
+  void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
+  void apply_temperature(PolicyTensor& policy) const;
+  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
+  void normalize(const ActionMask&, PolicyTensor& policy) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;

@@ -69,29 +69,64 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
                                                  SearchResults& results) {
-  Base::to_results(general_context, results);
+  const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
-  const Node* root = lookup_table.get_node(general_context.root_info.node_index);
-  auto& action_value_uncertainties = results.action_value_uncertainties;
+
+  const Node* root = lookup_table.get_node(root_info.node_index);
+  const auto& stable_data = root->stable_data();
+  const auto& stats = root->stats();  // thread-safe since single-threaded here
+
+  core::action_mode_t mode = root->action_mode();
+  group::element_t sym = root_info.canonical_sym;
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
   core::seat_index_t seat = root->stable_data().active_seat;
 
-  action_value_uncertainties.setZero();
-  for (int i = 0; i < root->stable_data().num_valid_actions; i++) {
+  results.valid_actions.reset();
+  results.policy_prior.setZero();
+  results.policy_posterior.setZero();
+  results.action_value_uncertainties.setZero();
+
+  core::action_t actions[stable_data.num_valid_actions];
+
+  int i = 0;
+  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
+    Game::Symmetries::apply(action, inv_sym, mode);
+    results.valid_actions.set(action, true);
+    actions[i] = action;
+
+    auto* edge = lookup_table.get_edge(root, i);
+    results.policy_prior(action) = edge->policy_prior_prob;
+    results.policy_posterior(action) = edge->policy_posterior_prob;
+
+    i++;
+  }
+
+  for (i = 0; i < root->stable_data().num_valid_actions; i++) {
     const Edge* edge = lookup_table.get_edge(root, i);
     const Node* child = lookup_table.get_node(edge->child_index);
     if (!child) continue;
 
     core::action_t action = edge->action;
-    const auto& stable_data = child->stable_data();
-    action_value_uncertainties(action) = stable_data.U[seat];
+    results.action_value_uncertainties(action) = child->stable_data().U[seat];
   }
 
-  core::action_mode_t mode = root->action_mode();
-  group::element_t sym = general_context.root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-  Game::Symmetries::apply(action_value_uncertainties, inv_sym, mode);
+  Derived::load_action_symmetries(general_context, root, &actions[0], results);
+  Derived::write_results(general_context, root, inv_sym, results);
+  results.policy_target = results.policy_posterior;
+  results.provably_lost = stats.provably_losing[stable_data.active_seat];
+  results.trivial = root->trivial();
 
-  const auto& stats = root->stats();  // thread-safe since single-threaded here
+  // No policy target pruning in BetaZero
+
+  Game::Symmetries::apply(results.counts, inv_sym, mode);
+  Game::Symmetries::apply(results.Q, inv_sym, mode);
+  Game::Symmetries::apply(results.Q_sq, inv_sym, mode);
+  Game::Symmetries::apply(results.action_values, inv_sym, mode);
+
+  results.win_rates = stats.Q;
+  results.value_prior = stable_data.R;
+  results.action_mode = mode;
+
   results.min_win_rates = stats.Q_min;
   results.max_win_rates = stats.Q_max;
 
