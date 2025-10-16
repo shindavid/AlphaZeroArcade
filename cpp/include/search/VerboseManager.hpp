@@ -5,21 +5,12 @@
 namespace generic {
 
 struct VerboseManager {
-  static VerboseManager* get_instance() {
-    static VerboseManager instance;
-    return &instance;
-  }
-
-  void set(VerboseDataBase* verbose_data) {
-    if (auto_terminal_printing_enabled_) {
-      verbose_data_->to_terminal_text();
-    } else {
-      verbose_data_ = verbose_data;
-    }
-  }
+  static VerboseManager* get_instance();
+  void set(VerboseDataBase* verbose_data);
 
   VerboseDataBase* verbose_data() const { return verbose_data_; }
   void disable_auto_terminal_printing() { auto_terminal_printing_enabled_ = false; }
+  bool auto_terminal_printing_enabled() const { return auto_terminal_printing_enabled_; }
 
  private:
   VerboseDataBase* verbose_data_ = nullptr;
@@ -28,3 +19,5 @@ struct VerboseManager {
 };
 
 }  // namespace generic
+
+#include "inline/search/VerboseManager.inl"
