@@ -82,8 +82,6 @@ function fmt(v) {
   return String(v);
 }
 
-
-
 export class GameAppBase extends React.Component {
   constructor(props) {
     super(props);
