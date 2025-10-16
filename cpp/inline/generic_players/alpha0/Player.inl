@@ -90,7 +90,7 @@ inline Player<Traits>::Player(const Params& params, SharedData_sptr shared_data,
       shared_data_(shared_data),
       owns_shared_data_(owns_shared_data) {
   if (params.verbose) {
-    verbose_info_ = new VerboseData<Traits>();
+    verbose_info_ = new VerboseData<Traits>(params.verbose_num_rows_to_display);
   }
 
   RELEASE_ASSERT(shared_data_.get() != nullptr);
@@ -167,7 +167,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 
   if (verbose_info_) {
     verbose_info_->set(modified_policy, *mcts_results);
-    VerboseManager::get_instance()->set(verbose_info_, params_.verbose_num_rows_to_display);
+    VerboseManager::get_instance()->set(verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
   RELEASE_ASSERT(request.valid_actions[action]);
