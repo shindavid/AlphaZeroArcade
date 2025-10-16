@@ -45,50 +45,6 @@ void VerboseData<Traits>::build_table() const {
 }
 
 template <search::concepts::Traits Traits>
-void VerboseData<Traits>::to_terminal_text(std::ostream& ss, int n_rows_to_display) const {
-  ss << "\nCPU pos eval:\n";
-
-  eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
-    {"action", [&](float x) { return IO::action_to_str(static_cast<int>(x), mcts_results.action_mode); }},
-  };
-
-  Game::GameResults::print_array(mcts_results.value_prior, mcts_results.win_rates, &fmt_map);
-
-  const int num_rows = std::min<int>(n_rows_to_display, static_cast<int>(table_.rows_sorted.size()));
-  int omitted_rows = table_.rows_sorted.size() - num_rows;
-
-  if (Game::Rules::is_chance_mode(table_.action_mode)) {
-    ss << "******************************\n";
-    return;
-  }
-
-  static constexpr const char* kCols[] = {"Action", "Prior", "Posterior", "Counts", "Modified"};
-  for (std::string_view c : kCols) {
-    ss << std::right << std::setw(10) << c;
-  }
-  ss << "\n";
-
-  for (int i = 0; i < num_rows; ++i) {
-    const VerboseRow& r = table_.rows_sorted[i];
-    ss << std::setw(10) << IO::action_to_str(r.action, table_.action_mode)
-       << std::setw(10) << r.prior
-       << std::setw(10) << r.posterior
-       << std::setw(10) << r.counts
-       << std::setw(10) << r.modified << "\n";
-  }
-
-  if (omitted_rows > 0) {
-    ss << "... " << omitted_rows
-       << (omitted_rows == 1 ? " row not displayed\n" : " rows not displayed\n");
-  } else {
-    for (int i = 0; i < std::max(0, n_rows_to_display - static_cast<int>(table_.rows_sorted.size()) + 1); ++i)
-      ss << "\n";
-  }
-  ss << "******************************\n";
-}
-
-template <search::concepts::Traits Traits>
 boost::json::object VerboseData<Traits>::to_json() const {
   boost::json::object obj;
   obj["action_mode"] = static_cast<int>(table_.action_mode);
@@ -115,6 +71,74 @@ boost::json::object VerboseData<Traits>::to_json() const {
   obj["actions"] = std::move(rows);
 
   return obj;
+}
+
+template <search::concepts::Traits Traits>
+void VerboseData<Traits>::to_terminal_text() const {
+  std::cout << std::endl << "CPU pos eval:" << std::endl;
+  const auto& valid_actions = mcts_results.valid_actions;
+  const auto& mcts_counts = mcts_results.counts;
+  const auto& net_policy = mcts_results.policy_prior;
+  const auto& win_rates = mcts_results.win_rates;
+  const auto& net_value = mcts_results.value_prior;
+  core::action_mode_t action_mode = mcts_results.action_mode;
+
+  eigen_util::PrintArrayFormatMap fmt_map{
+    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
+    {"action", [&](float x) { return IO::action_to_str(x, action_mode); }},
+  };
+
+  Game::GameResults::print_array(net_value, win_rates, &fmt_map);
+
+  if (Game::Rules::is_chance_mode(mcts_results.action_mode)) return;
+
+  int num_valid = valid_actions.count();
+
+  // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
+  LocalPolicyArray actions_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray net_policy_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray action_policy_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray mcts_counts_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray posterior_arr = LocalPolicyArray::Zero(num_valid);
+
+  float total_count = 0;
+  for (int a : valid_actions.on_indices()) {
+    total_count += mcts_counts(a);
+  }
+
+  int r = 0;
+  for (int a : valid_actions.on_indices()) {
+    actions_arr(r) = a;
+    net_policy_arr(r) = net_policy(a);
+    action_policy_arr(r) = action_policy(a);
+    mcts_counts_arr(r) = mcts_counts(a);
+    r++;
+  }
+
+  int num_rows = std::min(num_valid, n_rows_to_display_);
+
+  posterior_arr = mcts_counts_arr / total_count;
+  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
+  auto data = eigen_util::sort_rows(
+    eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
+                                    action_policy_arr),
+    3, false);
+
+  eigen_util::print_array(std::cout, data.topRows(num_rows), columns, &fmt_map);
+
+  if (num_valid > num_rows) {
+    int x = num_valid - num_rows;
+    if (x == 1) {
+      std::cout << "... 1 row not displayed" << std::endl;
+    } else {
+      std::cout << "... " << x << " rows not displayed" << std::endl;
+    }
+  } else {
+    for (int i = 0; i < n_rows_to_display_ - num_rows + 1; i++) {
+      std::cout << std::endl;
+    }
+  }
+  std::cout << "******************************" << std::endl;
 }
 
 template <search::concepts::Traits Traits>
