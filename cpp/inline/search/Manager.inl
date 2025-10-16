@@ -458,7 +458,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    Algorithms::pure_backprop(context, GameResults::to_value_array(stable_data.R));
+    pure_backprop(context);
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -519,9 +519,9 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       context.search_path.emplace_back(child, nullptr);
 
       if (Algorithms::should_short_circuit(edge, child)) {
-        Algorithms::short_circuit_backprop(context);
+        short_circuit_backprop(context);
       } else {
-        Algorithms::standard_backprop(context, false);
+        standard_backprop(context, false);
       }
 
       lock.lock();
@@ -561,7 +561,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     context.search_path.emplace_back(child, nullptr);
 
     if (Algorithms::should_short_circuit(edge, child)) {
-      Algorithms::short_circuit_backprop(context);
+      short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
       LOG_TRACE("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
@@ -639,7 +639,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     initialize_edges(child);
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
-      Algorithms::virtual_backprop(context);
+      virtual_backprop(context);
     }
 
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
@@ -677,15 +677,15 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       // when the lookup_table is defragmented.
       context.search_path.pop_back();
       if (do_virtual) {
-        Algorithms::undo_virtual_backprop(context);
+        undo_virtual_backprop(context);
       }
       context.expanded_new_node = false;
       child_index = edge->child_index;
     } else {
       if (terminal) {
-        Algorithms::pure_backprop(context, GameResults::to_value_array(child->stable_data().R));
+        pure_backprop(context);
       } else {
-        Algorithms::standard_backprop(context, do_virtual);
+        standard_backprop(context, do_virtual);
       }
     }
   }
@@ -732,6 +732,130 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   context.mid_expansion = false;
   return core::kContinue;
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::pure_backprop(SearchContext& context) {
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
+  }
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  RELEASE_ASSERT(!context.search_path.empty());
+  Node* last_node = context.search_path.back().node;
+
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
+    Algorithms::init_node_stats_from_terminal(last_node);
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
+  }
+  Algorithms::validate_search_path(context);
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::virtual_backprop(SearchContext& context) {
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
+  }
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  RELEASE_ASSERT(!context.search_path.empty());
+  Node* last_node = context.search_path.back().node;
+
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
+    Algorithms::virtually_update_node_stats(last_node);
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+      Algorithms::virtually_update_node_stats_and_edge(node, edge);
+    });
+  }
+  Algorithms::validate_search_path(context);
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
+  // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
+  // modified in between the two calls.
+
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
+  }
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  RELEASE_ASSERT(!context.search_path.empty());
+
+  for (int i = context.search_path.size() - 1; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+      Algorithms::undo_virtual_update(node, edge);
+    });
+  }
+  Algorithms::validate_search_path(context);
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
+  Node* last_node = context.search_path.back().node;
+  auto value = GameResults::to_value_array(last_node->stable_data().R);
+
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, context.search_path_str(),
+             fmt::streamed(value.transpose()));
+  }
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
+    Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual);
+  });
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, undo_virtual);
+    });
+  }
+  Algorithms::validate_search_path(context);
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
+  }
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+
+  for (int i = context.search_path.size() - 2; i >= 0; --i) {
+    Edge* edge = context.search_path[i].edge;
+    Node* node = context.search_path[i].node;
+
+    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
+  }
+  Algorithms::validate_search_path(context);
 }
 
 template <search::concepts::Traits Traits>

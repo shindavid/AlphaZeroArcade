@@ -5,8 +5,16 @@
 
 namespace math {
 
-inline float normal_cdf(float x) {
-  return 0.5f * erfc(-x * M_SQRT1_2);
+enum finiteness_t : int8_t { kFinite, kPosInf, kNegInf };
+
+template <typename T>
+finiteness_t get_finiteness(T x) {
+  return std::isfinite(x) ? kFinite : (x > 0 ? kPosInf : kNegInf);
+}
+
+template<typename T>
+inline auto normal_cdf(T x) {
+  return float(0.5) * erfc(-x * M_SQRT1_2);
 }
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64

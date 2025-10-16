@@ -13,14 +13,14 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using Game = EvalSpec::Game;
   using State = Game::State;
   using Base = alpha0::NodeStableData<EvalSpec>;
-  using WinShareTensor = Game::Types::WinShareTensor;
+  using ValueArray = Game::Types::ValueArray;
 
   template <typename... Ts>
   NodeStableData(Ts&&... args) : Base(std::forward<Ts>(args)...) {
     U.setZero();
   }
 
-  WinShareTensor U;  // uncertainty
+  ValueArray U;  // uncertainty
 };
 
 }  // namespace beta0

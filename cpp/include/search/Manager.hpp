@@ -219,6 +219,12 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
+  static void pure_backprop(SearchContext& context);
+  static void virtual_backprop(SearchContext& context);
+  static void undo_virtual_backprop(SearchContext& context);
+  static void standard_backprop(SearchContext& context, bool undo_virtual);
+  static void short_circuit_backprop(SearchContext& context);
+
   core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
   void update_child_expand_count(Node* node, int k = 1);
   void initialize_edges(Node* node);

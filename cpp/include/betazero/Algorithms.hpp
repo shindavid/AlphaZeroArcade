@@ -27,6 +27,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using GeneralContext = Base::GeneralContext;
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LookupTable = Base::LookupTable;
+  using ManagerParams = Base::ManagerParams;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
   using SearchContext = Base::SearchContext;
@@ -35,6 +36,14 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using TrainingInfo = Base::TrainingInfo;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;
+  using player_bitset_t = Base::player_bitset_t;
+
+  using EigenMapArrayXf = Eigen::Map<Eigen::ArrayXf>;
+  using EigenMapArrayXd = Eigen::Map<Eigen::ArrayXd>;
+
+  template <typename MutexProtectedFunc>
+  static void backprop_helper(Node* node, Edge* edge, LookupTable& lookup_table,
+                              MutexProtectedFunc&&);
 
   static void load_evaluations(SearchContext& context);
 
@@ -43,6 +52,18 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
+
+ protected:
+  static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table,
+                           const NodeStats& old_stats);
+
+  // Updates pi_arr in-place to be the posterior policy
+  static void update_policy(Node* node, Edge* edge, LookupTable& lookup_table,
+                            const NodeStats& old_stats, const NodeStats* child_stats_arr,
+                            EigenMapArrayXf pi_arr, int updated_edge_arr_index);
+
+  static void compute_theta_omega_sq(const NodeStats& stats, core::seat_index_t seat, double& theta,
+                                     double& omega_sq);
 };
 
 template <search::concepts::Traits Traits>

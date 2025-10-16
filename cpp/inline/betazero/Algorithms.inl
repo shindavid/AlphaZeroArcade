@@ -1,6 +1,11 @@
 #include "betazero/Algorithms.hpp"
 
+#include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
+#include "util/Exceptions.hpp"
+#include "util/Math.hpp"
+
+#include <limits>
 
 namespace beta0 {
 
@@ -17,6 +22,19 @@ void check_values(const T& t, int line) {
 }
 
 template <search::concepts::Traits Traits, typename Derived>
+template <typename MutexProtectedFunc>
+void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, Edge* edge,
+                                                      LookupTable& lookup_table,
+                                                      MutexProtectedFunc&& func) {
+  mit::unique_lock lock(node->mutex());
+  NodeStats old_stats = node->stats();  // make a copy
+  func();
+  lock.unlock();
+
+  Derived::update_stats(node, edge, lookup_table, old_stats);
+}
+
+template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   Base::load_evaluations(context);  // assumes that heads[:3] are [policy, value, action-value]
 
@@ -29,8 +47,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     int n = stable_data.num_valid_actions;
 
-    using ValueUncertaintyTensor = Traits::EvalSpec::NetworkHeads::ValueUncertaintyHead::Tensor;
-    ValueUncertaintyTensor U;
+    ValueArray U;
     LocalActionValueArray child_U(n);
 
     // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
@@ -44,6 +61,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->child_U_estimate = child_U[i];
+      edge->policy_posterior_prob = edge->policy_prior_prob;  // initialize posterior to prior
     }
   }
 }
@@ -65,7 +83,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
     core::action_t action = edge->action;
     const auto& stable_data = child->stable_data();
-    action_value_uncertainties(action) = stable_data.U(seat);
+    action_value_uncertainties(action) = stable_data.U[seat];
   }
 
   core::action_mode_t mode = root->action_mode();
@@ -190,6 +208,296 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   check_values(view.Q_min, __LINE__);
   check_values(view.Q_max, __LINE__);
   check_values(view.action_value_uncertainties, __LINE__);
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
+                                                   LookupTable& lookup_table,
+                                                   const NodeStats& old_stats) {
+  ValueArray piW_sum;
+  ValueArray piQ_sum;
+  ValueArray piQ_sq_sum;
+  piW_sum.setZero();
+  piQ_sum.setZero();
+  piQ_sq_sum.setZero();
+  int N = 0;
+
+  // provable bits are maintained for now because we are having beta0 reuse alpha0's selection
+  // criterion, which relies on them. Later, we will implement a new selection criterion for beta0,
+  // and we can remove the provable bits.
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
+
+  auto& stats = node->stats();
+  const auto& stable_data = node->stable_data();
+
+  int num_valid_actions = stable_data.num_valid_actions;
+  core::seat_index_t seat = stable_data.active_seat;
+
+  if (stable_data.is_chance_node) {
+    throw util::Exception("chance nodes not yet supported in beta0");
+  } else {
+    // read child stats and pi values into arrays to avoid repeated locking
+    NodeStats child_stats_arr[num_valid_actions];
+    float pi_raw_arr[num_valid_actions];
+    int num_children = 0;
+    int updated_edge_arr_index = -1;
+    bool skipped = false;
+
+    for (int i = 0; i < num_valid_actions; i++) {
+      const Edge* child_edge = lookup_table.get_edge(node, i);
+      const Node* child = lookup_table.get_node(child_edge->child_index);
+      if (!child) {
+        skipped = true;
+        continue;
+      }
+      child_stats_arr[num_children] = child->stats_safe();  // make a copy
+      pi_raw_arr[num_children] = child_edge->policy_posterior_prob;
+      if (child_edge == edge) {
+        updated_edge_arr_index = num_children;
+      }
+      num_children++;
+    }
+
+    Eigen::Map<Eigen::ArrayXf> pi_arr(pi_raw_arr, num_children);
+
+    // compute posterior policy
+    Derived::update_policy(node, edge, lookup_table, old_stats, child_stats_arr, pi_arr,
+                           updated_edge_arr_index);
+
+    // renormalize pi_arr
+    float pi_sum = pi_arr.sum();
+    if (pi_sum > 0.f) {
+      pi_arr *= 1.0f / pi_sum;
+    }
+
+    // provably winning/losing calculation
+    bool cp_has_winning_move = false;
+    for (int i = 0; i < num_children; i++) {
+      const auto& child_stats = child_stats_arr[i];
+      float pi = pi_arr[i];
+      piW_sum += child_stats.W * pi;
+      piQ_sum += child_stats.Q * pi;
+      piQ_sq_sum += child_stats.Q_sq * pi;
+
+      cp_has_winning_move |= child_stats.provably_winning[seat];
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+    }
+
+    if (skipped) {
+      all_provably_winning.reset();
+      all_provably_losing.reset();
+    }
+
+    ValueArray V;
+    const ValueArray& U = stable_data.U;
+    if (stable_data.VT_valid) {
+      V = Game::GameResults::to_value_array(stable_data.R);
+      eigen_util::debug_assert_is_valid_prob_distr(V);
+    } else {
+      V.setZero();
+    }
+
+    ValueArray Q;
+    ValueArray Q_sq;
+
+    if (num_children || N > 0) {
+      ValueArray denom = piW_sum + U * N;
+
+      Q = (V * piW_sum + U * N * piQ_sum) / denom;
+      Q_sq = (V * V * piW_sum + U * N * piQ_sq_sum) / denom;
+    } else {
+      Q.setZero();
+      Q_sq.setZero();
+    }
+
+    ValueArray W = piW_sum + piQ_sq_sum - Q * Q;
+    W = W.cwiseMax(0.f);  // numerical stability
+
+    mit::unique_lock lock(node->mutex());
+    if (pi_sum > 0.f) {
+      for (int i = 0; i < num_valid_actions; i++) {
+        Edge* child_edge = lookup_table.get_edge(node, i);
+        child_edge->policy_posterior_prob = pi_arr[i];
+      }
+    }
+    stats.update_q(Q, Q_sq, false);
+    stats.W = W;
+    stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
+                               cp_has_winning_move, num_valid_actions, seat);
+
+    if (N) {
+      eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+    }
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_policy(
+  Node* node, Edge* edge, LookupTable& lookup_table, const NodeStats& old_stats,
+  const NodeStats* child_stats_arr, EigenMapArrayXf pi_arr, int updated_edge_arr_index) {
+  // Throughout this function, theta and omega_sq represent the mean and variance of the value
+  // distribution in an idealized logistic-normal model of the value distribution.
+
+  const auto& stable_data = node->stable_data();
+  core::seat_index_t seat = stable_data.active_seat;
+
+  int arr_size = pi_arr.size();
+  RELEASE_ASSERT(updated_edge_arr_index >= 0 && updated_edge_arr_index < arr_size);
+
+  double theta_old;
+  double omega_sq_old;
+  compute_theta_omega_sq(old_stats, seat, theta_old, omega_sq_old);
+
+  double theta_raw_arr[arr_size];
+  double omega_sq_raw_arr[arr_size];
+
+  for (int i = 0; i < arr_size; i++) {
+    const auto& child_stats = child_stats_arr[i];
+    compute_theta_omega_sq(child_stats, seat, theta_raw_arr[i], omega_sq_raw_arr[i]);
+  }
+
+  math::finiteness_t finiteness_arr[arr_size];
+  bool any_pos_inf = 0;
+  for (int i = 0; i < arr_size; i++) {
+    finiteness_arr[i] = math::get_finiteness(theta_raw_arr[i]);
+    any_pos_inf |= (finiteness_arr[i] == math::kPosInf);
+  }
+
+  if (any_pos_inf) {
+    // Collapse pi values to only those with +inf theta
+    for (int i = 0; i < arr_size; i++) {
+      pi_arr[i] = (finiteness_arr[i] == math::kPosInf) ? 1.0f : 0.f;
+    }
+    return;
+  }
+
+  double theta_new = theta_raw_arr[updated_edge_arr_index];
+  double omega_sq_new = omega_sq_raw_arr[updated_edge_arr_index];
+  math::finiteness_t finiteness_new = finiteness_arr[updated_edge_arr_index];
+
+  EigenMapArrayXd theta_arr(theta_raw_arr, arr_size);
+  EigenMapArrayXd omega_sq_arr(omega_sq_raw_arr, arr_size);
+
+  if (finiteness_new == math::kNegInf) {
+    // Zero out the just-updated action
+    pi_arr[updated_edge_arr_index] = 0;
+    return;
+  }
+
+  if (omega_sq_new > 0) {
+    RELEASE_ASSERT(omega_sq_old > 0);  // cannot go from certain to uncertain
+  } else {                             // zero uncertainty case
+    // check for domination by another zero-uncertainty action
+    for (int i = 0; i < arr_size; i++) {
+      if (i == updated_edge_arr_index) continue;
+      if (omega_sq_arr[i] == 0) {
+        if (theta_arr[i] > theta_new) {
+          // dominated
+          pi_arr[updated_edge_arr_index] = 0;
+          return;
+        } else if (theta_arr[i] == theta_new) {
+          // tie
+          pi_arr[updated_edge_arr_index] = pi_arr[i];
+          return;
+        }
+      }
+    }
+  }
+
+  // At this point, we know that there are no +inf thetas, and the updated action is not -inf.
+  // If there is zero uncertainty with the updated action, we know that it dominates all other
+  // zero-uncertainty actions.
+  //
+  // We can now compute the posterior pi values using the logistic-normal model.
+
+  double alpha_raw_arr[arr_size];
+  double beta_raw_arr[arr_size];
+
+  EigenMapArrayXd alpha_arr(alpha_raw_arr, arr_size);
+  EigenMapArrayXd beta_arr(beta_raw_arr, arr_size);
+  alpha_arr.setConstant(1);
+  beta_arr.setZero();
+
+  for (int i = 0; i < arr_size; i++) {
+    bool was_updated = (i == updated_edge_arr_index);
+    if (was_updated) {
+      continue;
+    }
+
+    if (finiteness_arr[i] == math::kNegInf) {
+      RELEASE_ASSERT(pi_arr[i] == 0.f);
+      continue;
+    }
+
+    double theta_i = theta_raw_arr[i];
+    double omega_sq_i = omega_sq_raw_arr[i];
+
+    if (omega_sq_i == 0) {  // certain action
+      if (omega_sq_new == 0) {
+        RELEASE_ASSERT(theta_new > theta_i);  // expect strict domination
+        pi_arr[i] = 0.f;
+        continue;
+      }
+    }
+
+    // Based on all the edge-case checks above, we can now safely compute p and q and expect them
+    // to be in (0, 1).
+    double p = math::normal_cdf((theta_old - theta_i) / std::sqrt(omega_sq_old + omega_sq_i));
+    double q = math::normal_cdf((theta_new - theta_i) / std::sqrt(omega_sq_new + omega_sq_i));
+
+    RELEASE_ASSERT(p > 0.0 && p < 1.0, "invalid p: {}", p);
+    RELEASE_ASSERT(q > 0.0 && q < 1.0, "invalid q: {}", q);
+
+    double alpha = q * (1 - p) / (p * (1 - q));
+    double beta = pi_arr[i];
+
+    alpha_arr[i] = alpha;
+    beta_arr[i] = beta;
+  }
+
+  double beta_sum = beta_arr.sum();
+  if (beta_sum > 0.0) {
+    beta_arr *= (1.0 / beta_sum);
+    pi_arr[updated_edge_arr_index] *= std::exp((beta_arr * alpha_arr.log()).sum());
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(const NodeStats& stats,
+                                                             core::seat_index_t seat, double& theta,
+                                                             double& omega_sq) {
+  constexpr double kMin = Game::GameResults::kMinValue;
+  constexpr double kMax = Game::GameResults::kMaxValue;
+
+  double mu = stats.Q[seat];
+
+  if (mu == kMin) {
+    theta = -std::numeric_limits<double>::infinity();
+    omega_sq = 0;
+    return;
+  } else if (mu == kMax) {
+    theta = +std::numeric_limits<double>::infinity();
+    omega_sq = 0;
+    return;
+  }
+
+  mu = (mu - kMin) / (kMax - kMin);  // rescale to [0, 1]
+  mu = std::min(std::max(mu, 0.0), 1.0);
+
+  double sigma_sq = stats.W[seat];
+  sigma_sq /= (kMax - kMin) * (kMax - kMin);  // rescale to [0, 1]
+
+  // TODO: cache theta/omega_sq values in NodeStats to avoid recomputation
+
+  double theta1 = std::log(mu / (1 - mu));
+  double theta2 = -(1 - 2 * mu) * sigma_sq / (2 * mu * mu * (1 - mu) * (1 - mu));
+  theta = theta1 + theta2;
+
+  omega_sq = sigma_sq / (mu * mu * (1 - mu) * (1 - mu));
 }
 
 }  // namespace beta0

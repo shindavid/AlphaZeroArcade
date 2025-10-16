@@ -67,12 +67,18 @@ class AlgorithmsBase {
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  static void pure_backprop(SearchContext& context, const ValueArray& value);
-  static void virtual_backprop(SearchContext& context);
-  static void undo_virtual_backprop(SearchContext& context);
-  static void standard_backprop(SearchContext& context, bool undo_virtual);
-  static void short_circuit_backprop(SearchContext& context);
+  template <typename MutexProtectedFunc>
+  static void backprop_helper(Node* node, Edge* edge, LookupTable& lookup_table,
+                              MutexProtectedFunc&&);
 
+  static void init_node_stats_from_terminal(Node* node);
+  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual);
+  static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
+  static void virtually_update_node_stats(Node* node);
+  static void virtually_update_node_stats_and_edge(Node* node, Edge* edge);
+  static void undo_virtual_update(Node* node, Edge* edge);
+
+  static void validate_search_path(const SearchContext& context);
   static bool should_short_circuit(const Edge* edge, const Node* child);
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
@@ -90,10 +96,7 @@ class AlgorithmsBase {
                                  const SearchResults& results, int n_rows_to_display);
 
  protected:
-  template <typename MutexProtectedFunc>
-  static void backprop_helper(Node* node, LookupTable& lookup_table, MutexProtectedFunc&&);
-
-  static void update_stats(Node* node, LookupTable& lookup_table);
+  static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds
@@ -102,7 +105,6 @@ class AlgorithmsBase {
   static void load_action_symmetries(const GeneralContext&, const Node* root,
                                      core::action_t* actions, SearchResults&);
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
-  static void validate_search_path(const SearchContext& context);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
   static bool extract_policy_target(const SearchResults* mcts_results, PolicyTensor& target);

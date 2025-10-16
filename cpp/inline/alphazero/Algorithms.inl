@@ -20,146 +20,79 @@
 namespace alpha0 {
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::pure_backprop(SearchContext& context,
-                                                    const ValueArray& value) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, context.search_path_str(),
-             fmt::streamed(value.transpose()));
-  }
+template <typename MutexProtectedFunc>
+void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, Edge* edge,
+                                                      LookupTable& lookup_table,
+                                                      MutexProtectedFunc&& func) {
+  mit::unique_lock lock(node->mutex());
+  func();
+  lock.unlock();
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
-  RELEASE_ASSERT(!context.search_path.empty());
-  Node* last_node = context.search_path.back().node;
-
-  Derived::backprop_helper(last_node, lookup_table, [&] {
-    auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    stats.update_q(value, value * value, true);
-    stats.RN++;
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    Derived::backprop_helper(node, lookup_table, [&] {
-      edge->E++;
-      node->stats().RN++;  // thread-safe because executed under mutex
-    });
-  }
-  Derived::validate_search_path(context);
+  Derived::update_stats(node, edge, lookup_table);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::virtual_backprop(SearchContext& context) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
+void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) {
+  NodeStats& stats = node->stats();
+  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
+
+  stats.Q = q;
+  stats.Q_sq = q * q;
+  stats.RN++;
+
+  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+    stats.provably_winning[p] = q(p) >= Game::GameResults::kMaxValue;
+    stats.provably_losing[p] = q(p) <= Game::GameResults::kMinValue;
   }
-
-  LookupTable& lookup_table = context.general_context->lookup_table;
-  RELEASE_ASSERT(!context.search_path.empty());
-  Node* last_node = context.search_path.back().node;
-
-  Derived::backprop_helper(last_node, lookup_table, [&] {
-    last_node->stats().VN++;  // thread-safe because executed under mutex
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    Derived::backprop_helper(node, lookup_table, [&] {
-      edge->E++;
-      node->stats().VN++;  // thread-safe because executed under mutex
-    });
-  }
-  Derived::validate_search_path(context);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::undo_virtual_backprop(SearchContext& context) {
-  // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
-  // modified in between the two calls.
+void AlgorithmsBase<Traits, Derived>::init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {
+  NodeStats& stats = node->stats();
+  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
-  }
-
-  LookupTable& lookup_table = context.general_context->lookup_table;
-  RELEASE_ASSERT(!context.search_path.empty());
-
-  for (int i = context.search_path.size() - 1; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    Derived::backprop_helper(node, lookup_table, [&] {
-      edge->E--;
-      node->stats().VN--;  // thread-safe because executed under mutex
-    });
-  }
-  Derived::validate_search_path(context);
+  stats.Q = q;
+  stats.Q_sq = q * q;
+  stats.RN++;
+  stats.VN -= undo_virtual;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::standard_backprop(SearchContext& context, bool undo_virtual) {
-  Node* last_node = context.search_path.back().node;
-  auto value = GameResults::to_value_array(last_node->stable_data().R);
+void AlgorithmsBase<Traits, Derived>::update_node_stats_and_edge(Node* node, Edge* edge,
+                                                                 bool undo_virtual) {
+  auto& stats = node->stats();
 
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {} {}", "", context.log_prefix_n(), __func__, context.search_path_str(),
-             fmt::streamed(value.transpose()));
-  }
-
-  LookupTable& lookup_table = context.general_context->lookup_table;
-
-  Derived::backprop_helper(last_node, lookup_table, [&] {
-    auto& stats = last_node->stats();  // thread-safe because executed under mutex
-    stats.update_q(value, value * value, false);
-    stats.RN++;
-    stats.VN -= undo_virtual;
-  });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    Derived::backprop_helper(node, lookup_table, [&] {
-      edge->E += !undo_virtual;
-      auto& stats = node->stats();  // thread-safe because executed under mutex
-      stats.RN++;
-      stats.VN -= undo_virtual;
-    });
-  }
-  Derived::validate_search_path(context);
+  edge->E += !undo_virtual;
+  stats.RN++;
+  stats.VN -= undo_virtual;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::short_circuit_backprop(SearchContext& context) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
-  }
+void AlgorithmsBase<Traits, Derived>::virtually_update_node_stats(Node* node) {
+  node->stats().VN++;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
+  edge->E++;
+  node->stats().VN++;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::undo_virtual_update(Node* node, Edge* edge) {
+  edge->E--;
+  node->stats().VN--;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::validate_search_path(const SearchContext& context) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
 
   LookupTable& lookup_table = context.general_context->lookup_table;
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    // NOTE: always update the edge first, then the parent node
-    Derived::backprop_helper(node, lookup_table, [&] {
-      edge->E++;
-      node->stats().RN++;  // thread-safe because executed under mutex
-    });
+  int N = context.search_path.size();
+  for (int i = N - 1; i >= 0; --i) {
+    Derived::validate_state(lookup_table, context.search_path[i].node);
   }
-  Derived::validate_search_path(context);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -565,18 +498,8 @@ void AlgorithmsBase<Traits, Derived>::print_mcts_results(std::ostream& ss,
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, LookupTable& lookup_table,
-                                                      MutexProtectedFunc&& func) {
-  mit::unique_lock lock(node->mutex());
-  func();
-  lock.unlock();
-
-  Derived::update_stats(node, lookup_table);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& lookup_table) {
+void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
+                                                   LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -889,17 +812,6 @@ void AlgorithmsBase<Traits, Derived>::prune_policy_target(group::element_t inv_s
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
     eigen_util::print_array(std::cout, data, columns, &fmt_map);
-  }
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::validate_search_path(const SearchContext& context) {
-  if (!IS_DEFINED(DEBUG_BUILD)) return;
-
-  LookupTable& lookup_table = context.general_context->lookup_table;
-  int N = context.search_path.size();
-  for (int i = N - 1; i >= 0; --i) {
-    Derived::validate_state(lookup_table, context.search_path[i].node);
   }
 }
 
