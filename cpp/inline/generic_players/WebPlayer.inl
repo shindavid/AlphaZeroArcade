@@ -1,6 +1,7 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "search/VerboseManager.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"

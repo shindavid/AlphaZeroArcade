@@ -3,7 +3,6 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "search/VerboseManager.hpp"
 
 namespace generic {
 

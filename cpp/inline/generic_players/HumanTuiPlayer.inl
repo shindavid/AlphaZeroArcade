@@ -1,4 +1,5 @@
 #include "generic_players/HumanTuiPlayer.hpp"
+#include "search/VerboseManager.hpp"
 
 #include "util/ScreenUtil.hpp"
 
