@@ -12,16 +12,12 @@ struct VerboseManager {
     return &instance;
   }
 
-  void set(VerboseDataBase* verbose_data, int num_rows_to_display) {
-    verbose_data_ = verbose_data;
-    num_rows_to_display_ = num_rows_to_display;
+  void set(VerboseDataBase* verbose_data) {
     if (!tui_player_registered_ && !web_player_registered_) {
-      print_to_terminal();
+      verbose_data_->to_terminal_text();
+    } else {
+      verbose_data_ = verbose_data;
     }
-  }
-
-  void print_to_terminal() const {
-    verbose_data_->to_terminal_text(std::cout, num_rows_to_display_);
   }
 
   VerboseDataBase* verbose_data() const { return verbose_data_; }
