@@ -354,7 +354,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
     bool eval_all_children =
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
-    if (!node->stable_data().VT_valid) {
+    if (!node->stable_data().R_valid) {
       group::element_t sym = get_random_symmetry(leaf_canonical_history);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
       context.eval_request.emplace_back(node, leaf_canonical_history, sym, incorporate);

@@ -29,7 +29,7 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   core::seat_index_t active_seat;
 
   bool terminal;
-  bool VT_valid;
+  bool R_valid;
   bool is_chance_node;
 };
 

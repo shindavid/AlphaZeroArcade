@@ -234,7 +234,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     Derived::transform_policy(context, P_adjusted);
 
     stable_data.R = R;
-    stable_data.VT_valid = true;
+    stable_data.R_valid = true;
 
     // No need to worry about thread-safety when modifying edges or stats below, since no other
     // threads can access this node until after load_eval() returns
@@ -571,7 +571,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
       all_provably_losing.reset();
     }
 
-    if (stable_data.VT_valid) {
+    if (stable_data.R_valid) {
       ValueArray V = Game::GameResults::to_value_array(stable_data.R);
       Q_sum += V;
       Q_sq_sum += V * V;
@@ -648,7 +648,7 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
     }
 
     const auto& stable_data = child->stable_data();
-    RELEASE_ASSERT(stable_data.VT_valid);
+    RELEASE_ASSERT(stable_data.R_valid);
     ValueArray V = Game::GameResults::to_value_array(stable_data.R);
     action_values(action) = V(seat);
   }

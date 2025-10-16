@@ -329,7 +329,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
 
     ValueArray V;
     const ValueArray& U = stable_data.U;
-    if (stable_data.VT_valid) {
+    if (stable_data.R_valid) {
       V = Game::GameResults::to_value_array(stable_data.R);
       eigen_util::debug_assert_is_valid_prob_distr(V);
     } else {
