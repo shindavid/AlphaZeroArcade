@@ -83,9 +83,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void set_facing_human_tui_player() override {
-    facing_human_tui_player_ = true;  // affects printing
-  }
 
  protected:
   void clear_search_mode();
@@ -110,7 +107,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   SharedData_sptr shared_data_;
   VerboseData<Traits>* verbose_info_ = nullptr;
   const bool owns_shared_data_;
-  bool facing_human_tui_player_ = false;
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;

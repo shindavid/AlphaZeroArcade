@@ -115,11 +115,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
     get_manager()->receive_state_change(seat, state, action);
   }
   if (base_t::get_my_seat() == seat && params_.verbose) {
-    if (facing_human_tui_player_) {
-      util::clearscreen();
-    }
-
-    if (!facing_human_tui_player_) {
+    if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
       IO::print_state(std::cout, state, action, &this->get_player_names());
     }
   }

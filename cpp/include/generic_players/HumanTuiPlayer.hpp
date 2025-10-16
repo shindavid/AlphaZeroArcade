@@ -29,7 +29,6 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
-  bool is_human_tui_player() const override { return true; }
   bool disable_progress_bar() const override { return true; }
 
  protected:
