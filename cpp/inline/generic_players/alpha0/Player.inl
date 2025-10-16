@@ -181,7 +181,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 template <search::concepts::Traits Traits>
 auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
                                        const ActionMask& valid_actions) const {
-  PolicyTensor policy, Q_sum, Q_sq_sum;
+  PolicyTensor policy;
   const auto& counts = mcts_results->counts;
   if (search_mode_ == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
@@ -199,12 +199,6 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
   }
 
   if (search_mode_ != core::kRawPolicy && search_params_[search_mode_].tree_size_limit > 1) {
-    if (params_.LCB_z_score) {
-      Q_sum = mcts_results->Q * policy;
-      Q_sq_sum = mcts_results->Q_sq * policy;
-      Q_sum = mcts_results->action_symmetry_table.collapse(Q_sum);
-      Q_sq_sum = mcts_results->action_symmetry_table.collapse(Q_sq_sum);
-    }
     policy = mcts_results->action_symmetry_table.collapse(policy);
     float temp = move_temperature_.value();
     if (temp != 0) {
@@ -228,95 +222,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
     }
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
     if (params_.LCB_z_score) {
-      Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
-      Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);
-
-      PolicyTensor Q = Q_sum / counts;
-      PolicyTensor Q_sq = Q_sq_sum / counts;
-      PolicyTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
-      Q_sigma_sq = eigen_util::cwiseMax(Q_sigma_sq, 0);  // clip negative values to 0
-      PolicyTensor Q_sigma = Q_sigma_sq.sqrt();
-
-      PolicyTensor LCB = Q - params_.LCB_z_score * Q_sigma;
-
-      float policy_max = -1;
-      float min_LCB = 0;
-      bool min_LCB_set = false;
-
-      // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
-      // min_{i in S} {LCB(i)}
-      for (int a : valid_actions.on_indices()) {
-        float p = policy(a);
-        if (p <= 0) continue;
-
-        if (p > policy_max) {
-          policy_max = p;
-          min_LCB = LCB(a);
-          min_LCB_set = true;
-        } else if (p == policy_max) {
-          min_LCB = std::min(min_LCB, LCB(a));
-          min_LCB_set = true;
-        }
-      }
-
-      if (min_LCB_set) {
-        PolicyTensor UCB = Q + params_.LCB_z_score * Q_sigma;
-
-        // zero out policy wherever UCB < min_LCB
-        auto mask = (UCB >= min_LCB).template cast<float>();
-        PolicyTensor policy_masked = policy * mask;
-
-        if (search::kEnableSearchDebug) {
-          int visited_actions = 0;
-          for (int a : valid_actions.on_indices()) {
-            if (counts(a)) visited_actions++;
-          }
-
-          LocalPolicyArray actions_arr(visited_actions);
-          LocalPolicyArray counts_arr(visited_actions);
-          LocalPolicyArray policy_arr(visited_actions);
-          LocalPolicyArray Q_arr(visited_actions);
-          LocalPolicyArray Q_sigma_arr(visited_actions);
-          LocalPolicyArray LCB_arr(visited_actions);
-          LocalPolicyArray UCB_arr(visited_actions);
-          LocalPolicyArray policy_masked_arr(visited_actions);
-
-          int r = 0;
-          for (int a : valid_actions.on_indices()) {
-            if (counts(a) == 0) continue;
-
-            actions_arr(r) = a;
-            counts_arr(r) = counts(a);
-            policy_arr(r) = policy(a);
-            Q_arr(r) = Q(a);
-            Q_sigma_arr(r) = Q_sigma(a);
-            LCB_arr(r) = LCB(a);
-            UCB_arr(r) = UCB(a);
-            policy_masked_arr(r) = policy_masked(a);
-
-            r++;
-          }
-
-          policy_arr /= policy_arr.sum();
-          policy_masked_arr /= policy_masked_arr.sum();
-
-          static std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
-                                                     "Q_sigma", "LCB", "UCB", "P*"};
-          auto data = eigen_util::sort_rows(
-            eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr,
-                                            LCB_arr, UCB_arr, policy_masked_arr));
-
-          core::action_mode_t mode = mcts_results->action_mode;
-          eigen_util::PrintArrayFormatMap fmt_map{
-            {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
-          };
-
-          std::cout << std::endl << "Applying LCB:" << std::endl;
-          eigen_util::print_array(std::cout, data, columns, &fmt_map);
-        }
-
-        policy = policy_masked;
-      }
+      apply_LCB(mcts_results, valid_actions, policy);
     }
   }
 
@@ -330,6 +236,105 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
     eigen_util::normalize(policy);
   }
   return policy;
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMask& valid_actions,
+                               PolicyTensor& policy) const {
+  const auto& counts = mcts_results->counts;
+
+  PolicyTensor Q_sum = mcts_results->action_symmetry_table.collapse(mcts_results->Q) * policy;
+  PolicyTensor Q_sq_sum = mcts_results->action_symmetry_table.collapse(mcts_results->Q_sq) * policy;
+
+  Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
+  Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);
+
+  PolicyTensor Q = Q_sum / counts;
+  PolicyTensor Q_sq = Q_sq_sum / counts;
+  PolicyTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
+  Q_sigma_sq = eigen_util::cwiseMax(Q_sigma_sq, 0);  // clip negative values to 0
+  PolicyTensor Q_sigma = Q_sigma_sq.sqrt();
+
+  PolicyTensor LCB = Q - params_.LCB_z_score * Q_sigma;
+
+  float policy_max = -1;
+  float min_LCB = 0;
+  bool min_LCB_set = false;
+
+  // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
+  // min_{i in S} {LCB(i)}
+  for (int a : valid_actions.on_indices()) {
+    float p = policy(a);
+    if (p <= 0) continue;
+
+    if (p > policy_max) {
+      policy_max = p;
+      min_LCB = LCB(a);
+      min_LCB_set = true;
+    } else if (p == policy_max) {
+      min_LCB = std::min(min_LCB, LCB(a));
+      min_LCB_set = true;
+    }
+  }
+
+  if (min_LCB_set) {
+    PolicyTensor UCB = Q + params_.LCB_z_score * Q_sigma;
+
+    // zero out policy wherever UCB < min_LCB
+    auto mask = (UCB >= min_LCB).template cast<float>();
+    PolicyTensor policy_masked = policy * mask;
+
+    if (search::kEnableSearchDebug) {
+      int visited_actions = 0;
+      for (int a : valid_actions.on_indices()) {
+        if (counts(a)) visited_actions++;
+      }
+
+      LocalPolicyArray actions_arr(visited_actions);
+      LocalPolicyArray counts_arr(visited_actions);
+      LocalPolicyArray policy_arr(visited_actions);
+      LocalPolicyArray Q_arr(visited_actions);
+      LocalPolicyArray Q_sigma_arr(visited_actions);
+      LocalPolicyArray LCB_arr(visited_actions);
+      LocalPolicyArray UCB_arr(visited_actions);
+      LocalPolicyArray policy_masked_arr(visited_actions);
+
+      int r = 0;
+      for (int a : valid_actions.on_indices()) {
+        if (counts(a) == 0) continue;
+
+        actions_arr(r) = a;
+        counts_arr(r) = counts(a);
+        policy_arr(r) = policy(a);
+        Q_arr(r) = Q(a);
+        Q_sigma_arr(r) = Q_sigma(a);
+        LCB_arr(r) = LCB(a);
+        UCB_arr(r) = UCB(a);
+        policy_masked_arr(r) = policy_masked(a);
+
+        r++;
+      }
+
+      policy_arr /= policy_arr.sum();
+      policy_masked_arr /= policy_masked_arr.sum();
+
+      static std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
+                                                 "Q_sigma", "LCB", "UCB", "P*"};
+      auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr,
+                                        LCB_arr, UCB_arr, policy_masked_arr));
+
+      core::action_mode_t mode = mcts_results->action_mode;
+      eigen_util::PrintArrayFormatMap fmt_map{
+        {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+      };
+
+      std::cout << std::endl << "Applying LCB:" << std::endl;
+      eigen_util::print_array(std::cout, data, columns, &fmt_map);
+    }
+
+    policy = policy_masked;
+  }
 }
 
 template <search::concepts::Traits Traits>

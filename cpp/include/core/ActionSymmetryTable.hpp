@@ -51,7 +51,8 @@ class ActionSymmetryTable {
 
   /*
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
-   * symmetrically equivalent actions are shifted so that all but one are zero.
+   * symmetrically equivalent actions are shifted so that all but one are zero. The choice of which
+   * action to keep is consistent across calls.
    */
   PolicyTensor collapse(const PolicyTensor& policy) const;
 

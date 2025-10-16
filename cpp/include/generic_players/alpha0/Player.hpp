@@ -95,6 +95,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 
+  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
+
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
 

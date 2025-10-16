@@ -19,7 +19,7 @@
 namespace generic::beta0 {
 
 /*
- * The generic::beta0::Player uses AlphaZero MCTS to select actions.
+ * The generic::beta0::Player uses BetaZero MCTS to select actions.
  *
  * Note that when 2 or more identically-configured generic::beta0::Player's are playing in the same
  * game, they can share the same MCTS tree, as an optimization. This implementation supports this
