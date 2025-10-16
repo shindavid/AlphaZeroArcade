@@ -212,8 +212,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
        *
        * But the above doesn't work.
        */
-      PolicyTensor policy_max_tensor = policy.maximum();
-      float policy_max = policy_max_tensor(0);
+      float policy_max = eigen_util::max(policy);
       if (policy_max > 0) {
         PolicyTensor policy_max_broadcasted;
         policy_max_broadcasted.setConstant(policy_max);
