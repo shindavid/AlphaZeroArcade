@@ -7,7 +7,7 @@
 namespace generic::alpha0 {
 
 struct VerboseRow {
-  int action;
+  core::action_t action;
   float prior;
   float posterior;
   float counts;
@@ -23,11 +23,13 @@ struct VerboseData : public VerboseDataBase {
   using SearchResults = ::alpha0::SearchResults<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
+  VerboseData(int n_rows_to_display) : n_rows_to_display_(n_rows_to_display) {}
+
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
   boost::json::object to_json() const;
-  void to_terminal_text(std::ostream& ss, int n_rows_to_display) const;
+  void to_terminal_text() const;
   void set(const PolicyTensor& policy, const SearchResults& results);
 
  private:
@@ -46,6 +48,7 @@ struct VerboseData : public VerboseDataBase {
   };
 
   mutable Table table_;
+  int n_rows_to_display_ = -1;
 
   void build_table() const;
 };
