@@ -91,7 +91,7 @@ export default class OthelloApp extends GameAppBase {
 
     return (
       <div className="board-wrapper">
-        <div className="board"> {cells} </div>
+        <div className="board">{cells}</div>
         {passEnabled && this.renderPassButton()}
       </div>
 

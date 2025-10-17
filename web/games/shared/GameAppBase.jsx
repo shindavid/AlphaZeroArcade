@@ -18,6 +18,7 @@ function VerbosePanel({ data, cellRender }) {
     </div>
   );
 }
+
 // Make a uniform [{...}, {...}] from any value
 function normalizeToRows(v) {
   if (v == null) return [];
