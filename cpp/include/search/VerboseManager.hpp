@@ -3,6 +3,16 @@
 # include "search/VerboseDataBase.hpp"
 
 namespace generic {
+/*
+ * VerboseManager is a singleton that maintains a pointer to the current VerboseData instance.
+ * After each MCTS search, a player can set this pointer to expose detailed search statistics
+ * and diagnostics.
+ *
+ * By default, VerboseManager automatically prints the VerboseData to the terminal after every
+ * completed search (auto_terminal_printing_ = true). Player generators that provide their own
+ * output interfaces—such as WebPlayerGenerator or TUIPlayerGenerator—disable this behavior by
+ * calling disable_auto_terminal_printing().
+ */
 
 struct VerboseManager {
   static VerboseManager* get_instance();
