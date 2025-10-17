@@ -8,7 +8,6 @@ namespace generic {
  * VerboseDataBase is the base class for verbose data structures used to expose detailed MCTS
  * search statistics.
  */
-
 struct VerboseDataBase {
   virtual ~VerboseDataBase() {}
   virtual boost::json::object to_json() const = 0;

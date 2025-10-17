@@ -13,7 +13,6 @@ namespace generic {
  * output interfaces—such as WebPlayerGenerator or TUIPlayerGenerator—disable this behavior by
  * calling disable_auto_terminal_printing().
  */
-
 struct VerboseManager {
   static VerboseManager* get_instance();
   void set(VerboseDataBase* verbose_data);
