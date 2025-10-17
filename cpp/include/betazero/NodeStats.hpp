@@ -11,10 +11,15 @@ struct NodeStats : public alpha0::NodeStats<EvalSpec> {
   using ValueArray = Base::ValueArray;
 
   NodeStats();
-  void update_q(const ValueArray& q, const ValueArray& q_sq, bool pure);
 
-  ValueArray Q_min;  // for each player, the minimum value of Q ever observed for that player
-  ValueArray Q_max;  // for each player, the maximum value of Q ever observed for that player
+  // We will eventually remove Qbeta in favor of just Q. We keep it here so that we can track Q
+  // identically to alpha0 for now, so that we can reuse alpha0's selection criterion. Once we feel
+  // comfortable implementing a new selection criterion for beta0, we can remove Qbeta and change
+  // all Qbeta references to Q.
+  ValueArray Qbeta;
+
+  ValueArray Qbeta_min;  // for each player, the min Qbeta ever observed for that player
+  ValueArray Qbeta_max;  // for each player, the max Qbeta ever observed for that player
   ValueArray W;      // uncertainty
 };
 
