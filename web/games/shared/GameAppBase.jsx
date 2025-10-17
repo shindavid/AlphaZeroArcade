@@ -1,7 +1,7 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
-function VerbosePanel({ data }) {
+function VerbosePanel({ data, cellRender }) {
   if (!data) return null;
   return (
     <div className="verbose-panel">
@@ -11,14 +11,13 @@ function VerbosePanel({ data }) {
         return (
           <div key={section} className="verbose-section">
             <h4>{section}</h4>
-            {renderArrayOfObjects(rows)}
+            {renderArrayOfObjects(rows, cellRender)}
           </div>
         );
       })}
     </div>
   );
 }
-
 // Make a uniform [{...}, {...}] from any value
 function normalizeToRows(v) {
   if (v == null) return [];
@@ -53,21 +52,19 @@ function normalizeToRows(v) {
   return [{ value: v }];
 }
 
-function renderArrayOfObjects(rows) {
-  const cols = Array.from(rows.reduce((s, r) => {
-    Object.keys(r).forEach(k => s.add(k));
-    return s;
-  }, new Set()));
-
+function renderArrayOfObjects(rows, cellRender) {
+  const cols = Array.from(rows.reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set()));
   return (
     <table className="verbose-table">
-      <thead>
-        <tr>{cols.map(c => <th key={c}>{c}</th>)}</tr>
-      </thead>
+      <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
       <tbody>
         {rows.map((r, i) => (
           <tr key={i}>
-            {cols.map(c => <td key={c}>{fmt(r[c])}</td>)}
+            {cols.map(c => {
+              const v = r[c];
+              const rendered = cellRender ? cellRender(c, v) : undefined;
+              return <td key={`${i}-${c}`}>{rendered ?? fmt(v)}</td>;
+            })}
           </tr>
         ))}
       </tbody>
@@ -251,7 +248,14 @@ export class GameAppBase extends React.Component {
           />
         </div>
 
-        <VerbosePanel data={this.state.verboseInfo} />
+        <VerbosePanel data={this.state.verboseInfo}
+        cellRender={(key, val) => {
+          if (key === 'Player') {
+            return this.seatToHtml(String(val));
+          }
+          return fmt(val);
+        }}
+        />
       </div>
     );
   }

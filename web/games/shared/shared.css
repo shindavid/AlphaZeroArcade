@@ -156,7 +156,7 @@ button:focus-visible {
   min-width: 0;                 /* prevents overflow with wide boards */
 }
 
-.verbose-panel { flex: 0 0 600px; background:#1a1a1a; border:1px solid #ddd; border-radius:8px; padding:10px; color: white;}
+.verbose-panel { flex: 0 0 600px; background:#333333; border:1px solid #ddd; border-radius:8px; padding:10px; color: white;}
 .verbose-section { margin-bottom: 14px; text-align: left; }
 .verbose-section h4 { margin: 6px 0; border-bottom: 1px solid #e5e5e5; color:#1256a3; }
 .verbose-table { width:100%; border-collapse: collapse; font-size:.9rem; }
