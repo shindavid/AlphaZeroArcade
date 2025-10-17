@@ -155,7 +155,6 @@ export class GameAppBase extends React.Component {
   }
 
   handleStateUpdate(payload) {
-    console.log('State update:', payload);
     this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
