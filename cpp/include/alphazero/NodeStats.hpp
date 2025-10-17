@@ -14,8 +14,8 @@ struct NodeStats {
   void update_q(const ValueArray& q, const ValueArray& q_sq, bool pure);
   void update_provable_bits(const player_bitset_t& all_actions_provably_winning,
                             const player_bitset_t& all_actions_provably_losing,
-                            int num_expanded_children, bool cp_has_winning_move,
-                            int num_valid_actions, core::seat_index_t seat);
+                            bool cp_has_winning_move, bool all_edges_expanded,
+                            core::seat_index_t seat);
 
   ValueArray Q;     // excludes virtual loss
   ValueArray Q_sq;  // excludes virtual loss

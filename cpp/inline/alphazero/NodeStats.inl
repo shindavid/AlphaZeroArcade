@@ -17,15 +17,13 @@ void NodeStats<EvalSpec>::update_q(const ValueArray& q, const ValueArray& q_sq, 
 template <core::concepts::EvalSpec EvalSpec>
 void NodeStats<EvalSpec>::update_provable_bits(const player_bitset_t& all_actions_provably_winning,
                                                const player_bitset_t& all_actions_provably_losing,
-                                               int num_expanded_children, bool cp_has_winning_move,
-                                               int num_valid_actions, core::seat_index_t seat) {
-  if (num_valid_actions == 0) {
-    // terminal state, provably_winning/losing should already be set
-  } else if (cp_has_winning_move) {
+                                               bool cp_has_winning_move, bool all_edges_expanded,
+                                               core::seat_index_t seat) {
+  if (cp_has_winning_move) {
     provably_winning[seat] = true;
     provably_losing.set();
     provably_losing[seat] = false;
-  } else if (num_expanded_children == num_valid_actions) {
+  } else if (all_edges_expanded) {
     provably_winning = all_actions_provably_winning;
     provably_losing = all_actions_provably_losing;
   }

@@ -28,7 +28,9 @@ void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, Edge* edge,
   func();
   lock.unlock();
 
-  Derived::update_stats(node, edge, lookup_table);
+  if (edge) {
+    Derived::update_stats(node, edge, lookup_table);
+  }
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -504,7 +506,6 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
   ValueArray Q_sq_sum;
   Q_sum.setZero();
   Q_sq_sum.setZero();
-  int N = 0;
 
   player_bitset_t all_provably_winning;
   player_bitset_t all_provably_losing;
@@ -518,6 +519,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
   core::seat_index_t seat = stable_data.active_seat;
 
   if (stable_data.is_chance_node) {
+    int num_expanded_edges = 0;
     for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
@@ -528,12 +530,12 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
       const auto child_stats = child->stats_safe();  // make a copy
       Q_sum += child_stats.Q * edge->chance_prob;
       Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
-      N++;
+      num_expanded_edges++;
 
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
     }
-    if (N == num_valid_actions) {
+    if (num_expanded_edges == num_valid_actions) {
       mit::unique_lock lock(node->mutex());
       stats.update_q(Q_sum, Q_sq_sum, false);
       stats.provably_winning = all_provably_winning;
@@ -542,14 +544,14 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
   } else {
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
-    int num_children = 0;
+    int num_expanded_edges = 0;
+    int N = 0;
 
-    bool skipped = false;
+    DEBUG_ASSERT(num_valid_actions > 0);
     for (int i = 0; i < num_valid_actions; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(edge->child_index);
       if (!child) {
-        skipped = true;
         continue;
       }
       const auto child_stats = child->stats_safe();  // make a copy
@@ -563,34 +565,30 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
       cp_has_winning_move |= child_stats.provably_winning[seat];
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
-      num_children++;
+      num_expanded_edges++;
     }
 
-    if (skipped) {
+    bool all_edges_expanded = (num_expanded_edges == num_valid_actions);
+    if (!all_edges_expanded) {
       all_provably_winning.reset();
       all_provably_losing.reset();
     }
 
-    if (stable_data.R_valid) {
-      ValueArray V = Game::GameResults::to_value_array(stable_data.R);
-      Q_sum += V;
-      Q_sq_sum += V * V;
-      N++;
+    DEBUG_ASSERT(stable_data.R_valid);
+    ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+    Q_sum += V;
+    Q_sq_sum += V * V;
+    N++;
 
-      eigen_util::debug_assert_is_valid_prob_distr(V);
-    }
-
-    auto Q = N ? (Q_sum / N) : Q_sum;
-    auto Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+    auto Q = Q_sum / N;
+    auto Q_sq = Q_sq_sum / N;
 
     mit::unique_lock lock(node->mutex());
     stats.update_q(Q, Q_sq, false);
-    stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
-                               cp_has_winning_move, num_valid_actions, seat);
+    stats.update_provable_bits(all_provably_winning, all_provably_losing, cp_has_winning_move,
+                               all_edges_expanded, seat);
 
-    if (N) {
-      eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
-    }
+    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
   }
 }
 

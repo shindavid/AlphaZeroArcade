@@ -277,26 +277,24 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
     // read child stats and pi values into arrays to avoid repeated locking
     NodeStats child_stats_arr[num_valid_actions];
     float pi_raw_arr[num_valid_actions];
-    int num_children = 0;
+    int num_expanded_edges = 0;
     int updated_edge_arr_index = -1;
-    bool skipped = false;
 
     for (int i = 0; i < num_valid_actions; i++) {
       const Edge* child_edge = lookup_table.get_edge(node, i);
       const Node* child = lookup_table.get_node(child_edge->child_index);
       if (!child) {
-        skipped = true;
         continue;
       }
-      child_stats_arr[num_children] = child->stats_safe();  // make a copy
-      pi_raw_arr[num_children] = child_edge->policy_posterior_prob;
+      child_stats_arr[num_expanded_edges] = child->stats_safe();  // make a copy
+      pi_raw_arr[num_expanded_edges] = child_edge->policy_posterior_prob;
       if (child_edge == edge) {
-        updated_edge_arr_index = num_children;
+        updated_edge_arr_index = num_expanded_edges;
       }
-      num_children++;
+      num_expanded_edges++;
     }
 
-    Eigen::Map<Eigen::ArrayXf> pi_arr(pi_raw_arr, num_children);
+    Eigen::Map<Eigen::ArrayXf> pi_arr(pi_raw_arr, num_expanded_edges);
 
     // compute posterior policy
     Derived::update_policy(node, edge, lookup_table, old_stats, child_stats_arr, pi_arr,
@@ -310,7 +308,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
 
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
-    for (int i = 0; i < num_children; i++) {
+    for (int i = 0; i < num_expanded_edges; i++) {
       const auto& child_stats = child_stats_arr[i];
       float pi = pi_arr[i];
       piW_sum += child_stats.W * pi;
@@ -322,7 +320,8 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
       all_provably_losing &= child_stats.provably_losing;
     }
 
-    if (skipped) {
+    bool all_edges_expanded = (num_expanded_edges == num_valid_actions);
+    if (!all_edges_expanded) {
       all_provably_winning.reset();
       all_provably_losing.reset();
     }
@@ -339,7 +338,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
     ValueArray Q;
     ValueArray Q_sq;
 
-    if (num_children || N > 0) {
+    if (num_expanded_edges || N > 0) {
       ValueArray denom = piW_sum + U * N;
 
       Q = (V * piW_sum + U * N * piQ_sum) / denom;
@@ -361,8 +360,8 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge* edge,
     }
     stats.update_q(Q, Q_sq, false);
     stats.W = W;
-    stats.update_provable_bits(all_provably_winning, all_provably_losing, num_children,
-                               cp_has_winning_move, num_valid_actions, seat);
+    stats.update_provable_bits(all_provably_winning, all_provably_losing, cp_has_winning_move,
+                               all_edges_expanded, seat);
 
     if (N) {
       eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
