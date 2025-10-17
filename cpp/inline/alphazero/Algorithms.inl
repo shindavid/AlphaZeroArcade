@@ -429,18 +429,8 @@ void AlgorithmsBase<Traits, Derived>::print_visit_info(const SearchContext& cont
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, LookupTable& lookup_table,
-                                                      MutexProtectedFunc&& func) {
-  mit::unique_lock lock(node->mutex());
-  func();
-  lock.unlock();
-
-  Derived::update_stats(node, lookup_table);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, LookupTable& lookup_table) {
+void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
+                                                   LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
