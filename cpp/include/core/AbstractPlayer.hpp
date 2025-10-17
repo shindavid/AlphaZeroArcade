@@ -81,21 +81,6 @@ class AbstractPlayer {
    */
   virtual void end_game(const State&, const GameResultTensor&) {}
 
-  /*
-   * Some extra virtual functions that most subclasses can ignore.
-   *
-   * GameServer will invoke set_facing_human_tui_player() if there is a player in the game that is a
-   * HumanTuiPlayer. If you want to do something special when you are playing against a human TUI
-   * player, you can override this method. You might want to do this because you may want to print
-   * verbose information differently in this case, in order to avoid interfering with the
-   * user-interface of the human player.
-   *
-   * is_human_tui_player() is used by GameServer to determine whether to call
-   * set_facing_human_tui_player().
-   */
-  virtual bool is_human_tui_player() const { return false; }
-  virtual void set_facing_human_tui_player() {}
-
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }
 

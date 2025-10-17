@@ -2,8 +2,8 @@
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, 48px);
-  grid-template-rows: repeat(8, 48px);
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
   gap: 4px;
   background: #0a5a2b;
   padding: 8px;
@@ -58,3 +58,22 @@
 .pass-btn:hover { background: #bbb; }
 
 .board-wrapper { position: relative; }
+
+.board {
+  width: fit-content;
+  border: 2px solid #333;
+}
+
+.cell, .label-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.label-cell {
+  font-weight: bold;
+  background: #0a5a2b;
+  color: white;
+}

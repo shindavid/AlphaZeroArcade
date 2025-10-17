@@ -664,20 +664,10 @@ void GameServer<Game>::SharedData::update_perf_stats(PerfStats& stats) {
 template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
-  util::CompactBitSet<kNumPlayers> human_tui_indices;
   bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
-    human_tui_indices[p] = instantiations_[p].player->is_human_tui_player();
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
-  }
-
-  for (int p = 0; p < kNumPlayers; ++p) {
-    util::CompactBitSet<kNumPlayers> human_tui_indices_copy(human_tui_indices);
-    human_tui_indices_copy[p] = false;
-    if (human_tui_indices_copy.any()) {
-      instantiations_[p].player->set_facing_human_tui_player();
-    }
   }
 
   if (!disable_progress_bar) {

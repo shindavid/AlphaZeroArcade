@@ -574,6 +574,44 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
   }
 }
 
+template <typename Derived>
+boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
+                                    const std::vector<std::string>& key_strs,
+                                    const PrintArrayFormatMap* fmt_map) {
+  int num_rows = array.rows();
+  int num_cols = array.cols();
+
+  RELEASE_ASSERT(num_cols == int(key_strs.size()));
+
+  boost::json::object obj;
+
+  for (int j = 0; j < num_cols; ++j) {
+    const std::string& key = key_strs[j];
+    boost::json::array arr;
+
+    if (fmt_map) {
+      auto it = fmt_map->find(key);
+      if (it != fmt_map->end()) {
+        auto f = it->second;
+        for (int i = 0; i < num_rows; ++i) {
+          float x = array(i, j);
+          std::string s = f(x);
+          arr.emplace_back(boost::json::value(s));
+        }
+        obj[key] = arr;
+        continue;
+      }
+    }
+
+    for (int i = 0; i < num_rows; ++i) {
+      float x = array(i, j);
+      arr.emplace_back(x);
+    }
+    obj[key] = arr;
+  }
+  return obj;
+}
+
 template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest) {

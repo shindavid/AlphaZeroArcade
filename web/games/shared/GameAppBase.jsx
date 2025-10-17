@@ -1,6 +1,84 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
+function VerbosePanel({ data, cellRender }) {
+  if (!data) return null;
+  return (
+    <div className="verbose-panel">
+      {Object.entries(data).map(([section, value]) => {
+        const rows = normalizeToRows(value);
+        if (!rows.length) return null;
+        return (
+          <div key={section} className="verbose-section">
+            <h4>{section}</h4>
+            {renderArrayOfObjects(rows, cellRender)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Make a uniform [{...}, {...}] from any value
+function normalizeToRows(v) {
+  if (v == null) return [];
+
+  // already array of objects
+  if (Array.isArray(v) && v.every(x => x && typeof x === 'object' && !Array.isArray(x))) {
+    return v;
+  }
+
+  // object of arrays or scalars -> pivot to rows
+  if (!Array.isArray(v) && typeof v === 'object') {
+    const keys = Object.keys(v);
+    if (!keys.length) return [];
+    const len = Math.max(...keys.map(k => (Array.isArray(v[k]) ? v[k].length : 1)));
+    const rows = [];
+    for (let i = 0; i < len; i++) {
+      const row = {};
+      for (const k of keys) {
+        row[k] = Array.isArray(v[k]) ? v[k][i] : v[k];
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  // array of scalars -> one-column table
+  if (Array.isArray(v)) {
+    return v.map(x => ({ value: x }));
+  }
+
+  // scalar -> single row
+  return [{ value: v }];
+}
+
+function renderArrayOfObjects(rows, cellRender) {
+  const cols = Array.from(rows.reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set()));
+  return (
+    <table className="verbose-table">
+      <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i}>
+            {cols.map(c => {
+              const v = r[c];
+              const rendered = cellRender ? cellRender(c, v) : undefined;
+              return <td key={`${i}-${c}`}>{rendered ?? fmt(v)}</td>;
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function fmt(v) {
+  if (v == null) return '';
+  if (typeof v === 'number') return Number.isInteger(v) ? v : v.toFixed(6);
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
 
 export class GameAppBase extends React.Component {
   constructor(props) {
@@ -15,6 +93,7 @@ export class GameAppBase extends React.Component {
       playerNames: null,
       resultCodes: null,
       mySeat: null,
+      verboseInfo: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -78,6 +157,7 @@ export class GameAppBase extends React.Component {
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : null,
     });
   }
 
@@ -148,22 +228,34 @@ export class GameAppBase extends React.Component {
     let resultCodes = this.state.resultCodes;
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
+    let verboseInfo = this.state.verboseInfo;
 
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
     return (
-      <div className="container" style={{ minHeight: '600px', justifyContent: 'flex-start' }}>
-        <StatusBar
-          resultCodes={resultCodes}
-          playerNames={playerNames}
-          seatAssignments={seatAssignmentsHtml}
-        />
-        {this.renderBoard()}
-        <ActionButtons
-          onResign={this.handleResign}
-          onNewGame={this.handleNewGame}
-          midGame={midGame}
-          loading={this.state.loading}
+      <div className="container two-col">
+        <div className="left-col">
+          <StatusBar
+            resultCodes={resultCodes}
+            playerNames={playerNames}
+            seatAssignments={seatAssignmentsHtml}
+          />
+          {this.renderBoard()}
+          <ActionButtons
+            onResign={this.handleResign}
+            onNewGame={this.handleNewGame}
+            midGame={midGame}
+            loading={this.state.loading}
+          />
+        </div>
+
+        <VerbosePanel data={this.state.verboseInfo}
+        cellRender={(key, val) => {
+          if (key === 'Player') {
+            return this.seatToHtml(String(val));
+          }
+          return fmt(val);
+        }}
         />
       </div>
     );

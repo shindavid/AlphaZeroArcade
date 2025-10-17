@@ -412,6 +412,11 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
                  const std::vector<std::string>& column_names,
                  const PrintArrayFormatMap* fmt_map = nullptr);
 
+template <typename Derived>
+boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
+                                   const std::vector<std::string>& column_names,
+                                   const PrintArrayFormatMap* fmt_map = nullptr);
+
 template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest);

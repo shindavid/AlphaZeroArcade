@@ -90,7 +90,7 @@ inline Player<Traits>::Player(const Params& params, SharedData_sptr shared_data,
       shared_data_(shared_data),
       owns_shared_data_(owns_shared_data) {
   if (params.verbose) {
-    verbose_info_ = new VerboseInfo();
+    verbose_info_ = new VerboseData<Traits>(params.verbose_num_rows_to_display);
   }
 
   RELEASE_ASSERT(shared_data_.get() != nullptr);
@@ -122,11 +122,7 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
     get_manager()->receive_state_change(seat, state, action);
   }
   if (this->get_my_seat() == seat && params_.verbose) {
-    if (facing_human_tui_player_) {
-      util::ScreenClearer::clear_once();
-    }
-    verbose_dump();
-    if (!facing_human_tui_player_) {
+    if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
       IO::print_state(std::cout, state, action, &this->get_player_names());
     }
   }
@@ -169,9 +165,8 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 
   if (verbose_info_) {
-    verbose_info_->action_policy = modified_policy;
-    verbose_info_->mcts_results = *mcts_results;
-    verbose_info_->initialized = true;
+    verbose_info_->set(modified_policy, *mcts_results);
+    VerboseManager::get_instance()->set(verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
   RELEASE_ASSERT(request.valid_actions[action]);
@@ -352,16 +347,6 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
   }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
-}
-
-template <search::concepts::Traits Traits>
-inline void Player<Traits>::verbose_dump() const {
-  if (!verbose_info_->initialized) return;
-
-  const auto& action_policy = verbose_info_->action_policy;
-  const auto& mcts_results = verbose_info_->mcts_results;
-  int num_rows_to_display = params_.verbose_num_rows_to_display;
-  Algorithms::print_mcts_results(std::cout, action_policy, mcts_results, num_rows_to_display);
 }
 
 }  // namespace generic::alpha0

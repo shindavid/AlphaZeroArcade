@@ -4,6 +4,7 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "search/VerboseManager.hpp"
 
 namespace generic {
 
@@ -21,6 +22,7 @@ class WebPlayerGenerator : public core::AbstractPlayerGenerator<typename WebPlay
   virtual core::AbstractPlayer<Game>* generate(core::game_slot_index_t) override {
     return new WebPlayer();
   }
+  void start_session() override { VerboseManager::get_instance()->disable_auto_terminal_printing(); }
 };
 
 }  // namespace generic

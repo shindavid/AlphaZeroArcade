@@ -61,6 +61,19 @@ struct WinShareResults {
     static std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
     eigen_util::print_array(std::cout, data, columns, fmt_map);
   }
+
+  static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
+                                    const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+    ValueArray net_value_array;
+    ValueArray player_array;
+    for (int i = 0; i < kNumPlayers; i++) {
+      player_array(i) = i;
+      net_value_array(i) = net_value(i);
+    }
+    auto data = eigen_util::concatenate_columns(player_array, net_value_array, win_rates);
+    static std::vector<std::string> columns = {"Player", "Net(W)", "win-rate"};
+    return eigen_util::output_to_json(data, columns, fmt_map);
+  }
 };
 
 }  // namespace core

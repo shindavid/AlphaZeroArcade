@@ -48,6 +48,17 @@ struct WinLossResults {
     static std::vector<std::string> columns = {"Player", "win-rate"};
     eigen_util::print_array(std::cout, data, columns, fmt_map);
   }
+
+  static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
+                                    const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+    ValueArray player_array;
+    for (int i = 0; i < 2; i++) {
+      player_array(i) = i;
+    }
+    auto data = eigen_util::concatenate_columns(player_array, win_rates);
+    static std::vector<std::string> columns = {"Player", "win-rate"};
+    return eigen_util::output_to_json(data, columns, fmt_map);
+  }
 };
 
 static_assert(concepts::GameResults<WinLossResults>);

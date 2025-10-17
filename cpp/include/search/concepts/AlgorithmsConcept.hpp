@@ -40,7 +40,6 @@ concept Algorithms = requires(
     { A::load_evaluations(non_const_context) };
     { A::to_results(const_general_context, search_results) };
     { A::print_visit_info(const_context) };
-    { A::print_mcts_results(ss, policy, search_results, n_rows_to_display) };
   };
 
 }  // namespace concepts
