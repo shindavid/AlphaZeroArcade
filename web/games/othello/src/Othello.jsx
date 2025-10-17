@@ -91,16 +91,7 @@ export default class OthelloApp extends GameAppBase {
 
     return (
       <div className="board-wrapper">
-        <div
-          className="board"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${N + 1}, 1fr)`,
-            gridTemplateRows: `repeat(${N + 1}, 1fr)`,
-          }}
-        >
-          {cells}
-        </div>
+        <div className="board"> {cells} </div>
         {passEnabled && this.renderPassButton()}
       </div>
 

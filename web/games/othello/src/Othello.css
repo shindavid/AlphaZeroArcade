@@ -2,8 +2,8 @@
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, 48px);
-  grid-template-rows: repeat(8, 48px);
+  grid-template-columns: repeat(9, 48px);
+  grid-template-rows: repeat(9, 48px);
   gap: 4px;
   background: #0a5a2b;
   padding: 8px;
