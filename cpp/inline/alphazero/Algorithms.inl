@@ -21,16 +21,36 @@ namespace alpha0 {
 
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::backprop_helper(Node* node, Edge* edge,
-                                                      LookupTable& lookup_table,
-                                                      MutexProtectedFunc&& func) {
+void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge,
+                                                          MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
+  if (!edge) return;
+  NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  if (edge) {
-    Derived::update_stats(node, edge, lookup_table);
+  Derived::update_stats(stats, node, lookup_table_);
+
+  float child_Q_snapshot;
+  if (edge->child_index >= 0) {
+    Node* child = lookup_table_.get_node(edge->child_index);
+    child_Q_snapshot = child->safe_stats().Q[node->stable_data().active_seat];
   }
+
+  // Carefully copy back fields of stats back to node->stats()
+  // We don't copy counts, which may have been updated by other threads.
+  lock.lock();
+
+  if (edge->child_index >= 0) {
+    edge->child_Q_snapshot = child_Q_snapshot;
+  }
+
+  int RN = node->stats().RN;
+  int VN = node->stats().VN;
+  node->stats() = stats;
+  node->stats().RN = RN;
+  node->stats().VN = VN;
+  lock.unlock();
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -244,11 +264,12 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_prior_prob = P_raw[i];
       edge->adjusted_base_prob = P_adjusted[i];
-      edge->child_V_estimate = child_V.row(i);
+      edge->child_Q_snapshot = child_V.row(i);
     }
 
     ValueArray V = Game::GameResults::to_value_array(R);
-    stats.update_q(V, V * V, false);
+    stats.Q = V;
+    stats.Q_sq = V * V;
   }
 }
 
@@ -430,7 +451,7 @@ void AlgorithmsBase<Traits, Derived>::print_visit_info(const SearchContext& cont
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
+void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node* node,
                                                    LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
@@ -442,7 +463,6 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
   all_provably_winning.set();
   all_provably_losing.set();
 
-  auto& stats = node->stats();
   const auto& stable_data = node->stable_data();
 
   int num_valid_actions = stable_data.num_valid_actions;
@@ -466,11 +486,12 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
       all_provably_losing &= child_stats.provably_losing;
     }
     if (num_expanded_edges == num_valid_actions) {
-      mit::unique_lock lock(node->mutex());
-      stats.update_q(Q_sum, Q_sq_sum, false);
+      stats.Q = Q_sum;
+      stats.Q_sq = Q_sq_sum;
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
     }
+    return;
   } else {
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
@@ -512,13 +533,18 @@ void AlgorithmsBase<Traits, Derived>::update_stats(Node* node, Edge*,
 
     auto Q = Q_sum / N;
     auto Q_sq = Q_sq_sum / N;
+    eigen_util::debug_assert_is_valid_prob_distr(Q);
 
-    mit::unique_lock lock(node->mutex());
-    stats.update_q(Q, Q_sq, false);
-    stats.update_provable_bits(all_provably_winning, all_provably_losing, cp_has_winning_move,
-                               all_edges_expanded, seat);
-
-    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+    stats.Q = Q;
+    stats.Q_sq = Q_sq;
+    if (cp_has_winning_move) {
+      stats.provably_winning[seat] = true;
+      stats.provably_losing.set();
+      stats.provably_losing[seat] = false;
+    } else if (all_edges_expanded) {
+      stats.provably_winning = all_provably_winning;
+      stats.provably_losing = all_provably_losing;
+    }
   }
 }
 
@@ -560,7 +586,6 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
     const Node* child = lookup_table.get_node(edge->child_index);
     if (!child) continue;
 
-    // not actually unsafe since single-threaded
     const auto& child_stats = child->stats();  // thread-safe because single-threaded here
     if (params.avoid_proven_losers && !provably_losing && child_stats.provably_losing[seat]) {
       modified_count = 0;

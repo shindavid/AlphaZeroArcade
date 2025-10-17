@@ -168,7 +168,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
     ValueArray V;
     if (child_node_index < 0) {
-      V = edge->child_V_estimate;
+      V = edge->child_Qbeta_snapshot;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
       V = Game::GameResults::to_value_array(child->stable_data().R);
@@ -747,15 +747,17 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
-                              [&] { Algorithms::init_node_stats_from_terminal(last_node); });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::init_node_stats_from_terminal(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
   }
   Algorithms::validate_search_path(context);
 }
@@ -771,14 +773,15 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
-                              [&] { Algorithms::virtually_update_node_stats(last_node); });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+    backpropagator.run(node, edge, [&] {
       Algorithms::virtually_update_node_stats_and_edge(node, edge);
     });
   }
@@ -798,12 +801,14 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
 
+  Backpropagator backpropagator(lookup_table);
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::undo_virtual_update(node, edge); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::undo_virtual_update(node, edge);
+    });
   }
   Algorithms::validate_search_path(context);
 }
@@ -821,15 +826,15 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
 
   LookupTable& lookup_table = context.general_context->lookup_table;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual);
-  });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+    backpropagator.run(node, edge, [&] {
       Algorithms::update_node_stats_and_edge(node, edge, undo_virtual);
     });
   }
@@ -845,12 +850,14 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
 
   LookupTable& lookup_table = context.general_context->lookup_table;
 
+  Backpropagator backpropagator(lookup_table);
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
   }
   Algorithms::validate_search_path(context);
 }

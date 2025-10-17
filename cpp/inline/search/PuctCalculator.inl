@@ -50,7 +50,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
         Q(i) = (RN(i) * Q(i) + VN(i) * Game::GameResults::kMinValue) / (RN(i) + VN(i));
       }
     } else {
-      Q(i) = edge->child_V_estimate[seat];
+      Q(i) = edge->child_Q_snapshot[seat];
     }
   }
 

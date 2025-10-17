@@ -40,6 +40,7 @@ class Manager {
   using ManagerParams = Traits::ManagerParams;
   using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;
+  using Backpropagator = Algorithms::Backpropagator;
   using EvalServiceBase = search::NNEvaluationServiceBase<Traits>;
   using EvalServiceFactory = search::NNEvaluationServiceFactory<Traits>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;

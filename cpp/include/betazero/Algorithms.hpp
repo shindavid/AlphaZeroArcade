@@ -27,6 +27,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using GameLogViewParams = Base::GameLogViewParams;
   using GeneralContext = Base::GeneralContext;
   using LocalActionValueArray = Base::LocalActionValueArray;
+  using LocalPolicyArray = Base::LocalPolicyArray;
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
@@ -39,12 +40,19 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using ValueArray = Base::ValueArray;
   using player_bitset_t = Base::player_bitset_t;
 
-  using EigenMapArrayXf = Eigen::Map<Eigen::ArrayXf>;
-  using EigenMapArrayXd = Eigen::Map<Eigen::ArrayXd>;
+  using ValueArray2D = Eigen::Array<float, Eigen::Dynamic, Game::Constants::kNumPlayers, 0,
+                                    Game::Constants::kMaxBranchingFactor>;
 
-  template <typename MutexProtectedFunc>
-  static void backprop_helper(Node* node, Edge* edge, LookupTable& lookup_table,
-                              MutexProtectedFunc&&);
+  class Backpropagator {
+   public:
+    Backpropagator(LookupTable& lookup_table) : lookup_table_(lookup_table) {}
+
+    template <typename MutexProtectedFunc>
+    void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
+
+   private:
+    LookupTable& lookup_table_;
+  };
 
   static void load_evaluations(SearchContext& context);
 
@@ -55,16 +63,17 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table,
-                           const NodeStats& old_stats);
+  static void update_stats(NodeStats& stats, LocalPolicyArray& pi_arr, const Node* node,
+                           const Edge* edge, LookupTable& lookup_table);
 
   // Updates pi_arr in-place to be the posterior policy
-  static void update_policy(Node* node, Edge* edge, LookupTable& lookup_table,
-                            const NodeStats& old_stats, const NodeStats* child_stats_arr,
-                            EigenMapArrayXf pi_arr, int updated_edge_arr_index);
+  static void update_policy(LocalPolicyArray& pi_arr, const Node* node, const Edge* edge,
+                            LookupTable& lookup_table, int updated_edge_arr_index,
+                            float old_child_Qbeta, float old_child_W,
+                            const LocalPolicyArray& child_Qbeta_arr,
+                            const LocalPolicyArray& child_W_arr);
 
-  static void compute_theta_omega_sq(const NodeStats& stats, core::seat_index_t seat, double& theta,
-                                     double& omega_sq);
+  static void compute_theta_omega_sq(float Qbeta, float W, float& theta, float& omega_sq);
 };
 
 template <search::concepts::Traits Traits>

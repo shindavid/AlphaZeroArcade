@@ -149,6 +149,10 @@ using FTensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
 template <int N, typename Scalar = float>
 using DArray = Eigen::Array<Scalar, Eigen::Dynamic, 1, 0, N>;
 
+// DArray is a dynamic 2D Eigen::Array of max size (M, N)
+template <int M, int N, typename Scalar = float>
+using DArray2D = Eigen::Array<Scalar, Eigen::Dynamic, Eigen::Dynamic, 0, M, N>;
+
 // FArray is a fixed-size float Eigen::Array of size N
 template <int N>
 using FArray = Eigen::Array<float, N, 1>;
