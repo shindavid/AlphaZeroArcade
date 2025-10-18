@@ -54,7 +54,6 @@ boost::json::object VerboseData<Traits>::to_json() const {
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
     {"action", [&](float x) { return IO::action_to_str(x, action_mode); }},
   };
 
@@ -67,6 +66,7 @@ boost::json::object VerboseData<Traits>::to_json() const {
   auto data = build_action_data();
   auto columns = get_column_names();
   obj["actions"] = eigen_util::output_to_json(data, columns, &fmt_map);
+  obj["renderers"] = boost::json::object{{"Player", "seatIcon"}};
   return obj;
 }
 

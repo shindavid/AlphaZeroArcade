@@ -101,6 +101,9 @@ export class GameAppBase extends React.Component {
     this.port = import.meta.env.VITE_BRIDGE_PORT;
   }
 
+  // To be overridden by subclass
+  RENDERERS = {};
+
   componentDidMount() {
     if (!this.port) return;
     const ws = new WebSocket(`ws://localhost:${this.port}`);
@@ -230,10 +233,10 @@ export class GameAppBase extends React.Component {
     let resultCodes = this.state.resultCodes;
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
-    let verboseInfo = this.state.verboseInfo;
-
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
+
+    let func_str = "seatIcon"
     return (
       <div className="container two-col">
         <div className="left-col">
@@ -254,7 +257,8 @@ export class GameAppBase extends React.Component {
         <VerbosePanel data={this.state.verboseInfo}
         cellRender={(key, val) => {
           if (key === 'Player') {
-            return this.seatToHtml(String(val));
+            const fn = this.RENDERERS?.[func_str];
+            return fn ? fn(val) : fmt(val);
           }
           return fmt(val);
         }}
