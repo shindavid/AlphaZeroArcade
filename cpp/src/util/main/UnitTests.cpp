@@ -1261,27 +1261,10 @@ TEST(EigenUtil, output_to_json_no_fmt) {
 
   boost::json::object obj = eigen_util::output_to_json(a, keys, nullptr);
 
-  ASSERT_TRUE(obj.contains("a"));
-  ASSERT_TRUE(obj.contains("b"));
-  ASSERT_TRUE(obj.contains("c"));
+  const std::string output = boost::json::serialize(obj);
+  const std::string expected = R"({"a":[1E0,4E0],"b":[2E0,5.5E0],"c":[-3.25E0,6E0]})";
 
-  const auto& a_arr = obj.at("a").as_array();
-  ASSERT_EQ(a_arr.size(), 2u);
-  EXPECT_TRUE(a_arr[0].is_number());
-  EXPECT_NEAR(a_arr[0].as_double(), 1.0, 1e-6);
-  EXPECT_NEAR(a_arr[1].as_double(), 4.0, 1e-6);
-
-  const auto& b_arr = obj.at("b").as_array();
-  ASSERT_EQ(b_arr.size(), 2u);
-  EXPECT_TRUE(b_arr[0].is_number());
-  EXPECT_NEAR(b_arr[0].as_double(), 2.0, 1e-6);
-  EXPECT_NEAR(b_arr[1].as_double(), 5.5, 1e-6);
-
-  const auto& c_arr = obj.at("c").as_array();
-  ASSERT_EQ(c_arr.size(), 2u);
-  EXPECT_TRUE(c_arr[0].is_number());
-  EXPECT_NEAR(c_arr[0].as_double(), -3.25, 1e-6);
-  EXPECT_NEAR(c_arr[1].as_double(), 6.0, 1e-6);
+  EXPECT_EQ(output, expected);
 }
 
 TEST(EigenUtil, output_to_json_with_fmt) {
@@ -1300,27 +1283,10 @@ TEST(EigenUtil, output_to_json_with_fmt) {
 
   boost::json::object obj = eigen_util::output_to_json(a, keys, &fmt);
 
-  // "a" numeric
-  const auto& a_arr = obj.at("a").as_array();
-  ASSERT_EQ(a_arr.size(), 2u);
-  EXPECT_TRUE(a_arr[0].is_number());
-  EXPECT_NEAR(a_arr[0].as_double(), 1.0, 1e-6);
-  EXPECT_NEAR(a_arr[1].as_double(), 4.0, 1e-6);
+  const std::string output = boost::json::serialize(obj);
+  const std::string expected = R"({"a":[1E0,4E0],"b":["v=2.00","v=5.50"],"c":[-3.25E0,6E0]})";
 
-  // "b" formatted strings
-  const auto& b_arr = obj.at("b").as_array();
-  ASSERT_EQ(b_arr.size(), 2u);
-  ASSERT_TRUE(b_arr[0].is_string());
-  ASSERT_TRUE(b_arr[1].is_string());
-  EXPECT_EQ(b_arr[0].as_string(), "v=2.00");
-  EXPECT_EQ(b_arr[1].as_string(), "v=5.50");
-
-  // "c" numeric
-  const auto& c_arr = obj.at("c").as_array();
-  ASSERT_EQ(c_arr.size(), 2u);
-  EXPECT_TRUE(c_arr[0].is_number());
-  EXPECT_NEAR(c_arr[0].as_double(), -3.25, 1e-6);
-  EXPECT_NEAR(c_arr[1].as_double(), 6.0, 1e-6);
+  EXPECT_EQ(output, expected);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
