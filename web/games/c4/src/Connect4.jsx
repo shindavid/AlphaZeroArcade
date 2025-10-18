@@ -23,6 +23,18 @@ export default class Connect4App extends GameAppBase {
     this.animationHelper = new Connect4Animation();
   }
 
+  RENDERERS = {
+    seatIcon: (seat) => {
+      if (seat === 0) {
+        return <span className="seat-icon seat-R" />;
+      }
+      if (seat === 1) {
+        return <span className="seat-icon seat-Y" />;
+      }
+      return seat;
+    }
+  }
+
   // Override for colorful icons
   seatToHtml = (seat) => {
     if (seat === "R") {

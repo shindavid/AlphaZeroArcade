@@ -1,17 +1,26 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
-function VerbosePanel({ data, cellRender }) {
+function VerbosePanel({ data, renderers }) {
   if (!data) return null;
+  const col_renderer_mapping = {};
+  if (data.renderers) {
+    Object.entries(data.renderers).forEach(([key, fn_str]) => {
+      const fn = renderers[fn_str];
+      if (fn) col_renderer_mapping[key] = fn;
+    });
+  }
+
   return (
     <div className="verbose-panel">
       {Object.entries(data).map(([section, value]) => {
+        if (section === 'renderers') return null;
         const rows = normalizeToRows(value);
         if (!rows.length) return null;
         return (
           <div key={section} className="verbose-section">
             <h4>{section}</h4>
-            {renderArrayOfObjects(rows, cellRender)}
+            {renderArrayOfObjects(rows, col_renderer_mapping)}
           </div>
         );
       })}
@@ -53,7 +62,7 @@ function normalizeToRows(v) {
   return [{ value: v }];
 }
 
-function renderArrayOfObjects(rows, cellRender) {
+function renderArrayOfObjects(rows, renderers) {
   const cols = Array.from(rows.reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set()));
   return (
     <table className="verbose-table">
@@ -63,8 +72,8 @@ function renderArrayOfObjects(rows, cellRender) {
           <tr key={i}>
             {cols.map(c => {
               const v = r[c];
-              const rendered = cellRender ? cellRender(c, v) : undefined;
-              return <td key={`${i}-${c}`}>{rendered ?? fmt(v)}</td>;
+              const fn = renderers[c] || fmt;
+              return <td key={`${i}-${c}`}>{fn(v)}</td>;
             })}
           </tr>
         ))}
@@ -236,7 +245,6 @@ export class GameAppBase extends React.Component {
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
 
-    let func_str = "seatIcon"
     return (
       <div className="container two-col">
         <div className="left-col">
@@ -255,13 +263,7 @@ export class GameAppBase extends React.Component {
         </div>
 
         <VerbosePanel data={this.state.verboseInfo}
-        cellRender={(key, val) => {
-          if (key === 'Player') {
-            const fn = this.RENDERERS?.[func_str];
-            return fn ? fn(val) : fmt(val);
-          }
-          return fmt(val);
-        }}
+                      renderers={this.RENDERERS}
         />
       </div>
     );
