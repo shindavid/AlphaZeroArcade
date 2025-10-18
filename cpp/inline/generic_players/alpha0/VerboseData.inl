@@ -42,6 +42,11 @@ auto VerboseData<Traits>::build_action_data() const {
   return data;
 }
 
+static std::vector<std::string>& get_column_names() {
+  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
+  return columns;
+}
+
 template <search::concepts::Traits Traits>
 boost::json::object VerboseData<Traits>::to_json() const {
   const auto& win_rates = mcts_results.win_rates;
@@ -60,7 +65,7 @@ boost::json::object VerboseData<Traits>::to_json() const {
   if (Game::Rules::is_chance_mode(action_mode)) return obj;
 
   auto data = build_action_data();
-  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
+  auto columns = get_column_names();
   obj["actions"] = eigen_util::output_to_json(data, columns, &fmt_map);
   return obj;
 }
@@ -85,7 +90,7 @@ void VerboseData<Traits>::to_terminal_text() const {
   int num_valid = valid_actions.count();
   int num_rows = std::min(num_valid, n_rows_to_display_);
   auto data = build_action_data();
-  static std::vector<std::string> columns = {"action", "Prior", "Posterior", "Counts", "Modified"};
+  auto columns = get_column_names();
 
   eigen_util::print_array(std::cout, data.topRows(num_rows), columns, &fmt_map);
 
