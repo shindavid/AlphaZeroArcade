@@ -179,7 +179,7 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(core::seat_index_t se
 
   const VerboseManager* manager = VerboseManager::get_instance();
   const auto* verbose_data = manager->verbose_data();
-  if (verbose_data && verbose_data->initialized) {
+  if (verbose_data) {
     payload["verbose_info"] = verbose_data->to_json();
   }
 

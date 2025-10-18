@@ -108,7 +108,6 @@ template <search::concepts::Traits Traits>
 void VerboseData<Traits>::set(const PolicyTensor& policy, const SearchResults& results) {
   action_policy = policy;
   mcts_results = results;
-  initialized = true;
 }
 
 }  // namespace generic::alpha0
