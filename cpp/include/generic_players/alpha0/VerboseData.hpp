@@ -25,7 +25,7 @@ struct VerboseData : public VerboseDataBase {
   void set(const PolicyTensor& policy, const SearchResults& results);
 
  private:
-  int n_rows_to_display_ = -1;
+  const int n_rows_to_display_;
   auto build_action_data() const;
 };
 
