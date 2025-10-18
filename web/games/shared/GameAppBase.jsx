@@ -75,6 +75,8 @@ function renderArrayOfObjects(rows, cellRender) {
 
 function fmt(v) {
   if (v == null) return '';
+  // TODO: Decide whether numeric formatting (e.g., toFixed(6)) should be handled in C++
+  // instead of the frontend.
   if (typeof v === 'number') return Number.isInteger(v) ? v : v.toFixed(6);
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
