@@ -3,6 +3,7 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "search/VerboseManager.hpp"
 
 #include <string>
 #include <vector>
