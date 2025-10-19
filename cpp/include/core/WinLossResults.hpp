@@ -54,18 +54,14 @@ struct WinLossResults {
   static void print_array(const Tensor& net_value, const ValueArray& win_rates,
                           const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
     auto data = get_data_matrix(net_value, win_rates);
-    auto columns = get_column_names();
+    const auto& columns = get_column_names();
     eigen_util::print_array(std::cout, data, columns, fmt_map);
   }
 
   static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
                                     const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
-    ValueArray player_array;
-    for (int i = 0; i < 2; i++) {
-      player_array(i) = i;
-    }
     auto data = get_data_matrix(net_value, win_rates);
-    auto columns = get_column_names();
+    const auto& columns = get_column_names();
     return eigen_util::output_to_json(data, columns, fmt_map);
   }
 };
