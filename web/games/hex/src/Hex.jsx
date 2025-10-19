@@ -36,6 +36,17 @@ export default class HexApp extends GameAppBase {
     };
   }
 
+  RENDERERS = {
+    seatIcon: (seat) => {
+      if (seat === 0) {
+        return this.seatToHtml("R");
+      } else if (seat === 1) {
+        return this.seatToHtml("B");
+      }
+      return String(seat);
+    }
+  };
+
   // Override for colorful icons
   seatToHtml = (seat) => {
     const color = seat === "R" ? "#e44" : seat === "B" ? "#24f" : "#888";

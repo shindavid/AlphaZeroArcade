@@ -26,12 +26,11 @@ export default class Connect4App extends GameAppBase {
   RENDERERS = {
     seatIcon: (seat) => {
       if (seat === 0) {
-        return <span className="seat-icon seat-R" />;
+        return this.seatToHtml("R");
+      } else if (seat === 1) {
+        return this.seatToHtml("Y");
       }
-      if (seat === 1) {
-        return <span className="seat-icon seat-Y" />;
-      }
-      return seat;
+      return String(seat);
     }
   }
 

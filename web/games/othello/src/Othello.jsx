@@ -18,8 +18,11 @@ export default class OthelloApp extends GameAppBase {
 
   RENDERERS = {
     seatIcon: (seat) => {
-      if (seat === 0) return <span className="disc B"/>;
-      if (seat === 1) return <span className="disc W"/>;
+      if (seat === 0) {
+        return this.seatToHtml('*');
+      } else if (seat === 1) {
+        return this.seatToHtml('0');
+      }
       return String(seat);
     }
   }
