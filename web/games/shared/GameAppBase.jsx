@@ -262,8 +262,9 @@ export class GameAppBase extends React.Component {
           />
         </div>
 
-        <VerbosePanel data={this.state.verboseInfo}
-                      renderers={this.RENDERERS}
+        <VerbosePanel
+          data={this.state.verboseInfo}
+          renderers={this.RENDERERS}
         />
       </div>
     );
