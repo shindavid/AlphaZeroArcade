@@ -1,32 +1,6 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
-function VerbosePanel({ data, render_funcs }) {
-  if (!data) return null;
-  const col_renderer_mapping = {};
-  if (data.format_funcs) {
-    Object.entries(data.format_funcs).forEach(([key, fn_str]) => {
-      const fn = render_funcs[fn_str];
-      if (fn) col_renderer_mapping[key] = fn;
-    });
-  }
-
-  return (
-    <div className="verbose-panel">
-      {Object.entries(data).map(([section, value]) => {
-        if (section === 'format_funcs') return null;
-        const rows = normalizeToRows(value);
-        if (!rows.length) return null;
-        return (
-          <div key={section} className="verbose-section">
-            <h4>{section}</h4>
-            {renderArrayOfObjects(rows, col_renderer_mapping)}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // Make a uniform [{...}, {...}] from any value
 function normalizeToRows(v) {
@@ -229,6 +203,34 @@ export class GameAppBase extends React.Component {
     return null;
   }
 
+  VerbosePanel = ({ data }) => {
+    if (!data) return null;
+
+    const col_renderer_mapping = {};
+    if (data.format_funcs) {
+      Object.entries(data.format_funcs).forEach(([key, fn_str]) => {
+        const fn = this[fn_str];
+        if (fn) col_renderer_mapping[key] = fn;
+      });
+    }
+
+    return (
+      <div className="verbose-panel">
+        {Object.entries(data).map(([section, value]) => {
+          if (section === 'format_funcs') return null;
+          const rows = normalizeToRows(value);
+          if (!rows.length) return null;
+          return (
+            <div key={section} className="verbose-section">
+              <h4>{section}</h4>
+              {renderArrayOfObjects(rows, col_renderer_mapping)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   render() {
     if (!this.port) return <PortError port={this.port} />;
     if (this.state.wsClosed) {
@@ -262,7 +264,7 @@ export class GameAppBase extends React.Component {
           />
         </div>
 
-        <VerbosePanel
+        <this.VerbosePanel
           data={this.state.verboseInfo}
           render_funcs={this.render_funcs}
         />
