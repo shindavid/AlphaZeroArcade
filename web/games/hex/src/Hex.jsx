@@ -27,12 +27,6 @@ const HEX_NW = 3;
 const HEX_NE = 4;
 const HEX_E = 5;
 
-function seatValToChar(seat) {
-  if (seat === 0) return 'R';
-  if (seat === 1) return 'B';
-  return '_';
-}
-
 export default class HexApp extends GameAppBase {
   constructor(props) {
     super(props);
@@ -99,7 +93,7 @@ export default class HexApp extends GameAppBase {
     let mySeat = this.state.mySeat;
 
     const cell = row * B + col;
-    const color = seatValToChar(board[cell]);
+    const color = board[cell];
 
     // Hex center coordinates
     const cx = HEX_WIDTH_PX * col + HEX_WIDTH_PX / 2 + HEX_WIDTH_PX * row / 2;
@@ -128,8 +122,8 @@ export default class HexApp extends GameAppBase {
         <polygon
           className={
             "hex-cell" +
-            (color === "R" ? " hex-red" : "") +
-            (color === "B" ? " hex-blue" : "") +
+            (color === 0 ? " hex-red" : "") +
+            (color === 1 ? " hex-blue" : "") +
             (isLegal ? hoverClass : "")
           }
           points={corners.map(p => p.join(",")).join(" ")}
