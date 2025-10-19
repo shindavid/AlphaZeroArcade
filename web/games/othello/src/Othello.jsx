@@ -16,7 +16,7 @@ export default class OthelloApp extends GameAppBase {
     };
   }
 
-  RENDERERS = {
+  render_funcs = {
     seatIcon: (seat) => {
       if (seat === 0) {
         return this.seatToHtml('*');

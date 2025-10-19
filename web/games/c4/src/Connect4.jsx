@@ -23,7 +23,7 @@ export default class Connect4App extends GameAppBase {
     this.animationHelper = new Connect4Animation();
   }
 
-  RENDERERS = {
+  render_funcs = {
     seatIcon: (seat) => {
       if (seat === 0) {
         return this.seatToHtml("R");

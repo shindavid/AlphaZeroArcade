@@ -36,7 +36,7 @@ export default class HexApp extends GameAppBase {
     };
   }
 
-  RENDERERS = {
+  render_funcs = {
     seatIcon: (seat) => {
       if (seat === 0) {
         return this.seatToHtml("R");

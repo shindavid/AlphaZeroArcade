@@ -1,12 +1,12 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 
-function VerbosePanel({ data, renderers }) {
+function VerbosePanel({ data, render_funcs }) {
   if (!data) return null;
   const col_renderer_mapping = {};
-  if (data.format_mapping) {
-    Object.entries(data.format_mapping).forEach(([key, fn_str]) => {
-      const fn = renderers[fn_str];
+  if (data.format_funcs) {
+    Object.entries(data.format_funcs).forEach(([key, fn_str]) => {
+      const fn = render_funcs[fn_str];
       if (fn) col_renderer_mapping[key] = fn;
     });
   }
@@ -14,7 +14,7 @@ function VerbosePanel({ data, renderers }) {
   return (
     <div className="verbose-panel">
       {Object.entries(data).map(([section, value]) => {
-        if (section === 'format_mapping') return null;
+        if (section === 'format_funcs') return null;
         const rows = normalizeToRows(value);
         if (!rows.length) return null;
         return (
@@ -111,7 +111,7 @@ export class GameAppBase extends React.Component {
   }
 
   // To be overridden by subclass
-  RENDERERS = {};
+  render_funcs = {};
 
   componentDidMount() {
     if (!this.port) return;
@@ -264,7 +264,7 @@ export class GameAppBase extends React.Component {
 
         <VerbosePanel
           data={this.state.verboseInfo}
-          renderers={this.RENDERERS}
+          render_funcs={this.render_funcs}
         />
       </div>
     );
