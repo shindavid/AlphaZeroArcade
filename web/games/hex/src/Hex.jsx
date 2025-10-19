@@ -27,6 +27,12 @@ const HEX_NW = 3;
 const HEX_NE = 4;
 const HEX_E = 5;
 
+function seatValToChar(seat) {
+  if (seat === 0) return 'R';
+  if (seat === 1) return 'B';
+  return '_';
+}
+
 export default class HexApp extends GameAppBase {
   constructor(props) {
     super(props);
@@ -36,20 +42,9 @@ export default class HexApp extends GameAppBase {
     };
   }
 
-  render_funcs = {
-    seatIcon: (seat) => {
-      if (seat === 0) {
-        return this.seatToHtml("R");
-      } else if (seat === 1) {
-        return this.seatToHtml("B");
-      }
-      return String(seat);
-    }
-  };
-
   // Override for colorful icons
   seatToHtml = (seat) => {
-    const color = seat === "R" ? "#e44" : seat === "B" ? "#24f" : "#888";
+    const color = seat === 0 ? "#e44" : seat === 1 ? "#24f" : "#888";
     return (
       <span className="hex-seat-icon">
         <svg width="18" height="18" viewBox="0 0 18 18">
@@ -104,7 +99,7 @@ export default class HexApp extends GameAppBase {
     let mySeat = this.state.mySeat;
 
     const cell = row * B + col;
-    const color = board[cell];
+    const color = seatValToChar(board[cell]);
 
     // Hex center coordinates
     const cx = HEX_WIDTH_PX * col + HEX_WIDTH_PX / 2 + HEX_WIDTH_PX * row / 2;

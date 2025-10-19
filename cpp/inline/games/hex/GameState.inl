@@ -46,4 +46,13 @@ inline void GameState::Aux::init() {
   }
 }
 
+inline core::seat_index_t GameState::get_player_at(int row, int col) const {
+  int cp = core.cur_player;
+  bool occupied_by_cur_player = (core.rows[cp][row] & (mask_t(1) << col)) != 0;
+  bool occupied_by_any_player =
+    (core.rows[Constants::kRed][row] & (mask_t(1) << col)) != 0 ||
+    (core.rows[Constants::kBlue][row] & (mask_t(1) << col)) != 0;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
+}
+
 }  // namespace hex

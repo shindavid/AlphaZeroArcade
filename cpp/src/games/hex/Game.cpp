@@ -140,22 +140,14 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-boost::json::value Game::IO::state_to_json(const State& state) {
-  char buf[Constants::kNumSquares + 1];
-  int cx = 0;
+boost::json::array Game::IO::state_to_json(const State& state) {
+  boost::json::array arr;
   for (int row = 0; row < Constants::kBoardDim; ++row) {
     for (int col = 0; col < Constants::kBoardDim; ++col) {
-      if (state.core.rows[Constants::kRed][row] & (mask_t(1) << col)) {
-        buf[cx++] = 'R';
-      } else if (state.core.rows[Constants::kBlue][row] & (mask_t(1) << col)) {
-        buf[cx++] = 'B';
-      } else {
-        buf[cx++] = ' ';
-      }
+      arr.push_back(state.get_player_at(row, col));
     }
   }
-  buf[cx] = '\0';
-  return boost::json::value(std::string(buf));
+  return arr;
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink_column) {
