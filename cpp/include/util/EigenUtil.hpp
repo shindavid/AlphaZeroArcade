@@ -215,6 +215,10 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool asce
 template <class Derived>
 void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
+// Performs a row-wise softmax on the input tensor, in place.
+template <class Derived>
+void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
+
 /*
  * Applies an element-wise sigmoid function to the input tensor, in place.
  */
