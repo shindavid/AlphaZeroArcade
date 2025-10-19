@@ -139,8 +139,9 @@ export default class Connect4App extends GameAppBase {
         const isLegal = this.gameActive() && this.state.legalMoves.includes(col);
         let cellClass = "cell";
         if (!this.hideDisc(row, col)) {
-          if (cell === 0) cellClass += ' R';
-          else if (cell === 1) cellClass += ' Y';
+          if (cell === 0 || cell === 1) {
+            cellClass += ' ' + seatValToChar(cell);
+          }
         }
         if (isLegal) {
           cellClass += ' legal-move';
