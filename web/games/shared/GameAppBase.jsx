@@ -110,7 +110,7 @@ export class GameAppBase extends React.Component {
     this.port = import.meta.env.VITE_BRIDGE_PORT;
   }
 
-  // To be overridden by subclass
+  // To be overridden by subclass: used for rendering Verbose Panel
   render_funcs = {};
 
   componentDidMount() {
