@@ -8,10 +8,10 @@
   background-position: center;
   margin-right: 0.3em;
 }
-.seat-R {
+.seat0 {
   background-image: url('../images/red.svg');
 }
-.seat-Y {
+.seat1 {
   background-image: url('../images/yellow.svg');
 }
 /* Animated disc overlay for drop animation */
@@ -26,10 +26,10 @@
   display: grid;
   /* gridRow and gridColumn will be set inline */
 }
-.animated-disc.R {
+.animated-disc0 {
   background-image: url('../images/red.svg');
 }
-.animated-disc.Y {
+.animated-disc1 {
   background-image: url('../images/yellow.svg');
 }
 
@@ -71,12 +71,12 @@
   cursor: pointer;
 }
 
-.cell.R {
+.cell0 {
   background-image: url('../images/red.svg'), url('../images/board.svg');
   background-size: cover, cover;
   background-position: center, center;
 }
-.cell.Y {
+.cell1 {
   background-image: url('../images/yellow.svg'), url('../images/board.svg');
   background-size: cover, cover;
   background-position: center, center;

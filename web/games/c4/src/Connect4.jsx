@@ -9,13 +9,6 @@ const COLS = 7;
 
 const ANIMATION_INTERVAL = 60; // ms per row drop
 
-
-function seatValToChar(seat) {
-  if (seat === 0) return 'R';
-  if (seat === 1) return 'Y';
-  return '_';
-}
-
 export default class Connect4App extends GameAppBase {
   constructor(props) {
     super(props);
@@ -31,7 +24,7 @@ export default class Connect4App extends GameAppBase {
 
   // Override for colorful icons
   seatToHtml = seat =>
-    <span className={`seat-icon seat-${seatValToChar(seat)}`} />;
+    <span className={`seat-icon seat${seat}`} />;
 
   // Override for animations
   handleStartGame(payload) {
@@ -58,7 +51,7 @@ export default class Connect4App extends GameAppBase {
     const col = payload.last_col;
     if (col >= 0) {
       let row = ROWS - payload.col_heights[col];
-      let disc = seatValToChar(payload.board[row * COLS + col]);
+      let disc = payload.board[row * COLS + col];
 
       this.setState({
         animation: this.animationHelper.get(),
@@ -95,7 +88,7 @@ export default class Connect4App extends GameAppBase {
 
     let row = ROWS - this.state.colHeights[col] - 1;
 
-    const disc = seatValToChar(this.state.mySeat);
+    const disc = this.state.mySeat;
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -116,10 +109,10 @@ export default class Connect4App extends GameAppBase {
 
   renderAnimatedDisc() {
     const anim = this.state.animation;
-    if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
+    if (!anim || anim.col == null || anim.animRow == null || anim.disc == null) return null;
     return (
       <div
-        className={`animated-disc ${anim.disc}`}
+        className={`animated-disc animated-disc${anim.disc}`}
         style={{
           gridRow: anim.animRow + 1,
           gridColumn: anim.col + 1,
@@ -140,7 +133,7 @@ export default class Connect4App extends GameAppBase {
         let cellClass = "cell";
         if (!this.hideDisc(row, col)) {
           if (cell === 0 || cell === 1) {
-            cellClass += ' ' + seatValToChar(cell);
+            cellClass += cell;
           }
         }
         if (isLegal) {
