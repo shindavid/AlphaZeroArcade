@@ -4,8 +4,8 @@ import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
 function VerbosePanel({ data, renderers }) {
   if (!data) return null;
   const col_renderer_mapping = {};
-  if (data.renderers) {
-    Object.entries(data.renderers).forEach(([key, fn_str]) => {
+  if (data.format_mapping) {
+    Object.entries(data.format_mapping).forEach(([key, fn_str]) => {
       const fn = renderers[fn_str];
       if (fn) col_renderer_mapping[key] = fn;
     });
@@ -14,7 +14,7 @@ function VerbosePanel({ data, renderers }) {
   return (
     <div className="verbose-panel">
       {Object.entries(data).map(([section, value]) => {
-        if (section === 'renderers') return null;
+        if (section === 'format_mapping') return null;
         const rows = normalizeToRows(value);
         if (!rows.length) return null;
         return (

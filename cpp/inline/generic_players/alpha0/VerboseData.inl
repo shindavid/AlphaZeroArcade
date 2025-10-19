@@ -66,7 +66,7 @@ boost::json::object VerboseData<Traits>::to_json() const {
   auto data = build_action_data();
   auto columns = get_column_names();
   obj["actions"] = eigen_util::output_to_json(data, columns, &fmt_map);
-  obj["renderers"] = boost::json::object{{"Player", "seatIcon"}};
+  obj["format_mapping"] = boost::json::object{{"Player", "seatIcon"}};
   return obj;
 }
 
