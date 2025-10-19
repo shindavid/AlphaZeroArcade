@@ -10,6 +10,12 @@ const COLS = 7;
 const ANIMATION_INTERVAL = 60; // ms per row drop
 
 
+function seatValToChar(seat) {
+  if (seat === 0) return 'R';
+  if (seat === 1) return 'Y';
+  return '_';
+}
+
 export default class Connect4App extends GameAppBase {
   constructor(props) {
     super(props);
@@ -23,27 +29,9 @@ export default class Connect4App extends GameAppBase {
     this.animationHelper = new Connect4Animation();
   }
 
-  render_funcs = {
-    seatIcon: (seat) => {
-      if (seat === 0) {
-        return this.seatToHtml("R");
-      } else if (seat === 1) {
-        return this.seatToHtml("Y");
-      }
-      return String(seat);
-    }
-  }
-
   // Override for colorful icons
-  seatToHtml = (seat) => {
-    if (seat === "R") {
-      return <span className="seat-icon seat-R" />;
-    }
-    if (seat === "Y") {
-      return <span className="seat-icon seat-Y" />;
-    }
-    return seat;
-  }
+  seatToHtml = seat =>
+    <span className={`seat-icon seat-${seatValToChar(seat)}`} />;
 
   // Override for animations
   handleStartGame(payload) {
@@ -70,7 +58,7 @@ export default class Connect4App extends GameAppBase {
     const col = payload.last_col;
     if (col >= 0) {
       let row = ROWS - payload.col_heights[col];
-      let disc = payload.board[row * COLS + col];
+      let disc = seatValToChar(payload.board[row * COLS + col]);
 
       this.setState({
         animation: this.animationHelper.get(),
@@ -107,7 +95,7 @@ export default class Connect4App extends GameAppBase {
 
     let row = ROWS - this.state.colHeights[col] - 1;
 
-    const disc = this.state.mySeat;
+    const disc = seatValToChar(this.state.mySeat);
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -151,7 +139,8 @@ export default class Connect4App extends GameAppBase {
         const isLegal = this.gameActive() && this.state.legalMoves.includes(col);
         let cellClass = "cell";
         if (!this.hideDisc(row, col)) {
-          if (cell === "R" || cell === "Y") cellClass += ' ' + cell;
+          if (cell === 0) cellClass += ' R';
+          else if (cell === 1) cellClass += ' Y';
         }
         if (isLegal) {
           cellClass += ' legal-move';

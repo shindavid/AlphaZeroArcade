@@ -197,14 +197,11 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
 boost::json::array Game::IO::state_to_json(const State& state) {
     boost::json::array arr;
     arr.reserve(kBoardDimension * kBoardDimension);
-
     for (int row = 0; row < kBoardDimension; ++row) {
         for (int col = 0; col < kBoardDimension; ++col) {
-            int v = state.get_player_at(row, col);
-            arr.push_back(v);
+            arr.push_back(state.get_player_at(row, col));
         }
     }
-
     return arr;
 }
 
