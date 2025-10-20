@@ -120,7 +120,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
     seat_assignments.push_back(boost::json::value(seat));
     player_names.push_back(boost::json::value(this->get_player_names()[p]));
   }
-  payload["my_seat"] = this->get_my_seat();
+  payload["my_seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
   return payload;

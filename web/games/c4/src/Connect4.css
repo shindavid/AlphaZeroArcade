@@ -1,3 +1,6 @@
+.R { --disc: url('../images/red.svg'); }
+.Y { --disc: url('../images/yellow.svg'); }
+
 /* Inline seat icons for status bar */
 .seat-icon {
   display: inline-block;
@@ -8,12 +11,7 @@
   background-position: center;
   margin-right: 0.3em;
 }
-.seat0 {
-  background-image: url('../images/red.svg');
-}
-.seat1 {
-  background-image: url('../images/yellow.svg');
-}
+
 /* Animated disc overlay for drop animation */
 .animated-disc {
   width: 56px;
@@ -24,13 +22,7 @@
   background-position: center;
   transition: top 0.06s linear;
   display: grid;
-  /* gridRow and gridColumn will be set inline */
-}
-.animated-disc0 {
-  background-image: url('../images/red.svg');
-}
-.animated-disc1 {
-  background-image: url('../images/yellow.svg');
+  background-image: var(--disc, none);
 }
 
 /* Connect4 board styling */
@@ -48,7 +40,6 @@
   position: relative;
 }
 
-
 .cell {
   width: 56px;
   height: 56px;
@@ -65,21 +56,12 @@
   background: #fff;
   background-size: cover;
   background-position: center;
-  background-image: url('../images/board.svg');
+  background-image:
+    var(--disc, none),
+    url('../images/board.svg');
 }
 .cell.legal-move {
   cursor: pointer;
-}
-
-.cell0 {
-  background-image: url('../images/red.svg'), url('../images/board.svg');
-  background-size: cover, cover;
-  background-position: center, center;
-}
-.cell1 {
-  background-image: url('../images/yellow.svg'), url('../images/board.svg');
-  background-size: cover, cover;
-  background-position: center, center;
 }
 
 .container {

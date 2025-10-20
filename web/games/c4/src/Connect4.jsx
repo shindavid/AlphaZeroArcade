@@ -24,7 +24,7 @@ export default class Connect4App extends GameAppBase {
 
   // Override for colorful icons
   seatToHtml = seat =>
-    <span className={`seat-icon seat${seat}`} />;
+    <span className={`seat-icon ${seat}`} />;
 
   // Override for animations
   handleStartGame(payload) {
@@ -89,6 +89,7 @@ export default class Connect4App extends GameAppBase {
     let row = ROWS - this.state.colHeights[col] - 1;
 
     const disc = this.state.mySeat;
+    console.log(`Animating disc drop at col ${col}, row ${row} for seat ${disc}`);
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -109,10 +110,10 @@ export default class Connect4App extends GameAppBase {
 
   renderAnimatedDisc() {
     const anim = this.state.animation;
-    if (!anim || anim.col == null || anim.animRow == null || anim.disc == null) return null;
+    if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
     return (
       <div
-        className={`animated-disc animated-disc${anim.disc}`}
+        className={`animated-disc ${anim.disc}`}
         style={{
           gridRow: anim.animRow + 1,
           gridColumn: anim.col + 1,
@@ -132,9 +133,7 @@ export default class Connect4App extends GameAppBase {
         const isLegal = this.gameActive() && this.state.legalMoves.includes(col);
         let cellClass = "cell";
         if (!this.hideDisc(row, col)) {
-          if (cell === 0 || cell === 1) {
-            cellClass += cell;
-          }
+          if (cell === "R" || cell === "Y") cellClass += ' ' + cell;
         }
         if (isLegal) {
           cellClass += ' legal-move';

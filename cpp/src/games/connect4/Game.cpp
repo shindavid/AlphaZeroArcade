@@ -89,16 +89,21 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-
-boost::json::array Game::IO::state_to_json(const State& state) {
-    boost::json::array arr;
-    arr.reserve(kNumRows * kNumColumns);
-    for (int row = kNumRows - 1; row >= 0; --row) {
-        for (int col = 0; col < kNumColumns; ++col) {
-            arr.push_back(state.get_player_at(row, col));
-        }
+boost::json::value Game::IO::state_to_json(const State& state) {
+  char buf[kNumRows * kNumColumns + 1];
+  for (int row = kNumRows - 1; row >= 0; --row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      core::seat_index_t seat = state.get_player_at(row, col);
+      int idx = (kNumRows - 1 - row) * kNumColumns + col;
+      if (seat == -1) {
+        buf[idx] = ' ';
+      } else {
+        buf[idx] = Constants::kSeatChars[seat];
+      }
     }
-    return arr;
+    buf[kNumRows * kNumColumns] = '\0';
+  }
+  return buf;
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {
