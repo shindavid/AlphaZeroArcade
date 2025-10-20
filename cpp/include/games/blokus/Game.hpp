@@ -27,6 +27,7 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
+    static constexpr char kSeatChars[kNumPlayers] = {'B', 'Y', 'R', 'G'};
   };
 
   using State = blokus::GameState;
