@@ -34,7 +34,7 @@ concept GameIO = requires(std::ostream& ss, const GameTypes::State& state,
 // reflecting how that game lays out its board or state internally.
 template <typename GI, typename GameTypes>
 concept WebGameIO = GameIO<GI, GameTypes> && requires(GI, const GameTypes::State& state) {
-  { GI::state_to_json(state) } -> std::same_as<boost::json::array>;
+  { GI::state_to_json(state) } -> std::same_as<boost::json::value>;
 };
 
 }  // namespace concepts

@@ -36,12 +36,11 @@
   display: inline-block;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+  border-radius: 100%;
 }
 
-.disc.B { background: #111; }
-.disc.W { background: #fafafa; }
+.B { background: #111; }
+.W { background: #fafafa; }
 
 .pass-btn {
   display: flex;

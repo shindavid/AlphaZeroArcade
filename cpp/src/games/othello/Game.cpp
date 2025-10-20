@@ -194,15 +194,22 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
            : std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""));
 }
 
-boost::json::array Game::IO::state_to_json(const State& state) {
-    boost::json::array arr;
-    arr.reserve(kBoardDimension * kBoardDimension);
-    for (int row = 0; row < kBoardDimension; ++row) {
-        for (int col = 0; col < kBoardDimension; ++col) {
-            arr.push_back(state.get_player_at(row, col));
-        }
+boost::json::value Game::IO::state_to_json(const State& state) {
+  char buf[kBoardDimension * kBoardDimension + 1];
+
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      core::seat_index_t seat = state.get_player_at(row, col);
+      int idx = row * kBoardDimension + col;
+      if (seat == -1) {
+        buf[idx] = ' ';
+      } else {
+        buf[idx] = Constants::kSeatChars[seat];
+      }
     }
-    return arr;
+    buf[kBoardDimension * kBoardDimension] = '\0';
+  }
+  return buf;
 }
 
 }  // namespace othello

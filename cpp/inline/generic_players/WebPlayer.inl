@@ -116,7 +116,8 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    seat_assignments.push_back(p);
+    std::string seat = std::string(1, Game::Constants::kSeatChars[p]);
+    seat_assignments.push_back(boost::json::value(seat));
     player_names.push_back(boost::json::value(this->get_player_names()[p]));
   }
   payload["my_seat"] = this->get_my_seat();
