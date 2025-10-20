@@ -18,6 +18,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using Base = alpha0::AlgorithmsBase<Traits, Derived>;
   friend class alpha0::AlgorithmsBase<Traits, Derived>;
 
+  using ActionValueTensorData = Base::ActionValueTensorData;
   using Edge = Base::Edge;
   using Game = Base::Game;
   using GameLogCompactRecord = Base::GameLogCompactRecord;
@@ -29,10 +30,10 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
+  using PolicyTensorData = Base::PolicyTensorData;
   using RootInfo = Base::RootInfo;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
-  using TensorData = Base::TensorData;
   using TrainingInfo = Base::TrainingInfo;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;

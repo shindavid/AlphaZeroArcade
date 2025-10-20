@@ -1,4 +1,5 @@
 #include "core/NetworkHeads.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace core {
 
@@ -29,7 +30,7 @@ void ValueNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
 template <core::concepts::Game Game>
 template <typename Derived>
 void ActionValueNetworkHead<Game>::transform(Eigen::TensorBase<Derived>& dst) {
-  eigen_util::sigmoid_in_place(dst);
+  eigen_util::rowwise_softmax_in_place(dst);
 }
 
 template <core::concepts::Game Game>

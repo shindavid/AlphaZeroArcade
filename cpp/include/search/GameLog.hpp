@@ -38,10 +38,10 @@
  * paradigm (e.g., alpha0, beta0). For alpha0, its layout looks like:
  *
  * [alpha0::GameLogCompactRecord]
- * [TensorData]  // policy - variable-sized
- * [TensorData]  // action_values - variable-sized
+ * [PolicyTensorData]       // policy - variable-sized
+ * [ActionValueTensorData]  // action_values - variable-sized
  *
- * See GameLogBase::TensorData for details on the TensorData encoding.
+ * See search::TensorData<Shape> for details on the *TensorData encoding.
  */
 namespace search {
 
@@ -61,7 +61,8 @@ class GameReadLog : public GameLogBase<Traits> {
   using GameLogViewParams = search::GameLogViewParams<Traits>;
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using TensorData = GameLogBase::TensorData;
+  using PolicyTensorData = GameLogBase::PolicyTensorData;
+  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
   using Rules = Game::Rules;
   using InputTensorizor = core::InputTensorizor<Game>;
@@ -124,7 +125,8 @@ class GameWriteLog : public GameLogBase<Traits> {
 
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using TensorData = GameLogBase::TensorData;
+  using PolicyTensorData = GameLogBase::PolicyTensorData;
+  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
   using GameLogFullRecord = GameLogBase::GameLogFullRecord;
   using full_record_vec_t = GameLogBase::full_record_vec_t;
 
@@ -176,7 +178,8 @@ class GameLogSerializer {
   using Algorithms = search::AlgorithmsForT<Traits>;
 
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using TensorData = GameLogBase::TensorData;
+  using PolicyTensorData = GameLogBase::PolicyTensorData;
+  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
   using GameLogFullRecord = GameLogBase::GameLogFullRecord;
 
   GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);

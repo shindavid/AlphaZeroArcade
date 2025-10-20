@@ -221,7 +221,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     GameResultTensor R;
 
     LocalPolicyArray P_raw(n);
-    LocalActionValueArray child_V(n);
+    LocalActionValueArray child_V(n, Game::Constants::kNumPlayers);
 
     auto eval = item.eval();
 
@@ -244,7 +244,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_prior_prob = P_raw[i];
       edge->adjusted_base_prob = P_adjusted[i];
-      edge->child_V_estimate = child_V[i];
+      edge->child_V_estimate = child_V.row(i);
     }
 
     ValueArray V = Game::GameResults::to_value_array(R);
@@ -360,8 +360,8 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
   compact_record.action = full_record.action;
 
-  TensorData policy(full_record.policy_target_valid, full_record.policy_target);
-  TensorData action_values(full_record.action_values_valid, full_record.action_values);
+  PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
+  ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
@@ -383,11 +383,11 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   const char* addr = reinterpret_cast<const char*>(record);
 
   const char* policy_data_addr = addr + sizeof(GameLogCompactRecord);
-  const TensorData* policy_data = reinterpret_cast<const TensorData*>(policy_data_addr);
+  const PolicyTensorData* policy_data = reinterpret_cast<const PolicyTensorData*>(policy_data_addr);
 
   const char* action_values_data_addr = policy_data_addr + policy_data->size();
-  const TensorData* action_values_data =
-    reinterpret_cast<const TensorData*>(action_values_data_addr);
+  const ActionValueTensorData* action_values_data =
+    reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
   view.policy_valid = policy_data->load(view.policy);
   view.action_values_valid = action_values_data->load(view.action_values);
@@ -405,7 +405,8 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
     const char* next_addr = reinterpret_cast<const char*>(next_record);
 
     const char* next_policy_data_addr = next_addr + sizeof(GameLogCompactRecord);
-    const TensorData* next_policy_data = reinterpret_cast<const TensorData*>(next_policy_data_addr);
+    const PolicyTensorData* next_policy_data =
+      reinterpret_cast<const PolicyTensorData*>(next_policy_data_addr);
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
@@ -577,7 +578,7 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
     const auto& stable_data = child->stable_data();
     RELEASE_ASSERT(stable_data.R_valid);
     ValueArray V = Game::GameResults::to_value_array(stable_data.R);
-    action_values(action) = V(seat);
+    action_values.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
   }
 }
 

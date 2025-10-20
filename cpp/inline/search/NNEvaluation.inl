@@ -32,7 +32,8 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
       eigen_util::right_rotate(src, active_seat);
     }
 
-    using Dst = std::conditional_t<kPolicyBased, LocalPolicyTensor, Tensor>;
+    using LocalTensor = Eigen::Tensor<float, eigen_util::extract_rank_v<Shape>, Eigen::RowMajor>;
+    using Dst = std::conditional_t<kPolicyBased, LocalTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
     if constexpr (kPolicyBased) {
@@ -48,7 +49,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
         // We resort to a pragma here to silence an overzealous gcc warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-        dst(i++) = src(a);
+        dst.chip(i++, 0) = src.chip(a, 0);
 #pragma GCC diagnostic pop
       }
     } else {
@@ -71,7 +72,8 @@ void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
     using Shape = Tensor::Dimensions;
     constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
 
-    using Dst = std::conditional_t<kPolicyBased, LocalPolicyTensor, Tensor>;
+    using LocalTensor = Eigen::Tensor<float, eigen_util::extract_rank_v<Shape>, Eigen::RowMajor>;
+    using Dst = std::conditional_t<kPolicyBased, LocalTensor, Tensor>;
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
 
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
@@ -113,11 +115,13 @@ float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actio
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
     using Head = mp::TypeAt_t<NetworkHeads, i>;
+    using Tensor = Head::Tensor;
+    using Shape = Tensor::Dimensions;
     constexpr bool kPolicyBased = Head::kType == core::NetworkHeadType::kPolicyBasedHead;
 
     int size = Head::Tensor::Dimensions::total_size;
     if constexpr (kPolicyBased) {
-      size = valid_actions.count();
+      size = (size / eigen_util::extract_dim_v<0, Shape>) * valid_actions.count();
     }
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)

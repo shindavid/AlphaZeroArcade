@@ -102,6 +102,7 @@ struct ActionValueUncertaintyNetworkHead {
   static constexpr NetworkHeadType kType = NetworkHeadType::kPolicyBasedHead;
   using Tensor = Game::Types::ActionValueTensor;
 
+  // sigmoid is performed on pytorch side, so no transform performed here
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&) {}
 

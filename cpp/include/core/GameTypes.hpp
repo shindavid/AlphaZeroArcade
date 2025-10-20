@@ -24,27 +24,29 @@ struct GameTypes {
   using kNumActionsPerMode = GameConstants::kNumActionsPerMode;
   static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
+  static constexpr int kMaxBranchingFactor = GameConstants::kMaxBranchingFactor;
+  static constexpr int kNumPlayers = GameConstants::kNumPlayers;
 
   using ActionMask = util::CompactBitSet<kMaxNumActions>;
-  using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
-  using player_bitset_t = util::CompactBitSet<GameConstants::kNumPlayers>;
+  using player_name_array_t = std::array<std::string, kNumPlayers>;
+  using player_bitset_t = util::CompactBitSet<kNumPlayers>;
 
   using PolicyShape = Eigen::Sizes<kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using GameResultTensor = GameResults::Tensor;
-  using WinShareShape = Eigen::Sizes<GameConstants::kNumPlayers>;
+  using WinShareShape = Eigen::Sizes<kNumPlayers>;
   using WinShareTensor = eigen_util::FTensor<WinShareShape>;
-  using ActionValueShape = Eigen::Sizes<kMaxNumActions>;
+  using ActionValueShape = Eigen::Sizes<kMaxNumActions, kNumPlayers>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
   using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
   using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
-  using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
+  using ValueArray = eigen_util::FArray<kNumPlayers>;
   using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
-  using LocalPolicyTensor = Eigen::Tensor<float, 1, Eigen::RowMajor>;
-  using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
-  using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
+  using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
+  using LocalActionValueArray =
+    Eigen::Array<float, Eigen::Dynamic, kNumPlayers, 0, kMaxBranchingFactor>;
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 

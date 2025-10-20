@@ -41,8 +41,8 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym,
-                                    core::action_mode_t) {
+template <eigen_util::concepts::FTensor Tensor>
+inline void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_mode_t) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;

@@ -20,14 +20,14 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& policy, group::element_t sym,
-                                    core::action_mode_t) {
+template<eigen_util::concepts::FTensor Tensor>
+void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_mode_t) {
   constexpr int N = Constants::kBoardDim;
   switch (sym) {
     case groups::C2::kIdentity:
       return;
     case groups::C2::kRot180:
-      return eigen_util::rot180<N>(policy);
+      return eigen_util::rot180<N>(tensor);
     default:
       throw util::Exception("Unknown group element: {}", sym);
   }

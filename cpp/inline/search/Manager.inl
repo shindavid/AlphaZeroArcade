@@ -166,12 +166,14 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
     core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
+    ValueArray V;
     if (child_node_index < 0) {
-      action_values(action) = edge->child_V_estimate;
+      V = edge->child_V_estimate;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
-      action_values(action) = child->stable_data().R(stable_data.active_seat);
+      V = Game::GameResults::to_value_array(child->stable_data().R);
     }
+    action_values.chip(i, 0) = eigen_util::reinterpret_as_tensor(V);
     i++;
   }
 

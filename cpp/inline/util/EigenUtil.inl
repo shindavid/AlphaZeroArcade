@@ -218,9 +218,9 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
   const int R = x.dimension(0);
   const int C = x.dimension(1);
 
-  const Eigen::array<int, 1> reduce_dim = {1};         // reduce along columns
-  const Eigen::array<int, 2> col_vec    = {R, 1};      // (R,1) reshape
-  const Eigen::array<int, 2> bcast      = {1, C};      // broadcast across C
+  const Eigen::array<int, 1> reduce_dim = {1};  // reduce along columns
+  const Eigen::array<int, 2> col_vec = {R, 1};  // (R,1) reshape
+  const Eigen::array<int, 2> bcast = {1, C};    // broadcast across C
 
   // 1) rowwise max for stability, reshape to (R,1), then broadcast to (R,C)
   const auto row_max_bc = x.maximum(reduce_dim).reshape(col_vec).broadcast(bcast);
@@ -341,6 +341,18 @@ auto& reinterpret_as_array(Tensor& tensor) {
   return reinterpret_cast<Array&>(tensor);
 }
 
+template <concepts::FArray Array>
+const auto& reinterpret_as_tensor(const Array& array) {
+  using Tensor = FTensor<Eigen::Sizes<extract_length_v<Array>>>;
+  return reinterpret_cast<const Tensor&>(array);
+}
+
+template <concepts::FArray Array>
+auto& reinterpret_as_tensor(Array& array) {
+  using Tensor = FTensor<Eigen::Sizes<extract_length_v<Array>>>;
+  return reinterpret_cast<Tensor&>(array);
+}
+
 template <typename T>
 void debug_assert_is_valid_prob_distr(const T& distr, float eps) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
@@ -456,70 +468,80 @@ void right_rotate(Tensor& tensor, int n) {
 
 namespace detail {
 
-template <int Dim, concepts::FTensor Tensor>
+template <typename Scalar, int TensorDim0, int Dim>
 struct MatrixSlice {
-  static_assert(Dim * Dim <= Tensor::Dimensions::total_size, "Tensor is too small");
-  using type = Eigen::Map<
-    Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
+  static_assert(Dim * Dim <= TensorDim0, "Tensor is too small");
+  using type = Eigen::Map<Eigen::Matrix<Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
 };
 
 template <int Dim, concepts::FTensor Tensor>
-using MatrixSlice_t = typename MatrixSlice<Dim, Tensor>::type;
+using MatrixSlice_t =
+  typename MatrixSlice<typename Tensor::Scalar,
+                       eigen_util::extract_dim_v<0, typename Tensor::Dimensions>, Dim>::type;
+
+template <int Dim, concepts::FTensor Tensor>
+void transform_in_place(Tensor& tensor, std::function<void(MatrixSlice_t<Dim, Tensor>&)> func) {
+  using MatrixSlice = MatrixSlice_t<Dim, Tensor>;
+
+  using Dimensions = Tensor::Dimensions;
+  constexpr int64_t total_size = Dimensions::total_size;
+  constexpr int64_t dim0 = eigen_util::extract_dim_v<0, Dimensions>;
+  constexpr int64_t num_slices = total_size / dim0;
+
+  for (int64_t i = 0; i < num_slices; ++i) {
+    MatrixSlice slice(tensor.data() + i * dim0);
+    func(slice);
+  }
+}
 
 }  // namespace detail
 
 template <int Dim, concepts::FTensor Tensor>
 void rot90_clockwise(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.rowwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.rowwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void rot180(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.rowwise().reverseInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.rowwise().reverseInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void rot270_clockwise(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_vertical(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.colwise().reverseInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void mirror_horizontal(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.rowwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.rowwise().reverseInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_main_diag(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.transposeInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_anti_diag(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.rowwise().reverseInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.rowwise().reverseInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <concepts::FTensor Tensor>

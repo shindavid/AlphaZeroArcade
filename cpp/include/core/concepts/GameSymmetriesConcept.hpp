@@ -16,7 +16,7 @@ concept OperatesOn = requires(util::strict_type_match_t<T&> t, group::element_t 
 
 template <typename GS, typename T>
 concept OperatesOnWithActionMode =
-  requires(util::strict_type_match_t<T&> t, group::element_t sym, action_mode_t action_mode) {
+  requires(T& t, group::element_t sym, action_mode_t action_mode) {
     { GS::apply(t, action_mode, sym) };
   };
 
@@ -25,6 +25,7 @@ concept GameSymmetries = requires(const State& state) {
   { GS::get_mask(state) } -> std::same_as<typename GameTypes::SymmetryMask>;
   requires core::concepts::OperatesOn<GS, State>;
   requires core::concepts::OperatesOnWithActionMode<GS, typename GameTypes::PolicyTensor>;
+  requires core::concepts::OperatesOnWithActionMode<GS, typename GameTypes::ActionValueTensor>;
   requires core::concepts::OperatesOnWithActionMode<GS, core::action_t>;
   { GS::get_canonical_symmetry(state) } -> std::same_as<group::element_t>;
 };

@@ -21,7 +21,7 @@ template <core::concepts::Game G,
 struct Traits {
   using Game = G;
   using EvalSpec = ES;
-  using Edge = beta0::Edge;
+  using Edge = beta0::Edge<EvalSpec>;
   using NodeStableData = beta0::NodeStableData<EvalSpec>;
   using NodeStats = beta0::NodeStats<EvalSpec>;
   using ManagerParams = beta0::ManagerParams<EvalSpec>;

@@ -25,7 +25,6 @@ class NNEvaluation {
 
   using ActionMask = Game::Types::ActionMask;
   using OutputTensorTuple = TensorTypes::OutputTensorTuple;
-  using LocalPolicyTensor = Game::Types::LocalPolicyTensor;
 
   ~NNEvaluation() { clear(); }
 

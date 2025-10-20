@@ -88,8 +88,10 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
       policy.setConstant(losing_action_p);
       policy(winning_move) = winning_action_p;
 
-      action_values.setConstant(losing_v);
-      action_values(winning_move) = winning_v;
+      action_values.chip(seat, 0).setConstant(losing_v);
+      action_values.chip(1 - seat, 0).setConstant(winning_v);
+      action_values(winning_move, seat) = winning_v;
+      action_values(winning_move, 1 - seat) = losing_v;
     } else {
       value.setZero();
       policy.setZero();
