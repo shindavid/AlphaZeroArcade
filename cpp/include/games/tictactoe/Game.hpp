@@ -81,7 +81,7 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
 
-    static boost::json::value state_to_json(const State& state);
+    static boost::json::array state_to_json(const State& state);
   };
 
   static constexpr mask_t kThreeInARowMasks[] = {

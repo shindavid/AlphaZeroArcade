@@ -12,7 +12,12 @@ export default class TicTacToeApp extends GameAppBase {
   }
 
   isEmpty = (cell) => {
-    return this.state.board[cell] === '_';
+    return this.state.board[cell] === -1;
+  }
+
+  seatToHtml = (seat) => {
+    const symbols = [' ', 'X', 'O'];
+    return symbols[seat + 1];
   }
 
   handleCellClick = (cell) => {
@@ -34,7 +39,7 @@ export default class TicTacToeApp extends GameAppBase {
               className={`square${legal ? ' legal-move' : ''}`}
               onClick={() => this.handleCellClick(cell)}
               disabled={!!this.state.gameEnd || !legal}
-            >{empty ? '' : value}</button>
+            >{empty ? '' : this.seatToHtml(value)}</button>
           );
         })}
       </div>

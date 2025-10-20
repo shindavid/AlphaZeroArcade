@@ -142,6 +142,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
 boost::json::array Game::IO::state_to_json(const State& state) {
   boost::json::array arr;
+  arr.reserve(Constants::kBoardDim * Constants::kBoardDim);
   for (int row = 0; row < Constants::kBoardDim; ++row) {
     for (int col = 0; col < Constants::kBoardDim; ++col) {
       arr.push_back(state.get_player_at(row, col));
