@@ -90,24 +90,20 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 }
 
 boost::json::value Game::IO::state_to_json(const State& state) {
-  // 6 lines of 7 char's each, each char is in {'R', 'Y', '_'}
-  core::seat_index_t cp = Rules::get_current_player(state);
-  char cur_color = cp == kRed ? 'R' : 'Y';
-  char opp_color = cp == kRed ? 'Y' : 'R';
-
-  char buf[7 * 6 + 1];
-  int c = 0;
+  char buf[kNumRows * kNumColumns + 1];
   for (int row = kNumRows - 1; row >= 0; --row) {
     for (int col = 0; col < kNumColumns; ++col) {
-      int index = _to_bit_index(row, col);
-      bool occupied = (1UL << index) & state.full_mask;
-      bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
-
-      buf[c++] = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : '_';
+      core::seat_index_t seat = state.get_player_at(row, col);
+      int idx = (kNumRows - 1 - row) * kNumColumns + col;
+      if (seat == -1) {
+        buf[idx] = ' ';
+      } else {
+        buf[idx] = Constants::kSeatChars[seat];
+      }
     }
+    buf[kNumRows * kNumColumns] = '\0';
   }
-  buf[c] = '\0';
-  return boost::json::value(std::string(buf));
+  return buf;
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {

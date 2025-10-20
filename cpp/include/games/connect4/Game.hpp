@@ -38,6 +38,7 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<kNumColumns>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = kNumColumns;
+    static constexpr char kSeatChars[kNumPlayers] = {'R', 'Y'};
   };
 
   struct State {

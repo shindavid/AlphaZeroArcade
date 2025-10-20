@@ -2,8 +2,8 @@
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, 48px);
-  grid-template-rows: repeat(8, 48px);
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
   gap: 4px;
   background: #0a5a2b;
   padding: 8px;
@@ -36,12 +36,11 @@
   display: inline-block;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+  border-radius: 100%;
 }
 
-.disc.B { background: #111; }
-.disc.W { background: #fafafa; }
+.B { background: #111; }
+.W { background: #fafafa; }
 
 .pass-btn {
   display: flex;
@@ -58,3 +57,22 @@
 .pass-btn:hover { background: #bbb; }
 
 .board-wrapper { position: relative; }
+
+.board {
+  width: fit-content;
+  border: 2px solid #333;
+}
+
+.cell, .label-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.label-cell {
+  font-weight: bold;
+  background: #0a5a2b;
+  color: white;
+}

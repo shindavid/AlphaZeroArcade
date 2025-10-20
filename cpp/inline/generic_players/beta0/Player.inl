@@ -13,9 +13,8 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
   PolicyTensor modified_policy = this->get_action_policy(mcts_results, request.valid_actions);
 
   if (this->verbose_info_) {
-    this->verbose_info_->action_policy = modified_policy;
-    this->verbose_info_->mcts_results = *mcts_results;
-    this->verbose_info_->initialized = true;
+    this->verbose_info_->set(modified_policy, *mcts_results);
+    VerboseManager::get_instance()->set(this->verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
   RELEASE_ASSERT(request.valid_actions[action]);

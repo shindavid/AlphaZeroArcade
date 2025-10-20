@@ -38,7 +38,7 @@ export default class HexApp extends GameAppBase {
 
   // Override for colorful icons
   seatToHtml = (seat) => {
-    const color = seat === "R" ? "#e44" : seat === "B" ? "#24f" : "#888";
+    const color = seat === 'R' ? "#e44" : seat === 'B' ? "#24f" : "#888";
     return (
       <span className="hex-seat-icon">
         <svg width="18" height="18" viewBox="0 0 18 18">
@@ -122,8 +122,8 @@ export default class HexApp extends GameAppBase {
         <polygon
           className={
             "hex-cell" +
-            (color === "R" ? " hex-red" : "") +
-            (color === "B" ? " hex-blue" : "") +
+            (color === 'R' ? " hex-red" : "") +
+            (color === 'B' ? " hex-blue" : "") +
             (isLegal ? hoverClass : "")
           }
           points={corners.map(p => p.join(",")).join(" ")}

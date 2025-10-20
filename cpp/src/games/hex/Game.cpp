@@ -142,20 +142,15 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
 boost::json::value Game::IO::state_to_json(const State& state) {
   char buf[Constants::kNumSquares + 1];
-  int cx = 0;
+  int idx = 0;
   for (int row = 0; row < Constants::kBoardDim; ++row) {
     for (int col = 0; col < Constants::kBoardDim; ++col) {
-      if (state.core.rows[Constants::kRed][row] & (mask_t(1) << col)) {
-        buf[cx++] = 'R';
-      } else if (state.core.rows[Constants::kBlue][row] & (mask_t(1) << col)) {
-        buf[cx++] = 'B';
-      } else {
-        buf[cx++] = ' ';
-      }
+      core::seat_index_t seat = state.get_player_at(row, col);
+      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
     }
   }
-  buf[cx] = '\0';
-  return boost::json::value(std::string(buf));
+  buf[Constants::kNumSquares] = '\0';
+  return buf;
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink_column) {
@@ -197,4 +192,4 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
   return cx;
 }
 
-}  // namespace hex
+  }  // namespace hex

@@ -26,6 +26,7 @@ struct Game {
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor =
       std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
+    static constexpr char kSeatChars[kNumPlayers] = {'A', 'B' };
   };
 
   struct State {

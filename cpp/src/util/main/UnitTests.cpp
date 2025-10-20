@@ -1254,4 +1254,39 @@ TEST(CompactBitSet_Random, RandomlyZeroOut_AllBits) {
 // End tests for CompactBitSet //
 /////////////////////////////////
 
+TEST(EigenUtil, output_to_json_no_fmt) {
+  Eigen::ArrayXXf a(2, 3);
+  a << 1.0f, 2.0f, -3.25f, 4.0f, 5.5f, 6.0f;
+  std::vector<std::string> keys{"a", "b", "c"};
+
+  boost::json::object obj = eigen_util::output_to_json(a, keys, nullptr);
+
+  const std::string output = boost::json::serialize(obj);
+  const std::string expected = R"({"a":[1E0,4E0],"b":[2E0,5.5E0],"c":[-3.25E0,6E0]})";
+
+  EXPECT_EQ(output, expected);
+}
+
+TEST(EigenUtil, output_to_json_with_fmt) {
+  Eigen::ArrayXXf a(2, 3);
+  a << 1.0f, 2.0f, -3.25f, 4.0f, 5.5f, 6.0f;
+  std::vector<std::string> keys{"a", "b", "c"};
+
+  eigen_util::PrintArrayFormatMap fmt;
+  fmt["b"] = [](float x) {
+    std::ostringstream os;
+    os.setf(std::ios::fixed);
+    os.precision(2);
+    os << "v=" << x;
+    return os.str();
+  };
+
+  boost::json::object obj = eigen_util::output_to_json(a, keys, &fmt);
+
+  const std::string output = boost::json::serialize(obj);
+  const std::string expected = R"({"a":[1E0,4E0],"b":["v=2.00","v=5.50"],"c":[-3.25E0,6E0]})";
+
+  EXPECT_EQ(output, expected);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

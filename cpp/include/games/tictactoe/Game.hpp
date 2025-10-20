@@ -35,6 +35,7 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
+    static constexpr char kSeatChars[kNumPlayers] = {'X', 'O'};
   };
 
   struct State {

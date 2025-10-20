@@ -17,9 +17,7 @@ export default class OthelloApp extends GameAppBase {
   }
 
   seatToHtml = (seat) => {
-    if (seat === '*') return <span className="disc B"/>;
-    if (seat === '0') return <span className="disc W"/>;
-    return null;
+    return <span className={`disc ${seat}`}/>;
   };
 
   handleCellClick = (row, col) => {
@@ -40,33 +38,50 @@ export default class OthelloApp extends GameAppBase {
   );
 
   renderBoard() {
-    const { board, legalMoves, lastAction } = this.state;
+    const { board, legalMoves } = this.state;
     if (!board) return null;
 
     const cells = [];
-    for (let r = 0; r < N; r++) {
-      for (let c = 0; c < N; c++) {
-        const idx = r * N + c;
-        const v = board[idx];
-        const legal = this.gameActive() && legalMoves.includes(idx);
+    const N = 8;
+    const colLabels = ['', ...'ABCDEFGH'];
+    const rowLabels = Array.from({ length: N }, (_, i) => i + 1);
 
-        let cls = 'cell';
-        cls += ' \(' + r + ',' + c + '\):';
-        if (v === '*' || v === '0') cls += ' ' + v;
-        if (legal) cls += ' legal-move';
+    for (let r = 0; r <= N; r++) {
+      for (let c = 0; c <= N; c++) {
+        if (r === 0 && c === 0) {
+          cells.push(<div key="corner" className="label-cell" />);
+        } else if (r === 0) {
+          // column labels A–H
+          cells.push(
+            <div key={`col-${c}`} className="label-cell top-label">
+              {colLabels[c]}
+            </div>
+          );
+        } else if (c === 0) {
+          // row labels 1–8
+          cells.push(
+            <div key={`row-${r}`} className="label-cell left-label">
+              {rowLabels[r - 1]}
+            </div>
+          );
+        } else {
+          const idx = (r - 1) * N + (c - 1);
+          const v = board[idx];
+          const legal = this.gameActive() && legalMoves.includes(idx);
 
-        cells.push(
-          <div
-            key={idx}
-            className={cls}
-            onClick={legal ? () => this.handleCellClick(r, c) : undefined}
-            role={legal ? 'button' : undefined}
-            tabIndex={legal ? 0 : -1}
-            aria-label={legal ? `Play ${r + 1},${c + 1}` : undefined}
-          >
-            {this.seatToHtml(v)}
-          </div>
-        );
+          let cls = 'cell';
+          if (legal) cls += ' legal-move';
+
+          cells.push(
+            <div
+              key={`cell-${r}-${c}`}
+              className={cls}
+              onClick={legal ? () => this.handleCellClick(r - 1, c - 1) : undefined}
+            >
+              {this.seatToHtml(v)}
+            </div>
+          );
+        }
       }
     }
 

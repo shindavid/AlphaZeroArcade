@@ -9,7 +9,6 @@ const COLS = 7;
 
 const ANIMATION_INTERVAL = 60; // ms per row drop
 
-
 export default class Connect4App extends GameAppBase {
   constructor(props) {
     super(props);
@@ -24,15 +23,8 @@ export default class Connect4App extends GameAppBase {
   }
 
   // Override for colorful icons
-  seatToHtml = (seat) => {
-    if (seat === "R") {
-      return <span className="seat-icon seat-R" />;
-    }
-    if (seat === "Y") {
-      return <span className="seat-icon seat-Y" />;
-    }
-    return seat;
-  }
+  seatToHtml = seat =>
+    <span className={`seat-icon ${seat}`} />;
 
   // Override for animations
   handleStartGame(payload) {
@@ -97,6 +89,7 @@ export default class Connect4App extends GameAppBase {
     let row = ROWS - this.state.colHeights[col] - 1;
 
     const disc = this.state.mySeat;
+    console.log(`Animating disc drop at col ${col}, row ${row} for seat ${disc}`);
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,

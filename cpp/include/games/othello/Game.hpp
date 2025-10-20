@@ -33,6 +33,7 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<othello::kNumGlobalActions>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
+    static constexpr char kSeatChars[kNumPlayers] = {'B', 'W'};
   };
 
   using State = othello::GameState;

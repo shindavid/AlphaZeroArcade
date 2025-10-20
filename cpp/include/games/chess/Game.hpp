@@ -26,6 +26,7 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
     static constexpr int kNumPlayers = chess::kNumPlayers;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
+    static constexpr char kSeatChars[kNumPlayers] = {'W', 'B'};
   };
 
   using State = lczero::Position;

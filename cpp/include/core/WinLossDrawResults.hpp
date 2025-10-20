@@ -49,8 +49,7 @@ struct WinLossDrawResults {
 
   static void right_rotate(Tensor& t, core::seat_index_t s) { left_rotate(t, s); }
 
-  static void print_array(const Tensor& net_value, const ValueArray& win_rates,
-                          const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+  static auto get_data_matrix(const Tensor& net_value, const ValueArray& win_rates) {
     ValueArray net_value_array;
     ValueArray net_draw_array;
     ValueArray player_array;
@@ -59,10 +58,27 @@ struct WinLossDrawResults {
       net_value_array(i) = net_value(i);
       net_draw_array(i) = net_value(2);
     }
-    auto data =
-      eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array, win_rates);
-    static std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
+    return eigen_util::concatenate_columns(player_array, net_value_array, net_draw_array,
+                                           win_rates);
+  }
+
+  static const std::vector<std::string>& get_column_names() {
+    static const std::vector<std::string> columns = {"Player", "Net(W)", "Net(D)", "win-rate"};
+    return columns;
+  }
+
+  static void print_array(const Tensor& net_value, const ValueArray& win_rates,
+                          const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+    auto data = get_data_matrix(net_value, win_rates);
+    const auto& columns = get_column_names();
     eigen_util::print_array(std::cout, data, columns, fmt_map);
+  }
+
+  static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
+                                     const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+    auto data = get_data_matrix(net_value, win_rates);
+    const auto& columns = get_column_names();
+    return eigen_util::output_to_json(data, columns, fmt_map);
   }
 };
 

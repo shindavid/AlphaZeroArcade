@@ -24,6 +24,7 @@ struct GameState {
   size_t hash() const { return util::PODHash<Core>{}(core); }
   void init();
   void rotate();
+  core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
 
   // Core unambiguously represents the game state.
   struct Core {

@@ -18,6 +18,7 @@ def get_args():
                         help='num MCTS iterations (default: %(default)s)')
     parser.add_argument("-m", '--model-generation', type=int,
                         help='model generation (default: latest)')
+    parser.add_argument("-v", '--verbose', action='store_true', help='display verbose info of MCTS')
     return parser.parse_args()
 
 
@@ -51,10 +52,14 @@ def main():
     num_mcts_iters = args.num_mcts_iters
 
     # TODO: figure out whether to use alpha0 or some other paradigm somehow
+    player_str = f'--type=alpha0-C -m {model_filename} -i {num_mcts_iters}'
+    if args.verbose:
+        player_str += ' -v'
+
     cmd = [
         bin,
         '--player', '"--type=web"',
-        '--player', f'"--type=alpha0-C -m {model_filename} -i {num_mcts_iters}"'
+        '--player', f'"{player_str}"',
     ]
 
     cmd = ' '.join(cmd)

@@ -3,11 +3,13 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
+#include "generic_players/alpha0/VerboseData.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
+#include "search/VerboseManager.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -81,9 +83,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void set_facing_human_tui_player() override {
-    facing_human_tui_player_ = true;  // affects printing
-  }
 
  protected:
   void clear_search_mode();
@@ -99,24 +98,15 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
   void normalize(const ActionMask&, PolicyTensor& policy) const;
 
-  struct VerboseInfo {
-    PolicyTensor action_policy;
-    SearchResults mcts_results;
-
-    bool initialized = false;
-  };
-
   core::SearchMode get_random_search_mode() const;
-  void verbose_dump() const;
 
   const Params params_;
 
   const search::SearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   SharedData_sptr shared_data_;
-  VerboseInfo* verbose_info_ = nullptr;
+  VerboseData<Traits>* verbose_info_ = nullptr;
   const bool owns_shared_data_;
-  bool facing_human_tui_player_ = false;
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;

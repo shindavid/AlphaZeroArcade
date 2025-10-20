@@ -1,6 +1,7 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "search/VerboseManager.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"
@@ -115,10 +116,11 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    seat_assignments.push_back(boost::json::value(IO::player_to_str(p)));
+    std::string seat = std::string(1, Game::Constants::kSeatChars[p]);
+    seat_assignments.push_back(boost::json::value(seat));
     player_names.push_back(boost::json::value(this->get_player_names()[p]));
   }
-  payload["my_seat"] = IO::player_to_str(this->get_my_seat());
+  payload["my_seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
   return payload;
@@ -175,6 +177,13 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(core::seat_index_t se
   payload["board"] = IO::state_to_json(state);
   payload["seat"] = IO::player_to_str(seat);
   payload["last_action"] = IO::action_to_str(last_action, last_mode);
+
+  const VerboseManager* manager = VerboseManager::get_instance();
+  const auto* verbose_data = manager->verbose_data();
+  if (verbose_data) {
+    payload["verbose_info"] = verbose_data->to_json();
+  }
+
   return payload;
 }
 

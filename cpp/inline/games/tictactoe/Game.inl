@@ -194,17 +194,16 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 }
 
 inline boost::json::value Game::IO::state_to_json(const State& state) {
-  char buf[10];
-  const char* syms = "_XO";
-
-  int c = 0;
+  char buf[kBoardDimension * kBoardDimension + 1];
+  int idx = 0;
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      buf[c++] = syms[state.get_player_at(row, col) + 1];
+      core::seat_index_t seat = state.get_player_at(row, col);
+      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
     }
   }
-  buf[c] = '\0';
-  return boost::json::value(std::string(buf));
+  buf[kBoardDimension * kBoardDimension] = '\0';
+  return buf;
 }
 
 }  // namespace tictactoe
