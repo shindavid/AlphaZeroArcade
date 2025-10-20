@@ -35,6 +35,7 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
+    static constexpr char kSeatChars[kNumPlayers] = {'X', 'O'};
   };
 
   struct State {
@@ -81,7 +82,7 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
 
-    static boost::json::array state_to_json(const State& state);
+    static boost::json::value state_to_json(const State& state);
   };
 
   static constexpr mask_t kThreeInARowMasks[] = {

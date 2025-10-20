@@ -12,12 +12,7 @@ export default class TicTacToeApp extends GameAppBase {
   }
 
   isEmpty = (cell) => {
-    return this.state.board[cell] === -1;
-  }
-
-  seatToHtml = (seat) => {
-    const symbols = [' ', 'X', 'O'];
-    return symbols[seat + 1];
+    return this.state.board[cell] === ' ';
   }
 
   handleCellClick = (cell) => {
