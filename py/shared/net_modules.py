@@ -505,7 +505,7 @@ class WinShareActionValueHead(Head):
         return True
 
     def default_loss_function(self):
-        return nn.BCEWithLogitsLoss
+        return nn.KLDivLoss
 
     def forward(self, x):
         out = x
@@ -514,7 +514,7 @@ class WinShareActionValueHead(Head):
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
         out = out.view(-1, *self.output_shape)
-        return out
+        return F.log_softmax(out, dim=-1)  # KLDivLoss expects log-probabilities
 
 
 class WinShareValueHead(ValueHeadBase):

@@ -103,7 +103,7 @@ class CNN_b9_c128(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 2.0),
+            BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
             BasicLossTerm('score_margin', 0.02),
             BasicLossTerm('ownership', 0.15),
@@ -207,7 +207,7 @@ class Transformer(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 2.0),
+            BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
             BasicLossTerm('score_margin', 0.02),
             BasicLossTerm('ownership', 0.15),

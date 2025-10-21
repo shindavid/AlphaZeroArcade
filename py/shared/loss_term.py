@@ -98,6 +98,8 @@ class BasicLossTerm(LossTerm):
             if denominator == 0:
                 loss = 0
             else:
+                while valid_actions.dim() < loss.dim():
+                    valid_actions = valid_actions.unsqueeze(-1)
                 unreduced_loss = loss * valid_actions      # mask out invalid actions
                 loss = unreduced_loss.sum() / denominator  # reduce here
 
