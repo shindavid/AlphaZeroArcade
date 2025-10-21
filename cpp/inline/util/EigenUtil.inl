@@ -450,20 +450,64 @@ void right_rotate(Array& array, int n) {
 
 template <concepts::FTensor Tensor>
 void left_rotate(Tensor& tensor, int n) {
-  constexpr int rank = Tensor::Dimensions::count;
-  static_assert(rank == 1, "left_rotate only supports 1D tensors");
-  constexpr int N = Tensor::Dimensions::total_size;
+  using Shape = Tensor::Dimensions;
+  constexpr int kRank = Shape::count;
+  static_assert(kRank >= 1, "rotate_last_dim_left requires rank >= 1");
+
+  constexpr int kTotalSize = Shape::total_size;
   auto* data = tensor.data();
-  std::rotate(data, data + n, data + N);
+
+  // ---- 1D fast path ----
+  if constexpr (kRank == 1) {
+    constexpr int N = kTotalSize;
+    n = ((n % N) + N) % N;
+    if (n == 0) return;
+    std::rotate(data, data + n, data + N);
+    return;
+  }
+
+  // ---- multi-D (RowMajor, last dimension varies fastest) ----
+  constexpr int kInner = extract_dim_v<kRank - 1, Shape>;
+  constexpr int kOuter = kTotalSize / kInner;  // number of row blocks
+
+  n = ((n % kInner) + kInner) % kInner;
+  if (n == 0) return;
+
+  for (int i = 0; i < kOuter; ++i) {
+    auto* row = data + i * kInner;
+    std::rotate(row, row + n, row + kInner);
+  }
 }
 
 template <concepts::FTensor Tensor>
 void right_rotate(Tensor& tensor, int n) {
-  constexpr int rank = Tensor::Dimensions::count;
-  static_assert(rank == 1, "right_rotate only supports 1D tensors");
-  constexpr int N = Tensor::Dimensions::total_size;
+  using Shape = Tensor::Dimensions;
+  constexpr int kRank = Shape::count;
+  static_assert(kRank >= 1, "rotate_last_dim_left requires rank >= 1");
+
+  constexpr int kTotalSize = Shape::total_size;
   auto* data = tensor.data();
-  std::rotate(data, data + N - n, data + N);
+
+  // ---- 1D fast path ----
+  if constexpr (kRank == 1) {
+    constexpr int N = kTotalSize;
+    n = ((n % N) + N) % N;
+    if (n == 0) return;
+    std::rotate(data, data + N - n, data + N);
+    return;
+  }
+
+  // ---- multi-D (RowMajor, last dimension varies fastest) ----
+  constexpr int kInner = extract_dim_v<kRank - 1, Shape>;
+  constexpr int kOuter = kTotalSize / kInner;  // number of row blocks
+
+  n = ((n % kInner) + kInner) % kInner;
+  if (n == 0) return;
+
+  for (int i = 0; i < kOuter; ++i) {
+    auto* row = data + i * kInner;
+    std::rotate(row, row + kInner - n, row + kInner);
+  }
 }
 
 namespace detail {

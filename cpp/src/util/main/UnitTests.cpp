@@ -294,7 +294,6 @@ TEST(eigen_util, softmax_in_place) {
   }
 }
 
-
 TEST(eigen_util, rowwise_softmax_in_place) {
   constexpr int M = 2;
   constexpr int N = 4;
@@ -303,8 +302,7 @@ TEST(eigen_util, rowwise_softmax_in_place) {
   Tensor tensor;
   tensor.setValues({{0, 1, 2, 3}, {1, 1, 1, 1}});
   Tensor expected;
-  expected.setValues({{0.0320586, 0.0871443, 0.2368828, 0.6439143},
-                      {0.25, 0.25, 0.25, 0.25}});
+  expected.setValues({{0.0320586, 0.0871443, 0.2368828, 0.6439143}, {0.25, 0.25, 0.25, 0.25}});
 
   eigen_util::rowwise_softmax_in_place(tensor);
 
@@ -589,6 +587,120 @@ TEST(eigen_util, rotate) {
 
     Array expected_array = expected_right_rotate_arrays[i];
     EXPECT_TRUE((array == expected_array).all());
+  }
+
+  // --- 2D CASE ---
+  {
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<2, 4>>;
+    Tensor tensor;
+
+    // Fill with row-major increasing pattern
+    int counter = 0;
+    for (int i = 0; i < 2; ++i)
+      for (int j = 0; j < 4; ++j) tensor(i, j) = counter++;
+
+    // Rotate last dim (columns) left by 1
+    eigen_util::left_rotate(tensor, 1);
+    // Expected result:
+    // [[1,2,3,0],
+    //  [5,6,7,4]]
+    Tensor expected;
+    expected.setValues({{1, 2, 3, 0}, {5, 6, 7, 4}});
+    EXPECT_TRUE(eigen_util::equal(tensor, expected));
+
+    // Rotate right by 1 (restore)
+    eigen_util::right_rotate(tensor, 1);
+    counter = 0;
+    for (int i = 0; i < 2; ++i)
+      for (int j = 0; j < 4; ++j) EXPECT_EQ(tensor(i, j), counter++);
+  }
+
+  // --- 3D CASE ---
+  {
+    constexpr int I = 2, J = 2, K = 4;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<I, J, K>>;
+
+    auto fill_base = [](Tensor& t) {
+      for (int i = 0; i < I; ++i)
+        for (int j = 0; j < J; ++j)
+          for (int k = 0; k < K; ++k)
+            // Encode (i,j,k) so each last-dim slice is [..,0],[..,1],[..,2],[..,3]
+            t(i, j, k) = 100 * i + 10 * j + k;
+    };
+
+    auto expect_left = [&](const Tensor& base, int n, const Tensor& got) {
+      n = ((n % K) + K) % K;  // normalize
+      for (int i = 0; i < I; ++i)
+        for (int j = 0; j < J; ++j)
+          for (int k = 0; k < K; ++k) {
+            // left-rotate by n: new[k] = old[(k+n) % K]
+            int want = base(i, j, (k + n) % K);
+            EXPECT_EQ(got(i, j, k), want)
+              << "left n=" << n << " at (" << i << "," << j << "," << k << ")";
+          }
+    };
+
+    auto expect_right = [&](const Tensor& base, int n, const Tensor& got) {
+      n = ((n % K) + K) % K;  // normalize
+      for (int i = 0; i < I; ++i)
+        for (int j = 0; j < J; ++j)
+          for (int k = 0; k < K; ++k) {
+            // right-rotate by n: new[k] = old[(k - n + K) % K]
+            int want = base(i, j, (k - n + K) % K);
+            EXPECT_EQ(got(i, j, k), want)
+              << "right n=" << n << " at (" << i << "," << j << "," << k << ")";
+          }
+    };
+
+    // Base tensor
+    Tensor base;
+    fill_base(base);
+
+    // 1) Left by 1 really is left by 1
+    {
+      Tensor t = base;
+      eigen_util::left_rotate(t, 1);
+      expect_left(base, 1, t);
+    }
+
+    // 2) Right by 1 really is right by 1
+    {
+      Tensor t = base;
+      eigen_util::right_rotate(t, 1);
+      expect_right(base, 1, t);
+    }
+
+    // 3) Left by 1 then right by 1 restores base
+    {
+      Tensor t = base;
+      eigen_util::left_rotate(t, 1);
+      eigen_util::right_rotate(t, 1);
+      EXPECT_TRUE(eigen_util::equal(t, base));
+    }
+
+    // 4) Equivalence: left by 3 == right by 1 (since K==4)
+    {
+      Tensor tL = base, tR = base;
+      eigen_util::left_rotate(tL, 3);
+      eigen_util::right_rotate(tR, 1);
+      EXPECT_TRUE(eigen_util::equal(tL, tR));
+    }
+
+    // 5) Mod behavior: left by 5 == left by 1
+    {
+      Tensor t1 = base, t5 = base;
+      eigen_util::left_rotate(t1, 1);
+      eigen_util::left_rotate(t5, 5);
+      EXPECT_TRUE(eigen_util::equal(t1, t5));
+    }
+
+    // 6) Composition: left by 2 twice == identity (since 2+2 == 4 ≡ 0 mod K)
+    {
+      Tensor t = base;
+      eigen_util::left_rotate(t, 2);
+      eigen_util::left_rotate(t, 2);
+      EXPECT_TRUE(eigen_util::equal(t, base));
+    }
   }
 }
 

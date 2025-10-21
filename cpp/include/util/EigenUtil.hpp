@@ -351,7 +351,7 @@ void left_rotate(Array& array, int n);
 template <concepts::FArray Array>
 void right_rotate(Array& array, int n);
 
-// same as above for 1D tensors
+// Rotates the tensor left/right along the *last* dimension.
 template <concepts::FTensor Tensor>
 void left_rotate(Tensor& tensor, int n);
 template <concepts::FTensor Tensor>
