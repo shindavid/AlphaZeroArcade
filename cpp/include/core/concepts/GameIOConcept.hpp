@@ -27,11 +27,7 @@ concept GameIO = requires(std::ostream& ss, const GameTypes::State& state,
 };
 
 // WebGameIO is a concept that requires GameIO to be implemented, and also requires
-// a GI:: state_to_json() method that returns a boost::json::array.
-//
-// In spirit, state_to_json() simply serializes the board into a JSON array of
-// player seats. The array’s order is defined by each game’s own implementation,
-// reflecting how that game lays out its board or state internally.
+// a GI:: state_to_json() method that returns a boost::json::value.
 template <typename GI, typename GameTypes>
 concept WebGameIO = GameIO<GI, GameTypes> && requires(GI, const GameTypes::State& state) {
   { GI::state_to_json(state) } -> std::same_as<boost::json::value>;

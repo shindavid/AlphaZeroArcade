@@ -9,7 +9,7 @@ namespace generic {
 
   void VerboseManager::set(VerboseDataBase* verbose_data) {
     if (auto_terminal_printing_enabled_) {
-      verbose_data_->to_terminal_text();
+      verbose_data->to_terminal_text();
     } else {
       // TODO: Support multi-player games by storing multiple VerboseData objects
       verbose_data_ = verbose_data;
