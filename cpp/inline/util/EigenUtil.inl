@@ -512,29 +512,29 @@ void right_rotate(Tensor& tensor, int n) {
 
 namespace detail {
 
-template <typename Scalar, int TensorDim0, int Dim>
-struct MatrixSlice {
-  static_assert(Dim * Dim <= TensorDim0, "Tensor is too small");
-  using type = Eigen::Map<Eigen::Matrix<Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
-};
+template <int Dim, class Scalar, class Stride>
+using SliceMap =
+  Eigen::Map<Eigen::Matrix<Scalar, Dim, Dim, Eigen::RowMajor>, Eigen::Unaligned, Stride>;
 
-template <int Dim, concepts::FTensor Tensor>
-using MatrixSlice_t =
-  typename MatrixSlice<typename Tensor::Scalar,
-                       eigen_util::extract_dim_v<0, typename Tensor::Dimensions>, Dim>::type;
+template <int Dim, concepts::FTensor Tensor, class F>
+void transform_in_place(Tensor& tensor, F&& func) {
+  using Scalar = Tensor::Scalar;
+  using Shape = Tensor::Dimensions;
 
-template <int Dim, concepts::FTensor Tensor>
-void transform_in_place(Tensor& tensor, std::function<void(MatrixSlice_t<Dim, Tensor>&)> func) {
-  using MatrixSlice = MatrixSlice_t<Dim, Tensor>;
+  constexpr int kDim0 = extract_dim_v<0, Shape>;
+  constexpr int kTotalSize = Shape::total_size;
+  constexpr int kTailStride = kTotalSize / kDim0;  // product of trailing dims
 
-  using Dimensions = Tensor::Dimensions;
-  constexpr int64_t total_size = Dimensions::total_size;
-  constexpr int64_t dim0 = eigen_util::extract_dim_v<0, Dimensions>;
-  constexpr int64_t num_slices = total_size / dim0;
+  static_assert(Dim * Dim <= kDim0, "Dim*Dim window exceeds first dimension length");
 
-  for (int64_t i = 0; i < num_slices; ++i) {
-    MatrixSlice slice(tensor.data() + i * dim0);
-    func(slice);
+  auto* base_ptr = tensor.data();
+
+  using Stride = Eigen::Stride<Dim * kTailStride, kTailStride>;
+
+  for (int s = 0; s < kTailStride; ++s) {
+    auto* slice_ptr = base_ptr + s;
+    SliceMap<Dim, Scalar, Stride> block(slice_ptr, Dim, Dim);
+    std::forward<F>(func)(block);
   }
 }
 

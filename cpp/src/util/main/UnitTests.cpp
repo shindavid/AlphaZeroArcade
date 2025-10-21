@@ -565,6 +565,265 @@ TEST(eigen_util, count) {
   EXPECT_EQ(result, expected);
 }
 
+TEST(eigen_util, rot90_clockwise) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      6 3 0
+  // 3 4 5   -> 7 4 1
+  // 6 7 8      8 5 2
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{6, 16}, {3, 13}, {0, 10}, {7, 17}, {4, 14}, {1, 11}, {8, 18}, {5, 15}, {2, 12}, {9, 19}});
+
+  eigen_util::rot90_clockwise<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({6, 3, 0, 7, 4, 1, 8, 5, 2, 9});
+  eigen_util::rot90_clockwise<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, rot180) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      8 7 6
+  // 3 4 5   -> 5 4 3
+  // 6 7 8      2 1 0
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{8, 18}, {7, 17}, {6, 16}, {5, 15}, {4, 14}, {3, 13}, {2, 12}, {1, 11}, {0, 10}, {9, 19}});
+
+  eigen_util::rot180<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({8, 7, 6, 5, 4, 3, 2, 1, 0, 9});
+  eigen_util::rot180<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, rot270_clockwise) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      2 5 8
+  // 3 4 5   -> 1 4 7
+  // 6 7 8      0 3 6
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{2, 12}, {5, 15}, {8, 18}, {1, 11}, {4, 14}, {7, 17}, {0, 10}, {3, 13}, {6, 16}, {9, 19}});
+
+  eigen_util::rot270_clockwise<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({2, 5, 8, 1, 4, 7, 0, 3, 6, 9});
+  eigen_util::rot270_clockwise<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, flip_vertical) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      6 7 8
+  // 3 4 5   -> 3 4 5
+  // 6 7 8      0 1 2
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{6, 16}, {7, 17}, {8, 18}, {3, 13}, {4, 14}, {5, 15}, {0, 10}, {1, 11}, {2, 12}, {9, 19}});
+
+  eigen_util::flip_vertical<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({6, 7, 8, 3, 4, 5, 0, 1, 2, 9});
+  eigen_util::flip_vertical<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, mirror_horizontal) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      2 1 0
+  // 3 4 5   -> 5 4 3
+  // 6 7 8      8 7 6
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{2, 12}, {1, 11}, {0, 10}, {5, 15}, {4, 14}, {3, 13}, {8, 18}, {7, 17}, {6, 16}, {9, 19}});
+
+  eigen_util::mirror_horizontal<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({2, 1, 0, 5, 4, 3, 8, 7, 6, 9});
+  eigen_util::mirror_horizontal<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, flip_main_diag) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      0 3 6
+  // 3 4 5   -> 1 4 7
+  // 6 7 8      2 5 8
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{0, 10}, {3, 13}, {6, 16}, {1, 11}, {4, 14}, {7, 17}, {2, 12}, {5, 15}, {8, 18}, {9, 19}});
+
+  eigen_util::flip_main_diag<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({0, 3, 6, 1, 4, 7, 2, 5, 8, 9});
+  eigen_util::flip_main_diag<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
+TEST(eigen_util, flip_anti_diag) {
+  constexpr int M = 10;
+  constexpr int N = 2;
+  using Tensor2D = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  // 0 1 2      8 5 2
+  // 3 4 5   -> 7 4 1
+  // 6 7 8      6 3 0
+  Tensor2D tensor_2d;
+  tensor_2d.setValues(
+    {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}, {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}});
+
+  Tensor2D expected_2d;
+  expected_2d.setValues(
+    {{8, 18}, {5, 15}, {2, 12}, {7, 17}, {4, 14}, {1, 11}, {6, 16}, {3, 13}, {0, 10}, {9, 19}});
+
+  eigen_util::flip_anti_diag<3>(tensor_2d);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
+        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+    }
+  }
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M>>;
+  Tensor tensor;
+  tensor.setValues({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+  Tensor expected;
+  expected.setValues({8, 5, 2, 7, 4, 1, 6, 3, 0, 9});
+  eigen_util::flip_anti_diag<3>(tensor);
+
+  for (int i = 0; i < M; ++i) {
+    EXPECT_EQ(tensor(i), expected(i)) << "tensor:\n" << tensor << "\nexpected:\n" << expected;
+  }
+}
+
 TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
