@@ -196,19 +196,14 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
 
 boost::json::value Game::IO::state_to_json(const State& state) {
   char buf[kBoardDimension * kBoardDimension + 1];
-
+  int idx = 0;
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       core::seat_index_t seat = state.get_player_at(row, col);
-      int idx = row * kBoardDimension + col;
-      if (seat == -1) {
-        buf[idx] = ' ';
-      } else {
-        buf[idx] = Constants::kSeatChars[seat];
-      }
+      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
     }
-    buf[kBoardDimension * kBoardDimension] = '\0';
   }
+  buf[kBoardDimension * kBoardDimension] = '\0';
   return buf;
 }
 

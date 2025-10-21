@@ -192,4 +192,4 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
   return cx;
 }
 
-  }  // namespace hex
+}  // namespace hex

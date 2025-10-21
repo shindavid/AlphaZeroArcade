@@ -91,18 +91,14 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
 boost::json::value Game::IO::state_to_json(const State& state) {
   char buf[kNumRows * kNumColumns + 1];
+  int idx = 0;
   for (int row = kNumRows - 1; row >= 0; --row) {
     for (int col = 0; col < kNumColumns; ++col) {
       core::seat_index_t seat = state.get_player_at(row, col);
-      int idx = (kNumRows - 1 - row) * kNumColumns + col;
-      if (seat == -1) {
-        buf[idx] = ' ';
-      } else {
-        buf[idx] = Constants::kSeatChars[seat];
-      }
+      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
     }
-    buf[kNumRows * kNumColumns] = '\0';
   }
+  buf[kNumRows * kNumColumns] = '\0';
   return buf;
 }
 
