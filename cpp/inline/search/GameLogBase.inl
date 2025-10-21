@@ -214,7 +214,7 @@ bool TensorData<Shape>::load(Tensor& tensor) const {
 
     for (int i = 0; i < n; ++i) {
       SparseTensorEntry s = data.sparse_repr.x[i];
-      tensor(s.offset) = s.probability;
+      tensor.data()[s.offset] = s.probability;
     }
   }
   return true;
