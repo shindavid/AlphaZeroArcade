@@ -747,17 +747,15 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::init_node_stats_from_terminal(last_node);
-  });
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
+                              [&] { Algorithms::init_node_stats_from_terminal(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -773,9 +771,8 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::virtually_update_node_stats(last_node);
-  });
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
+                              [&] { Algorithms::virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
@@ -805,9 +802,8 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::undo_virtual_update(node, edge);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::undo_virtual_update(node, edge); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -853,9 +849,8 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }

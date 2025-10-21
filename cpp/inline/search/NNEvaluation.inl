@@ -116,7 +116,7 @@ float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actio
 
     int size = Head::Tensor::Dimensions::total_size;
     if constexpr (Head::kPerActionBased) {
-      size = (size / eigen_util::extract_dim_v<0, Shape>) * valid_actions.count();
+      size = (size / eigen_util::extract_dim_v<0, Shape>)*valid_actions.count();
     }
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)

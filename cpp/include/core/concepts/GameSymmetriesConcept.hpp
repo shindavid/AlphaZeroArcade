@@ -15,10 +15,9 @@ concept OperatesOn = requires(util::strict_type_match_t<T&> t, group::element_t 
 };
 
 template <typename GS, typename T>
-concept OperatesOnWithActionMode =
-  requires(T& t, group::element_t sym, action_mode_t action_mode) {
-    { GS::apply(t, action_mode, sym) };
-  };
+concept OperatesOnWithActionMode = requires(T& t, group::element_t sym, action_mode_t action_mode) {
+  { GS::apply(t, action_mode, sym) };
+};
 
 template <typename GS, typename GameTypes, typename State>
 concept GameSymmetries = requires(const State& state) {

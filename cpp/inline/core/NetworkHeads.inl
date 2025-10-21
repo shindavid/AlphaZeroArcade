@@ -1,4 +1,5 @@
 #include "core/NetworkHeads.hpp"
+
 #include "util/EigenUtil.hpp"
 
 namespace core {

@@ -20,7 +20,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-template<eigen_util::concepts::FTensor Tensor>
+template <eigen_util::concepts::FTensor Tensor>
 void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_mode_t) {
   constexpr int N = Constants::kBoardDim;
   switch (sym) {

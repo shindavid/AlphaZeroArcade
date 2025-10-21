@@ -199,7 +199,7 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
   ActionValueTensorData action_value_uncertainties(full_record.action_value_uncertainties_valid,
-                                        full_record.action_value_uncertainties);
+                                                   full_record.action_value_uncertainties);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);

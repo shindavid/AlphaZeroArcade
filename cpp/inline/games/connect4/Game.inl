@@ -48,8 +48,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
 }
 
 template <eigen_util::concepts::FTensor Tensor>
-inline void Game::Symmetries::apply(Tensor& t, group::element_t sym,
-                                    core::action_mode_t) {
+inline void Game::Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode_t) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;
