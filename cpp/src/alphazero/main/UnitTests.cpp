@@ -71,31 +71,28 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     core::action_mode_t mode = item.node()->action_mode();
 
     const State& state = item.cur_state();
+    action_values.setZero();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
     if (winning) {
       core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
+      float winning_action_p = smart_ ? 2 : 0;
+      float losing_action_p = smart_ ? 0 : 2;
+
       // these are logits
       float winning_v = smart_ ? 2 : 0;
       float losing_v = smart_ ? 0 : 2;
-
-      float winning_action_p = smart_ ? 2 : 0;
-      float losing_action_p = smart_ ? 0 : 2;
 
       value.setValues({winning_v, losing_v});
 
       policy.setConstant(losing_action_p);
       policy(winning_move) = winning_action_p;
 
-      action_values.chip(seat, 0).setConstant(losing_v);
-      action_values.chip(1 - seat, 0).setConstant(winning_v);
-      action_values(winning_move, seat) = winning_v;
-      action_values(winning_move, 1 - seat) = losing_v;
+      action_values(winning_move, 0) = winning_v;
     } else {
       value.setZero();
       policy.setZero();
-      action_values.setZero();
     }
 
     auto outputs = std::make_tuple(policy, value, action_values);
