@@ -8,7 +8,6 @@ import numpy as np
 import onnx
 import torch
 from torch import nn as nn
-from torch.export import Dim
 
 import hashlib
 import io
@@ -128,7 +127,6 @@ class Model(nn.Module):
 
         input_names = ["input"]
         output_names = clone._head_names
-        dynamic_shapes = ({0: Dim("batch")},)
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
@@ -144,9 +142,9 @@ class Model(nn.Module):
                 opset_version=18,
                 input_names=input_names,
                 output_names=output_names,
-                dynamic_shapes=dynamic_shapes,
-                do_constant_folding=True,
-                verbose=False
+                dynamo=False,
+                dynamic_axes={"input": {0: "batch"}},
+                do_constant_folding=False,
             )
 
         # 4) Add metadata
