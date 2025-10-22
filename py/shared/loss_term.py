@@ -7,6 +7,7 @@ import torch
 from torch import nn as nn
 
 import abc
+import logging
 from typing import List, Optional, TYPE_CHECKING, Tuple
 
 
@@ -14,26 +15,29 @@ if TYPE_CHECKING:
     from shared.model import Model
 
 
+logger = logging.getLogger(__name__)
+
+
 class Masker:
-    def __init__(self, mask_dict, y_dict, y_hat_dict):
+    def __init__(self, mask_dict, y_hat_dict, y_dict):
         self.mask_dict = mask_dict
-        self.y_dict = y_dict
         self.y_hat_dict = y_hat_dict
+        self.y_dict = y_dict
 
-    def get_y_and_y_hat(self, y_names: List[str], y_hat_names: List[str]):
-        ys = [self.y_dict[name] for name in y_names]
+    def get_y_hat_and_y(self, y_hat_names: List[str], y_names: List[str]):
         y_hats = [self.y_hat_dict[name] for name in y_hat_names]
-        if not y_hat_names:
-            return ys, y_hats
+        ys = [self.y_dict[name] for name in y_names]
+        if not y_names:
+            return y_hats, ys
 
-        masks = [self.mask_dict[name] for name in y_hat_names]
+        masks = [self.mask_dict[name] for name in y_names]
         mask = masks[0].clone()
         for m in masks[1:]:
             mask = mask & m
 
-        ys = [apply_mask(y, mask) for y in ys]
         y_hats = [apply_mask(y_hat, mask) for y_hat in y_hats]
-        return ys, y_hats
+        ys = [apply_mask(y, mask) for y in ys]
+        return y_hats, ys
 
 
 class LossTerm:
@@ -80,30 +84,34 @@ class BasicLossTerm(LossTerm):
             self._loss_fn = loss_fn_type()
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
-        y_names = [self.name]
         y_hat_names = [self.name]
+        y_names = [self.name]
 
         if self._use_policy_scaling:
-            y_hat_names.append('valid_actions')
+            y_names.append('valid_actions')
 
-        y_list, y_hat_list = masker.get_y_and_y_hat(y_names, y_hat_names)
-        y = y_list[0]
+        y_hat_list, y_list = masker.get_y_hat_and_y(y_hat_names, y_names)
         y_hat = y_hat_list[0]
-        loss = self._loss_fn(y, y_hat)
+        y = y_list[0]
+        loss = self._loss_fn(y_hat, y)
 
         if self._use_policy_scaling:
+            assert torch.isfinite(y_hat).all(), y_hat
+            assert torch.isfinite(y).all(), y
+            assert (y >= 0).all(), y
             # loss has not been reduced yet
-            valid_actions = y_hat_list[1]
+            valid_actions = y_list[1]
             denominator = valid_actions.sum()
             if denominator == 0:
-                loss = 0
+                loss = y_hat.sum() * 0.0
             else:
                 while valid_actions.dim() < loss.dim():
                     valid_actions = valid_actions.unsqueeze(-1)
+
                 unreduced_loss = loss * valid_actions      # mask out invalid actions
                 loss = unreduced_loss.sum() / denominator  # reduce here
 
-        return loss, len(y)
+        return loss, len(y_hat)
 
 
 class ValueUncertaintyLossTerm(LossTerm):
@@ -139,13 +147,13 @@ class ValueUncertaintyLossTerm(LossTerm):
         self._value_head = model.get_head(self._value_name)
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
-        y_names = [self.name, self._value_name]
-        y_hat_names = [self._Q_min_target_name, self._Q_max_target_name]
-        y, y_hat = masker.get_y_and_y_hat(y_names, y_hat_names)
+        y_hat_names = [self.name, self._value_name]
+        y_names = [self._Q_min_target_name, self._Q_max_target_name]
+        y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        predicted_Dsq, win_value = y
-        Q_min = y_hat[0]  # (B, 2)
-        Q_max = y_hat[1]  # (B, 2)
+        predicted_Dsq, win_value = y_hat
+        Q_min = y[0]  # (B, 2)
+        Q_max = y[1]  # (B, 2)
 
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
         actual_Dsq = torch.max((Q_prior - Q_min) ** 2, (Q_max - Q_prior) ** 2)  # (B, 2)
