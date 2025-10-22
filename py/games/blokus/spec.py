@@ -121,7 +121,7 @@ class CNN_b20_c128(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('action_value', 5.0),
             BasicLossTerm('score', 0.02),
             BasicLossTerm('ownership', 0.15),
             BasicLossTerm('unplayed_pieces', 0.3),

@@ -215,6 +215,10 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool asce
 template <class Derived>
 void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
+// Performs a row-wise softmax on the input tensor, in place.
+template <class Derived>
+void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
+
 /*
  * Applies an element-wise sigmoid function to the input tensor, in place.
  */
@@ -291,6 +295,15 @@ const auto& reinterpret_as_array(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 auto& reinterpret_as_array(Tensor& tensor);
 
+/*
+ * Reinterpret a fixed-size array as a rank-1 Eigen::TensorFixedSize<Scalar, Eigen::Sizes<N>>
+ */
+template <concepts::FArray Array>
+const auto& reinterpret_as_tensor(const Array& array);
+
+template <concepts::FArray Array>
+auto& reinterpret_as_tensor(Array& array);
+
 // DEBUG_ASSERT()'s that distr is a valid probability distribution
 // For release-build's, is a no-op
 template <typename T>
@@ -338,16 +351,16 @@ void left_rotate(Array& array, int n);
 template <concepts::FArray Array>
 void right_rotate(Array& array, int n);
 
-// same as above for 1D tensors
+// Rotates the tensor left/right along the *last* dimension.
 template <concepts::FTensor Tensor>
 void left_rotate(Tensor& tensor, int n);
 template <concepts::FTensor Tensor>
 void right_rotate(Tensor& tensor, int n);
 
 /*
- * The below functions all accept a flat 1D tensor as input, and interpret the first Dim**2
- * elements as entries of a square Dim x Dim board using row-major order. For Dim=8, this looks like
- * this:
+ * The below functions all accept a tensor of shape (S, ...) as input, and interpret the first
+ * Dim**2 <= S elements along the first dimension as entries of a square Dim x Dim board using
+ * row-major order. For Dim=8, this looks like this:
  *
  *  0  1  2  3  4  5  6  7
  *  8  9 10 11 12 13 14 15
@@ -366,6 +379,11 @@ void right_rotate(Tensor& tensor, int n);
  * Implementations are based on:
  *
  * https://stackoverflow.com/a/8664879/543913
+ *
+ * The awkwardness with the Dim template parameter is because in some games like go and othello,
+ * the policy is based on the board positions plus an extra "pass" action. So for a 19x19 board,
+ * the policy tensor has shape (362, ...), and we still want to be able to perform these
+ * transformations on the first 361 elements.
  */
 template <int Dim, concepts::FTensor Tensor>
 void rot90_clockwise(Tensor& tensor);

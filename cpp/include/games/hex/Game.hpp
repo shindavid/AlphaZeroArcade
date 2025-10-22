@@ -8,6 +8,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
@@ -25,7 +26,8 @@ struct Game {
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State&) { return Types::SymmetryMask().set(); }
     static void apply(State& state, group::element_t sym);
-    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t);
+    template <eigen_util::concepts::FTensor Tensor>
+    static void apply(Tensor& tensor, group::element_t sym, core::action_mode_t);
     static void apply(core::action_t& action, group::element_t sym, core::action_mode_t);
     static group::element_t get_canonical_symmetry(const State& state);
   };

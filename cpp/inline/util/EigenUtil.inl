@@ -213,6 +213,32 @@ void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
 }
 
 template <class Derived>
+void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  auto& x = static_cast<Derived&>(t);
+  const Eigen::Index R = x.dimension(0);
+  const Eigen::Index C = x.dimension(1);
+
+  // Reduce across columns (axis = 1)
+  const Eigen::array<int, 1> reduce_dim = {1};
+  const Eigen::array<Eigen::Index, 2> col_vec = {R, 1};  // (R,1)
+  const Eigen::array<Eigen::Index, 2> bcast   = {1, C};  // -> (R,C)
+
+  // 1) rowwise max (materialize!) -> reshape/broadcast
+  const auto row_max = x.maximum(reduce_dim).eval();
+  const auto row_max_bc = row_max.reshape(col_vec).broadcast(bcast);
+
+  // 2) shift & exp
+  const auto exp_shifted = (x - row_max_bc).exp();
+
+  // 3) rowwise sum (materialize!) -> reshape/broadcast
+  const auto row_sum = exp_shifted.sum(reduce_dim).eval();
+  const auto row_sum_bc = row_sum.reshape(col_vec).broadcast(bcast);
+
+  // 4) normalize
+  x = exp_shifted / row_sum_bc;
+}
+
+template <class Derived>
 void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
   auto& x = static_cast<Derived&>(t);
   x = 1.0 / (1.0 + (-x).exp());
@@ -318,6 +344,18 @@ auto& reinterpret_as_array(Tensor& tensor) {
   return reinterpret_cast<Array&>(tensor);
 }
 
+template <concepts::FArray Array>
+const auto& reinterpret_as_tensor(const Array& array) {
+  using Tensor = FTensor<Eigen::Sizes<extract_length_v<Array>>>;
+  return reinterpret_cast<const Tensor&>(array);
+}
+
+template <concepts::FArray Array>
+auto& reinterpret_as_tensor(Array& array) {
+  using Tensor = FTensor<Eigen::Sizes<extract_length_v<Array>>>;
+  return reinterpret_cast<Tensor&>(array);
+}
+
 template <typename T>
 void debug_assert_is_valid_prob_distr(const T& distr, float eps) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
@@ -415,88 +453,142 @@ void right_rotate(Array& array, int n) {
 
 template <concepts::FTensor Tensor>
 void left_rotate(Tensor& tensor, int n) {
-  constexpr int rank = Tensor::Dimensions::count;
-  static_assert(rank == 1, "left_rotate only supports 1D tensors");
-  constexpr int N = Tensor::Dimensions::total_size;
+  using Shape = Tensor::Dimensions;
+  constexpr int kRank = Shape::count;
+  static_assert(kRank >= 1, "rotate_last_dim_left requires rank >= 1");
+
+  constexpr int kTotalSize = Shape::total_size;
   auto* data = tensor.data();
-  std::rotate(data, data + n, data + N);
+
+  // ---- 1D fast path ----
+  if constexpr (kRank == 1) {
+    constexpr int N = kTotalSize;
+    n = ((n % N) + N) % N;
+    if (n == 0) return;
+    std::rotate(data, data + n, data + N);
+    return;
+  }
+
+  // ---- multi-D (RowMajor, last dimension varies fastest) ----
+  constexpr int kInner = extract_dim_v<kRank - 1, Shape>;
+  constexpr int kOuter = kTotalSize / kInner;  // number of row blocks
+
+  n = ((n % kInner) + kInner) % kInner;
+  if (n == 0) return;
+
+  for (int i = 0; i < kOuter; ++i) {
+    auto* row = data + i * kInner;
+    std::rotate(row, row + n, row + kInner);
+  }
 }
 
 template <concepts::FTensor Tensor>
 void right_rotate(Tensor& tensor, int n) {
-  constexpr int rank = Tensor::Dimensions::count;
-  static_assert(rank == 1, "right_rotate only supports 1D tensors");
-  constexpr int N = Tensor::Dimensions::total_size;
+  using Shape = Tensor::Dimensions;
+  constexpr int kRank = Shape::count;
+  static_assert(kRank >= 1, "rotate_last_dim_left requires rank >= 1");
+
+  constexpr int kTotalSize = Shape::total_size;
   auto* data = tensor.data();
-  std::rotate(data, data + N - n, data + N);
+
+  // ---- 1D fast path ----
+  if constexpr (kRank == 1) {
+    constexpr int N = kTotalSize;
+    n = ((n % N) + N) % N;
+    if (n == 0) return;
+    std::rotate(data, data + N - n, data + N);
+    return;
+  }
+
+  // ---- multi-D (RowMajor, last dimension varies fastest) ----
+  constexpr int kInner = extract_dim_v<kRank - 1, Shape>;
+  constexpr int kOuter = kTotalSize / kInner;  // number of row blocks
+
+  n = ((n % kInner) + kInner) % kInner;
+  if (n == 0) return;
+
+  for (int i = 0; i < kOuter; ++i) {
+    auto* row = data + i * kInner;
+    std::rotate(row, row + kInner - n, row + kInner);
+  }
 }
 
 namespace detail {
 
-template <int Dim, concepts::FTensor Tensor>
-struct MatrixSlice {
-  static_assert(Dim * Dim <= Tensor::Dimensions::total_size, "Tensor is too small");
-  using type = Eigen::Map<
-    Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
-};
+template <int Dim, class Scalar, class Stride>
+using SliceMap =
+  Eigen::Map<Eigen::Matrix<Scalar, Dim, Dim, Eigen::RowMajor>, Eigen::Unaligned, Stride>;
 
-template <int Dim, concepts::FTensor Tensor>
-using MatrixSlice_t = typename MatrixSlice<Dim, Tensor>::type;
+template <int Dim, concepts::FTensor Tensor, class F>
+void transform_in_place(Tensor& tensor, F&& func) {
+  using Scalar = Tensor::Scalar;
+  using Shape = Tensor::Dimensions;
+
+  constexpr int kDim0 = extract_dim_v<0, Shape>;
+  constexpr int kTotalSize = Shape::total_size;
+  constexpr int kTailStride = kTotalSize / kDim0;  // product of trailing dims
+
+  static_assert(Dim * Dim <= kDim0, "Dim*Dim window exceeds first dimension length");
+
+  auto* base_ptr = tensor.data();
+
+  using Stride = Eigen::Stride<Dim * kTailStride, kTailStride>;
+
+  for (int s = 0; s < kTailStride; ++s) {
+    auto* slice_ptr = base_ptr + s;
+    SliceMap<Dim, Scalar, Stride> block(slice_ptr, Dim, Dim);
+    std::forward<F>(func)(block);
+  }
+}
 
 }  // namespace detail
 
 template <int Dim, concepts::FTensor Tensor>
 void rot90_clockwise(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.rowwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.rowwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void rot180(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.rowwise().reverseInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.rowwise().reverseInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void rot270_clockwise(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_vertical(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.colwise().reverseInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void mirror_horizontal(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.rowwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.rowwise().reverseInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_main_diag(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) { slice.transposeInPlace(); });
 }
 
 template <int Dim, concepts::FTensor Tensor>
 void flip_anti_diag(Tensor& tensor) {
-  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
-  MatrixSlice slice(tensor.data());
-  slice.transposeInPlace();
-  slice.rowwise().reverseInPlace();
-  slice.colwise().reverseInPlace();
+  detail::transform_in_place<Dim>(tensor, [](auto& slice) {
+    slice.transposeInPlace();
+    slice.rowwise().reverseInPlace();
+    slice.colwise().reverseInPlace();
+  });
 }
 
 template <concepts::FTensor Tensor>

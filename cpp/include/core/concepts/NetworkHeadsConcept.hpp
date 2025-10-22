@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/NetworkHeads.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
@@ -16,15 +15,30 @@ concept NetworkHead = requires(typename T::Tensor& tensor) {
   // Head name, which must match name used in python.
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
 
-  // Targets that are of type kPolicyBasedHead are shaped like the policy tensor. The significance
-  // of this is that:
+  // A kPerActionBased head is one whose output is defined per action (e.g. policy, action-value).
+  // More precisely, the shape of the Tensor is such that the *first* dimension corresponds to the
+  // number of actions in the game.
   //
-  // 1. It can be packed based on ActionMask
-  // 2. It can be symmetrized via Game::Symmetries::apply()
+  // The significance of such heads is that:
   //
-  // Targets that are of type kValueBasedHead are shaped like the value tensor. The significance of
-  // this is that we need to left/right-rotate them based on the active seat.
-  { util::decay_copy(T::kType) } -> std::same_as<NetworkHeadType>;
+  // 1. They can be packed based on ActionMask
+  // 2. They can be symmetrized via Game::Symmetries::apply()
+  { util::decay_copy(T::kPerActionBased) } -> std::same_as<bool>;
+
+  // A kGameResultBased head is one whose output is defined per game result (e.g. value). The shape
+  // of the Tensor must exactly match that of Game::Types::GameResultTensor.
+  //
+  // The significance of this is that we need to left/right-rotate them based on the active seat.
+  { util::decay_copy(T::kGameResultBased) } -> std::same_as<bool>;
+
+  // A kWinShareBased head is one whose output is defined per player. More precisely, the shape of
+  // the Tensor is such that the *last* dimension corresponds to the number of players in the game.
+  //
+  // The significance of such heads is that we need to left/right-rotate them based on the active
+  // seat.
+  //
+  // Note that the action-value head is both kPerActionBased and kWinShareBased.
+  { util::decay_copy(T::kWinShareBased) } -> std::same_as<bool>;
 
   typename T::Tensor;
   requires eigen_util::concepts::FTensor<typename T::Tensor>;

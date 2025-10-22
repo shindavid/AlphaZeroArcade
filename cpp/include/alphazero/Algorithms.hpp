@@ -46,7 +46,8 @@ class AlgorithmsBase {
   using LookupTable = search::LookupTable<Traits>;
   using PuctCalculator = search::PuctCalculator<Traits>;
   using SearchContext = search::SearchContext<Traits>;
-  using TensorData = search::GameLogBase<Traits>::TensorData;
+  using PolicyTensorData = search::GameLogBase<Traits>::PolicyTensorData;
+  using ActionValueTensorData = search::GameLogBase<Traits>::ActionValueTensorData;
   using TrainingInfoParams = search::TrainingInfoParams<Traits>;
 
   using RootInfo = GeneralContext::RootInfo;

@@ -62,20 +62,6 @@ struct GameLogCommon {
   using pos_index_t = int32_t;
   using mem_offset_t = int32_t;
 
-  // tensor_encoding_t
-  //
-  // Used in TensorData. A value of t indicates that the TensorData::data field contains 4*abs(t)
-  // bytes of data.
-  //
-  // A negative value indicates that a dense tensor is stored, and a positive value indicates that a
-  // sparse tensor is stored.
-  using tensor_encoding_t = int32_t;
-
-  struct SparseTensorEntry {
-    int32_t offset;
-    float probability;
-  };
-
   static void merge_files(const char** input_filenames, int n_input_filenames,
                           const char* output_filename);
 
@@ -85,48 +71,69 @@ struct GameLogCommon {
   static int write_section(std::vector<char>& buf, const T* t, int count = 1, bool pad = true);
 };
 
+struct SparseTensorEntry {
+  int32_t offset;
+  float probability;
+};
+
+// tensor_encoding_t
+//
+// Used in TensorData. A value of t indicates that the TensorData::data field contains 4*abs(t)
+// bytes of data.
+//
+// A negative value indicates that a dense tensor is stored, and a positive value indicates that a
+// sparse tensor is stored.
+using tensor_encoding_t = int32_t;
+
+template <eigen_util::concepts::Shape Shape>
+struct TensorData {
+  using Tensor = eigen_util::FTensor<Shape>;
+  static constexpr int kDenseCapacity = Tensor::Dimensions::total_size;
+  static constexpr int kSparseCapacity = Tensor::Dimensions::total_size / 2;
+
+  TensorData(bool valid, const Tensor&);
+  int write_to(std::vector<char>& buf) const;
+  int base_size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+  int size() const;
+  bool load(Tensor&) const;  // return true if valid tensor
+
+  struct DenseData {
+    float x[kDenseCapacity];
+  };
+
+  struct SparseData {
+    SparseTensorEntry x[kSparseCapacity];
+  };
+  static_assert(sizeof(SparseData) == 8 * kSparseCapacity);
+
+  union data_t {
+    DenseData dense_repr;
+    SparseData sparse_repr;
+  };
+
+  tensor_encoding_t encoding;
+  data_t data;
+};
+
 template <search::concepts::Traits Traits>
 struct GameLogBase : public GameLogCommon {
   using Game = Traits::Game;
   using State = Game::State;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyShape = Game::Types::PolicyShape;
+  using ActionValueShape = Game::Types::ActionValueShape;
 
   using GameLogFullRecord = Traits::GameLogFullRecord;
   using GameLogCompactRecord = Traits::GameLogCompactRecord;
 
   using full_record_vec_t = std::vector<GameLogFullRecord*>;
 
-  struct TensorData {
-    static constexpr int kDenseCapacity = PolicyTensor::Dimensions::total_size;
-    static constexpr int kSparseCapacity = PolicyTensor::Dimensions::total_size / 2;
+  using PolicyTensorData = TensorData<PolicyShape>;
+  using ActionValueTensorData = TensorData<ActionValueShape>;
 
-    TensorData(bool valid, const PolicyTensor&);
-    int write_to(std::vector<char>& buf) const;
-    int base_size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
-    int size() const;
-    bool load(PolicyTensor&) const;  // return true if valid tensor
-
-    struct DenseData {
-      float x[kDenseCapacity];
-    };
-
-    struct SparseData {
-      SparseTensorEntry x[kSparseCapacity];
-    };
-    static_assert(sizeof(SparseData) == 8 * kSparseCapacity);
-
-    union data_t {
-      DenseData dense_repr;
-      SparseData sparse_repr;
-    };
-
-    tensor_encoding_t encoding;
-    data_t data;
-  };
-
-  static_assert(sizeof(TensorData) ==
-                sizeof(tensor_encoding_t) + sizeof(typename TensorData::data_t));
+  static_assert(sizeof(PolicyTensorData) ==
+                sizeof(tensor_encoding_t) + sizeof(typename PolicyTensorData::data_t));
+  static_assert(sizeof(ActionValueTensorData) ==
+                sizeof(tensor_encoding_t) + sizeof(typename ActionValueTensorData::data_t));
 };
 
 }  // namespace search

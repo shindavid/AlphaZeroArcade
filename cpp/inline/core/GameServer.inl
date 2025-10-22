@@ -858,7 +858,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome, StepResult& result) {
+void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome,
+                                                 StepResult& result) {
   ValueArray array = GameResults::to_value_array(outcome);
   for (auto player2 : players_) {
     player2->end_game(state_, outcome);

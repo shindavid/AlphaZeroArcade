@@ -22,7 +22,7 @@ template <core::concepts::Game G,
 struct Traits {
   using Game = G;
   using EvalSpec = ES;
-  using Edge = alpha0::Edge;
+  using Edge = alpha0::Edge<EvalSpec>;
   using NodeStableData = alpha0::NodeStableData<EvalSpec>;
   using NodeStats = alpha0::NodeStats<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;

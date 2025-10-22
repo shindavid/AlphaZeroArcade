@@ -16,7 +16,7 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using ActionMask = Game::Types::ActionMask;
   using GameResultTensor = Game::Types::GameResultTensor;
 
-  NodeStableData(const State&, core::seat_index_t active_seat);   // for non-terminal nodes
+  NodeStableData(const State&, core::seat_index_t active_seat);        // for non-terminal nodes
   NodeStableData(const State&, const GameResultTensor& game_outcome);  // for terminal nodes
 
   GameResultTensor R;

@@ -166,12 +166,14 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     core::action_t transformed_action = action;
     Symmetries::apply(transformed_action, sym, mode);
     core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
+    ValueArray V;
     if (child_node_index < 0) {
-      action_values(action) = edge->child_V_estimate;
+      V = edge->child_V_estimate;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
-      action_values(action) = child->stable_data().R(stable_data.active_seat);
+      V = Game::GameResults::to_value_array(child->stable_data().R);
     }
+    action_values.chip(transformed_action, 0) = eigen_util::reinterpret_as_tensor(V);
     i++;
   }
 
@@ -745,17 +747,15 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::init_node_stats_from_terminal(last_node);
-  });
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
+                              [&] { Algorithms::init_node_stats_from_terminal(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -771,9 +771,8 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::virtually_update_node_stats(last_node);
-  });
+  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
+                              [&] { Algorithms::virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
@@ -803,9 +802,8 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::undo_virtual_update(node, edge);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::undo_virtual_update(node, edge); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -851,9 +849,8 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    Algorithms::backprop_helper(node, edge, lookup_table,
+                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }

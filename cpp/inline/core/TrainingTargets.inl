@@ -23,6 +23,7 @@ template <typename GameLogView>
 bool ActionValueTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.action_values_valid) return false;
   tensor = view.action_values;
+  eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
 
@@ -55,6 +56,7 @@ template <typename GameLogView>
 bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.action_value_uncertainties_valid) return false;
   tensor = view.action_value_uncertainties;
+  eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
 

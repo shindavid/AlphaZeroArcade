@@ -47,13 +47,13 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym,
-                                    core::action_mode_t) {
+template <eigen_util::concepts::FTensor Tensor>
+inline void Game::Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode_t) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;
     case groups::D1::kFlip: {
-      Types::PolicyTensor u = eigen_util::reverse(t, t.rank() - 1);
+      Tensor u = eigen_util::reverse(t, 0);
       t = u;
       return;
     }

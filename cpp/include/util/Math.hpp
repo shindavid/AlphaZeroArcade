@@ -12,7 +12,7 @@ finiteness_t get_finiteness(T x) {
   return std::isfinite(x) ? kFinite : (x > 0 ? kPosInf : kNegInf);
 }
 
-template<typename T>
+template <typename T>
 inline auto normal_cdf(T x) {
   return float(0.5) * erfc(-x * M_SQRT1_2);
 }

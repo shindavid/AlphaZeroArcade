@@ -142,22 +142,22 @@ class NetTrainer:
 
             t1 = time.time()
             inputs = batch.input_tensor
-            y_hats = batch.target_tensors
+            ys = batch.target_tensors
             masks = batch.target_masks
 
             optimizer.zero_grad()
-            ys = net(inputs)
-            assert len(head_names) == len(ys), (head_names, len(ys))
+            y_hats = net(inputs)
+            assert len(head_names) == len(y_hats), (head_names, len(y_hats))
 
             mask_dict = {target: mask for target, mask in zip(target_names, masks)}
-            y_hat_dict = {target: y_hat for target, y_hat in zip(target_names, y_hats)}
-            y_dict = {head: y for head, y in zip(head_names, ys)}
+            y_dict = {target: y for target, y in zip(target_names, ys)}
+            y_hat_dict = {head: y_hat for head, y_hat in zip(head_names, y_hats)}
 
-            masker = Masker(mask_dict, y_dict, y_hat_dict)
+            masker = Masker(mask_dict, y_hat_dict, y_dict)
 
             loss_tuples = [term.compute_loss(masker) for term in loss_terms]
-            losses, _ = zip(*loss_tuples)
-            loss = sum([l * w for l, w in zip(losses, loss_weights)])
+            losses, counts = zip(*loss_tuples)
+            loss = sum([l * w * c for l, w, c in zip(losses, loss_weights, counts)])
             results_list = [EvaluationResults(*t) for t in loss_tuples]
 
             n_samples += len(inputs)

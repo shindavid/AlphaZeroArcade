@@ -68,7 +68,7 @@ class CNN_b3_c32(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('action_value', 5.0),
         ]
 
     @staticmethod
@@ -126,7 +126,7 @@ class Mini(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('action_value', 5.0),
         ]
 
     @staticmethod
@@ -210,7 +210,7 @@ class Transformer(ModelConfigGenerator):
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
-            BasicLossTerm('action_value', 1.0),
+            BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
         ]
 

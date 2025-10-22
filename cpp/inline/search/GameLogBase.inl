@@ -146,14 +146,14 @@ int GameLogCommon::write_section(std::vector<char>& buf, const T* t, int count, 
   return n_bytes + padding;
 }
 
-template <search::concepts::Traits Traits>
-GameLogBase<Traits>::TensorData::TensorData(bool valid, const PolicyTensor& tensor) {
+template <eigen_util::concepts::Shape Shape>
+TensorData<Shape>::TensorData(bool valid, const Tensor& tensor) {
   if (!valid) {
     encoding = 0;
     return;
   }
 
-  constexpr int N = PolicyTensor::Dimensions::total_size;
+  constexpr int N = Tensor::Dimensions::total_size;
   int num_nonzero_entries = eigen_util::count(tensor);
 
   const auto* src = tensor.data();
@@ -177,8 +177,8 @@ GameLogBase<Traits>::TensorData::TensorData(bool valid, const PolicyTensor& tens
   }
 }
 
-template <search::concepts::Traits Traits>
-int GameLogBase<Traits>::TensorData::write_to(std::vector<char>& buf) const {
+template <eigen_util::concepts::Shape Shape>
+int TensorData<Shape>::write_to(std::vector<char>& buf) const {
   int b = base_size();
   int s = size();
   const char* bytes = reinterpret_cast<const char*>(this);
@@ -189,13 +189,13 @@ int GameLogBase<Traits>::TensorData::write_to(std::vector<char>& buf) const {
   return s;
 }
 
-template <search::concepts::Traits Traits>
-int GameLogBase<Traits>::TensorData::size() const {
+template <eigen_util::concepts::Shape Shape>
+int TensorData<Shape>::size() const {
   return math::round_up_to_nearest_multiple(base_size(), GameLogCommon::kAlignment);
 }
 
-template <search::concepts::Traits Traits>
-bool GameLogBase<Traits>::TensorData::load(PolicyTensor& tensor) const {
+template <eigen_util::concepts::Shape Shape>
+bool TensorData<Shape>::load(Tensor& tensor) const {
   if (encoding == 0) {
     // no policy target
     return false;
@@ -214,7 +214,7 @@ bool GameLogBase<Traits>::TensorData::load(PolicyTensor& tensor) const {
 
     for (int i = 0; i < n; ++i) {
       SparseTensorEntry s = data.sparse_repr.x[i];
-      tensor(s.offset) = s.probability;
+      tensor.data()[s.offset] = s.probability;
     }
   }
   return true;

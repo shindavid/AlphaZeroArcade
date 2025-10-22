@@ -48,7 +48,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     int n = stable_data.num_valid_actions;
 
     ValueArray U;
-    LocalActionValueArray child_U(n);
+    LocalActionValueArray child_U(n, Game::Constants::kNumPlayers);
 
     // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
     //
@@ -60,7 +60,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
-      edge->child_U_estimate = child_U[i];
+      edge->child_U_estimate = child_U.row(i);
       edge->policy_posterior_prob = edge->policy_prior_prob;  // initialize posterior to prior
     }
   }
@@ -79,7 +79,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   core::action_mode_t mode = root->action_mode();
   group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-  core::seat_index_t seat = root->stable_data().active_seat;
 
   results.valid_actions.reset();
   results.policy_prior.setZero();
@@ -107,7 +106,8 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     if (!child) continue;
 
     core::action_t action = edge->action;
-    results.action_value_uncertainties(action) = child->stable_data().U[seat];
+    results.action_value_uncertainties.chip(action, 0) =
+      eigen_util::reinterpret_as_tensor(child->stable_data().U);
   }
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
@@ -196,10 +196,10 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   check_values(compact_record.Q_max, __LINE__);
   check_values(full_record.action_value_uncertainties, __LINE__);
 
-  TensorData policy(full_record.policy_target_valid, full_record.policy_target);
-  TensorData action_values(full_record.action_values_valid, full_record.action_values);
-  TensorData action_value_uncertainties(full_record.action_value_uncertainties_valid,
-                                        full_record.action_value_uncertainties);
+  PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
+  ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
+  ActionValueTensorData action_value_uncertainties(full_record.action_value_uncertainties_valid,
+                                                   full_record.action_value_uncertainties);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
@@ -218,16 +218,16 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   const char* addr = reinterpret_cast<const char*>(record);
 
   const char* policy_data_addr = addr + sizeof(GameLogCompactRecord);
-  const TensorData* policy_data = reinterpret_cast<const TensorData*>(policy_data_addr);
+  const PolicyTensorData* policy_data = reinterpret_cast<const PolicyTensorData*>(policy_data_addr);
 
   const char* action_values_data_addr = policy_data_addr + policy_data->size();
-  const TensorData* action_values_data =
-    reinterpret_cast<const TensorData*>(action_values_data_addr);
+  const ActionValueTensorData* action_values_data =
+    reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
   const char* action_values_uncertainty_data_addr =
     action_values_data_addr + action_values_data->size();
-  const TensorData* action_values_uncertainty_data =
-    reinterpret_cast<const TensorData*>(action_values_uncertainty_data_addr);
+  const ActionValueTensorData* action_values_uncertainty_data =
+    reinterpret_cast<const ActionValueTensorData*>(action_values_uncertainty_data_addr);
 
   view.action_value_uncertainties_valid =
     action_values_uncertainty_data->load(view.action_value_uncertainties);
