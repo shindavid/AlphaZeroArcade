@@ -215,23 +215,26 @@ void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
 template <class Derived>
 void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
   auto& x = static_cast<Derived&>(t);
-  const int R = x.dimension(0);
-  const int C = x.dimension(1);
+  const Eigen::Index R = x.dimension(0);
+  const Eigen::Index C = x.dimension(1);
 
-  const Eigen::array<int, 1> reduce_dim = {1};  // reduce along columns
-  const Eigen::array<int, 2> col_vec = {R, 1};  // (R,1) reshape
-  const Eigen::array<int, 2> bcast = {1, C};    // broadcast across C
+  // Reduce across columns (axis = 1)
+  const Eigen::array<int, 1> reduce_dim = {1};
+  const Eigen::array<Eigen::Index, 2> col_vec = {R, 1};  // (R,1)
+  const Eigen::array<Eigen::Index, 2> bcast   = {1, C};  // -> (R,C)
 
-  // 1) rowwise max for stability, reshape to (R,1), then broadcast to (R,C)
-  const auto row_max_bc = x.maximum(reduce_dim).reshape(col_vec).broadcast(bcast);
+  // 1) rowwise max (materialize!) -> reshape/broadcast
+  const auto row_max = x.maximum(reduce_dim).eval();
+  const auto row_max_bc = row_max.reshape(col_vec).broadcast(bcast);
 
   // 2) shift & exp
   const auto exp_shifted = (x - row_max_bc).exp();
 
-  // 3) rowwise sum, reshape/broadcast to (R,C)
-  const auto row_sum_bc = exp_shifted.sum(reduce_dim).reshape(col_vec).broadcast(bcast);
+  // 3) rowwise sum (materialize!) -> reshape/broadcast
+  const auto row_sum = exp_shifted.sum(reduce_dim).eval();
+  const auto row_sum_bc = row_sum.reshape(col_vec).broadcast(bcast);
 
-  // 4) normalize in place
+  // 4) normalize
   x = exp_shifted / row_sum_bc;
 }
 

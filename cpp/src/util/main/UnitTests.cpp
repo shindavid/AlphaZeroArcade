@@ -295,20 +295,40 @@ TEST(eigen_util, softmax_in_place) {
 }
 
 TEST(eigen_util, rowwise_softmax_in_place) {
-  constexpr int M = 2;
-  constexpr int N = 4;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+  {
+    constexpr int M = 2;
+    constexpr int N = 4;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
 
-  Tensor tensor;
-  tensor.setValues({{0, 1, 2, 3}, {1, 1, 1, 1}});
-  Tensor expected;
-  expected.setValues({{0.0320586, 0.0871443, 0.2368828, 0.6439143}, {0.25, 0.25, 0.25, 0.25}});
+    Tensor tensor;
+    tensor.setValues({{0, 1, 2, 3}, {1, 1, 1, 1}});
+    Tensor expected;
+    expected.setValues({{0.0320586, 0.0871443, 0.2368828, 0.6439143}, {0.25, 0.25, 0.25, 0.25}});
 
-  eigen_util::rowwise_softmax_in_place(tensor);
+    eigen_util::rowwise_softmax_in_place(tensor);
 
-  for (int i = 0; i < M; ++i) {
-    for (int j = 0; j < N; ++j) {
-      EXPECT_NEAR(tensor(i, j), expected(i, j), 1e-5);
+    for (int i = 0; i < M; ++i) {
+      for (int j = 0; j < N; ++j) {
+        EXPECT_NEAR(tensor(i, j), expected(i, j), 1e-5);
+      }
+    }
+  }
+  {
+    constexpr int M = 1;
+    constexpr int N = 2;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+    Tensor tensor;
+    tensor.setValues({{2, 0}});
+    Tensor expected;
+    expected.setValues({{0.8807971, 0.1192029}});
+
+    eigen_util::rowwise_softmax_in_place(tensor);
+
+    for (int i = 0; i < M; ++i) {
+      for (int j = 0; j < N; ++j) {
+        EXPECT_NEAR(tensor(i, j), expected(i, j), 1e-5);
+      }
     }
   }
 }
