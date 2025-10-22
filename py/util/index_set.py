@@ -94,7 +94,7 @@ class IndexSet:
         return int(np.count_nonzero(self.bits))
 
     def __repr__(self):
-        return f"IndexSet({list(self)})"
+        return f"IndexSet({list(map(int, self))})"
 
     def __array__(self, dtype=None, copy=True):
         return self.bits
