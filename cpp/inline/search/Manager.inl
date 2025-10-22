@@ -173,7 +173,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
       Node* child = lookup_table()->get_node(child_node_index);
       V = Game::GameResults::to_value_array(child->stable_data().R);
     }
-    action_values.chip(i, 0) = eigen_util::reinterpret_as_tensor(V);
+    action_values.chip(transformed_action, 0) = eigen_util::reinterpret_as_tensor(V);
     i++;
   }
 
