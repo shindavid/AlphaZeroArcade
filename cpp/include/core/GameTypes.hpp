@@ -46,7 +46,7 @@ struct GameTypes {
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
   using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
   using LocalActionValueArray =
-    Eigen::Array<float, Eigen::Dynamic, kNumPlayers, 0, kMaxBranchingFactor>;
+    Eigen::Array<float, Eigen::Dynamic, kNumPlayers, Eigen::RowMajor, kMaxBranchingFactor>;
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
