@@ -39,12 +39,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends git cmake build
     rm -rf /tmp/spdlog
 
 # 4) Python packages
+RUN pip3 install --pre --upgrade --force-reinstall --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/nightly/cu129 \
+    --constraint /dev/null torch torchvision torchaudio
+
 RUN pip3 install --no-cache-dir \
     ipython natsort tqdm termcolor cffi numpy matplotlib bokeh \
     scipy flask plotly dash packaging pygraphviz \
     google-cloud-compute google-api-python-client \
-    torch torchvision torchaudio notebook sortedcontainers \
-    runpod onnx
+    notebook sortedcontainers runpod onnx onnxscript onnxruntime
 
 # 5) Node.js via NodeSource (includes npm & npx)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
