@@ -1,4 +1,5 @@
 import atexit
+import contextlib
 from dataclasses import dataclass, field
 import datetime
 import logging
@@ -8,6 +9,71 @@ import queue
 import signal
 import sys
 from typing import List, Optional
+
+
+@contextlib.contextmanager
+def mute_everything():
+    """
+    Silences print() calls and logging.info() calls across threads.
+
+    - Automatically detects and pauses any active QueueListener threads.
+    - Flushes their queues before redirecting FDs.
+    - Restores everything afterward.
+    """
+    # --- Find and stop any active QueueListeners ---
+    active_listeners = []
+    for name, obj in logging.root.manager.loggerDict.items():
+        # loggerDict sometimes contains QueueListeners stored in custom places
+        if isinstance(obj, QueueListener):
+            active_listeners.append(obj)
+    # Also check the root namespace in case you attached a global _listener
+    for v in globals().values():
+        if isinstance(v, QueueListener):
+            active_listeners.append(v)
+
+    for lst in active_listeners:
+        try:
+            lst.stop()
+        except Exception:
+            pass
+
+    # --- Disable logging globally ---
+    prev_disable = logging.root.manager.disable
+    logging.disable(logging.INFO)
+
+    # --- Flush stdout/stderr before redirecting ---
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except Exception:
+            pass
+
+    # --- OS-level redirect of FDs 1 & 2 ---
+    devnull_fd = os.open(os.devnull, os.O_WRONLY)
+    saved_stdout_fd = os.dup(1)
+    saved_stderr_fd = os.dup(2)
+    os.dup2(devnull_fd, 1)
+    os.dup2(devnull_fd, 2)
+    os.close(devnull_fd)
+
+    try:
+        yield
+    finally:
+        # --- Restore FDs ---
+        os.dup2(saved_stdout_fd, 1)
+        os.dup2(saved_stderr_fd, 2)
+        os.close(saved_stdout_fd)
+        os.close(saved_stderr_fd)
+
+        # --- Re-enable logging ---
+        logging.disable(prev_disable)
+
+        # --- Restart previously active listeners ---
+        for lst in active_listeners:
+            try:
+                lst.start()
+            except Exception:
+                pass
 
 
 @dataclass
