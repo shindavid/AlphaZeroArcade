@@ -2,17 +2,19 @@ from shared.basic_types import ShapeInfoCollection
 from shared.model_config import ModelConfig
 from shared.net_modules import Head
 from util.graph_util import AdjMatrix, topological_sort
+from util.logging_util import mute_everything
 
 import numpy as np
 import onnx
 import torch
 from torch import nn as nn
+from torch.export import Dim
 
 import hashlib
 import io
 import logging
 import os
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +128,7 @@ class Model(nn.Module):
 
         input_names = ["input"]
         output_names = clone._head_names
-        dynamic_axes = {k:{0: "batch"} for k in input_names + output_names}
+        dynamic_shapes = ({0: Dim("batch")},)
 
         # 2) make an example‐input and ONNX‐export it
         batch_size = 1
@@ -135,15 +137,17 @@ class Model(nn.Module):
 
         # 3) Export to a temporary in-memory buffer
         buf = io.BytesIO()
-        torch.onnx.export(
-            clone, example_input, buf,
-            export_params=True,
-            opset_version=18,
-            input_names=input_names,
-            output_names=output_names,
-            dynamic_axes=dynamic_axes,
-            do_constant_folding=True,
-        )
+        with mute_everything():
+            torch.onnx.export(
+                clone, example_input, buf,
+                export_params=True,
+                opset_version=18,
+                input_names=input_names,
+                output_names=output_names,
+                dynamic_shapes=dynamic_shapes,
+                do_constant_folding=True,
+                verbose=False
+            )
 
         # 4) Add metadata
         model = onnx.load_from_string(buf.getvalue())
