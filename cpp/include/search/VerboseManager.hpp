@@ -23,7 +23,6 @@ struct VerboseManager {
 
  private:
   VerboseDataBase* verbose_data_ = nullptr;
-  int num_rows_to_display_ = -1;
   bool auto_terminal_printing_enabled_ = true;
 };
 
