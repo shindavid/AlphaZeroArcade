@@ -56,7 +56,8 @@ class Model(nn.Module):
         return adj_matrix
 
     def _compute_model_architecture_signature(self):
-        s = str(self) + '\n\n' + str(self._dag_indices)
+        components = [self, self._dag_indices, torch.__version__, onnx.__version__]
+        s = '\n'.join(str(c) for c in components)
         logger.debug('Computing model architecture signature: %s', s)
         return hashlib.md5(s.encode()).hexdigest()
 
