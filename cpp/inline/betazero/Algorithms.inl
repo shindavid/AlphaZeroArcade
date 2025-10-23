@@ -331,9 +331,9 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
 
     RELEASE_ASSERT(!pi_arr.hasNaN());
 
-    auto M = child_Qbeta_arr.matrix().transpose();
-    ValueArray piQbeta_sum = (M * pi_arr.matrix()).array();
-    ValueArray piQbeta_sq_sum = (M * M * pi_arr.matrix()).array();
+    ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
+    ValueArray piQbeta_sq_sum =
+      ((child_Qbeta_arr * child_Qbeta_arr).matrix().transpose() * pi_arr.matrix()).array();
     ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
 
     RELEASE_ASSERT(stable_data.R_valid);
