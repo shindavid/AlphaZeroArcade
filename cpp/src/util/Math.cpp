@@ -1,10 +1,5 @@
 #include "util/Math.hpp"
 
-#include "util/Exceptions.hpp"
-#include "util/StringUtil.hpp"
-
-#include <vector>
-
 namespace math {
 
 ExponentialDecay::ExponentialDecay(float value) : ExponentialDecay(value, value, 1.0) {}
