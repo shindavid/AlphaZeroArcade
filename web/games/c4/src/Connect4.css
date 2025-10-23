@@ -9,6 +9,8 @@
   vertical-align: middle;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  background-image: var(--disc, none);
   margin-right: 0.3em;
 }
 
