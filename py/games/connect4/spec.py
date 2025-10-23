@@ -100,7 +100,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
 
         assert value_shape == (3,), value_shape
         assert value_uncertainty_shape == (2,), value_uncertainty_shape
-        assert action_value_uncertainty_shape == (7,), action_value_uncertainty_shape
+        assert action_value_uncertainty_shape == (7, 2), action_value_uncertainty_shape
 
         c_trunk = 128
         c_mid = 128
