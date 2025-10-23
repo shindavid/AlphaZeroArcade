@@ -111,12 +111,18 @@ export default class Connect4App extends GameAppBase {
   renderAnimatedDisc() {
     const anim = this.state.animation;
     if (!anim || anim.col === null || anim.animRow === null || !anim.disc) return null;
+
+    // board layout constants (match CSS)
+    const CELL = 56; // px
+    const PAD_TOP = 20; // .board padding-top
+    const PAD_LEFT = 18; // .board padding-left
+
     return (
       <div
         className={`animated-disc ${anim.disc}`}
         style={{
-          gridRow: anim.animRow + 1,
-          gridColumn: anim.col + 1,
+          left: PAD_LEFT + anim.col * CELL,
+          top: PAD_TOP + anim.animRow * CELL,
           position: 'absolute',
         }}
       />
