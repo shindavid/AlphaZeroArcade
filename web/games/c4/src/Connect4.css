@@ -9,10 +9,17 @@
   vertical-align: middle;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  background-image: var(--disc, none);
   margin-right: 0.3em;
 }
 
-/* Animated disc overlay for drop animation */
+/*
+Animated disc overlay for drop animation
+
+NOTE: the width/height values here must match the constants used in renderAnimatedDisc()
+in Connect4.jsx
+*/
 .animated-disc {
   width: 56px;
   height: 56px;
@@ -25,7 +32,12 @@
   background-image: var(--disc, none);
 }
 
-/* Connect4 board styling */
+/*
+Connect4 board styling
+
+NOTE: the padding values here must match the constants used in renderAnimatedDisc()
+in Connect4.jsx
+*/
 .board {
   display: grid;
   grid-template-columns: repeat(7, 56px);
