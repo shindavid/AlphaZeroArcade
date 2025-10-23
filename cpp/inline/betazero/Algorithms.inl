@@ -390,10 +390,21 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   }
 
   math::finiteness_t finiteness_arr[arr_size];
-  bool any_pos_inf = 0;
+  bool any_pos_inf = false;
+  bool any_neg_inf = false;
   for (int i = 0; i < arr_size; i++) {
     finiteness_arr[i] = math::get_finiteness(theta_arr[i]);
     any_pos_inf |= (finiteness_arr[i] == math::kPosInf);
+    any_neg_inf |= (finiteness_arr[i] == math::kNegInf);
+  }
+
+  if (any_neg_inf) {
+    // Zero out pi values for all -inf theta actions
+    for (int i = 0; i < arr_size; i++) {
+      if (finiteness_arr[i] == math::kNegInf) {
+        pi_arr[i] = 0;
+      }
+    }
   }
 
   if (any_pos_inf) {
@@ -409,8 +420,6 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   math::finiteness_t finiteness_new = finiteness_arr[updated_edge_arr_index];
 
   if (finiteness_new == math::kNegInf) {
-    // Zero out the just-updated action
-    pi_arr[updated_edge_arr_index] = 0;
     return;
   }
 
