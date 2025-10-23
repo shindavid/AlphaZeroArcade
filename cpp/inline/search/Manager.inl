@@ -168,7 +168,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
     ValueArray V;
     if (child_node_index < 0) {
-      V = edge->child_Qbeta_snapshot;
+      V = edge->child_AV;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
       V = Game::GameResults::to_value_array(child->stable_data().R);

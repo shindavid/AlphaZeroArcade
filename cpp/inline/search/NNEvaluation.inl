@@ -25,6 +25,8 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
     if constexpr (Head::kGameResultBased) {
       Game::GameResults::right_rotate(src, active_seat);
     }
+
+    // TODO: do this right_rotate *after* the chip-loop, so we only rotate rows that we actually use
     if constexpr (Head::kWinShareBased) {
       eigen_util::right_rotate(src, active_seat);
     }
