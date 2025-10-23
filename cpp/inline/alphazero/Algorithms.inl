@@ -31,20 +31,10 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
 
   Derived::update_stats(stats, node, lookup_table_);
 
-  float child_Q_snapshot;
-  if (edge->child_index >= 0) {
-    Node* child = lookup_table_.get_node(edge->child_index);
-    child_Q_snapshot = child->safe_stats().Q[node->stable_data().active_seat];
-  }
+  lock.lock();
 
   // Carefully copy back fields of stats back to node->stats()
   // We don't copy counts, which may have been updated by other threads.
-  lock.lock();
-
-  if (edge->child_index >= 0) {
-    edge->child_Q_snapshot = child_Q_snapshot;
-  }
-
   int RN = node->stats().RN;
   int VN = node->stats().VN;
   node->stats() = stats;
@@ -241,7 +231,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     GameResultTensor R;
 
     LocalPolicyArray P_raw(n);
-    LocalActionValueArray child_V(n, Game::Constants::kNumPlayers);
+    LocalActionValueArray AV(n, Game::Constants::kNumPlayers);
 
     auto eval = item.eval();
 
@@ -250,7 +240,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     // TODO: we should be able to verify this assumption at compile-time
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
-    std::copy_n(eval->data(2), child_V.size(), child_V.data());
+    std::copy_n(eval->data(2), AV.size(), AV.data());
 
     LocalPolicyArray P_adjusted = P_raw;
     Derived::transform_policy(context, P_adjusted);
@@ -264,7 +254,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_prior_prob = P_raw[i];
       edge->adjusted_base_prob = P_adjusted[i];
-      edge->child_Q_snapshot = child_V.row(i);
+      edge->child_AV = AV.row(i);
     }
 
     ValueArray V = Game::GameResults::to_value_array(R);

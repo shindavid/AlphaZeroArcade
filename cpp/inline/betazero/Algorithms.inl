@@ -72,13 +72,13 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     int n = stable_data.num_valid_actions;
 
     ValueArray U;
-    LocalActionValueArray child_U(n, Game::Constants::kNumPlayers);
+    LocalActionValueArray AU(n, Game::Constants::kNumPlayers);
 
     // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
     //
     // TODO: we should be able to verify this assumption at compile-time
     std::copy_n(eval->data(3), U.size(), U.data());
-    std::copy_n(eval->data(4), child_U.size(), child_U.data());
+    std::copy_n(eval->data(4), AU.size(), AU.data());
 
     stable_data.U = U;
 
@@ -90,8 +90,8 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_posterior_prob = edge->policy_prior_prob;
-      edge->child_Qbeta_snapshot = edge->child_Q_snapshot;
-      edge->child_W_snapshot = child_U.row(i);
+      edge->child_Qbeta_snapshot = edge->child_AV;
+      edge->child_W_snapshot = AU.row(i);
     }
   }
 }
@@ -157,8 +157,8 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.value_prior = stable_data.R;
   results.action_mode = mode;
 
-  results.min_win_rates = stats.Q_min;
-  results.max_win_rates = stats.Q_max;
+  results.min_win_rates = stats.Qbeta_min;
+  results.max_win_rates = stats.Qbeta_max;
 
   check_values(results.min_win_rates, __LINE__);
   check_values(results.max_win_rates, __LINE__);
@@ -282,18 +282,19 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
                                                    LookupTable& lookup_table) {
   Base::update_stats(stats, node, lookup_table);  // writes stats.Q and stats.Q_sq
 
-  float old_child_Qbeta = edge->child_Qbeta_snapshot;
-  float old_child_W = edge->child_W_snapshot;
+  ValueArray old_child_Qbeta = edge->child_Qbeta_snapshot;
+  ValueArray old_child_W = edge->child_W_snapshot;
 
   const auto& stable_data = node->stable_data();
+  core::seat_index_t seat = stable_data.active_seat;
   int num_valid_actions = stable_data.num_valid_actions;
 
   if (stable_data.is_chance_node) {
     throw util::Exception("chance nodes not yet supported in beta0");
   } else {
     // read child stats and pi values into arrays to avoid repeated locking
-    LocalPolicyArray child_Qbeta_arr(num_valid_actions);
-    LocalPolicyArray child_W_arr(num_valid_actions);
+    LocalActionValueArray child_Qbeta_arr(num_valid_actions, kNumPlayers);
+    LocalActionValueArray child_W_arr(num_valid_actions, kNumPlayers);
 
     int updated_edge_arr_index = -1;
 
@@ -301,13 +302,13 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
       const Edge* child_edge = lookup_table.get_edge(node, i);  // TODO: make a safe copy
       const Node* child = lookup_table.get_node(child_edge->child_index);
       if (!child) {
-        child_Qbeta_arr[i] = child_edge->child_Qbeta_snapshot;
-        child_W_arr[i] = child_edge->child_W_snapshot;
+        child_Qbeta_arr.row(i) = child_edge->child_Qbeta_snapshot;
+        child_W_arr.row(i) = child_edge->child_W_snapshot;
       } else {
         const auto child_stats = child->stats_safe();  // make a copy
 
-        child_Qbeta_arr[i] = child_stats.Qbeta;
-        child_W_arr[i] = child_stats.W;
+        child_Qbeta_arr.row(i) = child_stats.Qbeta;
+        child_W_arr.row(i) = child_stats.W;
 
         if (child_edge == edge) {
           updated_edge_arr_index = i;
@@ -319,7 +320,8 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
 
     // compute posterior policy
     Derived::update_policy(pi_arr, node, edge, lookup_table, updated_edge_arr_index,
-                           old_child_Qbeta, old_child_W, child_Qbeta_arr, child_W_arr);
+                           old_child_Qbeta[seat], old_child_W[seat], child_Qbeta_arr.col(seat),
+                           child_W_arr.col(seat));
 
     // renormalize pi_arr
     float pi_sum = pi_arr.sum();
@@ -329,9 +331,9 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
 
     RELEASE_ASSERT(!pi_arr.hasNaN());
 
-    // TODO: this part doesn't work, it assumes we have 2D child {Qbeta, W} arrays, but currently
-    // this is collapsed to show just 1 player's info. This part needs fixing.
-    ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
+    auto M = child_Qbeta_arr.matrix().transpose();
+    ValueArray piQbeta_sum = (M * pi_arr.matrix()).array();
+    ValueArray piQbeta_sq_sum = (M * M * pi_arr.matrix()).array();
     ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
 
     RELEASE_ASSERT(stable_data.R_valid);
@@ -340,9 +342,20 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
     int N = stats.RN;
     RELEASE_ASSERT(N > 0);
 
+    // Qbeta is computed as a weighted average of V (the prior value) and piQbeta_sum (the expected
+    // value from children), with weights proportional to N * U (the prior-uncertainty scaled by N)
+    // and piW_sum (the expected uncertainty from children). This balances the influence of the
+    // prior and evidence obtained from children, gradually decaying the influence of the prior as N
+    // increases.
+    //
+    // Should something similar be done for W? Currently, W is just the expected uncertainty from
+    // children, and the prior uncertainty U is not directly incorporated into W. We're not ignoring
+    // U entirely, since U influences the weight given to V in the Qbeta calculation. But it's being
+    // ignored for the uncertainty calculation itself.
+
     ValueArray denom = piW_sum + U * N;
     ValueArray Qbeta = (V * piW_sum + U * N * piQbeta_sum) / denom;
-    ValueArray W = piW_sum + piQbeta_sum - Qbeta * Qbeta;
+    ValueArray W = piW_sum + piQbeta_sq_sum - Qbeta * Qbeta;
     W = W.cwiseMax(0.f);  // numerical stability
 
     stats.Qbeta = Qbeta;
@@ -362,9 +375,6 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   // Throughout this function, theta and omega_sq represent the mean and variance of the value
   // distribution in an idealized logistic-normal model of the value distribution.
 
-  const auto& stable_data = node->stable_data();
-  core::seat_index_t seat = stable_data.active_seat;
-
   int arr_size = pi_arr.size();
   RELEASE_ASSERT(updated_edge_arr_index >= 0 && updated_edge_arr_index < arr_size);
 
@@ -376,7 +386,7 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   LocalPolicyArray omega_sq_arr(arr_size);
 
   for (int i = 0; i < arr_size; i++) {
-    compute_theta_omega_sq(child_Qbeta_arr[i], child_W_arr[i], seat, theta_arr[i], omega_sq_arr[i]);
+    compute_theta_omega_sq(child_Qbeta_arr[i], child_W_arr[i], theta_arr[i], omega_sq_arr[i]);
   }
 
   math::finiteness_t finiteness_arr[arr_size];
@@ -432,7 +442,6 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
 
   LocalPolicyArray alpha_arr(arr_size);
   LocalPolicyArray beta_arr(arr_size);
-
   alpha_arr.setConstant(1);
   beta_arr.setZero();
 
@@ -487,23 +496,26 @@ void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(float Qbeta, float 
   constexpr float kMin = Game::GameResults::kMinValue;
   constexpr float kMax = Game::GameResults::kMaxValue;
 
-  float mu = Qbeta;
-
-  if (mu == kMin) {
+  if (Qbeta <= kMin) {
     theta = -std::numeric_limits<float>::infinity();
     omega_sq = 0;
     return;
-  } else if (mu == kMax) {
+  } else if (Qbeta >= kMax) {
     theta = +std::numeric_limits<float>::infinity();
     omega_sq = 0;
     return;
   }
 
-  mu = (mu - kMin) / (kMax - kMin);  // rescale to [0, 1]
-  mu = std::min(std::max(mu, 0.0f), 1.0f);
+  float mu = Qbeta;
 
+  // Rescale Qbeta to [0, 1]
+  mu = (mu - kMin) / (kMax - kMin);
+  mu = std::max(0.0f, std::min(1.0f, mu));
+
+  // Rescale W to variance in [0, 1]
   float sigma_sq = W;
-  sigma_sq /= (kMax - kMin) * (kMax - kMin);  // rescale to [0, 1]
+  sigma_sq /= (kMax - kMin) * (kMax - kMin);
+  sigma_sq = std::max(0.0f, std::min(1.0f, sigma_sq));
 
   // TODO: cache theta/omega_sq values in NodeStats to avoid recomputation
 

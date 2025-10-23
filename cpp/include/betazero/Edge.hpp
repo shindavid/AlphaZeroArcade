@@ -27,6 +27,9 @@ struct Edge : public alpha0::Edge<EvalSpec> {
   //
   // Note that in alpha0, the only child-stat that needed such tracking was RN, and Edge::E served
   // that purpose.
+  //
+  // The word "snapshot" is used to emphasize that these fields may be out-of-date, due to MCTS's
+  // move transposition mechanism.
   ValueArray child_Qbeta_snapshot;
   ValueArray child_W_snapshot;
 };

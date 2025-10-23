@@ -40,8 +40,10 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using ValueArray = Base::ValueArray;
   using player_bitset_t = Base::player_bitset_t;
 
-  using ValueArray2D = Eigen::Array<float, Eigen::Dynamic, Game::Constants::kNumPlayers, 0,
-                                    Game::Constants::kMaxBranchingFactor>;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
+
+  using ValueArray2D = Eigen::Array<float, Eigen::Dynamic, kNumPlayers, 0, kMaxBranchingFactor>;
 
   class Backpropagator {
    public:
