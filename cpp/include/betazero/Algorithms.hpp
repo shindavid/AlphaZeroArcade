@@ -25,6 +25,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using GameLogFullRecord = Base::GameLogFullRecord;
   using GameLogView = Base::GameLogView;
   using GameLogViewParams = Base::GameLogViewParams;
+  using GameResultTensor = Base::GameResultTensor;
   using GeneralContext = Base::GeneralContext;
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LocalPolicyArray = Base::LocalPolicyArray;
@@ -35,6 +36,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using RootInfo = Base::RootInfo;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
+  using State = Base::State;
   using TrainingInfo = Base::TrainingInfo;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;
