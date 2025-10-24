@@ -2,13 +2,13 @@
 
 #include "core/Constants.hpp"
 #include "search/SearchRequest.hpp"
+#include "search/VerboseManager.hpp"
 #include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/KeyValueDumper.hpp"
 #include "util/Math.hpp"
 #include "util/Random.hpp"
-#include "util/ScreenUtil.hpp"
 
 #include <unistd.h>
 

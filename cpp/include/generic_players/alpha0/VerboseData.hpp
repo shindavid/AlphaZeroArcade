@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "search/VerboseDataBase.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
@@ -12,7 +11,7 @@ struct VerboseData : public VerboseDataBase {
   using Game = Traits::Game;
   using IO = Game::IO;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using SearchResults = ::alpha0::SearchResults<Game>;
+  using SearchResults = Traits::SearchResults;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   VerboseData(int n_rows_to_display) : n_rows_to_display_(n_rows_to_display) {}

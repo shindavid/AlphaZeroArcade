@@ -9,7 +9,6 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/VerboseManager.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
