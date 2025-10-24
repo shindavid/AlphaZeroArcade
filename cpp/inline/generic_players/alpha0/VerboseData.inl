@@ -1,6 +1,8 @@
 #include "generic_players/alpha0/VerboseData.hpp"
 #include "util/EigenUtil.hpp"
 
+#include <iostream>
+
 namespace generic::alpha0 {
 
 template <search::concepts::Traits Traits>
