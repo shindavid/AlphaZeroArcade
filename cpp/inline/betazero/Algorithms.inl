@@ -4,6 +4,7 @@
 #include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Math.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <limits>
 
@@ -55,6 +56,41 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   node->stats().RN = RN;
   node->stats().VN = VN;
   lock.unlock();
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_edge_from_child(const GeneralContext& general_context,
+                                                           Node* parent, Edge* edge) {
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const Node* child = lookup_table.get_node(edge->child_index);
+  if (!child) return;
+
+  if (&parent->mutex() == &child->mutex()) {
+    // parent and child are sharing the same mutex (this happens because mutexes are allocated from
+    // a pool).
+    //
+    // Only lock the parent's mutex once.
+    mit::unique_lock lock(parent->mutex());
+    const NodeStats& child_stats = child->stats();  // does not acquire child mutex
+    edge->child_Qbeta_snapshot = child_stats.Qbeta;
+    edge->child_W_snapshot = child_stats.W;
+  } else {
+    NodeStats child_stats = child->stats_safe();  // copy
+    mit::unique_lock lock(parent->mutex());
+    edge->child_Qbeta_snapshot = child_stats.Qbeta;
+    edge->child_W_snapshot = child_stats.W;
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) {
+  Base::init_node_stats_from_terminal(node);
+
+  NodeStats& stats = node->stats();
+  stats.Qbeta = stats.Q;
+  stats.Qbeta_min = stats.Q;
+  stats.Qbeta_max = stats.Q;
+  stats.W.fill(0.f);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -160,6 +196,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.min_win_rates = stats.Qbeta_min;
   results.max_win_rates = stats.Qbeta_max;
 
+  check_values(results.policy_target, __LINE__);
   check_values(results.min_win_rates, __LINE__);
   check_values(results.max_win_rates, __LINE__);
   check_values(results.action_value_uncertainties, __LINE__);
@@ -178,6 +215,8 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
     training_info.Q_max(p) = mcts_results->max_win_rates[p];
   }
 
+  check_values(training_info.policy_target, __LINE__);
+  check_values(training_info.action_values_target, __LINE__);
   check_values(training_info.Q_min, __LINE__);
   check_values(training_info.Q_max, __LINE__);
 
@@ -197,6 +236,8 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   full_record.Q_min = training_info.Q_min;
   full_record.Q_max = training_info.Q_max;
 
+  check_values(full_record.policy_target, __LINE__);
+  check_values(full_record.action_values, __LINE__);
   check_values(full_record.Q_min, __LINE__);
   check_values(full_record.Q_max, __LINE__);
 
@@ -224,6 +265,8 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
 
   check_values(compact_record.Q_min, __LINE__);
   check_values(compact_record.Q_max, __LINE__);
+  check_values(full_record.policy_target, __LINE__);
+  check_values(full_record.action_values, __LINE__);
   check_values(full_record.action_value_uncertainties, __LINE__);
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
@@ -302,11 +345,14 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
 
+  check_values(view.policy, __LINE__);
+  check_values(view.action_values, __LINE__);
+  check_values(view.action_value_uncertainties, __LINE__);
   check_values(view.Q_min, __LINE__);
   check_values(view.Q_max, __LINE__);
+  check_values(view.action_values, __LINE__);
   check_values(view.action_value_uncertainties, __LINE__);
 }
-
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,

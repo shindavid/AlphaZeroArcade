@@ -58,6 +58,8 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
     LookupTable& lookup_table_;
   };
 
+  static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge);
+  static void init_node_stats_from_terminal(Node* node);
   static void load_evaluations(SearchContext& context);
 
   static void to_results(const GeneralContext&, SearchResults&);

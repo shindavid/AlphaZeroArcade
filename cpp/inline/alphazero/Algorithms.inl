@@ -61,10 +61,6 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {
   NodeStats& stats = node->stats();
-  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
-
-  stats.Q = q;
-  stats.Q_sq = q * q;
   stats.RN++;
   stats.VN -= undo_virtual;
 }
