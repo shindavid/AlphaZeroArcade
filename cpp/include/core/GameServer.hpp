@@ -383,9 +383,7 @@ class GameServer
    *
    * Takes ownership of the pointer.
    */
-  void register_player(seat_index_t seat, PlayerGenerator* gen) {
-    shared_data_.register_player(seat, gen);
-  }
+  void register_player(seat_index_t seat, PlayerGenerator* gen);
 
   /*
    * Blocks until all players have registered.
