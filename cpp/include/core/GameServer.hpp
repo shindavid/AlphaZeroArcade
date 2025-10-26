@@ -126,6 +126,7 @@ class GameServer
     bool print_game_states = false;      // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
+    bool analysis_mode = false;          // external controller steps through the game
 
     // The game server can choose to alternate between players, like so:
     //
