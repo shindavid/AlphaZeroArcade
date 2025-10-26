@@ -90,7 +90,10 @@ auto GameServer<Game>::Params::make_options_description() {
       "ignore imminent victory claims from players")
     .template add_option<"alternating-mode">(
       po::value<int>(&alternating_mode)->default_value(alternating_mode),
-      "alternating mode (0: disable, 1: auto-enable, 2: enable)");
+      "alternating mode (0: disable, 1: auto-enable, 2: enable)")
+    .template add_option<"analysis-mode">(
+      boost::program_options::bool_switch(&analysis_mode)->default_value(analysis_mode),
+      "enable analysis mode where the stepping of a game is controlled externally");
 }
 
 template <concepts::Game Game>
