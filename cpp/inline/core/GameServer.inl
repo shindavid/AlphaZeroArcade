@@ -383,11 +383,6 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::register_player(seat_index_t seat, PlayerGenerator* gen) {
-  shared_data_.register_player(seat, gen);
-}
-
-template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
                                                    bool implicit_remote) {
   CLEAN_ASSERT(seat < kNumPlayers, "Invalid seat number {}", seat);
