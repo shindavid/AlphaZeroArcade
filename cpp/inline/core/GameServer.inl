@@ -5,6 +5,7 @@
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
+#include "generic_players/AnalysisPlayer.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -669,7 +670,12 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
     : shared_data_(shared_data), id_(id) {
   bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
-    instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
+    PlayerInstantiation instantiation = shared_data_.registration_templates()[p].instantiate(id);
+    if (params().analysis_mode) {
+      auto analysis_player = new generic::AnalysisPlayer<Game>(instantiation.player);
+      instantiation.player = analysis_player;
+    }
+    instantiations_[p] = instantiation;
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
   }
 
