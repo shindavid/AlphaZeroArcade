@@ -67,4 +67,14 @@ constexpr T round_up_to_nearest_multiple(T value, T multiple) {
   return ((value + multiple - 1) / multiple) * multiple;
 }
 
+// Returns the logit difference of the normal CDF for two z-scores. In other words, returns
+// log(p / (1 - p)) - log(q / (1 - q)), where p = Phi(z_new) and q = Phi(z_old).
+//
+// Performs this calculation in a numerically stable manner. Even if z_new and z_old are large
+// positive or negative numbers, the result should be accurate as long as the logit difference
+// itself is not extremely large or small.
+double normal_cdf_logit_diff(double z_new, double z_old);
+
 }  // namespace math
+
+#include "inline/util/Math.inl"

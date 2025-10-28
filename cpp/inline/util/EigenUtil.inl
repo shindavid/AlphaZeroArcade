@@ -8,6 +8,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include <cstdint>
+#include <type_traits>
 
 namespace eigen_util {
 
@@ -203,6 +204,13 @@ auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix, bool ascendin
     out.row(i) = rows[i];
   }
   return out;
+}
+
+template <class Derived>
+void softmax_in_place(Eigen::ArrayBase<Derived>& a) {
+  auto& x = static_cast<Derived&>(a);
+  x = (x - x.maxCoeff()).exp();
+  x = x / x.sum();
 }
 
 template <class Derived>
@@ -707,9 +715,22 @@ boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
 template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest) {
+  static_assert((std::is_same_v<std::integral_constant<int, Derived0::ColsAtCompileTime>,
+                                std::integral_constant<int, Deriveds::ColsAtCompileTime>> &&
+                 ...));
+  static_assert((std::is_same_v<std::integral_constant<int, Derived0::RowsAtCompileTime>,
+                                std::integral_constant<int, Deriveds::RowsAtCompileTime>> &&
+                 ...));
+  static_assert((std::is_same_v<std::integral_constant<int, Derived0::Options>,
+                                std::integral_constant<int, Deriveds::Options>> &&
+                 ...));
+  static_assert((std::is_same_v<std::integral_constant<int, Derived0::MaxRowsAtCompileTime>,
+                                std::integral_constant<int, Deriveds::MaxRowsAtCompileTime>> &&
+                 ...));
+  static_assert((std::is_same_v<std::integral_constant<int, Derived0::MaxColsAtCompileTime>,
+                                std::integral_constant<int, Deriveds::MaxColsAtCompileTime>> &&
+                 ...));
   static_assert(Derived0::ColsAtCompileTime == 1);
-  static_assert((std::is_same_v<Derived0, Deriveds> && ...),
-                "All arguments must be of the same type");
 
   constexpr int num_arrays = sizeof...(rest) + 1;
   const int rows = first.rows();
@@ -717,7 +738,7 @@ auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
   bool sizes_match = (... && (rest.rows() == rows));
   RELEASE_ASSERT(sizes_match, "All arrays must have the same number of rows");
 
-  using Scalar = Derived0::Scalar;
+  using Scalar = std::common_type_t<typename Derived0::Scalar, typename Deriveds::Scalar...>;
   constexpr int ColsAtCompileTime = num_arrays;
   constexpr int RowsAtCompileTime = Derived0::RowsAtCompileTime;
   constexpr int Options = Derived0::Options;
@@ -728,9 +749,9 @@ auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
 
   ResultT result(rows, num_arrays);
 
-  result.col(0) = first;
+  result.col(0) = first.template cast<Scalar>();
   int col_idx = 1;
-  (..., (result.col(col_idx++) = rest));  // Unpack and assign the arrays
+  (..., (result.col(col_idx++) = rest.template cast<Scalar>()));  // Unpack and assign the arrays
 
   return result;
 }

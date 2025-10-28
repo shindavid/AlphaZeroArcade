@@ -6,7 +6,6 @@ add_library(util_core_objs OBJECT
   util/BoostUtil.cpp
   util/CudaUtil.cpp
   util/GTestUtil.cpp
-  util/Math.cpp
   util/SocketUtil.cpp
 )
 set_target_properties(util_core_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
