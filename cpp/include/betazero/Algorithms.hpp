@@ -42,10 +42,9 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using ValueArray = Base::ValueArray;
   using player_bitset_t = Base::player_bitset_t;
 
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
+  using LocalPolicyArrayDouble = Game::Types::LocalPolicyArrayDouble;
 
-  using ValueArray2D = Eigen::Array<float, Eigen::Dynamic, kNumPlayers, 0, kMaxBranchingFactor>;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   class Backpropagator {
    public:
@@ -55,11 +54,20 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
     void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
 
    private:
+    void update_edge_snapshots(Node* parent, Edge* edge, bool load_prev_snapshots = false);
+    void update_edge_snapshots_helper(const NodeStats& child_stats, Edge* edge,
+                                      bool load_edge_snapshots_before_update);
+
     LookupTable& lookup_table_;
+    ValueArray last_child_Qbeta_snapshot_;
+    ValueArray last_child_W_snapshot_;
+    bool snapshots_set_ = false;
   };
 
   static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge);
   static void init_node_stats_from_terminal(Node* node);
+  static void undo_virtual_update(Node* node, Edge* edge);
+
   static void load_evaluations(SearchContext& context);
 
   static void to_results(const GeneralContext&, SearchResults&);
@@ -69,7 +77,9 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(NodeStats& stats, LocalPolicyArray& pi_arr, const Node* node,
+  static void update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,
+                           const ValueArray& last_child_Qbeta_snapshot,
+                           const ValueArray& last_child_W_snapshot, const Node* node,
                            const Edge* edge, LookupTable& lookup_table);
 
   // Updates pi_arr in-place to be the posterior policy
@@ -79,7 +89,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
                             const LocalPolicyArray& child_Qbeta_arr,
                             const LocalPolicyArray& child_W_arr);
 
-  static void compute_theta_omega_sq(float Qbeta, float W, float& theta, float& omega_sq);
+  static void compute_theta_omega_sq(double Qbeta, double W, double& theta, double& omega_sq);
 };
 
 template <search::concepts::Traits Traits>

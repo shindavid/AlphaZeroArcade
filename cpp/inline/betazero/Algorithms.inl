@@ -2,13 +2,30 @@
 
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
+#include <cmath>
 #include <limits>
 
 namespace beta0 {
+
+namespace detail {
+
+// Your alpha, computed without forming p or q:
+inline double alpha_from_thetas(double theta_old, double omega_sq_old, double theta_new,
+                                double omega_sq_new, double theta_i, double omega_sq_i) {
+  const double z_old = (theta_old - theta_i) /
+                       std::sqrt(omega_sq_old + omega_sq_i);
+  const double z_new = (theta_new - theta_i) /
+                       std::sqrt(omega_sq_new + omega_sq_i);
+
+  return math::normal_cdf_logit_diff(z_new, z_old);
+}
+
+}  // namespace detail
 
 template <typename T>
 void check_values(const T& t, int line) {
@@ -27,9 +44,31 @@ template <typename MutexProtectedFunc>
 void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge,
                                                           MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
+  // LOG_INFO("Backpropagator::run()");
   func();
-  if (!edge) return;
+  if (!snapshots_set_) {
+    if (edge) {
+      // This corresponds to the short-circuit-backprop or undo-virtual-backprop case.
+      update_edge_snapshots(node, edge, true);
+    } else {
+      last_child_Qbeta_snapshot_ = node->stats().Qbeta;
+      last_child_W_snapshot_ = node->stats().W;
+      snapshots_set_ = true;
+      // LOG_INFO("Updating snapshots @{}:", __LINE__);
+      // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
+      //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
+      // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
+      return;
+    }
+  } else {
+    RELEASE_ASSERT(edge, "unexpected null edge on subsequent Backpropagator::run() call");
+  }
+
+  RELEASE_ASSERT(snapshots_set_);
   NodeStats stats = node->stats();  // copy
+
+  ValueArray tmp_last_child_Qbeta_snapshot = stats.Qbeta;
+  ValueArray tmp_last_child_W_snapshot = stats.W;
 
   int num_valid_actions = node->stable_data().num_valid_actions;
   LocalPolicyArray pi_arr(num_valid_actions);
@@ -39,16 +78,30 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   }
   lock.unlock();
 
-  update_stats(stats, pi_arr, node, edge, lookup_table_);
+  Derived::update_stats(stats, pi_arr, last_child_Qbeta_snapshot_, last_child_W_snapshot_, node,
+                        edge, lookup_table_);
+
+  // LOG_INFO("Update result:");
+  // LOG_INFO("Qbeta = {} -> {}", fmt::streamed(tmp_last_child_Qbeta_snapshot.transpose()),
+  //          fmt::streamed(stats.Qbeta.transpose()));
+  // LOG_INFO("W = {} -> {}", fmt::streamed(tmp_last_child_W_snapshot.transpose()),
+  //          fmt::streamed(stats.W.transpose()));
 
   lock.lock();
 
+  update_edge_snapshots(node, edge);
+  last_child_Qbeta_snapshot_ = tmp_last_child_Qbeta_snapshot;
+  last_child_W_snapshot_ = tmp_last_child_W_snapshot;
+  // LOG_INFO("Updating snapshots @{}:", __LINE__);
+  // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
+  //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
+  // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
   for (int i = 0; i < num_valid_actions; i++) {
     Edge* child_edge = lookup_table_.get_edge(node, i);
     child_edge->policy_posterior_prob = pi_arr[i];
   }
 
-  // Carefully copy back fields of stats back to node->stats()
+  // Carefully copy fields of stats back to node->stats()
   // We don't copy counts, which may have been updated by other threads.
   int RN = node->stats().RN;
   int VN = node->stats().VN;
@@ -56,6 +109,41 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   node->stats().RN = RN;
   node->stats().VN = VN;
   lock.unlock();
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::Backpropagator::update_edge_snapshots(
+  Node* parent, Edge* edge, bool load_edge_snapshots_before_update) {
+  // Like Algorithsm::init_edge_from_child(), but assumes parent mutex is already held
+
+  const Node* child = lookup_table_.get_node(edge->child_index);
+  if (!child) return;
+
+  if (&parent->mutex() == &child->mutex()) {
+    // parent and child are sharing the same mutex (this happens because mutexes are allocated from
+    // a pool).
+    const NodeStats& child_stats = child->stats();  // do not acquire child mutex
+    update_edge_snapshots_helper(child_stats, edge, load_edge_snapshots_before_update);
+  } else {
+    NodeStats child_stats = child->stats_safe();  // acquire child mutex and make a copy
+    update_edge_snapshots_helper(child_stats, edge, load_edge_snapshots_before_update);
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::Backpropagator::update_edge_snapshots_helper(
+  const NodeStats& child_stats, Edge* edge, bool load_edge_snapshots_before_update) {
+  if (load_edge_snapshots_before_update) {
+    last_child_Qbeta_snapshot_ = edge->child_Qbeta_snapshot;
+    last_child_W_snapshot_ = edge->child_W_snapshot;
+    snapshots_set_ = true;
+    // LOG_INFO("Updating snapshots @{}:", __LINE__);
+    // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
+    //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
+    // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
+  }
+  edge->child_Qbeta_snapshot = child_stats.Qbeta;
+  edge->child_W_snapshot = child_stats.W;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -68,8 +156,6 @@ void AlgorithmsBase<Traits, Derived>::init_edge_from_child(const GeneralContext&
   if (&parent->mutex() == &child->mutex()) {
     // parent and child are sharing the same mutex (this happens because mutexes are allocated from
     // a pool).
-    //
-    // Only lock the parent's mutex once.
     mit::unique_lock lock(parent->mutex());
     const NodeStats& child_stats = child->stats();  // does not acquire child mutex
     edge->child_Qbeta_snapshot = child_stats.Qbeta;
@@ -94,6 +180,11 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
 }
 
 template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::undo_virtual_update(Node* node, Edge* edge) {
+  throw util::CleanException("virtual updates not yet support in beta0");
+}
+
+template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   Base::load_evaluations(context);
 
@@ -108,7 +199,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     int n = stable_data.num_valid_actions;
 
     ValueArray U;
-    LocalActionValueArray AU(n, Game::Constants::kNumPlayers);
+    LocalActionValueArray AU(n, kNumPlayers);
 
     // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
     //
@@ -209,7 +300,7 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
 
   const SearchResults* mcts_results = params.mcts_results;
 
-  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+  for (int p = 0; p < kNumPlayers; ++p) {
     training_info.Q_posterior(p) = mcts_results->win_rates[p];
     training_info.Q_min(p) = mcts_results->min_win_rates[p];
     training_info.Q_max(p) = mcts_results->max_win_rates[p];
@@ -356,12 +447,11 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,
+                                                   const ValueArray& last_child_Qbeta_snapshot,
+                                                   const ValueArray& last_child_W_snapshot,
                                                    const Node* node, const Edge* edge,
                                                    LookupTable& lookup_table) {
   Base::update_stats(stats, node, lookup_table);  // writes stats.Q and stats.Q_sq
-
-  ValueArray old_child_Qbeta = edge->child_Qbeta_snapshot;
-  ValueArray old_child_W = edge->child_W_snapshot;
 
   const auto& stable_data = node->stable_data();
   core::seat_index_t seat = stable_data.active_seat;
@@ -398,16 +488,18 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
 
     // compute posterior policy
     Derived::update_policy(pi_arr, node, edge, lookup_table, updated_edge_arr_index,
-                           old_child_Qbeta[seat], old_child_W[seat], child_Qbeta_arr.col(seat),
-                           child_W_arr.col(seat));
+                           last_child_Qbeta_snapshot[seat], last_child_W_snapshot[seat],
+                           child_Qbeta_arr.col(seat), child_W_arr.col(seat));
 
     // renormalize pi_arr
     float pi_sum = pi_arr.sum();
     if (pi_sum > 0.f) {
       pi_arr *= 1.0 / pi_sum;
+    } else {
+      pi_arr.fill(1.0f / num_valid_actions);
     }
 
-    RELEASE_ASSERT(!pi_arr.hasNaN());
+    check_values(pi_arr, __LINE__);
 
     ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
     ValueArray piQbeta_sq_sum =
@@ -433,8 +525,28 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
 
     ValueArray denom = piW_sum + U * N;
     ValueArray Qbeta = (V * piW_sum + U * N * piQbeta_sum) / denom;
-    ValueArray W = piW_sum + piQbeta_sq_sum - Qbeta * Qbeta;
+    ValueArray W = piW_sum + piQbeta_sq_sum - piQbeta_sum * piQbeta_sum;
+    // ValueArray rawW = W;
     W = W.cwiseMax(0.f);  // numerical stability
+
+    // fix-up for imprecision when piW_sum is zero
+    for (int p = 0; p < kNumPlayers; ++p) {
+      if (piW_sum[p] == 0) {
+        W[p] = 0;
+      }
+    }
+
+    // LOG_INFO("Qbeta update:");
+    // LOG_INFO("  N: {}", N);
+    // LOG_INFO("  V: {}", fmt::streamed(V.transpose()));
+    // LOG_INFO("  U: {}", fmt::streamed(U.transpose()));
+    // LOG_INFO("  pi: {}", fmt::streamed(pi_arr.transpose()));
+    // LOG_INFO("  piQbeta_sum: {}", fmt::streamed(piQbeta_sum.transpose()));
+    // LOG_INFO("  piQbeta_sq_sum: {}", fmt::streamed(piQbeta_sq_sum.transpose()));
+    // LOG_INFO("  piW_sum: {}", fmt::streamed(piW_sum.transpose()));
+    // LOG_INFO("  Qbeta: {}", fmt::streamed(Qbeta.transpose()));
+    // LOG_INFO("  rawW: {}", fmt::streamed(rawW.transpose()));
+    // LOG_INFO("  W: {}", fmt::streamed(W.transpose()));
 
     stats.Qbeta = Qbeta;
     stats.Qbeta_min = stats.Qbeta_min.min(Qbeta);
@@ -453,15 +565,35 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   // Throughout this function, theta and omega_sq represent the mean and variance of the value
   // distribution in an idealized logistic-normal model of the value distribution.
 
+  // LOG_INFO("*** DBG update_policy() ***");
+  // LOG_INFO("old_child_Qbeta: {}", old_child_Qbeta);
+  // LOG_INFO("old_child_W: {}", old_child_W);
+  // LOG_INFO("updated-edge: {}", updated_edge_arr_index);
+
+  // LocalPolicyArray E_arr = pi_arr;
+  // LocalPolicyArray child_Q_arr = pi_arr;
+  // LocalPolicyArray dbg_pi_prior = pi_arr;
+
   int arr_size = pi_arr.size();
   RELEASE_ASSERT(updated_edge_arr_index >= 0 && updated_edge_arr_index < arr_size);
 
-  float theta_old;
-  float omega_sq_old;
+  // auto seat = node->stable_data().active_seat;
+  // for (int i = 0; i < arr_size; i++) {
+  //   Edge* child_edge = lookup_table.get_edge(node, i);
+  //   E_arr[i] = child_edge->E;
+  //   Node* child = lookup_table.get_node(child_edge->child_index);
+  //   child_Q_arr[i] = child ? child->stats_safe().Q(seat) : child_edge->child_AV[seat];
+  // }
+
+  double theta_old;
+  double omega_sq_old;
   compute_theta_omega_sq(old_child_Qbeta, old_child_W, theta_old, omega_sq_old);
 
-  LocalPolicyArray theta_arr(arr_size);
-  LocalPolicyArray omega_sq_arr(arr_size);
+  // LOG_INFO("theta_old: {}", theta_old);
+  // LOG_INFO("omega_sq_old: {}", omega_sq_old);
+
+  LocalPolicyArrayDouble theta_arr(arr_size);
+  LocalPolicyArrayDouble omega_sq_arr(arr_size);
 
   for (int i = 0; i < arr_size; i++) {
     compute_theta_omega_sq(child_Qbeta_arr[i], child_W_arr[i], theta_arr[i], omega_sq_arr[i]);
@@ -490,14 +622,32 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
     for (int i = 0; i < arr_size; i++) {
       pi_arr[i] = (finiteness_arr[i] == math::kPosInf) ? 1.0f : 0.f;
     }
+    // LOG_INFO("skipping update_policy due to +inf theta");
+    // std::stringstream ss;
+    // auto action_data =
+    //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
+    //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
+    // static std::vector<std::string> action_columns = {
+    //   "pi-prior", "E", "child_Q", "child_Qbeta", "child_W", "theta", "omega_sq", "pi-posterior"};
+    // eigen_util::print_array(ss, action_data, action_columns);
+    // LOG_INFO("\n{}", ss.str());
     return;
   }
 
-  float theta_new = theta_arr[updated_edge_arr_index];
-  float omega_sq_new = omega_sq_arr[updated_edge_arr_index];
+  double theta_new = theta_arr[updated_edge_arr_index];
+  double omega_sq_new = omega_sq_arr[updated_edge_arr_index];
   math::finiteness_t finiteness_new = finiteness_arr[updated_edge_arr_index];
 
   if (finiteness_new == math::kNegInf) {
+    // LOG_INFO("skipping update_policy due to -inf theta");
+    // std::stringstream ss;
+    // auto action_data =
+    //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
+    //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
+    // static std::vector<std::string> action_columns = {
+    //   "pi-prior", "E", "child_Q", "child_Qbeta", "child_W", "theta", "omega_sq", "pi-posterior"};
+    // eigen_util::print_array(ss, action_data, action_columns);
+    // LOG_INFO("\n{}", ss.str());
     return;
   }
 
@@ -511,10 +661,30 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
         if (theta_arr[i] > theta_new) {
           // dominated
           pi_arr[updated_edge_arr_index] = 0;
+          // LOG_INFO("skipping update_policy due to domination");
+          // std::stringstream ss;
+          // auto action_data =
+          //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
+          //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
+          // static std::vector<std::string> action_columns = {"pi-prior",    "E",           "child_Q",
+          //                                                   "child_Qbeta", "child_W",     "theta",
+          //                                                   "omega_sq",    "pi-posterior"};
+          // eigen_util::print_array(ss, action_data, action_columns);
+          // LOG_INFO("\n{}", ss.str());
           return;
         } else if (theta_arr[i] == theta_new) {
           // tie
           pi_arr[updated_edge_arr_index] = pi_arr[i];
+          // LOG_INFO("skipping update_policy due to tie");
+          // std::stringstream ss;
+          // auto action_data =
+          //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
+          //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
+          // static std::vector<std::string> action_columns = {"pi-prior",    "E",           "child_Q",
+          //                                                   "child_Qbeta", "child_W",     "theta",
+          //                                                   "omega_sq",    "pi-posterior"};
+          // eigen_util::print_array(ss, action_data, action_columns);
+          // LOG_INFO("\n{}", ss.str());
           return;
         }
       }
@@ -527,8 +697,8 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   //
   // We can now compute the posterior pi values using the logistic-normal model.
 
-  LocalPolicyArray alpha_arr(arr_size);
-  LocalPolicyArray beta_arr(arr_size);
+  LocalPolicyArrayDouble alpha_arr(arr_size);
+  LocalPolicyArrayDouble beta_arr(arr_size);
   alpha_arr.setConstant(1);
   beta_arr.setZero();
 
@@ -543,8 +713,8 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
       continue;
     }
 
-    float theta_i = theta_arr[i];
-    float omega_sq_i = omega_sq_arr[i];
+    double theta_i = theta_arr[i];
+    double omega_sq_i = omega_sq_arr[i];
 
     if (omega_sq_i == 0) {  // certain action
       if (omega_sq_new == 0) {
@@ -554,60 +724,67 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
       }
     }
 
-    // Based on all the edge-case checks above, we can now safely compute p and q and expect them
-    // to be in (0, 1).
-    float p = math::normal_cdf((theta_old - theta_i) / std::sqrt(omega_sq_old + omega_sq_i));
-    float q = math::normal_cdf((theta_new - theta_i) / std::sqrt(omega_sq_new + omega_sq_i));
-
-    RELEASE_ASSERT(p > 0.0 && p < 1.0, "invalid p: {}", p);
-    RELEASE_ASSERT(q > 0.0 && q < 1.0, "invalid q: {}", q);
-
-    float alpha = q * (1 - p) / (p * (1 - q));
-    float beta = pi_arr[i];
+    double alpha = detail::alpha_from_thetas(theta_old, omega_sq_old, theta_new, omega_sq_new,
+                                             theta_i, omega_sq_i);
+    double beta = pi_arr[i];
 
     alpha_arr[i] = alpha;
     beta_arr[i] = beta;
   }
 
-  float beta_sum = beta_arr.sum();
+  double beta_sum = beta_arr.sum();
   if (beta_sum > 0.0) {
     beta_arr *= (1.0 / beta_sum);
-    pi_arr[updated_edge_arr_index] *= std::exp((beta_arr * alpha_arr.log()).sum());
-    RELEASE_ASSERT(!std::isnan(pi_arr[updated_edge_arr_index]));
+    LocalPolicyArrayDouble log_pi_arr = pi_arr.template cast<double>().log();
+    double adjustment = (beta_arr * alpha_arr).sum();
+    adjustment = std::max(-5.0, std::min(+5.0, adjustment));  // cap to reasonable range
+    log_pi_arr[updated_edge_arr_index] += adjustment;
+    pi_arr = log_pi_arr.template cast<float>();
+    eigen_util::softmax_in_place(pi_arr);
   }
+
+  // std::stringstream ss;
+  // auto action_data =
+  //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr, child_W_arr,
+  //                                   theta_arr, omega_sq_arr, alpha_arr, beta_arr, pi_arr);
+  // static std::vector<std::string> action_columns = {
+  //   "pi-prior", "E",        "child_Q", "child_Qbeta", "child_W",
+  //   "theta",    "omega_sq", "alpha",   "beta",        "pi-posterior"};
+  // eigen_util::print_array(ss, action_data, action_columns);
+  // LOG_INFO("\n{}", ss.str());
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(float Qbeta, float W, float& theta,
-                                                             float& omega_sq) {
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
+void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Qbeta, double W, double& theta,
+                                                             double& omega_sq) {
+  constexpr double kMin = Game::GameResults::kMinValue;
+  constexpr double kMax = Game::GameResults::kMaxValue;
 
   if (Qbeta <= kMin) {
-    theta = -std::numeric_limits<float>::infinity();
+    theta = -std::numeric_limits<double>::infinity();
     omega_sq = 0;
     return;
   } else if (Qbeta >= kMax) {
-    theta = +std::numeric_limits<float>::infinity();
+    theta = +std::numeric_limits<double>::infinity();
     omega_sq = 0;
     return;
   }
 
-  float mu = Qbeta;
+  double mu = Qbeta;
 
   // Rescale Qbeta to [0, 1]
   mu = (mu - kMin) / (kMax - kMin);
-  mu = std::max(0.0f, std::min(1.0f, mu));
+  mu = std::max(0.0, std::min(1.0, mu));
 
   // Rescale W to variance in [0, 1]
-  float sigma_sq = W;
+  double sigma_sq = W;
   sigma_sq /= (kMax - kMin) * (kMax - kMin);
-  sigma_sq = std::max(0.0f, std::min(1.0f, sigma_sq));
+  sigma_sq = std::max(0.0, std::min(1.0, sigma_sq));
 
   // TODO: cache theta/omega_sq values in NodeStats to avoid recomputation
 
-  float theta1 = std::log(mu / (1 - mu));
-  float theta2 = -(1 - 2 * mu) * sigma_sq / (2 * mu * mu * (1 - mu) * (1 - mu));
+  double theta1 = std::log(mu / (1 - mu));
+  double theta2 = -(1 - 2 * mu) * sigma_sq / (2 * mu * mu * (1 - mu) * (1 - mu));
   theta = theta1 + theta2;
 
   omega_sq = sigma_sq / (mu * mu * (1 - mu) * (1 - mu));
