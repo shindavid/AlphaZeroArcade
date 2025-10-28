@@ -131,14 +131,20 @@ GameServer<Game>::SharedData::~SharedData() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_slots() {
-  int n_slots = params_.parallelism;
-  if (params_.num_games > 0) {
-    n_slots = std::min(n_slots, params_.num_games);
-  }
+  int n_slots;
 
-  for (const auto& reg : registrations_) {
-    int n = reg.gen->max_simultaneous_games();
-    if (n > 0) n_slots = std::min(n_slots, n);
+  if (params_.analysis_mode) {
+    n_slots = 1;
+  } else {
+    n_slots = params_.parallelism;
+    if (params_.num_games > 0) {
+      n_slots = std::min(n_slots, params_.num_games);
+    }
+
+    for (const auto& reg : registrations_) {
+      int n = reg.gen->max_simultaneous_games();
+      if (n > 0) n_slots = std::min(n_slots, n);
+    }
   }
 
   for (int p = 0; p < n_slots; ++p) {
