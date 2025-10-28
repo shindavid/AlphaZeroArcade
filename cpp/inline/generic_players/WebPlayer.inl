@@ -164,6 +164,7 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
 
   boost::json::object payload;
   payload["legal_moves"] = legal_move_indices;
+  payload["seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   return payload;
 }
 
