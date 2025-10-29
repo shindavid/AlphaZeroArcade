@@ -114,4 +114,17 @@ void WebManager<Game>::wait_for_new_game_ready() {
   ready_for_new_game_ = false;
 }
 
+template <core::concepts::Game Game>
+void WebManager<Game>::send_start_game(boost::json::object start_game_msg) {
+  mit::unique_lock lock(mutex_);
+  send_msg(start_game_msg);
+  has_sent_initial_board_ = true;
+}
+
+template <core::concepts::Game Game>
+bool WebManager<Game>::has_sent_initial_board() {
+  mit::unique_lock lock(mutex_);
+  return has_sent_initial_board_;
+}
+
 }  // namespace core
