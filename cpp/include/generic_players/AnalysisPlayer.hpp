@@ -13,22 +13,21 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = typename Game::Types::ActionRequest;
   using ActionResponse = typename Game::Types::ActionResponse;
   using GameResultTensor = typename Game::Types::GameResultTensor;
+  using ActionMask = typename Game::Types::ActionMask;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }
 
-  std::string get_name() const {
-    return "AnalysisPlayer(" + wrapped_player_->get_name() + ")";
-  }
+  std::string get_name() const { return "AnalysisPlayer(" + wrapped_player_->get_name() + ")"; }
 
   bool start_game() override;
+  ActionResponse get_action_response(const ActionRequest& request) override;
+
   void receive_state_change(core::seat_index_t seat, const State& state,
                             core::action_t action) override {
     wrapped_player_->receive_state_change(seat, state, action);
   }
-  ActionResponse get_action_response(const ActionRequest& request) override {
-    return wrapped_player_->get_action_response(request);
-  }
+
   void end_game(const State& state, const GameResultTensor& outcome) override {
     wrapped_player_->end_game(state, outcome);
   }
@@ -36,12 +35,15 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   bool disable_progress_bar() const override { return true; }
 
  private:
-  void send_start_game();
   boost::json::object make_start_game_msg();
+  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
+  boost::json::object make_action_request_msg(const ActionMask& valid_actions,
+                                              core::action_t proposed_action);
 
   core::AbstractPlayer<Game>* wrapped_player_;
   mit::mutex mutex_;
   mit::condition_variable cv_;
+  core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
   bool first_game_ = true;
   bool resign_ = false;
