@@ -177,6 +177,7 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   stats.Qbeta_min = stats.Q;
   stats.Qbeta_max = stats.Q;
   stats.W.fill(0.f);
+  stats.W_max.fill(0.f);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -213,6 +214,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.Qbeta_min = stats.Q;
     stats.Qbeta_max = stats.Q;
     stats.W = U;
+    stats.W_max = U;
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
@@ -286,10 +288,12 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   results.min_win_rates = stats.Qbeta_min;
   results.max_win_rates = stats.Qbeta_max;
+  results.max_uncertainties = stats.W_max;
 
   check_values(results.policy_target, __LINE__);
   check_values(results.min_win_rates, __LINE__);
   check_values(results.max_win_rates, __LINE__);
+  check_values(results.max_uncertainties, __LINE__);
   check_values(results.action_value_uncertainties, __LINE__);
 }
 
@@ -304,12 +308,14 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
     training_info.Q_posterior(p) = mcts_results->win_rates[p];
     training_info.Q_min(p) = mcts_results->min_win_rates[p];
     training_info.Q_max(p) = mcts_results->max_win_rates[p];
+    training_info.W_max(p) = mcts_results->max_uncertainties[p];
   }
 
   check_values(training_info.policy_target, __LINE__);
   check_values(training_info.action_values_target, __LINE__);
   check_values(training_info.Q_min, __LINE__);
   check_values(training_info.Q_max, __LINE__);
+  check_values(training_info.W_max, __LINE__);
 
   if (params.use_for_training) {
     training_info.action_value_uncertainties_target = mcts_results->action_value_uncertainties;
@@ -326,11 +332,13 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   full_record.Q_posterior = training_info.Q_posterior;
   full_record.Q_min = training_info.Q_min;
   full_record.Q_max = training_info.Q_max;
+  full_record.W_max = training_info.W_max;
 
   check_values(full_record.policy_target, __LINE__);
   check_values(full_record.action_values, __LINE__);
   check_values(full_record.Q_min, __LINE__);
   check_values(full_record.Q_max, __LINE__);
+  check_values(full_record.W_max, __LINE__);
 
   if (training_info.action_value_uncertainties_target_valid) {
     full_record.action_value_uncertainties = training_info.action_value_uncertainties_target;
@@ -350,12 +358,14 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   compact_record.Q_posterior = full_record.Q_posterior;
   compact_record.Q_min = full_record.Q_min;
   compact_record.Q_max = full_record.Q_max;
+  compact_record.W_max = full_record.W_max;
   compact_record.active_seat = full_record.active_seat;
   compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
   compact_record.action = full_record.action;
 
   check_values(compact_record.Q_min, __LINE__);
   check_values(compact_record.Q_max, __LINE__);
+  check_values(compact_record.W_max, __LINE__);
   check_values(full_record.policy_target, __LINE__);
   check_values(full_record.action_values, __LINE__);
   check_values(full_record.action_value_uncertainties, __LINE__);
@@ -435,12 +445,14 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_posterior = record->Q_posterior;
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
+  view.W_max = record->W_max;
 
   check_values(view.policy, __LINE__);
   check_values(view.action_values, __LINE__);
   check_values(view.action_value_uncertainties, __LINE__);
   check_values(view.Q_min, __LINE__);
   check_values(view.Q_max, __LINE__);
+  check_values(view.W_max, __LINE__);
   check_values(view.action_values, __LINE__);
   check_values(view.action_value_uncertainties, __LINE__);
 }
@@ -552,6 +564,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
     stats.Qbeta_min = stats.Qbeta_min.min(Qbeta);
     stats.Qbeta_max = stats.Qbeta_max.max(Qbeta);
     stats.W = W;
+    stats.W_max = stats.W_max.max(W);
   }
 }
 

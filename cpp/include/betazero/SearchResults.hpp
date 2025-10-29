@@ -21,6 +21,9 @@ struct SearchResults : alpha0::SearchResults<Game> {
   ValueArray min_win_rates;
   ValueArray max_win_rates;
 
+  // For each player, the max uncertainty ever observed during search.
+  ValueArray max_uncertainties;
+
   boost::json::object to_json() const;
 };
 

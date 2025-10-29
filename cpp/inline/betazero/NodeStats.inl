@@ -8,6 +8,7 @@ NodeStats<EvalSpec>::NodeStats() {
   Qbeta_min.fill(EvalSpec::Game::GameResults::kMaxValue);
   Qbeta_max.fill(EvalSpec::Game::GameResults::kMinValue);
   W.fill(0);
+  W_max.fill(0);
 }
 
 }  // namespace beta0
