@@ -15,10 +15,8 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
-  AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
+  AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player);
   ~AnalysisPlayer() { delete wrapped_player_; }
-
-  std::string get_name() const { return "AnalysisPlayer(" + wrapped_player_->get_name() + ")"; }
 
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
