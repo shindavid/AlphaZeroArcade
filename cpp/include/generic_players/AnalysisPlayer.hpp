@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace generic {
@@ -16,7 +17,11 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }
 
-  bool start_game() override { return wrapped_player_->start_game(); }
+  std::string get_name() const {
+    return "AnalysisPlayer(" + wrapped_player_->get_name() + ")";
+  }
+
+  bool start_game() override;
   void receive_state_change(core::seat_index_t seat, const State& state,
                             core::action_t action) override {
     wrapped_player_->receive_state_change(seat, state, action);
@@ -31,7 +36,18 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   bool disable_progress_bar() const override { return true; }
 
  private:
+  void send_start_game();
+  boost::json::object make_start_game_msg();
+
   core::AbstractPlayer<Game>* wrapped_player_;
+  mit::mutex mutex_;
+  mit::condition_variable cv_;
+  core::action_t action_ = -1;
+  bool first_game_ = true;
+  bool resign_ = false;
+  bool ready_for_new_game_ = false;
 };
 
 }  // namespace generic
+
+#include "inline/generic_players/AnalysisPlayer.inl"
