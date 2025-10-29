@@ -99,6 +99,49 @@ void WebManager<Game>::response_loop() {
     bridge_connected_ = true;
   }
   cv_.notify_all();
+
+  while (bridge_connected_) {
+    try {
+      boost::asio::streambuf buf;
+      boost::asio::read_until(socket_, buf, "\n");
+      std::istream is(&buf);
+      std::string line;
+      std::getline(is, line);
+      auto parsed = boost::json::parse(line);
+      const auto& obj = parsed.as_object();
+
+      char seat = obj.at("seat").as_string().c_str()[0];
+      int seat_index = Game::IO::seat_char_to_index(seat);
+      std::string msg_type = obj.at("type").as_string().c_str();
+
+      if (seat_index >= 0) {
+        HandlerFuncMap handlers = handlers_[seat_index];
+        auto it = handlers.find(msg_type);
+        if (it != handlers.end()) {
+          HandlerFunc f = it->second;
+          f(obj.at("payload").as_object());
+        } else {
+          throw util::Exception("No handler registered for message type: {}", msg_type);
+        }
+        continue;
+      }
+
+      if (msg_type == "new_game") {
+        mit::unique_lock lock(mutex_);
+        ready_for_new_game_ = true;
+        lock.unlock();
+        cv_.notify_all();
+      } else {
+        throw util::Exception("Unknown message type: {}", msg_type);
+      }
+
+    } catch (const std::exception& ex) {
+      LOG_INFO("WebManager: connection closed or error: {}", ex.what());
+      bridge_connected_ = false;
+      cv_.notify_all();
+      break;
+    }
+  }
 }
 
 template <core::concepts::Game Game>
