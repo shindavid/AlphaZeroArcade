@@ -119,7 +119,9 @@ void WebManager<Game>::response_loop() {
         auto it = handlers.find(msg_type);
         if (it != handlers.end()) {
           HandlerFunc f = it->second;
-          f(obj.at("payload").as_object());
+          boost::json::object payload =
+            obj.contains("payload") ? obj.at("payload").as_object() : boost::json::object{};
+          f(payload);
         } else {
           throw util::Exception("No handler registered for message type: {}", msg_type);
         }
