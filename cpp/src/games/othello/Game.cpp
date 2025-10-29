@@ -207,4 +207,13 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   return buf;
 }
 
+int Game::IO::seat_char_to_index(char seat_char) {
+  for (int i = 0; i < Constants::kNumPlayers; ++i) {
+    if (Constants::kSeatChars[i] == seat_char) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 }  // namespace othello
