@@ -18,6 +18,12 @@ bool generic::AnalysisPlayer<Game>::start_game() {
   auto* manager = core::WebManager<Game>::get_instance();
   manager->wait_for_connection();
 
+  core::HandlerFuncMap handler_map = {
+    {"make_move", [this](const boost::json::object& payload) {this->set_action(payload); }},
+    {"resign", [this](const boost::json::object& payload) {this->set_resign(payload); }},
+  };
+  manager->register_handler(this->get_my_seat(), std::move(handler_map));
+
   bool started = wrapped_player_->start_game();
   if (!manager->has_sent_initial_board()) {
     manager->send_start_game(make_start_game_msg());
@@ -101,6 +107,18 @@ boost::json::object AnalysisPlayer<Game>::make_action_request_msg(const ActionMa
   payload["seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   payload["proposed_action"] = action;
   return payload;
+}
+
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::set_action(const boost::json::object& payload) {
+  action_ = static_cast<core::action_t>(payload.at("index").as_int64());
+  notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::set_resign(const boost::json::object& payload) {
+  resign_ = true;
+  notification_unit_.yield_manager->notify(notification_unit_);
 }
 
 }  // namespace generic
