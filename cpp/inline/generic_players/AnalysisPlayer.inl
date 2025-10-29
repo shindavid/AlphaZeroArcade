@@ -1,4 +1,5 @@
 #include "core/WebManager.hpp"
+#include "search/VerboseManager.hpp"
 #include "generic_players/AnalysisPlayer.hpp"
 #include "util/Rendering.hpp"
 
@@ -119,6 +120,47 @@ template <core::concepts::Game Game>
 void AnalysisPlayer<Game>::set_resign(const boost::json::object& payload) {
   resign_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
+                                                core::action_t action) {
+  wrapped_player_->receive_state_change(seat, state, action);
+  send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
+}
+
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::send_state_update(core::seat_index_t seat, const State& state,
+                                        core::action_t last_action, core::action_mode_t last_mode) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object msg;
+  msg["type"] = "state_update";
+  msg["payload"] = make_state_update_msg(seat, state, last_action, last_mode);
+
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg);
+}
+
+template <core::concepts::Game Game>
+boost::json::object AnalysisPlayer<Game>::make_state_update_msg(core::seat_index_t seat,
+                                                           const State& state,
+                                                           core::action_t last_action,
+                                                           core::action_mode_t last_mode) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object payload;
+  payload["board"] = Game::IO::state_to_json(state);
+  payload["seat"] = Game::IO::player_to_str(seat);
+  payload["last_action"] = Game::IO::action_to_str(last_action, last_mode);
+
+  const VerboseManager* manager = VerboseManager::get_instance();
+  const auto* verbose_data = manager->verbose_data();
+  if (verbose_data) {
+    payload["verbose_info"] = verbose_data->to_json();
+  }
+
+  return payload;
 }
 
 }  // namespace generic
