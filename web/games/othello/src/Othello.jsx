@@ -17,6 +17,7 @@ export default class OthelloApp extends GameAppBase {
   }
 
   seatToHtml = (seat) => {
+    if (seat === ' ') return null;
     return <span className={`disc ${seat}`}/>;
   };
 
@@ -72,6 +73,11 @@ export default class OthelloApp extends GameAppBase {
           let cls = 'cell';
           if (legal) cls += ' legal-move';
 
+          let ghostDisc = null;
+          if (idx === this.state.proposed_action) {
+            ghostDisc = <span className={`ghost disc ${this.state.currentTurn}`} />;
+          }
+
           cells.push(
             <div
               key={`cell-${r}-${c}`}
@@ -79,6 +85,7 @@ export default class OthelloApp extends GameAppBase {
               onClick={legal ? () => this.handleCellClick(r - 1, c - 1) : undefined}
             >
               {this.seatToHtml(v)}
+              {ghostDisc}
             </div>
           );
         }
