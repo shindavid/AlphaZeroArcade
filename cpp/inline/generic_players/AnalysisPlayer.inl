@@ -5,6 +5,12 @@
 namespace generic {
 
 template <core::concepts::Game Game>
+AnalysisPlayer<Game>::AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player)
+    : wrapped_player_(wrapped_player) {
+  this->set_name("AnalysisPlayer(" + wrapped_player_->get_name() + ")");
+}
+
+template <core::concepts::Game Game>
 bool generic::AnalysisPlayer<Game>::start_game() {
   action_ = -1;
   resign_ = false;
