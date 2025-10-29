@@ -9,25 +9,14 @@ bool generic::AnalysisPlayer<Game>::start_game() {
   action_ = -1;
   resign_ = false;
 
-  if (first_game_) {
-    first_game_ = false;
-    core::WebManager<Game>::get_instance()->wait_for_connection();
-  } else {
-    core::WebManager<Game>::get_instance()->wait_for_new_game_ready();
-  }
+  auto* manager = core::WebManager<Game>::get_instance();
+  manager->wait_for_connection();
 
   bool started = wrapped_player_->start_game();
-  send_start_game();
+  if (!manager->has_sent_initial_board()) {
+    manager->send_start_game(make_start_game_msg());
+  }
   return started;
-}
-
-template <core::concepts::Game Game>
-void AnalysisPlayer<Game>::send_start_game() {
-  boost::json::object msg;
-  msg["type"] = "start_game";
-  msg["payload"] = make_start_game_msg();
-
-  core::WebManager<Game>::get_instance()->send_msg(msg);
 }
 
 template <core::concepts::Game Game>
@@ -50,7 +39,11 @@ boost::json::object AnalysisPlayer<Game>::make_start_game_msg() {
   payload["my_seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
-  return payload;
+
+  boost::json::object msg;
+  msg["type"] = "start_game";
+  msg["payload"] = payload;
+  return msg;
 }
 
 }  // namespace generic
