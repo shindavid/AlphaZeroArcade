@@ -32,6 +32,9 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
 
   bool disable_progress_bar() const override { return true; }
 
+  void set_action(const boost::json::object& payload);
+  void set_resign(const boost::json::object& payload);
+
  private:
   boost::json::object make_start_game_msg();
   void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
