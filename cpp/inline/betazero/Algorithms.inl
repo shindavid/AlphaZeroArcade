@@ -409,9 +409,12 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
     return;
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   double theta_new = theta_raw_arr[updated_edge_arr_index];
   double omega_sq_new = omega_sq_raw_arr[updated_edge_arr_index];
   math::finiteness_t finiteness_new = finiteness_arr[updated_edge_arr_index];
+#pragma GCC diagnostic pop
 
   EigenMapArrayXd theta_arr(theta_raw_arr, arr_size);
   EigenMapArrayXd omega_sq_arr(omega_sq_raw_arr, arr_size);
