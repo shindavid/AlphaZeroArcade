@@ -29,6 +29,9 @@ struct WebManager {
     handlers_[seat] = std::move(handler_map);
   }
   void send_msg(const boost::json::object& msg);
+  bool has_sent_initial_board();
+
+  void send_start_game(boost::json::object start_game_msg);
 
  private:
   boost::asio::ip::tcp::acceptor create_acceptor();
@@ -49,7 +52,10 @@ struct WebManager {
   mit::condition_variable cv_;
 
   bool bridge_connected_ = false;
+
+  //TODO: move ready_for_new_game_ to AnalysisPlayer and WebPlayer
   bool ready_for_new_game_ = false;
+  bool has_sent_initial_board_ = false;
 
   boost::process::child* bridge_process_ = nullptr;
   boost::process::child* frontend_process_ = nullptr;
