@@ -20,29 +20,24 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
 
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
-
   void receive_state_change(core::seat_index_t seat, const State& state,
                             core::action_t action) override;
-
-  void end_game(const State& state, const GameResultTensor& outcome) override {
-    wrapped_player_->end_game(state, outcome);
-  }
-
+  void end_game(const State& state, const GameResultTensor& outcome) override;
   bool disable_progress_bar() const override { return true; }
-
   void set_action(const boost::json::object& payload);
   void set_resign(const boost::json::object& payload);
 
  private:
-  boost::json::object make_start_game_msg();
   void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
+  void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
+                         core::action_mode_t last_mode);
+  boost::json::object make_start_game_msg();
   boost::json::object make_action_request_msg(const ActionMask& valid_actions,
                                               core::action_t proposed_action);
   boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
                                             core::action_t last_action,
                                             core::action_mode_t last_mode);
-  void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
-                         core::action_mode_t last_mode);
+  boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
 
   core::AbstractPlayer<Game>* wrapped_player_;
   mit::mutex mutex_;
