@@ -163,4 +163,41 @@ boost::json::object AnalysisPlayer<Game>::make_state_update_msg(core::seat_index
   return payload;
 }
 
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
+  wrapped_player_->end_game(state, outcome);
+  boost::json::object msg;
+  msg["type"] = "game_end";
+  msg["payload"] = make_result_msg(state, outcome);
+
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg);
+}
+
+template <core::concepts::Game Game>
+boost::json::object AnalysisPlayer<Game>::make_result_msg(const State& state,
+                                                          const GameResultTensor& outcome) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object payload;
+  constexpr int P = Game::Constants::kNumPlayers;
+
+  auto array = Game::GameResults::to_value_array(outcome);
+
+  char result_codes[P + 1];
+  for (int p = 0; p < P; ++p) {
+    if (array[p] == 1) {
+      result_codes[p] = 'W';  // Win
+    } else if (array[p] == 0) {
+      result_codes[p] = 'L';  // Loss
+    } else {
+      result_codes[p] = 'D';  // Draw
+    }
+  }
+  result_codes[P] = '\0';  // Null-terminate the string
+  payload["result_codes"] = std::string(result_codes);
+
+  return payload;
+}
+
 }  // namespace generic
