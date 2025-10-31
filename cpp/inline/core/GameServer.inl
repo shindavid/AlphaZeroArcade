@@ -6,6 +6,7 @@
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
 #include "generic_players/AnalysisPlayer.hpp"
+#include "search/VerboseManager.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -370,6 +371,9 @@ template <concepts::Game Game>
 void GameServer<Game>::SharedData::start_session() {
   for (auto& reg : registrations_) {
     reg.gen->start_session();
+  }
+  if (params_.analysis_mode) {
+    generic::VerboseManager::get_instance()->disable_auto_terminal_printing();
   }
 }
 
