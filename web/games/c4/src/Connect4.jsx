@@ -132,6 +132,7 @@ export default class Connect4App extends GameAppBase {
   renderBoard() {
     if (!this.state.board) return null;
     const grid = [];
+    const heights = computeColHeights(this.state.board);
     for (let row = 0; row < ROWS; ++row) {
       for (let col = 0; col < COLS; ++col) {
         const idx = row * COLS + col;
@@ -146,7 +147,7 @@ export default class Connect4App extends GameAppBase {
         }
 
         let ghostDisc = null;
-        let targetRow = ROWS - computeColHeights(this.state.board)[col] - 1;
+        let targetRow = ROWS - heights[col] - 1;
         if (col === this.state.proposed_action && row === targetRow) {
            ghostDisc = <span className={`cell ghost ${this.state.seatAssignments[this.state.currentTurn]}`} />;
         }
