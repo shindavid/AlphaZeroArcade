@@ -26,7 +26,8 @@ bool generic::AnalysisPlayer<Game>::start_game() {
   manager->register_handler(this->get_my_seat(), std::move(handler_map));
 
   bool started = wrapped_player_->start_game();
-  if (!manager->has_sent_initial_board()) {
+  if (!manager->become_starter()) {
+    manager->wait_for_new_game_ready();
     manager->send_start_game(make_start_game_msg());
   }
   return started;
@@ -178,6 +179,7 @@ void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& 
 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
+  web_manager->clear_starter();
 }
 
 template <core::concepts::Game Game>
