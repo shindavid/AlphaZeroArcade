@@ -56,11 +56,11 @@ boost::json::object AnalysisPlayer<Game>::make_start_game_msg() {
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    std::string seat = std::string(1, Game::Constants::kSeatChars[p]);
+    std::string seat = std::string(1, Game::IO::kSeatChars[p]);
     seat_assignments.push_back(boost::json::value(seat));
     player_names.push_back(boost::json::value(this->get_player_names()[p]));
   }
-  payload["my_seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
+  payload["my_seat"] = std::string(1, Game::IO::kSeatChars[this->get_my_seat()]);
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
 
@@ -113,7 +113,7 @@ boost::json::object AnalysisPlayer<Game>::make_action_request_msg(const ActionMa
 
   boost::json::object payload;
   payload["legal_moves"] = legal_move_indices;
-  payload["seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
+  payload["seat"] = std::string(1, Game::IO::kSeatChars[this->get_my_seat()]);
   payload["proposed_action"] = action;
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
@@ -167,12 +167,6 @@ boost::json::object AnalysisPlayer<Game>::make_state_update_msg(core::seat_index
   payload["board"] = Game::IO::state_to_json(state);
   payload["seat"] = Game::IO::player_to_str(seat);
   payload["last_action"] = Game::IO::action_to_str(last_action, last_mode);
-
-  const VerboseManager* manager = VerboseManager::get_instance();
-  const auto* verbose_data = manager->verbose_data();
-  if (verbose_data) {
-    payload["verbose_info"] = verbose_data->to_json();
-  }
 
   return payload;
 }
