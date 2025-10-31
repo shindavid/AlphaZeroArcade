@@ -4,6 +4,7 @@
 #include "core/LoopControllerClient.hpp"
 #include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
+#include "core/concepts/GameIOConcept.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
 #include "generic_players/AnalysisPlayer.hpp"
 #include "search/VerboseManager.hpp"
@@ -681,10 +682,14 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
   bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     PlayerInstantiation instantiation = shared_data_.registration_templates()[p].instantiate(id);
-    if (params().analysis_mode) {
-      auto analysis_player = new generic::AnalysisPlayer<Game>(instantiation.player);
-      instantiation.player = analysis_player;
+
+    if constexpr (concepts::WebGameIO<typename Game::IO, typename Game::Types>) {
+      if (params().analysis_mode) {
+        auto analysis_player = new generic::AnalysisPlayer<Game>(instantiation.player);
+        instantiation.player = analysis_player;
+      }
     }
+
     instantiations_[p] = instantiation;
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
   }
