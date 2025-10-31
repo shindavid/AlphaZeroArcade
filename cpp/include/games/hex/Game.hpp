@@ -48,6 +48,7 @@ struct Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'B'};
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t mode = 0);
     static std::string player_to_str(core::seat_index_t player);
