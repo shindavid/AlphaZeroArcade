@@ -26,7 +26,6 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
     static constexpr int kNumPlayers = chess::kNumPlayers;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
-    static constexpr char kSeatChars[kNumPlayers] = {'W', 'B'};
   };
 
   using State = lczero::Position;
@@ -46,6 +45,7 @@ struct Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'W', 'B'};
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
