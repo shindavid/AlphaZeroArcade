@@ -124,13 +124,7 @@ void WebManager<Game>::response_loop() {
         continue;
       }
 
-      char seat = obj.at("seat").as_string().c_str()[0];
-      int seat_index = Game::IO::seat_char_to_index(seat);
-
-      if (seat_index < 0) {
-        throw util::Exception("Invalid seat char in message: {}", seat);
-      }
-
+      int seat_index = boost::json::value_to<int>(obj.at("seat"));
       HandlerFuncMap handlers = handlers_[seat_index];
       auto it = handlers.find(msg_type);
       if (it != handlers.end()) {
