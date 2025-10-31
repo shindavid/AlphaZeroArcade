@@ -114,17 +114,23 @@ export default class HexApp extends GameAppBase {
     // Determine hover class
     let hoverClass = "";
     if (isLegal) {
-      hoverClass = mySeat === "R" ? " hex-hover-red" : " hex-hover-blue";
+      hoverClass = this.state.seatAssignments[this.state.currentTurn] === "R" ? " hex-hover-red" : " hex-hover-blue";
     }
+
+    let classNameSuffix = "";
+    if (cell === this.state.proposed_action) {
+      classNameSuffix = ` ghost ${this.state.seatAssignments[this.state.currentTurn]}`;
+    }
+    console.log(`classNameSuffix: ${classNameSuffix}`);
 
     return (
       <g key={cell}>
         <polygon
           className={
             "hex-cell" +
-            (color === 'R' ? " hex-red" : "") +
-            (color === 'B' ? " hex-blue" : "") +
-            (isLegal ? hoverClass : "")
+            ` ${color} ` +
+            (isLegal ? hoverClass : "") +
+            classNameSuffix
           }
           points={corners.map(p => p.join(",")).join(" ")}
           onClick={isLegal ? () => this.sendMove(cell) : undefined}

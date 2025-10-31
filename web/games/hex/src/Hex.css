@@ -13,12 +13,6 @@
   cursor: pointer;
   transition: filter 0.2s;
 }
-.hex-cell.hex-red {
-  fill: var(--hex-red, #e44);
-}
-.hex-cell.hex-blue {
-  fill: var(--hex-blue, #24f);
-}
 
 .hex-cell.hex-hover-red:hover {
   fill: #ffd6e6;
@@ -27,26 +21,20 @@
   fill: #d6e6ff;
 }
 
-.hex-disc-red {
+.ghost {
+  opacity: 0.3;
+}
+
+.R {
   fill: var(--hex-red, #e44);
   stroke: #a00;
   stroke-width: 2px;
 }
-.hex-disc-blue {
+
+.B {
   fill: var(--hex-blue, #24f);
   stroke: #04a;
   stroke-width: 2px;
-}
-
-.hex-outline-red {
-  stroke: var(--hex-red, #e44);
-  stroke-width: 5px;
-  fill: none;
-}
-.hex-outline-blue {
-  stroke: var(--hex-blue, #24f);
-  stroke-width: 5px;
-  fill: none;
 }
 
 .hex-label {
