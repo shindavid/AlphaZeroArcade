@@ -21,6 +21,7 @@ struct WebManager {
   using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>; // idx by seat
 
   WebManager();
+  ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
   void wait_for_new_game_ready();
