@@ -35,7 +35,6 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
-    static constexpr char kSeatChars[kNumPlayers] = {'X', 'O'};
   };
 
   struct State {
@@ -72,6 +71,7 @@ class Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[kNumPlayers] = {'X', 'O'};
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action);
@@ -82,7 +82,6 @@ class Game {
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
-
     static boost::json::value state_to_json(const State& state);
   };
 
