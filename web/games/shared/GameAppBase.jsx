@@ -80,7 +80,7 @@ export class GameAppBase extends React.Component {
       mySeat: null,
       verboseInfo: null,
       currentTurn: null,
-      proposed_move: null,
+      proposed_action: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -163,6 +163,8 @@ export class GameAppBase extends React.Component {
   handleGameEnd(payload) {
     this.setState({
       resultCodes: payload.result_codes,
+      legalMoves: [],
+      proposed_action: null,
     });
   }
 
@@ -176,6 +178,7 @@ export class GameAppBase extends React.Component {
   sendMove(action_index) {
     this.setState({
       legalMoves: [],
+      proposed_action: null,
     });
     this.sendMsg({ type: 'make_move', seat: this.state.currentTurn, payload: { index: action_index } })
   }
@@ -252,6 +255,7 @@ export class GameAppBase extends React.Component {
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
 
+    console.log('Rendering game with state:', this.state);
     return (
       <div className="container two-col">
         <div className="left-col">
