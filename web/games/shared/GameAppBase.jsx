@@ -147,7 +147,7 @@ export class GameAppBase extends React.Component {
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
-      verboseInfo: payload.verbose_info ? payload.verbose_info : null,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
     });
   }
 
