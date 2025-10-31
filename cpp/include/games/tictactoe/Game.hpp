@@ -71,7 +71,7 @@ class Game {
   };
 
   struct IO : public core::IOBase<Types> {
-    static constexpr char kSeatChars[kNumPlayers] = {'X', 'O'};
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'X', 'O'};
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action);
