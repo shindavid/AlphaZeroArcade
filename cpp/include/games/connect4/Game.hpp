@@ -38,7 +38,6 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<kNumColumns>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = kNumColumns;
-    static constexpr char kSeatChars[kNumPlayers] = {'R', 'Y'};
   };
 
   struct State {
@@ -75,6 +74,7 @@ struct Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[kNumPlayers] = {'R', 'Y'};
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);
