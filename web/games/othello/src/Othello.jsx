@@ -75,7 +75,7 @@ export default class OthelloApp extends GameAppBase {
 
           let ghostDisc = null;
           if (idx === this.state.proposed_action) {
-            ghostDisc = <span className={`ghost disc ${this.state.currentTurn}`} />;
+            ghostDisc = <span className={`ghost disc ${this.state.seatAssignments[this.state.currentTurn]}`} />;
           }
 
           cells.push(
