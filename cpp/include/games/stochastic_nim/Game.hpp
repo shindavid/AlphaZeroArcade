@@ -26,7 +26,6 @@ struct Game {
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor =
       std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
-    static constexpr char kSeatChars[kNumPlayers] = {'A', 'B'};
   };
 
   struct State {
@@ -56,6 +55,7 @@ struct Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'A', 'B' };
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t mode);
     static void print_state(std::ostream& ss, const State& state, core::action_t last_action = -1,

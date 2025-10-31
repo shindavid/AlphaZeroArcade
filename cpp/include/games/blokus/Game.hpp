@@ -27,7 +27,6 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
-    static constexpr char kSeatChars[kNumPlayers] = {'B', 'Y', 'R', 'G'};
   };
 
   using State = blokus::GameState;
@@ -57,6 +56,7 @@ class Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'B', 'Y', 'R', 'G'};
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static std::string player_to_str(core::seat_index_t player);
