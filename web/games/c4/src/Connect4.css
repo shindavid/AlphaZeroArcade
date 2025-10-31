@@ -76,6 +76,10 @@ in Connect4.jsx
   cursor: pointer;
 }
 
+.ghost {
+  opacity: 0.6;
+}
+
 .container {
   display: flex;
   flex-direction: column;
