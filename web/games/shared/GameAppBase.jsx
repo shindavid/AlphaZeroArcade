@@ -156,6 +156,7 @@ export class GameAppBase extends React.Component {
       legalMoves: payload.legal_moves,
       currentTurn: payload.seat,
       proposed_action: payload.proposed_action,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : null,
     });
   }
 

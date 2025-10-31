@@ -89,8 +89,8 @@ void AnalysisPlayer<Game>::send_action_request(const ActionMask& valid_actions, 
   boost::json::object msg;
   msg["type"] = "action_request";
   msg["payload"] = make_action_request_msg(valid_actions, action);
-  auto* manager = core::WebManager<Game>::get_instance();
-  manager->send_msg(msg);
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg);
 }
 
 template <core::concepts::Game Game>
@@ -107,6 +107,12 @@ boost::json::object AnalysisPlayer<Game>::make_action_request_msg(const ActionMa
   payload["legal_moves"] = legal_move_indices;
   payload["seat"] = std::string(1, Game::Constants::kSeatChars[this->get_my_seat()]);
   payload["proposed_action"] = action;
+
+  const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
+  if (verbose_data) {
+    payload["verbose_info"] = verbose_data->to_json();
+  }
+
   return payload;
 }
 
