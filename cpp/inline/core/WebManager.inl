@@ -110,31 +110,36 @@ void WebManager<Game>::response_loop() {
       auto parsed = boost::json::parse(line);
       const auto& obj = parsed.as_object();
 
-      char seat = obj.at("seat").as_string().c_str()[0];
-      int seat_index = Game::IO::seat_char_to_index(seat);
       std::string msg_type = obj.at("type").as_string().c_str();
 
-      if (seat_index >= 0) {
-        HandlerFuncMap handlers = handlers_[seat_index];
-        auto it = handlers.find(msg_type);
-        if (it != handlers.end()) {
-          HandlerFunc f = it->second;
-          boost::json::object payload =
-            obj.contains("payload") ? obj.at("payload").as_object() : boost::json::object{};
-          f(payload);
+      if (!obj.contains("seat")) {
+        if (msg_type == "new_game") {
+          mit::unique_lock lock(mutex_);
+          ready_for_new_game_ = true;
+          lock.unlock();
+          cv_.notify_all();
         } else {
-          throw util::Exception("No handler registered for message type: {}", msg_type);
+          throw util::Exception("Unknown message type: {}", msg_type);
         }
         continue;
       }
 
-      if (msg_type == "new_game") {
-        mit::unique_lock lock(mutex_);
-        ready_for_new_game_ = true;
-        lock.unlock();
-        cv_.notify_all();
+      char seat = obj.at("seat").as_string().c_str()[0];
+      int seat_index = Game::IO::seat_char_to_index(seat);
+
+      if (seat_index < 0) {
+        throw util::Exception("Invalid seat char in message: {}", seat);
+      }
+
+      HandlerFuncMap handlers = handlers_[seat_index];
+      auto it = handlers.find(msg_type);
+      if (it != handlers.end()) {
+        HandlerFunc f = it->second;
+        boost::json::object payload =
+          obj.contains("payload") ? obj.at("payload").as_object() : boost::json::object{};
+        f(payload);
       } else {
-        throw util::Exception("Unknown message type: {}", msg_type);
+        throw util::Exception("No handler registered for message type: {}", msg_type);
       }
 
     } catch (const std::exception& ex) {
@@ -163,13 +168,23 @@ template <core::concepts::Game Game>
 void WebManager<Game>::send_start_game(boost::json::object start_game_msg) {
   mit::unique_lock lock(mutex_);
   send_msg(start_game_msg);
-  has_sent_initial_board_ = true;
 }
 
 template <core::concepts::Game Game>
-bool WebManager<Game>::has_sent_initial_board() {
+bool WebManager<Game>::become_starter() {
   mit::unique_lock lock(mutex_);
-  return has_sent_initial_board_;
+  if (has_starter_) {
+    return false;
+  } else {
+    has_starter_ = true;
+    return true;
+  }
+}
+
+template <core::concepts::Game Game>
+void WebManager<Game>::clear_starter() {
+  mit::unique_lock lock(mutex_);
+  has_starter_ = false;
 }
 
 }  // namespace core
