@@ -27,7 +27,7 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-export function StatusBar({resultCodes, playerNames, seatAssignments}) {
+export function StatusBar({resultCodes, playerNames, seatAssignments, currentSeat}) {
   // Helper to render result text in fixed-width area
   function renderResultText(code) {
     if (code === "W") {
@@ -45,10 +45,14 @@ export function StatusBar({resultCodes, playerNames, seatAssignments}) {
         <div style={{ marginTop: '0.5em', textAlign: 'left' }}>
           {seatAssignments.map((seat, i) => {
             let resultCode = resultCodes ? resultCodes[i] : null;
+            let isCurrent = currentSeat === i;
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
                 {renderResultText(resultCode)}
-                <span style={{ marginLeft: 8 }}>{seat}</span>: <span>{playerNames[i]}</span>
+                <span style={{ marginLeft: 8 }}>
+                  {isCurrent ? <span className="current-seat">*</span> : <span className="current-seat"></span>}
+                  {seat}</span>: <span>{playerNames[i]}
+                </span>
               </div>
             );
           })}

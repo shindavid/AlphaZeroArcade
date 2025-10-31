@@ -254,8 +254,8 @@ export class GameAppBase extends React.Component {
     let seatAssignments = this.state.seatAssignments;
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
+    let currentSeat = this.state.seatAssignments.indexOf(this.state.currentTurn);
 
-    console.log('Rendering game with state:', this.state);
     return (
       <div className="container two-col">
         <div className="left-col">
@@ -263,6 +263,7 @@ export class GameAppBase extends React.Component {
             resultCodes={resultCodes}
             playerNames={playerNames}
             seatAssignments={seatAssignmentsHtml}
+            currentSeat={currentSeat}
           />
           {this.renderBoard()}
           <ActionButtons
