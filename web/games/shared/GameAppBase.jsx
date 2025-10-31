@@ -254,7 +254,7 @@ export class GameAppBase extends React.Component {
     let seatAssignments = this.state.seatAssignments;
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
-    let currentSeat = this.state.seatAssignments.indexOf(this.state.currentTurn);
+    let currentSeat = this.state.currentTurn;
 
     return (
       <div className="container two-col">
