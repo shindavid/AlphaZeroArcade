@@ -30,8 +30,6 @@ struct WebManager {
   }
   void send_msg(const boost::json::object& msg);
   bool become_starter();
-
-  void send_start_game(boost::json::object start_game_msg);
   void clear_starter();
 
  private:
