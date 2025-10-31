@@ -38,6 +38,10 @@
   cursor: pointer;
 }
 
+.ghost {
+  opacity: 0.4;
+}
+
 .square.legal-move {
   cursor: pointer;
 }
