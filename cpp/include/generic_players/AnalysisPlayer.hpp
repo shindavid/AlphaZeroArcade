@@ -28,6 +28,7 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   void set_resign(const boost::json::object& payload);
 
  private:
+  void send_start_game();
   void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
   void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
                          core::action_mode_t last_mode);

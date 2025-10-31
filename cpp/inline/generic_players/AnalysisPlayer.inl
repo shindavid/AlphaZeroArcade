@@ -28,9 +28,19 @@ bool generic::AnalysisPlayer<Game>::start_game() {
   bool started = wrapped_player_->start_game();
   if (!manager->become_starter()) {
     manager->wait_for_new_game_ready();
-    manager->send_start_game(make_start_game_msg());
+    send_start_game();
   }
   return started;
+}
+
+template <core::concepts::Game Game>
+void AnalysisPlayer<Game>::send_start_game() {
+  boost::json::object msg;
+  msg["type"] = "start_game";
+  msg["payload"] = make_start_game_msg();
+
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg);
 }
 
 template <core::concepts::Game Game>
@@ -54,10 +64,7 @@ boost::json::object AnalysisPlayer<Game>::make_start_game_msg() {
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
 
-  boost::json::object msg;
-  msg["type"] = "start_game";
-  msg["payload"] = payload;
-  return msg;
+  return payload;
 }
 
 template <core::concepts::Game Game>

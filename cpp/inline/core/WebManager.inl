@@ -165,12 +165,6 @@ void WebManager<Game>::wait_for_new_game_ready() {
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::send_start_game(boost::json::object start_game_msg) {
-  mit::unique_lock lock(mutex_);
-  send_msg(start_game_msg);
-}
-
-template <core::concepts::Game Game>
 bool WebManager<Game>::become_starter() {
   mit::unique_lock lock(mutex_);
   if (has_starter_) {
