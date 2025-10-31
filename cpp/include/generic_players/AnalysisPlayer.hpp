@@ -41,8 +41,6 @@ class AnalysisPlayer : public core::AbstractPlayer<Game> {
   boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
 
   core::AbstractPlayer<Game>* wrapped_player_;
-  mit::mutex mutex_;
-  mit::condition_variable cv_;
   core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
   bool first_game_ = true;
