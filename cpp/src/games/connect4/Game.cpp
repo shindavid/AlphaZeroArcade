@@ -95,7 +95,7 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   for (int row = kNumRows - 1; row >= 0; --row) {
     for (int col = 0; col < kNumColumns; ++col) {
       core::seat_index_t seat = state.get_player_at(row, col);
-      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
+      buf[idx++] = (seat == -1) ? ' ' : kSeatChars[seat];
     }
   }
   buf[kNumRows * kNumColumns] = '\0';
