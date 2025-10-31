@@ -17,6 +17,27 @@ WebManager<Game>::WebManager() : acceptor_(create_acceptor()), socket_(io_contex
 }
 
 template <core::concepts::Game Game>
+WebManager<Game>::~WebManager() {
+  if (bridge_process_) {
+    bridge_process_->terminate();
+    delete bridge_process_;
+  }
+  if (frontend_process_) {
+    frontend_process_->terminate();
+    delete frontend_process_;
+  }
+
+  {
+    mit::unique_lock lock(mutex_);
+    bridge_connected_ = false;
+    cv_.notify_all();
+  }
+  if (thread_.joinable()) {
+    thread_.join();
+  }
+}
+
+template <core::concepts::Game Game>
 inline WebManager<Game>* WebManager<Game>::get_instance() {
   static WebManager<Game> instance;
   return &instance;
@@ -24,6 +45,7 @@ inline WebManager<Game>* WebManager<Game>::get_instance() {
 
 template <core::concepts::Game Game>
 void WebManager<Game>::send_msg(const boost::json::object& msg) {
+  mit::unique_lock lock(mutex_);
   std::string out = boost::json::serialize(msg) + "\n";
   boost::asio::write(socket_, boost::asio::buffer(out));
 }
@@ -125,7 +147,7 @@ void WebManager<Game>::response_loop() {
       }
 
       int seat_index = boost::json::value_to<int>(obj.at("seat"));
-      HandlerFuncMap handlers = handlers_[seat_index];
+      HandlerFuncMap& handlers = handlers_[seat_index];
       auto it = handlers.find(msg_type);
       if (it != handlers.end()) {
         HandlerFunc f = it->second;
