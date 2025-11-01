@@ -38,9 +38,15 @@ export default class Connect4App extends GameAppBase {
   seatToHtml = seat =>
     <span className={`seat-icon ${seat}`} />;
 
+  handleStartGame(payload) {
+    super.handleStartGame(payload);
+    this.colHeights = Array(COLS).fill(0);
+  }
+
   // Override for animations
   handleStateUpdate(payload) {
     super.handleStateUpdate(payload);
+    this.colHeights = computeColHeights(payload.board);
 
     if (this.state.skipNextAnimation) {
       this.setState({ skipNextAnimation: false });
@@ -49,7 +55,7 @@ export default class Connect4App extends GameAppBase {
 
     const col = payload.last_col;
     if (col >= 0) {
-      let row = ROWS - payload.col_heights[col];
+      let row = ROWS - this.colHeights[col];
       let disc = payload.board[row * COLS + col];
 
       this.setState({
@@ -83,13 +89,10 @@ export default class Connect4App extends GameAppBase {
   };
 
   handleCellClick = (col) => {
-    console.log(`Column ${col} clicked`);
     if (!this.gameActive() || (this.state.animation && this.state.animation.col !== null)) return;
 
-    let row = ROWS - computeColHeights(this.state.board)[col] - 1;
-
+    let row = ROWS - this.colHeights[col] - 1;
     const disc = this.state.seatAssignments[this.state.currentTurn];
-    console.log(`Animating disc drop at col ${col}, row ${row} for seat ${disc}`);
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -132,7 +135,6 @@ export default class Connect4App extends GameAppBase {
   renderBoard() {
     if (!this.state.board) return null;
     const grid = [];
-    const heights = computeColHeights(this.state.board);
     for (let row = 0; row < ROWS; ++row) {
       for (let col = 0; col < COLS; ++col) {
         const idx = row * COLS + col;
@@ -147,7 +149,7 @@ export default class Connect4App extends GameAppBase {
         }
 
         let ghostDisc = null;
-        let targetRow = ROWS - heights[col] - 1;
+        let targetRow = ROWS - this.colHeights[col] - 1;
         if (col === this.state.proposed_action && row === targetRow) {
            ghostDisc = <span className={`cell ghost ${this.state.seatAssignments[this.state.currentTurn]}`} />;
         }
