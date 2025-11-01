@@ -26,7 +26,7 @@ bool AnalysisPlayer<Game>::start_game() {
   manager->register_handler(this->get_my_seat(), std::move(handler_map));
 
   bool started = wrapped_player_->start_game();
-  if (!manager->become_starter()) {
+  if (manager->become_starter()) {
     manager->wait_for_new_game_ready();
     this->send_start_game();
   }
