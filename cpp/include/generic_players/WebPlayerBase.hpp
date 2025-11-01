@@ -23,13 +23,13 @@ class WebPlayerBase: public core::AbstractPlayer<Game> {
   void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
   void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
                          core::action_mode_t last_mode);
-  boost::json::object make_start_game_msg();
-  boost::json::object make_action_request_msg(const ActionMask& valid_actions,
+  virtual boost::json::object make_start_game_msg();
+  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
                                               core::action_t proposed_action);
-  boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
+  virtual boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
                                             core::action_t last_action,
                                             core::action_mode_t last_mode);
-  boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
+  virtual boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
 
   core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
