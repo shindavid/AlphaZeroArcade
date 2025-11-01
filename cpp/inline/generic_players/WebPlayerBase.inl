@@ -106,7 +106,7 @@ boost::json::object WebPlayerBase<Game>::make_state_update_msg(core::seat_index_
 
   boost::json::object payload;
   payload["board"] = Game::IO::state_to_json(state);
-  payload["seat"] = Game::IO::player_to_str(seat);
+  payload["seat"] = seat;
   payload["last_action"] = Game::IO::action_to_str(last_action, last_mode);
 
   return payload;
