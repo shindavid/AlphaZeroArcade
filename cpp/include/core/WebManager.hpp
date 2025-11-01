@@ -52,8 +52,6 @@ struct WebManager {
   mit::condition_variable cv_;
 
   bool bridge_connected_ = false;
-
-  //TODO: move ready_for_new_game_ to AnalysisPlayer and WebPlayer
   bool ready_for_new_game_ = true;
   bool has_starter_ = false;
 
