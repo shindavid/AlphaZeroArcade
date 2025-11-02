@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -21,7 +22,7 @@ using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
  * frontend through a bridge process. It launches both the bridge and frontend upon construction and
  * processes incoming bridge messages on a dedicated thread. Player instances (e.g., AnalysisPlayer,
  * WebPlayer) can register handlers for specific message types, which are automatically invoked when
- * messages of thosetypes are received.
+ * messages of those types are received.
  */
 template<concepts::Game Game>
 struct WebManager {

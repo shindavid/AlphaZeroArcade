@@ -4,6 +4,8 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
+#include "boost/json/object.hpp"
+
 namespace generic {
 /*
  * WebPlayerBase provides core functionality for web-based players, handling communication with
