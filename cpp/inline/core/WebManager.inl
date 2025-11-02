@@ -13,7 +13,7 @@ WebManager<Game>::WebManager() : acceptor_(create_acceptor()), socket_(io_contex
   launch_frontend();
 
   std::cout << "Please open the frontend in your browser at:\n\n"
-            << "    http://localhost:5173\n"
+            << std::format("    http://localhost:{}\n", vite_port_)
             << std::endl;
 
   thread_ = mit::thread([this]() { response_loop(); });
@@ -48,7 +48,7 @@ inline WebManager<Game>* WebManager<Game>::get_instance() {
 
 template <core::concepts::Game Game>
 void WebManager<Game>::send_msg(const boost::json::object& msg) {
-  mit::unique_lock lock(mutex_);
+  mit::unique_lock lock(io_mutex_);
   std::string out = boost::json::serialize(msg) + "\n";
   boost::asio::write(socket_, boost::asio::buffer(out));
 }

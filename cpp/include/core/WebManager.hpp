@@ -71,6 +71,7 @@ struct WebManager {
   boost::asio::ip::tcp::socket socket_;
   mit::thread thread_;
   mit::mutex mutex_;
+  mit::mutex io_mutex_;
   mit::condition_variable cv_;
 
   bool bridge_connected_ = false;
