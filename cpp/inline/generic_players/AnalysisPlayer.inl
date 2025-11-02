@@ -75,6 +75,7 @@ void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
   web_manager->clear_starter();
+  web_manager->clear_handlers();
 }
 
 }  // namespace generic
