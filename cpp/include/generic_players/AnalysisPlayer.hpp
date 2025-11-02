@@ -7,6 +7,13 @@
 
 namespace generic {
 
+/*
+ * AnalysisPlayer wraps an AbstractPlayer and adds web-based communication to enable interactive
+ * analysis. It uses WebManager to interface with a web frontend, allowing users to inspect the
+ * wrapped player's reasoning and optionally override its moves. AnalysisPlayer registers handlers
+ * for incoming messages such as "make_move" and "resign", supporting interactive gameplay with
+ * detailed insight into the player's decisions.
+ */
 template <core::concepts::Game Game>
 class AnalysisPlayer : public WebPlayerBase<Game>{
  public:
