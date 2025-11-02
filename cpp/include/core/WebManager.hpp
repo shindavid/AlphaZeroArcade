@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/concepts/GameConcept.hpp"
-#include "util/OsUtil.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <array>
 #include <boost/asio.hpp>

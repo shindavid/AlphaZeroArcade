@@ -1,7 +1,6 @@
 #include "generic_players/WebPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "search/VerboseManager.hpp"
 #include "util/Exceptions.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/OsUtil.hpp"
@@ -10,9 +9,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/json/array.hpp>
 #include <boost/process.hpp>
-
-#include <iostream>
-#include <string>
 
 namespace generic {
 
