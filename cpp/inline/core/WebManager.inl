@@ -150,7 +150,7 @@ void WebManager<Game>::response_loop() {
       HandlerFuncMap& handlers = handlers_[seat_index];
       auto it = handlers.find(msg_type);
       if (it != handlers.end()) {
-        HandlerFunc f = it->second;
+        HandlerFunc& f = it->second;
         boost::json::object payload =
           obj.contains("payload") ? obj.at("payload").as_object() : boost::json::object{};
         f(payload);
@@ -164,6 +164,14 @@ void WebManager<Game>::response_loop() {
       cv_.notify_all();
       break;
     }
+  }
+}
+
+template <core::concepts::Game Game>
+void WebManager<Game>::clear_handlers() {
+  mit::unique_lock lock(mutex_);
+  for (auto& handler_map : handlers_) {
+    handler_map.clear();
   }
 }
 
