@@ -13,8 +13,8 @@ bool WebPlayer<Game>::start_game() {
   manager->wait_for_connection();
 
   core::HandlerFuncMap handler_map = {
-    {"make_move", [this](const boost::json::object& payload) {this->set_action(payload); }},
-    {"resign", [this](const boost::json::object& payload) {this->set_resign(payload); }},
+    {"make_move", [this](const boost::json::object& payload) { this->set_action(payload); }},
+    {"resign", [this](const boost::json::object& payload) { this->set_resign(payload); }},
   };
   manager->register_handler(this->get_my_seat(), std::move(handler_map));
 
@@ -26,7 +26,8 @@ bool WebPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(const ActionRequest& request) {
+typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
   if (this->resign_) {
     return ActionResponse::resign();
   }
@@ -44,7 +45,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(const 
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                core::action_t action) {
+                                           core::action_t action) {
   this->send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
 }
 

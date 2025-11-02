@@ -41,7 +41,8 @@ boost::json::object WebPlayerBase<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayerBase<Game>::send_action_request(const ActionMask& valid_actions, core::action_t action) {
+void WebPlayerBase<Game>::send_action_request(const ActionMask& valid_actions,
+                                              core::action_t action) {
   boost::json::object msg;
   msg["type"] = "action_request";
   msg["payload"] = make_action_request_msg(valid_actions, action);
@@ -51,7 +52,7 @@ void WebPlayerBase<Game>::send_action_request(const ActionMask& valid_actions, c
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayerBase<Game>::make_action_request_msg(const ActionMask& valid_actions,
-                                                                  core::action_t action) {
+                                                                 core::action_t action) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
@@ -86,7 +87,8 @@ void WebPlayerBase<Game>::set_resign(const boost::json::object& payload) {
 
 template <core::concepts::Game Game>
 void WebPlayerBase<Game>::send_state_update(core::seat_index_t seat, const State& state,
-                                        core::action_t last_action, core::action_mode_t last_mode) {
+                                            core::action_t last_action,
+                                            core::action_mode_t last_mode) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object msg;
@@ -99,9 +101,9 @@ void WebPlayerBase<Game>::send_state_update(core::seat_index_t seat, const State
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayerBase<Game>::make_state_update_msg(core::seat_index_t seat,
-                                                           const State& state,
-                                                           core::action_t last_action,
-                                                           core::action_mode_t last_mode) {
+                                                               const State& state,
+                                                               core::action_t last_action,
+                                                               core::action_mode_t last_mode) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;
@@ -114,7 +116,7 @@ boost::json::object WebPlayerBase<Game>::make_state_update_msg(core::seat_index_
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayerBase<Game>::make_result_msg(const State& state,
-                                                          const GameResultTensor& outcome) {
+                                                         const GameResultTensor& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;

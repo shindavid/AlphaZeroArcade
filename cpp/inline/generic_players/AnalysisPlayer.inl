@@ -20,8 +20,8 @@ bool AnalysisPlayer<Game>::start_game() {
   manager->wait_for_connection();
 
   core::HandlerFuncMap handler_map = {
-    {"make_move", [this](const boost::json::object& payload) {this->set_action(payload); }},
-    {"resign", [this](const boost::json::object& payload) {this->set_resign(payload); }},
+    {"make_move", [this](const boost::json::object& payload) { this->set_action(payload); }},
+    {"resign", [this](const boost::json::object& payload) { this->set_resign(payload); }},
   };
   manager->register_handler(this->get_my_seat(), std::move(handler_map));
 
@@ -34,7 +34,8 @@ bool AnalysisPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(const ActionRequest& request) {
+typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
   auto wrapped_player_response = wrapped_player_->get_action_response(request);
 
   if (this->resign_) {

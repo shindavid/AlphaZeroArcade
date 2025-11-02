@@ -15,7 +15,7 @@ namespace generic {
  * detailed insight into the player's decisions.
  */
 template <core::concepts::Game Game>
-class AnalysisPlayer : public WebPlayerBase<Game>{
+class AnalysisPlayer : public WebPlayerBase<Game> {
  public:
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
@@ -35,7 +35,6 @@ class AnalysisPlayer : public WebPlayerBase<Game>{
 
  private:
   core::AbstractPlayer<Game>* wrapped_player_;
-
 };
 
 }  // namespace generic

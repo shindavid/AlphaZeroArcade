@@ -1,24 +1,23 @@
 #pragma once
 
+#include "boost/json/object.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
-#include "boost/json/object.hpp"
-
 namespace generic {
 /*
  * WebPlayerBase provides core functionality for web-based players, handling communication with
- * the web frontend via WebManager. It includes methods to send game start messages, action requests,
- * state updates, and game results to the frontend. Derived classes can override message construction
- * methods to customize the payloads sent to the web interface.
+ * the web frontend via WebManager. It includes methods to send game start messages, action
+ * requests, state updates, and game results to the frontend. Derived classes can override message
+ * construction methods to customize the payloads sent to the web interface.
  *
  * Note: WebPlayerBase does not have the necessary methods to function as a player on its own. It is
  * intended to be subclassed by specific player implementations (e.g., WebPlayer, AnalysisPlayer)
  * that provide the required player interface.
  */
 template <core::concepts::Game Game>
-class WebPlayerBase: public core::AbstractPlayer<Game> {
+class WebPlayerBase : public core::AbstractPlayer<Game> {
  public:
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
@@ -61,7 +60,7 @@ class WebPlayerBase: public core::AbstractPlayer<Game> {
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
   virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
-                                              core::action_t proposed_action);
+                                                      core::action_t proposed_action);
 
   // Construct json object that the frontend can use to display the state.
   //
@@ -79,8 +78,8 @@ class WebPlayerBase: public core::AbstractPlayer<Game> {
   // visualization in the frontend. This too should have reasonable defaults built into this
   // base class.
   virtual boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
-                                            core::action_t last_action,
-                                            core::action_mode_t last_mode);
+                                                    core::action_t last_action,
+                                                    core::action_mode_t last_mode);
 
   // Optional: override this to provide a game-specific result message.
   // By default, it returns something like:

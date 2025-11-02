@@ -4,10 +4,11 @@
 #include "core/concepts/GameConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include <array>
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
 #include <boost/process.hpp>
+
+#include <array>
 #include <functional>
 #include <unordered_map>
 
@@ -24,9 +25,9 @@ using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
  * WebPlayer) can register handlers for specific message types, which are automatically invoked when
  * messages of those types are received.
  */
-template<concepts::Game Game>
+template <concepts::Game Game>
 struct WebManager {
-  using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>; // idx by seat
+  using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>;  // idx by seat
 
   WebManager();
   ~WebManager();
