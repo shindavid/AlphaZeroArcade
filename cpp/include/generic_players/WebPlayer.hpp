@@ -4,11 +4,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "generic_players/WebPlayerBase.hpp"
-#include "util/mit/mit.hpp"  // IWYU pragma: keep
-
-#include <boost/asio.hpp>
-#include <boost/json.hpp>
-#include <boost/process.hpp>
 
 namespace generic {
 
@@ -20,7 +15,6 @@ class WebPlayer : public WebPlayerBase<Game> {
   using base_t = core::AbstractPlayer<Game>;
   using IO = Game::IO;
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
