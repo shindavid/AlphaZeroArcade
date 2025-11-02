@@ -16,6 +16,13 @@ using MsgType = std::string;
 using HandlerFunc = std::function<void(const boost::json::object& payload)>;
 using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
 
+/*
+ * WebManager is a singleton responsible for communication between the game server and the web-based
+ * frontend through a bridge process. It launches both the bridge and frontend upon construction and
+ * processes incoming bridge messages on a dedicated thread. Player instances (e.g., AnalysisPlayer,
+ * WebPlayer) can register handlers for specific message types, which are automatically invoked when
+ * messages of thosetypes are received.
+ */
 template<concepts::Game Game>
 struct WebManager {
   using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>; // idx by seat
@@ -26,12 +33,25 @@ struct WebManager {
   void wait_for_connection();
   void wait_for_new_game_ready();
 
+  /*
+   * A starter is a player that initiates a new game in the front end. The starter sends the initial
+   * game state. Only one player performs the starter role for each game. At the end of each game,
+   * the starter role is cleared, allowing another player to become the starter for the next game.
+   */
+  bool become_starter();
+  void clear_starter();
+
   void register_handler(seat_index_t seat, HandlerFuncMap&& handler_map) {
     handlers_[seat] = std::move(handler_map);
   }
+
+  /*
+   * All handlers are cleared at the end of each game to prevent retaining stale handlers from
+   * previous sessions. Although new handlers are typically registered at the start of every game,
+   * this serves as a defensive safeguard.
+   */
+  void clear_handlers();
   void send_msg(const boost::json::object& msg);
-  bool become_starter();
-  void clear_starter();
 
  private:
   boost::asio::ip::tcp::acceptor create_acceptor();
