@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "util/Exceptions.hpp"
 
+#include <boost/json/value.hpp>
 #include <string>
 
 namespace core {
@@ -19,6 +20,9 @@ struct IOBase {
   }
   static std::string compact_state_repr(const State& state) {
     throw util::CleanException("compact_state_repr not implemented");
+  }
+  static boost::json::value state_to_json(const State& state) {
+    throw util::CleanException("state_to_json not implemented");
   }
 };
 

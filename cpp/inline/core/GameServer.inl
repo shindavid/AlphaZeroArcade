@@ -386,12 +386,11 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
+void GameServer<Game>::SharedData::register_player(seat_index_t seat,
+                                                   AbstractPlayerGenerator<Game>* gen,
                                                    bool implicit_remote) {
-  if constexpr (concepts::WebGameIO<typename Game::IO, typename Game::Types>) {
-    if (params_.analysis_mode) {
-      gen = new generic::AnalysisPlayerGenerator<Game>(gen);
-    }
+  if (params_.analysis_mode) {
+    gen = new generic::AnalysisPlayerGenerator<Game>(gen);
   }
 
   CLEAN_ASSERT(seat < kNumPlayers, "Invalid seat number {}", seat);

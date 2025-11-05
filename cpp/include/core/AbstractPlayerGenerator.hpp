@@ -112,7 +112,7 @@ class AbstractPlayerGenerator {
    */
   virtual int max_simultaneous_games() const { return 0; }
 
-  const std::string& get_name() const { return name_; }
+  virtual const std::string& get_name() const { return name_; }
 
   /*
    * Validates name, raising an exception if the name is invalid (too long or uses invalid

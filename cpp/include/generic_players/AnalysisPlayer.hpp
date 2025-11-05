@@ -25,7 +25,7 @@ class AnalysisPlayer : public WebPlayerBase<Game> {
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }
-  std::string get_name() const { return wrapped_player_->get_name(); }
+  const std::string& get_name() const override { return wrapped_player_->get_name(); }
 
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
