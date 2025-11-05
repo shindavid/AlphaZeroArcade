@@ -6,7 +6,7 @@
 #include "core/PerfStats.hpp"
 #include "core/concepts/GameIOConcept.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
-#include "generic_players/AnalysisPlayer.hpp"
+#include "generic_players/AnalysisPlayerGenerator.hpp"
 #include "search/VerboseManager.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CompactBitSet.hpp"
@@ -133,20 +133,14 @@ GameServer<Game>::SharedData::~SharedData() {
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::init_slots() {
-  int n_slots;
+  int n_slots = params_.parallelism;
+  if (params_.num_games > 0) {
+    n_slots = std::min(n_slots, params_.num_games);
+  }
 
-  if (params_.analysis_mode) {
-    n_slots = 1;
-  } else {
-    n_slots = params_.parallelism;
-    if (params_.num_games > 0) {
-      n_slots = std::min(n_slots, params_.num_games);
-    }
-
-    for (const auto& reg : registrations_) {
-      int n = reg.gen->max_simultaneous_games();
-      if (n > 0) n_slots = std::min(n_slots, n);
-    }
+  for (const auto& reg : registrations_) {
+    int n = reg.gen->max_simultaneous_games();
+    if (n > 0) n_slots = std::min(n_slots, n);
   }
 
   for (int p = 0; p < n_slots; ++p) {
@@ -373,9 +367,6 @@ void GameServer<Game>::SharedData::start_session() {
   for (auto& reg : registrations_) {
     reg.gen->start_session();
   }
-  if (params_.analysis_mode) {
-    generic::VerboseManager::get_instance()->disable_auto_terminal_printing();
-  }
 }
 
 template <concepts::Game Game>
@@ -397,6 +388,10 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
                                                    bool implicit_remote) {
+  if (params_.analysis_mode) {
+    gen = new generic::AnalysisPlayerGenerator<Game>(gen);
+  }
+
   CLEAN_ASSERT(seat < kNumPlayers, "Invalid seat number {}", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
@@ -411,6 +406,7 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
 
     CLEAN_ASSERT(seat < 0, "Cannot specify --seat with --type=Remote");
   }
+
   if (seat >= 0) {
     for (const auto& reg : registrations_) {
       CLEAN_ASSERT(reg.seat != seat, "Double-seated player at seat {}", seat);
@@ -681,16 +677,7 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
     : shared_data_(shared_data), id_(id) {
   bool disable_progress_bar = false;
   for (int p = 0; p < kNumPlayers; ++p) {
-    PlayerInstantiation instantiation = shared_data_.registration_templates()[p].instantiate(id);
-
-    if constexpr (concepts::WebGameIO<typename Game::IO, typename Game::Types>) {
-      if (params().analysis_mode) {
-        auto analysis_player = new generic::AnalysisPlayer<Game>(instantiation.player);
-        instantiation.player = analysis_player;
-      }
-    }
-
-    instantiations_[p] = instantiation;
+    instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
   }
 
