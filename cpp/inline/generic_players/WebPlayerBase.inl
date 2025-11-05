@@ -80,7 +80,7 @@ void WebPlayerBase<Game>::set_action(const boost::json::object& payload) {
 }
 
 template <core::concepts::Game Game>
-void WebPlayerBase<Game>::set_resign(const boost::json::object& payload) {
+void WebPlayerBase<Game>::set_resign() {
   resign_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
 }

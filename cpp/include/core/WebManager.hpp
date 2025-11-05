@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -13,11 +14,6 @@
 #include <unordered_map>
 
 namespace core {
-
-using MsgType = std::string;
-using HandlerFunc = std::function<void(const boost::json::object& payload)>;
-using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
-
 /*
  * WebManager is a singleton responsible for communication between the game server and the web-based
  * frontend through a bridge process. It launches both the bridge and frontend upon construction and
@@ -27,7 +23,8 @@ using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
  */
 template <concepts::Game Game>
 struct WebManager {
-  using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>;  // idx by seat
+  using client_vec_t = std::array<WebManagerClient*, Game::Constants::kNumPlayers>;
+
   ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
@@ -41,8 +38,8 @@ struct WebManager {
   bool become_starter();
   void clear_starter();
 
-  void register_handler(seat_index_t seat, HandlerFuncMap&& handler_map) {
-    handlers_[seat] = std::move(handler_map);
+  void register_client(seat_index_t seat, WebManagerClient* client) {
+    clients_[seat] = client;
   }
 
   /*
@@ -50,7 +47,7 @@ struct WebManager {
    * previous sessions. Although new handlers are typically registered at the start of every game,
    * this serves as a defensive safeguard.
    */
-  void clear_handlers();
+  void clear_clients();
   void send_msg(const boost::json::object& msg);
 
  private:
@@ -80,7 +77,7 @@ struct WebManager {
   boost::process::child* bridge_process_ = nullptr;
   boost::process::child* frontend_process_ = nullptr;
 
-  Handlers handlers_;
+  client_vec_t clients_;
 };
 
 }  // namespace core

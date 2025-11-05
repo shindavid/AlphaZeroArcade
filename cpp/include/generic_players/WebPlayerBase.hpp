@@ -1,23 +1,23 @@
 #pragma once
 
-#include "boost/json/object.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace generic {
 /*
  * WebPlayerBase provides core functionality for web-based players, handling communication with
- * the web frontend via WebManager. It includes methods to send game start messages, action
- * requests, state updates, and game results to the frontend. Derived classes can override message
- * construction methods to customize the payloads sent to the web interface.
+ * the web frontend via WebManager. It includes methods to send game start messages, action requests,
+ * state updates, and game results to the frontend. Derived classes can override message construction
+ * methods to customize the payloads sent to the web interface.
  *
  * Note: WebPlayerBase does not have the necessary methods to function as a player on its own. It is
  * intended to be subclassed by specific player implementations (e.g., WebPlayer, AnalysisPlayer)
  * that provide the required player interface.
  */
 template <core::concepts::Game Game>
-class WebPlayerBase : public core::AbstractPlayer<Game> {
+class WebPlayerBase : public core::AbstractPlayer<Game>, public core::WebManagerClient {
  public:
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
@@ -25,8 +25,8 @@ class WebPlayerBase : public core::AbstractPlayer<Game> {
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
-  void set_action(const boost::json::object& payload);
-  void set_resign(const boost::json::object& payload);
+  void set_action(const boost::json::object& payload) override;
+  void set_resign() override;
 
  protected:
   void send_start_game();

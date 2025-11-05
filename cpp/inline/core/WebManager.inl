@@ -137,30 +137,23 @@ void WebManager<Game>::response_loop() {
 
       std::string msg_type = obj.at("type").as_string().c_str();
 
-      if (!obj.contains("seat")) {
-        if (msg_type == "new_game") {
-          mit::unique_lock lock(mutex_);
-          ready_for_new_game_ = true;
-          lock.unlock();
-          cv_.notify_all();
+      if (msg_type == "new_game") {
+        mit::unique_lock lock(mutex_);
+        ready_for_new_game_ = true;
+        lock.unlock();
+        cv_.notify_all();
+        continue;
+      } else {
+        int seat_index = boost::json::value_to<int>(obj.at("seat"));
+        if (msg_type == "make_move") {
+          boost::json::object payload = obj.at("payload").as_object();
+          clients_[seat_index]->set_action(payload);
+        } else if (msg_type == "resign") {
+          clients_[seat_index]->set_resign();
         } else {
           throw util::Exception("Unknown message type: {}", msg_type);
         }
-        continue;
       }
-
-      int seat_index = boost::json::value_to<int>(obj.at("seat"));
-      HandlerFuncMap& handlers = handlers_[seat_index];
-      auto it = handlers.find(msg_type);
-      if (it != handlers.end()) {
-        HandlerFunc& f = it->second;
-        boost::json::object payload =
-          obj.contains("payload") ? obj.at("payload").as_object() : boost::json::object{};
-        f(payload);
-      } else {
-        throw util::Exception("No handler registered for message type: {}", msg_type);
-      }
-
     } catch (const std::exception& ex) {
       LOG_INFO("WebManager: connection closed or error: {}", ex.what());
       bridge_connected_ = false;
@@ -171,11 +164,9 @@ void WebManager<Game>::response_loop() {
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::clear_handlers() {
+void WebManager<Game>::clear_clients() {
   mit::unique_lock lock(mutex_);
-  for (auto& handler_map : handlers_) {
-    handler_map.clear();
-  }
+  clients_.fill(nullptr);
 }
 
 template <core::concepts::Game Game>

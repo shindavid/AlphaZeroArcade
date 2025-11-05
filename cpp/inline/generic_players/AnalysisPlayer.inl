@@ -12,12 +12,7 @@ bool AnalysisPlayer<Game>::start_game() {
 
   auto* manager = core::WebManager<Game>::get_instance();
   manager->wait_for_connection();
-
-  core::HandlerFuncMap handler_map = {
-    {"make_move", [this](const boost::json::object& payload) { this->set_action(payload); }},
-    {"resign", [this](const boost::json::object& payload) { this->set_resign(payload); }},
-  };
-  manager->register_handler(this->get_my_seat(), std::move(handler_map));
+  manager->register_client(this->get_my_seat(), this);
 
   bool started = wrapped_player_->start_game();
   if (manager->become_starter()) {
@@ -70,7 +65,7 @@ void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
   web_manager->clear_starter();
-  web_manager->clear_handlers();
+  web_manager->clear_clients();
 }
 
 }  // namespace generic
