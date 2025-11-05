@@ -8,10 +8,12 @@
 #include "games/connect4/players/HumanTuiPlayerGenerator.hpp"
 #include "games/connect4/players/PerfectPlayerGenerator.hpp"
 #include "games/connect4/players/WebPlayer.hpp"
+#include "gammazero/Traits.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
 #include "generic_players/beta0/PlayerGenerator.hpp"
+#include "generic_players/gamma0/PlayerGenerator.hpp"
 
 namespace c4 {
 
@@ -21,6 +23,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
   using player_subfactory_vec_t = base_t::player_subfactory_vec_t;
   using AlphaZeroTraits = ::alpha0::Traits<Game>;
   using BetaZeroTraits = ::beta0::Traits<Game>;
+  using GammaZeroTraits = ::gamma0::Traits<Game>;
 
   PlayerFactory() : base_t(make_subfactories()) {}
 
@@ -32,6 +35,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::beta0::CompetitionPlayerGenerator<BetaZeroTraits>>(),
       new core::PlayerSubfactory<generic::beta0::TrainingPlayerGenerator<BetaZeroTraits>>(),
+      new core::PlayerSubfactory<generic::gamma0::CompetitionPlayerGenerator<GammaZeroTraits>>(),
+      new core::PlayerSubfactory<generic::gamma0::TrainingPlayerGenerator<GammaZeroTraits>>(),
       new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
       new core::PlayerSubfactory<generic::WebPlayerGenerator<c4::WebPlayer>>(),
       new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),

@@ -2,6 +2,7 @@
 
 #include "alphazero/Traits.hpp"
 #include "betazero/Traits.hpp"
+#include "gammazero/Traits.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "search/DataLoader.hpp"
@@ -24,6 +25,10 @@ struct FfiFunctions {
   using BetaZeroGameReadLog = search::GameReadLog<BetaZeroTraits>;
   using BetaZeroDataLoader = search::DataLoader<BetaZeroTraits>;
 
+  using GammaZeroTraits = gamma0::Traits<Game>;
+  using GammaZeroGameReadLog = search::GameReadLog<GammaZeroTraits>;
+  using GammaZeroDataLoader = search::DataLoader<GammaZeroTraits>;
+
   using DataLoader = search::DataLoaderBase;
 
   static DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
@@ -36,6 +41,8 @@ struct FfiFunctions {
         return new AlphaZeroDataLoader(params);
       case core::kParadigmBetaZero:
         return new BetaZeroDataLoader(params);
+      case core::kParadigmGammaZero:
+        return new GammaZeroDataLoader(params);
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -76,6 +83,8 @@ struct FfiFunctions {
         return AlphaZeroGameReadLog::get_input_shapes();
       case core::kParadigmBetaZero:
         return BetaZeroGameReadLog::get_input_shapes();
+      case core::kParadigmGammaZero:
+        return GammaZeroGameReadLog::get_input_shapes();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -88,6 +97,8 @@ struct FfiFunctions {
         return AlphaZeroGameReadLog::get_target_shapes();
       case core::kParadigmBetaZero:
         return BetaZeroGameReadLog::get_target_shapes();
+      case core::kParadigmGammaZero:
+        return GammaZeroGameReadLog::get_target_shapes();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
@@ -100,6 +111,8 @@ struct FfiFunctions {
         return AlphaZeroGameReadLog::get_head_shapes();
       case core::kParadigmBetaZero:
         return BetaZeroGameReadLog::get_head_shapes();
+      case core::kParadigmGammaZero:
+        return GammaZeroGameReadLog::get_head_shapes();
       default:
         throw util::Exception("Unknown search paradigm '{}'", paradigm);
     }
