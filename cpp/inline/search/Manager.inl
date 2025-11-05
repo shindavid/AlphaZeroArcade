@@ -168,7 +168,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     core::node_pool_index_t child_node_index = lookup_child_by_action(root, transformed_action);
     ValueArray V;
     if (child_node_index < 0) {
-      V = edge->child_V_estimate;
+      V = edge->child_AV;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
       V = Game::GameResults::to_value_array(child->stable_data().R);
@@ -390,6 +390,10 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   Algorithms::load_evaluations(context);
   context.eval_request.mark_all_as_stale();
 
+  if (is_root) {
+    node->stats().RN = std::max(node->stats().RN, 1);
+  }
+
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
@@ -516,12 +520,15 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
+      DEBUG_ASSERT(node == lookup_table.get_node(general_context_.root_info.node_index));
       DEBUG_ASSERT(edge->child_index >= 0);
       Node* child = lookup_table.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
 
       if (Algorithms::should_short_circuit(edge, child)) {
         short_circuit_backprop(context);
+      } else if (child->is_terminal()) {
+        pure_backprop(context);
       } else {
         standard_backprop(context, false);
       }
@@ -654,8 +661,6 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
-
-  core::node_pool_index_t child_index = context.initialization_index;
   Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
@@ -664,13 +669,12 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
   }
 
   if (context.expanded_new_node) {
-    core::node_pool_index_t inserted_child_index = context.inserted_node_index;
-    Node* child = lookup_table.get_node(child_index);
+    Node* child = lookup_table.get_node(context.initialization_index);
     bool terminal = child->is_terminal();
     bool do_virtual = !terminal && multithreaded();
 
-    edge->child_index = inserted_child_index;
-    if (child_index != inserted_child_index) {
+    edge->child_index = context.inserted_node_index;
+    if (context.initialization_index != context.inserted_node_index) {
       // This means that we hit the race-condition described in begin_expansion(). We need to
       // "unwind" the second resume_node_initialization() call, and instead use the first one.
       //
@@ -678,11 +682,11 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
       // when the lookup_table is defragmented.
       context.search_path.pop_back();
+      Algorithms::init_edge_from_child(general_context_, parent, edge);
       if (do_virtual) {
         undo_virtual_backprop(context);
       }
       context.expanded_new_node = false;
-      child_index = edge->child_index;
     } else {
       if (terminal) {
         pure_backprop(context);
@@ -690,46 +694,19 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
         standard_backprop(context, do_virtual);
       }
     }
+  } else {
+    edge->child_index = context.initialization_index;
+    Algorithms::init_edge_from_child(general_context_, parent, edge);
   }
 
-  if (!context.expanded_new_node) {
-    // TODO: in this case, we should check to see if there are sister edges that point to the same
-    // child. In this case, we can "slide" the visits and policy-mass from one edge to the other,
-    // effectively pretending that we had merged the two edges from the beginning. This should
-    // result in a more efficient search.
-    //
-    // We had something like this at some point, and for tic-tac-toe, it led to a significant
-    // improvement. But that previous implementation was inefficient for large branching factors,
-    // as it did the edge-merging up-front. This proposal only attempts edge-merges on-demand,
-    // piggy-backing existing MCGS-key-lookups for minimal additional overhead.
-    //
-    // Some technical notes on this:
-    //
-    // - At a minimum we want to slide E and adjusted_base_prob, and then mark the edge as defunct,
-    //   so that PUCT will not select it.
-    // - We can easily mutex-protect the writes, by doing this under the parent's mutex. For the
-    //   reads in PuctCalculator, we can probably be unsafe. I think a reasonable order would be:
-    //
-    //   edge1->merged_edge_index = edge2_index;
-    //   edge2->adjusted_base_prob += edge1->adjusted_base_prob;
-    //   edge1->adjusted_base_prob = 0;
-    //   edge2->E += edge1->E;
-    //   edge1->E = 0;
-    //
-    //   We just have to reason carefully about the order of the reads in PuctCalculator. Choosing
-    //   which edge merges into which edge can also give us more control over possible races, as
-    //   PuctCalculator iterates over the edges in a specific order. More careful analysis is
-    //   needed here.
-    //
-    //   Wherever we increment an edge->E, we can check, under the parent-mutex, if
-    //   edge->merged_edge_index >= 0, and if so, increment the E of the merged edge instead, in
-    //   order to make the writes thread-safe.
-    edge->child_index = child_index;
-  }
+  // TODO: in the !expanded_new_node case, we should check to see if there are sister edges from the
+  // same parent that point to the same child. In this case, we can "slide" the visits and
+  // policy-mass from one edge to the other, effectively pretending that we had merged the two edges
+  // from the beginning. This should result in a more efficient search.
 
   mit::unique_lock lock(parent->mutex());
-  update_child_expand_count(parent);
   set_edge_state(context, edge, Edge::kExpanded);
+  update_child_expand_count(parent);
   lock.unlock();
 
   context.mid_expansion = false;
@@ -747,15 +724,17 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
-                              [&] { Algorithms::init_node_stats_from_terminal(last_node); });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::init_node_stats_from_terminal(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
   }
   Algorithms::validate_search_path(context);
 }
@@ -771,14 +750,15 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table,
-                              [&] { Algorithms::virtually_update_node_stats(last_node); });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+    backpropagator.run(node, edge, [&] {
       Algorithms::virtually_update_node_stats_and_edge(node, edge);
     });
   }
@@ -798,12 +778,14 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
 
+  Backpropagator backpropagator(lookup_table);
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::undo_virtual_update(node, edge); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::undo_virtual_update(node, edge);
+    });
   }
   Algorithms::validate_search_path(context);
 }
@@ -811,6 +793,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
+  RELEASE_ASSERT(!last_node->is_terminal());
   auto value = GameResults::to_value_array(last_node->stable_data().R);
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
@@ -821,15 +804,15 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
 
   LookupTable& lookup_table = context.general_context->lookup_table;
 
-  Algorithms::backprop_helper(last_node, nullptr, lookup_table, [&] {
-    Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual);
-  });
+  Backpropagator backpropagator(lookup_table);
+  backpropagator.run(last_node, nullptr,
+                     [&] { Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table, [&] {
+    backpropagator.run(node, edge, [&] {
       Algorithms::update_node_stats_and_edge(node, edge, undo_virtual);
     });
   }
@@ -845,12 +828,14 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
 
   LookupTable& lookup_table = context.general_context->lookup_table;
 
+  Backpropagator backpropagator(lookup_table);
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop_helper(node, edge, lookup_table,
-                                [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
+    backpropagator.run(node, edge, [&] {
+      Algorithms::update_node_stats_and_edge(node, edge, false);
+    });
   }
   Algorithms::validate_search_path(context);
 }
@@ -1020,6 +1005,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
+      Algorithms::init_edge_from_child(general_context_, node, edge);
       canonical_history.undo();
       context.raw_history.undo();
       continue;

@@ -11,6 +11,7 @@ struct GameLogCompactRecord : public alpha0::GameLogCompactRecord<Game> {
   WinShareTensor Q_posterior;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player
   WinShareTensor Q_max;  // for each player, the maximum value of Q ever observed for that player
+  WinShareTensor W_max;  // for each player, the maximum uncertainty ever observed for that player
 };
 
 }  // namespace beta0

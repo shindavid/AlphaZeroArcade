@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cmath>
 #include <map>
 
 #ifndef MIT_TEST_MODE
@@ -278,7 +279,21 @@ TEST(eigen_util, sort_columns_one_element) {
   }
 }
 
-TEST(eigen_util, softmax_in_place) {
+TEST(eigen_util, softmax_in_place_array) {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+
+  Array array {0, 1, 2, 3};
+  Array expected{0.0320586, 0.0871443, 0.2368828, 0.6439143};
+
+  eigen_util::softmax_in_place(array);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_NEAR(array(i), expected(i), 1e-5);
+  }
+}
+
+TEST(eigen_util, softmax_in_place_tensor) {
   constexpr int N = 4;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
 
@@ -1027,12 +1042,13 @@ TEST(eigen_util, print_array) {
 }
 
 TEST(eigen_util, concatenate_columns) {
-  using Array1 = Eigen::Array<float, 4, 1>;
+  using Array1f = Eigen::Array<float, 4, 1>;
+  using Array1i = Eigen::Array<int, 4, 1>;
   using Array2 = Eigen::Array<float, 4, 3>;
 
-  Array1 a{1, 2, 3, 4};
-  Array1 b{5, 6, 7, 8};
-  Array1 c{9, 10, 11, 12};
+  Array1f a{1, 2, 3, 4};
+  Array1i b{5, 6, 7, 8};
+  Array1f c{9, 10, 11, 12};
 
   Array2 expected = {{1, 5, 9}, {2, 6, 10}, {3, 7, 11}, {4, 8, 12}};
 
@@ -1190,6 +1206,20 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
+TEST(math, finiteness) {
+  EXPECT_EQ(math::get_finiteness(std::numeric_limits<double>::infinity()), math::kPosInf);
+  EXPECT_EQ(math::get_finiteness(-std::numeric_limits<double>::infinity()), math::kNegInf);
+  EXPECT_EQ(math::get_finiteness(0), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(0.0f), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(0.0), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(1), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(1.0f), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(1.0), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(-1), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(-1.0f), math::kFinite);
+  EXPECT_EQ(math::get_finiteness(-1.0), math::kFinite);
+}
+
 TEST(math, normal_cdf) {
   EXPECT_NEAR(math::normal_cdf(0), 0.5, 1e-6);
   EXPECT_NEAR(math::normal_cdf(1), 0.8413447, 1e-6);
@@ -1212,6 +1242,169 @@ TEST(math, splitmix64) {
   for (int i = 0; i < num_buckets; ++i) {
     double pct = counts[i] * 1.0 / N;
     EXPECT_NEAR(pct, 1.0 / num_buckets, 0.01);
+  }
+}
+
+// ---------- Long-double stable reference for log(alpha) ----------
+// We mirror the stable algorithm (Mills' ratio in tails + erfc/log1p in moderate)
+// but in long double precision, and we return the LOG-odds directly.
+
+static inline long double logPhiNeg_moderate_ld(long double z_nonneg) {
+  static const long double SQRT1_2_LD = 1.0l / std::sqrt(2.0l);
+  const long double t = z_nonneg * SQRT1_2_LD;
+  return std::log(0.5l) + std::log(std::erfc(t)); // log Phi(-z)
+}
+
+static inline long double logPhi_moderate_ld(long double z) {
+  static const long double SQRT1_2_LD = 1.0l / std::sqrt(2.0l);
+  if (z < 0.0l) {
+    const long double t = -z * SQRT1_2_LD;
+    return std::log(0.5l) + std::log(std::erfc(t)); // log Phi(z)
+  } else {
+    const long double s = logPhiNeg_moderate_ld(z); // s = log Phi(-z)
+    return std::log1p(-std::exp(s));               // log(1 - Phi(-z)) == log Phi(z)
+  }
+}
+
+// log( odds(z) ) = log( Phi(z) ) - log(1 - Phi(z) )
+static inline long double log_odds_normal_ld(long double z) {
+  static const long double LOG_SQRT_2PI_LD = 0.5l * std::log(2.0l * M_PIl);
+  static const long double THRESH = 10.0l;
+
+  if (z < -THRESH) {
+    // Use Mills' ratio for far negative tail: Phi(-t) ~ phi(t) * R(t)
+    const long double t = -z;         // t > 0
+    const long double inv = 1.0l / t; // series terms
+    const long double inv3 = inv*inv*inv;
+    const long double inv5 = inv3*inv*inv;
+    const long double inv7 = inv5*inv*inv;
+    const long double R = inv - inv3 + 3.0l*inv5 - 15.0l*inv7;
+    const long double logphi = -0.5l * t * t - LOG_SQRT_2PI_LD; // log φ(t)
+    // odds(z) = Phi(z)/Phi(-z) with z=-t; Phi(z)=Phi(-t) in tiny range, but we want log-odds.
+    // From tail analysis: log-odds(z) ~ log(φ(t) * R(t))
+    return logphi + std::log(R);
+  }
+  if (z > THRESH) {
+    // Symmetry: odds(z) = 1 / odds(-z)
+    return -log_odds_normal_ld(-z);
+  }
+  // Moderate range: exact long double logs
+  return logPhi_moderate_ld(z) - logPhi_moderate_ld(-z);
+}
+
+// long-double reference for log(alpha) = log-odds(z_new) - log-odds(z_old)
+static inline long double log_alpha_ref_ld(long double z_new, long double z_old) {
+  return log_odds_normal_ld(z_new) - log_odds_normal_ld(z_old);
+}
+
+// Absolute comparison on log-scale (since we directly return logs now)
+static inline ::testing::AssertionResult NearAbsLog(double log_a, long double log_b, double tol_abs) {
+  if (!std::isfinite(log_a) || !std::isfinite((double)log_b)) {
+    return ::testing::AssertionFailure()
+      << "Non-finite values: log_a=" << log_a << ", log_b=" << (double)log_b;
+  }
+  const long double diff = std::fabs((long double)log_a - log_b);
+  if (diff <= tol_abs) return ::testing::AssertionSuccess();
+  return ::testing::AssertionFailure()
+    << "log_a=" << log_a << " log_b=" << (double)log_b
+    << " |diff|=" << (double)diff << " > tol=" << tol_abs;
+}
+
+// ---------- Tests for math::normal_cdf_logit_diff ----------
+
+TEST(math, normal_cdf_logit_diff_IdentityWhenEqual) {
+  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(-3.14, -3.14), 0.0);
+  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(0.0,   0.0),   0.0);
+  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(25.0,  25.0),  0.0);
+}
+
+TEST(math, normal_cdf_logit_diff_Antisymmetry) {
+  // logit-diff(z1,z2) == -logit-diff(z2,z1)
+  std::vector<std::pair<double,double>> cases = {
+    {-2.0, -1.0}, { -6.0, -5.5}, { 1.0, 2.5}, {-9.0,  3.0}, { 7.5, -7.2}
+  };
+  for (auto [z1, z2] : cases) {
+    const double d12 = math::normal_cdf_logit_diff(z1, z2);
+    const double d21 = math::normal_cdf_logit_diff(z2, z1);
+    EXPECT_NEAR(d12 + d21, 0.0, 1e-12);
+  }
+}
+
+TEST(math, normal_cdf_logit_diff_Monotonicity) {
+  // If z_new > z_old, log-odds difference > 0
+  EXPECT_GT(math::normal_cdf_logit_diff(-1.0, -2.0), 0.0);
+  EXPECT_GT(math::normal_cdf_logit_diff( 2.0,  1.0), 0.0);
+  EXPECT_LT(math::normal_cdf_logit_diff(-2.0, -1.0), 0.0);
+}
+
+TEST(math, normal_cdf_logit_diff_MatchesNaiveInModerateRange) {
+  // In moderate z, compute a naive log-odds diff safely in double.
+  auto naive_log_diff = [](double zn, double zo) {
+    const double p_new = 0.5 * std::erfc(-zn / std::sqrt(2.0));
+    const double p_old = 0.5 * std::erfc(-zo / std::sqrt(2.0));
+    // log-odds = log(p) - log1p(-p)
+    const double lnew = std::log(p_new) - std::log1p(-p_new);
+    const double lold = std::log(p_old) - std::log1p(-p_old);
+    return lnew - lold;
+  };
+
+  std::vector<std::pair<double,double>> cases = {
+    {-2.0, -1.0}, { -1.5, -1.6}, { 0.0, -0.5}, { 2.0, 1.0}, { 3.0, -3.0}
+  };
+
+  for (auto [zn, zo] : cases) {
+    const double stable_log = math::normal_cdf_logit_diff(zn, zo);
+    const double naive_log  = naive_log_diff(zn, zo);
+    EXPECT_NEAR(stable_log, naive_log, 1e-12);
+  }
+}
+
+TEST(math, normal_cdf_logit_diff_ExtremeNegative_AgreesWithLongDouble) {
+  // Far negative tails (z ~ -20, -30, -39). Compare to long-double stable reference.
+  std::vector<std::pair<double,double>> cases = {
+    {-20.0, -19.5},
+    {-30.0, -29.0},
+    {-39.0, -38.5}
+  };
+
+  for (auto [zn, zo] : cases) {
+    const double stable_log = math::normal_cdf_logit_diff(zn, zo);
+    const long double ref_log = log_alpha_ref_ld((long double)zn, (long double)zo);
+    // Slightly looser absolute tolerance in extreme tails.
+    EXPECT_TRUE(NearAbsLog(stable_log, ref_log, /*tol_abs=*/1e-9));
+  }
+}
+
+TEST(math, normal_cdf_logit_diff_ExtremePositive_AgreesWithLongDouble) {
+  // Mirror cases in the far positive tail.
+  std::vector<std::pair<double,double>> cases = {
+    {19.5, 20.0},
+    {29.0, 30.0},
+    {38.5, 39.0}
+  };
+
+  for (auto [zn, zo] : cases) {
+    const double stable_log = math::normal_cdf_logit_diff(zn, zo);
+    const long double ref_log = log_alpha_ref_ld((long double)zn, (long double)zo);
+    EXPECT_TRUE(NearAbsLog(stable_log, ref_log, /*tol_abs=*/1e-9));
+  }
+}
+
+TEST(math, normal_cdf_logit_diff_VectorizedSweepSanity) {
+  // Sweep grid; check finiteness, signs, and agreement with long double.
+  std::vector<double> zs = {-10.0, -6.0, -3.0, -1.0, 0.0, 1.0, 3.0, 6.0, 10.0};
+  for (double zo : zs) {
+    for (double zn : zs) {
+      const double d = math::normal_cdf_logit_diff(zn, zo);
+      ASSERT_TRUE(std::isfinite(d)) << "non-finite for zn=" << zn << " zo=" << zo;
+      if (zn > zo) {
+        EXPECT_GT(d, 0.0);
+      } else if (zn < zo) {
+        EXPECT_LT(d, 0.0);
+      }
+      const long double ref_log = log_alpha_ref_ld((long double)zn, (long double)zo);
+      EXPECT_TRUE(NearAbsLog(d, ref_log, 1e-5));
+    }
   }
 }
 

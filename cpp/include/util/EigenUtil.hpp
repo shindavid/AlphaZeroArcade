@@ -210,6 +210,12 @@ template <typename Derived>
 auto sort_rows(const Eigen::ArrayBase<Derived>& array, int col_ix = 0, bool ascending = true);
 
 /*
+ * Performs a global-softmax on the input array, in place.
+ */
+template <class Derived>
+void softmax_in_place(Eigen::ArrayBase<Derived>&);
+
+/*
  * Performs a global-softmax on the input tensor, in place.
  */
 template <class Derived>

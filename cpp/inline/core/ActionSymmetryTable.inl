@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <ranges>
+#include <limits>
 
 namespace core {
 
@@ -26,7 +26,7 @@ void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<Item>& items) 
 
   pair_array_t pair_array;
   int num_pairs = 0;
-  int last_equivalence_class = -1;
+  int last_equivalence_class = std::numeric_limits<int>::min();
   for (int i = 0; i < num_items; ++i) {
     auto& item = items[i];
     if (item.equivalence_class != last_equivalence_class) {

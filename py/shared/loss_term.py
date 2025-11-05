@@ -96,9 +96,9 @@ class BasicLossTerm(LossTerm):
         loss = self._loss_fn(y_hat, y)
 
         if self._use_policy_scaling:
-            assert torch.isfinite(y_hat).all(), y_hat
-            assert torch.isfinite(y).all(), y
-            assert (y >= 0).all(), y
+            assert torch.isfinite(y_hat).all(), (y_hat, self.name)
+            assert torch.isfinite(y).all(), (y, self.name)
+            assert (y >= 0).all(), (y, self.name)
             # loss has not been reduced yet
             valid_actions = y_list[1]
             denominator = valid_actions.sum()
@@ -118,28 +118,40 @@ class ValueUncertaintyLossTerm(LossTerm):
     """
     A LossTerm for a ValueUncertaintyHead.
 
-    The ValueUncertaintyHead predicts a size-P tensor, T, where P is the number of players. For the
-    p'th player, let Q_min(p) and Q_max(p) be the minimum and maximum values of Q ever observed for
-    that player during MCTS search. Then T(p) corresponds to the larger of (V(p) - Q_min(p))^2 and
-    (Q_max(p) - V(p))^2, where V(p) is the value head's output (converted from logit space to
-    probability space).
+    For the p'th player, define the following:
+
+    - Q_min(p): minimum value of Q ever observed for that player during MCTS search
+    - Q_max(p): maximum value of Q ever observed for that player during MCTS search
+    - W_max(p): maximum value of W ever observed for that player during MCTS search
+
+    Then, let T(p) be the largest of the following 3 quantities:
+
+    1. (V(p) - Q_min(p))^2
+    2. (Q_max(p) - V(p))^2
+    3. 0.5 * W_max(p)
+
+    The ValueUncertaintyHead predicts T.
 
     Following KataGo, the loss term is computed using Huber loss to reduce sensitivity to outliers.
     """
-    def __init__(self, name: str, value_name: str, Q_min_target_name: str, Q_max_target_name: str,
-                 weight: float):
+    def __init__(self, name: str, weight: float, value_name: str='value',
+                 Q_min_target_name: str='Q_min', Q_max_target_name: str='Q_max',
+                 W_max_target_name: str='W_max'):
         """
         Args:
-            name: the name of the ValueUncertaintyHead module
-            value_name: the name of the head/target that provides the value prediction
-            Q_min_target_name: the name of the head that provides the target Q_min
-            Q_max_target_name: the name of the head that provides the target Q_max
-            weight: the weight to assign to this loss term
+
+        - name: the name of the ValueUncertaintyHead module
+        - value_name: the name of the head/target that provides the value prediction
+        - Q_min_target_name: the name of the head that provides the target Q_min
+        - Q_max_target_name: the name of the head that provides the target Q_max
+        - W_max_target_name: the name of the head that provides the target W_max
+        - weight: the weight to assign to this loss term
         """
         super().__init__(name, weight)
         self._value_name = value_name
         self._Q_min_target_name = Q_min_target_name
         self._Q_max_target_name = Q_max_target_name
+        self._W_max_target_name = W_max_target_name
         self._value_head = None  # initialized lazily in post_init()
         self._loss_fn = nn.HuberLoss()
 
@@ -148,13 +160,18 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name, self._value_name]
-        y_names = [self._Q_min_target_name, self._Q_max_target_name]
+        y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_max_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
         predicted_Dsq, win_value = y_hat
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
+        W_max = y[2]  # (B, 2)
 
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
-        actual_Dsq = torch.max((Q_prior - Q_min) ** 2, (Q_max - Q_prior) ** 2)  # (B, 2)
+
+        d1 = (Q_prior - Q_min) ** 2
+        d2 = (Q_max - Q_prior) ** 2
+        d3 = 0.5 * W_max
+        actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
         return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)

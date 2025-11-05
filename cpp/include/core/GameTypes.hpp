@@ -45,6 +45,7 @@ struct GameTypes {
   using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
   using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
+  using LocalPolicyArrayDouble = eigen_util::DArray<kMaxBranchingFactor, double>;
   using LocalActionValueArray =
     Eigen::Array<float, Eigen::Dynamic, kNumPlayers, Eigen::RowMajor, kMaxBranchingFactor>;
 

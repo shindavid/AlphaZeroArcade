@@ -66,12 +66,20 @@ class AlgorithmsBase {
   using GameResultTensor = Game::Types::GameResultTensor;
   using player_bitset_t = Game::Types::player_bitset_t;
 
+  class Backpropagator {
+   public:
+    Backpropagator(LookupTable& lookup_table) : lookup_table_(lookup_table) {}
+
+    template <typename MutexProtectedFunc>
+    void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
+
+   private:
+    LookupTable& lookup_table_;
+  };
+
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  template <typename MutexProtectedFunc>
-  static void backprop_helper(Node* node, Edge* edge, LookupTable& lookup_table,
-                              MutexProtectedFunc&&);
-
+  static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge) {}
   static void init_node_stats_from_terminal(Node* node);
   static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual);
   static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
@@ -95,7 +103,7 @@ class AlgorithmsBase {
   static void print_visit_info(const SearchContext&);
 
  protected:
-  static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table);
+  static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds

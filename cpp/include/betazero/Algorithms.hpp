@@ -25,8 +25,10 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using GameLogFullRecord = Base::GameLogFullRecord;
   using GameLogView = Base::GameLogView;
   using GameLogViewParams = Base::GameLogViewParams;
+  using GameResultTensor = Base::GameResultTensor;
   using GeneralContext = Base::GeneralContext;
   using LocalActionValueArray = Base::LocalActionValueArray;
+  using LocalPolicyArray = Base::LocalPolicyArray;
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
@@ -34,17 +36,38 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using RootInfo = Base::RootInfo;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
+  using State = Base::State;
   using TrainingInfo = Base::TrainingInfo;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;
   using player_bitset_t = Base::player_bitset_t;
 
-  using EigenMapArrayXf = Eigen::Map<Eigen::ArrayXf>;
-  using EigenMapArrayXd = Eigen::Map<Eigen::ArrayXd>;
+  using LocalPolicyArrayDouble = Game::Types::LocalPolicyArrayDouble;
+  using NodeStableData = Traits::NodeStableData;
 
-  template <typename MutexProtectedFunc>
-  static void backprop_helper(Node* node, Edge* edge, LookupTable& lookup_table,
-                              MutexProtectedFunc&&);
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+
+  class Backpropagator {
+   public:
+    Backpropagator(LookupTable& lookup_table) : lookup_table_(lookup_table) {}
+
+    template <typename MutexProtectedFunc>
+    void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
+
+   private:
+    void update_edge_snapshots(Node* parent, Edge* edge, bool load_prev_snapshots = false);
+    void update_edge_snapshots_helper(const NodeStats& child_stats, Edge* edge,
+                                      bool load_edge_snapshots_before_update);
+
+    LookupTable& lookup_table_;
+    ValueArray last_child_Qbeta_snapshot_;
+    ValueArray last_child_W_snapshot_;
+    bool snapshots_set_ = false;
+  };
+
+  static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge);
+  static void init_node_stats_from_terminal(Node* node);
+  static void undo_virtual_update(Node* node, Edge* edge);
 
   static void load_evaluations(SearchContext& context);
 
@@ -55,16 +78,23 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(Node* node, Edge* edge, LookupTable& lookup_table,
-                           const NodeStats& old_stats);
+  static void update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,
+                           const ValueArray& last_child_Qbeta_snapshot,
+                           const ValueArray& last_child_W_snapshot, const Node* node,
+                           const Edge* edge, LookupTable& lookup_table);
 
   // Updates pi_arr in-place to be the posterior policy
-  static void update_policy(Node* node, Edge* edge, LookupTable& lookup_table,
-                            const NodeStats& old_stats, const NodeStats* child_stats_arr,
-                            EigenMapArrayXf pi_arr, int updated_edge_arr_index);
+  static void update_policy(LocalPolicyArray& pi_arr, const Node* node, const Edge* edge,
+                            LookupTable& lookup_table, int updated_edge_arr_index,
+                            float old_child_Qbeta, float old_child_W,
+                            const LocalPolicyArray& child_Qbeta_arr,
+                            const LocalPolicyArray& child_W_arr);
 
-  static void compute_theta_omega_sq(const NodeStats& stats, core::seat_index_t seat, double& theta,
-                                     double& omega_sq);
+  static void compute_theta_omega_sq(double Qbeta, double W, double& theta, double& omega_sq);
+
+  static void update_QW_fields(const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
+                               const LocalActionValueArray& child_Qbeta_arr,
+                               const LocalActionValueArray& child_W_arr, NodeStats& stats);
 };
 
 template <search::concepts::Traits Traits>

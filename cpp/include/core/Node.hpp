@@ -50,14 +50,8 @@ class Node : public NodeBase {
   // stats() returns a reference to the stats object, WITHOUT acquiring the mutex. In order to use
   // this function properly, the caller must ensure that one of the following is true:
   //
-  // 1. The context is single-threaded,
-  //
-  // or,
-  //
-  // 2. The usage of the stats reference falls within the scope of the node's mutex,
-  //
-  // or,
-  //
+  // 1. The context is single-threaded, or,
+  // 2. The usage of the stats reference falls within the scope of the node's mutex, or,
   // 3. The caller is ok with the possibility of a race-condition with a writer.
   const Stats& stats() const { return stats_; }
   Stats& stats() { return stats_; }

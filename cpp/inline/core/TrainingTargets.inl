@@ -53,6 +53,14 @@ bool QMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
 
 template <core::concepts::Game Game>
 template <typename GameLogView>
+bool WMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+  tensor = view.W_max;
+  eigen_util::left_rotate(tensor, view.active_seat);
+  return true;
+}
+
+template <core::concepts::Game Game>
+template <typename GameLogView>
 bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.action_value_uncertainties_valid) return false;
   tensor = view.action_value_uncertainties;
