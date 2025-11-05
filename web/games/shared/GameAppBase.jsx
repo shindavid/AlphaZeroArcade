@@ -80,7 +80,7 @@ export class GameAppBase extends React.Component {
       mySeat: null,
       verboseInfo: null,
       currentTurn: null,
-      proposed_action: null,
+      proposedAction: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -155,7 +155,7 @@ export class GameAppBase extends React.Component {
     this.setState({
       legalMoves: payload.legal_moves,
       currentTurn: payload.seat,
-      proposed_action: payload.proposed_action,
+      proposedAction: payload.proposed_action,
       verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
     });
   }
@@ -164,7 +164,7 @@ export class GameAppBase extends React.Component {
     this.setState({
       resultCodes: payload.result_codes,
       legalMoves: [],
-      proposed_action: null,
+      proposedAction: null,
     });
   }
 
@@ -178,7 +178,7 @@ export class GameAppBase extends React.Component {
   sendMove(action_index) {
     this.setState({
       legalMoves: [],
-      proposed_action: null,
+      proposedAction: null,
     });
     this.sendMsg({ type: 'make_move', seat: this.state.currentTurn, payload: { index: action_index } })
   }
