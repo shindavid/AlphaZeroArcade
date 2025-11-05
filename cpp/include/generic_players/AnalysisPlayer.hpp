@@ -17,11 +17,11 @@ namespace generic {
 template <core::concepts::Game Game>
 class AnalysisPlayer : public WebPlayerBase<Game> {
  public:
-  using State = typename Game::State;
-  using ActionRequest = typename Game::Types::ActionRequest;
-  using ActionResponse = typename Game::Types::ActionResponse;
-  using GameResultTensor = typename Game::Types::GameResultTensor;
-  using ActionMask = typename Game::Types::ActionMask;
+  using State = Game::State;
+  using ActionRequest = Game::Types::ActionRequest;
+  using ActionResponse = Game::Types::ActionResponse;
+  using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionMask = Game::Types::ActionMask;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }
