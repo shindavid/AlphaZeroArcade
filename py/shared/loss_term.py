@@ -128,7 +128,7 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     1. (V(p) - Q_min(p))^2
     2. (Q_max(p) - V(p))^2
-    3. W_max(p)
+    3. 0.5 * W_max(p)
 
     The ValueUncertaintyHead predicts T.
 
