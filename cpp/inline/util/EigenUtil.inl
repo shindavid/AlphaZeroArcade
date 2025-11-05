@@ -229,7 +229,7 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
   // Reduce across columns (axis = 1)
   const Eigen::array<int, 1> reduce_dim = {1};
   const Eigen::array<Eigen::Index, 2> col_vec = {R, 1};  // (R,1)
-  const Eigen::array<Eigen::Index, 2> bcast   = {1, C};  // -> (R,C)
+  const Eigen::array<Eigen::Index, 2> bcast = {1, C};    // -> (R,C)
 
   // 1) rowwise max (materialize!) -> reshape/broadcast
   const auto row_max = x.maximum(reduce_dim).eval();
@@ -676,8 +676,8 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
 
 template <typename Derived>
 boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
-                                    const std::vector<std::string>& key_strs,
-                                    const PrintArrayFormatMap* fmt_map) {
+                                   const std::vector<std::string>& key_strs,
+                                   const PrintArrayFormatMap* fmt_map) {
   int num_rows = array.rows();
   int num_cols = array.cols();
 

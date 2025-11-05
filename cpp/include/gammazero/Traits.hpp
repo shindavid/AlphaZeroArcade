@@ -1,5 +1,8 @@
 #pragma once
 
+#include "core/Constants.hpp"
+#include "core/EvalSpec.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "gammazero/AuxState.hpp"
 #include "gammazero/Edge.hpp"
 #include "gammazero/GameLogCompactRecord.hpp"
@@ -10,9 +13,6 @@
 #include "gammazero/NodeStats.hpp"
 #include "gammazero/SearchResults.hpp"
 #include "gammazero/TrainingInfo.hpp"
-#include "core/Constants.hpp"
-#include "core/EvalSpec.hpp"
-#include "core/concepts/GameConcept.hpp"
 
 namespace gamma0 {
 

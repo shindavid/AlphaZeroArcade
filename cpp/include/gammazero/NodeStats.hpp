@@ -20,8 +20,8 @@ struct NodeStats : public alpha0::NodeStats<EvalSpec> {
 
   ValueArray Qgamma_min;  // for each player, the min Qgamma ever observed for that player
   ValueArray Qgamma_max;  // for each player, the max Qgamma ever observed for that player
-  ValueArray W;          // uncertainty
-  ValueArray W_max;      // for each player, the max W ever observed for that player
+  ValueArray W;           // uncertainty
+  ValueArray W_max;       // for each player, the max W ever observed for that player
 };
 
 }  // namespace gamma0

@@ -1,4 +1,5 @@
 #include "generic_players/alpha0/VerboseData.hpp"
+
 #include "util/EigenUtil.hpp"
 
 #include <iostream>
@@ -56,7 +57,8 @@ boost::json::object VerboseData<Traits>::to_json() const {
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](core::seat_index_t x) { return std::string(1, Game::Constants::kSeatChars[x]); }},
+    {"Player",
+     [&](core::seat_index_t x) { return std::string(1, Game::Constants::kSeatChars[x]); }},
     {"action", [&](float x) { return IO::action_to_str(x, action_mode); }},
   };
 

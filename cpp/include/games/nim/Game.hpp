@@ -24,7 +24,7 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
-    static constexpr char kSeatChars[kNumPlayers] = {'A', 'B' };
+    static constexpr char kSeatChars[kNumPlayers] = {'A', 'B'};
   };
 
   struct State {

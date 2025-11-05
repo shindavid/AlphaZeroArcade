@@ -59,7 +59,7 @@ struct WinLossResults {
   }
 
   static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
-                                    const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
+                                     const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
     auto data = get_data_matrix(net_value, win_rates);
     const auto& columns = get_column_names();
     return eigen_util::output_to_json(data, columns, fmt_map);

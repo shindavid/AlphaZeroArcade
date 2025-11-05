@@ -2,9 +2,9 @@
 
 #include "alphazero/Traits.hpp"
 #include "betazero/Traits.hpp"
-#include "gammazero/Traits.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "gammazero/Traits.hpp"
 #include "search/DataLoader.hpp"
 #include "search/GameLog.hpp"
 #include "util/Exceptions.hpp"

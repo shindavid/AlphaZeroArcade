@@ -283,7 +283,7 @@ TEST(eigen_util, softmax_in_place_array) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
 
-  Array array {0, 1, 2, 3};
+  Array array{0, 1, 2, 3};
   Array expected{0.0320586, 0.0871443, 0.2368828, 0.6439143};
 
   eigen_util::softmax_in_place(array);
@@ -620,8 +620,9 @@ TEST(eigen_util, rot90_clockwise) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -657,8 +658,9 @@ TEST(eigen_util, rot180) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -694,8 +696,9 @@ TEST(eigen_util, rot270_clockwise) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -731,8 +734,9 @@ TEST(eigen_util, flip_vertical) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -768,8 +772,9 @@ TEST(eigen_util, mirror_horizontal) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -805,8 +810,9 @@ TEST(eigen_util, flip_main_diag) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -842,8 +848,9 @@ TEST(eigen_util, flip_anti_diag) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j))
-        << "tensor_2d:\n" << tensor_2d << "\nexpected_2d:\n" << expected_2d;
+      EXPECT_EQ(tensor_2d(i, j), expected_2d(i, j)) << "tensor_2d:\n"
+                                                    << tensor_2d << "\nexpected_2d:\n"
+                                                    << expected_2d;
     }
   }
 
@@ -1252,17 +1259,17 @@ TEST(math, splitmix64) {
 static inline long double logPhiNeg_moderate_ld(long double z_nonneg) {
   static const long double SQRT1_2_LD = 1.0l / std::sqrt(2.0l);
   const long double t = z_nonneg * SQRT1_2_LD;
-  return std::log(0.5l) + std::log(std::erfc(t)); // log Phi(-z)
+  return std::log(0.5l) + std::log(std::erfc(t));  // log Phi(-z)
 }
 
 static inline long double logPhi_moderate_ld(long double z) {
   static const long double SQRT1_2_LD = 1.0l / std::sqrt(2.0l);
   if (z < 0.0l) {
     const long double t = -z * SQRT1_2_LD;
-    return std::log(0.5l) + std::log(std::erfc(t)); // log Phi(z)
+    return std::log(0.5l) + std::log(std::erfc(t));  // log Phi(z)
   } else {
-    const long double s = logPhiNeg_moderate_ld(z); // s = log Phi(-z)
-    return std::log1p(-std::exp(s));               // log(1 - Phi(-z)) == log Phi(z)
+    const long double s = logPhiNeg_moderate_ld(z);  // s = log Phi(-z)
+    return std::log1p(-std::exp(s));                 // log(1 - Phi(-z)) == log Phi(z)
   }
 }
 
@@ -1273,13 +1280,13 @@ static inline long double log_odds_normal_ld(long double z) {
 
   if (z < -THRESH) {
     // Use Mills' ratio for far negative tail: Phi(-t) ~ phi(t) * R(t)
-    const long double t = -z;         // t > 0
-    const long double inv = 1.0l / t; // series terms
-    const long double inv3 = inv*inv*inv;
-    const long double inv5 = inv3*inv*inv;
-    const long double inv7 = inv5*inv*inv;
-    const long double R = inv - inv3 + 3.0l*inv5 - 15.0l*inv7;
-    const long double logphi = -0.5l * t * t - LOG_SQRT_2PI_LD; // log φ(t)
+    const long double t = -z;          // t > 0
+    const long double inv = 1.0l / t;  // series terms
+    const long double inv3 = inv * inv * inv;
+    const long double inv5 = inv3 * inv * inv;
+    const long double inv7 = inv5 * inv * inv;
+    const long double R = inv - inv3 + 3.0l * inv5 - 15.0l * inv7;
+    const long double logphi = -0.5l * t * t - LOG_SQRT_2PI_LD;  // log φ(t)
     // odds(z) = Phi(z)/Phi(-z) with z=-t; Phi(z)=Phi(-t) in tiny range, but we want log-odds.
     // From tail analysis: log-odds(z) ~ log(φ(t) * R(t))
     return logphi + std::log(R);
@@ -1298,31 +1305,30 @@ static inline long double log_alpha_ref_ld(long double z_new, long double z_old)
 }
 
 // Absolute comparison on log-scale (since we directly return logs now)
-static inline ::testing::AssertionResult NearAbsLog(double log_a, long double log_b, double tol_abs) {
+static inline ::testing::AssertionResult NearAbsLog(double log_a, long double log_b,
+                                                    double tol_abs) {
   if (!std::isfinite(log_a) || !std::isfinite((double)log_b)) {
     return ::testing::AssertionFailure()
-      << "Non-finite values: log_a=" << log_a << ", log_b=" << (double)log_b;
+           << "Non-finite values: log_a=" << log_a << ", log_b=" << (double)log_b;
   }
   const long double diff = std::fabs((long double)log_a - log_b);
   if (diff <= tol_abs) return ::testing::AssertionSuccess();
-  return ::testing::AssertionFailure()
-    << "log_a=" << log_a << " log_b=" << (double)log_b
-    << " |diff|=" << (double)diff << " > tol=" << tol_abs;
+  return ::testing::AssertionFailure() << "log_a=" << log_a << " log_b=" << (double)log_b
+                                       << " |diff|=" << (double)diff << " > tol=" << tol_abs;
 }
 
 // ---------- Tests for math::normal_cdf_logit_diff ----------
 
 TEST(math, normal_cdf_logit_diff_IdentityWhenEqual) {
   EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(-3.14, -3.14), 0.0);
-  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(0.0,   0.0),   0.0);
-  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(25.0,  25.0),  0.0);
+  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(0.0, 0.0), 0.0);
+  EXPECT_DOUBLE_EQ(math::normal_cdf_logit_diff(25.0, 25.0), 0.0);
 }
 
 TEST(math, normal_cdf_logit_diff_Antisymmetry) {
   // logit-diff(z1,z2) == -logit-diff(z2,z1)
-  std::vector<std::pair<double,double>> cases = {
-    {-2.0, -1.0}, { -6.0, -5.5}, { 1.0, 2.5}, {-9.0,  3.0}, { 7.5, -7.2}
-  };
+  std::vector<std::pair<double, double>> cases = {
+    {-2.0, -1.0}, {-6.0, -5.5}, {1.0, 2.5}, {-9.0, 3.0}, {7.5, -7.2}};
   for (auto [z1, z2] : cases) {
     const double d12 = math::normal_cdf_logit_diff(z1, z2);
     const double d21 = math::normal_cdf_logit_diff(z2, z1);
@@ -1333,7 +1339,7 @@ TEST(math, normal_cdf_logit_diff_Antisymmetry) {
 TEST(math, normal_cdf_logit_diff_Monotonicity) {
   // If z_new > z_old, log-odds difference > 0
   EXPECT_GT(math::normal_cdf_logit_diff(-1.0, -2.0), 0.0);
-  EXPECT_GT(math::normal_cdf_logit_diff( 2.0,  1.0), 0.0);
+  EXPECT_GT(math::normal_cdf_logit_diff(2.0, 1.0), 0.0);
   EXPECT_LT(math::normal_cdf_logit_diff(-2.0, -1.0), 0.0);
 }
 
@@ -1348,24 +1354,19 @@ TEST(math, normal_cdf_logit_diff_MatchesNaiveInModerateRange) {
     return lnew - lold;
   };
 
-  std::vector<std::pair<double,double>> cases = {
-    {-2.0, -1.0}, { -1.5, -1.6}, { 0.0, -0.5}, { 2.0, 1.0}, { 3.0, -3.0}
-  };
+  std::vector<std::pair<double, double>> cases = {
+    {-2.0, -1.0}, {-1.5, -1.6}, {0.0, -0.5}, {2.0, 1.0}, {3.0, -3.0}};
 
   for (auto [zn, zo] : cases) {
     const double stable_log = math::normal_cdf_logit_diff(zn, zo);
-    const double naive_log  = naive_log_diff(zn, zo);
+    const double naive_log = naive_log_diff(zn, zo);
     EXPECT_NEAR(stable_log, naive_log, 1e-12);
   }
 }
 
 TEST(math, normal_cdf_logit_diff_ExtremeNegative_AgreesWithLongDouble) {
   // Far negative tails (z ~ -20, -30, -39). Compare to long-double stable reference.
-  std::vector<std::pair<double,double>> cases = {
-    {-20.0, -19.5},
-    {-30.0, -29.0},
-    {-39.0, -38.5}
-  };
+  std::vector<std::pair<double, double>> cases = {{-20.0, -19.5}, {-30.0, -29.0}, {-39.0, -38.5}};
 
   for (auto [zn, zo] : cases) {
     const double stable_log = math::normal_cdf_logit_diff(zn, zo);
@@ -1377,11 +1378,7 @@ TEST(math, normal_cdf_logit_diff_ExtremeNegative_AgreesWithLongDouble) {
 
 TEST(math, normal_cdf_logit_diff_ExtremePositive_AgreesWithLongDouble) {
   // Mirror cases in the far positive tail.
-  std::vector<std::pair<double,double>> cases = {
-    {19.5, 20.0},
-    {29.0, 30.0},
-    {38.5, 39.0}
-  };
+  std::vector<std::pair<double, double>> cases = {{19.5, 20.0}, {29.0, 30.0}, {38.5, 39.0}};
 
   for (auto [zn, zo] : cases) {
     const double stable_log = math::normal_cdf_logit_diff(zn, zo);

@@ -732,9 +732,8 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backpropagator.run(node, edge, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    backpropagator.run(node, edge,
+                       [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -758,9 +757,8 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backpropagator.run(node, edge, [&] {
-      Algorithms::virtually_update_node_stats_and_edge(node, edge);
-    });
+    backpropagator.run(node, edge,
+                       [&] { Algorithms::virtually_update_node_stats_and_edge(node, edge); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -783,9 +781,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backpropagator.run(node, edge, [&] {
-      Algorithms::undo_virtual_update(node, edge);
-    });
+    backpropagator.run(node, edge, [&] { Algorithms::undo_virtual_update(node, edge); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -812,9 +808,8 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backpropagator.run(node, edge, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, undo_virtual);
-    });
+    backpropagator.run(node, edge,
+                       [&] { Algorithms::update_node_stats_and_edge(node, edge, undo_virtual); });
   }
   Algorithms::validate_search_path(context);
 }
@@ -833,9 +828,8 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backpropagator.run(node, edge, [&] {
-      Algorithms::update_node_stats_and_edge(node, edge, false);
-    });
+    backpropagator.run(node, edge,
+                       [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
   }
   Algorithms::validate_search_path(context);
 }

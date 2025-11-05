@@ -18,10 +18,8 @@ namespace detail {
 // Your alpha, computed without forming p or q:
 inline double alpha_from_thetas(double theta_old, double omega_sq_old, double theta_new,
                                 double omega_sq_new, double theta_i, double omega_sq_i) {
-  const double z_old = (theta_old - theta_i) /
-                       std::sqrt(omega_sq_old + omega_sq_i);
-  const double z_new = (theta_new - theta_i) /
-                       std::sqrt(omega_sq_new + omega_sq_i);
+  const double z_old = (theta_old - theta_i) / std::sqrt(omega_sq_old + omega_sq_i);
+  const double z_new = (theta_new - theta_i) / std::sqrt(omega_sq_new + omega_sq_i);
 
   return math::normal_cdf_logit_diff(z_new, z_old);
 }
@@ -557,9 +555,9 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
       dbg_pi_prior, E_arr, child_Q_arr, child_V_arr, child_Qbeta_arr, child_W_arr, theta_arr,
       omega_sq_arr, alpha_arr, beta_arr, pi_arr);
 
-    std::vector<std::string> action_columns = {
-      "pi-prior", "E",        "child_Q", "child_V", "child_Qbeta", "child_W",
-      "theta",    "omega_sq", "alpha",   "beta",        "pi"};
+    std::vector<std::string> action_columns = {"pi-prior",    "E",       "child_Q", "child_V",
+                                               "child_Qbeta", "child_W", "theta",   "omega_sq",
+                                               "alpha",       "beta",    "pi"};
     eigen_util::print_array(ss, action_data, action_columns);
     LOG_INFO("{}\n{}", msg, ss.str());
   };

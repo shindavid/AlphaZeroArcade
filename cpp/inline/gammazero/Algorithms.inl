@@ -18,10 +18,8 @@ namespace detail {
 // Your alpha, computed without forming p or q:
 inline double alpha_from_thetas(double theta_old, double omega_sq_old, double theta_new,
                                 double omega_sq_new, double theta_i, double omega_sq_i) {
-  const double z_old = (theta_old - theta_i) /
-                       std::sqrt(omega_sq_old + omega_sq_i);
-  const double z_new = (theta_new - theta_i) /
-                       std::sqrt(omega_sq_new + omega_sq_i);
+  const double z_old = (theta_old - theta_i) / std::sqrt(omega_sq_old + omega_sq_i);
+  const double z_new = (theta_new - theta_i) / std::sqrt(omega_sq_new + omega_sq_i);
 
   return math::normal_cdf_logit_diff(z_new, z_old);
 }
@@ -557,9 +555,9 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
       dbg_pi_prior, E_arr, child_Q_arr, child_V_arr, child_Qgamma_arr, child_W_arr, theta_arr,
       omega_sq_arr, alpha_arr, gamma_arr, pi_arr);
 
-    std::vector<std::string> action_columns = {
-      "pi-prior", "E",        "child_Q", "child_V", "child_Qgamma", "child_W",
-      "theta",    "omega_sq", "alpha",   "gamma",        "pi"};
+    std::vector<std::string> action_columns = {"pi-prior",     "E",       "child_Q", "child_V",
+                                               "child_Qgamma", "child_W", "theta",   "omega_sq",
+                                               "alpha",        "gamma",   "pi"};
     eigen_util::print_array(ss, action_data, action_columns);
     LOG_INFO("{}\n{}", msg, ss.str());
   };
@@ -689,11 +687,10 @@ void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Qgamma, doub
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_QW_fields(const NodeStableData& stable_data,
-                                                       const LocalPolicyArray& pi_arr,
-                                                       const LocalActionValueArray& child_Qgamma_arr,
-                                                       const LocalActionValueArray& child_W_arr,
-                                                       NodeStats& stats) {
+void AlgorithmsBase<Traits, Derived>::update_QW_fields(
+  const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
+  const LocalActionValueArray& child_Qgamma_arr, const LocalActionValueArray& child_W_arr,
+  NodeStats& stats) {
   ValueArray piQgamma_sum = (child_Qgamma_arr.matrix().transpose() * pi_arr.matrix()).array();
   ValueArray piQgamma_sq_sum =
     ((child_Qgamma_arr * child_Qgamma_arr).matrix().transpose() * pi_arr.matrix()).array();
@@ -721,7 +718,7 @@ void AlgorithmsBase<Traits, Derived>::update_QW_fields(const NodeStableData& sta
   ValueArray denom = piW_sum + U * N;
   stats.Qgamma = (V * piW_sum + U * N * piQgamma_sum) / denom;
   stats.W = piW_sum + piQgamma_sq_sum - piQgamma_sum * piQgamma_sum;
-  stats.W = stats.W.cwiseMax(0.f);   // numerical stability
+  stats.W = stats.W.cwiseMax(0.f);     // numerical stability
   stats.Qgamma /= stats.Qgamma.sum();  // numerical stability
 
   // fix-up for imprecision when piW_sum is zero

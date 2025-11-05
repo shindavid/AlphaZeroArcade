@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gammazero/Algorithms.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "gammazero/Algorithms.hpp"
 #include "search/AlgorithmsFor.hpp"
 
 namespace gamma0 {
