@@ -62,7 +62,7 @@ def main():
         '--player', f'"{player_str}"',
     ]
 
-    if args.analyasis_mode:
+    if args.analysis_mode:
         cmd = [bin,
                '--player', f'"{player_str + ' -v'}"',
                '--player', "'--name alpha0-2 --copy-from alpha0'",

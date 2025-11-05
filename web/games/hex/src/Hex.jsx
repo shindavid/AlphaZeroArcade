@@ -118,7 +118,7 @@ export default class HexApp extends GameAppBase {
     }
 
     let classNameSuffix = "";
-    if (cell === this.state.proposed_action) {
+    if (cell === this.state.proposedAction) {
       classNameSuffix = ` ghost ${this.state.seatAssignments[this.state.currentTurn]}`;
     }
     console.log(`classNameSuffix: ${classNameSuffix}`);

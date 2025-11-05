@@ -30,7 +30,7 @@ export default class TicTacToeApp extends GameAppBase {
           const legal = empty && this.gameActive();
 
           let proposed = null;
-          if (cell === this.state.proposed_action) {
+          if (cell === this.state.proposedAction) {
             proposed = <span className={'ghost'}> {this.state.seatAssignments[this.state.currentTurn]} </span>;
           }
           return (

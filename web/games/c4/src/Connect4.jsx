@@ -150,7 +150,7 @@ export default class Connect4App extends GameAppBase {
 
         let ghostDisc = null;
         let targetRow = ROWS - this.colHeights[col] - 1;
-        if (col === this.state.proposed_action && row === targetRow) {
+        if (col === this.state.proposedAction && row === targetRow) {
            ghostDisc = <span className={`cell ghost ${this.state.seatAssignments[this.state.currentTurn]}`} />;
         }
 

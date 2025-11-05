@@ -74,7 +74,7 @@ export default class OthelloApp extends GameAppBase {
           if (legal) cls += ' legal-move';
 
           let ghostDisc = null;
-          if (idx === this.state.proposed_action) {
+          if (idx === this.state.proposedAction) {
             ghostDisc = <span className={`ghost disc ${this.state.seatAssignments[this.state.currentTurn]}`} />;
           }
 
