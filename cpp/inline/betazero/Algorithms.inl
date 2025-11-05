@@ -1,5 +1,6 @@
 #include "betazero/Algorithms.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "util/Asserts.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
@@ -27,18 +28,6 @@ inline double alpha_from_thetas(double theta_old, double omega_sq_old, double th
 
 }  // namespace detail
 
-template <typename T>
-void check_values(const T& t, int line) {
-  if (!IS_DEFINED(DEBUG_BUILD)) return;
-
-  auto data = t.data();
-  int n = t.size();
-  for (int i = 0; i < n; ++i) {
-    RELEASE_ASSERT(data[i] >= 0.f, "invalid value ({}) at line {}", data[i], line);
-    RELEASE_ASSERT(data[i] <= 1.f, "invalid value ({}) at line {}", data[i], line);
-  }
-}
-
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
 void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge,
@@ -46,23 +35,11 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   mit::unique_lock lock(node->mutex());
   // LOG_INFO("Backpropagator::run()");
   func();
-  if (!snapshots_set_) {
-    if (edge) {
-      // This corresponds to the short-circuit-backprop or undo-virtual-backprop case.
-      update_edge_snapshots(node, edge, true);
-    } else {
-      last_child_Qbeta_snapshot_ = node->stats().Qbeta;
-      last_child_W_snapshot_ = node->stats().W;
-      snapshots_set_ = true;
-      // LOG_INFO("Updating snapshots @{}:", __LINE__);
-      // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
-      //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
-      // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
-      return;
-    }
-  } else {
-    RELEASE_ASSERT(edge, "unexpected null edge on subsequent Backpropagator::run() call");
+  if (!snapshots_set_ && edge) {
+    update_edge_snapshots(node, edge, true);
   }
+
+  if (!edge) return;
 
   RELEASE_ASSERT(snapshots_set_);
   NodeStats stats = node->stats();  // copy
@@ -108,6 +85,7 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   node->stats() = stats;
   node->stats().RN = RN;
   node->stats().VN = VN;
+
   lock.unlock();
 }
 
@@ -210,18 +188,25 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     stable_data.U = U;
 
-    stats.Qbeta = stats.Q;
-    stats.Qbeta_min = stats.Q;
-    stats.Qbeta_max = stats.Q;
-    stats.W = U;
-    stats.W_max = U;
-
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_posterior_prob = edge->policy_prior_prob;
       edge->child_Qbeta_snapshot = edge->child_AV;
       edge->child_W_snapshot = AU.row(i);
     }
+
+    RELEASE_ASSERT(stats.RN == 0, "RN={}", stats.RN);
+
+    LocalActionValueArray child_Qbeta_arr(n, kNumPlayers);
+    const LocalActionValueArray& child_W_arr = AU;
+    LocalPolicyArray pi_arr(n);
+    for (int i = 0; i < n; i++) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      pi_arr(i) = edge->policy_posterior_prob;
+      child_Qbeta_arr.row(i) = edge->child_Qbeta_snapshot;
+    }
+
+    update_QW_fields(stable_data, pi_arr, child_Qbeta_arr, child_W_arr, stats);
   }
 }
 
@@ -281,6 +266,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   Game::Symmetries::apply(results.Q, inv_sym, mode);
   Game::Symmetries::apply(results.Q_sq, inv_sym, mode);
   Game::Symmetries::apply(results.action_values, inv_sym, mode);
+  Game::Symmetries::apply(results.action_value_uncertainties, inv_sym, mode);
 
   results.win_rates = stats.Qbeta;
   results.value_prior = stable_data.R;
@@ -290,11 +276,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.max_win_rates = stats.Qbeta_max;
   results.max_uncertainties = stats.W_max;
 
-  check_values(results.policy_target, __LINE__);
-  check_values(results.min_win_rates, __LINE__);
-  check_values(results.max_win_rates, __LINE__);
-  check_values(results.max_uncertainties, __LINE__);
-  check_values(results.action_value_uncertainties, __LINE__);
+  eigen_util::assert_is_valid_prob_distr(results.policy_posterior);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -311,16 +293,9 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
     training_info.W_max(p) = mcts_results->max_uncertainties[p];
   }
 
-  check_values(training_info.policy_target, __LINE__);
-  check_values(training_info.action_values_target, __LINE__);
-  check_values(training_info.Q_min, __LINE__);
-  check_values(training_info.Q_max, __LINE__);
-  check_values(training_info.W_max, __LINE__);
-
   if (params.use_for_training) {
     training_info.action_value_uncertainties_target = mcts_results->action_value_uncertainties;
     training_info.action_value_uncertainties_target_valid = true;
-    check_values(training_info.action_value_uncertainties_target, __LINE__);
   }
 }
 
@@ -334,12 +309,6 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   full_record.Q_max = training_info.Q_max;
   full_record.W_max = training_info.W_max;
 
-  check_values(full_record.policy_target, __LINE__);
-  check_values(full_record.action_values, __LINE__);
-  check_values(full_record.Q_min, __LINE__);
-  check_values(full_record.Q_max, __LINE__);
-  check_values(full_record.W_max, __LINE__);
-
   if (training_info.action_value_uncertainties_target_valid) {
     full_record.action_value_uncertainties = training_info.action_value_uncertainties_target;
   } else {
@@ -347,7 +316,6 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   }
   full_record.action_value_uncertainties_valid =
     training_info.action_value_uncertainties_target_valid;
-  check_values(full_record.action_value_uncertainties, __LINE__);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -362,13 +330,6 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   compact_record.active_seat = full_record.active_seat;
   compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
   compact_record.action = full_record.action;
-
-  check_values(compact_record.Q_min, __LINE__);
-  check_values(compact_record.Q_max, __LINE__);
-  check_values(compact_record.W_max, __LINE__);
-  check_values(full_record.policy_target, __LINE__);
-  check_values(full_record.action_values, __LINE__);
-  check_values(full_record.action_value_uncertainties, __LINE__);
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
@@ -446,15 +407,6 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
   view.W_max = record->W_max;
-
-  check_values(view.policy, __LINE__);
-  check_values(view.action_values, __LINE__);
-  check_values(view.action_value_uncertainties, __LINE__);
-  check_values(view.Q_min, __LINE__);
-  check_values(view.Q_max, __LINE__);
-  check_values(view.W_max, __LINE__);
-  check_values(view.action_values, __LINE__);
-  check_values(view.action_value_uncertainties, __LINE__);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -506,65 +458,21 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
     // renormalize pi_arr
     float pi_sum = pi_arr.sum();
     if (pi_sum > 0.f) {
-      pi_arr *= 1.0 / pi_sum;
+      LocalPolicyArray posterior = pi_arr;
+      posterior *= 1.0 / pi_sum;
+      if (posterior.hasNaN()) {
+        for (int i = 0; i < pi_arr.size(); ++i) {
+          posterior[i] = pi_arr[i] > 0.f ? 1.f : 0.f;
+        }
+        posterior *= 1.0 / posterior.sum();
+      }
+      pi_arr = posterior;
     } else {
+      RELEASE_ASSERT(num_valid_actions > 0);
       pi_arr.fill(1.0f / num_valid_actions);
     }
 
-    check_values(pi_arr, __LINE__);
-
-    ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
-    ValueArray piQbeta_sq_sum =
-      ((child_Qbeta_arr * child_Qbeta_arr).matrix().transpose() * pi_arr.matrix()).array();
-    ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
-
-    RELEASE_ASSERT(stable_data.R_valid);
-    ValueArray V = Game::GameResults::to_value_array(stable_data.R);
-    const ValueArray& U = stable_data.U;
-    int N = stats.RN;
-    RELEASE_ASSERT(N > 0);
-
-    // Qbeta is computed as a weighted average of V (the prior value) and piQbeta_sum (the expected
-    // value from children), with weights proportional to N * U (the prior-uncertainty scaled by N)
-    // and piW_sum (the expected uncertainty from children). This balances the influence of the
-    // prior and evidence obtained from children, gradually decaying the influence of the prior as N
-    // increases.
-    //
-    // Should something similar be done for W? Currently, W is just the expected uncertainty from
-    // children, and the prior uncertainty U is not directly incorporated into W. We're not ignoring
-    // U entirely, since U influences the weight given to V in the Qbeta calculation. But it's being
-    // ignored for the uncertainty calculation itself.
-
-    ValueArray denom = piW_sum + U * N;
-    ValueArray Qbeta = (V * piW_sum + U * N * piQbeta_sum) / denom;
-    ValueArray W = piW_sum + piQbeta_sq_sum - piQbeta_sum * piQbeta_sum;
-    // ValueArray rawW = W;
-    W = W.cwiseMax(0.f);  // numerical stability
-
-    // fix-up for imprecision when piW_sum is zero
-    for (int p = 0; p < kNumPlayers; ++p) {
-      if (piW_sum[p] == 0) {
-        W[p] = 0;
-      }
-    }
-
-    // LOG_INFO("Qbeta update:");
-    // LOG_INFO("  N: {}", N);
-    // LOG_INFO("  V: {}", fmt::streamed(V.transpose()));
-    // LOG_INFO("  U: {}", fmt::streamed(U.transpose()));
-    // LOG_INFO("  pi: {}", fmt::streamed(pi_arr.transpose()));
-    // LOG_INFO("  piQbeta_sum: {}", fmt::streamed(piQbeta_sum.transpose()));
-    // LOG_INFO("  piQbeta_sq_sum: {}", fmt::streamed(piQbeta_sq_sum.transpose()));
-    // LOG_INFO("  piW_sum: {}", fmt::streamed(piW_sum.transpose()));
-    // LOG_INFO("  Qbeta: {}", fmt::streamed(Qbeta.transpose()));
-    // LOG_INFO("  rawW: {}", fmt::streamed(rawW.transpose()));
-    // LOG_INFO("  W: {}", fmt::streamed(W.transpose()));
-
-    stats.Qbeta = Qbeta;
-    stats.Qbeta_min = stats.Qbeta_min.min(Qbeta);
-    stats.Qbeta_max = stats.Qbeta_max.max(Qbeta);
-    stats.W = W;
-    stats.W_max = stats.W_max.max(W);
+    update_QW_fields(stable_data, pi_arr, child_Qbeta_arr, child_W_arr, stats);
   }
 }
 
@@ -578,32 +486,14 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   // Throughout this function, theta and omega_sq represent the mean and variance of the value
   // distribution in an idealized logistic-normal model of the value distribution.
 
-  // LOG_INFO("*** DBG update_policy() ***");
-  // LOG_INFO("old_child_Qbeta: {}", old_child_Qbeta);
-  // LOG_INFO("old_child_W: {}", old_child_W);
-  // LOG_INFO("updated-edge: {}", updated_edge_arr_index);
-
-  // LocalPolicyArray E_arr = pi_arr;
-  // LocalPolicyArray child_Q_arr = pi_arr;
-  // LocalPolicyArray dbg_pi_prior = pi_arr;
+  LocalPolicyArray dbg_pi_prior = pi_arr;
 
   int arr_size = pi_arr.size();
   RELEASE_ASSERT(updated_edge_arr_index >= 0 && updated_edge_arr_index < arr_size);
 
-  // auto seat = node->stable_data().active_seat;
-  // for (int i = 0; i < arr_size; i++) {
-  //   Edge* child_edge = lookup_table.get_edge(node, i);
-  //   E_arr[i] = child_edge->E;
-  //   Node* child = lookup_table.get_node(child_edge->child_index);
-  //   child_Q_arr[i] = child ? child->stats_safe().Q(seat) : child_edge->child_AV[seat];
-  // }
-
   double theta_old;
   double omega_sq_old;
   compute_theta_omega_sq(old_child_Qbeta, old_child_W, theta_old, omega_sq_old);
-
-  // LOG_INFO("theta_old: {}", theta_old);
-  // LOG_INFO("omega_sq_old: {}", omega_sq_old);
 
   LocalPolicyArrayDouble theta_arr(arr_size);
   LocalPolicyArrayDouble omega_sq_arr(arr_size);
@@ -630,20 +520,56 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
     }
   }
 
+  LocalPolicyArrayDouble alpha_arr(arr_size);
+  LocalPolicyArrayDouble beta_arr(arr_size);
+  alpha_arr.setConstant(1);
+  beta_arr.setZero();
+
+  auto debug_dump = [&](const std::string& msg) {
+    if (!search::kEnableSearchDebug) return;
+    LocalPolicyArray E_arr = pi_arr;
+    LocalPolicyArray child_Q_arr = pi_arr;
+    LocalPolicyArray child_V_arr = pi_arr;
+
+    auto seat = node->stable_data().active_seat;
+    for (int i = 0; i < arr_size; i++) {
+      Edge* child_edge = lookup_table.get_edge(node, i);
+      E_arr[i] = child_edge->E;
+      Node* child = lookup_table.get_node(child_edge->child_index);
+      child_Q_arr[i] = child ? child->stats_safe().Q(seat) : child_edge->child_AV[seat];
+      if (child) {
+        ValueArray V = Game::GameResults::to_value_array(child->stable_data().R);
+        child_V_arr[i] = V[seat];
+      } else {
+        child_V_arr[i] = child_edge->child_AV[seat];
+      }
+    }
+
+    LOG_INFO("*** DBG update_policy() ***");
+    LOG_INFO("old_child_Qbeta: {}", old_child_Qbeta);
+    LOG_INFO("old_child_W: {}", old_child_W);
+    LOG_INFO("updated-edge: {}", updated_edge_arr_index);
+    LOG_INFO("theta_old: {}", theta_old);
+    LOG_INFO("omega_sq_old: {}", omega_sq_old);
+
+    std::stringstream ss;
+    auto action_data = eigen_util::concatenate_columns(
+      dbg_pi_prior, E_arr, child_Q_arr, child_V_arr, child_Qbeta_arr, child_W_arr, theta_arr,
+      omega_sq_arr, alpha_arr, beta_arr, pi_arr);
+
+    std::vector<std::string> action_columns = {
+      "pi-prior", "E",        "child_Q", "child_V", "child_Qbeta", "child_W",
+      "theta",    "omega_sq", "alpha",   "beta",        "pi"};
+    eigen_util::print_array(ss, action_data, action_columns);
+    LOG_INFO("{}\n{}", msg, ss.str());
+  };
+
   if (any_pos_inf) {
     // Collapse pi values to only those with +inf theta
     for (int i = 0; i < arr_size; i++) {
       pi_arr[i] = (finiteness_arr[i] == math::kPosInf) ? 1.0f : 0.f;
     }
-    // LOG_INFO("skipping update_policy due to +inf theta");
-    // std::stringstream ss;
-    // auto action_data =
-    //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
-    //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
-    // static std::vector<std::string> action_columns = {
-    //   "pi-prior", "E", "child_Q", "child_Qbeta", "child_W", "theta", "omega_sq", "pi-posterior"};
-    // eigen_util::print_array(ss, action_data, action_columns);
-    // LOG_INFO("\n{}", ss.str());
+    debug_dump("skipping due to +inf theta");
     return;
   }
 
@@ -652,21 +578,11 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   math::finiteness_t finiteness_new = finiteness_arr[updated_edge_arr_index];
 
   if (finiteness_new == math::kNegInf) {
-    // LOG_INFO("skipping update_policy due to -inf theta");
-    // std::stringstream ss;
-    // auto action_data =
-    //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
-    //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
-    // static std::vector<std::string> action_columns = {
-    //   "pi-prior", "E", "child_Q", "child_Qbeta", "child_W", "theta", "omega_sq", "pi-posterior"};
-    // eigen_util::print_array(ss, action_data, action_columns);
-    // LOG_INFO("\n{}", ss.str());
+    debug_dump("skipping due to -inf theta");
     return;
   }
 
-  if (omega_sq_new > 0) {
-    RELEASE_ASSERT(omega_sq_old > 0);  // cannot go from certain to uncertain
-  } else {                             // zero uncertainty case
+  if (omega_sq_new <= 0) {
     // check for domination by another zero-uncertainty action
     for (int i = 0; i < arr_size; i++) {
       if (i == updated_edge_arr_index) continue;
@@ -674,30 +590,12 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
         if (theta_arr[i] > theta_new) {
           // dominated
           pi_arr[updated_edge_arr_index] = 0;
-          // LOG_INFO("skipping update_policy due to domination");
-          // std::stringstream ss;
-          // auto action_data =
-          //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
-          //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
-          // static std::vector<std::string> action_columns = {"pi-prior",    "E",           "child_Q",
-          //                                                   "child_Qbeta", "child_W",     "theta",
-          //                                                   "omega_sq",    "pi-posterior"};
-          // eigen_util::print_array(ss, action_data, action_columns);
-          // LOG_INFO("\n{}", ss.str());
+          debug_dump("skipping due to domination");
           return;
         } else if (theta_arr[i] == theta_new) {
           // tie
           pi_arr[updated_edge_arr_index] = pi_arr[i];
-          // LOG_INFO("skipping update_policy due to tie");
-          // std::stringstream ss;
-          // auto action_data =
-          //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr,
-          //                                   child_W_arr, theta_arr, omega_sq_arr, pi_arr);
-          // static std::vector<std::string> action_columns = {"pi-prior",    "E",           "child_Q",
-          //                                                   "child_Qbeta", "child_W",     "theta",
-          //                                                   "omega_sq",    "pi-posterior"};
-          // eigen_util::print_array(ss, action_data, action_columns);
-          // LOG_INFO("\n{}", ss.str());
+          debug_dump("skipping update_policy due to tie");
           return;
         }
       }
@@ -709,11 +607,6 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   // zero-uncertainty actions.
   //
   // We can now compute the posterior pi values using the logistic-normal model.
-
-  LocalPolicyArrayDouble alpha_arr(arr_size);
-  LocalPolicyArrayDouble beta_arr(arr_size);
-  alpha_arr.setConstant(1);
-  beta_arr.setZero();
 
   for (int i = 0; i < arr_size; i++) {
     bool was_updated = (i == updated_edge_arr_index);
@@ -750,21 +643,13 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
     beta_arr *= (1.0 / beta_sum);
     LocalPolicyArrayDouble log_pi_arr = pi_arr.template cast<double>().log();
     double adjustment = (beta_arr * alpha_arr).sum();
-    adjustment = std::max(-5.0, std::min(+5.0, adjustment));  // cap to reasonable range
+    adjustment = std::max(-1.0, std::min(+1.0, adjustment));  // cap to reasonable range
     log_pi_arr[updated_edge_arr_index] += adjustment;
     pi_arr = log_pi_arr.template cast<float>();
     eigen_util::softmax_in_place(pi_arr);
   }
 
-  // std::stringstream ss;
-  // auto action_data =
-  //   eigen_util::concatenate_columns(dbg_pi_prior, E_arr, child_Q_arr, child_Qbeta_arr, child_W_arr,
-  //                                   theta_arr, omega_sq_arr, alpha_arr, beta_arr, pi_arr);
-  // static std::vector<std::string> action_columns = {
-  //   "pi-prior", "E",        "child_Q", "child_Qbeta", "child_W",
-  //   "theta",    "omega_sq", "alpha",   "beta",        "pi-posterior"};
-  // eigen_util::print_array(ss, action_data, action_columns);
-  // LOG_INFO("\n{}", ss.str());
+  debug_dump("after update_policy");
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -801,6 +686,70 @@ void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Qbeta, doubl
   theta = theta1 + theta2;
 
   omega_sq = sigma_sq / (mu * mu * (1 - mu) * (1 - mu));
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_QW_fields(const NodeStableData& stable_data,
+                                                       const LocalPolicyArray& pi_arr,
+                                                       const LocalActionValueArray& child_Qbeta_arr,
+                                                       const LocalActionValueArray& child_W_arr,
+                                                       NodeStats& stats) {
+  ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
+  ValueArray piQbeta_sq_sum =
+    ((child_Qbeta_arr * child_Qbeta_arr).matrix().transpose() * pi_arr.matrix()).array();
+  ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
+
+  RELEASE_ASSERT(stable_data.R_valid);
+
+  ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+  const ValueArray& U = stable_data.U;
+  int N = stats.RN + 1;
+
+  // Qbeta is computed as a weighted average of V (the prior value) and piQbeta_sum (the expected
+  // value from children), with weights proportional to N * U (the prior-uncertainty scaled by N)
+  // and piW_sum (the expected uncertainty from children). This balances the influence of the
+  // prior and evidence obtained from children, gradually decaying the influence of the prior as N
+  // increases.
+  //
+  // Should something similar be done for W? Currently, W is just the expected uncertainty from
+  // children, and the prior uncertainty U is not directly incorporated into W. We're not ignoring
+  // U entirely, since U influences the weight given to V in the Qbeta calculation. But it's being
+  // ignored for the uncertainty calculation itself.
+
+  ValueArray old_Qbeta = stats.Qbeta;
+
+  ValueArray denom = piW_sum + U * N;
+  stats.Qbeta = (V * piW_sum + U * N * piQbeta_sum) / denom;
+  stats.W = piW_sum + piQbeta_sq_sum - piQbeta_sum * piQbeta_sum;
+  stats.W = stats.W.cwiseMax(0.f);   // numerical stability
+  stats.Qbeta /= stats.Qbeta.sum();  // numerical stability
+
+  // fix-up for imprecision when piW_sum is zero
+  for (int p = 0; p < kNumPlayers; ++p) {
+    if (piW_sum[p] == 0) {
+      stats.W[p] = 0;
+    }
+  }
+
+  stats.Qbeta_min = stats.Qbeta;
+  stats.Qbeta_max = stats.Qbeta;
+  stats.W_max = stats.W;
+
+  if (search::kEnableSearchDebug) {
+    LOG_INFO("QW update:");
+    LOG_INFO("  N: {}", N);
+    LOG_INFO("  V: {}", fmt::streamed(V.transpose()));
+    LOG_INFO("  U: {}", fmt::streamed(U.transpose()));
+    LOG_INFO("  child_Qbeta_arr:\n{}", fmt::streamed(child_Qbeta_arr.transpose()));
+    LOG_INFO("  child_W_arr:\n{}", fmt::streamed(child_W_arr.transpose()));
+    LOG_INFO("  pi: {}", fmt::streamed(pi_arr.transpose()));
+    LOG_INFO("  piQbeta_sum: {}", fmt::streamed(piQbeta_sum.transpose()));
+    LOG_INFO("  piQbeta_sq_sum: {}", fmt::streamed(piQbeta_sq_sum.transpose()));
+    LOG_INFO("  piW_sum: {}", fmt::streamed(piW_sum.transpose()));
+    LOG_INFO("  old Qbeta: {}", fmt::streamed(old_Qbeta.transpose()));
+    LOG_INFO("  new Qbeta: {}", fmt::streamed(stats.Qbeta.transpose()));
+    LOG_INFO("  W: {}", fmt::streamed(stats.W.transpose()));
+  }
 }
 
 }  // namespace beta0

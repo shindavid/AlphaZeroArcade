@@ -43,6 +43,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using player_bitset_t = Base::player_bitset_t;
 
   using LocalPolicyArrayDouble = Game::Types::LocalPolicyArrayDouble;
+  using NodeStableData = Traits::NodeStableData;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
@@ -90,6 +91,10 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
                             const LocalPolicyArray& child_W_arr);
 
   static void compute_theta_omega_sq(double Qbeta, double W, double& theta, double& omega_sq);
+
+  static void update_QW_fields(const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
+                               const LocalActionValueArray& child_Qbeta_arr,
+                               const LocalActionValueArray& child_W_arr, NodeStats& stats);
 };
 
 template <search::concepts::Traits Traits>

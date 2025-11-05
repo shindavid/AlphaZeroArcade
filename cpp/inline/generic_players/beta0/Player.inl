@@ -32,9 +32,6 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
     policy = mcts_results->action_symmetry_table.collapse(policy);
     this->apply_temperature(policy);
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
-    if (this->params_.LCB_z_score) {
-      this->apply_LCB(mcts_results, valid_actions, policy);
-    }
   }
 
   this->normalize(valid_actions, policy);

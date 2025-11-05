@@ -159,13 +159,6 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
     new (root) Node(lookup_table.get_random_mutex(), cur_state, active_seat);
   }
 
-  Node* root2 = lookup_table.get_node(root_info.node_index);
-
-  // thread-safe since single-threaded here
-  if (root2->stats().RN == 0) {
-    root2->stats().RN = 1;
-  }
-
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
     const auto& state = root_info.history.current();
     IO::print_state(std::cout, state);
@@ -497,6 +490,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
         N += e;
         Q_sum += child_stats.Q * e;
         Q_sq_sum += child_stats.Q_sq * e;
+        eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
       }
 
       cp_has_winning_move |= child_stats.provably_winning[seat];
@@ -516,13 +510,14 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
     Q_sum += V;
     Q_sq_sum += V * V;
     N++;
+    eigen_util::debug_assert_is_valid_prob_distr(V);
 
     auto Q = Q_sum / N;
     auto Q_sq = Q_sq_sum / N;
-    eigen_util::debug_assert_is_valid_prob_distr(Q);
 
     stats.Q = Q;
     stats.Q_sq = Q_sq;
+    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
     if (cp_has_winning_move) {
       stats.provably_winning[seat] = true;
       stats.provably_losing.set();
@@ -661,10 +656,14 @@ void AlgorithmsBase<Traits, Derived>::load_action_symmetries(const GeneralContex
   std::vector<Item> items;
   items.reserve(stable_data.num_valid_actions);
 
+  int neg_equivalent_class = -1;
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     Edge* edge = lookup_table.get_edge(root, e);
-    if (edge->child_index < 0) continue;
-    items.emplace_back(edge->child_index, actions[e]);
+    if (edge->child_index < 0) {
+      items.emplace_back(neg_equivalent_class--, actions[e]);
+    } else {
+      items.emplace_back(edge->child_index, actions[e]);
+    }
   }
 
   results.action_symmetry_table.load(items);
@@ -855,6 +854,7 @@ bool AlgorithmsBase<Traits, Derived>::extract_policy_target(const SearchResults*
   } else {
     target = mcts_results->action_symmetry_table.symmetrize(target);
     target = target / eigen_util::sum(target);
+    eigen_util::debug_assert_is_valid_prob_distr(target);
     return true;
   }
 }

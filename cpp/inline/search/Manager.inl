@@ -390,6 +390,10 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   Algorithms::load_evaluations(context);
   context.eval_request.mark_all_as_stale();
 
+  if (is_root) {
+    node->stats().RN = std::max(node->stats().RN, 1);
+  }
+
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
@@ -524,6 +528,8 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
       if (Algorithms::should_short_circuit(edge, child)) {
         short_circuit_backprop(context);
+      } else if (child->is_terminal()) {
+        pure_backprop(context);
       } else {
         standard_backprop(context, false);
       }
@@ -788,6 +794,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
+  RELEASE_ASSERT(!last_node->is_terminal());
   auto value = GameResults::to_value_array(last_node->stable_data().R);
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
