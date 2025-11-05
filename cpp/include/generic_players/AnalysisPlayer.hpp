@@ -34,7 +34,7 @@ class AnalysisPlayer : public WebPlayerBase<Game> {
   bool disable_progress_bar() const override { return true; }
 
  private:
-  core::AbstractPlayer<Game>* wrapped_player_;
+  core::AbstractPlayer<Game>* const wrapped_player_;
 };
 
 }  // namespace generic
