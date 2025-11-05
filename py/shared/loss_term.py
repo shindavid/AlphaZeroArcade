@@ -96,9 +96,9 @@ class BasicLossTerm(LossTerm):
         loss = self._loss_fn(y_hat, y)
 
         if self._use_policy_scaling:
-            assert torch.isfinite(y_hat).all(), y_hat
-            assert torch.isfinite(y).all(), y
-            assert (y >= 0).all(), y
+            assert torch.isfinite(y_hat).all(), (y_hat, self.name)
+            assert torch.isfinite(y).all(), (y, self.name)
+            assert (y >= 0).all(), (y, self.name)
             # loss has not been reduced yet
             valid_actions = y_list[1]
             denominator = valid_actions.sum()
@@ -172,6 +172,6 @@ class ValueUncertaintyLossTerm(LossTerm):
 
         d1 = (Q_prior - Q_min) ** 2
         d2 = (Q_max - Q_prior) ** 2
-        d3 = W_max
+        d3 = 0.5 * W_max
         actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
         return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
