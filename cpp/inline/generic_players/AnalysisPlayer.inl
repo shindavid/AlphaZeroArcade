@@ -6,12 +6,6 @@
 namespace generic {
 
 template <core::concepts::Game Game>
-AnalysisPlayer<Game>::AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player)
-    : wrapped_player_(wrapped_player) {
-  this->set_name("AnalysisPlayer(" + wrapped_player_->get_name() + ")");
-}
-
-template <core::concepts::Game Game>
 bool AnalysisPlayer<Game>::start_game() {
   this->action_ = -1;
   this->resign_ = false;
