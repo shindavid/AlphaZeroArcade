@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument("-m", '--model-generation', type=int,
                         help='model generation (default: latest)')
     parser.add_argument("-v", '--verbose', action='store_true', help='display verbose info of MCTS')
-    parser.add_argument("-a", '--analyasis-mode', action='store_true', help='run in analysis mode')
+    parser.add_argument("-a", '--analysis-mode', action='store_true', help='run in analysis mode')
     return parser.parse_args()
 
 
