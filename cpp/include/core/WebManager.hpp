@@ -28,8 +28,6 @@ using HandlerFuncMap = std::unordered_map<MsgType, HandlerFunc>;
 template <concepts::Game Game>
 struct WebManager {
   using Handlers = std::array<HandlerFuncMap, Game::Constants::kNumPlayers>;  // idx by seat
-
-  WebManager();
   ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
@@ -56,6 +54,7 @@ struct WebManager {
   void send_msg(const boost::json::object& msg);
 
  private:
+  WebManager();
   boost::asio::ip::tcp::acceptor create_acceptor();
 
   void launch_bridge();
