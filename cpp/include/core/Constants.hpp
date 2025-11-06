@@ -28,7 +28,6 @@ constexpr int kNumRowsToDisplayVerbose = 10;
 enum SearchParadigm : int8_t {
   kParadigmAlphaZero,
   kParadigmBetaZero,
-  kParadigmGammaZero,
   kUnknownParadigm
 };
 
@@ -39,8 +38,6 @@ inline SearchParadigm parse_search_paradigm(const char* s) {
     return kParadigmAlphaZero;
   } else if (ss == "beta0") {
     return kParadigmBetaZero;
-  } else if (ss == "gamma0") {
-    return kParadigmGammaZero;
   } else {
     return kUnknownParadigm;
   }
