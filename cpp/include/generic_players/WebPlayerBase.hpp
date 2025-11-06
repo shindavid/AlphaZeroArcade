@@ -73,10 +73,6 @@ class WebPlayerBase : public core::AbstractPlayer<Game>, public core::WebManager
   // }
   //
   // Can be overridden to add more fields, or change the representation.
-  //
-  // TODO: when playing against an MCTS player, this is where we should add MCTS stats for
-  // visualization in the frontend. This too should have reasonable defaults built into this
-  // base class.
   virtual boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
                                                     core::action_t last_action,
                                                     core::action_mode_t last_mode);

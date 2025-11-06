@@ -142,7 +142,6 @@ void WebManager<Game>::response_loop() {
         ready_for_new_game_ = true;
         lock.unlock();
         cv_.notify_all();
-        continue;
       } else {
         int seat_index = boost::json::value_to<int>(obj.at("seat"));
         if (msg_type == "make_move") {
@@ -179,24 +178,20 @@ template <core::concepts::Game Game>
 void WebManager<Game>::wait_for_new_game_ready() {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this]() { return ready_for_new_game_; });
-  ready_for_new_game_ = false;
-}
 
-template <core::concepts::Game Game>
-bool WebManager<Game>::become_starter() {
-  mit::unique_lock lock(mutex_);
-  if (has_starter_) {
-    return false;
-  } else {
-    has_starter_ = true;
-    return true;
+  if (all_clients_registered()) {
+    ready_for_new_game_ = false;
   }
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::clear_starter() {
-  mit::unique_lock lock(mutex_);
-  has_starter_ = false;
+bool WebManager<Game>::all_clients_registered() const {
+  for (const auto* client : clients_) {
+    if (client == nullptr) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace core

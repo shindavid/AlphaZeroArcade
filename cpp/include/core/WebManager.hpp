@@ -57,6 +57,7 @@ struct WebManager {
   void launch_bridge();
   void launch_frontend();
   void response_loop();
+  bool all_clients_registered() const;
 
   int engine_port_ = 48040;  // TODO: Make this configurable
   int bridge_port_ = 52528;  // TODO: Make this configurable
@@ -72,7 +73,6 @@ struct WebManager {
 
   bool bridge_connected_ = false;
   bool ready_for_new_game_ = true;
-  bool has_starter_ = false;
 
   boost::process::child* bridge_process_ = nullptr;
   boost::process::child* frontend_process_ = nullptr;

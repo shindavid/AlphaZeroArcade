@@ -15,10 +15,8 @@ bool AnalysisPlayer<Game>::start_game() {
   manager->register_client(this->get_my_seat(), this);
 
   bool started = wrapped_player_->start_game();
-  if (manager->become_starter()) {
-    manager->wait_for_new_game_ready();
-    this->send_start_game();
-  }
+  manager->wait_for_new_game_ready();
+  this->send_start_game();
   return started;
 }
 
@@ -64,7 +62,6 @@ void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& 
 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
-  web_manager->clear_starter();
   web_manager->clear_clients();
 }
 
