@@ -1,10 +1,13 @@
 #pragma once
 
+#include "core/AbstractPlayer.hpp"
 #include "boost/json/object.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace core {
-struct WebManagerClient {
+template <concepts::Game Game>
+struct WebManagerClient : public AbstractPlayer<Game> {
+  virtual ~WebManagerClient() = default;
   void handle_start_game() {
     mit::unique_lock lock(mutex_);
     new_game_handled_ = true;

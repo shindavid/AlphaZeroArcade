@@ -17,7 +17,7 @@ namespace generic {
  * that provide the required player interface.
  */
 template <core::concepts::Game Game>
-class WebPlayerBase : public core::AbstractPlayer<Game>, public core::WebManagerClient {
+class WebPlayerBase : public core::WebManagerClient<Game> {
  public:
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
@@ -25,6 +25,7 @@ class WebPlayerBase : public core::AbstractPlayer<Game>, public core::WebManager
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
+  virtual ~WebPlayerBase() = default;
   void handle_action(const boost::json::object& payload) override;
   void handle_resign() override;
 

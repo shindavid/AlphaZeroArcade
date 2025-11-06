@@ -102,7 +102,7 @@ void WebManager<Game>::launch_frontend() {
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::register_client( WebManagerClient* client) {
+void WebManager<Game>::register_client( WebManagerClient<Game>* client) {
   mit::unique_lock lock(mutex_);
   for (seat_index_t seat = 0; seat < Game::Constants::kNumPlayers; ++seat) {
     if (clients_[seat] == nullptr) {
@@ -180,11 +180,10 @@ void WebManager<Game>::wait_for_connection() {
 }
 
 template <core::concepts::Game Game>
-WebManagerClient* WebManager<Game>::client_at_seat(seat_index_t seat) {
+WebManagerClient<Game>* WebManager<Game>::client_at_seat(seat_index_t seat) {
   mit::unique_lock lock(mutex_);
   for (auto* c : clients_) {
-    auto* p = dynamic_cast<AbstractPlayer<Game>*>(c);
-    if (c && p->get_my_seat() == seat) {
+    if (c && c->get_my_seat() == seat) {
       return c;
     }
   }
