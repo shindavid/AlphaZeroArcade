@@ -74,13 +74,13 @@ boost::json::object WebPlayerBase<Game>::make_action_request_msg(const ActionMas
 }
 
 template <core::concepts::Game Game>
-void WebPlayerBase<Game>::set_action(const boost::json::object& payload) {
+void WebPlayerBase<Game>::handle_action(const boost::json::object& payload) {
   action_ = static_cast<core::action_t>(payload.at("index").as_int64());
   notification_unit_.yield_manager->notify(notification_unit_);
 }
 
 template <core::concepts::Game Game>
-void WebPlayerBase<Game>::set_resign() {
+void WebPlayerBase<Game>::handle_resign() {
   resign_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
 }

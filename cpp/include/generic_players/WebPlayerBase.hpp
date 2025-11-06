@@ -25,8 +25,8 @@ class WebPlayerBase : public core::AbstractPlayer<Game>, public core::WebManager
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
-  void set_action(const boost::json::object& payload) override;
-  void set_resign() override;
+  void handle_action(const boost::json::object& payload) override;
+  void handle_resign() override;
 
  protected:
   void send_start_game();

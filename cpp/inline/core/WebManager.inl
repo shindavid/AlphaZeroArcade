@@ -146,9 +146,9 @@ void WebManager<Game>::response_loop() {
         int seat_index = boost::json::value_to<int>(obj.at("seat"));
         if (msg_type == "make_move") {
           boost::json::object payload = obj.at("payload").as_object();
-          clients_[seat_index]->set_action(payload);
+          clients_[seat_index]->handle_action(payload);
         } else if (msg_type == "resign") {
-          clients_[seat_index]->set_resign();
+          clients_[seat_index]->handle_resign();
         } else {
           throw util::Exception("Unknown message type: {}", msg_type);
         }
