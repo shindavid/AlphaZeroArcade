@@ -5,8 +5,7 @@
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace core {
-template <concepts::Game Game>
-struct WebManagerClient : public AbstractPlayer<Game> {
+struct WebManagerClient{
   virtual ~WebManagerClient() = default;
   void handle_start_game() {
     mit::unique_lock lock(mutex_);
@@ -15,6 +14,7 @@ struct WebManagerClient : public AbstractPlayer<Game> {
     cv_.notify_all();
   }
 
+  virtual core::seat_index_t seat() const = 0;
   virtual void handle_action(const boost::json::object& payload) = 0;
   virtual void handle_resign() = 0;
 

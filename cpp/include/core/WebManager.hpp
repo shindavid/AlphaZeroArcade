@@ -23,12 +23,12 @@ namespace core {
  */
 template <concepts::Game Game>
 struct WebManager {
-  using client_vec_t = std::array<WebManagerClient<Game>*, Game::Constants::kNumPlayers>;
+  using client_vec_t = std::array<WebManagerClient*, Game::Constants::kNumPlayers>;
 
   ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
-  void register_client(WebManagerClient<Game>* client);
+  void register_client(WebManagerClient* client);
   void send_msg(const boost::json::object& msg);
 
  private:
@@ -37,7 +37,7 @@ struct WebManager {
   void launch_bridge();
   void launch_frontend();
   void response_loop();
-  WebManagerClient<Game>* client_at_seat(seat_index_t seat);
+  WebManagerClient* client_at_seat(seat_index_t seat);
 
   int engine_port_ = 48040;  // TODO: Make this configurable
   int bridge_port_ = 52528;  // TODO: Make this configurable

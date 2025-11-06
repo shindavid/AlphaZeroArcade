@@ -102,7 +102,7 @@ void WebManager<Game>::launch_frontend() {
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::register_client( WebManagerClient<Game>* client) {
+void WebManager<Game>::register_client(WebManagerClient* client) {
   mit::unique_lock lock(mutex_);
   for (seat_index_t seat = 0; seat < Game::Constants::kNumPlayers; ++seat) {
     if (clients_[seat] == nullptr) {
@@ -151,7 +151,9 @@ void WebManager<Game>::response_loop() {
 
       if (msg_type == "new_game") {
         for (auto& client : clients_) {
-          client->handle_start_game();
+          if (client) {
+            client->handle_start_game();
+          }
         }
       } else {
         int seat_index = boost::json::value_to<int>(obj.at("seat"));
@@ -180,10 +182,10 @@ void WebManager<Game>::wait_for_connection() {
 }
 
 template <core::concepts::Game Game>
-WebManagerClient<Game>* WebManager<Game>::client_at_seat(seat_index_t seat) {
+WebManagerClient* WebManager<Game>::client_at_seat(seat_index_t seat) {
   mit::unique_lock lock(mutex_);
   for (auto* c : clients_) {
-    if (c && c->get_my_seat() == seat) {
+    if (c && c->seat() == seat) {
       return c;
     }
   }

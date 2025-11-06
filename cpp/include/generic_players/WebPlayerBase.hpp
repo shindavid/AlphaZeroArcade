@@ -2,6 +2,7 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
 
@@ -17,7 +18,7 @@ namespace generic {
  * that provide the required player interface.
  */
 template <core::concepts::Game Game>
-class WebPlayerBase : public core::WebManagerClient<Game> {
+class WebPlayerBase : public core::WebManagerClient, public core::AbstractPlayer<Game> {
  public:
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
@@ -25,9 +26,14 @@ class WebPlayerBase : public core::WebManagerClient<Game> {
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
+  WebPlayerBase() {
+    core::WebManager<Game>::get_instance()->register_client(this);
+  }
+
   virtual ~WebPlayerBase() = default;
   void handle_action(const boost::json::object& payload) override;
   void handle_resign() override;
+  core::seat_index_t seat() const override { return this->get_my_seat(); }
 
  protected:
   void send_start_game();
