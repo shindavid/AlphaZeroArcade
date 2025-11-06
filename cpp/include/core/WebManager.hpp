@@ -52,8 +52,6 @@ struct WebManager {
   mit::condition_variable cv_;
 
   bool bridge_connected_ = false;
-  bool ready_for_new_game_ = true;
-
   boost::process::child* bridge_process_ = nullptr;
   boost::process::child* frontend_process_ = nullptr;
 
