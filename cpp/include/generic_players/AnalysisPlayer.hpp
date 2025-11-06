@@ -23,7 +23,7 @@ class AnalysisPlayer : public WebPlayerBase<Game> {
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
 
-  AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
+  AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player);
   ~AnalysisPlayer() { delete wrapped_player_; }
   const std::string& get_name() const override { return wrapped_player_->get_name(); }
 

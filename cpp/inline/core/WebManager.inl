@@ -102,6 +102,18 @@ void WebManager<Game>::launch_frontend() {
 }
 
 template <core::concepts::Game Game>
+void WebManager<Game>::register_client( WebManagerClient* client) {
+  mit::unique_lock lock(mutex_);
+  for (seat_index_t seat = 0; seat < Game::Constants::kNumPlayers; ++seat) {
+    if (clients_[seat] == nullptr) {
+      clients_[seat] = client;
+      return;
+    }
+  }
+  throw util::Exception("All seats are already registered with clients");
+}
+
+template <core::concepts::Game Game>
 boost::asio::ip::tcp::acceptor WebManager<Game>::create_acceptor() {
   os_util::free_port(engine_port_);
 
@@ -138,17 +150,16 @@ void WebManager<Game>::response_loop() {
       std::string msg_type = obj.at("type").as_string().c_str();
 
       if (msg_type == "new_game") {
-        mit::unique_lock lock(mutex_);
-        ready_for_new_game_ = true;
-        lock.unlock();
-        cv_.notify_all();
+        for (auto& client : clients_) {
+          client->handle_start_game();
+        }
       } else {
         int seat_index = boost::json::value_to<int>(obj.at("seat"));
         if (msg_type == "make_move") {
           boost::json::object payload = obj.at("payload").as_object();
-          clients_[seat_index]->handle_action(payload);
+          client_at_seat(seat_index)->handle_action(payload);
         } else if (msg_type == "resign") {
-          clients_[seat_index]->handle_resign();
+          client_at_seat(seat_index)->handle_resign();
         } else {
           throw util::Exception("Unknown message type: {}", msg_type);
         }
@@ -163,35 +174,21 @@ void WebManager<Game>::response_loop() {
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::clear_clients() {
-  mit::unique_lock lock(mutex_);
-  clients_.fill(nullptr);
-}
-
-template <core::concepts::Game Game>
 void WebManager<Game>::wait_for_connection() {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this]() { return bridge_connected_; });
 }
 
 template <core::concepts::Game Game>
-void WebManager<Game>::wait_for_new_game_ready() {
+WebManagerClient* WebManager<Game>::client_at_seat(seat_index_t seat) {
   mit::unique_lock lock(mutex_);
-  cv_.wait(lock, [this]() { return ready_for_new_game_; });
-
-  if (all_clients_registered()) {
-    ready_for_new_game_ = false;
-  }
-}
-
-template <core::concepts::Game Game>
-bool WebManager<Game>::all_clients_registered() const {
-  for (const auto* client : clients_) {
-    if (client == nullptr) {
-      return false;
+  for (auto* c : clients_) {
+    auto* p = dynamic_cast<AbstractPlayer<Game>*>(c);
+    if (c && p->get_my_seat() == seat) {
+      return c;
     }
   }
-  return true;
+  throw util::Exception("No client registered at seat {}", seat);
 }
 
 }  // namespace core

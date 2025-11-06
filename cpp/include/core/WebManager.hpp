@@ -28,36 +28,16 @@ struct WebManager {
   ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
-  void wait_for_new_game_ready();
-
-  /*
-   * A starter is a player that initiates a new game in the front end. The starter sends the initial
-   * game state. Only one player performs the starter role for each game. At the end of each game,
-   * the starter role is cleared, allowing another player to become the starter for the next game.
-   */
-  bool become_starter();
-  void clear_starter();
-
-  void register_client(seat_index_t seat, WebManagerClient* client) {
-    clients_[seat] = client;
-  }
-
-  /*
-   * All handlers are cleared at the end of each game to prevent retaining stale handlers from
-   * previous sessions. Although new handlers are typically registered at the start of every game,
-   * this serves as a defensive safeguard.
-   */
-  void clear_clients();
+  void register_client(WebManagerClient* client);
   void send_msg(const boost::json::object& msg);
 
  private:
   WebManager();
   boost::asio::ip::tcp::acceptor create_acceptor();
-
   void launch_bridge();
   void launch_frontend();
   void response_loop();
-  bool all_clients_registered() const;
+  WebManagerClient* client_at_seat(seat_index_t seat);
 
   int engine_port_ = 48040;  // TODO: Make this configurable
   int bridge_port_ = 52528;  // TODO: Make this configurable

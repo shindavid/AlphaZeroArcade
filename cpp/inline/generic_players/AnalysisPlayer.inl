@@ -6,16 +6,21 @@
 namespace generic {
 
 template <core::concepts::Game Game>
+AnalysisPlayer<Game>::AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player)
+    : wrapped_player_(wrapped_player) {
+  core::WebManager<Game>::get_instance()->register_client(this);
+}
+
+template <core::concepts::Game Game>
 bool AnalysisPlayer<Game>::start_game() {
   this->action_ = -1;
   this->resign_ = false;
 
   auto* manager = core::WebManager<Game>::get_instance();
   manager->wait_for_connection();
-  manager->register_client(this->get_my_seat(), this);
 
   bool started = wrapped_player_->start_game();
-  manager->wait_for_new_game_ready();
+  this->wait_for_new_game();
   this->send_start_game();
   return started;
 }
@@ -62,7 +67,6 @@ void AnalysisPlayer<Game>::end_game(const State& state, const GameResultTensor& 
 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
-  web_manager->clear_clients();
 }
 
 }  // namespace generic

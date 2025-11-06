@@ -21,6 +21,8 @@ class WebPlayer : public WebPlayerBase<Game> {
 
   static_assert(core::concepts::WebGameIO<IO, GameTypes>, "IO must satisfy WebGameIO");
 
+  WebPlayer() { core::WebManager<Game>::get_instance()->register_client(this); }
+
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
