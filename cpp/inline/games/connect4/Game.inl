@@ -125,4 +125,12 @@ inline constexpr mask_t Game::_full_bottom_mask() {
   return mask;
 }
 
+inline void Game::IO::add_render_info(const State& state, boost::json::object& msg) {
+  boost::json::array col_heights;
+  for (int col = 0; col < kNumColumns; ++col) {
+    col_heights.push_back(kNumRows - state.num_empty_cells(col));
+  }
+  msg["col_heights"] = col_heights;
+}
+
 }  // namespace c4

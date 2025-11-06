@@ -84,6 +84,7 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static boost::json::value state_to_json(const State& state);
+    static void add_render_info(const State& state, boost::json::object& obj);
 
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);

@@ -36,6 +36,7 @@ boost::json::object WebPlayerBase<Game>::make_start_game_msg() {
   payload["my_seat"] = std::string(1, Game::IO::kSeatChars[this->get_my_seat()]);
   payload["seat_assignments"] = seat_assignments;
   payload["player_names"] = player_names;
+  Game::IO::add_render_info(state, payload);
 
   return payload;
 }
@@ -110,6 +111,7 @@ boost::json::object WebPlayerBase<Game>::make_state_update_msg(core::seat_index_
   payload["board"] = Game::IO::state_to_json(state);
   payload["seat"] = seat;
   payload["last_action"] = Game::IO::action_to_str(last_action, last_mode);
+  Game::IO::add_render_info(state, payload);
 
   return payload;
 }

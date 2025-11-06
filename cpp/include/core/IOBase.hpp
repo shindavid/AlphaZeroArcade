@@ -24,6 +24,7 @@ struct IOBase {
   static boost::json::value state_to_json(const State& state) {
     throw util::CleanException("state_to_json not implemented");
   }
+  static void add_render_info(const State& state, boost::json::object& obj) {}
 };
 
 }  // namespace core
