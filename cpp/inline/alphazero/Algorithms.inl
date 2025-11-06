@@ -780,7 +780,7 @@ void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const Searc
 
     eigen_util::PrintArrayFormatMap fmt_map1{
       {"Seat", [&](float x) { return std::to_string(int(x)); }},
-      {"CurP", [&](float x) { return std::string(x == seat ? "*" : ""); }},
+      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
     };
 
     std::stringstream ss1;
