@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "util/Asserts.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Math.hpp"
@@ -42,37 +41,38 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   RELEASE_ASSERT(snapshots_set_);
   NodeStats stats = node->stats();  // copy
 
-  ValueArray tmp_last_child_Qbeta_snapshot = stats.Qbeta;
+  ValueArray tmp_last_child_Q_snapshot = stats.Q;
   ValueArray tmp_last_child_W_snapshot = stats.W;
 
+  LookupTable& lookup_table = context_.general_context->lookup_table;
   int num_valid_actions = node->stable_data().num_valid_actions;
   LocalPolicyArray pi_arr(num_valid_actions);
   for (int i = 0; i < num_valid_actions; i++) {
-    const Edge* child_edge = lookup_table_.get_edge(node, i);
+    const Edge* child_edge = lookup_table.get_edge(node, i);
     pi_arr(i) = child_edge->policy_posterior_prob;
   }
   lock.unlock();
 
-  Derived::update_stats(stats, pi_arr, last_child_Qbeta_snapshot_, last_child_W_snapshot_, node,
-                        edge, lookup_table_);
+  Derived::update_stats(context_, stats, pi_arr, last_child_Q_snapshot_, last_child_W_snapshot_,
+                        node, edge);
 
   // LOG_INFO("Update result:");
-  // LOG_INFO("Qbeta = {} -> {}", fmt::streamed(tmp_last_child_Qbeta_snapshot.transpose()),
-  //          fmt::streamed(stats.Qbeta.transpose()));
+  // LOG_INFO("Q = {} -> {}", fmt::streamed(tmp_last_child_Q_snapshot.transpose()),
+  //          fmt::streamed(stats.Q.transpose()));
   // LOG_INFO("W = {} -> {}", fmt::streamed(tmp_last_child_W_snapshot.transpose()),
   //          fmt::streamed(stats.W.transpose()));
 
   lock.lock();
 
   update_edge_snapshots(node, edge);
-  last_child_Qbeta_snapshot_ = tmp_last_child_Qbeta_snapshot;
+  last_child_Q_snapshot_ = tmp_last_child_Q_snapshot;
   last_child_W_snapshot_ = tmp_last_child_W_snapshot;
   // LOG_INFO("Updating snapshots @{}:", __LINE__);
-  // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
-  //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
+  // LOG_INFO("last_child_Q_snapshot_ = {}",
+  //          fmt::streamed(last_child_Q_snapshot_.transpose()));
   // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
   for (int i = 0; i < num_valid_actions; i++) {
-    Edge* child_edge = lookup_table_.get_edge(node, i);
+    Edge* child_edge = lookup_table.get_edge(node, i);
     child_edge->policy_posterior_prob = pi_arr[i];
   }
 
@@ -92,7 +92,8 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::update_edge_snapshots(
   Node* parent, Edge* edge, bool load_edge_snapshots_before_update) {
   // Like Algorithsm::init_edge_from_child(), but assumes parent mutex is already held
 
-  const Node* child = lookup_table_.get_node(edge->child_index);
+  LookupTable& lookup_table = context_.general_context->lookup_table;
+  const Node* child = lookup_table.get_node(edge->child_index);
   if (!child) return;
 
   if (&parent->mutex() == &child->mutex()) {
@@ -110,16 +111,17 @@ template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::Backpropagator::update_edge_snapshots_helper(
   const NodeStats& child_stats, Edge* edge, bool load_edge_snapshots_before_update) {
   if (load_edge_snapshots_before_update) {
-    last_child_Qbeta_snapshot_ = edge->child_Qbeta_snapshot;
+    last_child_Q_snapshot_ = edge->child_Q_snapshot;
     last_child_W_snapshot_ = edge->child_W_snapshot;
     snapshots_set_ = true;
     // LOG_INFO("Updating snapshots @{}:", __LINE__);
-    // LOG_INFO("last_child_Qbeta_snapshot_ = {}",
-    //          fmt::streamed(last_child_Qbeta_snapshot_.transpose()));
+    // LOG_INFO("last_child_Q_snapshot_ = {}",
+    //          fmt::streamed(last_child_Q_snapshot_.transpose()));
     // LOG_INFO("last_child_W_snapshot_ = {}", fmt::streamed(last_child_W_snapshot_.transpose()));
   }
-  edge->child_Qbeta_snapshot = child_stats.Qbeta;
+  edge->child_Q_snapshot = child_stats.Q;
   edge->child_W_snapshot = child_stats.W;
+  eigen_util::debug_validate_bounds(edge->child_Q_snapshot);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -134,13 +136,15 @@ void AlgorithmsBase<Traits, Derived>::init_edge_from_child(const GeneralContext&
     // a pool).
     mit::unique_lock lock(parent->mutex());
     const NodeStats& child_stats = child->stats();  // does not acquire child mutex
-    edge->child_Qbeta_snapshot = child_stats.Qbeta;
+    edge->child_Q_snapshot = child_stats.Q;
     edge->child_W_snapshot = child_stats.W;
+    eigen_util::debug_validate_bounds(edge->child_Q_snapshot);
   } else {
     NodeStats child_stats = child->stats_safe();  // copy
     mit::unique_lock lock(parent->mutex());
-    edge->child_Qbeta_snapshot = child_stats.Qbeta;
+    edge->child_Q_snapshot = child_stats.Q;
     edge->child_W_snapshot = child_stats.W;
+    eigen_util::debug_validate_bounds(edge->child_Q_snapshot);
   }
 }
 
@@ -149,9 +153,8 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   Base::init_node_stats_from_terminal(node);
 
   NodeStats& stats = node->stats();
-  stats.Qbeta = stats.Q;
-  stats.Qbeta_min = stats.Q;
-  stats.Qbeta_max = stats.Q;
+  stats.Q_min = stats.Q;
+  stats.Q_max = stats.Q;
   stats.W.fill(0.f);
   stats.W_max.fill(0.f);
 }
@@ -189,22 +192,23 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_posterior_prob = edge->policy_prior_prob;
-      edge->child_Qbeta_snapshot = edge->child_AV;
+      edge->child_Q_snapshot = edge->child_AV;
       edge->child_W_snapshot = AU.row(i);
+      eigen_util::debug_validate_bounds(edge->child_Q_snapshot);
     }
 
     RELEASE_ASSERT(stats.RN == 0, "RN={}", stats.RN);
 
-    LocalActionValueArray child_Qbeta_arr(n, kNumPlayers);
+    LocalActionValueArray child_Q_arr(n, kNumPlayers);
     const LocalActionValueArray& child_W_arr = AU;
     LocalPolicyArray pi_arr(n);
     for (int i = 0; i < n; i++) {
       const Edge* edge = lookup_table.get_edge(node, i);
       pi_arr(i) = edge->policy_posterior_prob;
-      child_Qbeta_arr.row(i) = edge->child_Qbeta_snapshot;
+      child_Q_arr.row(i) = edge->child_Q_snapshot;
     }
 
-    update_QW_fields(stable_data, pi_arr, child_Qbeta_arr, child_W_arr, stats);
+    update_QW_fields(context, node, stable_data, pi_arr, child_Q_arr, child_W_arr, stats);
   }
 }
 
@@ -266,12 +270,12 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   Game::Symmetries::apply(results.action_values, inv_sym, mode);
   Game::Symmetries::apply(results.action_value_uncertainties, inv_sym, mode);
 
-  results.win_rates = stats.Qbeta;
+  results.win_rates = stats.Q;
   results.value_prior = stable_data.R;
   results.action_mode = mode;
 
-  results.min_win_rates = stats.Qbeta_min;
-  results.max_win_rates = stats.Qbeta_max;
+  results.min_win_rates = stats.Q_min;
+  results.max_win_rates = stats.Q_max;
   results.max_uncertainties = stats.W_max;
 
   eigen_util::assert_is_valid_prob_distr(results.policy_posterior);
@@ -408,50 +412,69 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,
-                                                   const ValueArray& last_child_Qbeta_snapshot,
+void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeStats& stats,
+                                                   LocalPolicyArray& pi_arr,
+                                                   const ValueArray& last_child_Q_snapshot,
                                                    const ValueArray& last_child_W_snapshot,
-                                                   const Node* node, const Edge* edge,
-                                                   LookupTable& lookup_table) {
-  Base::update_stats(stats, node, lookup_table);  // writes stats.Q and stats.Q_sq
-
+                                                   const Node* node, const Edge* edge) {
+  LookupTable& lookup_table = context.general_context->lookup_table;
   const auto& stable_data = node->stable_data();
   core::seat_index_t seat = stable_data.active_seat;
   int num_valid_actions = stable_data.num_valid_actions;
+
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
 
   if (stable_data.is_chance_node) {
     throw util::Exception("chance nodes not yet supported in beta0");
   } else {
     // read child stats and pi values into arrays to avoid repeated locking
-    LocalActionValueArray child_Qbeta_arr(num_valid_actions, kNumPlayers);
+    LocalActionValueArray child_Q_arr(num_valid_actions, kNumPlayers);
     LocalActionValueArray child_W_arr(num_valid_actions, kNumPlayers);
 
     int updated_edge_arr_index = -1;
+    bool cp_has_winning_move = false;
+    int num_expanded_edges = 0;
 
     for (int i = 0; i < num_valid_actions; i++) {
       const Edge* child_edge = lookup_table.get_edge(node, i);  // TODO: make a safe copy
       const Node* child = lookup_table.get_node(child_edge->child_index);
       if (!child) {
-        child_Qbeta_arr.row(i) = child_edge->child_Qbeta_snapshot;
+        child_Q_arr.row(i) = child_edge->child_Q_snapshot;
         child_W_arr.row(i) = child_edge->child_W_snapshot;
       } else {
         const auto child_stats = child->stats_safe();  // make a copy
 
-        child_Qbeta_arr.row(i) = child_stats.Qbeta;
+        child_Q_arr.row(i) = child_stats.Q;
         child_W_arr.row(i) = child_stats.W;
 
+        eigen_util::debug_validate_bounds(child_stats.Q);
         if (child_edge == edge) {
           updated_edge_arr_index = i;
         }
+
+        cp_has_winning_move |= child_stats.provably_winning[seat];
+        all_provably_winning &= child_stats.provably_winning;
+        all_provably_losing &= child_stats.provably_losing;
+        num_expanded_edges++;
       }
+    }
+
+    eigen_util::debug_validate_bounds(child_Q_arr);
+    bool all_edges_expanded = (num_expanded_edges == num_valid_actions);
+    if (!all_edges_expanded) {
+      all_provably_winning.reset();
+      all_provably_losing.reset();
     }
 
     RELEASE_ASSERT(updated_edge_arr_index >= 0);
 
     // compute posterior policy
-    Derived::update_policy(pi_arr, node, edge, lookup_table, updated_edge_arr_index,
-                           last_child_Qbeta_snapshot[seat], last_child_W_snapshot[seat],
-                           child_Qbeta_arr.col(seat), child_W_arr.col(seat));
+    Derived::update_policy(context, pi_arr, node, edge, lookup_table, updated_edge_arr_index,
+                           last_child_Q_snapshot[seat], last_child_W_snapshot[seat],
+                           child_Q_arr.col(seat), child_W_arr.col(seat));
 
     // renormalize pi_arr
     float pi_sum = pi_arr.sum();
@@ -470,17 +493,23 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, LocalPolicy
       pi_arr.fill(1.0f / num_valid_actions);
     }
 
-    update_QW_fields(stable_data, pi_arr, child_Qbeta_arr, child_W_arr, stats);
+    update_QW_fields(context, node, stable_data, pi_arr, child_Q_arr, child_W_arr, stats);
+    if (cp_has_winning_move) {
+      stats.provably_winning[seat] = true;
+      stats.provably_losing.set();
+      stats.provably_losing[seat] = false;
+    } else if (all_edges_expanded) {
+      stats.provably_winning = all_provably_winning;
+      stats.provably_losing = all_provably_losing;
+    }
   }
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, const Node* node,
-                                                    const Edge* edge, LookupTable& lookup_table,
-                                                    int updated_edge_arr_index,
-                                                    float old_child_Qbeta, float old_child_W,
-                                                    const LocalPolicyArray& child_Qbeta_arr,
-                                                    const LocalPolicyArray& child_W_arr) {
+void AlgorithmsBase<Traits, Derived>::update_policy(
+  SearchContext& context, LocalPolicyArray& pi_arr, const Node* node, const Edge* edge,
+  LookupTable& lookup_table, int updated_edge_arr_index, float old_child_Q, float old_child_W,
+  const LocalPolicyArray& child_Q_arr, const LocalPolicyArray& child_W_arr) {
   // Throughout this function, theta and omega_sq represent the mean and variance of the value
   // distribution in an idealized logistic-normal model of the value distribution.
 
@@ -491,13 +520,13 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
 
   double theta_old;
   double omega_sq_old;
-  compute_theta_omega_sq(old_child_Qbeta, old_child_W, theta_old, omega_sq_old);
+  compute_theta_omega_sq(old_child_Q, old_child_W, theta_old, omega_sq_old);
 
   LocalPolicyArrayDouble theta_arr(arr_size);
   LocalPolicyArrayDouble omega_sq_arr(arr_size);
 
   for (int i = 0; i < arr_size; i++) {
-    compute_theta_omega_sq(child_Qbeta_arr[i], child_W_arr[i], theta_arr[i], omega_sq_arr[i]);
+    compute_theta_omega_sq(child_Q_arr[i], child_W_arr[i], theta_arr[i], omega_sq_arr[i]);
   }
 
   math::finiteness_t finiteness_arr[arr_size];
@@ -526,39 +555,37 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
   auto debug_dump = [&](const std::string& msg) {
     if (!search::kEnableSearchDebug) return;
     LocalPolicyArray E_arr = pi_arr;
-    LocalPolicyArray child_Q_arr = pi_arr;
-    LocalPolicyArray child_V_arr = pi_arr;
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
 
-    auto seat = node->stable_data().active_seat;
+    LocalPolicyArray actions = pi_arr;
     for (int i = 0; i < arr_size; i++) {
       Edge* child_edge = lookup_table.get_edge(node, i);
+      core::action_t action = child_edge->action;
+      Game::Symmetries::apply(action, inv_sym, node->action_mode());
+      actions(i) = action;
       E_arr[i] = child_edge->E;
-      Node* child = lookup_table.get_node(child_edge->child_index);
-      child_Q_arr[i] = child ? child->stats_safe().Q(seat) : child_edge->child_AV[seat];
-      if (child) {
-        ValueArray V = Game::GameResults::to_value_array(child->stable_data().R);
-        child_V_arr[i] = V[seat];
-      } else {
-        child_V_arr[i] = child_edge->child_AV[seat];
-      }
     }
 
     LOG_INFO("*** DBG update_policy() ***");
-    LOG_INFO("old_child_Qbeta: {}", old_child_Qbeta);
+    LOG_INFO("old_child_Q: {}", old_child_Q);
     LOG_INFO("old_child_W: {}", old_child_W);
     LOG_INFO("updated-edge: {}", updated_edge_arr_index);
     LOG_INFO("theta_old: {}", theta_old);
     LOG_INFO("omega_sq_old: {}", omega_sq_old);
 
     std::stringstream ss;
-    auto action_data = eigen_util::concatenate_columns(
-      dbg_pi_prior, E_arr, child_Q_arr, child_V_arr, child_Qbeta_arr, child_W_arr, theta_arr,
-      omega_sq_arr, alpha_arr, beta_arr, pi_arr);
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      actions, dbg_pi_prior, E_arr, child_Q_arr, child_W_arr, theta_arr,
+      omega_sq_arr, alpha_arr, beta_arr, pi_arr));
 
-    std::vector<std::string> action_columns = {"pi-prior",    "E",       "child_Q", "child_V",
-                                               "child_Qbeta", "child_W", "theta",   "omega_sq",
-                                               "alpha",       "beta",    "pi"};
-    eigen_util::print_array(ss, action_data, action_columns);
+    std::vector<std::string> action_columns = {"action", "pi-prior", "E",     "child_Q", "child_W",
+                                               "theta",  "omega_sq", "alpha", "beta",    "pi"};
+
+    eigen_util::PrintArrayFormatMap fmt_map{
+      {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+    };
+
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
     LOG_INFO("{}\n{}", msg, ss.str());
   };
 
@@ -651,24 +678,24 @@ void AlgorithmsBase<Traits, Derived>::update_policy(LocalPolicyArray& pi_arr, co
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Qbeta, double W, double& theta,
+void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Q, double W, double& theta,
                                                              double& omega_sq) {
   constexpr double kMin = Game::GameResults::kMinValue;
   constexpr double kMax = Game::GameResults::kMaxValue;
 
-  if (Qbeta <= kMin) {
+  if (Q <= kMin) {
     theta = -std::numeric_limits<double>::infinity();
     omega_sq = 0;
     return;
-  } else if (Qbeta >= kMax) {
+  } else if (Q >= kMax) {
     theta = +std::numeric_limits<double>::infinity();
     omega_sq = 0;
     return;
   }
 
-  double mu = Qbeta;
+  double mu = Q;
 
-  // Rescale Qbeta to [0, 1]
+  // Rescale Q to [0, 1]
   mu = (mu - kMin) / (kMax - kMin);
   mu = std::max(0.0, std::min(1.0, mu));
 
@@ -687,66 +714,237 @@ void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Qbeta, doubl
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_QW_fields(const NodeStableData& stable_data,
+void AlgorithmsBase<Traits, Derived>::update_QW_fields(SearchContext& context,
+                                                       const Node* node,
+                                                       const NodeStableData& stable_data,
                                                        const LocalPolicyArray& pi_arr,
-                                                       const LocalActionValueArray& child_Qbeta_arr,
+                                                       const LocalActionValueArray& child_Q_arr,
                                                        const LocalActionValueArray& child_W_arr,
                                                        NodeStats& stats) {
-  ValueArray piQbeta_sum = (child_Qbeta_arr.matrix().transpose() * pi_arr.matrix()).array();
-  ValueArray piQbeta_sq_sum =
-    ((child_Qbeta_arr * child_Qbeta_arr).matrix().transpose() * pi_arr.matrix()).array();
-  ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
-
   RELEASE_ASSERT(stable_data.R_valid);
 
   ValueArray V = Game::GameResults::to_value_array(stable_data.R);
   const ValueArray& U = stable_data.U;
-  int N = stats.RN + 1;
 
-  // Qbeta is computed as a weighted average of V (the prior value) and piQbeta_sum (the expected
-  // value from children), with weights proportional to N * U (the prior-uncertainty scaled by N)
-  // and piW_sum (the expected uncertainty from children). This balances the influence of the
-  // prior and evidence obtained from children, gradually decaying the influence of the prior as N
-  // increases.
-  //
-  // Should something similar be done for W? Currently, W is just the expected uncertainty from
-  // children, and the prior uncertainty U is not directly incorporated into W. We're not ignoring
-  // U entirely, since U influences the weight given to V in the Qbeta calculation. But it's being
-  // ignored for the uncertainty calculation itself.
+  ValueArray old_Q = stats.Q;
+  ValueArray old_W = stats.W;
 
-  ValueArray old_Qbeta = stats.Qbeta;
+  if (stats.RN == 0) {
+    stats.Q = V;
+    stats.W = U;
+    eigen_util::debug_validate_bounds(stats.Q);
+  } else {
+    RELEASE_ASSERT(stats.RN >= 2);
+    int N = stats.RN;
 
-  ValueArray denom = piW_sum + U * N;
-  stats.Qbeta = (V * piW_sum + U * N * piQbeta_sum) / denom;
-  stats.W = piW_sum + piQbeta_sq_sum - piQbeta_sum * piQbeta_sum;
-  stats.W = stats.W.cwiseMax(0.f);   // numerical stability
-  stats.Qbeta /= stats.Qbeta.sum();  // numerical stability
+    // We have length-n vector pi, Q, and W for the children.
+    //
+    // To incorporate the prior (V, U) with the children's statistics, we extend to a length-(n+1)
+    // vector by adding the prior as an additional "virtual child" with mean V and uncertainty U
+    // and a carefully chosen weight alpha.
+    //
+    // This choice of alpha ensures that the effective sample size of the virtual child decays
+    // like 1/N, and that it gets zeroed out if the policy is fully concentrated on children with
+    // zero uncertainty.
+    //
+    // The other children's weights are scaled by beta = (1 - alpha).
 
-  // fix-up for imprecision when piW_sum is zero
-  for (int p = 0; p < kNumPlayers; ++p) {
-    if (piW_sum[p] == 0) {
-      stats.W[p] = 0;
+    ValueArray piQ_sum = (child_Q_arr.matrix().transpose() * pi_arr.matrix()).array();
+    ValueArray piW_sum = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
+
+    float alpha = (2 * piW_sum.sum()) / (N * (U.sum() + piW_sum.sum()));
+    float beta = 1.0f - alpha;
+    RELEASE_ASSERT(alpha >= 0.f && alpha <= 1.f);
+
+    ValueArray Q_bar = alpha * V + beta * piQ_sum;
+    auto Qdiff = child_Q_arr.rowwise() - Q_bar.transpose();
+    ValueArray piQdiff2 = (Qdiff.square().matrix().transpose() * pi_arr.matrix()).array();
+    ValueArray W = alpha * (U + (V - Q_bar).square()) + beta * (piW_sum + piQdiff2);
+
+    if (!Q_bar.isFinite().all()) {
+      LOG_ERROR("Q_bar has non-finite values:");
+      LOG_ERROR("N = {}", N);
+      LOG_ERROR("V = {}", fmt::streamed(V.transpose()));
+      LOG_ERROR("U = {}", fmt::streamed(U.transpose()));
+      LOG_ERROR("pi_arr = {}", fmt::streamed(pi_arr.transpose()));
+      LOG_ERROR("child_Q_arr =\n{}", fmt::streamed(child_Q_arr));
+      LOG_ERROR("child_W_arr =\n{}", fmt::streamed(child_W_arr));
+      LOG_ERROR("alpha = {}", alpha);
+      LOG_ERROR("beta = {}", beta);
+      LOG_ERROR("piQ_sum = {}", fmt::streamed(piQ_sum.transpose()));
+      LOG_ERROR("Q_bar = {}", fmt::streamed(Q_bar.transpose()));
+      RELEASE_ASSERT(false);
     }
+
+    stats.Q = Q_bar;
+    stats.W = W;
+    eigen_util::debug_validate_bounds(stats.Q);
   }
 
-  stats.Qbeta_min = stats.Qbeta;
-  stats.Qbeta_max = stats.Qbeta;
-  stats.W_max = stats.W;
+  stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
+  stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
+  stats.W_max = stats.W_max.cwiseMax(stats.W);
 
   if (search::kEnableSearchDebug) {
-    LOG_INFO("QW update:");
-    LOG_INFO("  N: {}", N);
-    LOG_INFO("  V: {}", fmt::streamed(V.transpose()));
-    LOG_INFO("  U: {}", fmt::streamed(U.transpose()));
-    LOG_INFO("  child_Qbeta_arr:\n{}", fmt::streamed(child_Qbeta_arr.transpose()));
-    LOG_INFO("  child_W_arr:\n{}", fmt::streamed(child_W_arr.transpose()));
-    LOG_INFO("  pi: {}", fmt::streamed(pi_arr.transpose()));
-    LOG_INFO("  piQbeta_sum: {}", fmt::streamed(piQbeta_sum.transpose()));
-    LOG_INFO("  piQbeta_sq_sum: {}", fmt::streamed(piQbeta_sq_sum.transpose()));
-    LOG_INFO("  piW_sum: {}", fmt::streamed(piW_sum.transpose()));
-    LOG_INFO("  old Qbeta: {}", fmt::streamed(old_Qbeta.transpose()));
-    LOG_INFO("  new Qbeta: {}", fmt::streamed(stats.Qbeta.transpose()));
-    LOG_INFO("  W: {}", fmt::streamed(stats.W.transpose()));
+    std::ostringstream ss;
+    ss << std::format("{:>{}}", "", context.log_prefix_n());
+
+    std::string line_break =
+      std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+
+    ss << "QW update details:\n";
+    ss << "  RN: " << stats.RN << line_break;
+
+    core::seat_index_t seat = stable_data.active_seat;
+
+    ValueArray players;
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == seat;
+    }
+
+    static std::vector<std::string> player_columns = {"Seat", "V",    "U",    "oldQ",
+                                                      "oldW", "newQ", "newW", "CurP"};
+
+    auto player_data =
+      eigen_util::concatenate_columns(players, V, U, old_Q, old_W, stats.Q, stats.W, CP);
+
+    eigen_util::PrintArrayFormatMap fmt_map1{
+      {"Seat", [&](float x) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+    };
+
+    std::stringstream ss1;
+    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+    for (const std::string& line : util::splitlines(ss1.str())) {
+      ss << line << line_break;
+    }
+
+    LookupTable& lookup_table = context.general_context->lookup_table;
+    int n_actions = stable_data.num_valid_actions;
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray cQ_arr(n_actions);
+    LocalPolicyArray cW_arr(n_actions);
+    for (int e = 0; e < n_actions; ++e) {
+      auto edge = lookup_table.get_edge(node, e);
+      core::action_t action = edge->action;
+      Game::Symmetries::apply(action, inv_sym, stable_data.action_mode);
+      actions(e) = action;
+      cQ_arr(e) = child_Q_arr(e, seat);
+      cW_arr(e) = child_W_arr(e, seat);
+    }
+
+    static std::vector<std::string> action_columns = {"action", "child_Q_arr", "child_W_arr", "pi"};
+
+    auto action_data =
+      eigen_util::sort_rows(eigen_util::concatenate_columns(actions, cQ_arr, cW_arr, pi_arr));
+
+    eigen_util::PrintArrayFormatMap fmt_map2{
+      {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+    };
+
+    std::stringstream ss2;
+    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+
+    for (const std::string& line : util::splitlines(ss2.str())) {
+      ss << line << line_break;
+    }
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const SearchContext& context,
+                                                                     const PuctCalculator& selector,
+                                                                     int argmax_index) {
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  Node* node = context.visit_node;
+  if (search::kEnableSearchDebug) {
+    std::ostringstream ss;
+    ss << std::format("{:>{}}", "", context.log_prefix_n());
+
+    core::seat_index_t seat = node->stable_data().active_seat;
+
+    int n_actions = node->stable_data().num_valid_actions;
+
+    ValueArray players;
+    ValueArray nQ = node->stats().Q;
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == seat;
+    }
+
+    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+
+    eigen_util::PrintArrayFormatMap fmt_map1{
+      {"Seat", [&](float x) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+    };
+
+    std::stringstream ss1;
+    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+    std::string line_break =
+      std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+
+    for (const std::string& line : util::splitlines(ss1.str())) {
+      ss << line << line_break;
+    }
+
+    const LocalPolicyArray& P = selector.P;
+    const LocalPolicyArray& Q = selector.Q;
+    const LocalPolicyArray& FPU = selector.FPU;
+    const LocalPolicyArray& PW = selector.PW;
+    const LocalPolicyArray& PL = selector.PL;
+    const LocalPolicyArray& E = selector.E;
+    const LocalPolicyArray& mE = selector.mE;
+    const LocalPolicyArray& RN = selector.RN;
+    const LocalPolicyArray& VN = selector.VN;
+    const LocalPolicyArray& PUCT = selector.PUCT;
+
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray child_addr(n_actions);
+    LocalPolicyArray argmax(n_actions);
+    LocalPolicyArray pi(n_actions);
+    LocalPolicyArray W(n_actions);
+    child_addr.setConstant(-1);
+    argmax.setZero();
+    argmax(argmax_index) = 1;
+
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
+    for (int e = 0; e < n_actions; ++e) {
+      auto edge = lookup_table.get_edge(node, e);
+      core::action_t action = edge->action;
+      Game::Symmetries::apply(action, inv_sym, node->action_mode());
+      actions(e) = action;
+      child_addr(e) = edge->child_index;
+      pi(e) = edge->policy_posterior_prob;
+      W(e) = edge->child_W_snapshot[seat];
+    }
+
+    static std::vector<std::string> action_columns = {
+      "action", "pi", "W", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      actions, pi, W, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+
+    eigen_util::PrintArrayFormatMap fmt_map2{
+      {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+      {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
+      {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+    };
+
+    std::stringstream ss2;
+    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+
+    for (const std::string& line : util::splitlines(ss2.str())) {
+      ss << line << line_break;
+    }
+
+    LOG_INFO(ss.str());
   }
 }
 

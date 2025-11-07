@@ -68,13 +68,13 @@ class AlgorithmsBase {
 
   class Backpropagator {
    public:
-    Backpropagator(LookupTable& lookup_table) : lookup_table_(lookup_table) {}
+    Backpropagator(SearchContext& context) : context_(context) {}
 
     template <typename MutexProtectedFunc>
     void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
 
    private:
-    LookupTable& lookup_table_;
+    SearchContext& context_;
   };
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

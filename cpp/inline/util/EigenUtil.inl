@@ -394,6 +394,25 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
   }
 }
 
+template <typename T>
+void debug_validate_bounds(const T& t, float min, float max) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
+  validate_bounds(t, min, max);
+}
+
+template <typename T>
+void validate_bounds(const T& t, float min, float max) {
+  for (int i = 0; i < t.size(); ++i) {
+    float v = t.data()[i];
+    if (v < min || v > max) {
+      std::ostringstream ss;
+      ss << t;
+      throw util::Exception("Value out of bounds [{}, {}]: {} distr:\n{}", min, max, v,
+                           ss.str());
+    }
+  }
+}
+
 template <typename Derived>
 float sum(const Eigen::TensorBase<Derived>& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.sum();

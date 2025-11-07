@@ -29,7 +29,7 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  Derived::update_stats(stats, node, lookup_table_);
+  Derived::update_stats(stats, node, context_.general_context->lookup_table);
 
   lock.lock();
 

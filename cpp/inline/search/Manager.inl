@@ -391,6 +391,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   context.eval_request.mark_all_as_stale();
 
   if (is_root) {
+    // TODO: move this into an Algorithms:: function
     node->stats().RN = std::max(node->stats().RN, 1);
   }
 
@@ -720,11 +721,10 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Backpropagator backpropagator(lookup_table);
+  Backpropagator backpropagator(context);
   backpropagator.run(last_node, nullptr,
                      [&] { Algorithms::init_node_stats_from_terminal(last_node); });
 
@@ -745,11 +745,10 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Backpropagator backpropagator(lookup_table);
+  Backpropagator backpropagator(context);
   backpropagator.run(last_node, nullptr,
                      [&] { Algorithms::virtually_update_node_stats(last_node); });
 
@@ -773,10 +772,9 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
   RELEASE_ASSERT(!context.search_path.empty());
 
-  Backpropagator backpropagator(lookup_table);
+  Backpropagator backpropagator(context);
   for (int i = context.search_path.size() - 1; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
@@ -798,9 +796,7 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
              fmt::streamed(value.transpose()));
   }
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
-
-  Backpropagator backpropagator(lookup_table);
+  Backpropagator backpropagator(context);
   backpropagator.run(last_node, nullptr,
                      [&] { Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual); });
 
@@ -821,9 +817,7 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
   }
 
-  LookupTable& lookup_table = context.general_context->lookup_table;
-
-  Backpropagator backpropagator(lookup_table);
+  Backpropagator backpropagator(context);
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;

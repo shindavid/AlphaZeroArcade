@@ -322,6 +322,14 @@ void assert_is_valid_prob_distr(const Tensor& distr, float eps = 1e-5);
 template <typename Derived>
 void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float eps = 1e-5);
 
+// DEBUG_ASSERT()'s that every value in t is in [min, max]
+// For release-build's, is a no-op
+template <typename T>
+void debug_validate_bounds(const T& t, float min=0, float max=1);
+
+template <typename T>
+void validate_bounds(const T& t, float min=0, float max=1);
+
 /*
  * Convenience methods that return scalars.
  */

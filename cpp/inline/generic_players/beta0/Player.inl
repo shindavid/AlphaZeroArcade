@@ -2,6 +2,7 @@
 
 #include "core/Constants.hpp"
 #include "util/Asserts.hpp"
+#include "util/EigenUtil.hpp"
 
 #include <unistd.h>
 

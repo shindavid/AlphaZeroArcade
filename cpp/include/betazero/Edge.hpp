@@ -14,7 +14,7 @@ struct Edge : public alpha0::Edge<EvalSpec> {
   using Base = alpha0::Edge<EvalSpec>;
 
   Edge() : Base() {
-    child_Qbeta_snapshot.fill(0);
+    child_Q_snapshot.fill(0);
     child_W_snapshot.fill(0);
   }
 
@@ -23,14 +23,14 @@ struct Edge : public alpha0::Edge<EvalSpec> {
   // In beta0, we decouple the two concepts, and so track the posterior policy value separately.
   float policy_posterior_prob = 0;
 
-  // We track snapshots of the child node's W/Qbeta to support short-circuiting.
+  // We track snapshots of the child node's W/Q to support short-circuiting.
   //
   // Note that in alpha0, the only child-stat that needed such tracking was RN, and Edge::E served
   // that purpose.
   //
   // The word "snapshot" is used to emphasize that these fields may be out-of-date, due to MCTS's
   // move transposition mechanism.
-  ValueArray child_Qbeta_snapshot;
+  ValueArray child_Q_snapshot;
   ValueArray child_W_snapshot;
 };
 

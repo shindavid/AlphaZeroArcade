@@ -33,6 +33,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
   using PolicyTensorData = Base::PolicyTensorData;
+  using PuctCalculator = Base::PuctCalculator;
   using RootInfo = Base::RootInfo;
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
@@ -49,7 +50,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
 
   class Backpropagator {
    public:
-    Backpropagator(LookupTable& lookup_table) : lookup_table_(lookup_table) {}
+    Backpropagator(SearchContext& context) : context_(context) {}
 
     template <typename MutexProtectedFunc>
     void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
@@ -59,8 +60,8 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
     void update_edge_snapshots_helper(const NodeStats& child_stats, Edge* edge,
                                       bool load_edge_snapshots_before_update);
 
-    LookupTable& lookup_table_;
-    ValueArray last_child_Qbeta_snapshot_;
+    SearchContext& context_;
+    ValueArray last_child_Q_snapshot_;
     ValueArray last_child_W_snapshot_;
     bool snapshots_set_ = false;
   };
@@ -78,23 +79,27 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(NodeStats& stats, LocalPolicyArray& pi_arr,
-                           const ValueArray& last_child_Qbeta_snapshot,
+  static void update_stats(SearchContext& context, NodeStats& stats, LocalPolicyArray& pi_arr,
+                           const ValueArray& last_child_Q_snapshot,
                            const ValueArray& last_child_W_snapshot, const Node* node,
-                           const Edge* edge, LookupTable& lookup_table);
+                           const Edge* edge);
 
   // Updates pi_arr in-place to be the posterior policy
-  static void update_policy(LocalPolicyArray& pi_arr, const Node* node, const Edge* edge,
-                            LookupTable& lookup_table, int updated_edge_arr_index,
-                            float old_child_Qbeta, float old_child_W,
-                            const LocalPolicyArray& child_Qbeta_arr,
+  static void update_policy(SearchContext& context, LocalPolicyArray& pi_arr, const Node* node,
+                            const Edge* edge, LookupTable& lookup_table, int updated_edge_arr_index,
+                            float old_child_Q, float old_child_W,
+                            const LocalPolicyArray& child_Q_arr,
                             const LocalPolicyArray& child_W_arr);
 
-  static void compute_theta_omega_sq(double Qbeta, double W, double& theta, double& omega_sq);
+  static void compute_theta_omega_sq(double Q, double W, double& theta, double& omega_sq);
 
-  static void update_QW_fields(const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
-                               const LocalActionValueArray& child_Qbeta_arr,
+  static void update_QW_fields(SearchContext& context, const Node* node,
+                               const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
+                               const LocalActionValueArray& child_Q_arr,
                                const LocalActionValueArray& child_W_arr, NodeStats& stats);
+
+  static void print_action_selection_details(const SearchContext& context,
+                                             const PuctCalculator& selector, int argmax_index);
 };
 
 template <search::concepts::Traits Traits>
