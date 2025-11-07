@@ -37,7 +37,9 @@ struct WebManager {
   void launch_bridge();
   void launch_frontend();
   void response_loop();
-  WebManagerClient* client_at_seat(seat_index_t seat);
+  void handle_start_game();
+  void handle_action(const boost::json::object& payload, seat_index_t seat);
+  void handle_resign(seat_index_t seat);
 
   int engine_port_ = 48040;  // TODO: Make this configurable
   int bridge_port_ = 52528;  // TODO: Make this configurable

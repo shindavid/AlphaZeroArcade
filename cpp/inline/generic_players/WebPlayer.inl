@@ -33,13 +33,19 @@ void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outco
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::handle_action(const boost::json::object& payload) {
+void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::seat_index_t seat) {
+  if (seat != this->get_my_seat()) {
+    return;
+  }
   action_ = static_cast<core::action_t>(payload.at("index").as_int64());
   notification_unit_.yield_manager->notify(notification_unit_);
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::handle_resign() {
+void WebPlayer<Game>::handle_resign(core::seat_index_t seat) {
+  if (seat != this->get_my_seat()) {
+    return;
+  }
   resign_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
 }

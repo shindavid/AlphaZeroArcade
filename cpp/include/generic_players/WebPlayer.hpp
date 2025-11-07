@@ -34,9 +34,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   bool disable_progress_bar() const override { return true; }
 
   // WebManagerClient interface
-  void handle_action(const boost::json::object& payload) override;
-  void handle_resign() override;
-  core::seat_index_t seat() const override { return core::AbstractPlayer<Game>::get_my_seat(); }
+  void handle_action(const boost::json::object& payload, core::seat_index_t seat) override;
+  void handle_resign(core::seat_index_t seat) override;
 
  protected:
   ActionResponse get_web_response(const ActionRequest& request,

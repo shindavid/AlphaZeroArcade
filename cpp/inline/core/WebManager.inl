@@ -150,18 +150,14 @@ void WebManager<Game>::response_loop() {
       std::string msg_type = obj.at("type").as_string().c_str();
 
       if (msg_type == "new_game") {
-        for (auto& client : clients_) {
-          if (client) {
-            client->handle_start_game();
-          }
-        }
+        handle_start_game();
       } else {
         int seat_index = boost::json::value_to<int>(obj.at("seat"));
         if (msg_type == "make_move") {
           boost::json::object payload = obj.at("payload").as_object();
-          client_at_seat(seat_index)->handle_action(payload);
+          handle_action(payload, seat_index);
         } else if (msg_type == "resign") {
-          client_at_seat(seat_index)->handle_resign();
+          handle_resign(seat_index);
         } else {
           throw util::Exception("Unknown message type: {}", msg_type);
         }
@@ -182,14 +178,33 @@ void WebManager<Game>::wait_for_connection() {
 }
 
 template <core::concepts::Game Game>
-WebManagerClient* WebManager<Game>::client_at_seat(seat_index_t seat) {
+void WebManager<Game>::handle_start_game() {
   mit::unique_lock lock(mutex_);
-  for (auto* c : clients_) {
-    if (c && c->seat() == seat) {
-      return c;
+  for (auto& client : clients_) {
+    if (client) {
+      client->handle_start_game();
     }
   }
-  throw util::Exception("No client registered at seat {}", seat);
+}
+
+template <core::concepts::Game Game>
+void WebManager<Game>::handle_action(const boost::json::object& payload, seat_index_t seat) {
+  mit::unique_lock lock(mutex_);
+  for (auto& client : clients_) {
+    if (client) {
+      client->handle_action(payload, seat);
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+void WebManager<Game>::handle_resign(seat_index_t seat) {
+  mit::unique_lock lock(mutex_);
+  for (auto& client : clients_) {
+    if (client) {
+      client->handle_resign(seat);
+    }
+  }
 }
 
 }  // namespace core
