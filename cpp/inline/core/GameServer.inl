@@ -386,8 +386,7 @@ bool GameServer<Game>::SharedData::ready_to_start() const {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::register_player(seat_index_t seat,
-                                                   AbstractPlayerGenerator<Game>* gen,
+void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
                                                    bool implicit_remote) {
   if (params_.analysis_mode) {
     gen = new generic::AnalysisPlayerGenerator<Game>(gen);

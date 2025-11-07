@@ -254,8 +254,7 @@ class GameServer
     void start_session();
     void end_session();
     bool ready_to_start() const;
-    void register_player(seat_index_t seat, AbstractPlayerGenerator<Game>* gen,
-                         bool implicit_remote = false);
+    void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote = false);
     player_instantiation_array_t generate_player_order(
       const player_instantiation_array_t& instantiations);
 
@@ -384,7 +383,7 @@ class GameServer
    *
    * Takes ownership of the pointer.
    */
-  void register_player(seat_index_t seat, AbstractPlayerGenerator<Game>* gen) {
+  void register_player(seat_index_t seat, PlayerGenerator* gen) {
     shared_data_.register_player(seat, gen);
   }
 
