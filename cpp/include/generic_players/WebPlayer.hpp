@@ -16,14 +16,14 @@ template <core::concepts::Game Game>
 class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Game> {
  public:
   using GameClass = Game;
-  using WebManagerT = core::WebManager<Game>;
-  using State = typename Game::State;
-  using ActionRequest = typename Game::Types::ActionRequest;
-  using ActionResponse = typename Game::Types::ActionResponse;
-  using GameResultTensor = typename Game::Types::GameResultTensor;
-  using ActionMask = typename Game::Types::ActionMask;
+  using WebManager = core::WebManager<Game>;
+  using State = Game::State;
+  using ActionRequest = Game::Types::ActionRequest;
+  using ActionResponse = Game::Types::ActionResponse;
+  using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionMask = Game::Types::ActionMask;
 
-  WebPlayer() : WebManagerClient(std::in_place_type<WebManagerT>) {}
+  WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
   virtual ~WebPlayer() = default;
 
   // AbstractPlayer interface

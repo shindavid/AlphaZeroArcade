@@ -9,9 +9,9 @@
 
 namespace core {
 struct WebManagerClient{
-  template <class WebManagerT>
-  explicit WebManagerClient(std::in_place_type_t<WebManagerT> = {}) {
-    WebManagerT::get_instance()->register_client(this);
+  template <class WebManager>
+  explicit WebManagerClient(std::in_place_type_t<WebManager> = {}) {
+    WebManager::get_instance()->register_client(this);
   }
   virtual ~WebManagerClient() = default;
 

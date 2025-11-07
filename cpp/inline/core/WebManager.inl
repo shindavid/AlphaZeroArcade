@@ -173,7 +173,6 @@ void WebManager<Game>::wait_for_connection() {
 
 template <core::concepts::Game Game>
 void WebManager<Game>::handle_start_game() {
-  mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
     client->handle_start_game();
   }
@@ -181,7 +180,6 @@ void WebManager<Game>::handle_start_game() {
 
 template <core::concepts::Game Game>
 void WebManager<Game>::handle_action(const boost::json::object& payload, seat_index_t seat) {
-  mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
     client->handle_action(payload, seat);
   }
@@ -189,7 +187,6 @@ void WebManager<Game>::handle_action(const boost::json::object& payload, seat_in
 
 template <core::concepts::Game Game>
 void WebManager<Game>::handle_resign(seat_index_t seat) {
-  mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
     client->handle_resign(seat);
   }
