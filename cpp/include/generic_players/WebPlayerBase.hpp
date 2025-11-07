@@ -20,26 +20,31 @@ namespace generic {
 template <core::concepts::Game Game>
 class WebPlayerBase : public core::WebManagerClient, public core::AbstractPlayer<Game> {
  public:
+  using WebManagerT = core::WebManager<Game>;
   using State = typename Game::State;
   using ActionRequest = typename Game::Types::ActionRequest;
   using ActionResponse = typename Game::Types::ActionResponse;
   using GameResultTensor = typename Game::Types::GameResultTensor;
   using ActionMask = typename Game::Types::ActionMask;
 
-  WebPlayerBase() {
-    core::WebManager<Game>::get_instance()->register_client(this);
-  }
-
+  WebPlayerBase() : WebManagerClient(std::in_place_type<WebManagerT>) {}
   virtual ~WebPlayerBase() = default;
+
   void handle_action(const boost::json::object& payload) override;
   void handle_resign() override;
-  core::seat_index_t seat() const override { return this->get_my_seat(); }
+  core::seat_index_t seat() const override { return core::AbstractPlayer<Game>::get_my_seat(); }
 
  protected:
-  void send_start_game();
-  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
+  ActionResponse get_web_response(const ActionRequest& request,
+                                  const ActionResponse& proposed_response);
+  void initialize_game();
   void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
                          core::action_mode_t last_mode);
+  void send_result_msg(const State& state, const GameResultTensor& outcome);
+
+ private:
+  void send_start_game();
+  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -100,6 +105,7 @@ class WebPlayerBase : public core::WebManagerClient, public core::AbstractPlayer
   // stalemate, threefold repetition, etc.).
   virtual boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
 
+ private:
   core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
   bool resign_ = false;

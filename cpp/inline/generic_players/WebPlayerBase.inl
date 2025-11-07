@@ -4,7 +4,62 @@
 #include "search/VerboseManager.hpp"
 #include "util/Rendering.hpp"
 
+#include <boost/json/array.hpp>
+#include <boost/json/object.hpp>
+
 namespace generic {
+
+template <core::concepts::Game Game>
+void WebPlayerBase<Game>::handle_action(const boost::json::object& payload) {
+  action_ = static_cast<core::action_t>(payload.at("index").as_int64());
+  notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
+void WebPlayerBase<Game>::handle_resign() {
+  resign_ = true;
+  notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
+void WebPlayerBase<Game>::initialize_game() {
+  action_ = -1;
+  resign_ = false;
+
+  auto* manager = core::WebManager<Game>::get_instance();
+  manager->wait_for_connection();
+
+  core::WebManagerClient::wait_for_new_game();
+  send_start_game();
+}
+
+template <core::concepts::Game Game>
+typename Game::Types::ActionResponse WebPlayerBase<Game>::get_web_response(
+  const ActionRequest& request, const ActionResponse& proposed_response) {
+  if (resign_) {
+    return ActionResponse::resign();
+  }
+
+  if (action_ != -1) {
+    core::action_t action = action_;
+    action_ = -1;
+    return action;
+  }
+
+  send_action_request(request.valid_actions, proposed_response.action);
+  notification_unit_ = request.notification_unit;
+  return ActionResponse::yield();
+}
+
+template <core::concepts::Game Game>
+void WebPlayerBase<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
+  boost::json::object msg;
+  msg["type"] = "game_end";
+  msg["payload"] = make_result_msg(state, outcome);
+
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg);
+}
 
 template <core::concepts::Game Game>
 void WebPlayerBase<Game>::send_start_game() {
@@ -72,18 +127,6 @@ boost::json::object WebPlayerBase<Game>::make_action_request_msg(const ActionMas
   }
 
   return payload;
-}
-
-template <core::concepts::Game Game>
-void WebPlayerBase<Game>::handle_action(const boost::json::object& payload) {
-  action_ = static_cast<core::action_t>(payload.at("index").as_int64());
-  notification_unit_.yield_manager->notify(notification_unit_);
-}
-
-template <core::concepts::Game Game>
-void WebPlayerBase<Game>::handle_resign() {
-  resign_ = true;
-  notification_unit_.yield_manager->notify(notification_unit_);
 }
 
 template <core::concepts::Game Game>
