@@ -18,7 +18,7 @@ class AnalysisPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
 
   const std::string& get_name() const override { return wrapped_generator_->get_name(); }
   std::string get_default_name() const override { return wrapped_generator_->get_default_name(); }
-  std::vector<std::string> get_types() const override { return {""}; }
+  std::vector<std::string> get_types() const override { return {}; }
   std::string get_description() const override { return "Analysis Player"; }
   int max_simultaneous_games() const override { return 1; }
 
