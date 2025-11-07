@@ -25,7 +25,6 @@ class AnalysisPlayer : public WebPlayer<Game> {
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }
-  const std::string& get_name() const override { return wrapped_player_->get_name(); }
 
   // TODO: we should probably have start_game() use the kContinue/kYield framework,
   // so that GameServer isn 't blocked indefinitely here. This doesn' t matter right now,
