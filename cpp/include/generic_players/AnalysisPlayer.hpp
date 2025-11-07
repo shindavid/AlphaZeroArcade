@@ -27,6 +27,10 @@ class AnalysisPlayer : public WebPlayer<Game> {
   ~AnalysisPlayer() { delete wrapped_player_; }
   const std::string& get_name() const override { return wrapped_player_->get_name(); }
 
+  // TODO: we should probably have start_game() use the kContinue/kYield framework,
+  // so that GameServer isn 't blocked indefinitely here. This doesn' t matter right now,
+  // but if in the future we have a single GameServer hosting multiple simultaneous web games,
+  // this can cause one AFK player blocking all games.
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
   void receive_state_change(core::seat_index_t seat, const State& state,
