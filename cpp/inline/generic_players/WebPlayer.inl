@@ -11,6 +11,7 @@
 #include <boost/json/array.hpp>
 #include <boost/process.hpp>
 
+#include <iostream>
 #include <string>
 
 namespace generic {
