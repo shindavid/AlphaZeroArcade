@@ -16,6 +16,7 @@
 .result-text.draw {
   color: #1E90FF;
 }
+
 /* Shared status message area for all games */
 .status-message-area {
   min-width: 11em;
@@ -34,6 +35,7 @@
   padding: 0 0.5em;
   color: #222;
 }
+
 .status-bar {
   display: flex;
   flex-direction: row;
@@ -120,9 +122,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -156,10 +160,41 @@ button:focus-visible {
   min-width: 0;                 /* prevents overflow with wide boards */
 }
 
-.verbose-panel { flex: 0 0 600px; background:#333333; border:1px solid #ddd; border-radius:8px; padding:10px; color: white;}
-.verbose-section { margin-bottom: 14px; text-align: left; }
-.verbose-section h4 { margin: 6px 0; border-bottom: 1px solid #e5e5e5; color:#1256a3; }
-.verbose-table { width:100%; border-collapse: collapse; font-size:.9rem; }
-.verbose-table th, .verbose-table td { border:1px solid #ccc; padding:4px 6px; }
-.kv-line { display:flex; gap:8px; }
-.kv-line .k { min-width: 120px; font-weight:600; }
+.verbose-panel {
+  flex: 0 0 600px;
+  background:#333333;
+  border:1px solid #ddd;
+  border-radius:8px;
+  padding:10px;
+  color: white;
+}
+
+.verbose-section {
+  margin-bottom: 14px;
+  text-align: left;
+}
+.verbose-section h4 {
+  margin: 6px 0;
+  border-bottom: 1px solid #e5e5e5;
+  color:#1256a3;
+}
+
+.verbose-table {
+  width:100%;
+  border-collapse: collapse;
+  font-size:.9rem;
+}
+.verbose-table th, .verbose-table td {
+  border:1px solid #ccc;
+  padding:4px 6px;
+}
+
+.kv-line {
+  display:flex;
+  gap:8px;
+}
+.kv-line .k {
+  min-width: 120px;
+  font-weight:600;
+}
+
