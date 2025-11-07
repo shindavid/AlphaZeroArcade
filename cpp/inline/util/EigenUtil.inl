@@ -407,8 +407,7 @@ void validate_bounds(const T& t, float min, float max) {
     if (v < min || v > max) {
       std::ostringstream ss;
       ss << t;
-      throw util::Exception("Value out of bounds [{}, {}]: {} distr:\n{}", min, max, v,
-                           ss.str());
+      throw util::Exception("Value out of bounds [{}, {}]: {} distr:\n{}", min, max, v, ss.str());
     }
   }
 }

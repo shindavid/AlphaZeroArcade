@@ -574,9 +574,9 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
     LOG_INFO("omega_sq_old: {}", omega_sq_old);
 
     std::stringstream ss;
-    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-      actions, dbg_pi_prior, E_arr, child_Q_arr, child_W_arr, theta_arr,
-      omega_sq_arr, alpha_arr, beta_arr, pi_arr));
+    auto action_data = eigen_util::sort_rows(
+      eigen_util::concatenate_columns(actions, dbg_pi_prior, E_arr, child_Q_arr, child_W_arr,
+                                      theta_arr, omega_sq_arr, alpha_arr, beta_arr, pi_arr));
 
     std::vector<std::string> action_columns = {"action", "pi-prior", "E",     "child_Q", "child_W",
                                                "theta",  "omega_sq", "alpha", "beta",    "pi"};
@@ -714,8 +714,7 @@ void AlgorithmsBase<Traits, Derived>::compute_theta_omega_sq(double Q, double W,
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_QW_fields(SearchContext& context,
-                                                       const Node* node,
+void AlgorithmsBase<Traits, Derived>::update_QW_fields(SearchContext& context, const Node* node,
                                                        const NodeStableData& stable_data,
                                                        const LocalPolicyArray& pi_arr,
                                                        const LocalActionValueArray& child_Q_arr,
@@ -926,8 +925,9 @@ void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const Searc
       W(e) = edge->child_W_snapshot[seat];
     }
 
-    static std::vector<std::string> action_columns = {
-      "action", "pi", "W", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+    static std::vector<std::string> action_columns = {"action", "pi", "W",   "P",    "Q",
+                                                      "FPU",    "PW", "PL",  "E",    "mE",
+                                                      "RN",     "VN", "&ch", "PUCT", "argmax"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
       actions, pi, W, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 

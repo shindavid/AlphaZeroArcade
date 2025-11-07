@@ -1,14 +1,14 @@
 #pragma once
 
+#include "boost/json/object.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
-#include "boost/json/object.hpp"
 #include <type_traits>
 
 namespace core {
-struct WebManagerClient{
+struct WebManagerClient {
   template <class WebManager>
   explicit WebManagerClient(std::in_place_type_t<WebManager> = {}) {
     WebManager::get_instance()->register_client(this);

@@ -25,11 +25,7 @@ enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 
 constexpr int kNumRowsToDisplayVerbose = 10;
 
-enum SearchParadigm : int8_t {
-  kParadigmAlphaZero,
-  kParadigmBetaZero,
-  kUnknownParadigm
-};
+enum SearchParadigm : int8_t { kParadigmAlphaZero, kParadigmBetaZero, kUnknownParadigm };
 
 // Must match string names in python code. See SearchParadigm enum in py/shared/basic_types.py
 inline SearchParadigm parse_search_paradigm(const char* s) {

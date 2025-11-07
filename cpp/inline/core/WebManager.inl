@@ -13,8 +13,7 @@ WebManager<Game>::WebManager() : acceptor_(create_acceptor()), socket_(io_contex
   launch_frontend();
 
   std::cout << "Please open the frontend in your browser at:\n\n"
-            << std::format("    http://localhost:{}\n", vite_port_)
-            << std::endl;
+            << std::format("    http://localhost:{}\n", vite_port_) << std::endl;
 
   thread_ = mit::thread([this]() { response_loop(); });
 }

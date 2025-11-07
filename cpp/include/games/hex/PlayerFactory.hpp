@@ -5,8 +5,8 @@
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayerGenerator.hpp"
-#include "generic_players/WebPlayer.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
+#include "generic_players/WebPlayer.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
 
