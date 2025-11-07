@@ -6,7 +6,6 @@
 #include "games/othello/Game.hpp"
 #include "games/othello/players/EdaxPlayerGenerator.hpp"
 #include "games/othello/players/HumanTuiPlayerGenerator.hpp"
-#include "games/othello/players/WebPlayer.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
@@ -26,7 +25,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
     return {
       new core::PlayerSubfactory<othello::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<othello::EdaxPlayerGenerator>(),
-      new core::PlayerSubfactory<generic::WebPlayerGenerator<othello::WebPlayer>>(),
+      new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>(),
       new core::PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
