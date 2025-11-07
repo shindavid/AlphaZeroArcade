@@ -9,13 +9,8 @@
 namespace generic {
 /*
  * WebPlayer provides core functionality for web-based players, handling communication with
- * the web frontend via WebManager. It includes methods to send game start messages, action requests,
- * state updates, and game results to the frontend. Derived classes can override message construction
- * methods to customize the payloads sent to the web interface.
- *
- * Note: WebPlayer does not have the necessary methods to function as a player on its own. It is
- * intended to be subclassed by specific player implementations (e.g., WebPlayer, AnalysisPlayer)
- * that provide the required player interface.
+ * the web frontend via WebManager. It implements the AbstractPlayer interface and the
+ * WebManagerClient interface to facilitate interactive gameplay through a web interface.
  */
 template <core::concepts::Game Game>
 class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Game> {
