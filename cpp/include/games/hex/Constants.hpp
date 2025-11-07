@@ -178,8 +178,6 @@ struct Constants : public core::ConstantsBase {
   static constexpr core::seat_index_t kFirstPlayer = kRed;
   static constexpr core::seat_index_t kSecondPlayer = kBlue;
 
-  static constexpr char kSeatChars[kNumPlayers] = {'R', 'B'};
-
   static_assert(sizeof(mask_t) * 8 >= kBoardDim, "mask_t must be large enough to hold a row");
   static_assert(kSwap == kNumSquares, "kSwap must be equal to kNumSquares");
 };

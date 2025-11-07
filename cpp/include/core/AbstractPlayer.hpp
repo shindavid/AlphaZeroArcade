@@ -48,7 +48,7 @@ class AbstractPlayer {
 
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string& name) { name_ = name; }
-  std::string get_name() const { return name_; }
+  const std::string& get_name() const { return name_; }
   const player_name_array_t& get_player_names() const { return player_names_; }
   game_id_t get_game_id() const { return game_id_; }
   seat_index_t get_my_seat() const { return my_seat_; }

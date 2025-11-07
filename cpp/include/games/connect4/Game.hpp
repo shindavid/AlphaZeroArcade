@@ -38,7 +38,6 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<kNumColumns>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = kNumColumns;
-    static constexpr char kSeatChars[kNumPlayers] = {'R', 'Y'};
   };
 
   struct State {
@@ -75,6 +74,7 @@ struct Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'Y'};
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action, core::action_mode_t) {
       return std::to_string(action + 1);
@@ -84,6 +84,7 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static boost::json::value state_to_json(const State& state);
+    static void add_render_info(const State& state, boost::json::object& obj);
 
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);

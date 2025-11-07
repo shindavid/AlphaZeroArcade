@@ -200,7 +200,7 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       core::seat_index_t seat = state.get_player_at(row, col);
-      buf[idx++] = (seat == -1) ? ' ' : Constants::kSeatChars[seat];
+      buf[idx++] = (seat == -1) ? ' ' : kSeatChars[seat];
     }
   }
   buf[kBoardDimension * kBoardDimension] = '\0';

@@ -28,13 +28,20 @@ export default class TicTacToeApp extends GameAppBase {
         {this.state.board.map((value, cell) => {
           const empty = this.isEmpty(cell);
           const legal = empty && this.gameActive();
+
+          let proposed = null;
+          if (cell === this.state.proposedAction) {
+            proposed = <span className={'ghost'}> {this.state.seatAssignments[this.state.currentTurn]} </span>;
+          }
           return (
             <button
               key={cell}
               className={`square${legal ? ' legal-move' : ''}`}
               onClick={() => this.handleCellClick(cell)}
               disabled={!!this.state.gameEnd || !legal}
-            >{empty ? '' : this.seatToHtml(value)}</button>
+            >{empty ? '' : this.seatToHtml(value)}
+             {proposed}
+            </button>
           );
         })}
       </div>

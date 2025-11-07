@@ -5,7 +5,7 @@
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayerGenerator.hpp"
-#include "games/hex/players/WebPlayer.hpp"
+#include "generic_players/WebPlayer.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
@@ -26,7 +26,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       new core::PlayerSubfactory<hex::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
-      new core::PlayerSubfactory<generic::WebPlayerGenerator<hex::WebPlayer>>(),
+      new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>(),
       new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
       new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>()};
   }

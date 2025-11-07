@@ -33,7 +33,6 @@ class Game {
     using kNumActionsPerMode = util::int_sequence<othello::kNumGlobalActions>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
-    static constexpr char kSeatChars[kNumPlayers] = {'B', 'W'};
   };
 
   using State = othello::GameState;
@@ -64,6 +63,7 @@ class Game {
   };
 
   struct IO : public core::IOBase<Types> {
+    static constexpr char kSeatChars[kNumPlayers] = {'B', 'W'};
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static std::string player_to_str(core::seat_index_t player);
@@ -71,7 +71,6 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static void write_edax_board_str(char* buf, const State& state);
-
     static boost::json::value state_to_json(const State& state);
 
    private:

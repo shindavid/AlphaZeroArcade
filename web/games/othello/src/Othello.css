@@ -39,6 +39,10 @@
   border-radius: 100%;
 }
 
+.ghost {
+  opacity: 0.6;
+}
+
 .B { background: #111; }
 .W { background: #fafafa; }
 

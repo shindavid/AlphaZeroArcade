@@ -9,13 +9,25 @@ const COLS = 7;
 
 const ANIMATION_INTERVAL = 60; // ms per row drop
 
+const computeColHeights = (board) => {
+  const heights = Array(COLS).fill(0);
+  for (let col = 0; col < COLS; ++col) {
+    let h = 0;
+    for (let row = 0; row < ROWS; ++row) {
+      const cell = board[row * COLS + col];
+      if (cell === 'R' || cell === 'Y') h++;
+    }
+    heights[col] = h;
+  }
+  return heights;
+};
+
 export default class Connect4App extends GameAppBase {
   constructor(props) {
     super(props);
     this.state = {
       ...this.state,
       board: null,
-      colHeights: null,
       animation: null, // { col, row, disc, targetRow, animRow }
       skipNextAnimation: false,
     };
@@ -26,22 +38,15 @@ export default class Connect4App extends GameAppBase {
   seatToHtml = seat =>
     <span className={`seat-icon ${seat}`} />;
 
-  // Override for animations
   handleStartGame(payload) {
     super.handleStartGame(payload);
-
-    this.setState({
-      colHeights: payload.col_heights,
-    });
+    this.colHeights = Array(COLS).fill(0);
   }
 
   // Override for animations
   handleStateUpdate(payload) {
     super.handleStateUpdate(payload);
-
-    this.setState({
-      colHeights: payload.col_heights,
-    });
+    this.colHeights = computeColHeights(payload.board);
 
     if (this.state.skipNextAnimation) {
       this.setState({ skipNextAnimation: false });
@@ -50,7 +55,7 @@ export default class Connect4App extends GameAppBase {
 
     const col = payload.last_col;
     if (col >= 0) {
-      let row = ROWS - payload.col_heights[col];
+      let row = ROWS - this.colHeights[col];
       let disc = payload.board[row * COLS + col];
 
       this.setState({
@@ -86,10 +91,8 @@ export default class Connect4App extends GameAppBase {
   handleCellClick = (col) => {
     if (!this.gameActive() || (this.state.animation && this.state.animation.col !== null)) return;
 
-    let row = ROWS - this.state.colHeights[col] - 1;
-
-    const disc = this.state.mySeat;
-    console.log(`Animating disc drop at col ${col}, row ${row} for seat ${disc}`);
+    let row = ROWS - this.colHeights[col] - 1;
+    const disc = this.state.seatAssignments[this.state.currentTurn];
     this.setState({ skipNextAnimation: true });
     this.startAnimation({
       col,
@@ -144,6 +147,13 @@ export default class Connect4App extends GameAppBase {
         if (isLegal) {
           cellClass += ' legal-move';
         }
+
+        let ghostDisc = null;
+        let targetRow = ROWS - this.colHeights[col] - 1;
+        if (col === this.state.proposedAction && row === targetRow) {
+           ghostDisc = <span className={`cell ghost ${this.state.seatAssignments[this.state.currentTurn]}`} />;
+        }
+
         grid.push(
           <div
             key={idx}
@@ -152,7 +162,9 @@ export default class Connect4App extends GameAppBase {
             role={isLegal ? "button" : undefined}
             tabIndex={isLegal ? 0 : -1}
             aria-label={isLegal ? `Play in column ${col + 1}` : undefined}
-          />
+            >
+            {ghostDisc}
+          </div>
         );
       }
     }

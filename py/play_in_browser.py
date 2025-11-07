@@ -19,6 +19,7 @@ def get_args():
     parser.add_argument("-m", '--model-generation', type=int,
                         help='model generation (default: latest)')
     parser.add_argument("-v", '--verbose', action='store_true', help='display verbose info of MCTS')
+    parser.add_argument("-a", '--analysis-mode', action='store_true', help='run in analysis mode')
     return parser.parse_args()
 
 
@@ -52,15 +53,24 @@ def main():
     num_mcts_iters = args.num_mcts_iters
 
     # TODO: figure out whether to use alpha0 or some other paradigm somehow
-    player_str = f'--type=alpha0-C -m {model_filename} -i {num_mcts_iters}'
+    player_str = f'--type=alpha0-C --name alpha0 -m {model_filename} -i {num_mcts_iters}'
     if args.verbose:
         player_str += ' -v'
 
     cmd = [
         bin,
-        '--player', '"--type=web"',
         '--player', f'"{player_str}"',
     ]
+
+    if args.analysis_mode:
+        cmd = [bin,
+               '--player', f'"{player_str + ' -v'}"',
+               '--player', "'--name alpha0-2 --copy-from alpha0'",
+               '--analysis-mode']
+    else:
+        cmd = [bin,
+               '--player', f'"{player_str}"',
+               '--player', "'--type=web'"]
 
     cmd = ' '.join(cmd)
     print(f'Running: {cmd}\n')

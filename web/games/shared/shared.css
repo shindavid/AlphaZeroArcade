@@ -48,6 +48,20 @@
   color: #1256a3;
 }
 
+.current-seat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1ch;
+  height: 1em;
+  line-height: 1;
+  margin-left: 4px;
+  font-size: 2em;
+  color: #FFD700;
+  font-weight: bold;
+  vertical-align: middle;
+}
+
 .button-row {
   display: flex;
   gap: 1em;

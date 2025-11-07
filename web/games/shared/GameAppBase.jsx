@@ -79,6 +79,8 @@ export class GameAppBase extends React.Component {
       resultCodes: null,
       mySeat: null,
       verboseInfo: null,
+      currentTurn: null,
+      proposedAction: null,
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -145,19 +147,24 @@ export class GameAppBase extends React.Component {
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
-      verboseInfo: payload.verbose_info ? payload.verbose_info : null,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
     });
   }
 
   handleActionRequest(payload) {
     this.setState({
       legalMoves: payload.legal_moves,
+      currentTurn: payload.seat,
+      proposedAction: payload.proposed_action,
+      verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
     });
   }
 
   handleGameEnd(payload) {
     this.setState({
       resultCodes: payload.result_codes,
+      legalMoves: [],
+      proposedAction: null,
     });
   }
 
@@ -171,8 +178,9 @@ export class GameAppBase extends React.Component {
   sendMove(action_index) {
     this.setState({
       legalMoves: [],
+      proposedAction: null,
     });
-    this.sendMsg({ type: 'make_move', payload: { index: action_index } })
+    this.sendMsg({ type: 'make_move', seat: this.state.currentTurn, payload: { index: action_index } })
   }
 
   sendMsg(msg) {
@@ -185,7 +193,7 @@ export class GameAppBase extends React.Component {
     this.setState({
       legalMoves: [],
     });
-    this.sendMsg({ type: 'resign' });
+    this.sendMsg({ type: 'resign', seat: this.state.currentTurn });
   }
 
   handleNewGame = () => {
@@ -246,6 +254,7 @@ export class GameAppBase extends React.Component {
     let seatAssignments = this.state.seatAssignments;
     let midGame = resultCodes === null;
     const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
+    let currentSeat = this.state.currentTurn;
 
     return (
       <div className="container two-col">
@@ -254,6 +263,7 @@ export class GameAppBase extends React.Component {
             resultCodes={resultCodes}
             playerNames={playerNames}
             seatAssignments={seatAssignmentsHtml}
+            currentSeat={currentSeat}
           />
           {this.renderBoard()}
           <ActionButtons
