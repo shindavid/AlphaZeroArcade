@@ -9,9 +9,7 @@
 #include <boost/json.hpp>
 #include <boost/process.hpp>
 
-#include <array>
-#include <functional>
-#include <unordered_map>
+#include <vector>
 
 namespace core {
 /*
@@ -23,9 +21,8 @@ namespace core {
  */
 template <concepts::Game Game>
 struct WebManager {
-  using client_vec_t = std::array<WebManagerClient*, Game::Constants::kNumPlayers>;
+  using client_vec_t = std::vector<WebManagerClient*>;
 
-  ~WebManager();
   static WebManager* get_instance();
   void wait_for_connection();
   void register_client(WebManagerClient* client);
@@ -33,6 +30,8 @@ struct WebManager {
 
  private:
   WebManager();
+  ~WebManager();
+
   boost::asio::ip::tcp::acceptor create_acceptor();
   void launch_bridge();
   void launch_frontend();

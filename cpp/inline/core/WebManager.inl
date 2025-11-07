@@ -104,13 +104,7 @@ void WebManager<Game>::launch_frontend() {
 template <core::concepts::Game Game>
 void WebManager<Game>::register_client(WebManagerClient* client) {
   mit::unique_lock lock(mutex_);
-  for (seat_index_t seat = 0; seat < Game::Constants::kNumPlayers; ++seat) {
-    if (clients_[seat] == nullptr) {
-      clients_[seat] = client;
-      return;
-    }
-  }
-  throw util::Exception("All seats are already registered with clients");
+  clients_.push_back(client);
 }
 
 template <core::concepts::Game Game>
@@ -181,9 +175,7 @@ template <core::concepts::Game Game>
 void WebManager<Game>::handle_start_game() {
   mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
-    if (client) {
-      client->handle_start_game();
-    }
+    client->handle_start_game();
   }
 }
 
@@ -191,9 +183,7 @@ template <core::concepts::Game Game>
 void WebManager<Game>::handle_action(const boost::json::object& payload, seat_index_t seat) {
   mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
-    if (client) {
-      client->handle_action(payload, seat);
-    }
+    client->handle_action(payload, seat);
   }
 }
 
@@ -201,9 +191,7 @@ template <core::concepts::Game Game>
 void WebManager<Game>::handle_resign(seat_index_t seat) {
   mit::unique_lock lock(mutex_);
   for (auto& client : clients_) {
-    if (client) {
-      client->handle_resign(seat);
-    }
+    client->handle_resign(seat);
   }
 }
 
