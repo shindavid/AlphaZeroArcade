@@ -80,3 +80,40 @@
   background: #0a5a2b;
   color: white;
 }
+/* --- Keep the yellow outline STATIC; flash only the disc --- */
+.board .cell.legal-move:has(.disc) {
+  outline: 2px dashed #ffd54f !important;  /* fixed yellow bracket */
+  animation: none !important;               /* no outline blinking */
+}
+.board .cell.legal-move:has(.disc)::after {
+  content: none !important;                 /* no extra inner box */
+  animation: none !important;
+}
+
+/* Disc flash with color clamping */
+.board .cell.legal-move:has(.disc.B) .disc.B {
+  background-color: #333 !important;        /* never darker than #333 */
+  animation: dramaticFlashB 1.2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+.board .cell.legal-move:has(.disc.W) .disc.W {
+  background-color: #bbb !important;        /* never brighter than #bbb */
+  animation: dramaticFlashW 1.2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* Keyframes: disc fully disappears and returns */
+@keyframes dramaticFlashB {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  45%, 55% { opacity: 0;   transform: scale(0.8); }
+}
+@keyframes dramaticFlashW {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  45%, 55% { opacity: 0;   transform: scale(0.8); }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .board .cell.legal-move:has(.disc) { animation: none !important; }
+  .board .cell.legal-move:has(.disc) .disc { animation: none !important; opacity: 1; transform: none; }
+}
