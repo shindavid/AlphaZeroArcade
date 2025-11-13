@@ -250,6 +250,12 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.Q = V;
     stats.Q_sq = V * V;
   }
+
+  const RootInfo& root_info = context.general_context->root_info;
+  Node* root = lookup_table.get_node(root_info.node_index);
+  if (root) {
+    root->stats().RN = std::max(root->stats().RN, 1);
+  }
 }
 
 template <search::concepts::Traits Traits, typename Derived>

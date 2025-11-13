@@ -390,11 +390,6 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   Algorithms::load_evaluations(context);
   context.eval_request.mark_all_as_stale();
 
-  if (is_root) {
-    // TODO: move this into an Algorithms:: function
-    node->stats().RN = std::max(node->stats().RN, 1);
-  }
-
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
     for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
