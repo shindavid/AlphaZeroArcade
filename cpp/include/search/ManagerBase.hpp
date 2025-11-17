@@ -25,12 +25,12 @@
 namespace search {
 
 /*
- * The Manager class is the main entry point for doing MCTS searches.
+ * The ManagerBase class is the main entry point for doing MCTS searches.
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
 template <search::concepts::Traits Traits>
-class Manager {
+class ManagerBase {
  public:
   using EvalSpec = Traits::EvalSpec;
   using Edge = Traits::Edge;
@@ -87,20 +87,21 @@ class Manager {
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
-  // StateMachine is used to track the state of the Manager's execution.
+  // StateMachine is used to track the state of the ManagerBase's execution.
   //
   // In the GameServer GameThread/GameSlot paradigm, there are a set of GameThread's that
-  // continuously cycle through a set of GameSlot's. This translates to calls to Manager::search().
-  // If the Manager is configured for multithreading, there can be many such concurrent calls.
+  // continuously cycle through a set of GameSlot's. This translates to calls to
+  // ManagerBase::search(). If the ManagerBase is configured for multithreading, there can be many
+  // such concurrent calls.
   //
-  // The Manager must carefully coordinate these calls, so that in general (N - 1) of those calls
-  // yield, while the N'th call returns results. It should do this in such a way so that typically,
-  // none of those N calls end up blocked waiting for an nn-eval (assuming the GameServer is
-  // appropriately configured with enough GameSlot's). This coordination is a sensitive task.
+  // The ManagerBase must carefully coordinate these calls, so that in general (N - 1) of those
+  // calls yield, while the N'th call returns results. It should do this in such a way so that
+  // typically, none of those N calls end up blocked waiting for an nn-eval (assuming the GameServer
+  // is appropriately configured with enough GameSlot's). This coordination is a sensitive task.
   //
-  // The Manager maintains a list of C SearchContext's, where C is its configured concurrency level
-  // (in training, C=1, while in competition, C>1). It also maintains an execution_state_t enum
-  // that tracks the execution state.
+  // The ManagerBase maintains a list of C SearchContext's, where C is its configured concurrency
+  // level (in training, C=1, while in competition, C>1). It also maintains an execution_state_t
+  // enum that tracks the execution state.
   //
   // Each incoming search() comes with an assigned context id, which is used to select a
   // SearchContext to work with. Here is a summary of the state machine:
@@ -145,22 +146,22 @@ class Manager {
   };
 
   /*
-   * Construct a Manager object.
+   * Construct a ManagerBase object.
    *
    * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
    * for testing.
    *
    * Can optionally pass mutex_pool's to be used for Node's and SearchContext's. If not provided,
-   * the Manager will create a separate single-element mutex-pool for each.
+   * the ManagerBase will create a separate single-element mutex-pool for each.
    */
-  Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
-          EvalServiceBase_sptr service = nullptr);
+  ManagerBase(const ManagerParams&, core::GameServerBase* server = nullptr,
+              EvalServiceBase_sptr service = nullptr);
 
-  Manager(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase* server = nullptr,
-          EvalServiceBase_sptr service = nullptr);
+  ManagerBase(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
+              const ManagerParams& params, core::GameServerBase* server = nullptr,
+              EvalServiceBase_sptr service = nullptr);
 
-  ~Manager();
+  ~ManagerBase();
 
   const ManagerParams& params() const { return general_context_.manager_params; }
   int num_search_threads() const { return params().num_search_threads; }
@@ -189,9 +190,9 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
-          core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-          core::GameServerBase*, EvalServiceBase_sptr service);
+  ManagerBase(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
+              core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+              core::GameServerBase*, EvalServiceBase_sptr service);
 
   SearchResponse search_helper(const SearchRequest& request);
 
@@ -260,4 +261,4 @@ class Manager {
 
 }  // namespace search
 
-#include "inline/search/Manager.inl"
+#include "inline/search/ManagerBase.inl"

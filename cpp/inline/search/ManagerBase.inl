@@ -1,4 +1,4 @@
-#include "search/Manager.hpp"
+#include "search/ManagerBase.hpp"
 
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
@@ -15,9 +15,10 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-Manager<Traits>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
-                         core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-                         core::GameServerBase* server, EvalServiceBase_sptr service)
+ManagerBase<Traits>::ManagerBase(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
+                                 core::mutex_vec_sptr_t context_mutex_pool,
+                                 const ManagerParams& params, core::GameServerBase* server,
+                                 EvalServiceBase_sptr service)
     : manager_id_(next_instance_id_++),
       general_context_(params, node_mutex_pool),
       context_mutex_pool_(context_mutex_pool) {
@@ -38,25 +39,26 @@ Manager<Traits>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
 }
 
 template <search::concepts::Traits Traits>
-Manager<Traits>::Manager(const ManagerParams& params, core::GameServerBase* server,
-                         EvalServiceBase_sptr service)
-    : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1),
-              params, server, service) {}
+ManagerBase<Traits>::ManagerBase(const ManagerParams& params, core::GameServerBase* server,
+                                 EvalServiceBase_sptr service)
+    : ManagerBase(true, std::make_shared<core::mutex_vec_t>(1),
+                  std::make_shared<core::mutex_vec_t>(1), params, server, service) {}
 
 template <search::concepts::Traits Traits>
-Manager<Traits>::Manager(core::mutex_vec_sptr_t& node_mutex_pool,
-                         core::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
-                         core::GameServerBase* server, EvalServiceBase_sptr service)
-    : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
+ManagerBase<Traits>::ManagerBase(core::mutex_vec_sptr_t& node_mutex_pool,
+                                 core::mutex_vec_sptr_t& context_mutex_pool,
+                                 const ManagerParams& params, core::GameServerBase* server,
+                                 EvalServiceBase_sptr service)
+    : ManagerBase(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
 template <search::concepts::Traits Traits>
-inline Manager<Traits>::~Manager() {
+inline ManagerBase<Traits>::~ManagerBase() {
   clear();
   nn_eval_service_->disconnect();
 }
 
 template <search::concepts::Traits Traits>
-inline void Manager<Traits>::start() {
+inline void ManagerBase<Traits>::start() {
   clear();
 
   if (!connected_) {
@@ -66,18 +68,18 @@ inline void Manager<Traits>::start() {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::clear() {
+void ManagerBase<Traits>::clear() {
   general_context_.clear();
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
-                                           core::action_t action) {
+void ManagerBase<Traits>::receive_state_change(core::seat_index_t, const State&,
+                                               core::action_t action) {
   update(action);
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::update(core::action_t action) {
+void ManagerBase<Traits>::update(core::action_t action) {
   group::element_t root_sym = root_info()->canonical_sym;
 
   State& raw_state = root_info()->history.extend();
@@ -98,12 +100,13 @@ void Manager<Traits>::update(core::action_t action) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::set_search_params(const SearchParams& params) {
+void ManagerBase<Traits>::set_search_params(const SearchParams& params) {
   general_context_.search_params = params;
 }
 
 template <search::concepts::Traits Traits>
-typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchRequest& request) {
+typename ManagerBase<Traits>::SearchResponse ManagerBase<Traits>::search(
+  const SearchRequest& request) {
   auto context_id = request.context_id();
 
   DEBUG_ASSERT(context_id < num_search_threads(), "Invalid context_id: {} (max: {})", context_id,
@@ -122,13 +125,13 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search(const SearchReq
 }
 
 /*
- * Here, we do a skimmed-down version of Manager::search()
+ * Here, we do a skimmed-down version of ManagerBase::search()
  *
  * TODO: dispatch to Algorithms:: here, since different paradigms want to fill in training_info
  * differently.
  */
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::load_root_action_values(
+core::yield_instruction_t ManagerBase<Traits>::load_root_action_values(
   const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
   TrainingInfo& training_info) {
   if (!mid_load_root_action_values_) {
@@ -188,7 +191,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
 }
 
 template <search::concepts::Traits Traits>
-typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
+typename ManagerBase<Traits>::SearchResponse ManagerBase<Traits>::search_helper(
   const SearchRequest& request) {
   mit::unique_lock lock(state_machine_.mutex);
   auto context_id = request.context_id();
@@ -248,7 +251,7 @@ typename Manager<Traits>::SearchResponse Manager<Traits>::search_helper(
 }
 
 template <search::concepts::Traits Traits>
-int Manager<Traits>::update_state_machine_to_in_visit_loop(SearchContext& context) {
+int ManagerBase<Traits>::update_state_machine_to_in_visit_loop(SearchContext& context) {
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return 0;
 
@@ -265,8 +268,8 @@ int Manager<Traits>::update_state_machine_to_in_visit_loop(SearchContext& contex
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::mark_as_done_with_visit_loop(SearchContext& context,
-                                                                        int extra_enqueue_count) {
+core::yield_instruction_t ManagerBase<Traits>::mark_as_done_with_visit_loop(
+  SearchContext& context, int extra_enqueue_count) {
   // Assumes state_machine_.mutex is held
   RELEASE_ASSERT(context.in_visit_loop);
   context.in_visit_loop = false;
@@ -289,7 +292,7 @@ core::yield_instruction_t Manager<Traits>::mark_as_done_with_visit_loop(SearchCo
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::init_context(core::context_id_t i) {
+void ManagerBase<Traits>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
   context.general_context = &general_context_;
@@ -301,7 +304,7 @@ void Manager<Traits>::init_context(core::context_id_t i) {
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -329,13 +332,13 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::resume_root_initialization(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::resume_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   return resume_node_initialization(context);
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const SearchParams& search_params = general_context_.search_params;
   const RootInfo& root_info = general_context_.root_info;
@@ -375,7 +378,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -412,7 +415,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -432,7 +435,7 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
 
@@ -454,7 +457,7 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   LookupTable& lookup_table = general_context_.lookup_table;
 
@@ -546,7 +549,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   Edge* edge = context.visit_edge;
@@ -599,7 +602,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -658,7 +661,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
 }
 
 template <search::concepts::Traits Traits>
-core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& context) {
+core::yield_instruction_t ManagerBase<Traits>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -715,7 +718,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::pure_backprop(SearchContext& context) {
+void ManagerBase<Traits>::pure_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -739,7 +742,7 @@ void Manager<Traits>::pure_backprop(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::virtual_backprop(SearchContext& context) {
+void ManagerBase<Traits>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -763,7 +766,7 @@ void Manager<Traits>::virtual_backprop(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
+void ManagerBase<Traits>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
 
@@ -785,7 +788,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
+void ManagerBase<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   RELEASE_ASSERT(!last_node->is_terminal());
   auto value = GameResults::to_value_array(last_node->stable_data().R);
@@ -811,7 +814,7 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
+void ManagerBase<Traits>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -829,8 +832,8 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node,
-                                                                core::action_t action) const {
+core::node_pool_index_t ManagerBase<Traits>::lookup_child_by_action(const Node* node,
+                                                                    core::action_t action) const {
   // NOTE: this can be switched to use binary search if we'd like
   const LookupTable& lookup_table = general_context_.lookup_table;
   int i = 0;
@@ -844,7 +847,7 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::update_child_expand_count(Node* node, int k) {
+void ManagerBase<Traits>::update_child_expand_count(Node* node, int k) {
   if (!node->increment_child_expand_count(k)) return;
 
   // all children have been expanded, check for triviality
@@ -861,7 +864,7 @@ void Manager<Traits>::update_child_expand_count(Node* node, int k) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::initialize_edges(Node* node) {
+void ManagerBase<Traits>::initialize_edges(Node* node) {
   int n_edges = node->stable_data().num_valid_actions;
   if (n_edges == 0) return;
 
@@ -878,7 +881,7 @@ void Manager<Traits>::initialize_edges(Node* node) {
 }
 
 template <search::concepts::Traits Traits>
-bool Manager<Traits>::all_children_edges_initialized(const Node* root) const {
+bool ManagerBase<Traits>::all_children_edges_initialized(const Node* root) const {
   int n = root->stable_data().num_valid_actions;
   if (n == 0) return true;
   if (root->get_first_edge_index() == -1) return false;
@@ -894,7 +897,7 @@ bool Manager<Traits>::all_children_edges_initialized(const Node* root) const {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edge) {
+void ManagerBase<Traits>::add_pending_notification(SearchContext& context, Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
   DEBUG_ASSERT(edge->expanding_context_id >= 0);
@@ -909,8 +912,8 @@ void Manager<Traits>::add_pending_notification(SearchContext& context, Edge* edg
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
-                                     Edge::expansion_state_t state) {
+void ManagerBase<Traits>::set_edge_state(SearchContext& context, Edge* edge,
+                                         Edge::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == Edge::kPreExpanded) {
     // Makes no assumptions about mutexes
@@ -931,7 +934,7 @@ void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
+void ManagerBase<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -1030,7 +1033,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::set_leaf_canonical_history(SearchContext& context) {
+void ManagerBase<Traits>::set_leaf_canonical_history(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   context.leaf_canonical_history = context.raw_history;  // copy
@@ -1040,7 +1043,7 @@ void Manager<Traits>::set_leaf_canonical_history(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
+int ManagerBase<Traits>::sample_chance_child_index(const SearchContext& context) {
   const LookupTable& lookup_table = general_context_.lookup_table;
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_actions;
@@ -1052,7 +1055,7 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-group::element_t Manager<Traits>::get_random_symmetry(const StateHistory& history) const {
+group::element_t ManagerBase<Traits>::get_random_symmetry(const StateHistory& history) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
     auto it = history.begin();
