@@ -7,6 +7,7 @@ namespace core {
  */
 struct MctsConfigurationBase {
   static constexpr bool kStoreStates = false;
+  static constexpr bool kSupportSymmetryTranspositions = true;
 };
 
 }  // namespace core

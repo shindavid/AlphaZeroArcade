@@ -14,11 +14,11 @@
 
 namespace search {
 
-template <typename Derived>
-ManagerBase<Derived>::ManagerBase(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
-                                  core::mutex_vec_sptr_t context_mutex_pool,
-                                  const ManagerParams& params, core::GameServerBase* server,
-                                  EvalServiceBase_sptr service)
+template <search::concepts::Traits Traits, typename Derived>
+ManagerBase<Traits, Derived>::ManagerBase(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
+                                          core::mutex_vec_sptr_t context_mutex_pool,
+                                          const ManagerParams& params, core::GameServerBase* server,
+                                          EvalServiceBase_sptr service)
     : manager_id_(next_instance_id_++),
       general_context_(params, node_mutex_pool),
       context_mutex_pool_(context_mutex_pool) {
@@ -38,27 +38,27 @@ ManagerBase<Derived>::ManagerBase(bool dummy, core::mutex_vec_sptr_t node_mutex_
   }
 }
 
-template <typename Derived>
-ManagerBase<Derived>::ManagerBase(const ManagerParams& params, core::GameServerBase* server,
-                                  EvalServiceBase_sptr service)
+template <search::concepts::Traits Traits, typename Derived>
+ManagerBase<Traits, Derived>::ManagerBase(const ManagerParams& params, core::GameServerBase* server,
+                                          EvalServiceBase_sptr service)
     : ManagerBase(true, std::make_shared<core::mutex_vec_t>(1),
                   std::make_shared<core::mutex_vec_t>(1), params, server, service) {}
 
-template <typename Derived>
-ManagerBase<Derived>::ManagerBase(core::mutex_vec_sptr_t& node_mutex_pool,
-                                  core::mutex_vec_sptr_t& context_mutex_pool,
-                                  const ManagerParams& params, core::GameServerBase* server,
-                                  EvalServiceBase_sptr service)
+template <search::concepts::Traits Traits, typename Derived>
+ManagerBase<Traits, Derived>::ManagerBase(core::mutex_vec_sptr_t& node_mutex_pool,
+                                          core::mutex_vec_sptr_t& context_mutex_pool,
+                                          const ManagerParams& params, core::GameServerBase* server,
+                                          EvalServiceBase_sptr service)
     : ManagerBase(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
-template <typename Derived>
-inline ManagerBase<Derived>::~ManagerBase() {
+template <search::concepts::Traits Traits, typename Derived>
+inline ManagerBase<Traits, Derived>::~ManagerBase() {
   clear();
   nn_eval_service_->disconnect();
 }
 
-template <typename Derived>
-inline void ManagerBase<Derived>::start() {
+template <search::concepts::Traits Traits, typename Derived>
+inline void ManagerBase<Traits, Derived>::start() {
   clear();
 
   if (!connected_) {
@@ -67,19 +67,19 @@ inline void ManagerBase<Derived>::start() {
   }
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::clear() {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::clear() {
   general_context_.clear();
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::receive_state_change(core::seat_index_t, const State&,
-                                                core::action_t action) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::receive_state_change(core::seat_index_t, const State&,
+                                                        core::action_t action) {
   update(action);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::update(core::action_t action) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::update(core::action_t action) {
   group::element_t root_sym = root_info()->canonical_sym;
 
   State& raw_state = root_info()->history.extend();
@@ -99,13 +99,13 @@ void ManagerBase<Derived>::update(core::action_t action) {
   root_info()->node_index = lookup_child_by_action(root, transformed_action);  // tree reuse
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::set_search_params(const SearchParams& params) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::set_search_params(const SearchParams& params) {
   general_context_.search_params = params;
 }
 
-template <typename Derived>
-typename ManagerBase<Derived>::SearchResponse ManagerBase<Derived>::search(
+template <search::concepts::Traits Traits, typename Derived>
+typename ManagerBase<Traits, Derived>::SearchResponse ManagerBase<Traits, Derived>::search(
   const SearchRequest& request) {
   auto context_id = request.context_id();
 
@@ -130,8 +130,8 @@ typename ManagerBase<Derived>::SearchResponse ManagerBase<Derived>::search(
  * TODO: dispatch to Algorithms:: here, since different paradigms want to fill in training_info
  * differently.
  */
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::load_root_action_values(
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::load_root_action_values(
   const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
   TrainingInfo& training_info) {
   if (!mid_load_root_action_values_) {
@@ -190,8 +190,8 @@ core::yield_instruction_t ManagerBase<Derived>::load_root_action_values(
   return core::kContinue;
 }
 
-template <typename Derived>
-typename ManagerBase<Derived>::SearchResponse ManagerBase<Derived>::search_helper(
+template <search::concepts::Traits Traits, typename Derived>
+typename ManagerBase<Traits, Derived>::SearchResponse ManagerBase<Traits, Derived>::search_helper(
   const SearchRequest& request) {
   mit::unique_lock lock(state_machine_.mutex);
   auto context_id = request.context_id();
@@ -250,8 +250,8 @@ typename ManagerBase<Derived>::SearchResponse ManagerBase<Derived>::search_helpe
   return SearchResponse(&results_);
 }
 
-template <typename Derived>
-int ManagerBase<Derived>::update_state_machine_to_in_visit_loop(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+int ManagerBase<Traits, Derived>::update_state_machine_to_in_visit_loop(SearchContext& context) {
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return 0;
 
@@ -267,8 +267,8 @@ int ManagerBase<Derived>::update_state_machine_to_in_visit_loop(SearchContext& c
   return state_machine_.in_visit_loop_count - 1;
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::mark_as_done_with_visit_loop(
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::mark_as_done_with_visit_loop(
   SearchContext& context, int extra_enqueue_count) {
   // Assumes state_machine_.mutex is held
   RELEASE_ASSERT(context.in_visit_loop);
@@ -291,8 +291,8 @@ core::yield_instruction_t ManagerBase<Derived>::mark_as_done_with_visit_loop(
   return core::kDrop;
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::init_context(core::context_id_t i) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
   context.general_context = &general_context_;
@@ -303,8 +303,9 @@ void ManagerBase<Derived>::init_context(core::context_id_t i) {
   }
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::begin_root_initialization(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::begin_root_initialization(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -331,14 +332,16 @@ core::yield_instruction_t ManagerBase<Derived>::begin_root_initialization(Search
   return begin_node_initialization(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::resume_root_initialization(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::resume_root_initialization(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   return resume_node_initialization(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::begin_node_initialization(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::begin_node_initialization(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const SearchParams& search_params = general_context_.search_params;
   const RootInfo& root_info = general_context_.root_info;
@@ -377,8 +380,9 @@ core::yield_instruction_t ManagerBase<Derived>::begin_node_initialization(Search
   return resume_node_initialization(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::resume_node_initialization(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::resume_node_initialization(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -414,8 +418,9 @@ core::yield_instruction_t ManagerBase<Derived>::resume_node_initialization(Searc
   return core::kContinue;
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::begin_search_iteration(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::begin_search_iteration(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -434,8 +439,9 @@ core::yield_instruction_t ManagerBase<Derived>::begin_search_iteration(SearchCon
   return resume_search_iteration(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::resume_search_iteration(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::resume_search_iteration(
+  SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
 
@@ -456,8 +462,8 @@ core::yield_instruction_t ManagerBase<Derived>::resume_search_iteration(SearchCo
   return core::kContinue;
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::begin_visit(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   LookupTable& lookup_table = general_context_.lookup_table;
 
@@ -548,8 +554,8 @@ core::yield_instruction_t ManagerBase<Derived>::begin_visit(SearchContext& conte
   return resume_visit(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::resume_visit(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Node* node = context.visit_node;
   Edge* edge = context.visit_edge;
@@ -601,8 +607,8 @@ core::yield_instruction_t ManagerBase<Derived>::resume_visit(SearchContext& cont
   return core::kContinue;
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::begin_expansion(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -660,8 +666,8 @@ core::yield_instruction_t ManagerBase<Derived>::begin_expansion(SearchContext& c
   return resume_expansion(context);
 }
 
-template <typename Derived>
-core::yield_instruction_t ManagerBase<Derived>::resume_expansion(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+core::yield_instruction_t ManagerBase<Traits, Derived>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -717,8 +723,8 @@ core::yield_instruction_t ManagerBase<Derived>::resume_expansion(SearchContext& 
   return core::kContinue;
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::pure_backprop(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::pure_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -741,8 +747,8 @@ void ManagerBase<Derived>::pure_backprop(SearchContext& context) {
   Algorithms::validate_search_path(context);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::virtual_backprop(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -765,8 +771,8 @@ void ManagerBase<Derived>::virtual_backprop(SearchContext& context) {
   Algorithms::validate_search_path(context);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::undo_virtual_backprop(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
 
@@ -787,8 +793,8 @@ void ManagerBase<Derived>::undo_virtual_backprop(SearchContext& context) {
   Algorithms::validate_search_path(context);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::standard_backprop(SearchContext& context, bool undo_virtual) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   RELEASE_ASSERT(!last_node->is_terminal());
   auto value = GameResults::to_value_array(last_node->stable_data().R);
@@ -813,8 +819,8 @@ void ManagerBase<Derived>::standard_backprop(SearchContext& context, bool undo_v
   Algorithms::validate_search_path(context);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::short_circuit_backprop(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -831,9 +837,9 @@ void ManagerBase<Derived>::short_circuit_backprop(SearchContext& context) {
   Algorithms::validate_search_path(context);
 }
 
-template <typename Derived>
-core::node_pool_index_t ManagerBase<Derived>::lookup_child_by_action(const Node* node,
-                                                                     core::action_t action) const {
+template <search::concepts::Traits Traits, typename Derived>
+core::node_pool_index_t ManagerBase<Traits, Derived>::lookup_child_by_action(
+  const Node* node, core::action_t action) const {
   // NOTE: this can be switched to use binary search if we'd like
   const LookupTable& lookup_table = general_context_.lookup_table;
   int i = 0;
@@ -846,8 +852,8 @@ core::node_pool_index_t ManagerBase<Derived>::lookup_child_by_action(const Node*
   return -1;
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::update_child_expand_count(Node* node, int k) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::update_child_expand_count(Node* node, int k) {
   if (!node->increment_child_expand_count(k)) return;
 
   // all children have been expanded, check for triviality
@@ -863,8 +869,8 @@ void ManagerBase<Derived>::update_child_expand_count(Node* node, int k) {
   node->mark_as_trivial();
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::initialize_edges(Node* node) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::initialize_edges(Node* node) {
   int n_edges = node->stable_data().num_valid_actions;
   if (n_edges == 0) return;
 
@@ -880,8 +886,8 @@ void ManagerBase<Derived>::initialize_edges(Node* node) {
   }
 }
 
-template <typename Derived>
-bool ManagerBase<Derived>::all_children_edges_initialized(const Node* root) const {
+template <search::concepts::Traits Traits, typename Derived>
+bool ManagerBase<Traits, Derived>::all_children_edges_initialized(const Node* root) const {
   int n = root->stable_data().num_valid_actions;
   if (n == 0) return true;
   if (root->get_first_edge_index() == -1) return false;
@@ -896,8 +902,8 @@ bool ManagerBase<Derived>::all_children_edges_initialized(const Node* root) cons
   return true;
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::add_pending_notification(SearchContext& context, Edge* edge) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::add_pending_notification(SearchContext& context, Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
   DEBUG_ASSERT(edge->expanding_context_id >= 0);
@@ -911,9 +917,9 @@ void ManagerBase<Derived>::add_pending_notification(SearchContext& context, Edge
   notifying_context.pending_notifications.push_back(slot_context);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::set_edge_state(SearchContext& context, Edge* edge,
-                                          Edge::expansion_state_t state) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::set_edge_state(SearchContext& context, Edge* edge,
+                                                  Edge::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
   if (state == Edge::kPreExpanded) {
     // Makes no assumptions about mutexes
@@ -933,8 +939,8 @@ void ManagerBase<Derived>::set_edge_state(SearchContext& context, Edge* edge,
   }
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::expand_all_children(SearchContext& context, Node* node) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -1032,8 +1038,8 @@ void ManagerBase<Derived>::expand_all_children(SearchContext& context, Node* nod
   update_child_expand_count(node, expand_count);
 }
 
-template <typename Derived>
-void ManagerBase<Derived>::set_leaf_canonical_history(SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+void ManagerBase<Traits, Derived>::set_leaf_canonical_history(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   context.leaf_canonical_history = context.raw_history;  // copy
@@ -1042,8 +1048,8 @@ void ManagerBase<Derived>::set_leaf_canonical_history(SearchContext& context) {
   }
 }
 
-template <typename Derived>
-int ManagerBase<Derived>::sample_chance_child_index(const SearchContext& context) {
+template <search::concepts::Traits Traits, typename Derived>
+int ManagerBase<Traits, Derived>::sample_chance_child_index(const SearchContext& context) {
   const LookupTable& lookup_table = general_context_.lookup_table;
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_actions;
@@ -1054,8 +1060,9 @@ int ManagerBase<Derived>::sample_chance_child_index(const SearchContext& context
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
-template <typename Derived>
-group::element_t ManagerBase<Derived>::get_random_symmetry(const StateHistory& history) const {
+template <search::concepts::Traits Traits, typename Derived>
+group::element_t ManagerBase<Traits, Derived>::get_random_symmetry(
+  const StateHistory& history) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
     auto it = history.begin();

@@ -29,10 +29,9 @@ namespace search {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <typename Derived>
+template <search::concepts::Traits Traits, typename Derived>
 class ManagerBase {
  public:
-  using Traits = Derived::Traits;
   using EvalSpec = Traits::EvalSpec;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
