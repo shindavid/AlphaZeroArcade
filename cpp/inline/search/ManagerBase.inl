@@ -75,28 +75,7 @@ void ManagerBase<Traits, Derived>::clear() {
 template <search::concepts::Traits Traits, typename Derived>
 void ManagerBase<Traits, Derived>::receive_state_change(core::seat_index_t, const State&,
                                                         core::action_t action) {
-  update(action);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void ManagerBase<Traits, Derived>::update(core::action_t action) {
-  group::element_t root_sym = root_info()->canonical_sym;
-
-  State& raw_state = root_info()->history.extend();
-  core::action_mode_t mode = Rules::get_action_mode(raw_state);
-  Rules::apply(raw_state, action);
-
-  root_info()->canonical_sym = Symmetries::get_canonical_symmetry(raw_state);
-
-  general_context_.step();
-  core::node_pool_index_t root_index = root_info()->node_index;
-  if (root_index < 0) return;
-
-  core::action_t transformed_action = action;
-  Symmetries::apply(transformed_action, root_sym, mode);
-
-  Node* root = lookup_table()->get_node(root_index);
-  root_info()->node_index = lookup_child_by_action(root, transformed_action);  // tree reuse
+  static_cast<Derived*>(this)->update(action);
 }
 
 template <search::concepts::Traits Traits, typename Derived>

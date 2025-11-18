@@ -170,7 +170,6 @@ class ManagerBase {
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
-  void update(core::action_t);
 
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
@@ -185,6 +184,9 @@ class ManagerBase {
   void end_session() { nn_eval_service_->end_session(); }
 
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
+
+  GeneralContext& general_context() { return general_context_; }
+  core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
 
  private:
   using context_vec_t = std::vector<SearchContext>;
@@ -227,7 +229,6 @@ class ManagerBase {
   static void standard_backprop(SearchContext& context, bool undo_virtual);
   static void short_circuit_backprop(SearchContext& context);
 
-  core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
   void update_child_expand_count(Node* node, int k = 1);
   void initialize_edges(Node* node);
   bool all_children_edges_initialized(const Node* root) const;
