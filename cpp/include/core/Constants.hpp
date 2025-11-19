@@ -20,6 +20,12 @@ const int kMaxNameLength = 32;  // excluding null terminator
  */
 const int kSerializationLimit = 1024;
 
+enum TranspositionRule : int8_t {
+  kSimpleTranspositions,
+  kSymmetryTranspositions,
+  kNoTranspositions
+};
+
 // See KataGo paper for description of search modes.
 enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 

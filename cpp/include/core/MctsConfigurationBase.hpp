@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/Constants.hpp"
+
 namespace core {
 /*
  * This can be used as the base class of any EvalSpec::MctsConfiguration struct, in order to get
@@ -7,7 +9,7 @@ namespace core {
  */
 struct MctsConfigurationBase {
   static constexpr bool kStoreStates = false;
-  static constexpr bool kSupportSymmetryTranspositions = true;
+  static constexpr TranspositionRule kTranspositionRule = kSymmetryTranspositions;
 };
 
 }  // namespace core
