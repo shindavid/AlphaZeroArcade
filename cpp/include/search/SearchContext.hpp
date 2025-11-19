@@ -15,9 +15,8 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-struct SearchContext {
+struct SearchContextBase {
   int log_prefix_n() const { return kThreadWhitespaceLength * id; }
-  std::string search_path_str() const;  // slow, for debugging
 
   using Edge = Traits::Edge;
   using Game = Traits::Game;
@@ -43,8 +42,6 @@ struct SearchContext {
   StateHistoryArray history_array;      // used in expand_all_children() only
   StateHistory leaf_canonical_history;  // only initialized when needed for nn eval
   core::seat_index_t active_seat;
-  group::element_t root_canonical_sym;
-  group::element_t leaf_canonical_sym;
 
   bool mid_expansion = false;
   bool mid_visit = false;
@@ -69,6 +66,32 @@ struct SearchContext {
   // For convenience
   const SearchRequest* search_request = nullptr;
 };
+
+template <search::concepts::Traits Traits, core::TranspositionRule TranspositionRule>
+struct SearchContextImpl : public SearchContextBase<Traits> {
+  using Base = SearchContextBase<Traits>;
+  using Game = Base::Game;
+  using Visitation = Base::Visitation;
+
+  std::string search_path_str() const;  // slow, for debugging
+};
+
+template <search::concepts::Traits Traits>
+struct SearchContextImpl<Traits, core::kSymmetryTranspositions> : public SearchContextBase<Traits> {
+  using Base = SearchContextBase<Traits>;
+  using Game = Base::Game;
+  using SymmetryGroup = Base::SymmetryGroup;
+  using Visitation = Base::Visitation;
+
+  std::string search_path_str() const;  // slow, for debugging
+
+  group::element_t root_canonical_sym;
+  group::element_t leaf_canonical_sym;
+};
+
+template <search::concepts::Traits Traits>
+using SearchContext =
+  SearchContextImpl<Traits, Traits::EvalSpec::MctsConfiguration::kTranspositionRule>;
 
 }  // namespace search
 
