@@ -3,17 +3,6 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-void GeneralContext<Traits>::RootInfo::clear() {
-  node_index = -1;
-
-  State state;
-  Rules::init_state(state);
-  history.clear();
-  history.update(state);
-  canonical_sym = Symmetries::get_canonical_symmetry(state);
-}
-
-template <search::concepts::Traits Traits>
 GeneralContext<Traits>::GeneralContext(const ManagerParams& mparams,
                                        core::mutex_vec_sptr_t node_mutex_pool)
     : manager_params(mparams),

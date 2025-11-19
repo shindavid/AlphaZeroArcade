@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
+#include "search/RootInfo.hpp"
 #include "search/SearchParams.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -27,16 +28,7 @@ struct GeneralContext {
   using SymmetryGroup = Game::SymmetryGroup;
 
   using LookupTable = search::LookupTable<Traits>;
-
-  struct RootInfo {
-    void clear();
-
-    StateHistory history;
-    group::element_t canonical_sym = -1;
-    core::node_pool_index_t node_index = -1;
-    core::seat_index_t active_seat = -1;
-    bool add_noise = false;
-  };
+  using RootInfo = search::RootInfo<Traits>;
 
   GeneralContext(const ManagerParams& mparams, core::mutex_vec_sptr_t node_mutex_pool);
   void clear();
