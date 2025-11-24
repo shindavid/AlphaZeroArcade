@@ -4,6 +4,7 @@
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/NNEvaluationRequest.hpp"
+#include "search/RootInfo.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -14,10 +15,12 @@
 
 namespace search {
 
+// TODO:
+// - replace the *history* members with a single InputTensorizor member.
+// - remove the leaf_canonical_history member once we drop support for history-utilizing
+//   InputTensorizor's with canonical symmetries.
 template <search::concepts::Traits Traits>
 struct SearchContextBase {
-  int log_prefix_n() const { return kThreadWhitespaceLength * id; }
-
   using Edge = Traits::Edge;
   using Game = Traits::Game;
 
@@ -25,12 +28,16 @@ struct SearchContextBase {
   using Node = TraitsTypes::Node;
   using EvalRequest = search::NNEvaluationRequest<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
+  using RootInfo = search::RootInfo<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = std::vector<Visitation>;
 
   using StateHistory = TraitsTypes::StateHistory;
   using StateHistoryArray = TraitsTypes::StateHistoryArray;
   using SymmetryGroup = Game::SymmetryGroup;
+
+  int log_prefix_n() const { return kThreadWhitespaceLength * id; }
+  void init(const RootInfo&);
 
   core::context_id_t id;
 
@@ -80,10 +87,12 @@ template <search::concepts::Traits Traits>
 struct SearchContextImpl<Traits, core::kSymmetryTranspositions> : public SearchContextBase<Traits> {
   using Base = SearchContextBase<Traits>;
   using Game = Base::Game;
+  using RootInfo = Base::RootInfo;
   using SymmetryGroup = Base::SymmetryGroup;
   using Visitation = Base::Visitation;
 
   std::string search_path_str() const;  // slow, for debugging
+  void init(const RootInfo&);
 
   group::element_t root_canonical_sym;
   group::element_t leaf_canonical_sym;

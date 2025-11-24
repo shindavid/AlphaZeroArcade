@@ -8,6 +8,20 @@
 
 namespace search {
 
+///////////////////////////////
+// SearchContextBase<Traits> //
+///////////////////////////////
+
+template <search::concepts::Traits Traits>
+void SearchContextBase<Traits>::init(const RootInfo& root_info) {
+  raw_history = root_info.history;
+  active_seat = root_info.active_seat;
+}
+
+//////////////////////////////////
+// SearchContextImpl<Traits, *> //
+//////////////////////////////////
+
 template <search::concepts::Traits Traits, core::TranspositionRule TranspositionRule>
 std::string SearchContextImpl<Traits, TranspositionRule>::search_path_str() const {
   std::string delim = Game::IO::action_delimiter();
@@ -20,6 +34,10 @@ std::string SearchContextImpl<Traits, TranspositionRule>::search_path_str() cons
   }
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }
+
+//////////////////////////////////////////////////////////////
+// SearchContextImpl<Traits, core::kSymmetryTranspositions> //
+//////////////////////////////////////////////////////////////
 
 template <search::concepts::Traits Traits>
 std::string SearchContextImpl<Traits, core::kSymmetryTranspositions>::search_path_str() const {
@@ -38,6 +56,13 @@ std::string SearchContextImpl<Traits, core::kSymmetryTranspositions>::search_pat
     vec.push_back(Game::IO::action_to_str(action, mode));
   }
   return std::format("[{}]", boost::algorithm::join(vec, delim));
+}
+
+template <search::concepts::Traits Traits>
+void SearchContextImpl<Traits, core::kSymmetryTranspositions>::init(const RootInfo& root_info) {
+  Base::init(root_info);
+  root_canonical_sym = root_info.canonical_sym;
+  leaf_canonical_sym = root_info.canonical_sym;
 }
 
 }  // namespace search

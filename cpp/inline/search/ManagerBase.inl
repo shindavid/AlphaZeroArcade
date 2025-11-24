@@ -303,11 +303,8 @@ core::yield_instruction_t ManagerBase<Traits, Derived>::begin_root_initializatio
     return core::kContinue;
   }
 
-  context.raw_history = root_info.history;
-  context.root_canonical_sym = root_info.canonical_sym;
-  context.leaf_canonical_sym = root_info.canonical_sym;
-  context.active_seat = root_info.active_seat;
-  context.initialization_index = root_index;
+  context.init(root_info);
+  context.initialization_index = root_info.node_index;
   return begin_node_initialization(context);
 }
 
@@ -342,6 +339,14 @@ core::yield_instruction_t ManagerBase<Traits, Derived>::begin_node_initializatio
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().R_valid) {
+      // Design note: for better cache-efficiency, we want (history1, sym1) and (history2, sym2) to
+      // map to the same hash if they are symmetrically equivalent. This demands performing a
+      // canonicalization operation *somewhere*. We choose do it here, rather than in
+      // NNEvaluationService, to distribute that computation work across the many search threads,
+      // rather than bottlenecking it in the NN eval service.
+      //
+      // Also, we have leaf_canonical_history as a member of SearchContext, as opposed to local
+      // variable, so that it can be accessed by reference from outside the current function call.
       group::element_t sym = get_random_symmetry(leaf_canonical_history);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
       context.eval_request.emplace_back(node, leaf_canonical_history, sym, incorporate);
@@ -406,10 +411,10 @@ core::yield_instruction_t ManagerBase<Traits, Derived>::begin_search_iteration(
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
-  context.raw_history = root_info.history;
-  context.root_canonical_sym = root_info.canonical_sym;
-  context.leaf_canonical_sym = root_info.canonical_sym;
-  context.active_seat = root_info.active_seat;
+  // TODO: question, is it ok to set context.initialization_index to root_info.node_index here?
+  // If so, maybe we want to move that into context.init().
+  context.init(root_info);
+
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
   context.visit_node = root;
@@ -432,10 +437,12 @@ core::yield_instruction_t ManagerBase<Traits, Derived>::resume_search_iteration(
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
+  // TODO: are these redundant with the calls in begin_search_iteration()? I think so.
   context.raw_history = root_info.history;
   context.root_canonical_sym = root_info.canonical_sym;
   context.leaf_canonical_sym = root_info.canonical_sym;
   context.active_seat = root_info.active_seat;
+
   if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
   return core::kContinue;
@@ -484,9 +491,35 @@ core::yield_instruction_t ManagerBase<Traits, Derived>::begin_visit(SearchContex
       core::action_t edge_action = edge->action;
       Symmetries::apply(edge_action, inv_leaf_canonical_sym, node->action_mode());
 
+      // TODO: above 2 lines, and everywhere else where "canonical_sym" occurs in the code, needs
+      // to be moved into a TranspositionRule-specialized method, whether in SearchContext:: or
+      // RootInfo::, or potentially something else that ends up getting specialization-treatment.
+      //
+      // For example, maybe the above gets replaced with:
+      //
+      // core::action_t edge_action = context.get_raw_orientation_action(edge);
+      //
+      // or should that be...
+      //
+      // core::action_t edge_action = context.get_action(edge);
+
       // apply raw-orientation action to raw-orientation leaf-state
       State& leaf_state = context.raw_history.extend();
       Rules::apply(leaf_state, edge_action);
+
+      // TODO: once we have InputTensorizor abstraction, the above 2 lines will be something like:
+      //
+      // // Option 1
+      // context.input_tensorizor.update(edge_action)
+      //
+      // or:
+      //
+      // // Option 2  <-- probably better
+      // // some SearchContext method returns the action, sym-specialization comes from
+      // // SearchContext specialization
+      //
+      // Rules::apply(context.raw_state, action);
+      // context.input_tensorizor.update(context.raw_state);
 
       // determine canonical orientation of new leaf-state
       group::element_t leaf_sym = Symmetries::get_canonical_symmetry(leaf_state);
@@ -918,6 +951,8 @@ void ManagerBase<Traits, Derived>::set_edge_state(SearchContext& context, Edge* 
   }
 }
 
+// TODO: this will get simplified once we drop support for symmetry-transpositions combined with
+// multi-state-tensorization
 template <search::concepts::Traits Traits, typename Derived>
 void ManagerBase<Traits, Derived>::expand_all_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);

@@ -693,6 +693,10 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
     return out;
   });
 
+  // TODO: the above 10 lines will be simplified to simply,
+  //
+  // input_tensorizor.tensorize(sym);
+
   TensorGroup& group = batch_data->tensor_groups[row];
   group.input = input;
   group.eval = item.eval();

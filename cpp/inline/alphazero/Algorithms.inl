@@ -122,6 +122,11 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_context,
                                                      search::RootInitPurpose purpose) {
+  // TODO: it feels like the majority of this really belongs in ManagerBase - it was only moved here
+  // because dshin clumsily moved all dirichlet-noise related stuff into alpha0::Algorithms. But
+  // arguably we should have limited that to just the add_noise computation, and otherwise kept the
+  // rest of this in ManagerBase. That potentially allows for some code-merging, as the chunk of
+  // code ending with the new (root) Node(...) line is basically duplicated in ManagerBase.
   const ManagerParams& manager_params = general_context.manager_params;
   const search::SearchParams& search_params = general_context.search_params;
 
