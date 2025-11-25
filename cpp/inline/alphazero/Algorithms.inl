@@ -631,7 +631,10 @@ void AlgorithmsBase<Traits, Derived>::transform_policy(SearchContext& context,
       if (manager_params.dirichlet_mult) {
         Derived::add_dirichlet_noise(general_context, P);
       }
-      P = P.pow(1.0 / general_context.aux_state.root_softmax_temperature.value());
+      float temp = general_context.aux_state.root_softmax_temperature.value();
+      if (temp > 0.0f) {
+        P = P.pow(1.0f / temp);
+      }
       P /= P.sum();
     }
   }
