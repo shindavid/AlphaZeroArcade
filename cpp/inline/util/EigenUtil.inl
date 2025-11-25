@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include <cmath>
 #include <cstdint>
 #include <type_traits>
 
@@ -375,7 +376,7 @@ void assert_is_valid_prob_distr(const Tensor& distr, float eps) {
   float s = sum(distr);
   float m = min(distr);
 
-  if (m < 0 || abs(s - 1.0) > eps) {
+  if (m < 0 || abs(s - 1.0) > eps || !std::isfinite(s) || !std::isfinite(m)) {
     std::ostringstream ss;
     ss << distr;
     throw util::Exception("Invalid prob distr: sum={}, min={} distr:\n{}", s, m, ss.str());
@@ -387,7 +388,7 @@ void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float ep
   float s = distr.sum();
   float m = distr.minCoeff();
 
-  if (m < 0 || abs(s - 1.0) > eps) {
+  if (m < 0 || abs(s - 1.0) > eps || !distr.allFinite()) {
     std::ostringstream ss;
     ss << distr;
     throw util::Exception("Invalid prob distr: sum={}, min={} distr:\n{}", s, m, ss.str());
