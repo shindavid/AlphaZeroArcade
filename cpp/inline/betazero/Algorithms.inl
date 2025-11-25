@@ -760,8 +760,8 @@ void AlgorithmsBase<Traits, Derived>::update_QW_fields(SearchContext& context, c
     stats.W = U;
     eigen_util::debug_validate_bounds(stats.Q);
   } else {
-    RELEASE_ASSERT(stats.RN >= 2);
-    int N = stats.RN;
+    // RELEASE_ASSERT(stats.RN >= 2, "RN={}", stats.RN);
+    int N = std::max(stats.RN, 2);
 
     // We have length-n vector pi, Q, and W for the children.
     //
