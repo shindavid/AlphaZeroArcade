@@ -49,6 +49,12 @@ std::string PlayerGeneratorBase<Traits, PlayerT, Mode>::get_default_name() const
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
 void PlayerGeneratorBase<Traits, PlayerT, Mode>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
+
+  if (manager_params_.num_search_threads > 1) {
+    LOG_WARN("beta0: overriding num_search_threads from {} to 1",
+             manager_params_.num_search_threads);
+    manager_params_.num_search_threads = 1;
+  }
 }
 
 template <search::concepts::Traits Traits, typename PlayerT, search::Mode Mode>
