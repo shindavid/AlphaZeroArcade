@@ -166,8 +166,6 @@ void AlgorithmsBase<Traits, Derived>::undo_virtual_update(Node* node, Edge* edge
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
-  Base::load_evaluations(context);
-
   const LookupTable& lookup_table = context.general_context->lookup_table;
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
@@ -178,8 +176,18 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     int n = stable_data.num_valid_actions;
 
+    GameResultTensor R;
     ValueArray U;
     LocalActionValueArray AU(n, kNumPlayers);
+    LocalPolicyArray P_raw(n);
+    LocalActionValueArray AV(n, kNumPlayers);
+
+    // assumes that heads are in order policy, value, action-value
+    //
+    // TODO: we should be able to verify this assumption at compile-time
+    std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
+    std::copy_n(eval->data(1), R.size(), R.data());
+    std::copy_n(eval->data(2), AV.size(), AV.data());
 
     // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
     //
@@ -187,10 +195,19 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(3), U.size(), U.data());
     std::copy_n(eval->data(4), AU.size(), AU.data());
 
+    LocalPolicyArray P_adjusted = P_raw;
+    Derived::transform_policy(context, P_adjusted);
+
+    stable_data.R = R;
+    stable_data.R_valid = true;
+
     stable_data.U = U;
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
+      edge->policy_prior_prob = P_raw[i];
+      edge->adjusted_base_prob = P_adjusted[i];
+      edge->child_AV = AV.row(i);
       edge->policy_posterior_prob = edge->policy_prior_prob;
       edge->child_Q_snapshot = edge->child_AV;
       edge->child_W_snapshot = AU.row(i);
@@ -198,6 +215,10 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     }
 
     RELEASE_ASSERT(stats.RN == 0, "RN={}", stats.RN);
+
+    ValueArray V = Game::GameResults::to_value_array(R);
+    stats.Q = V;
+    stats.Q_sq = V * V;
 
     LocalActionValueArray child_Q_arr(n, kNumPlayers);
     const LocalActionValueArray& child_W_arr = AU;
@@ -209,6 +230,12 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     }
 
     update_QW_fields(context, node, stable_data, pi_arr, child_Q_arr, child_W_arr, stats);
+
+    const RootInfo& root_info = context.general_context->root_info;
+    Node* root = lookup_table.get_node(root_info.node_index);
+    if (root) {
+      root->stats().RN = std::max(root->stats().RN, 1);
+    }
   }
 }
 
