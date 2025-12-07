@@ -162,17 +162,21 @@ class GameServer
   static std::string get_results_str(const results_map_t& map);
 
  private:
-  using node_ix_t = size_t;
   class SharedData;  // forward declaration
+  using node_ix_t = size_t;
 
-  struct StateTree {
+  class StateTree {
+   public:
+    const State& state(node_ix_t ix) const { return nodes_[ix].state; }
+
+   private:
     struct Node {
       State state;
       node_ix_t parent;
       action_t action_from_parent;
       std::vector<node_ix_t> children;
     };
-    std::vector<Node> nodes;
+    std::vector<Node> nodes_;
   };
 
   class GameSlot {
@@ -193,7 +197,7 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    const State& state() const { return state_; }
+    const State& state() const { return state_tree_.state(state_node_ix_); }
 
    private:
     const Params& params() const { return shared_data_.params(); }
