@@ -4,6 +4,7 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/GameSlot.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
@@ -15,6 +16,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -81,7 +83,8 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
-  using action_vec_t = std::vector<core::action_t>;
+  using action_t = core::action_t;
+  using action_vec_t = std::vector<action_t>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -159,7 +162,18 @@ class GameServer
   static std::string get_results_str(const results_map_t& map);
 
  private:
+  using node_ix_t = size_t;
   class SharedData;  // forward declaration
+
+  struct StateTree {
+    struct Node {
+      State state;
+      node_ix_t parent;
+      action_t action_from_parent;
+      std::vector<node_ix_t> children;
+    };
+    std::vector<Node> nodes;
+  };
 
   class GameSlot {
    public:
@@ -207,7 +221,8 @@ class GameServer
     bool game_started_ = false;
 
     // Updated for each move
-    State state_;
+    StateTree state_tree_;
+    node_ix_t state_node_index_ = 0;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
