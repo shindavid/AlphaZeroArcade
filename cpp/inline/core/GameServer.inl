@@ -735,6 +735,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_action_ < 0) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
     chance_action_ = eigen_util::sample(chance_dist);
+    Rules::apply(state_, chance_action_);
     apply_action(chance_action_);
   }
 
@@ -851,6 +852,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     // the server.
     RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
 
+    Rules::apply(state_, action);
     apply_action(action);
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state(), action, &player_names_);
@@ -932,13 +934,19 @@ bool GameServer<Game>::GameSlot::start_game() {
   noisy_mode_ = false;
   mid_yield_ = false;
 
+  Rules::init_state(state_);
   state_tree_.init();
   state_node_index_ = 0;
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
+    Rules::apply(state_, action);
     apply_action(action);
     for (int p = 0; p < kNumPlayers; ++p) {
       players_[p]->receive_state_change(active_seat_, state(), action);
+    }
+
+    if (state_ != state()) {
+      throw util::Exception("GameServer::{}(): state_ not identical to tree state", __func__);
     }
   }
 
@@ -1222,13 +1230,13 @@ void GameServer<Game>::StateTree::init() {
 template <concepts::Game Game>
 GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, action_t action) {
   State new_state = nodes_[ix].state;
-  Node& parent_node = nodes_[ix];
-  parent_node.children.push_back(nodes_.size());
+  node_ix_t new_ix = nodes_.size();
+  nodes_[ix].children.push_back(new_ix);
 
   Rules::apply(new_state, action);
   Node node(new_state, ix, action);
   nodes_.push_back(node);
-  return nodes_.size() - 1;
+  return new_ix;
 }
 
 }  // namespace core
