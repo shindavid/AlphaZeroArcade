@@ -4,7 +4,6 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/GameSlot.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
@@ -163,18 +162,23 @@ class GameServer
 
  private:
   class SharedData;  // forward declaration
-  using node_ix_t = size_t;
+  using node_ix_t = int64_t;
 
   class StateTree {
    public:
     const State& state(node_ix_t ix) const { return nodes_[ix].state; }
+    void init();
+    node_ix_t advance(node_ix_t ix, action_t action);
 
    private:
     struct Node {
-      State state;
-      node_ix_t parent;
-      action_t action_from_parent;
+      const State state;
+      const node_ix_t parent;
+      const action_t action_from_parent;
       std::vector<node_ix_t> children;
+
+      Node(State s, node_ix_t p, action_t a)
+          : state(s), parent(p), action_from_parent(a) {}
     };
     std::vector<Node> nodes_;
   };
@@ -198,6 +202,9 @@ class GameServer
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
+    void apply_action(action_t action) {
+      state_node_index_ = state_tree_.advance(state_node_index_, action);
+    }
 
    private:
     const Params& params() const { return shared_data_.params(); }
