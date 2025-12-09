@@ -201,14 +201,10 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    const State& state() const {
-      const State& tree_state = state_tree_.state(state_node_index_);
-      RELEASE_ASSERT(tree_state == state_);
-      DEBUG_ASSERT(tree_state == state_);
-      return state_;
-    }
+    const State& state() const { return curr_state_; }
     void apply_action(action_t action) {
       state_node_index_ = state_tree_.advance(state_node_index_, action);
+      curr_state_ = state_tree_.state(state_node_index_);
     }
 
    private:
@@ -237,6 +233,7 @@ class GameServer
     bool game_started_ = false;
 
     // Updated for each move
+    State curr_state_;
     State state_;
     StateTree state_tree_;
     node_ix_t state_node_index_ = 0;

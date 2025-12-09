@@ -936,6 +936,7 @@ bool GameServer<Game>::GameSlot::start_game() {
 
   Rules::init_state(state_);
   state_tree_.init();
+  curr_state_ = state_tree_.state(0);
   state_node_index_ = 0;
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
