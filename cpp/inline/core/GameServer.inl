@@ -1216,18 +1216,36 @@ void GameServer<Game>::StateTree::init() {
   nodes_.clear();
   State state{};
   Rules::init_state(state);
-  nodes_.emplace_back(state, -1, -1);
+  nodes_.emplace_back(state);
 }
 
 template <concepts::Game Game>
 GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, action_t action) {
   State new_state = nodes_[ix].state;
-  node_ix_t new_ix = nodes_.size();
-  nodes_[ix].children.push_back(new_ix);
-
   Rules::apply(new_state, action);
-  Node node(new_state, ix, action);
-  nodes_.push_back(node);
+
+  node_ix_t last_child_ix = null_node_ix;
+  for (node_ix_t i = nodes_[ix].first_child_ix; i != null_node_ix; i = nodes_[i].next_sibling_ix) {
+    if (new_state == nodes_[i].state) {
+      return i;
+    }
+
+    if (nodes_[i].next_sibling_ix == null_node_ix) {
+      last_child_ix = i;
+    }
+  }
+
+  nodes_.emplace_back(new_state, ix, action);
+  node_ix_t new_ix = nodes_.size() - 1;
+
+  if (nodes_[ix].first_child_ix == null_node_ix) {
+    nodes_[ix].first_child_ix = new_ix;
+  }
+
+  if (last_child_ix != null_node_ix) {
+    nodes_[last_child_ix].next_sibling_ix = new_ix;
+  }
+
   return new_ix;
 }
 

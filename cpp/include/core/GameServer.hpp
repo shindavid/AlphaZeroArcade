@@ -171,14 +171,18 @@ class GameServer
     node_ix_t advance(node_ix_t ix, action_t action);
 
    private:
+    static constexpr node_ix_t null_node_ix = -1;
+    static constexpr action_t null_action = -1;
+
     struct Node {
       const State state;
-      const node_ix_t parent;
+      const node_ix_t parent_ix;
       const action_t action_from_parent;
-      std::vector<node_ix_t> children;
+      node_ix_t first_child_ix = null_node_ix;
+      node_ix_t next_sibling_ix = null_node_ix;
 
-      Node(State s, node_ix_t p, action_t a)
-          : state(s), parent(p), action_from_parent(a) {}
+      Node(const State& s, node_ix_t p = null_node_ix, action_t a = null_action)
+          : state(s), parent_ix(p), action_from_parent(a) {}
     };
     std::vector<Node> nodes_;
   };
