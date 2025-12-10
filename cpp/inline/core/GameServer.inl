@@ -722,18 +722,18 @@ void GameServer<Game>::GameSlot::pre_step() {
   // get here with multiple threads
 
   chance_action_ = -1;
-  action_mode_ = Rules::get_action_mode(state_);
+  action_mode_ = Rules::get_action_mode(state());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
   if (!Rules::is_chance_mode(action_mode_)) {
-    active_seat_ = Rules::get_current_player(state_);
-    valid_actions_ = Rules::get_legal_moves(state_);
+    active_seat_ = Rules::get_current_player(state());
+    valid_actions_ = Rules::get_legal_moves(state());
   }
 }
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_action_ < 0) {
-    ChanceDistribution chance_dist = Rules::get_chance_distribution(state_);
+    ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
     chance_action_ = eigen_util::sample(chance_dist);
     Rules::apply(state_, chance_action_);
     apply_action(chance_action_);
@@ -743,7 +743,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChanceEventHandleRequest request(notification_unit, state_, chance_action_);
+    ChanceEventHandleRequest request(notification_unit, state(), chance_action_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 
@@ -768,14 +768,14 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   step_chance_player_index_ = 0;  // reset for next chance event
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state_, chance_action_, &player_names_);
+    Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
   for (auto player2 : players_) {
-    player2->receive_state_change(active_seat_, state_, chance_action_);
+    player2->receive_state_change(active_seat_, state(), chance_action_);
   }
 
   GameResultTensor outcome;
-  if (Game::Rules::is_terminal(state_, active_seat_, chance_action_, outcome)) {
+  if (Game::Rules::is_terminal(state(), active_seat_, chance_action_, outcome)) {
     handle_terminal(outcome, result);
     return false;
   }
@@ -873,14 +873,14 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     Rules::apply(state_, action);
     apply_action(action);
     if (params().print_game_states) {
-      Game::IO::print_state(std::cout, state_, action, &player_names_);
+      Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
     for (auto player2 : players_) {
-      player2->receive_state_change(active_seat_, state_, action);
+      player2->receive_state_change(active_seat_, state(), action);
     }
 
     GameResultTensor outcome;
-    if (Game::Rules::is_terminal(state_, active_seat_, action, outcome)) {
+    if (Game::Rules::is_terminal(state(), active_seat_, action, outcome)) {
       handle_terminal(outcome, result);
       return false;
     }
@@ -893,7 +893,7 @@ void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome
                                                  StepResult& result) {
   ValueArray array = GameResults::to_value_array(outcome);
   for (auto player2 : players_) {
-    player2->end_game(state_, outcome);
+    player2->end_game(state(), outcome);
   }
 
   if (params().announce_game_results) {
@@ -962,14 +962,14 @@ bool GameServer<Game>::GameSlot::start_game() {
     Rules::apply(state_, action);
     apply_action(action);
     for (int p = 0; p < kNumPlayers; ++p) {
-      players_[p]->receive_state_change(active_seat_, state_, action);
+      players_[p]->receive_state_change(active_seat_, state(), action);
     }
   }
 
   pre_step();
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state_, -1, &player_names_);
+    Game::IO::print_state(std::cout, state(), -1, &player_names_);
   }
 
   return true;
