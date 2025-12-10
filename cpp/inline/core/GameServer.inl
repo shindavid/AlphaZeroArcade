@@ -786,7 +786,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state_, valid_actions_, notification_unit);
+  ActionRequest request(state(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
 
 
@@ -954,6 +954,7 @@ bool GameServer<Game>::GameSlot::start_game() {
 
   Rules::init_state(state_);
   state_tree_.init();
+  RELEASE_ASSERT(state_tree_.state(0).aux.stable_discs == 0, "stable discs not set to 0");
   curr_state_ = state_tree_.state(0);
   state_node_index_ = 0;
   for (const core::action_t& action : shared_data_.initial_actions()) {
