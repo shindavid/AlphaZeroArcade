@@ -1244,14 +1244,14 @@ TEST(math, fast_coarse_batch_normal_cdf) {
 
   // 2) Monotonicity (x is strictly increasing)
   for (size_t i = 1; i < y.size(); ++i) {
-    EXPECT_LE(y[i - 1], y[i] + 1e-6f)
+    EXPECT_LE(y[i - 1], y[i])
       << "Non-monotone at i=" << i << " x[i-1]=" << x[i - 1] << " x[i]=" << x[i]
       << " y[i-1]=" << y[i - 1] << " y[i]=" << y[i];
   }
 
   // 3) Accuracy vs reference in [-2, 2]
   // With LUT/coarse approximations, a loose tolerance is appropriate.
-  constexpr float tol = 0.01f;
+  constexpr float tol = 0.0001f;
 
   for (size_t i = 0; i < x.size(); ++i) {
     float exact = ref_normal_cdf(x[i]);
