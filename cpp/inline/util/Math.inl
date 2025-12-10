@@ -1,38 +1,115 @@
 #include "util/Math.hpp"
 
+#include <algorithm>
+
 namespace math {
 
 namespace detail {
 
-inline float phi_exact(float x) {
-  // Used only for LUT initialization.
-  // Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))
-  return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f));
-}
-
 struct PhiLUT {
-  static constexpr int kSize = 257;
+  static constexpr int kSize = 256;
   static constexpr float kXMin = -4.0f;
   static constexpr float kXMax = 4.0f;
   static constexpr float kRange = kXMax - kXMin;
-  static constexpr float kScale = (kSize - 1) / kRange;
-  static constexpr float kInvScale = 1.0f / kScale;
+  static constexpr float kScale = (kSize - 4) / kRange;
 
+  // We set table[0], table[kSize-1], and table[kSize-2] to exact values to allow
+  // fast_coarse_batch_normal_cdf() to handle out-of-bounds inputs without branching.
   alignas(64) float table[kSize];
 
   PhiLUT() {
-    for (int i = 0; i < kSize; ++i) {
-      float t = static_cast<float>(i) / static_cast<float>(kSize - 1);  // [0,1]
+    // Exact left tail
+    table[0] = 0.0f;
+
+    for (int i = 1; i < kSize - 2; ++i) {
+      float t = float(i - 1) / (kSize - 4);
       float x = kXMin + t * kRange;
-      table[i] = phi_exact(x);
+      table[i] = normal_cdf(x);
     }
+
+    // Exact right tail (two slots)
+    table[kSize - 2] = 1.0f;
+    table[kSize - 1] = 1.0f;
   }
 };
 
 inline const PhiLUT& get_phi_lut() {
-  // Thread-safe static init since C++11.
   static const PhiLUT lut;
   return lut;
+}
+
+inline float pdf_exact(float x) {
+  // standard normal pdf
+  constexpr float inv_sqrt_2pi = 0.39894228040143267794f;
+  return inv_sqrt_2pi * std::exp(-0.5f * x * x);
+}
+
+// Very fast inverse-CDF guess (logistic approximation).
+inline float invphi_logistic_guess(float p) {
+  // Phi^{-1}(p) ~ log(p/(1-p)) / 1.702
+  constexpr float a = 1.702f;
+  // Clamp away from 0/1
+  p = std::clamp(p, 1e-6f, 1.0f - 1e-6f);
+  return std::log(p / (1.0f - p)) / a;
+}
+
+// ----------------------------
+// Inverse Phi LUT
+// ----------------------------
+struct InvPhiLUT {
+  static constexpr int kSize = 256;
+  static constexpr float kPMin = 1e-6f;
+  static constexpr float kPMax = 1.0f - 1e-6f;
+  static constexpr float kRange = kPMax - kPMin;
+  static constexpr float kScale = (kSize - 1) / kRange;
+
+  alignas(64) float table[kSize];
+
+  InvPhiLUT() {
+    for (int i = 0; i < kSize; ++i) {
+      float t = static_cast<float>(i) / static_cast<float>(kSize - 1);  // [0,1]
+      float p = kPMin + t * kRange;
+
+      // Initial guess
+      float x = invphi_logistic_guess(p);
+
+      // Two Newton refinements using exact CDF/PDF.
+      // x_{new} = x - (Phi(x) - p) / phi(x)
+      for (int it = 0; it < 2; ++it) {
+        float fx = normal_cdf(x) - p;
+        float d = pdf_exact(x);
+        // Guard against tiny derivative
+        x -= fx / std::max(d, 1e-12f);
+      }
+
+      table[i] = x;
+    }
+  }
+};
+
+inline const InvPhiLUT& get_invphi_lut() {
+  static const InvPhiLUT lut;
+  return lut;
+}
+
+// Fast inverse Phi using LUT + linear interpolation
+inline float fast_invphi_lut(float p) {
+  const auto& lut = get_invphi_lut();
+
+  // Clamp to LUT domain
+  p = std::clamp(p, InvPhiLUT::kPMin, InvPhiLUT::kPMax);
+
+  float t = (p - InvPhiLUT::kPMin) * InvPhiLUT::kScale;  // in [0, kSize-1)
+  int idx = static_cast<int>(t);
+
+  if (idx >= InvPhiLUT::kSize - 1) return lut.table[InvPhiLUT::kSize - 1];
+  if (idx < 0) return lut.table[0];
+
+  float frac = t - static_cast<float>(idx);
+
+  float a = lut.table[idx];
+  float b = lut.table[idx + 1];
+  return a + (b - a) * frac;
 }
 
 // log Phi(-z) for z >= 0  (upper-tail log-prob)
@@ -75,41 +152,39 @@ inline void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float
   using PhiLUT = detail::PhiLUT;
 
   constexpr float xmin = PhiLUT::kXMin;
-  constexpr float xmax = PhiLUT::kXMax;
   constexpr float scale = PhiLUT::kScale;
+  constexpr float tmax = float(PhiLUT::kSize - 2);
 
-  // Encourage vectorization where possible.
-  // Note: LUT access is effectively a gather; full SIMD speedups may be modest,
-  // but this loop is still very cheap.
-#if defined(__clang__)
-#pragma clang loop vectorize(enable) interleave(enable)
-#elif defined(__GNUC__)
-#pragma GCC ivdep
-#endif
   for (int i = 0; i < n; ++i) {
-    float xi = x[i];
+    float t = 1.0f + (x[i] - xmin) * scale;
+    t = std::clamp(t, 0.0f, tmax);
 
-    if (xi <= xmin) {
-      y[i] = 0.0f;
-      continue;
-    }
-    if (xi >= xmax) {
-      y[i] = 1.0f;  // If you *really* want 0 outside range, change this to 0.0f.
-      continue;
-    }
-
-    float t = (xi - xmin) * scale;  // [0, 255)
-    int idx = static_cast<int>(t);
-
-    // Defensive clamp
-    if (idx < 0) idx = 0;
-    if (idx > PhiLUT::kSize - 2) idx = PhiLUT::kSize - 2;
-
-    float frac = t - static_cast<float>(idx);
+    int idx = t;
+    float frac = t - idx;
 
     float a = lut.table[idx];
     float b = lut.table[idx + 1];
+
     y[i] = a + (b - a) * frac;
+  }
+}
+
+inline void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p,
+                                                               int n, float* __restrict y,
+                                                               float eps) {
+  float rmin[n];
+  float rmax[n];
+
+  for (int i = 0; i < n; ++i) {
+    float inv_denom = 1.0f / (p0 + p[i]);
+    rmin[i] = (p0 - eps) * inv_denom;
+    rmax[i] = (p0 + eps) * inv_denom;
+  }
+
+  for (int i = 0; i < n; ++i) {
+    float y_min = detail::fast_invphi_lut(rmin[i]);
+    float y_max = detail::fast_invphi_lut(rmax[i]);
+    y[i] = std::clamp(0.0f, y_min, y_max);
   }
 }
 

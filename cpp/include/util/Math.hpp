@@ -13,16 +13,36 @@ finiteness_t get_finiteness(T x) {
   throw std::runtime_error("get_finiteness() no longer valid after we enabled -ffast-math");
 }
 
-template <typename T>
-inline auto normal_cdf(T x) {
-  return float(0.5) * erfc(-x * M_SQRT1_2);
+inline float normal_cdf(float x) {
+  return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f));
 }
 
 // Very-fast coarse approximation of normal CDF for batch processing.
 //
+// Sets y[i] ~= Phi(x[i]) for i in [0, n).
+//
 // Under the hood, use a piecewise linear approximation with 256 segments over the range
 // [-4, +4], and clamp to 0 or 1 outside that range.
-inline void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y);
+void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y);
+
+// Very-fast coarse approximation of a specialized clamped-range inverse normal CDF calculation for
+// batch processing.
+//
+// Define
+//
+// f(x) = inverse_normal_cdf(x)
+//
+// with f(x) taking the values -inf at x<=0 and +inf at x>=1.
+//
+// For each i in [0, n), define R[i] to be the set of ratios q0 / (q0 + q[i]), where q0 is a float
+// in the range [p0 - eps, p0 + eps], and q[i] is a float in the range [p[i] - eps, p[i] + eps].
+//
+// Sets y[i] ~= clamp(0, m[i], M[i]), where
+//
+// m[i] = min_{r in R[i]} f(r)
+// M[i] = max_{r in R[i]} f(r)
+void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p, int n,
+                                                        float* __restrict y, float eps=0.01f);
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 inline uint64_t splitmix64(uint64_t x) {

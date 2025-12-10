@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <map>
@@ -19,6 +20,8 @@
 #ifndef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
+
+namespace {
 
 template <typename T>
 void test_zero_out() {
@@ -44,6 +47,47 @@ void test_zero_out() {
     }
   }
 }
+
+// Reference inverse normal CDF via bisection.
+// Slow but robust for unit testing.
+inline float ref_inv_normal_cdf(float p) {
+  // Clamp away from exact 0/1 to avoid infinite targets.
+  p = std::clamp(p, 1e-8f, 1.0f - 1e-8f);
+
+  float lo = -10.0f;
+  float hi = 10.0f;
+
+  // 80 iterations is overkill but still cheap in tests.
+  for (int it = 0; it < 80; ++it) {
+    float mid = 0.5f * (lo + hi);
+    float cmid = math::normal_cdf(mid);
+    if (cmid < p)
+      lo = mid;
+    else
+      hi = mid;
+  }
+  return 0.5f * (lo + hi);
+}
+
+// Expected output under the box-eps model.
+inline float expected_clamped_z(float p0, float pi, float eps) {
+  // Avoid degenerate denom in tests.
+  const float denom = p0 + pi;
+  if (denom <= 0.0f) return 0.0f;
+
+  const float num_min = std::max(0.0f, p0 - eps);
+  const float num_max = p0 + eps;
+
+  const float rmin = num_min / denom;
+  const float rmax = num_max / denom;
+
+  const float y_min = ref_inv_normal_cdf(rmin);
+  const float y_max = ref_inv_normal_cdf(rmax);
+
+  return std::clamp(0.0f, y_min, y_max);
+}
+
+}  // namespace
 
 TEST(BoostUtil, get_random_set_index) {
   util::Random::set_seed(1);
@@ -1213,13 +1257,6 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
-// Reference normal CDF using erf (slow but accurate).
-inline float ref_normal_cdf(float x) {
-  // Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))
-  constexpr float inv_sqrt2 = 0.7071067811865475244f;
-  return 0.5f * (1.0f + std::erff(x * inv_sqrt2));
-}
-
 TEST(math, fast_coarse_batch_normal_cdf) {
   // Build x = 0.01 * k for k in [-200, 200]
   constexpr int kMin = -200;
@@ -1244,9 +1281,8 @@ TEST(math, fast_coarse_batch_normal_cdf) {
 
   // 2) Monotonicity (x is strictly increasing)
   for (size_t i = 1; i < y.size(); ++i) {
-    EXPECT_LE(y[i - 1], y[i])
-      << "Non-monotone at i=" << i << " x[i-1]=" << x[i - 1] << " x[i]=" << x[i]
-      << " y[i-1]=" << y[i - 1] << " y[i]=" << y[i];
+    EXPECT_LE(y[i - 1], y[i]) << "Non-monotone at i=" << i << " x[i-1]=" << x[i - 1]
+                              << " x[i]=" << x[i] << " y[i-1]=" << y[i - 1] << " y[i]=" << y[i];
   }
 
   // 3) Accuracy vs reference in [-2, 2]
@@ -1254,7 +1290,7 @@ TEST(math, fast_coarse_batch_normal_cdf) {
   constexpr float tol = 0.0001f;
 
   for (size_t i = 0; i < x.size(); ++i) {
-    float exact = ref_normal_cdf(x[i]);
+    float exact = math::normal_cdf(x[i]);
     EXPECT_NEAR(y[i], exact, tol) << "x=" << x[i];
   }
 
@@ -1312,6 +1348,104 @@ TEST(math, fast_coarse_batch_normal_cdf_edge_cases) {
     for (int i = 0; i < n; ++i) {
       EXPECT_EQ(y[i], 1.0f) << "x=" << x[i];
     }
+  }
+}
+
+TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_n0) {
+  float p0 = 0.2f;
+  std::vector<float> p;
+  std::vector<float> y;
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), 0, y.data(), 0.01f);
+  SUCCEED();
+}
+
+TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_equal_probs_gives_zero) {
+  const float p0 = 0.2f;
+  const float eps = 0.01f;
+
+  std::vector<float> p = {0.2f, 0.2f, 0.2f, 0.2f};
+  std::vector<float> y(p.size(), 123.0f);
+
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
+                                                           eps);
+
+  for (size_t i = 0; i < y.size(); ++i) {
+    EXPECT_NEAR(y[i], 0.0f, 1e-3f) << "i=" << i;
+  }
+}
+
+TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_sign_sanity) {
+  const float eps = 0.01f;
+
+  // p0 dominates -> expect positive z-barrier
+  {
+    float p0 = 0.30f;
+    std::vector<float> p = {0.05f, 0.10f, 0.15f};
+    std::vector<float> y(p.size(), 0.0f);
+
+    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
+                                                             eps);
+
+    for (float v : y) {
+      EXPECT_GT(v, 0.0f);
+    }
+  }
+
+  // p0 is dominated -> expect negative z-barrier
+  {
+    float p0 = 0.10f;
+    std::vector<float> p = {0.20f, 0.30f, 0.50f};
+    std::vector<float> y(p.size(), 0.0f);
+
+    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
+                                                             eps);
+
+    for (float v : y) {
+      EXPECT_LT(v, 0.0f);
+    }
+  }
+}
+
+TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_eps_zero_matches_point_ratio) {
+  const float p0 = 0.30f;
+  const float pi = 0.10f;
+  const float eps = 0.0f;
+
+  std::vector<float> p = {pi};
+  std::vector<float> y(1, 0.0f);
+
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), 1, y.data(), eps);
+
+  const float r = p0 / (p0 + pi);  // 0.75
+  const float z_ref = ref_inv_normal_cdf(r);
+
+  // Should be close-ish to the point estimate when eps=0.
+  EXPECT_NEAR(y[0], z_ref, 1e-2f);
+}
+
+TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_matches_reference_model_dense_grid) {
+  const float p0 = 0.23f;
+  const float eps = 0.01f;
+
+  // p in [0, 1] with 0.01 increments
+  std::vector<float> p;
+  p.reserve(101);
+  for (int k = 0; k <= 100; ++k) {
+    p.push_back(0.01f * static_cast<float>(k));
+  }
+
+  std::vector<float> y(p.size(), 0.0f);
+
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), static_cast<int>(p.size()),
+                                                           y.data(), eps);
+
+  for (size_t i = 0; i < p.size(); ++i) {
+    float expected = expected_clamped_z(p0, p[i], eps);
+
+    constexpr float tol = .0001f;
+
+    EXPECT_NEAR(y[i], expected, tol)
+      << "i=" << i << " p[i]=" << p[i] << " p0=" << p0 << " eps=" << eps;
   }
 }
 
