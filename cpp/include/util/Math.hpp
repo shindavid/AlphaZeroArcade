@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 
 namespace math {
 
@@ -9,13 +10,19 @@ enum finiteness_t : int8_t { kFinite, kPosInf, kNegInf };
 
 template <typename T>
 finiteness_t get_finiteness(T x) {
-  return std::isfinite(x) ? kFinite : (x > 0 ? kPosInf : kNegInf);
+  throw std::runtime_error("get_finiteness() no longer valid after we enabled -ffast-math");
 }
 
 template <typename T>
 inline auto normal_cdf(T x) {
   return float(0.5) * erfc(-x * M_SQRT1_2);
 }
+
+// Very-fast coarse approximation of normal CDF for batch processing.
+//
+// Under the hood, use a piecewise linear approximation with 256 segments over the range
+// [-4, +4], and clamp to 0 or 1 outside that range.
+inline void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y);
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 inline uint64_t splitmix64(uint64_t x) {

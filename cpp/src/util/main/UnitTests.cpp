@@ -1213,18 +1213,84 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
-TEST(math, finiteness) {
-  EXPECT_EQ(math::get_finiteness(std::numeric_limits<double>::infinity()), math::kPosInf);
-  EXPECT_EQ(math::get_finiteness(-std::numeric_limits<double>::infinity()), math::kNegInf);
-  EXPECT_EQ(math::get_finiteness(0), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(0.0f), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(0.0), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(1), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(1.0f), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(1.0), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(-1), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(-1.0f), math::kFinite);
-  EXPECT_EQ(math::get_finiteness(-1.0), math::kFinite);
+// Reference normal CDF using erf (slow but accurate).
+inline float ref_normal_cdf(float x) {
+  // Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))
+  constexpr float inv_sqrt2 = 0.7071067811865475244f;
+  return 0.5f * (1.0f + std::erff(x * inv_sqrt2));
+}
+
+TEST(math, fast_coarse_batch_normal_cdf) {
+  // Build x = 0.01 * k for k in [-200, 200]
+  constexpr int kMin = -200;
+  constexpr int kMax = 200;
+  constexpr int n = (kMax - kMin + 1);
+
+  std::vector<float> x;
+  x.reserve(n);
+  for (int k = kMin; k <= kMax; ++k) {
+    x.push_back(0.01f * static_cast<float>(k));
+  }
+
+  std::vector<float> y(x.size(), -1.0f);
+
+  math::fast_coarse_batch_normal_cdf(x.data(), static_cast<int>(x.size()), y.data());
+
+  // 1) Range sanity
+  for (size_t i = 0; i < y.size(); ++i) {
+    EXPECT_GE(y[i], 0.0f) << "y[" << i << "]";
+    EXPECT_LE(y[i], 1.0f) << "y[" << i << "]";
+  }
+
+  // 2) Monotonicity (x is strictly increasing)
+  for (size_t i = 1; i < y.size(); ++i) {
+    EXPECT_LE(y[i - 1], y[i] + 1e-6f)
+      << "Non-monotone at i=" << i << " x[i-1]=" << x[i - 1] << " x[i]=" << x[i]
+      << " y[i-1]=" << y[i - 1] << " y[i]=" << y[i];
+  }
+
+  // 3) Accuracy vs reference in [-2, 2]
+  // With LUT/coarse approximations, a loose tolerance is appropriate.
+  constexpr float tol = 0.01f;
+
+  for (size_t i = 0; i < x.size(); ++i) {
+    float exact = ref_normal_cdf(x[i]);
+    EXPECT_NEAR(y[i], exact, tol) << "x=" << x[i];
+  }
+
+  // 4) Spot-check the midpoint is reasonably close
+  // Find k=0 => x=0
+  const size_t mid = static_cast<size_t>(-kMin);  // index where k==0
+  ASSERT_LT(mid, x.size());
+  EXPECT_NEAR(x[mid], 0.0f, 1e-8f);
+  EXPECT_NEAR(y[mid], 0.5f, 0.01f);
+}
+
+TEST(math, fast_coarse_batch_normal_cdf_repeated_values) {
+  // Repeated values should produce identical outputs.
+  float values[] = {-17.0f, -1.0f, 0.0f, 0.1f, 3.0f, +17.0f};
+  for (float v : values) {
+    std::vector<float> x(1024, v);
+    std::vector<float> y(1024, -1.0f);
+
+    math::fast_coarse_batch_normal_cdf(x.data(), static_cast<int>(x.size()), y.data());
+
+    EXPECT_GE(y[0], 0.0f) << "v=" << v;
+    EXPECT_LE(y[0], 1.0f) << "v=" << v;
+    for (size_t i = 1; i < y.size(); ++i) {
+      EXPECT_EQ(y[i], y[0]) << "v=" << v << " i=" << i;
+    }
+  }
+}
+
+TEST(math, fast_coarse_batch_normal_cdf_small_batch_edge_cases) {
+  // n=0 should be safe/no-op.
+  {
+    std::vector<float> x;
+    std::vector<float> y;
+    math::fast_coarse_batch_normal_cdf(x.data(), 0, y.data());
+    SUCCEED();
+  }
 }
 
 TEST(math, normal_cdf) {
@@ -1307,10 +1373,6 @@ static inline long double log_alpha_ref_ld(long double z_new, long double z_old)
 // Absolute comparison on log-scale (since we directly return logs now)
 static inline ::testing::AssertionResult NearAbsLog(double log_a, long double log_b,
                                                     double tol_abs) {
-  if (!std::isfinite(log_a) || !std::isfinite((double)log_b)) {
-    return ::testing::AssertionFailure()
-           << "Non-finite values: log_a=" << log_a << ", log_b=" << (double)log_b;
-  }
   const long double diff = std::fabs((long double)log_a - log_b);
   if (diff <= tol_abs) return ::testing::AssertionSuccess();
   return ::testing::AssertionFailure() << "log_a=" << log_a << " log_b=" << (double)log_b
@@ -1393,7 +1455,6 @@ TEST(math, normal_cdf_logit_diff_VectorizedSweepSanity) {
   for (double zo : zs) {
     for (double zn : zs) {
       const double d = math::normal_cdf_logit_diff(zn, zo);
-      ASSERT_TRUE(std::isfinite(d)) << "non-finite for zn=" << zn << " zo=" << zo;
       if (zn > zo) {
         EXPECT_GT(d, 0.0);
       } else if (zn < zo) {

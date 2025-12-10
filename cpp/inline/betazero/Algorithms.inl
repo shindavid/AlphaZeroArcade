@@ -560,7 +560,8 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
   bool any_pos_inf = false;
   bool any_neg_inf = false;
   for (int i = 0; i < arr_size; i++) {
-    finiteness_arr[i] = math::get_finiteness(theta_arr[i]);
+    // finiteness_arr[i] = math::get_finiteness(theta_arr[i]);
+    finiteness_arr[i] = math::kFinite;  // TEMPORARY: to silence gcc, all this code will be gone
     any_pos_inf |= (finiteness_arr[i] == math::kPosInf);
     any_neg_inf |= (finiteness_arr[i] == math::kNegInf);
   }

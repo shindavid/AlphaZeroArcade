@@ -88,6 +88,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${EXTRA_DEFINITIONS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=50")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math")
 
 # -fconcepts-diagnostics-depth works for gcc but not clang. Our .clangd filters it out:
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
@@ -190,9 +191,6 @@ function(add_game)
         # build the two object-libs
         add_library(${AG_NAME}_common_objs  OBJECT ${AG_SOURCES})
         set_target_properties(${AG_NAME}_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        # # Enable fast-math for non-test common objects (C++ only)
-        # target_compile_options(${AG_NAME}_common_objs PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-ffast-math>)
-
         add_library(${AG_NAME}_common_objs_test OBJECT ${AG_SOURCES})
         set_target_properties(${AG_NAME}_common_objs_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
         target_compile_definitions(${AG_NAME}_common_objs_test PRIVATE ${TEST_COMPILE_DEFINITIONS})
@@ -233,8 +231,6 @@ function(add_game)
     # 5) Normal executable
     if (AG_EXE)
         add_executable(${AG_NAME}_exe ${AG_EXE})
-        # # Enable fast-math for non-test executable (C++ only)
-        # target_compile_options(${AG_NAME}_exe PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-ffast-math>)
         target_link_libraries(${AG_NAME}_exe
             PRIVATE
             ${_link_objs}
@@ -251,8 +247,6 @@ function(add_game)
     if (AG_FFI)
         add_library(${AG_NAME}_ffi SHARED ${AG_FFI})
         set_target_properties(${AG_NAME}_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        # # Enable fast-math for non-test FFI (C++ only)
-        # target_compile_options(${AG_NAME}_ffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-ffast-math>)
         target_link_libraries(${AG_NAME}_ffi
             PRIVATE
             ${_link_objs}
