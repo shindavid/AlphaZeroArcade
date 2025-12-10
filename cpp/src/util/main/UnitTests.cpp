@@ -1283,13 +1283,35 @@ TEST(math, fast_coarse_batch_normal_cdf_repeated_values) {
   }
 }
 
-TEST(math, fast_coarse_batch_normal_cdf_small_batch_edge_cases) {
+TEST(math, fast_coarse_batch_normal_cdf_edge_cases) {
   // n=0 should be safe/no-op.
   {
     std::vector<float> x;
     std::vector<float> y;
     math::fast_coarse_batch_normal_cdf(x.data(), 0, y.data());
     SUCCEED();
+  }
+
+  // small values should give 0.0f
+  {
+    constexpr int n = 3;
+    float x[n] = {-20.0f, -50.0f, -100.0f};
+    float y[n] = {-1.0f, -1.0f, -1.0f};
+    math::fast_coarse_batch_normal_cdf(x, n, y);
+    for (int i = 0; i < n; ++i) {
+      EXPECT_EQ(y[i], 0.0f) << "x=" << x[i];
+    }
+  }
+
+  // large values should give 1.0f
+  {
+    constexpr int n = 3;
+    float x[n] = {20.0f, 50.0f, 100.0f};
+    float y[n] = {-1.0f, -1.0f, -1.0f};
+    math::fast_coarse_batch_normal_cdf(x, n, y);
+    for (int i = 0; i < n; ++i) {
+      EXPECT_EQ(y[i], 1.0f) << "x=" << x[i];
+    }
   }
 }
 
