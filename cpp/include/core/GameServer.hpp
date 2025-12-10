@@ -169,11 +169,10 @@ class GameServer
     const State& state(node_ix_t ix) const;
     void init();
     node_ix_t advance(node_ix_t ix, action_t action);
-
-   private:
     static constexpr node_ix_t null_node_ix = -1;
     static constexpr action_t null_action = -1;
 
+   private:
     struct Node {
       const State state;
       const node_ix_t parent_ix;
@@ -238,7 +237,7 @@ class GameServer
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = 0;
+    node_ix_t state_node_index_ = StateTree::null_node_ix;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
