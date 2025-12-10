@@ -1245,6 +1245,7 @@ GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, a
   if (last_child_ix != null_node_ix) {
     nodes_[last_child_ix].next_sibling_ix = new_ix;
   }
+  nodes_[new_ix].prev_sibling_ix = last_child_ix;
 
   return new_ix;
 }
