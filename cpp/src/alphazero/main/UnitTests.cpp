@@ -177,7 +177,8 @@ class ManagerTest : public testing::Test {
     const SearchResults* result = search(num_search);
 
     auto root = util::Repo::root();
-    boost::filesystem::path base_dir = root / "goldenfiles" / "alphazero_tests";
+    std::string build = IS_DEFINED(DEBUG_BUILD) ? "Debug" : "Release";
+    boost::filesystem::path base_dir = root / "goldenfiles" / build / "alphazero_tests";
 
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");

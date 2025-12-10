@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 
 namespace math {
 
@@ -9,7 +10,7 @@ enum finiteness_t : int8_t { kFinite, kPosInf, kNegInf };
 
 template <typename T>
 finiteness_t get_finiteness(T x) {
-  return std::isfinite(x) ? kFinite : (x > 0 ? kPosInf : kNegInf);
+  throw std::runtime_error("get_finiteness() no longer valid after we enabled -ffast-math");
 }
 
 template <typename T>

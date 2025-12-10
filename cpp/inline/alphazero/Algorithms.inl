@@ -708,8 +708,9 @@ void AlgorithmsBase<Traits, Derived>::prune_policy_target(group::element_t inv_s
 
   auto PUCT_max = PUCT(mE_max_index);
   auto sqrt_mE = sqrt(mE_sum + PuctCalculator::eps);
+  auto denom = PUCT_max - 2 * Q;
 
-  LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / (PUCT_max - 2 * Q) - 1;
+  LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / denom - 1;
 
   int n_actions = root->stable_data().num_valid_actions;
   for (int i = 0; i < n_actions; ++i) {
@@ -719,7 +720,7 @@ void AlgorithmsBase<Traits, Derived>::prune_policy_target(group::element_t inv_s
       continue;
     }
     if (mE(i) == mE_max) continue;
-    if (!isfinite(mE_floor(i))) continue;
+    if (denom(i) == 0) continue;
     if (mE_floor(i) >= mE(i)) continue;
     auto n = std::max(mE_floor(i), mE(i) - n_forced(i));
     if (n <= 1.0) {
