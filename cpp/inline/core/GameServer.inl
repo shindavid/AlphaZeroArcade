@@ -735,7 +735,6 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_action_ < 0) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
     chance_action_ = eigen_util::sample(chance_dist);
-    Rules::apply(state_, chance_action_);
     apply_action(chance_action_);
   }
 
@@ -789,25 +788,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   ActionRequest request(state(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
 
-
-  State state_before = state_;
-  State tree_state_before = state();
-  DEBUG_ASSERT(state_.aux.stable_discs == state().aux.stable_discs,
-               "stable discs mismatch before get_action_response");
-
   ActionResponse response = player->get_action_response(request);
-
-  DEBUG_ASSERT(state_before == state_, "State changed during action request");
-  DEBUG_ASSERT(state_before.aux.stable_discs == state_.aux.stable_discs,
-               "state_ aux ERROR: stable discs mismatch after get_action_response");
-
-  DEBUG_ASSERT(tree_state_before == state(), "Tree State changed during get_action_response");
-  DEBUG_ASSERT(tree_state_before.aux.stable_discs == state().aux.stable_discs,
-               "tree state_ aux ERROR: stable discs mismatch after get_action_response");
-
-  DEBUG_ASSERT(state_.aux.stable_discs == state().aux.stable_discs,
-               "stable discs mismatch after get_action_response");
-
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
@@ -870,7 +851,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     // the server.
     RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
 
-    Rules::apply(state_, action);
     apply_action(action);
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state(), action, &player_names_);
@@ -952,14 +932,10 @@ bool GameServer<Game>::GameSlot::start_game() {
   noisy_mode_ = false;
   mid_yield_ = false;
 
-  Rules::init_state(state_);
   state_tree_.init();
-  RELEASE_ASSERT(state_tree_.state(0).aux.stable_discs == 0, "stable discs not set to 0");
-  curr_state_ = state_tree_.state(0);
   state_node_index_ = 0;
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
-    Rules::apply(state_, action);
     apply_action(action);
     for (int p = 0; p < kNumPlayers; ++p) {
       players_[p]->receive_state_change(active_seat_, state(), action);
