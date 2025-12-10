@@ -166,7 +166,7 @@ class GameServer
 
   class StateTree {
    public:
-    const State& state(node_ix_t ix) const { return nodes_[ix].state; }
+    const State& state(node_ix_t ix) const;
     void init();
     node_ix_t advance(node_ix_t ix, action_t action);
 

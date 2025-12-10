@@ -1220,7 +1220,14 @@ void GameServer<Game>::StateTree::init() {
 }
 
 template <concepts::Game Game>
+const GameServer<Game>::State& GameServer<Game>::StateTree::state(node_ix_t ix) const {
+  DEBUG_ASSERT(ix < nodes_.size());
+  return nodes_[ix].state;
+}
+
+template <concepts::Game Game>
 GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, action_t action) {
+  DEBUG_ASSERT(ix < nodes_.size());
   State new_state = nodes_[ix].state;
   Rules::apply(new_state, action);
 
