@@ -789,7 +789,25 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   ActionRequest request(state_, valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
 
+
+  State state_before = state_;
+  State tree_state_before = state();
+  DEBUG_ASSERT(state_.aux.stable_discs == state().aux.stable_discs,
+               "stable discs mismatch before get_action_response");
+
   ActionResponse response = player->get_action_response(request);
+
+  DEBUG_ASSERT(state_before == state_, "State changed during action request");
+  DEBUG_ASSERT(state_before.aux.stable_discs == state_.aux.stable_discs,
+               "state_ aux ERROR: stable discs mismatch after get_action_response");
+
+  DEBUG_ASSERT(tree_state_before == state(), "Tree State changed during get_action_response");
+  DEBUG_ASSERT(tree_state_before.aux.stable_discs == state().aux.stable_discs,
+               "tree state_ aux ERROR: stable discs mismatch after get_action_response");
+
+  DEBUG_ASSERT(state_.aux.stable_discs == state().aux.stable_discs,
+               "stable discs mismatch after get_action_response");
+
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));

@@ -201,7 +201,12 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    const State& state() const { return state_; }
+    const State& state() const {
+      const auto& tree_state = state_tree_.state(state_node_index_);
+      DEBUG_ASSERT(tree_state == state_, "state core mismatch");
+      DEBUG_ASSERT(tree_state.aux.stable_discs == state_.aux.stable_discs, "stable discs mismatch");
+      return tree_state;
+    }
     void apply_action(action_t action) {
       state_node_index_ = state_tree_.advance(state_node_index_, action);
       curr_state_ = state_tree_.state(state_node_index_);
