@@ -6,6 +6,36 @@ namespace math {
 
 namespace detail {
 
+// ----------------------------
+// Logit LUT
+// ----------------------------
+struct LogitLUT {
+  static constexpr int kSize = 256;
+  static constexpr float kMuMin = 1e-4f;
+  static constexpr float kMuMax = 1.0f - 1e-4f;
+  static constexpr float kRange = kMuMax - kMuMin;
+  static constexpr float kScale = (kSize - 1) / kRange;
+
+  alignas(64) float table[kSize];
+
+  LogitLUT() {
+    for (int i = 0; i < kSize; ++i) {
+      float t = static_cast<float>(i) / static_cast<float>(kSize - 1);  // 0..1
+      float mu = kMuMin + t * kRange;
+      // exact logit for the LUT construction
+      table[i] = std::log(mu / (1.0f - mu));
+    }
+  }
+};
+
+inline const LogitLUT& get_logit_lut() {
+  static const LogitLUT lut;
+  return lut;
+}
+
+// ----------------------------
+// Phi LUT
+// ----------------------------
 struct PhiLUT {
   static constexpr int kSize = 256;
   static constexpr float kXMin = -4.0f;
@@ -146,6 +176,24 @@ inline double log_odds_normal(double z) {
 }
 
 }  // namespace detail
+
+inline float fast_coarse_logit(float mu) {
+  const auto& lut = detail::get_logit_lut();
+  using LUT = detail::LogitLUT;
+
+  float x = std::clamp(mu, LUT::kMuMin, LUT::kMuMax);
+
+  float t = (x - LUT::kMuMin) * LUT::kScale;
+  int idx = static_cast<int>(t);
+  if (idx >= LUT::kSize - 1) idx = LUT::kSize - 2;
+
+  float frac = t - static_cast<float>(idx);
+
+  float a = lut.table[idx];
+  float b = lut.table[idx + 1];
+
+  return a + (b - a) * frac;
+}
 
 inline void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y) {
   const auto& lut = detail::get_phi_lut();

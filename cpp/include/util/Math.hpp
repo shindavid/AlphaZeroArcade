@@ -17,6 +17,12 @@ inline float normal_cdf(float x) {
   return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f));
 }
 
+// Approximates logit(x).
+//
+// Returns a value close to log(x / (1 - x)), but uses a fast approximation that is less accurate
+// when x is very close to 0 or 1.
+float fast_coarse_logit(float x);
+
 // Very-fast coarse approximation of normal CDF for batch processing.
 //
 // Sets y[i] ~= Phi(x[i]) for i in [0, n).

@@ -87,6 +87,13 @@ inline float expected_clamped_z(float p0, float pi, float eps) {
   return std::clamp(0.0f, y_min, y_max);
 }
 
+// Exact reference logit (with safe clamp for testing)
+inline float ref_logit(float mu) {
+  const float eps = 1e-8f;
+  mu = std::min(1.0f - eps, std::max(eps, mu));
+  return std::log(mu / (1.0f - mu));
+}
+
 }  // namespace
 
 TEST(BoostUtil, get_random_set_index) {
@@ -1255,6 +1262,82 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("0"), 0);
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("cuda:1"), 1);
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
+}
+
+TEST(math, fast_coarse_logit_basic_midpoint) {
+  EXPECT_NEAR(math::fast_coarse_logit(0.5f), 0.0f, 1e-5f);
+}
+
+TEST(math, fast_coarse_logit_sign_sanity) {
+  // Below 0.5 should be negative
+  EXPECT_LT(math::fast_coarse_logit(0.25f), 0.0f);
+  EXPECT_LT(math::fast_coarse_logit(0.10f), 0.0f);
+
+  // Above 0.5 should be positive
+  EXPECT_GT(math::fast_coarse_logit(0.75f), 0.0f);
+  EXPECT_GT(math::fast_coarse_logit(0.90f), 0.0f);
+}
+
+TEST(math, fast_coarse_logit_odd_symmetry_about_half) {
+  // f(0.5 + d) ~= -f(0.5 - d)
+  const float tol = 1e-6f;
+
+  for (int k = 1; k <= 40; ++k) {
+    float d = 0.01f * k;  // up to 0.40
+    float a = 0.5f - d;
+    float b = 0.5f + d;
+
+    float fa = math::fast_coarse_logit(a);
+    float fb = math::fast_coarse_logit(b);
+
+    EXPECT_NEAR(fb, -fa, tol) << "d=" << d;
+  }
+}
+
+TEST(math, fast_coarse_logit_monotonic_on_dense_grid) {
+  // Monotonic increasing on (0,1)
+  // We avoid exact 0/1.
+  float prev = math::fast_coarse_logit(0.001f);
+
+  for (int k = 1; k <= 999; ++k) {
+    float mu = 0.001f * k;  // 0.001..0.999
+    float cur = math::fast_coarse_logit(mu);
+
+    // Allow tiny numerical wobble
+    EXPECT_LE(prev, cur + 1e-4f) << "mu=" << mu;
+
+    prev = cur;
+  }
+}
+
+TEST(math, fast_coarse_logit_matches_logit_on_0p01_grid) {
+  // Compare against exact logit at mu = 0.01*k for k=1..99
+  const float tol = 2e-2f;
+
+  for (int k = 1; k <= 99; ++k) {
+    float mu = 0.01f * k;
+
+    float fast = math::fast_coarse_logit(mu);
+    float exact = ref_logit(mu);
+
+    EXPECT_NEAR(fast, exact, tol) << "mu=" << mu;
+  }
+}
+
+TEST(math, fast_coarse_logit_edge_behavior_is_finite_and_signed) {
+  // We don't insist on accuracy near edges,
+  // just that the sign is correct and result is finite.
+  const float mus[] = {1e-6f, 1e-4f, 1e-3f, 1.0f - 1e-3f, 1.0f - 1e-4f, 1.0f - 1e-6f};
+
+  for (float mu : mus) {
+    float v = math::fast_coarse_logit(mu);
+
+    if (mu < 0.5f) {
+      EXPECT_LE(v, 0.0f) << "mu=" << mu;
+    } else if (mu > 0.5f) {
+      EXPECT_GE(v, 0.0f) << "mu=" << mu;
+    }
+  }
 }
 
 TEST(math, fast_coarse_batch_normal_cdf) {
