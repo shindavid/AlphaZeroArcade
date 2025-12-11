@@ -1214,7 +1214,7 @@ std::string GameServer<Game>::get_results_str(const results_map_t& map) {
 template <concepts::Game Game>
 void GameServer<Game>::StateTree::init() {
   nodes_.clear();
-  State state{};
+  State state;
   Rules::init_state(state);
   nodes_.emplace_back(state);
 }
