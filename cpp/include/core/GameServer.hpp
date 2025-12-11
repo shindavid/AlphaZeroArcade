@@ -82,7 +82,6 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
-  using action_t = core::action_t;
   using action_vec_t = std::vector<action_t>;
 
   /*
