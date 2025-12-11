@@ -15,6 +15,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -81,7 +82,7 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
-  using action_vec_t = std::vector<core::action_t>;
+  using action_vec_t = std::vector<action_t>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -160,6 +161,29 @@ class GameServer
 
  private:
   class SharedData;  // forward declaration
+  using node_ix_t = int32_t;
+
+  class StateTree {
+   public:
+    const State& state(node_ix_t ix) const;
+    void init();
+    node_ix_t advance(node_ix_t ix, action_t action);
+    static constexpr node_ix_t kNullNodeIx = -1;
+    static constexpr action_t kNullAction = -1;
+
+   private:
+    struct Node {
+      const State state;
+      const node_ix_t parent_ix;
+      const action_t action_from_parent;
+      node_ix_t first_child_ix = kNullNodeIx;
+      node_ix_t next_sibling_ix = kNullNodeIx;
+
+      Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
+          : state(s), parent_ix(p), action_from_parent(a) {}
+    };
+    std::vector<Node> nodes_;
+  };
 
   class GameSlot {
    public:
@@ -179,7 +203,10 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    const State& state() const { return state_; }
+    const State& state() const { return state_tree_.state(state_node_index_); }
+    void apply_action(action_t action) {
+      state_node_index_ = state_tree_.advance(state_node_index_, action);
+    }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -207,7 +234,8 @@ class GameServer
     bool game_started_ = false;
 
     // Updated for each move
-    State state_;
+    StateTree state_tree_;
+    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
