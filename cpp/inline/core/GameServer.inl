@@ -1228,12 +1228,10 @@ const GameServer<Game>::State& GameServer<Game>::StateTree::state(node_ix_t ix) 
 template <concepts::Game Game>
 GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, action_t action) {
   DEBUG_ASSERT(ix < nodes_.size());
-  State new_state = nodes_[ix].state;
-  Rules::apply(new_state, action);
 
   node_ix_t last_child_ix = null_node_ix;
   for (node_ix_t i = nodes_[ix].first_child_ix; i != null_node_ix; i = nodes_[i].next_sibling_ix) {
-    if (new_state == nodes_[i].state) {
+    if (action == nodes_[i].action_from_parent) {
       return i;
     }
 
@@ -1241,6 +1239,9 @@ GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, a
       last_child_ix = i;
     }
   }
+
+  State new_state = nodes_[ix].state;
+  Rules::apply(new_state, action);
 
   nodes_.emplace_back(new_state, ix, action);
   node_ix_t new_ix = nodes_.size() - 1;
@@ -1252,7 +1253,6 @@ GameServer<Game>::node_ix_t GameServer<Game>::StateTree::advance(node_ix_t ix, a
   if (last_child_ix != null_node_ix) {
     nodes_[last_child_ix].next_sibling_ix = new_ix;
   }
-  nodes_[new_ix].prev_sibling_ix = last_child_ix;
 
   return new_ix;
 }
