@@ -162,7 +162,7 @@ class GameServer
 
  private:
   class SharedData;  // forward declaration
-  using node_ix_t = int64_t;
+  using node_ix_t = int32_t;
 
   class StateTree {
    public:
@@ -179,7 +179,6 @@ class GameServer
       const action_t action_from_parent;
       node_ix_t first_child_ix = null_node_ix;
       node_ix_t next_sibling_ix = null_node_ix;
-      node_ix_t prev_sibling_ix = null_node_ix;
 
       Node(const State& s, node_ix_t p = null_node_ix, action_t a = null_action)
           : state(s), parent_ix(p), action_from_parent(a) {}
