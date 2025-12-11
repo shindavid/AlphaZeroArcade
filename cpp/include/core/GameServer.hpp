@@ -169,18 +169,18 @@ class GameServer
     const State& state(node_ix_t ix) const;
     void init();
     node_ix_t advance(node_ix_t ix, action_t action);
-    static constexpr node_ix_t null_node_ix = -1;
-    static constexpr action_t null_action = -1;
+    static constexpr node_ix_t kNullNodeIx = -1;
+    static constexpr action_t kNullAction = -1;
 
    private:
     struct Node {
       const State state;
       const node_ix_t parent_ix;
       const action_t action_from_parent;
-      node_ix_t first_child_ix = null_node_ix;
-      node_ix_t next_sibling_ix = null_node_ix;
+      node_ix_t first_child_ix = kNullNodeIx;
+      node_ix_t next_sibling_ix = kNullNodeIx;
 
-      Node(const State& s, node_ix_t p = null_node_ix, action_t a = null_action)
+      Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
           : state(s), parent_ix(p), action_from_parent(a) {}
     };
     std::vector<Node> nodes_;
@@ -236,7 +236,7 @@ class GameServer
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = StateTree::null_node_ix;
+    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
