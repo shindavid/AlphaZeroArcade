@@ -4,6 +4,7 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
@@ -83,6 +84,8 @@ class GameServer
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using action_vec_t = std::vector<action_t>;
+  using StateTree = GameStateTree<Game>;
+  using node_ix_t = StateTree::node_ix_t;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -161,30 +164,6 @@ class GameServer
 
  private:
   class SharedData;  // forward declaration
-  using node_ix_t = int32_t;
-
-  class StateTree {
-   public:
-    const State& state(node_ix_t ix) const;
-    void init();
-    node_ix_t advance(node_ix_t ix, action_t action);
-    static constexpr node_ix_t kNullNodeIx = -1;
-    static constexpr action_t kNullAction = -1;
-
-   private:
-    struct Node {
-      const State state;
-      const node_ix_t parent_ix;
-      const action_t action_from_parent;
-      node_ix_t first_child_ix = kNullNodeIx;
-      node_ix_t next_sibling_ix = kNullNodeIx;
-
-      Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
-          : state(s), parent_ix(p), action_from_parent(a) {}
-    };
-    std::vector<Node> nodes_;
-  };
-
   class GameSlot {
    public:
     GameSlot(SharedData&, game_slot_index_t);
