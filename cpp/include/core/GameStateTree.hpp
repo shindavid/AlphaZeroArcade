@@ -22,6 +22,7 @@ class GameStateTree {
   const State& state(node_ix_t ix) const;
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
+  const void*& get_player_aux_data(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
 
  private:
   struct Node {
@@ -32,7 +33,7 @@ class GameStateTree {
     node_ix_t next_sibling_ix = kNullNodeIx;
 
     // Auxilary data for players. Each player can store a pointer here for their *private* reference.
-    uint64_t aux[Constants::kNumPlayers];
+    const void* aux[Constants::kNumPlayers];
 
     Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
         : state(s), parent_ix(p), action_from_parent(a) {}
