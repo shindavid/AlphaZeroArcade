@@ -130,9 +130,9 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
-  const ActionRequest& request, void*& player_aux_data) {
+  const ActionRequest& request, const void*& player_aux_data) {
   if (player_aux_data) {
-    SearchResults* mcts_results = static_cast<SearchResults*>(player_aux_data);
+    const SearchResults* mcts_results = static_cast<const SearchResults*>(player_aux_data);
     return get_action_response_helper(mcts_results, request);
   }
 
