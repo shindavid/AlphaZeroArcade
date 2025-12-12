@@ -26,7 +26,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 }
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
-  const ActionRequest& request) {
+  const ActionRequest& request, const void*& player_aux_data) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 

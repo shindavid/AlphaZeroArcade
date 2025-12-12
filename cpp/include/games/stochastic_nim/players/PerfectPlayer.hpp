@@ -45,7 +45,7 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
 
   PerfectPlayer(const Params& params, const PerfectStrategy* strategy)
       : params_(params), strategy_(strategy) {}
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  ActionResponse get_action_response(const ActionRequest&, const void*&) override;
 
  private:
   const Params params_;

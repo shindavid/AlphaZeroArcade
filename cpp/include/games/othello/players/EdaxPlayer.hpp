@@ -39,7 +39,7 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
 
   EdaxPlayer(OraclePool* oracle_pool, const Params&);
 
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  ActionResponse get_action_response(const ActionRequest&, const void*&) override;
 
  private:
   OraclePool* const oracle_pool_;
