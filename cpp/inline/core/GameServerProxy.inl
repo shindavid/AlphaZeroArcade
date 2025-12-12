@@ -65,7 +65,8 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
   payload.parse_player_names(player_names_);
 
   game_started_ = true;
-  Rules::init_state(state_);
+  state_tree_.init();
+  state_node_index_ = 0;
   mid_yield_ = false;
 
   Player* player = players_[payload.player_id];
@@ -79,14 +80,14 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat = Rules::get_current_player(state_);
+  seat_index_t seat = Rules::get_current_player(state());
   ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.action;
-  Rules::apply(state_, action);
+  apply_action(action);
 
   Player* player = players_[payload.player_id];
-  player->receive_state_change(seat, state_, action);
+  player->receive_state_change(seat, state(), action);
 }
 
 template <concepts::Game Game>
@@ -115,7 +116,7 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
   GameResultTensor* outcome = new (buffer) GameResultTensor();  // Placement new
 
   Player* player = players_[payload.player_id];
-  player->end_game(state_, *outcome);
+  player->end_game(state(), *outcome);
 }
 
 template <concepts::Game Game>
@@ -127,7 +128,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
-  core::action_mode_t mode = Rules::get_action_mode(state_);
+  core::action_mode_t mode = Rules::get_action_mode(state());
 
   // If below assert gets hit, that means we need to add chance-mode support to GameServerProxy.
   // Should be similar to how it works in GameServer.
@@ -137,7 +138,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   RELEASE_ASSERT(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state_, valid_actions_, notification_unit);
+  ActionRequest request(state(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
