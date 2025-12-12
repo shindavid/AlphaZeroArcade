@@ -183,6 +183,9 @@ class GameServer
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
+    void apply_action(action_t action) {
+      state_node_index_ = state_tree_.advance(state_node_index_, action);
+    }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -196,14 +199,6 @@ class GameServer
     bool step_non_chance(context_id_t context, StepResult& result);
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
-
-    void apply_action(action_t action) {
-      state_node_index_ = state_tree_.advance(state_node_index_, action);
-    }
-
-    void* aux_data() {
-      return state_tree_.get_aux_data(state_node_index_, active_seat_);
-    }
 
     SharedData& shared_data_;
     const game_slot_index_t id_;

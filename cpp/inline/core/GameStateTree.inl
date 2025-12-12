@@ -19,13 +19,6 @@ const GameStateTree<Game>::State& GameStateTree<Game>::state(node_ix_t ix) const
 }
 
 template <concepts::Game Game>
-void* GameStateTree<Game>::get_aux_data(node_ix_t ix, seat_index_t seat) {
-  DEBUG_ASSERT(ix < nodes_.size());
-  DEBUG_ASSERT(seat < Constants::kNumPlayers);
-  return nodes_[ix].aux[seat];
-}
-
-template <concepts::Game Game>
 GameStateTree<Game>::node_ix_t GameStateTree<Game>::advance(node_ix_t ix, action_t action) {
   DEBUG_ASSERT(ix < nodes_.size());
 
