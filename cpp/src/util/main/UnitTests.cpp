@@ -1314,7 +1314,7 @@ TEST(math, fast_coarse_logit_monotonic_on_dense_grid) {
 
 TEST(math, fast_coarse_logit_matches_logit_on_0p01_grid) {
   // Compare against exact logit at mu = 0.01*k for k=1..99
-  const float tol = 2e-2f;
+  const float tol = .02f;
 
   for (int k = 1; k <= 99; ++k) {
     float mu = 0.01f * k;
@@ -1409,8 +1409,7 @@ TEST(math, fast_coarse_batch_normal_cdf) {
   }
 
   // 3) Accuracy vs reference in [-2, 2]
-  // With LUT/coarse approximations, a loose tolerance is appropriate.
-  constexpr float tol = 0.0001f;
+  const float tol = 1e-4f;
 
   for (size_t i = 0; i < x.size(); ++i) {
     float exact = math::normal_cdf(x[i]);
@@ -1451,6 +1450,17 @@ TEST(math, fast_coarse_batch_normal_cdf_edge_cases) {
     SUCCEED();
   }
 
+  // 0 should yield exactly 0.5f
+  {
+    constexpr int n = 5;
+    float x[n] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    float y[n] = {-1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
+    math::fast_coarse_batch_normal_cdf(x, n, y);
+    for (int i = 0; i < n; ++i) {
+      EXPECT_EQ(y[i], 0.5f) << "x=" << x[i];
+    }
+  }
+
   // small values should give 0.0f
   {
     constexpr int n = 3;
@@ -1476,9 +1486,13 @@ TEST(math, fast_coarse_batch_normal_cdf_edge_cases) {
 
 TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_n0) {
   float p0 = 0.2f;
+  const float eps = 0.01f;
+
   std::vector<float> p;
+  std::vector<float> c;
   std::vector<float> y;
-  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), 0, y.data(), 0.01f);
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
+                                                           y.data(), eps);
   SUCCEED();
 }
 
@@ -1487,10 +1501,11 @@ TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_equal_probs_gives_
   const float eps = 0.01f;
 
   std::vector<float> p = {0.2f, 0.2f, 0.2f, 0.2f};
+  std::vector<float> c(p.size(), 0.0f);
   std::vector<float> y(p.size(), 123.0f);
 
-  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
-                                                           eps);
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
+                                                           y.data(), eps);
 
   for (size_t i = 0; i < y.size(); ++i) {
     EXPECT_NEAR(y[i], 0.0f, 1e-3f) << "i=" << i;
@@ -1504,10 +1519,11 @@ TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_sign_sanity) {
   {
     float p0 = 0.30f;
     std::vector<float> p = {0.05f, 0.10f, 0.15f};
+    std::vector<float> c(p.size(), 0.0f);
     std::vector<float> y(p.size(), 0.0f);
 
-    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
-                                                             eps);
+    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
+                                                             y.data(), eps);
 
     for (float v : y) {
       EXPECT_GT(v, 0.0f);
@@ -1518,10 +1534,11 @@ TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_sign_sanity) {
   {
     float p0 = 0.10f;
     std::vector<float> p = {0.20f, 0.30f, 0.50f};
+    std::vector<float> c(p.size(), 0.0f);
     std::vector<float> y(p.size(), 0.0f);
 
-    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), (int)p.size(), y.data(),
-                                                             eps);
+    math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
+                                                             y.data(), eps);
 
     for (float v : y) {
       EXPECT_LT(v, 0.0f);
@@ -1535,9 +1552,11 @@ TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_eps_zero_matches_p
   const float eps = 0.0f;
 
   std::vector<float> p = {pi};
-  std::vector<float> y(1, 0.0f);
+  std::vector<float> c(p.size(), 0.0f);
+  std::vector<float> y(p.size(), 0.0f);
 
-  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), 1, y.data(), eps);
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
+                                                           y.data(), eps);
 
   const float r = p0 / (p0 + pi);  // 0.75
   const float z_ref = ref_inv_normal_cdf(r);
@@ -1557,9 +1576,10 @@ TEST(math, fast_coarse_batch_inverse_normal_cdf_clamped_range_matches_reference_
     p.push_back(0.01f * static_cast<float>(k));
   }
 
+  std::vector<float> c(p.size(), 0.0f);
   std::vector<float> y(p.size(), 0.0f);
 
-  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), static_cast<int>(p.size()),
+  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(p0, p.data(), c.data(), p.size(),
                                                            y.data(), eps);
 
   for (size_t i = 0; i < p.size(); ++i) {

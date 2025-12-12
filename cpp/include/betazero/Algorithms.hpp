@@ -1,7 +1,9 @@
 #pragma once
 
 #include "alphazero/Algorithms.hpp"
+#include "core/BasicTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
+#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -44,6 +46,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using player_bitset_t = Base::player_bitset_t;
 
   using LocalPolicyArrayDouble = Game::Types::LocalPolicyArrayDouble;
+  using LogitValueArray = Game::Types::LogitValueArray;
   using NodeStableData = Traits::NodeStableData;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
@@ -56,20 +59,13 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
     void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
 
    private:
-    void update_edge_snapshots(Node* parent, Edge* edge, bool load_prev_snapshots = false);
-    void update_edge_snapshots_helper(const NodeStats& child_stats, Edge* edge,
-                                      bool load_edge_snapshots_before_update);
-
     SearchContext& context_;
-    ValueArray last_child_Q_snapshot_;
-    ValueArray last_child_W_snapshot_;
-    bool snapshots_set_ = false;
   };
 
-  static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge);
   static void init_node_stats_from_terminal(Node* node);
   static void undo_virtual_update(Node* node, Edge* edge);
 
+  static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
 
   static void to_results(const GeneralContext&, SearchResults&);
@@ -80,26 +76,19 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
 
  protected:
   static void update_stats(SearchContext& context, NodeStats& stats, LocalPolicyArray& pi_arr,
-                           const ValueArray& last_child_Q_snapshot,
-                           const ValueArray& last_child_W_snapshot, const Node* node,
-                           const Edge* edge);
+                           const Node* node, const Edge* edge);
 
   // Updates pi_arr in-place to be the posterior policy
   static void update_policy(SearchContext& context, LocalPolicyArray& pi_arr, const Node* node,
                             const Edge* edge, LookupTable& lookup_table, int updated_edge_arr_index,
-                            float old_child_Q, float old_child_W,
-                            const LocalPolicyArray& child_Q_arr,
-                            const LocalPolicyArray& child_W_arr);
+                            const LocalPolicyArray& prior_pi_arr,
+                            const util::Gaussian1D* prior_logit_beliefs,
+                            const util::Gaussian1D* cur_logit_beliefs);
 
-  static void compute_theta_omega_sq(double Q, double W, double& theta, double& omega_sq);
-
-  static void update_QW_fields(SearchContext& context, const Node* node,
-                               const NodeStableData& stable_data, const LocalPolicyArray& pi_arr,
-                               const LocalActionValueArray& child_Q_arr,
-                               const LocalActionValueArray& child_W_arr, NodeStats& stats);
-
-  static void print_action_selection_details(const SearchContext& context,
-                                             const PuctCalculator& selector, int argmax_index);
+  static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
+                                           LogitValueArray& logit_value_beliefs);
+  static util::Gaussian1D compute_logit_value_belief(float Q, float W);
+  static void normalize_policy(LocalPolicyArray& pi_arr);
 };
 
 template <search::concepts::Traits Traits>

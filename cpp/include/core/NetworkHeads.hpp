@@ -64,6 +64,7 @@ struct ValueUncertaintyNetworkHead : public NetworkHeadBase {
 
   using Tensor = Game::Types::WinShareTensor;
 
+  // sigmoid is performed on pytorch side, so no transform performed here
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&) {}
 

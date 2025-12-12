@@ -14,6 +14,7 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using State = Game::State;
   using Base = alpha0::NodeStableData<EvalSpec>;
   using ValueArray = Game::Types::ValueArray;
+  using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
 
   template <typename... Ts>
   NodeStableData(Ts&&... args) : Base(std::forward<Ts>(args)...) {
@@ -21,6 +22,7 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   }
 
   ValueArray U;  // uncertainty
+  LogitValueArray prior_logit_value_beliefs;
 };
 
 }  // namespace beta0

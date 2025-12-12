@@ -272,8 +272,8 @@ inline void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float
 }
 
 inline void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p,
-                                                               int n, float* __restrict y,
-                                                               float eps) {
+                                                               const float* __restrict c, int n,
+                                                               float* __restrict y, float eps) {
   float rmin[n];
   float rmax[n];
 
@@ -286,7 +286,7 @@ inline void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const f
   for (int i = 0; i < n; ++i) {
     float y_min = detail::fast_invphi_lut(rmin[i]);
     float y_max = detail::fast_invphi_lut(rmax[i]);
-    y[i] = std::clamp(0.0f, y_min, y_max);
+    y[i] = std::clamp(c[i], y_min, y_max);
   }
 }
 

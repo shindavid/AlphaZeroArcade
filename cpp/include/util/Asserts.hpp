@@ -1,5 +1,6 @@
 #pragma once
 
+#include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
 
 #include <format>
