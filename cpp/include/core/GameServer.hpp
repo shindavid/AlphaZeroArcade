@@ -200,8 +200,8 @@ class GameServer
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
 
-    void* player_aux_data() {
-      return state_tree_.get_aux_data(state_node_index_, active_seat_);
+    const void*& player_aux_data() {
+      return state_tree_.get_player_aux_data(state_node_index_, active_seat_);
     }
 
     SharedData& shared_data_;
