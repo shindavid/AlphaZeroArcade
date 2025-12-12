@@ -61,16 +61,14 @@ struct GameTypes {
   };
 
   struct ActionRequest {
-    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
-                  void* aux = nullptr)
-        : state(s), valid_actions(va), notification_unit(u), player_aux_data(aux) {}
+    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u)
+        : state(s), valid_actions(va), notification_unit(u) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
     const State& state;
     const ActionMask& valid_actions;
     YieldNotificationUnit notification_unit;
-    void* player_aux_data;
 
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
