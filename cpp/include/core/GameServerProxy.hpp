@@ -3,6 +3,7 @@
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/GameStateTree.hpp"
 #include "core/Packet.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -39,6 +40,8 @@ class GameServerProxy : public core::GameServerBase {
   using player_name_array_t = Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
+  using StateTree = GameStateTree<Game>;
+  using node_ix_t = StateTree::node_ix_t;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -78,7 +81,10 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield() const { return mid_yield_; }
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
-    const State& state() const { return state_; }
+    const State& state() const { return state_tree_.state(state_node_index_); }
+    void apply_action(action_t action) {
+      state_node_index_ = state_tree_.advance(state_node_index_, action);
+    }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -96,7 +102,8 @@ class GameServerProxy : public core::GameServerBase {
     bool game_started_ = false;
 
     // Updated for each move
-    State state_;
+    StateTree state_tree_;
+    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;
