@@ -22,7 +22,7 @@ class GameStateTree {
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
 
-  private:
+ private:
   struct Node {
     const State state;
     const node_ix_t parent_ix;

@@ -13,9 +13,7 @@ finiteness_t get_finiteness(T x) {
   throw std::runtime_error("get_finiteness() no longer valid after we enabled -ffast-math");
 }
 
-inline float normal_cdf(float x) {
-  return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f));
-}
+inline float normal_cdf(float x) { return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f)); }
 
 // Approximates logit(x).
 //
@@ -48,7 +46,7 @@ void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __res
 // m[i] = min_{r in R[i]} f(r)
 // M[i] = max_{r in R[i]} f(r)
 void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p, int n,
-                                                        float* __restrict y, float eps=0.01f);
+                                                        float* __restrict y, float eps = 0.01f);
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 inline uint64_t splitmix64(uint64_t x) {
