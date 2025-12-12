@@ -1,6 +1,10 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+
+#include <cstdint>
+#include <vector>
 
 namespace core {
 
@@ -11,11 +15,12 @@ class GameStateTree {
   using State = Game::State;
   using Rules = Game::Rules;
 
+  static constexpr node_ix_t kNullNodeIx = -1;
+  static constexpr action_t kNullAction = -1;
+
   const State& state(node_ix_t ix) const;
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
-  static constexpr node_ix_t kNullNodeIx = -1;
-  static constexpr action_t kNullAction = -1;
 
   private:
   struct Node {

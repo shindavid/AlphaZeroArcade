@@ -1,5 +1,7 @@
 #include "core/GameStateTree.hpp"
 
+#include "util/Asserts.hpp"
+
 namespace core {
 
 template <concepts::Game Game>
