@@ -81,7 +81,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   Manager* get_manager() const { return &shared_data_->manager; }
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  ActionResponse get_action_response(const ActionRequest&) override;
+  ActionResponse get_action_response(const ActionRequest&, void*&) override;
 
  protected:
   void clear_search_mode();

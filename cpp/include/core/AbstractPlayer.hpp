@@ -73,7 +73,7 @@ class AbstractPlayer {
    * request.state is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual ActionResponse get_action_response(const ActionRequest& request) = 0;
+  virtual ActionResponse get_action_response(const ActionRequest& request, void*& player_aux_data) = 0;
 
   /*
    * The State passed in here is guaranteed to be identical to the State last received via

@@ -130,10 +130,16 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
-  const ActionRequest& request) {
+  const ActionRequest& request, void*& player_aux_data) {
+  if (player_aux_data) {
+    SearchResults* mcts_results = static_cast<SearchResults*>(player_aux_data);
+    return get_action_response_helper(mcts_results, request);
+  }
+
   init_search_mode(request);
   search::SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
+  player_aux_data = response.results;
 
   if (response.yield_instruction == core::kYield) {
     return ActionResponse::yield(response.extra_enqueue_count);
