@@ -141,7 +141,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   ActionRequest request(state(), valid_actions_, notification_unit);
   request.play_noisily = play_noisily_;
 
-  ActionResponse response = player->get_action_response(request);
+  ActionResponse response = player->get_action_response(request, player_aux_data());
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
