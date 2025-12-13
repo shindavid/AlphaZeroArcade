@@ -92,8 +92,8 @@ class GameServerProxy : public core::GameServerBase {
     void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
-    const void*& player_aux_data() {
-      return state_tree_.get_player_aux_data(state_node_index_, prompted_player_id_);
+    const node_aux_t get_player_aux() {
+      return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);
     }
 
     SharedData& shared_data_;
