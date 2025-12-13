@@ -132,7 +132,8 @@ template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
-    const SearchResults* const mcts_results = static_cast<const SearchResults* const>(request.aux);
+    const SearchResults* const mcts_results =
+      reinterpret_cast<const SearchResults* const>(request.aux);
     return get_action_response_helper(mcts_results, request);
   }
 
@@ -146,13 +147,11 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  ActionResponse& action_response = get_action_response_helper(response.results, request);
-
   const SearchResults* search_result = new SearchResults(*response.results);
+  search_result_ptrs_.push_back(search_result);
 
-  search_result_ptrs_.push_back(static_cast<core::node_aux_t>(search_result));
-  action_response.set_aux(static_cast<core::node_aux_t>(search_result));
-
+  ActionResponse action_response = get_action_response_helper(response.results, request);
+  action_response.set_aux(reinterpret_cast<core::node_aux_t>(search_result));
   return action_response;
 }
 

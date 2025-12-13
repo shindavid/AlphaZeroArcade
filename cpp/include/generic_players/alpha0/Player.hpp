@@ -108,7 +108,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   SharedData_sptr shared_data_;
   VerboseData<Traits>* verbose_info_ = nullptr;
   const bool owns_shared_data_;
-  std::vector<SearchResults*> search_result_ptrs_;
+  std::vector<const SearchResults*> search_result_ptrs_;
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
