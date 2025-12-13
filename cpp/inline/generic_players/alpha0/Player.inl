@@ -148,9 +148,9 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
 
   ActionResponse& action_response = get_action_response_helper(response.results, request);
 
-
-
-  action_response.set_aux(static_cast<node_aux_t>(search_result_pointer));
+  const SearchResults* search_result = new SearchResults(*response.results);
+  search_result_ptrs_.push_back(search_result);
+  action_response.set_aux(static_cast<core::node_aux_t>(search_result));
 
   return action_response;
 }
