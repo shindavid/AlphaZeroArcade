@@ -20,6 +20,7 @@ using nn_evaluation_pool_index_t = int32_t;
 using nn_evaluation_sequence_id_t = int64_t;
 using pipeline_index_t = int32_t;
 using generation_t = int32_t;
+using node_aux_t = uint64_t;
 
 // A game_slot_index_t specifies a GameSlot within a GameServer/GameServerProxy.
 using game_slot_index_t = int16_t;

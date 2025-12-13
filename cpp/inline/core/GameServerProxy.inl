@@ -138,7 +138,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   RELEASE_ASSERT(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_actions_, notification_unit);
+  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);

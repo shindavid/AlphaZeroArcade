@@ -61,8 +61,9 @@ struct GameTypes {
   };
 
   struct ActionRequest {
-    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u)
-        : state(s), valid_actions(va), notification_unit(u) {}
+    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
+                  node_aux_t a)
+        : state(s), valid_actions(va), notification_unit(u), aux(a) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
@@ -73,7 +74,7 @@ struct GameTypes {
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
     bool play_noisily = false;
-    ;
+    const node_aux_t aux = 0;
   };
 
   /*
@@ -105,13 +106,23 @@ struct GameTypes {
       r.resign_game = true;
       return r;
     }
+    void set_aux(node_aux_t aux);
+    bool is_aux_set() const { return aux_set_; }
+    node_aux_t aux() const { return aux_; }
 
+    // TODO: make these private and add access methods
     action_t action = -1;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
     bool resign_game = false;  // If true, the player resigns the game.
+
+   private:
+    node_aux_t aux_;
+    bool aux_set_ = false;
   };
 };
 
 }  // namespace core
+
+#include "inline/core/GameTypes.inl"

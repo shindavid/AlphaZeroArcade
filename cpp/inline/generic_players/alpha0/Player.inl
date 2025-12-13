@@ -131,6 +131,12 @@ inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
+  if (request.aux) {
+    const SearchResults* const mcts_results =
+      reinterpret_cast<const SearchResults* const>(request.aux);
+    return get_action_response_helper(mcts_results, request);
+  }
+
   init_search_mode(request);
   search::SearchRequest search_request(request.notification_unit);
   SearchResponse response = get_manager()->search(search_request);
@@ -141,7 +147,13 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  return get_action_response_helper(response.results, request);
+  // TODO: Only store when game backtracking is enabled.
+  const SearchResults* search_result = new SearchResults(*response.results);
+  search_result_ptrs_.push_back(search_result);
+
+  ActionResponse action_response = get_action_response_helper(response.results, request);
+  action_response.set_aux(reinterpret_cast<core::node_aux_t>(search_result));
+  return action_response;
 }
 
 template <search::concepts::Traits Traits>
@@ -347,6 +359,14 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
   }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+  for (auto* ptr : search_result_ptrs_) {
+    delete ptr;
+  }
+  search_result_ptrs_.clear();
 }
 
 }  // namespace generic::alpha0
