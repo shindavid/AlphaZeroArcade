@@ -1,5 +1,6 @@
 #include "betazero/Algorithms.hpp"
 
+#include "betazero/Constants.hpp"
 #include "core/BasicTypes.hpp"
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
@@ -11,6 +12,75 @@
 #include <cmath>
 
 namespace beta0 {
+
+namespace detail {
+
+// Map (Q, lW) -> lQ, with lW held fixed.
+inline float logit_normal_mean(float Q, float lW) {
+  // Assumes Q in (0,1).
+  const float logit = math::fast_coarse_logit(Q);
+  return logit - 0.5f * lW * (1.0f - 2.0f * Q);
+}
+
+// Given current Q, fixed lW, and a desired delta_lQ,
+// solve for new Q' such that lQ(Q', lW) = lQ(Q, lW) + delta_lQ.
+// Uses a few Newton iterations starting from a linearized guess.
+inline float newton_update_Q_from_delta_lQ(float Q, float lW, float delta_lQ) {
+  // Clamp away from 0/1 for numerical safety.
+  constexpr float kEps = 1e-6f;
+  constexpr int kMaxIters = 6;
+  constexpr float kTol = 1e-3f;
+
+  Q = std::clamp(Q, kEps, 1.0f - kEps);
+
+  // Target lQ after the change.
+  const float lQ_current = logit_normal_mean(Q, lW);
+  const float lQ_target = lQ_current + delta_lQ;
+
+  // Derivative d(lQ)/dQ at the current Q, with lW fixed:
+  //   d/dQ logit = 1/(Q(1-Q))
+  //   d/dQ[-(lW/2)(1-2Q)] = lW
+  const float dlQ_dQ0 = 1.0f / (Q * (1.0f - Q)) + lW;
+
+  // Linearized initial guess.
+  float x = Q + delta_lQ / dlQ_dQ0;
+  x = std::clamp(x, kEps, 1.0f - kEps);
+
+  for (int iter = 0; iter < kMaxIters; ++iter) {
+    const float lQ = logit_normal_mean(x, lW);
+
+    // f(x) = lQ(x) - lQ_target
+    const float fx = lQ - lQ_target;
+
+    // Check convergence in lQ space.
+    if (std::fabs(fx) < kTol) {
+      break;
+    }
+
+    // f'(x) = d(lQ)/dQ at x with lW fixed.
+    const float dlQ_dQ = 1.0f / (x * (1.0f - x)) + lW;
+
+    // Guard against pathological derivative (shouldn't really happen for Q in (0,1)).
+    if (std::fabs(dlQ_dQ) < 1e-8f) {
+      break;
+    }
+
+    // Newton step: x_{n+1} = x_n - f(x_n)/f'(x_n).
+    float step = fx / dlQ_dQ;
+    x -= step;
+
+    x = std::clamp(x, kEps, 1.0f - kEps);
+
+    // Optional: stop if Q itself is barely moving.
+    if (std::fabs(step) < kTol * 0.1f) {
+      break;
+    }
+  }
+
+  return x;
+}
+
+}  // namespace detail
 
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
@@ -32,12 +102,22 @@ void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge
   }
   lock.unlock();
 
-  Derived::update_stats(context_, stats, pi_arr, node, edge);
+  float minus_shock = 0;
+  float plus_shock = 0;
+  Derived::update_stats(context_, stats, pi_arr, minus_shock, plus_shock, node, edge);
 
   lock.lock();
   for (int i = 0; i < num_valid_actions; i++) {
     Edge* child_edge = lookup_table.get_edge(node, i);
     child_edge->policy_posterior_prob = pi_arr[i];
+
+    if (edge == child_edge) {
+      child_edge->minus_shock = minus_shock;
+      child_edge->plus_shock = plus_shock;
+    } else {
+      child_edge->minus_shock *= beta0::kShockMult;
+      child_edge->plus_shock *= beta0::kShockMult;
+    }
   }
 
   node->stats() = stats;  // copy back
@@ -49,6 +129,8 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
 
   NodeStats& stats = node->stats();
   populate_logit_value_beliefs(stats.Q, stats.W, stats.logit_value_beliefs);
+  stats.minus_shocks.fill(0.f);
+  stats.plus_shocks.fill(0.f);
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
@@ -76,6 +158,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     auto eval = item.eval();
 
     int n = stable_data.num_valid_actions;
+    core::seat_index_t seat = stable_data.active_seat;
 
     GameResultTensor R;
     ValueArray U;
@@ -108,6 +191,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stable_data.U = U;
     populate_logit_value_beliefs(V, U, stable_data.prior_logit_value_beliefs);
 
+    constexpr float z = beta0::kShockZScore;
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->policy_prior_prob = P_raw[i];
@@ -116,14 +200,23 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->child_AV = AV.row(i);
       edge->policy_posterior_prob = edge->policy_prior_prob;
       populate_logit_value_beliefs(edge->child_AV, edge->child_AU, edge->child_logit_value_beliefs);
+      edge->minus_shock = std::sqrt(edge->child_logit_value_beliefs[seat].variance()) * z;
+      edge->plus_shock = edge->minus_shock;
     }
 
     RELEASE_ASSERT(stats.RN == 0, "RN={}", stats.RN);
 
     stats.Q = V;
-    stats.Q_sq = V * V;
+
+    stats.logit_value_beliefs = stable_data.prior_logit_value_beliefs;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      stats.minus_shocks[p] = std::sqrt(stats.logit_value_beliefs[p].variance()) * z;
+      stats.plus_shocks[p] = stats.minus_shocks[p];
+    }
+
     stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
     stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
+    stats.W = U;
     stats.W_max = stats.W_max.cwiseMax(stats.W);
   }
 
@@ -188,7 +281,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   Game::Symmetries::apply(results.counts, inv_sym, mode);
   Game::Symmetries::apply(results.Q, inv_sym, mode);
-  Game::Symmetries::apply(results.Q_sq, inv_sym, mode);
   Game::Symmetries::apply(results.action_values, inv_sym, mode);
   Game::Symmetries::apply(results.action_value_uncertainties, inv_sym, mode);
 
@@ -335,7 +427,8 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeStats& stats,
-                                                   LocalPolicyArray& pi_arr, const Node* node,
+                                                   LocalPolicyArray& pi_arr, float& minus_shock,
+                                                   float& plus_shock, const Node* node,
                                                    const Edge* edge) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   const auto& stable_data = node->stable_data();
@@ -376,6 +469,8 @@ void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeS
         eigen_util::debug_validate_bounds(child_stats.Q);
         if (child_edge == edge) {
           updated_edge_arr_index = i;
+          minus_shock = child_stats.minus_shocks[seat];
+          plus_shock = child_stats.plus_shocks[seat];
         }
 
         cp_has_winning_move |= child_stats.provably_winning[seat];
@@ -396,14 +491,43 @@ void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeS
       all_provably_losing.reset();
     }
 
-    RELEASE_ASSERT(updated_edge_arr_index >= 0);
+    int i = updated_edge_arr_index;
+    RELEASE_ASSERT(i >= 0);
 
-    Derived::update_policy(context, pi_arr, node, edge, lookup_table, updated_edge_arr_index,
-                           prior_pi_arr, prior_logit_beliefs_arr, cur_logit_beliefs_arr);
+    LocalPolicyArray pi_minus_arr = pi_arr;
+    LocalPolicyArray pi_plus_arr = pi_arr;
 
-    // TODO: compute shock terms for action selection
+    Derived::update_policy(context, pi_minus_arr, pi_arr, pi_plus_arr, node, edge, lookup_table,
+                           i, prior_pi_arr, prior_logit_beliefs_arr,
+                           cur_logit_beliefs_arr, minus_shock, plus_shock);
 
-    Derived::update_QW(stats, seat, pi_arr, child_Q_arr, child_W_arr);
+    Derived::update_QW(&stats.Q, &stats.W, seat, pi_arr, child_Q_arr, child_W_arr);
+
+    if (minus_shock != 0.f) {
+      ValueArray prev_Q_i = child_Q_arr.row(i).transpose();
+      apply_shock(child_Q_arr, cur_logit_beliefs_arr[i].variance(), -minus_shock, i, seat);
+      ValueArray Q_minus;
+      Derived::update_QW(&Q_minus, nullptr, seat, pi_minus_arr, child_Q_arr, child_W_arr);
+      ValueArray minus_shocks = stats.Q - Q_minus;
+      if (minus_shocks[seat] > stats.minus_shocks[seat]) {
+        stats.minus_shocks = minus_shocks;
+      }
+      child_Q_arr.row(i) = prev_Q_i.transpose();
+    }
+
+    if (plus_shock != 0.f) {
+      apply_shock(child_Q_arr, cur_logit_beliefs_arr[i].variance(), plus_shock, i, seat);
+      ValueArray Q_plus;
+      Derived::update_QW(&Q_plus, nullptr, seat, pi_plus_arr, child_Q_arr, child_W_arr);
+      ValueArray plus_shocks = Q_plus - stats.Q;
+      if (plus_shocks[seat] > stats.plus_shocks[seat]) {
+        stats.plus_shocks = plus_shocks;
+      }
+    }
+
+    stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
+    stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
+    stats.W_max = stats.W_max.cwiseMax(stats.W);
 
     if (cp_has_winning_move) {
       stats.provably_winning[seat] = true;
@@ -418,22 +542,32 @@ void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeS
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::update_policy(
-  SearchContext& context, LocalPolicyArray& pi_arr, const Node* node, const Edge* edge,
-  LookupTable& lookup_table, int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
-  const util::Gaussian1D* prior_logit_beliefs, const util::Gaussian1D* cur_logit_beliefs) {
+  SearchContext& context, LocalPolicyArray& pi_minus_arr, LocalPolicyArray& pi_arr,
+  LocalPolicyArray& pi_plus_arr, const Node* node, const Edge* edge, LookupTable& lookup_table,
+  int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
+  const util::Gaussian1D* prior_logit_beliefs, const util::Gaussian1D* cur_logit_beliefs,
+  float minus_shock, float plus_shock) {
   int i = updated_edge_arr_index;
-  util::Gaussian1D QW_i = cur_logit_beliefs[i];
-  if (QW_i == util::Gaussian1D::neg_inf()) {
+  util::Gaussian1D lQW_i = cur_logit_beliefs[i];
+  if (lQW_i == util::Gaussian1D::neg_inf()) {
+    pi_minus_arr[i] = 0.f;
     pi_arr[i] = 0.f;
+    pi_plus_arr[i] = 0.f;
+    normalize_policy(pi_minus_arr);
     normalize_policy(pi_arr);
+    normalize_policy(pi_plus_arr);
     return;
-  } else if (QW_i == util::Gaussian1D::pos_inf()) {
+  } else if (lQW_i == util::Gaussian1D::pos_inf()) {
+    pi_minus_arr.fill(0.f);
     pi_arr.fill(0.f);
+    pi_plus_arr.fill(0.f);
+    pi_minus_arr[i] = 1.f;
     pi_arr[i] = 1.f;
+    pi_plus_arr[i] = 1.f;
     return;
   }
 
-  RELEASE_ASSERT(QW_i.valid());
+  RELEASE_ASSERT(lQW_i.valid());
 
   float old_pi_i = pi_arr[i];
   if (old_pi_i >= 1.f) {
@@ -445,17 +579,17 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
   const int n = stable_data.num_valid_actions - 1;  // excluding updated action
 
   float P_i = prior_pi_arr[i];
-  float Q_i = QW_i.mean();
-  float W_i = QW_i.variance();
-  float V_i = prior_logit_beliefs[i].mean();
-  float U_i = prior_logit_beliefs[i].variance();
+  float lQ_i = lQW_i.mean();
+  float lW_i = lQW_i.variance();
+  float lV_i = prior_logit_beliefs[i].mean();
+  float lU_i = prior_logit_beliefs[i].variance();
 
   LocalPolicyArray pi(n);
   LocalPolicyArray P(n);
-  LocalPolicyArray V(n);
-  LocalPolicyArray U(n);
-  LocalPolicyArray Q(n);
-  LocalPolicyArray W(n);
+  LocalPolicyArray lV(n);
+  LocalPolicyArray lU(n);
+  LocalPolicyArray lQ(n);
+  LocalPolicyArray lW(n);
 
   int r = 0;
   int w = 0;
@@ -465,36 +599,64 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
     }
     util::Gaussian1D QW_r = cur_logit_beliefs[r];
     if (QW_r == util::Gaussian1D::pos_inf()) {
+      pi_minus_arr.fill(0.f);
       pi_arr.fill(0.f);
+      pi_plus_arr.fill(0.f);
+      pi_minus_arr[w] = 1.f;
       pi_arr[w] = 1.f;
+      pi_plus_arr[w] = 1.f;
       return;
     }
 
     pi[w] = pi_arr[r];
     P[w] = prior_pi_arr[r];
-    V[w] = prior_logit_beliefs[r].mean();
-    U[w] = prior_logit_beliefs[r].variance();
-    Q[w] = cur_logit_beliefs[r].mean();
-    W[w] = cur_logit_beliefs[r].variance();
+    lV[w] = prior_logit_beliefs[r].mean();
+    lU[w] = prior_logit_beliefs[r].variance();
+    lQ[w] = cur_logit_beliefs[r].mean();
+    lW[w] = cur_logit_beliefs[r].variance();
     ++w;
   }
 
+  LocalPolicyArray original_pi_arr = pi_arr;
+
+  LocalPolicyArray S_denom_inv(n);
+  LocalPolicyArray S_minus(n);
   LocalPolicyArray S(n);
+  LocalPolicyArray S_plus(n);
   LocalPolicyArray c(n);
   LocalPolicyArray z(n);
+  LocalPolicyArray tau_minus(n);
   LocalPolicyArray tau(n);
+  LocalPolicyArray tau_plus(n);
 
-  c = (V_i - V) / (U_i + U).sqrt();
+  c = (lV_i - lV) / (lU_i + lU).sqrt();
   math::fast_coarse_batch_inverse_normal_cdf_clamped_range(P_i, P.data(), c.data(), n, z.data());
   z -= c;
 
-  S = (Q_i - Q) / (W_i + W).sqrt() + z;
+  S_denom_inv = 1.0f / (lW_i + lW).sqrt();
+
+  S = (lQ_i - lQ) * S_denom_inv + z;
   math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
-
-  LocalPolicyArray original_pi_arr = pi_arr;
-
   pi_arr[i] = (pi * tau).sum() / old_pi_i;
   normalize_policy(pi_arr);
+
+  if (minus_shock != 0.f) {
+    S_minus = (lQ_i - minus_shock - lQ) * S_denom_inv + z;
+    math::fast_coarse_batch_normal_cdf(S_minus.data(), n, tau_minus.data());
+    pi_minus_arr[i] = (pi * tau_minus).sum() / old_pi_i;
+    normalize_policy(pi_minus_arr);
+  } else {
+    pi_minus_arr = pi_arr;
+  }
+
+  if (plus_shock != 0.f) {
+    S_plus = (lQ_i + plus_shock - lQ) * S_denom_inv + z;
+    math::fast_coarse_batch_normal_cdf(S_plus.data(), n, tau_plus.data());
+    pi_plus_arr[i] = (pi * tau_plus).sum() / old_pi_i;
+    normalize_policy(pi_plus_arr);
+  } else {
+    pi_plus_arr = pi_arr;
+  }
 
   if (!search::kEnableSearchDebug) return;
 
@@ -502,12 +664,16 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
 
   LocalPolicyArray actions(n + 1);
   LocalPolicyArray P2(n + 1);
-  LocalPolicyArray V2(n + 1);
-  LocalPolicyArray U2(n + 1);
-  LocalPolicyArray Q2(n + 1);
-  LocalPolicyArray W2(n + 1);
+  LocalPolicyArray lV2(n + 1);
+  LocalPolicyArray lU2(n + 1);
+  LocalPolicyArray lQminus2(n + 1);
+  LocalPolicyArray lQ2(n + 1);
+  LocalPolicyArray lQplus2(n + 1);
+  LocalPolicyArray lW2(n + 1);
   LocalPolicyArray z2(n + 1);
+  LocalPolicyArray tau_minus2(n + 1);
   LocalPolicyArray tau2(n + 1);
+  LocalPolicyArray tau_plus2(n + 1);
 
   r = 0;
   for (; r < n + 1; ++r) {
@@ -516,22 +682,32 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
     Game::Symmetries::apply(action, inv_sym, node->action_mode());
     actions(r) = action;
     P2(r) = prior_pi_arr[r];
-    V2(r) = prior_logit_beliefs[r].mean();
-    U2(r) = prior_logit_beliefs[r].variance();
-    Q2(r) = cur_logit_beliefs[r].mean();
-    W2(r) = cur_logit_beliefs[r].variance();
+    lV2(r) = prior_logit_beliefs[r].mean();
+    lU2(r) = prior_logit_beliefs[r].variance();
+    lQ2(r) = cur_logit_beliefs[r].mean();
+    lW2(r) = cur_logit_beliefs[r].variance();
     z2(r) = (r == i) ? 0.f : z(r < i ? r : r - 1);
+    tau_minus2(r) = (r == i) ? 0.f : tau_minus(r < i ? r : r - 1);
     tau2(r) = (r == i) ? 0.f : tau(r < i ? r : r - 1);
+    tau_plus2(r) = (r == i) ? 0.f : tau_plus(r < i ? r : r - 1);
   }
+
+  lQminus2.setZero();
+  lQplus2.setZero();
+
+  lQminus2(i) = lQ_i - minus_shock;
+  lQplus2(i) = lQ_i + plus_shock;
 
   LOG_INFO("*** DBG update_policy() ***");
 
   std::stringstream ss;
-  auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(actions, P2, V2, U2, Q2, W2, z2,
-                                                                    tau2, original_pi_arr, pi_arr));
+  auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+    actions, P2, lV2, lU2, lQminus2, lQ2, lQplus2, lW2, z2, tau_minus2, tau2, tau_plus2,
+    original_pi_arr, pi_minus_arr, pi_arr, pi_plus_arr));
 
-  std::vector<std::string> columns = {"action", "P", "V",   "U",      "Q",
-                                      "W",      "z", "tau", "old_pi", "new_pi"};
+  std::vector<std::string> columns = {"action", "P",   "lV", "lU",   "lQ-", "lQ",
+                                      "lQ+",    "lW",  "z",  "tau-", "tau", "tau+",
+                                      "old_pi", "pi-", "pi", "pi+"};
 
   eigen_util::PrintArrayFormatMap fmt_map{
     {"action",
@@ -545,7 +721,8 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_QW(NodeStats& stats, core::seat_index_t seat,
+void AlgorithmsBase<Traits, Derived>::update_QW(ValueArray* Q, ValueArray* W,
+                                                core::seat_index_t seat,
                                                 const LocalPolicyArray& pi_arr,
                                                 const LocalActionValueArray& child_Q_arr,
                                                 const LocalActionValueArray& child_W_arr) {
@@ -581,25 +758,7 @@ void AlgorithmsBase<Traits, Derived>::update_QW(NodeStats& stats, core::seat_ind
       if (Q_i >= Q_floor) {
         continue;
       }
-      auto row_i = Q_star_arr.row(i);
-      float delta = Q_floor - Q_i;
-      if constexpr (kNumPlayers == 1) {
-        // In single-player, we can just adjust the Q value directly.
-        row_i(seat) += delta;
-      } else if constexpr (kNumPlayers == 2) {
-        // In two-player zero-sum, we can just adjust both players' Q values symmetrically.
-        row_i(seat) += delta;
-        row_i(1 - seat) -= delta;
-      } else {
-        // For multiplayer games, it's a little more ambiguous how we should adjust the other
-        // players' Q values.
-        //
-        // Here, we scale the other players' Q values by a constant chosen such that the sum of Q
-        // values remains the same after the adjustment.
-        float Q_sum = row_i.sum();
-        row_i *= Q_sum / (Q_sum + delta);
-        row_i(seat) += delta;
-      }
+      modify_Q_arr(Q_star_arr, i, seat, Q_floor);
     }
   }
 
@@ -607,18 +766,24 @@ void AlgorithmsBase<Traits, Derived>::update_QW(NodeStats& stats, core::seat_ind
   auto Q_star_mat = Q_star_arr.matrix();
   auto Q_p_mat = Q_star_mat.transpose() * pi_mat;
   auto Q_p_arr = Q_p_mat.array();
+  *Q = Q_p_arr;
+
+  if (!W) return;
 
   auto W_in_mat = child_W_arr.matrix();
   auto W_across_mat = (Q_star_arr.rowwise() - Q_p_arr.transpose()).square().matrix();
   auto W_p_mat = (W_in_mat + W_across_mat).transpose() * pi_mat;
   auto W_p_arr = W_p_mat.array();
+  *W = W_p_arr;
+}
 
-  stats.Q = Q_p_arr;
-  stats.W = W_p_arr;
-
-  stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
-  stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
-  stats.W_max = stats.W_max.cwiseMax(stats.W);
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::apply_shock(LocalActionValueArray& Q_arr, float lW,
+                                                  float shock, int action_index,
+                                                  core::seat_index_t seat) {
+  float old_q = Q_arr(action_index, seat);
+  float new_q = detail::newton_update_Q_from_delta_lQ(old_q, lW, shock);
+  modify_Q_arr(Q_arr, action_index, seat, new_q);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -675,6 +840,34 @@ void AlgorithmsBase<Traits, Derived>::normalize_policy(LocalPolicyArray& pi_arr)
     std::ostringstream ss;
     ss << pi_arr;
     throw util::Exception("Invalid policy: {}", ss.str());
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::modify_Q_arr(LocalActionValueArray& Q_arr, int action_index,
+                                                   core::seat_index_t seat, float q_new) {
+  int i = action_index;
+  float Q_i = Q_arr(i, seat);
+  auto row_i = Q_arr.row(i);
+  float delta = q_new - Q_i;
+
+  if constexpr (kNumPlayers == 1) {
+    // In single-player, we can just adjust the Q value directly.
+    row_i(seat) = q_new;
+  } else if constexpr (kNumPlayers == 2) {
+    // In two-player zero-sum, we can just adjust both players' Q values symmetrically.
+    row_i(seat) = q_new;
+    row_i(1 - seat) -= delta;
+  } else {
+    // For multiplayer games, it's a little more ambiguous how we should adjust the other
+    // players' Q values.
+    //
+    // Here, we scale the other players' Q values by a constant chosen such that the sum of Q
+    // values remains the same after the adjustment.
+    float Q_sum = row_i.sum();
+    float mult = (Q_sum - delta) / Q_sum;
+    row_i *= mult;
+    row_i(seat) = q_new;
   }
 }
 

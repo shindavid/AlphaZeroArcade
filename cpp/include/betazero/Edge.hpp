@@ -24,6 +24,10 @@ struct Edge : public alpha0::Edge<EvalSpec> {
   ValueArray child_AU;
 
   LogitValueArray child_logit_value_beliefs;
+
+  // TODO: child and parent shocks needed. Maybe in logit and value space?
+  float minus_shock = 0;  // negative shock, in logit space
+  float plus_shock = 0;   // positive shock, in logit space
 };
 
 }  // namespace beta0
