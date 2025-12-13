@@ -401,14 +401,9 @@ void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeS
     Derived::update_policy(context, pi_arr, node, edge, lookup_table, updated_edge_arr_index,
                            prior_pi_arr, prior_logit_beliefs_arr, cur_logit_beliefs_arr);
 
-    // TODO(1): compute shock terms for action selection
+    // TODO: compute shock terms for action selection
 
-    stats.Q = (child_Q_arr.matrix().transpose() * pi_arr.matrix()).array();
-    stats.W = (child_W_arr.matrix().transpose() * pi_arr.matrix()).array();
-
-    stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
-    stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
-    stats.W_max = stats.W_max.cwiseMax(stats.W);
+    Derived::update_QW(stats, seat, pi_arr, child_Q_arr, child_W_arr);
 
     if (cp_has_winning_move) {
       stats.provably_winning[seat] = true;
@@ -547,6 +542,83 @@ void AlgorithmsBase<Traits, Derived>::update_policy(
 
   eigen_util::print_array(ss, data, columns, &fmt_map);
   LOG_INFO("{}", ss.str());
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_QW(NodeStats& stats, core::seat_index_t seat,
+                                                const LocalPolicyArray& pi_arr,
+                                                const LocalActionValueArray& child_Q_arr,
+                                                const LocalActionValueArray& child_W_arr) {
+  // Q/W-Update rules:
+  //
+  // Q(p) = sum_i pi_i * Q^*_i
+  // W(p) = sum_i pi_i (W_i + (Q^*_i - Q(p))^2)
+  //
+  // where Q^*_i is the *conditional* belief
+  //
+  // Q^*_i = E[Z_i | i = argmax_j Z_j]
+  //
+  // We approximate Q^*_i = max(Q_i, Q_floor), where
+  //
+  // Q_floor is the maximum Q_k over all actions k with W_k = 0 (i.e. no uncertainty).
+
+  float Q_floor = Game::GameResults::kMinValue;
+  for (int i = 0; i < child_Q_arr.rows(); ++i) {
+    float W_i = child_W_arr(i, seat);
+    if (W_i == 0.f) {
+      Q_floor = std::max(Q_floor, child_Q_arr(i, seat));
+    }
+  }
+
+  LocalActionValueArray Q_star_arr = child_Q_arr;
+  if (Q_floor > Game::GameResults::kMinValue) {
+    // Cap by Q_floor where necessary
+    for (int i = 0; i < child_Q_arr.rows(); ++i) {
+      if (child_W_arr(i, seat) == 0.f) {
+        continue;
+      }
+      float Q_i = child_Q_arr(i, seat);
+      if (Q_i >= Q_floor) {
+        continue;
+      }
+      auto row_i = Q_star_arr.row(i);
+      float delta = Q_floor - Q_i;
+      if constexpr (kNumPlayers == 1) {
+        // In single-player, we can just adjust the Q value directly.
+        row_i(seat) += delta;
+      } else if constexpr (kNumPlayers == 2) {
+        // In two-player zero-sum, we can just adjust both players' Q values symmetrically.
+        row_i(seat) += delta;
+        row_i(1 - seat) -= delta;
+      } else {
+        // For multiplayer games, it's a little more ambiguous how we should adjust the other
+        // players' Q values.
+        //
+        // Here, we scale the other players' Q values by a constant chosen such that the sum of Q
+        // values remains the same after the adjustment.
+        float Q_sum = row_i.sum();
+        row_i *= Q_sum / (Q_sum + delta);
+        row_i(seat) += delta;
+      }
+    }
+  }
+
+  auto pi_mat = pi_arr.matrix();
+  auto Q_star_mat = Q_star_arr.matrix();
+  auto Q_p_mat = Q_star_mat.transpose() * pi_mat;
+  auto Q_p_arr = Q_p_mat.array();
+
+  auto W_in_mat = child_W_arr.matrix();
+  auto W_across_mat = (Q_star_arr.rowwise() - Q_p_arr.transpose()).square().matrix();
+  auto W_p_mat = (W_in_mat + W_across_mat).transpose() * pi_mat;
+  auto W_p_arr = W_p_mat.array();
+
+  stats.Q = Q_p_arr;
+  stats.W = W_p_arr;
+
+  stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
+  stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
+  stats.W_max = stats.W_max.cwiseMax(stats.W);
 }
 
 template <search::concepts::Traits Traits, typename Derived>

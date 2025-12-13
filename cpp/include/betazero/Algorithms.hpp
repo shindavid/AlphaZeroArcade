@@ -85,6 +85,10 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
                             const util::Gaussian1D* prior_logit_beliefs,
                             const util::Gaussian1D* cur_logit_beliefs);
 
+  static void update_QW(NodeStats& stats, core::seat_index_t seat, const LocalPolicyArray& pi_arr,
+                       const LocalActionValueArray& child_Q_arr,
+                       const LocalActionValueArray& child_W_arr);
+
   static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
                                            LogitValueArray& logit_value_beliefs);
   static util::Gaussian1D compute_logit_value_belief(float Q, float W);
