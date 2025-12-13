@@ -34,8 +34,7 @@ class PerfectPlayerTest : public testing::Test {
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
     ActionRequest request(state, valid_actions);
-    static const void* dummy_aux_data = nullptr;
-    return player_.get_action_response(request, dummy_aux_data).action;
+    return player_.get_action_response(request).action;
   }
 
  private:
