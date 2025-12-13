@@ -360,4 +360,12 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
+template <search::concepts::Traits Traits>
+void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+  for (auto* ptr : search_result_ptrs_) {
+    delete ptr;
+  }
+  search_result_ptrs_.clear();
+}
+
 }  // namespace generic::alpha0
