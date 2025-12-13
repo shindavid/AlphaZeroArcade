@@ -50,12 +50,4 @@ GameStateTree<Game>::node_ix_t GameStateTree<Game>::advance(node_ix_t ix, action
   return new_ix;
 }
 
-template <concepts::Game Game>
-GameStateTree<Game>::Node::Node(const State& s, node_ix_t p, action_t a)
-    : state(s), parent_ix(p), action_from_parent(a) {
-  for (int i = 0; i < Constants::kNumPlayers; ++i) {
-    aux[i] = nullptr;
-  }
-}
-
 }  // namespace core

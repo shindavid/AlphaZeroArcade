@@ -26,7 +26,6 @@ class GameStateTree {
 
  private:
   struct Node {
-    Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction);
     const State state;
     const node_ix_t parent_ix;
     const action_t action_from_parent;
@@ -35,6 +34,9 @@ class GameStateTree {
 
     // Auxilary data for players. Each player can store a pointer here for their *private* reference.
     const void* aux[Constants::kNumPlayers];
+
+    Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
+        : state(s), parent_ix(p), action_from_parent(a) {}
   };
   std::vector<Node> nodes_;
 };
