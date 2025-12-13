@@ -23,6 +23,9 @@ class GameStateTree {
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
   const node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
+  void set_player_aux(node_ix_t ix, seat_index_t seat, node_aux_t aux) {
+    nodes_[ix].aux[seat] = aux;
+  }
 
  private:
   struct Node {

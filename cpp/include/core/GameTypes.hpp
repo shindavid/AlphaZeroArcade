@@ -108,6 +108,7 @@ struct GameTypes {
     }
     void set_aux(node_aux_t aux);
     bool is_aux_set() const { return aux_set_; }
+    node_aux_t aux() const { return aux_; }
 
     // TODO: make these private and add access methods
     action_t action = -1;
