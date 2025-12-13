@@ -22,7 +22,7 @@ class GameStateTree {
   const State& state(node_ix_t ix) const;
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
-  const void*& get_player_aux(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
+  const node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
 
  private:
   struct Node {
