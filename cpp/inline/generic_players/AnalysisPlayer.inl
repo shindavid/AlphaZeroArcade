@@ -14,8 +14,8 @@ bool AnalysisPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
-  const ActionRequest& request, const void*& player_aux_data) {
-  auto proposed_response = wrapped_player_->get_action_response(request, player_aux_data);
+  const ActionRequest& request) {
+  auto proposed_response = wrapped_player_->get_action_response(request);
 
   if (proposed_response.yield_instruction == core::kYield) {
     return proposed_response;

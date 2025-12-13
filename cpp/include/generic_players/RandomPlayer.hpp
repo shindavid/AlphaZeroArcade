@@ -14,8 +14,7 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
 
-  ActionResponse get_action_response(const ActionRequest& request,
-                                     const void*& player_aux_data) override {
+  ActionResponse get_action_response(const ActionRequest& request) override {
     return request.valid_actions.choose_random_on_index();
   }
 };

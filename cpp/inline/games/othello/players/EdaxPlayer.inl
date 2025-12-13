@@ -26,8 +26,7 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
   CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
-inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request,
-                                                                  const void*& player_aux_data) {
+inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
   const auto& state = request.state;
   const auto& valid_actions = request.valid_actions;
   int num_valid_actions = valid_actions.count();

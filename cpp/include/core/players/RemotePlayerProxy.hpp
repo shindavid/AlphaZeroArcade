@@ -61,7 +61,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
 
   bool start_game() override;
   void receive_state_change(seat_index_t, const State&, action_t) override;
-  ActionResponse get_action_response(const ActionRequest&, const void*&) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
  private:

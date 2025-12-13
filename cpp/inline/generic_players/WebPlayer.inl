@@ -17,7 +17,7 @@ bool WebPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
-  const ActionRequest& request, const void*& player_aux_data) {
+  const ActionRequest& request) {
   return get_web_response(request, -1);
 }
 

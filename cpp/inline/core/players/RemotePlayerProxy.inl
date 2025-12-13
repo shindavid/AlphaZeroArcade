@@ -148,7 +148,7 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 
 template <concepts::Game Game>
 typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
-  const ActionRequest& request, const void*& player_aux_data) {
+  const ActionRequest& request) {
   if (yielding_) {
     yielding_ = false;
     return action_response_;

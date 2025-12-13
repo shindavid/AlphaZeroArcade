@@ -4,8 +4,7 @@
 
 namespace c4 {
 
-PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request,
-                                                                 const void*& player_aux_data) {
+PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   PerfectOracle* oracle = oracle_pool_->get_oracle(request.notification_unit);
   if (!oracle) {
     return ActionResponse::yield();
