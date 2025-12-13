@@ -786,7 +786,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   ActionRequest request(state(), valid_actions_, notification_unit);
   request.play_noisily = noisy_mode_;
 
-  ActionResponse response = player->get_action_response(request, player_aux_data());
+  ActionResponse response = player->get_action_response(request);
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
