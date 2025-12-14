@@ -147,7 +147,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  // TODO: Only store when game backtracking is enabled.
+  // TODO: Only store when game backtracking is possible.
   const SearchResults* search_result = new SearchResults(*response.results);
   search_result_ptrs_.push_back(search_result);
 
