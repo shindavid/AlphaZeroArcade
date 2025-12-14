@@ -170,6 +170,10 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
     }
   }
 
+  if (response.is_aux_set()) {
+    set_player_aux(response.aux());
+  }
+
   CriticalSectionCheck check2(in_critical_section_);
   continue_hit_ = false;
   send_action_packet(response);

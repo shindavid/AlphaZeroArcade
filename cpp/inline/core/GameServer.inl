@@ -820,7 +820,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     set_player_aux(response.aux());
   }
 
-
   CriticalSectionCheck check2(in_critical_section_);
   RELEASE_ASSERT(!mid_yield_);
 
