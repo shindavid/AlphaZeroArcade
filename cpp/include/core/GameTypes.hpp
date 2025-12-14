@@ -118,7 +118,7 @@ struct GameTypes {
     bool resign_game = false;  // If true, the player resigns the game.
 
    private:
-    node_aux_t aux_;
+    node_aux_t aux_ = 0;
     bool aux_set_ = false;
   };
 };

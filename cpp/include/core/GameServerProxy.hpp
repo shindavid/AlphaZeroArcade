@@ -92,11 +92,11 @@ class GameServerProxy : public core::GameServerBase {
     void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
-    const node_aux_t get_player_aux() {
+    node_aux_t get_player_aux() {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);
     }
 
-    void set_player_aux(const node_aux_t aux) {
+    void set_player_aux(node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, prompted_player_id_, aux);
     }
 
