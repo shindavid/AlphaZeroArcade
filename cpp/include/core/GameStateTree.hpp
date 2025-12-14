@@ -22,7 +22,7 @@ class GameStateTree {
   const State& state(node_ix_t ix) const;
   void init();
   node_ix_t advance(node_ix_t ix, action_t action);
-  const node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
+  node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) { return nodes_[ix].aux[seat]; }
   void set_player_aux(node_ix_t ix, seat_index_t seat, node_aux_t aux) {
     nodes_[ix].aux[seat] = aux;
   }
@@ -35,7 +35,7 @@ class GameStateTree {
     node_ix_t first_child_ix = kNullNodeIx;
     node_ix_t next_sibling_ix = kNullNodeIx;
 
-    // Auxilary data for players. Each player can store 8-byte data here for their *private* access.
+    // Auxiliary data for players. Each player can store 8-byte data here for their *private* access.
     node_aux_t aux[Constants::kNumPlayers] = {};
 
     Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
