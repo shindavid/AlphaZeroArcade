@@ -35,7 +35,12 @@ class GameStateTree {
     node_ix_t first_child_ix = kNullNodeIx;
     node_ix_t next_sibling_ix = kNullNodeIx;
 
-    // Auxiliary data for players. Each player can store 8-byte data here for their *private* access.
+    /*
+     * Auxiliary data for players. Each player can store 8-byte data here for their private access.
+     *
+     * IMPORTANT NOTE: aux = 0 is reserved to mean "no aux data". Hence, players should avoid
+     * storing aux = 0 here.
+     */
     node_aux_t aux[Constants::kNumPlayers] = {};
 
     Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
