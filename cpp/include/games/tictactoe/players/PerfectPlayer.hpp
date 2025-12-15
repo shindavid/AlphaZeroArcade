@@ -35,6 +35,8 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
     float p[kNumCells];
   };
 
+  ActionResponse get_action_response_helper(const ActionRequest& request);
+
   using lookup_map_t = std::map<uint64_t, policy_t>;
 
   static lookup_map_t make_lookup_map();

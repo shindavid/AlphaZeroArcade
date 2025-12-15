@@ -31,6 +31,13 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     return request.aux - 1;
   }
 
+  ActionResponse response = get_action_response_helper(request);
+  response.set_aux(response.action + 1);
+  return response;
+}
+
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response_helper(
+  const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 
@@ -71,9 +78,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
         std::cout << "    winning along:  " << std::bitset<16>(mask) << std::endl;
         std::cout << "    winning move:   " << a << std::endl;
       }
-      response.action = a;
-      response.set_aux(response.action + 1);
-      return response;
+      return a;
     }
   }
 
@@ -85,9 +90,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
         std::cout << "    blocking along: " << std::bitset<16>(mask) << std::endl;
         std::cout << "    blocking move:  " << a << std::endl;
       }
-      response.action = a;
-      response.set_aux(response.action + 1);
-      return response;
+      return a;
     }
   }
 
@@ -98,9 +101,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   try {
-    response.action = lookup_map_.at(key).select();
-    response.set_aux(response.action + 1);
-    return response;
+    return lookup_map_.at(key).select();
   } catch (const std::out_of_range&) {
     throw util::Exception("lookup failed ({:08x}|{:08x})", x_mask, o_mask);
   }
