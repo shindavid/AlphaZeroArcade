@@ -27,6 +27,11 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
 }
 
 inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
+  if (request.aux) {
+    RELEASE_ASSERT(request.valid_actions[request.aux - 1], "Invalid aux action: {}",
+                   request.aux - 1);
+    return request.aux - 1;
+  }
   const auto& state = request.state;
   const auto& valid_actions = request.valid_actions;
   int num_valid_actions = valid_actions.count();
@@ -44,7 +49,9 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
 
   core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
-  return action;
+  ActionResponse response(action);
+  response.set_aux(action + 1);
+  return response;
 }
 
 }  // namespace othello

@@ -27,6 +27,11 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
+  if (request.aux) {
+    RELEASE_ASSERT(request.valid_actions[request.aux - 1], "Invalid aux action: {}",
+                   request.aux - 1);
+    return request.aux - 1;
+  }
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 
@@ -57,6 +62,8 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     std::cout << "  o_mask:    " << std::bitset<16>(o_mask) << std::endl;
   }
 
+  ActionResponse response;
+
   // check for winning move
   for (mask_t mask : Game::kThreeInARowMasks) {
     if ((std::popcount(uint32_t(mask & my_mask))) == 2 && ((mask & opp_mask) == 0)) {
@@ -65,7 +72,9 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
         std::cout << "    winning along:  " << std::bitset<16>(mask) << std::endl;
         std::cout << "    winning move:   " << a << std::endl;
       }
-      return a;
+      response.action = a;
+      response.set_aux(response.action + 1);
+      return response;
     }
   }
 
@@ -77,7 +86,9 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
         std::cout << "    blocking along: " << std::bitset<16>(mask) << std::endl;
         std::cout << "    blocking move:  " << a << std::endl;
       }
-      return a;
+      response.action = a;
+      response.set_aux(response.action + 1);
+      return response;
     }
   }
 
@@ -88,7 +99,9 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   try {
-    return lookup_map_.at(key).select();
+    response.action = lookup_map_.at(key).select();
+    response.set_aux(response.action + 1);
+    return response;
   } catch (const std::out_of_range&) {
     throw util::Exception("lookup failed ({:08x}|{:08x})", x_mask, o_mask);
   }

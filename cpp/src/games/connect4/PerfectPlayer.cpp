@@ -5,6 +5,11 @@
 namespace c4 {
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
+  if (request.aux) {
+    RELEASE_ASSERT(request.valid_actions[request.aux - 1], "Invalid aux action: {}",
+                   request.aux - 1);
+    return request.aux - 1;
+  }
   PerfectOracle* oracle = oracle_pool_->get_oracle(request.notification_unit);
   if (!oracle) {
     return ActionResponse::yield();
@@ -57,6 +62,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
   }
 
   response.action = candidates.choose_random_on_index();
+  response.set_aux(response.action + 1);
   return response;
 }
 
