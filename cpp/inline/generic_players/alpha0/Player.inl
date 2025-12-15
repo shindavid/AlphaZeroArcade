@@ -132,8 +132,7 @@ template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
-    const SearchResults* const mcts_results =
-      reinterpret_cast<const SearchResults* const>(request.aux);
+    SearchResults* mcts_results = reinterpret_cast<SearchResults*>(request.aux);
     return get_action_response_helper(mcts_results, request);
   }
 
