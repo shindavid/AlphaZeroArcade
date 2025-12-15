@@ -151,7 +151,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     const SearchResults* search_result = new SearchResults(*response.results);
     search_result_ptrs_.push_back(search_result);
     ActionResponse action_response = get_action_response_helper(search_result, request);
-    action_response.set_aux(reinterpret_cast<core::node_aux_t>(search_result));
+    action_response.set_aux(search_result);
     return action_response;
   }
 

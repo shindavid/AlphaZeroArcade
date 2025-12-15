@@ -106,7 +106,10 @@ struct GameTypes {
       r.resign_game = true;
       return r;
     }
-    void set_aux(node_aux_t aux);
+
+    template <typename T>
+    void set_aux(T aux);
+
     bool is_aux_set() const { return aux_set_; }
     node_aux_t aux() const { return aux_; }
 
