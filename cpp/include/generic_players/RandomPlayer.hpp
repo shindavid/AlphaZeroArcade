@@ -16,8 +16,6 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
 
   ActionResponse get_action_response(const ActionRequest& request) override {
     if (request.aux) {
-      RELEASE_ASSERT(request.valid_actions[request.aux - 1], "Invalid aux action: {}",
-                     request.aux - 1);
       return request.aux - 1;
     }
 

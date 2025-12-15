@@ -17,10 +17,9 @@ inline auto PerfectPlayer::Params::make_options_description() {
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
-    RELEASE_ASSERT(request.valid_actions[request.aux - 1], "Invalid aux action: {}",
-                   request.aux - 1);
     return request.aux - 1;
   }
+
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
