@@ -200,7 +200,7 @@ class GameServer
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
 
-    node_aux_t get_player_aux() {
+    node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, active_seat_);
     }
 
