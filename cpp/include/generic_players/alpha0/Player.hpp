@@ -113,7 +113,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
 
-  // TODO: add a bool to indicate whether game backtracking is possible.
+  // TODO: set this bool properly (in generator start_session())
+  bool facing_backtracking_opponent_ = false;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;

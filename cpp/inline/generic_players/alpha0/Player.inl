@@ -147,13 +147,15 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  // TODO: Only store when game backtracking is possible.
-  const SearchResults* search_result = new SearchResults(*response.results);
-  search_result_ptrs_.push_back(search_result);
+  if (facing_backtracking_opponent_) {
+    const SearchResults* search_result = new SearchResults(*response.results);
+    search_result_ptrs_.push_back(search_result);
+    ActionResponse action_response = get_action_response_helper(search_result, request);
+    action_response.set_aux(reinterpret_cast<core::node_aux_t>(search_result));
+    return action_response;
+  }
 
-  ActionResponse action_response = get_action_response_helper(search_result, request);
-  action_response.set_aux(reinterpret_cast<core::node_aux_t>(search_result));
-  return action_response;
+  return get_action_response_helper(response.results, request);
 }
 
 template <search::concepts::Traits Traits>
