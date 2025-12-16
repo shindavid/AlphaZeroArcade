@@ -16,7 +16,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
     std::getline(std::cin, input);
     return kPass;
   }
-  std::cout << "Enter move [A1-H8]: ";
+  std::cout << "Enter move [A1-H8] or UD to undo: ";
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);

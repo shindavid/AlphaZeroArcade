@@ -84,7 +84,7 @@ class AbstractPlayer {
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }
 
-  bool is_backtrackign_enabled() const { return backtracking_enabled_; }
+  bool is_backtracking_enabled() const { return backtracking_enabled_; }
 
   void enable_backtracking() { backtracking_enabled_ = true; }
 
