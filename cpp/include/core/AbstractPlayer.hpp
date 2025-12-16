@@ -84,16 +84,16 @@ class AbstractPlayer {
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }
 
-  bool is_facing_backtracking_opponent() const { return facing_backtracking_opponent_; }
+  bool is_backtrackign_enabled() const { return backtracking_enabled_; }
 
-  void set_facing_backtracking_opponent(bool v) { facing_backtracking_opponent_ = v; }
+  void enable_backtracking() { backtracking_enabled_ = true; }
 
  private:
   std::string name_;
   player_name_array_t player_names_;
   game_id_t game_id_ = -1;
   seat_index_t my_seat_ = -1;
-  bool facing_backtracking_opponent_ = false;
+  bool backtracking_enabled_ = false;
 };
 
 }  // namespace core

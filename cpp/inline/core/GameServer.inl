@@ -674,9 +674,19 @@ template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
   bool disable_progress_bar = false;
+
+  bool player_supports_backtracking = false;
   for (int p = 0; p < kNumPlayers; ++p) {
-    instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
+    PlayerRegistration& reg = shared_data_.registration_templates()[p];
+    player_supports_backtracking |= reg.gen->supports_backtracking();
+    instantiations_[p] = reg.instantiate(id);
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
+  }
+
+  if (player_supports_backtracking) {
+    for (auto& inst : instantiations_) {
+      inst.player->enable_backtracking();
+    }
   }
 
   if (!disable_progress_bar) {
