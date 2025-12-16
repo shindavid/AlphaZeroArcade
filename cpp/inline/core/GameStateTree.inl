@@ -1,7 +1,5 @@
 #include "core/GameStateTree.hpp"
 
-#include "util/Asserts.hpp"
-
 namespace core {
 
 template <concepts::Game Game>
@@ -14,14 +12,11 @@ void GameStateTree<Game>::init() {
 
 template <concepts::Game Game>
 const GameStateTree<Game>::State& GameStateTree<Game>::state(node_ix_t ix) const {
-  DEBUG_ASSERT(ix < nodes_.size());
   return nodes_[ix].state;
 }
 
 template <concepts::Game Game>
 GameStateTree<Game>::node_ix_t GameStateTree<Game>::advance(node_ix_t ix, action_t action) {
-  DEBUG_ASSERT(ix < nodes_.size());
-
   node_ix_t last_child_ix = kNullNodeIx;
   for (node_ix_t i = nodes_[ix].first_child_ix; i != kNullNodeIx; i = nodes_[i].next_sibling_ix) {
     if (action == nodes_[i].action_from_parent) {
