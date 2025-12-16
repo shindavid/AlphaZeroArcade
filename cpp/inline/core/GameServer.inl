@@ -783,7 +783,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_actions_, notification_unit);
+  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
 
   ActionResponse response = player->get_action_response(request);
@@ -814,6 +814,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     default: {
       throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
     }
+  }
+
+  if (response.is_aux_set()) {
+    set_player_aux(response.aux());
   }
 
   CriticalSectionCheck check2(in_critical_section_);

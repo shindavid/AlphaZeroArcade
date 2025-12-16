@@ -27,6 +27,17 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
+  if (request.aux) {
+    return request.aux - 1;
+  }
+
+  ActionResponse response = get_action_response_helper(request);
+  response.set_aux(response.action + 1);
+  return response;
+}
+
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response_helper(
+  const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 
@@ -56,6 +67,8 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     std::cout << "  x_mask:    " << std::bitset<16>(x_mask) << std::endl;
     std::cout << "  o_mask:    " << std::bitset<16>(o_mask) << std::endl;
   }
+
+  ActionResponse response;
 
   // check for winning move
   for (mask_t mask : Game::kThreeInARowMasks) {

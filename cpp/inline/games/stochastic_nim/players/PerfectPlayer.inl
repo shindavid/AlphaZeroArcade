@@ -16,14 +16,23 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
+  if (request.aux) {
+    return request.aux - 1;
+  }
+
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
+  ActionResponse response;
+
   if (params_.strength == 0) {
-    return valid_actions.choose_random_on_index();
+    response.action = valid_actions.choose_random_on_index();
+  } else {
+    response.action = strategy_->get_optimal_action(state.stones_left);
   }
-  return strategy_->get_optimal_action(state.stones_left);
+  response.set_aux(response.action + 1);
+  return response;
 }
 
 PerfectStrategy::PerfectStrategy() {

@@ -65,6 +65,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
   struct SharedData {
     template <typename... Ts>
@@ -82,6 +83,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
+  void end_game(const State&, const GameResultTensor&) override;
 
  protected:
   void clear_search_mode();
@@ -106,9 +108,13 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   SharedData_sptr shared_data_;
   VerboseData<Traits>* verbose_info_ = nullptr;
   const bool owns_shared_data_;
+  std::vector<const SearchResults*> search_result_ptrs_;
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
+
+  // TODO: set this bool properly (in generator start_session())
+  bool facing_backtracking_opponent_ = false;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;
