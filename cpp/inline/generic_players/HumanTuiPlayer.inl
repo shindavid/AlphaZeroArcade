@@ -15,6 +15,7 @@ inline bool HumanTuiPlayer<Game>::start_game() {
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
+  node_ix_history_.push(0);  // initial state node ix
 
   util::clearscreen();
   return true;
@@ -55,7 +56,8 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
         printf("Cannot undo further!\n");
         continue;
       } else {
-        // Pop current state
+        // Pop current state and the previous opponent's state
+        node_ix_history_.pop();
         node_ix_history_.pop();
         core::node_ix_t prev_node_ix = node_ix_history_.top();
         node_ix_history_.pop();

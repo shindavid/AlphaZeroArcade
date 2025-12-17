@@ -801,6 +801,11 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
 
+  if (response.backtrack_node_ix() != kNullNodeIx) {
+    backtrack_to_node(response.backtrack_node_ix());
+    return true;
+  }
+
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
   switch (response.yield_instruction) {

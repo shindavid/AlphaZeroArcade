@@ -185,6 +185,7 @@ class GameServer
     void apply_action(action_t action) {
       state_node_index_ = state_tree_.advance(state_node_index_, action);
     }
+    void backtrack_to_node(node_ix_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
