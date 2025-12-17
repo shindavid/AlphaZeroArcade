@@ -60,7 +60,6 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
         node_ix_history_.pop();
         node_ix_history_.pop();
         core::node_ix_t prev_node_ix = node_ix_history_.top();
-        node_ix_history_.pop();
         return ActionResponse::backtrack(prev_node_ix);
       }
     }
