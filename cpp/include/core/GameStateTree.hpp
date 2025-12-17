@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
-#include <cstdint>
 #include <vector>
 
 namespace core {
@@ -11,7 +10,6 @@ namespace core {
 template <concepts::Game Game>
 class GameStateTree {
  public:
-  using node_ix_t = int32_t;
   using State = Game::State;
   using Rules = Game::Rules;
   using Constants = Game::Constants;

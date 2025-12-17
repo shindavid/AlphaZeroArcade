@@ -85,7 +85,6 @@ class GameServer
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using action_vec_t = std::vector<action_t>;
   using StateTree = GameStateTree<Game>;
-  using node_ix_t = StateTree::node_ix_t;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
