@@ -30,10 +30,15 @@ inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const 
 }
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State&, const ActionMask&) {
-  std::cout << "Enter move [1-7]: ";
+  std::cout << "Enter move [1-7] or UD to undo: ";
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);
+
+  if (input == "UD" || input == "ud" || input == "Ud" || input == "uD") {
+    return base_t::kUndoAction;
+  }
+
   try {
     return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
