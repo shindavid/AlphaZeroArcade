@@ -96,25 +96,31 @@ struct GameTypes {
    *     engage in multithreaded search. This should only be used for instruction type kYield.
    */
   struct ActionResponse {
-    ActionResponse(action_t a = -1, int e = 0, core::yield_instruction_t y = core::kContinue)
+    ActionResponse(action_t a = kNullAction, int e = 0,
+                   core::yield_instruction_t y = core::kContinue)
         : action(a), extra_enqueue_count(e), yield_instruction(y) {}
 
-    static ActionResponse yield(int e = 0) { return ActionResponse(-1, e, core::kYield); }
-    static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
+    static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
+    static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
     static ActionResponse resign() {
       ActionResponse r;
       r.resign_game = true;
       return r;
     }
-
+    static ActionResponse backtrack(node_ix_t b) {
+      ActionResponse r;
+      r.backtrack_node_ix_ = b;
+      return r;
+    }
     template <typename T>
     void set_aux(T aux);
 
     bool is_aux_set() const { return aux_set_; }
     node_aux_t aux() const { return aux_; }
+    node_ix_t backtrack_node_ix() const { return backtrack_node_ix_; }
 
     // TODO: make these private and add access methods
-    action_t action = -1;
+    action_t action = kNullAction;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
@@ -123,6 +129,7 @@ struct GameTypes {
    private:
     node_aux_t aux_ = 0;
     bool aux_set_ = false;
+    node_ix_t backtrack_node_ix_ = kNullNodeIx;
   };
 };
 
