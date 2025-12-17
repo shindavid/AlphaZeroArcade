@@ -678,9 +678,9 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
   bool player_supports_backtracking = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     PlayerRegistration& reg = shared_data_.registration_templates()[p];
-    player_supports_backtracking |= reg.gen->supports_backtracking();
     instantiations_[p] = reg.instantiate(id);
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
+    player_supports_backtracking |= reg.gen->supports_backtracking();
   }
 
   if (player_supports_backtracking) {

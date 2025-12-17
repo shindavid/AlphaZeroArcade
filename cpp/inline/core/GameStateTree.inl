@@ -12,13 +12,13 @@ void GameStateTree<Game>::init() {
 
 template <concepts::Game Game>
 const GameStateTree<Game>::State& GameStateTree<Game>::state(node_ix_t ix) const {
-  DEBUG_ASSERT(ix >= 0 && ix < static_cast<node_ix_t>(nodes_.size()));
+  RELEASE_ASSERT(ix >= 0 && ix < static_cast<node_ix_t>(nodes_.size()));
   return nodes_[ix].state;
 }
 
 template <concepts::Game Game>
 node_ix_t GameStateTree<Game>::advance(node_ix_t ix, action_t action) {
-  DEBUG_ASSERT(ix >= 0 && ix < static_cast<node_ix_t>(nodes_.size()));
+  RELEASE_ASSERT(ix >= 0 && ix < static_cast<node_ix_t>(nodes_.size()));
   node_ix_t last_child_ix = kNullNodeIx;
   for (node_ix_t i = nodes_[ix].first_child_ix; i != kNullNodeIx; i = nodes_[i].next_sibling_ix) {
     if (action == nodes_[i].action_from_parent) {

@@ -26,7 +26,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
   }
 
   if (input == "UD" || input == "ud" || input == "Ud" || input == "uD") {
-    return GenericTuiPlayer::kUndoAction;
+    return generic::HumanTuiPlayer<Game>::kUndoAction;
   }
 
   int col = input[0] - 'A';
