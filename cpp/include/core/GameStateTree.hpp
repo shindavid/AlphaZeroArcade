@@ -14,8 +14,7 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
 
-  static constexpr node_ix_t kNullNodeIx = -1;
-  static constexpr action_t kNullAction = -1;
+
 
   const State& state(node_ix_t ix) const;
   void init();

@@ -110,7 +110,7 @@ class GameServerProxy : public core::GameServerBase {
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
+    node_ix_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;

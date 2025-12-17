@@ -221,11 +221,11 @@ class GameServer
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
+    node_ix_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
-    action_t chance_action_ = -1;
+    action_t chance_action_ = kNullAction;
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
