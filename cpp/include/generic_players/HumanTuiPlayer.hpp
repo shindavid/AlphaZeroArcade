@@ -4,6 +4,8 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
+#include <stack>
+
 namespace generic {
 
 /*
@@ -47,6 +49,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual void print_state(const State&, bool terminal);
 
   core::action_t last_action_;
+  std::stack<core::node_ix_t> node_ix_history_;
 };
 
 }  // namespace generic

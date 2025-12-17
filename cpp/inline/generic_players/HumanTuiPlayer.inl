@@ -22,8 +22,9 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const State&,
-                                                       core::action_t action, core::node_ix_t) {
+                                                       core::action_t action, core::node_ix_t state_node_ix) {
   last_action_ = action;
+  node_ix_history_.push(state_node_ix);
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
@@ -72,6 +73,7 @@ inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultT
   } else {
     std::cout << "The game has ended in a draw." << std::endl;
   }
+  node_ix_history_ = std::stack<core::node_ix_t>();
 }
 
 template <core::concepts::Game Game>
