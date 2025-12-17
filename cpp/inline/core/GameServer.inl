@@ -803,6 +803,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
   if (response.backtrack_node_ix() != kNullNodeIx) {
     backtrack_to_node(response.backtrack_node_ix());
+    // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
+    // Players that maintain internal search/UI history may become inconsistent (e.g. alpha0::Player).
+    // The right mechanism is likely an explicit "backtrack" notification or a full state resync,
+    // which depends on how we factor Player/Manager.
     return true;
   }
 
