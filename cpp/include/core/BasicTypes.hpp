@@ -25,7 +25,6 @@ using node_ix_t = int32_t;
 
 constexpr node_ix_t kNullNodeIx = -1;
 constexpr action_t kNullAction = -1;
-constexpr action_t kBacktrackAction = -2;
 
 // A game_slot_index_t specifies a GameSlot within a GameServer/GameServerProxy.
 using game_slot_index_t = int16_t;
