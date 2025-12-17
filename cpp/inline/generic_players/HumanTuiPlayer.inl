@@ -50,6 +50,19 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
     complain = true;
     my_action = prompt_for_action(state, valid_actions);
 
+    if (my_action == kUndoAction) {
+      if (node_ix_history_.size() < 2) {
+        printf("Cannot undo further!\n");
+        continue;
+      } else {
+        // Pop current state
+        node_ix_history_.pop();
+        core::node_ix_t prev_node_ix = node_ix_history_.top();
+        node_ix_history_.pop();
+        return ActionResponse::backtrack(prev_node_ix);
+      }
+    }
+
     if (my_action < 0 || my_action >= Game::Types::kMaxNumActions || !valid_actions[my_action]) {
       continue;
     }

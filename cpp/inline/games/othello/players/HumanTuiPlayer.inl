@@ -22,8 +22,13 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
   std::getline(std::cin, input);
 
   if (input.size() < 2) {
-    return -1;
+    return core::kNullAction;
   }
+
+  if (input == "UD" || input == "ud" || input == "Ud" || input == "uD") {
+    return GenericTuiPlayer::kUndoAction;
+  }
+
   int col = input[0] - 'A';
   if (col < 0 || col >= 8) {
     col = input[0] - 'a';  // accept lower-case
@@ -32,12 +37,12 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
   try {
     row = std::stoi(input.substr(1)) - 1;
   } catch (std::invalid_argument& e) {
-    return -1;
+    return core::kNullAction;
   } catch (std::out_of_range& e) {
-    return -1;
+    return core::kNullAction;
   }
   if (col < 0 || col >= kBoardDimension || row < 0 || row >= kBoardDimension) {
-    return -1;
+    return core::kNullAction;
   }
 
   return row * kBoardDimension + col;

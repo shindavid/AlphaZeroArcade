@@ -24,6 +24,8 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using GameResultTensor = Game::Types::GameResultTensor;
   using player_array_t = base_t::player_array_t;
 
+  static constexpr core::action_t kUndoAction = -2;
+
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   bool start_game() override;
