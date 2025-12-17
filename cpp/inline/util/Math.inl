@@ -34,6 +34,40 @@ inline const LogitLUT& get_logit_lut() {
 }
 
 // ----------------------------
+// Sigmoid LUT
+// ----------------------------
+struct SigmoidLUT {
+  static constexpr int   kSize  = 256;
+  static constexpr float kXMin  = -8.0f;
+  static constexpr float kXMax  =  8.0f;
+  static constexpr float kRange = kXMax - kXMin;
+  static constexpr float kScale = (kSize - 4) / kRange;
+
+  alignas(64) float table[kSize];
+
+  SigmoidLUT() {
+    // Exact left tail
+    table[0] = 0.0f;
+
+    for (int i = 1; i < kSize - 2; ++i) {
+      float t = float(i - 1) / float(kSize - 4);
+      float x = kXMin + t * kRange;
+      float s = 1.0f / (1.0f + std::exp(-x));
+      table[i] = s;
+    }
+
+    // Exact right tail (two slots)
+    table[kSize - 2] = 1.0f;
+    table[kSize - 1] = 1.0f;
+  }
+};
+
+inline const SigmoidLUT& get_sigmoid_lut() {
+  static const SigmoidLUT lut;
+  return lut;
+}
+
+// ----------------------------
 // Phi LUT
 // ----------------------------
 struct PhiLUT {
@@ -192,6 +226,26 @@ inline float fast_coarse_logit(float mu) {
   float a = lut.table[idx];
   float b = lut.table[idx + 1];
 
+  return a + (b - a) * frac;
+}
+
+inline float fast_coarse_sigmoid(float x) {
+  const auto& lut = detail::get_sigmoid_lut();
+  using SigmoidLUT = detail::SigmoidLUT;
+
+  constexpr float xmin = SigmoidLUT::kXMin;
+  constexpr float scale = SigmoidLUT::kScale;
+  constexpr float tmax = float(SigmoidLUT::kSize - 2);
+
+  // Map x to LUT coordinate, with a 1.0 offset because table[0] is the left tail.
+  float t = 1.0f + (x - xmin) * scale;
+  t = std::clamp(t, 0.0f, tmax);
+
+  int idx = static_cast<int>(t);
+  float frac = t - float(idx);
+
+  float a = lut.table[idx];
+  float b = lut.table[idx + 1];
   return a + (b - a) * frac;
 }
 

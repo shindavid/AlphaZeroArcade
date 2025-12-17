@@ -94,6 +94,8 @@ inline float ref_logit(float mu) {
   return std::log(mu / (1.0f - mu));
 }
 
+inline float ref_sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
+
 }  // namespace
 
 TEST(BoostUtil, get_random_set_index) {
@@ -1337,6 +1339,44 @@ TEST(math, fast_coarse_logit_edge_behavior_is_finite_and_signed) {
     } else if (mu > 0.5f) {
       EXPECT_GE(v, 0.0f) << "mu=" << mu;
     }
+  }
+}
+
+// Check scalar fast_coarse_sigmoid against the true logistic on a fine grid.
+TEST(math, fast_coarse_sigmoid_matches_reference_on_grid) {
+  constexpr float kTol = 1e-4f;
+
+  // Cover the LUT range [-8, 8] with step 0.01
+  for (int k = -800; k <= 800; ++k) {
+    float x = 0.01f * static_cast<float>(k);
+
+    float ref  = ref_sigmoid(x);
+    float fast = math::fast_coarse_sigmoid(x);
+
+    EXPECT_NEAR(fast, ref, kTol) << "x=" << x;
+  }
+}
+
+// Check saturation behavior well outside the LUT range.
+TEST(math, fast_coarse_sigmoid_saturates_in_tails) {
+  float y_neg = math::fast_coarse_sigmoid(-100.0f);
+  float y_pos = math::fast_coarse_sigmoid(100.0f);
+
+  EXPECT_NEAR(y_neg, 0.0f, 1e-6f);
+  EXPECT_NEAR(y_pos, 1.0f, 1e-6f);
+}
+
+// Sanity check: function should be (almost) monotone increasing.
+TEST(math, fast_coarse_sigmoid_is_monotone_non_decreasing) {
+  float prev = math::fast_coarse_sigmoid(-8.0f);
+
+  for (int i = 1; i <= 400; ++i) {
+    float x = -8.0f + 16.0f * (static_cast<float>(i) / 400.0f);
+    float y = math::fast_coarse_sigmoid(x);
+
+    // Allow a tiny epsilon for numerical noise / interpolation.
+    EXPECT_GE(y + 1e-6f, prev) << "Monotonicity violated at x=" << x;
+    prev = y;
   }
 }
 

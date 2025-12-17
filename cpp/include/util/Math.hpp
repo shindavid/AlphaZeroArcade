@@ -21,6 +21,12 @@ inline float normal_cdf(float x) { return 0.5f * (1.0f + std::erff(x * 0.7071067
 // when x is very close to 0 or 1.
 float fast_coarse_logit(float x);
 
+// Approximates sigmoid(x).
+//
+// Returns a value close to 1 / (1 + exp(-x)), but uses a fast approximation that is less accurate
+// when x is very large positive or negative.
+float fast_coarse_sigmoid(float x);
+
 // Very-fast coarse approximation of normal CDF for batch processing.
 //
 // Sets y[i] ~= Phi(x[i]) for i in [0, n).
