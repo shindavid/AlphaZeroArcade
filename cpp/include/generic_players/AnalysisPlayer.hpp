@@ -32,8 +32,8 @@ class AnalysisPlayer : public WebPlayer<Game> {
   // this can cause one AFK player blocking all games.
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
-  void receive_state_change(core::seat_index_t seat, const State& state,
-                            core::action_t action) override;
+  void receive_state_change(core::seat_index_t seat, const State& state, core::action_t action,
+                            core::node_ix_t state_node_ix) override;
   void end_game(const State& state, const GameResultTensor& outcome) override;
 
  private:

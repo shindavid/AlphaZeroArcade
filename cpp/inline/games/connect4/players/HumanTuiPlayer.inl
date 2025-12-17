@@ -23,9 +23,10 @@ inline bool HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const State& state,
-                                                 core::action_t action) {
+                                                 core::action_t action,
+                                                 core::node_ix_t state_node_ix) {
   if (move_history_) move_history_->append(action);
-  base_t::receive_state_change(seat, state, action);
+  base_t::receive_state_change(seat, state, action, state_node_ix);
 }
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State&, const ActionMask&) {

@@ -80,7 +80,7 @@ class PlayerTest : public ::testing::Test {
     for (core::action_t action : initial_actions) {
       core::seat_index_t seat = Rules::get_current_player(state);
       Rules::apply(state, action);
-      mcts_player_->receive_state_change(seat, state, action);
+      mcts_player_->receive_state_change(seat, state, action, -1);
     }
     initial_actions_ = initial_actions;
   }

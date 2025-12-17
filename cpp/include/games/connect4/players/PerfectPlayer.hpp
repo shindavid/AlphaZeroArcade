@@ -47,7 +47,8 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
   PerfectPlayer(OraclePool* oracle_pool, const Params&);
 
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  void receive_state_change(core::seat_index_t, const State&, core::action_t,
+                            core::node_ix_t) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:

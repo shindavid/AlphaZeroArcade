@@ -1,5 +1,6 @@
 #include "generic_players/HumanTuiPlayer.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "search/VerboseManager.hpp"
 #include "util/ScreenUtil.hpp"
 
@@ -21,7 +22,7 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const State&,
-                                                       core::action_t action) {
+                                                       core::action_t action, core::node_ix_t) {
   last_action_ = action;
 }
 

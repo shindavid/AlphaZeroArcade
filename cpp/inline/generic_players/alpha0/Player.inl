@@ -115,7 +115,8 @@ inline bool Player<Traits>::start_game() {
 
 template <search::concepts::Traits Traits>
 inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                 core::action_t action) {
+                                                 core::action_t action,
+                                                 core::node_ix_t state_node_ix) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {

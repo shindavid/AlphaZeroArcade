@@ -59,7 +59,7 @@ class AbstractPlayer {
   // start_game() should return false if the player refuses to play the game.
   virtual bool start_game() { return true; }
 
-  virtual void receive_state_change(seat_index_t, const State&, action_t) {}
+  virtual void receive_state_change(seat_index_t, const State&, action_t, node_ix_t) {}
 
   /*
    * In games with chance events, this method is called before the chance event occurs. This gives

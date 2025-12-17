@@ -15,7 +15,8 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   ~HumanTuiPlayer();
 
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  void receive_state_change(core::seat_index_t, const State&, core::action_t,
+                            core::node_ix_t) override;
 
  private:
   core::action_t prompt_for_action(const State&, const ActionMask&) override;

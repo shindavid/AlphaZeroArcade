@@ -28,7 +28,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
   // AbstractPlayer interface
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  void receive_state_change(core::seat_index_t, const State&, core::action_t,
+                            core::node_ix_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
   bool disable_progress_bar() const override { return true; }

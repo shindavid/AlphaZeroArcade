@@ -23,7 +23,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                           core::action_t action) {
+                                           core::action_t action, core::node_ix_t) {
   send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
 }
 

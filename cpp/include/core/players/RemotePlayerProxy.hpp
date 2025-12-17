@@ -60,7 +60,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_slot_index_t game_slot_index);
 
   bool start_game() override;
-  void receive_state_change(seat_index_t, const State&, action_t) override;
+  void receive_state_change(seat_index_t, const State&, action_t, node_ix_t) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
