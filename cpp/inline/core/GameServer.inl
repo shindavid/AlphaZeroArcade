@@ -685,7 +685,7 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
 
   if (player_supports_backtracking) {
     for (auto& inst : instantiations_) {
-      inst.player->enable_backtracking();
+      inst.player->set_facing_backtracking_opponent();
     }
   }
 

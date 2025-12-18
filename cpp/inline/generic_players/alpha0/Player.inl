@@ -145,7 +145,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  if (this->is_backtracking_enabled()) {
+  if (this->is_facing_backtracking_opponent()) {
     const SearchResults* search_result = new SearchResults(*response.results);
     search_result_ptrs_.push_back(search_result);
     ActionResponse action_response = get_action_response_helper(search_result, request);
