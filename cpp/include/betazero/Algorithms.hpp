@@ -79,22 +79,6 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
                             SearchResults& results);
 
-  // static void update_stats(SearchContext& context, NodeStats& stats, LocalPolicyArray& pi_arr,
-  //                          float& minus_shock, float& plus_shock, const Node* node,
-  //                          const Edge* edge);
-
-  // // Updates pi_arr in-place to be the posterior policy
-  // static void update_policy(SearchContext& context, LocalPolicyArray& pi_minus_arr,
-  //                           LocalPolicyArray& pi_arr, LocalPolicyArray& pi_plus_arr,
-  //                           const Node* node, const Edge* edge, LookupTable& lookup_table,
-  //                           int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
-  //                           const util::Gaussian1D* prior_logit_beliefs,
-  //                           const util::Gaussian1D* cur_logit_beliefs, float minus_shock,
-  //                           float plus_shock);
-
-  // static void apply_shock(LocalActionValueArray& Q_arr, float lW, float shock, int action_index,
-  //                         core::seat_index_t seat);
-
   static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
                                            LogitValueArray& lQW);
   static util::Gaussian1D compute_logit_value_belief(float Q, float W);

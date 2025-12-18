@@ -1,9 +1,5 @@
 #include "betazero/Backpropagator.hpp"
 
-#include "betazero/Constants.hpp"
-
-#include <sstream>
-
 namespace beta0 {
 
 template <search::concepts::Traits Traits>
@@ -43,6 +39,7 @@ void Backpropagator<Traits>::preload_parent_data() {
   seat_ = stable_data.active_seat;
 
   read_data_.resize(n_);
+  read_data2_.resize(n_);
 
   int i = -1;
   for (int k = 0; k < n_; k++) {
@@ -79,7 +76,6 @@ void Backpropagator<Traits>::load_parent_data() {
   mit::unique_lock lock(node_->mutex());
 
   stats_ = node_->stats();  // copy
-  Qi_snapshot_ = edge_->Q_snapshot;
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -158,9 +154,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
   sibling_write_data_.resize(n_ - 1);
   compute_policy();
-  // compute_Q_stars();
   update_QW();
-  update_Qp_plus_minus();
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
@@ -174,9 +168,6 @@ void Backpropagator<Traits>::apply_updates() {
   for (int k = 0; k < n_; k++) {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
-    child_edge->Q_snapshot = read_data2_(r2_Q, k, seat_);
-    child_edge->Qp_minus = full_write_data_(fw_Qp_minus, k);
-    child_edge->Qp_plus = full_write_data_(fw_Qp_plus, k);
   }
 
   node_->stats() = stats_;  // copy back
@@ -189,14 +180,10 @@ void Backpropagator<Traits>::compute_policy() {
     full_write_data_(fw_pi) = read_data_(r_pi);
     full_write_data_(fw_pi, i_) = 0.f;
     normalize_policy(full_write_data_(fw_pi));
-    full_write_data_(fw_pi_minus) = full_write_data_(fw_pi);
-    full_write_data_(fw_pi_plus) = full_write_data_(fw_pi);
     return;
   } else if (lQW_i == util::Gaussian1D::pos_inf()) {
     full_write_data_(fw_pi).fill(0.f);
     full_write_data_(fw_pi, i_) = 1.f;
-    full_write_data_(fw_pi_minus) = full_write_data_(fw_pi);
-    full_write_data_(fw_pi_plus) = full_write_data_(fw_pi);
     return;
   }
 
@@ -206,8 +193,6 @@ void Backpropagator<Traits>::compute_policy() {
 
   if (read_data_(r_pi, i_) >= 1.f) {
     // all policy mass is already on this action
-    full_write_data_(fw_pi_minus) = full_write_data_(fw_pi);
-    full_write_data_(fw_pi_plus) = full_write_data_(fw_pi);
     return;
   }
 
@@ -228,14 +213,10 @@ void Backpropagator<Traits>::compute_policy() {
   const int n = n_ - 1;
 
   auto S_denom_inv = sibling_write_data_(sw_S_denom_inv);
-  auto S_minus = sibling_write_data_(sw_S_minus);
   auto S = sibling_write_data_(sw_S);
-  auto S_plus = sibling_write_data_(sw_S_plus);
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
-  auto tau_minus = sibling_write_data_(sw_tau_minus);
   auto tau = sibling_write_data_(sw_tau);
-  auto tau_plus = sibling_write_data_(sw_tau_plus);
 
   c = (lV_i - lV) / (lU_i + lU).sqrt();
   math::fast_coarse_batch_inverse_normal_cdf_clamped_range(P_i, P.data(), c.data(), n, z.data());
@@ -244,52 +225,11 @@ void Backpropagator<Traits>::compute_policy() {
   S_denom_inv = 1.0f / (lW_i + lW).sqrt();
   const float pi_i_inv = 1.0f / pi_i;
 
-  auto write_pi = [&](float _shock, auto& _S, auto& _tau, auto& _pi_i) {
-    _S = (lQ_i + _shock - lQ) * S_denom_inv + z;
-    math::fast_coarse_batch_normal_cdf(_S.data(), n, _tau.data());
-    _pi_i = (pi * _tau).sum() * pi_i_inv;
-  };
-
-  write_pi(0.f, S, tau, full_write_data_(fw_pi, i_));
-
-  if (lW_i != 0.f) {
-    float lShock = beta0::kShockZScore * std::sqrt(lW_i);
-    write_pi(-lShock, S_minus, tau_minus, full_write_data_(fw_pi_minus, i_));
-    write_pi(lShock, S_plus, tau_plus, full_write_data_(fw_pi_plus, i_));
-  } else {
-    full_write_data_(fw_pi_minus, i_) = full_write_data_(fw_pi, i_);
-    full_write_data_(fw_pi_plus, i_) = full_write_data_(fw_pi, i_);
-  }
-
+  S = (lQ_i - lQ) * S_denom_inv + z;
+  math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
+  full_write_data_(fw_pi, i_) = (pi * tau).sum() * pi_i_inv;
   normalize_policy(full_write_data_(fw_pi));
 }
-
-// template <search::concepts::Traits Traits>
-// void Backpropagator<Traits>::compute_Q_stars() {
-//   // TODO: what is this for??
-//   const auto Q = read_data2_(r2_Q);
-//   const auto W = read_data2_(r2_W);
-//   const auto Q_star = read_data2_(r2_Q_star);
-
-//   auto Q_star_minus = full_write_data_(fw_Q_star_minus);;
-//   auto Q_star_plus = full_write_data_(fw_Q_star_plus);
-
-//   Q_star_minus = Q_star.col(seat_);
-//   Q_star_plus = Q_star.col(seat_);
-
-//   if (W(i_, seat_) != 0.f) {
-//     float lShock = beta0::kShockZScore * std::sqrt(W(i_, seat_));
-//     float lQ = read_data_(r_lQ, i_);
-//     float lQ_i_minus = lQ - lShock;
-//     float lQ_i_plus = lQ + lShock;
-
-//     float Q_i_minus = math::fast_coarse_sigmoid(lQ_i_minus);
-//     float Q_i_plus = math::fast_coarse_sigmoid(lQ_i_plus);
-
-//     Q_star_minus(i_) = std::max(Q_i_minus, Q_floor_);
-//     Q_star_plus(i_) = std::max(Q_i_plus, Q_floor_);
-//   }
-// }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::update_QW() {
@@ -308,7 +248,7 @@ void Backpropagator<Traits>::update_QW() {
 
   auto pi = full_write_data_(fw_pi);
   auto W = read_data2_(r2_W);
-  auto Q_star = read_data2_(r2_Q);
+  auto Q_star = read_data2_(r2_Q_star);
   auto pi_mat = pi.matrix();
 
   stats_.Q = (Q_star.matrix().transpose() * pi_mat).array();
@@ -316,65 +256,14 @@ void Backpropagator<Traits>::update_QW() {
   auto W_in_mat = W.matrix();
   auto W_across_mat = (Q_star.rowwise() - stats_.Q.transpose()).square().matrix();
   auto W_p_mat = (W_in_mat + W_across_mat).transpose() * pi_mat;
+
   stats_.W = W_p_mat.array();
-}
-
-template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::update_Qp_plus_minus() {
-  // For j != i, the plus shock update rule is:
-  //
-  // Q^{n+}_j(p) = \pi^{n+}_i * Q^n_i + \frac{1 - \pi^{n+}_i}{1 - \alpha_j} *
-  //                   [Q^{o+}_j(p) - \alpha_j * Q^o_i]
-  //
-  // where:
-  //
-  // \alpha_j = \frac{1 - \pi^{o+}_j}{1- \pi^{o}_j} \pi^o_i
-  //
-  // The minus shock update rule is analogous.
-
-  float Q_new_i = read_data2_(r2_Q, i_, seat_);
-  const auto pi_old_j = sibling_read_data_(sr_pi);
-  float pi_old_i = read_data_(r_pi, i_);
-  float Q_old_i = Qi_snapshot_;
-
-  float pi_new_minus_i = full_write_data_(fw_pi_minus, i_);
-  const auto Qp_old_minus_j = sibling_read_data_(sr_Qp_minus);
-  const auto pi_old_minus_j = sibling_read_data_(sr_pi_minus);
-  auto beta_j = (1.f - pi_old_minus_j) / (1.f - pi_old_j) * pi_old_i;
-  auto Qp_new_minus_j = pi_new_minus_i * Q_new_i + (1.f - pi_new_minus_i) / (1.f - beta_j) *
-                                                     (Qp_old_minus_j - beta_j * Q_old_i);
-  sibling_write_data_(sw_Qp_minus) = Qp_new_minus_j;
-  unsplice(sw_Qp_minus, fw_Qp_minus);
-
-  float pi_new_plus_i = full_write_data_(fw_pi_plus, i_);
-  const auto Qp_old_plus_j = sibling_read_data_(sr_Qp_plus);
-  const auto pi_old_plus_j = sibling_read_data_(sr_pi_plus);
-  auto alpha_j = (1.f - pi_old_plus_j) / (1.f - pi_old_j) * pi_old_i;
-  auto Qp_new_plus_j = pi_new_plus_i * Q_new_i + (1.f - pi_new_plus_i) / (1.f - alpha_j) *
-                                                   (Qp_old_plus_j - alpha_j * Q_old_i);
-  sibling_write_data_(sw_Qp_plus) = Qp_new_plus_j;
-  unsplice(sw_Qp_plus, fw_Qp_plus);
 }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::splice(read_col_t from_col, sibling_read_col_t to_col) {
   const auto from = read_data_(from_col);
   auto to = sibling_read_data_(to_col);
-
-  if (i_ > 0) {
-    to.topRows(i_) = from.topRows(i_);
-  }
-
-  int tail = n_ - i_ - 1;
-  if (tail > 0) {
-    to.bottomRows(tail) = from.bottomRows(tail);
-  }
-}
-
-template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::unsplice(sibling_write_col_t from_col, full_write_col_t to_col) {
-  const auto from = sibling_write_data_(from_col);
-  auto to = full_write_data_(to_col);
 
   if (i_ > 0) {
     to.topRows(i_) = from.topRows(i_);
@@ -418,13 +307,15 @@ void Backpropagator<Traits>::modify_Q_arr(T& Q_arr, int action_index,
 template <search::concepts::Traits Traits>
 template <typename T>
 void Backpropagator<Traits>::normalize_policy(T pi) {
-  float pi_sum = pi.sum();
-  if (pi_sum > 0.f) {
-    pi /= pi_sum;
+  float pi_i = pi(i_);
+  float sum_others = pi.sum() - pi_i;
+
+  if (sum_others > 0.f) {
+    float mult = (1.f - pi_i) / sum_others;
+    pi *= mult;
+    pi(i_) = pi_i;
   } else {
-    std::ostringstream ss;
-    ss << pi;
-    throw util::Exception("Invalid policy: {}", ss.str());
+    pi(i_) = 1.f;
   }
 }
 

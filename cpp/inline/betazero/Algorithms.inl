@@ -2,7 +2,6 @@
 
 #include "betazero/Backpropagator.hpp"
 #include "core/BasicTypes.hpp"
-#include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
@@ -12,77 +11,6 @@
 #include <cmath>
 
 namespace beta0 {
-
-namespace detail {
-
-// Map (Q, lW) -> lQ, with lW held fixed.
-inline float logit_normal_mean(float Q, float lW) {
-  // Assumes Q in (0,1).
-  const float logit = math::fast_coarse_logit(Q);
-  return logit - 0.5f * lW * (1.0f - 2.0f * Q);
-}
-
-// Given current Q, fixed lW, and a desired delta_lQ,
-// solve for new Q' such that lQ(Q', lW) = lQ(Q, lW) + delta_lQ.
-// Uses a few Newton iterations starting from a linearized guess.
-inline float newton_update_Q_from_delta_lQ(float Q, float lW, float delta_lQ) {
-  // Clamp away from 0/1 for numerical safety.
-  constexpr float kEps = 1e-6f;
-  constexpr int kMaxIters = 6;
-  constexpr float kTol = 1e-3f;
-
-  Q = std::clamp(Q, kEps, 1.0f - kEps);
-
-  // Target lQ after the change.
-  const float lQ_current = logit_normal_mean(Q, lW);
-  const float lQ_target = lQ_current + delta_lQ;
-
-  // Derivative d(lQ)/dQ at the current Q, with lW fixed:
-  //   d/dQ logit = 1/(Q(1-Q))
-  //   d/dQ[-(lW/2)(1-2Q)] = lW
-  const float dlQ_dQ0 = 1.0f / (Q * (1.0f - Q)) + lW;
-
-  // Linearized initial guess.
-  float x = Q + delta_lQ / dlQ_dQ0;
-  x = std::clamp(x, kEps, 1.0f - kEps);
-
-  for (int iter = 0; iter < kMaxIters; ++iter) {
-    const float lQ = logit_normal_mean(x, lW);
-
-    // f(x) = lQ(x) - lQ_target
-    const float fx = lQ - lQ_target;
-
-    // Check convergence in lQ space.
-    if (std::fabs(fx) < kTol) {
-      break;
-    }
-
-    // f'(x) = d(lQ)/dQ at x with lW fixed.
-    const float dlQ_dQ = 1.0f / (x * (1.0f - x)) + lW;
-
-    // Guard against pathological derivative (shouldn't really happen for Q in (0,1)).
-    if (std::fabs(dlQ_dQ) < 1e-8f) {
-      break;
-    }
-
-    // Newton step: x_{n+1} = x_n - f(x_n)/f'(x_n).
-    float step = fx / dlQ_dQ;
-    x -= step;
-
-    x = std::clamp(x, kEps, 1.0f - kEps);
-
-    // Optional: stop if Q itself is barely moving.
-    if (std::fabs(step) < kTol * 0.1f) {
-      break;
-    }
-  }
-
-  return x;
-}
-
-}  // namespace detail
-
-
 
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
@@ -101,8 +29,6 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
 
   NodeStats& stats = node->stats();
   populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
-  stats.minus_shocks.fill(0.f);
-  stats.plus_shocks.fill(0.f);
   stats.Q = q;
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
@@ -387,137 +313,6 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
                                                     SearchResults& results) {
   throw util::CleanException("write_results not yet support in beta0");
 }
-
-// template <search::concepts::Traits Traits, typename Derived>
-// void AlgorithmsBase<Traits, Derived>::update_stats(SearchContext& context, NodeStats& stats,
-//                                                    LocalPolicyArray& pi_arr, float& minus_shock,
-//                                                    float& plus_shock, const Node* node,
-//                                                    const Edge* edge) {
-//   LookupTable& lookup_table = context.general_context->lookup_table;
-//   const auto& stable_data = node->stable_data();
-//   core::seat_index_t seat = stable_data.active_seat;
-//   int num_valid_actions = stable_data.num_valid_actions;
-
-//   player_bitset_t all_provably_winning;
-//   player_bitset_t all_provably_losing;
-//   all_provably_winning.set();
-//   all_provably_losing.set();
-
-//   if (stable_data.is_chance_node) {
-//     throw util::Exception("chance nodes not yet supported in beta0");
-//   } else {
-//     Derived::update_QW(&stats.Q, &stats.W, seat, pi_arr, child_Q_arr, child_W_arr);
-
-//     if (minus_shock != 0.f) {
-//       ValueArray prev_Q_i = child_Q_arr.row(i).transpose();
-//       apply_shock(child_Q_arr, cur_logit_beliefs_arr[i].variance(), -minus_shock, i, seat);
-//       ValueArray Q_minus;
-//       Derived::update_QW(&Q_minus, nullptr, seat, pi_minus_arr, child_Q_arr, child_W_arr);
-//       ValueArray minus_shocks = stats.Q - Q_minus;
-//       if (minus_shocks[seat] > stats.minus_shocks[seat]) {
-//         stats.minus_shocks = minus_shocks;
-//       }
-//       child_Q_arr.row(i) = prev_Q_i.transpose();
-//     }
-
-//     if (plus_shock != 0.f) {
-//       apply_shock(child_Q_arr, cur_logit_beliefs_arr[i].variance(), plus_shock, i, seat);
-//       ValueArray Q_plus;
-//       Derived::update_QW(&Q_plus, nullptr, seat, pi_plus_arr, child_Q_arr, child_W_arr);
-//       ValueArray plus_shocks = Q_plus - stats.Q;
-//       if (plus_shocks[seat] > stats.plus_shocks[seat]) {
-//         stats.plus_shocks = plus_shocks;
-//       }
-//     }
-
-//     if (cp_has_winning_move) {
-//       stats.provably_winning[seat] = true;
-//       stats.provably_losing.set();
-//       stats.provably_losing[seat] = false;
-//     } else if (all_edges_expanded) {
-//       stats.provably_winning = all_provably_winning;
-//       stats.provably_losing = all_provably_losing;
-//     }
-//   }
-// }
-
-// template <search::concepts::Traits Traits, typename Derived>
-// void AlgorithmsBase<Traits, Derived>::update_policy(
-//   SearchContext& context, LocalPolicyArray& pi_minus_arr, LocalPolicyArray& pi_arr,
-//   LocalPolicyArray& pi_plus_arr, const Node* node, const Edge* edge, LookupTable& lookup_table,
-//   int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
-//   const util::Gaussian1D* prior_logit_beliefs, const util::Gaussian1D* cur_logit_beliefs,
-//   float minus_shock, float plus_shock) {
-//   if (!search::kEnableSearchDebug) return;
-
-//   group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
-
-//   LocalPolicyArray actions(n + 1);
-//   LocalPolicyArray P2(n + 1);
-//   LocalPolicyArray lV2(n + 1);
-//   LocalPolicyArray lU2(n + 1);
-//   LocalPolicyArray lQminus2(n + 1);
-//   LocalPolicyArray lQ2(n + 1);
-//   LocalPolicyArray lQplus2(n + 1);
-//   LocalPolicyArray lW2(n + 1);
-//   LocalPolicyArray z2(n + 1);
-//   LocalPolicyArray tau_minus2(n + 1);
-//   LocalPolicyArray tau2(n + 1);
-//   LocalPolicyArray tau_plus2(n + 1);
-
-//   r = 0;
-//   for (; r < n + 1; ++r) {
-//     Edge* child_edge = lookup_table.get_edge(node, r);
-//     core::action_t action = child_edge->action;
-//     Game::Symmetries::apply(action, inv_sym, node->action_mode());
-//     actions(r) = action;
-//     P2(r) = prior_pi_arr[r];
-//     lV2(r) = prior_logit_beliefs[r].mean();
-//     lU2(r) = prior_logit_beliefs[r].variance();
-//     lQ2(r) = cur_logit_beliefs[r].mean();
-//     lW2(r) = cur_logit_beliefs[r].variance();
-//     z2(r) = (r == i) ? 0.f : z(r < i ? r : r - 1);
-//     tau_minus2(r) = (r == i) ? 0.f : tau_minus(r < i ? r : r - 1);
-//     tau2(r) = (r == i) ? 0.f : tau(r < i ? r : r - 1);
-//     tau_plus2(r) = (r == i) ? 0.f : tau_plus(r < i ? r : r - 1);
-//   }
-
-//   lQminus2.setZero();
-//   lQplus2.setZero();
-
-//   lQminus2(i) = lQ_i - minus_shock;
-//   lQplus2(i) = lQ_i + plus_shock;
-
-//   LOG_INFO("*** DBG update_policy() ***");
-
-//   std::stringstream ss;
-//   auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-//     actions, P2, lV2, lU2, lQminus2, lQ2, lQplus2, lW2, z2, tau_minus2, tau2, tau_plus2,
-//     original_pi_arr, pi_minus_arr, pi_arr, pi_plus_arr));
-
-//   std::vector<std::string> columns = {"action", "P",   "lV", "lU",   "lQ-", "lQ",
-//                                       "lQ+",    "lW",  "z",  "tau-", "tau", "tau+",
-//                                       "old_pi", "pi-", "pi", "pi+"};
-
-//   eigen_util::PrintArrayFormatMap fmt_map{
-//     {"action",
-//      [&](float x) {
-//        return Game::IO::action_to_str(x, node->action_mode()) + (x == i ? "*" : "");
-//      }},
-//   };
-
-//   eigen_util::print_array(ss, data, columns, &fmt_map);
-//   LOG_INFO("{}", ss.str());
-// }
-
-// template <search::concepts::Traits Traits, typename Derived>
-// void AlgorithmsBase<Traits, Derived>::apply_shock(LocalActionValueArray& Q_arr, float lW,
-//                                                   float shock, int action_index,
-//                                                   core::seat_index_t seat) {
-//   float old_q = Q_arr(action_index, seat);
-//   float new_q = detail::newton_update_Q_from_delta_lQ(old_q, lW, shock);
-//   modify_Q_arr(Q_arr, action_index, seat, new_q);
-// }
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::populate_logit_value_beliefs(

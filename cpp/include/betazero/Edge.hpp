@@ -18,10 +18,6 @@ struct Edge : public search::EdgeBase {
 
   int RC;  // refresh count
 
-  float Q_snapshot;
-  float Qp_minus;
-  float Qp_plus;
-
   ValueArray child_AV;
   ValueArray child_AU;
   LogitValueArray child_lAUV;

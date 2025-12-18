@@ -16,9 +16,6 @@ struct NodeStats {
   // but we store it here for computational savings.
   LogitValueArray lQW;
 
-  ValueArray minus_shocks;  // per-player negative shocks, in logit space
-  ValueArray plus_shocks;   // per-player positive shocks, in logit space
-
   ValueArray Q;
   ValueArray Q_min;    // min Q observed per player
   ValueArray Q_max;    // for each player, the max Q ever observed for that player

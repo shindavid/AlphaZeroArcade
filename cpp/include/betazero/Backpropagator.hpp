@@ -55,10 +55,6 @@ class Backpropagator {
   enum full_write_col_t : uint8_t {
     // Corresponds to columns of full_write_data_
     fw_pi,
-    fw_pi_minus,  // TODO: we only need this for i_
-    fw_pi_plus,   // TODO: we only need this for i_
-    fw_Qp_minus,
-    fw_Qp_plus,
     fwSize
   };
 
@@ -70,10 +66,6 @@ class Backpropagator {
     sr_lU,
     sr_lQ,
     sr_lW,
-    sr_Qp_minus,
-    sr_Qp_plus,
-    sr_pi_minus,
-    sr_pi_plus,
     srSize
   };
 
@@ -84,12 +76,6 @@ class Backpropagator {
     sw_c,
     sw_z,
     sw_tau,
-    sw_S_minus,
-    sw_S_plus,
-    sw_tau_minus,
-    sw_tau_plus,
-    sw_Qp_minus,
-    sw_Qp_plus,
     swSize
   };
 
@@ -161,12 +147,9 @@ class Backpropagator {
   void apply_updates();
 
   void compute_policy();
-  // void compute_Q_stars();
   void update_QW();
-  void update_Qp_plus_minus();
 
   void splice(read_col_t from_col, sibling_read_col_t to_col);
-  void unsplice(sibling_write_col_t from_col, full_write_col_t to_col);
 
   // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.
   template<typename T>
@@ -174,7 +157,7 @@ class Backpropagator {
                            core::seat_index_t seat, float q_new);
 
   template <typename T>
-  void normalize_policy(T pi);
+  void normalize_policy(T pi);  // keep pi[i_] fixed, normalize others
 
   LookupTable& lookup_table() { return context_.general_context->lookup_table; }
 
@@ -184,7 +167,6 @@ class Backpropagator {
   Edge* edge_;
   int n_;  // number of valid actions
   int i_;  // current action index
-  float Qi_snapshot_;
   float Q_floor_;
   core::seat_index_t seat_;
 
@@ -196,74 +178,6 @@ class Backpropagator {
   FullWriteData full_write_data_;
   SiblingReadData sibling_read_data_;
   SiblingWriteData sibling_write_data_;
-
-  // struct WriteData {
-  //   struct FullData {
-  //     // full data arrays are of length n_
-  //   };
-
-  //   struct SiblingData {
-  //     // sibling data arrays are of length (n_ - 1), as they splice out column i_
-  //   };
-  // };
-
-  // // full data arrays are of length n_
-  // struct FullData {
-  //   void resize(int n);
-
-  //   LocalArray1D P;
-  //   LocalArray1D pi;
-  //   LocalArray1D lV;
-  //   LocalArray1D lU;
-  //   LocalArray1D lQ;
-  //   LocalArray1D lW;
-  //   LocalArray1D Q_star_minus;
-  //   LocalArray1D Q_star_plus;
-
-  //   LocalArray2D Q;
-  //   LocalArray2D W;
-  //   LocalArray2D Q_star;
-  // };
-
-  // // sibling data arrays are of length (n_ - 1), as they split out column i_
-  // struct SiblingData {
-  //   void resize(int n);
-
-  //   LocalArray1D P;
-  //   LocalArray1D pi;
-  //   LocalArray1D lV;
-  //   LocalArray1D lU;
-  //   LocalArray1D lQ;
-  //   LocalArray1D lW;
-
-  //   LocalArray1D S_denom_inv;
-  //   LocalArray1D S_minus;
-  //   LocalArray1D S;
-  //   LocalArray1D S_plus;
-  //   LocalArray1D c;
-  //   LocalArray1D z;
-  //   LocalArray1D tau_minus;
-  //   LocalArray1D tau;
-  //   LocalArray1D tau_plus;
-
-  //   LocalArray1D Qp_minus;
-  //   LocalArray1D Qp_plus;
-  // };
-
-  // struct UpdateData {
-  //   void resize(int n);
-
-  //   LocalArray1D pi_minus;  // posterior policy if we shock Q[i] downward
-  //   LocalArray1D pi;        // posterior policy given actual Q[i]
-  //   LocalArray1D pi_plus;   // posterior policy if we shock Q[i] upward
-
-  //   LocalArray1D Qp_minus;
-  //   LocalArray1D Qp_plus;
-  // };
-
-  // FullData full_data_;
-  // SiblingData sibling_data_;
-  // UpdateData update_data_;
 };
 
 }  // namespace beta0
