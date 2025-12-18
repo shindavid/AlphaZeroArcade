@@ -50,20 +50,21 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  class Backpropagator {
-   public:
-    Backpropagator(SearchContext& context) : context_(context) {}
-
-    template <typename MutexProtectedFunc>
-    void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
-
-   private:
-    SearchContext& context_;
-  };
+  template <typename MutexProtectedFunc>
+  static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
   static void init_node_stats_from_terminal(Node* node);
-  static void undo_virtual_update(Node* node, Edge* edge);
+  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {}
+  static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {}
+  static void virtually_update_node_stats(Node* node) {}
+  static void virtually_update_node_stats_and_edge(Node* node, Edge* edge) {}
+  static void undo_virtual_update(Node* node, Edge* edge) {}
+
+  static void validate_search_path(const SearchContext& context) {}
   static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
+  static bool more_search_iterations_needed(const GeneralContext&, const Node* root) {
+    throw util::Exception("TODO");
+  }
 
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
@@ -75,34 +76,29 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(SearchContext& context, NodeStats& stats, LocalPolicyArray& pi_arr,
-                           float& minus_shock, float& plus_shock, const Node* node,
-                           const Edge* edge);
+  static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
+                            SearchResults& results);
 
-  // Updates pi_arr in-place to be the posterior policy
-  static void update_policy(SearchContext& context, LocalPolicyArray& pi_minus_arr,
-                            LocalPolicyArray& pi_arr, LocalPolicyArray& pi_plus_arr,
-                            const Node* node, const Edge* edge, LookupTable& lookup_table,
-                            int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
-                            const util::Gaussian1D* prior_logit_beliefs,
-                            const util::Gaussian1D* cur_logit_beliefs, float minus_shock,
-                            float plus_shock);
+  // static void update_stats(SearchContext& context, NodeStats& stats, LocalPolicyArray& pi_arr,
+  //                          float& minus_shock, float& plus_shock, const Node* node,
+  //                          const Edge* edge);
 
-  static void update_QW(ValueArray* Q, ValueArray* W, core::seat_index_t seat,
-                        const LocalPolicyArray& pi_arr, const LocalActionValueArray& child_Q_arr,
-                        const LocalActionValueArray& child_W_arr);
+  // // Updates pi_arr in-place to be the posterior policy
+  // static void update_policy(SearchContext& context, LocalPolicyArray& pi_minus_arr,
+  //                           LocalPolicyArray& pi_arr, LocalPolicyArray& pi_plus_arr,
+  //                           const Node* node, const Edge* edge, LookupTable& lookup_table,
+  //                           int updated_edge_arr_index, const LocalPolicyArray& prior_pi_arr,
+  //                           const util::Gaussian1D* prior_logit_beliefs,
+  //                           const util::Gaussian1D* cur_logit_beliefs, float minus_shock,
+  //                           float plus_shock);
 
-  static void apply_shock(LocalActionValueArray& Q_arr, float lW, float shock, int action_index,
-                          core::seat_index_t seat);
+  // static void apply_shock(LocalActionValueArray& Q_arr, float lW, float shock, int action_index,
+  //                         core::seat_index_t seat);
 
   static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
-                                           LogitValueArray& logit_value_beliefs);
+                                           LogitValueArray& lQW);
   static util::Gaussian1D compute_logit_value_belief(float Q, float W);
-  static void normalize_policy(LocalPolicyArray& pi_arr);
-
-  // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.
-  static void modify_Q_arr(LocalActionValueArray& Q_arr, int action_index,
-                           core::seat_index_t seat, float q_new);
+  // static void normalize_policy(LocalPolicyArray& pi_arr);
 };
 
 template <search::concepts::Traits Traits>

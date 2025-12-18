@@ -9,6 +9,7 @@
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Gaussian1D.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
 

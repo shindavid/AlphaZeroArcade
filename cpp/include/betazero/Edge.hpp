@@ -1,7 +1,7 @@
 #pragma once
 
-#include "alphazero/Edge.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
+#include "search/EdgeBase.hpp"
 
 namespace beta0 {
 
@@ -9,25 +9,22 @@ namespace beta0 {
  * An Edge corresponds to an action that can be taken from this node.
  */
 template <core::concepts::EvalSpec EvalSpec>
-struct Edge : public alpha0::Edge<EvalSpec> {
+struct Edge : public search::EdgeBase {
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
   using ValueArray = EvalSpec::Game::Types::ValueArray;
-  using Base = alpha0::Edge<EvalSpec>;
 
-  // In alpha0, the edge-count *is* the (unnormalized) posterior policy value.
-  //
-  // In beta0, we decouple the two concepts, and so track the posterior policy value separately.
-  float policy_posterior_prob = 0;
+  float P;
+  float pi;
 
-  // child_AU is set to with the neural network's AU estimate of this edge's action at the time the
-  // parent is evaluated.
+  int RC;  // refresh count
+
+  float Q_snapshot;
+  float Qp_minus;
+  float Qp_plus;
+
+  ValueArray child_AV;
   ValueArray child_AU;
-
-  LogitValueArray child_logit_value_beliefs;
-
-  // TODO: child and parent shocks needed. Maybe in logit and value space?
-  float minus_shock = 0;  // negative shock, in logit space
-  float plus_shock = 0;   // positive shock, in logit space
+  LogitValueArray child_lAUV;
 };
 
 }  // namespace beta0

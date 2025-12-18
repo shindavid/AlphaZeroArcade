@@ -21,15 +21,15 @@ namespace alpha0 {
 
 template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::Backpropagator::run(Node* node, Edge* edge,
-                                                          MutexProtectedFunc&& func) {
+void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* node, Edge* edge,
+                                               MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  Derived::update_stats(stats, node, context_.general_context->lookup_table);
+  Derived::update_stats(stats, node, context.general_context->lookup_table);
 
   lock.lock();
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/Asserts.hpp"
-
 namespace util {
 
 // A simple 1D Gaussian representation.
@@ -16,7 +14,7 @@ class Gaussian1D {
   static constexpr float kVariancePosInf = -3;
   static constexpr float kVarianceUnset = -2;
 
-  Gaussian1D(float m, float v) : mean_(m), variance_(v) { DEBUG_ASSERT(variance_ >= 0); }
+  Gaussian1D(float m, float v) : mean_(m), variance_(v) {}
   Gaussian1D() = default;
 
   static Gaussian1D neg_inf() { return Gaussian1D(0, kVarianceNegInf); }

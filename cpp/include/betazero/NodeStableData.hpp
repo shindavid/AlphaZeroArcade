@@ -22,7 +22,7 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   }
 
   ValueArray U;  // uncertainty
-  LogitValueArray prior_logit_value_beliefs;
+  LogitValueArray lUV;
 };
 
 }  // namespace beta0
