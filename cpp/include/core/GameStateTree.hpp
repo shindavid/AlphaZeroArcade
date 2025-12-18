@@ -16,21 +16,21 @@ class GameStateTree {
 
 
 
-  const State& state(node_ix_t ix) const;
+  const State& state(game_tree_index_t ix) const;
   void init();
-  node_ix_t advance(node_ix_t ix, action_t action);
-  node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) const { return nodes_[ix].aux[seat]; }
-  void set_player_aux(node_ix_t ix, seat_index_t seat, node_aux_t aux) {
+  game_tree_index_t advance(game_tree_index_t ix, action_t action);
+  game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const { return nodes_[ix].aux[seat]; }
+  void set_player_aux(game_tree_index_t ix, seat_index_t seat, game_tree_node_aux_t aux) {
     nodes_[ix].aux[seat] = aux;
   }
 
  private:
   struct Node {
     const State state;
-    const node_ix_t parent_ix;
+    const game_tree_index_t parent_ix;
     const action_t action_from_parent;
-    node_ix_t first_child_ix = kNullNodeIx;
-    node_ix_t next_sibling_ix = kNullNodeIx;
+    game_tree_index_t first_child_ix = kNullNodeIx;
+    game_tree_index_t next_sibling_ix = kNullNodeIx;
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -38,9 +38,9 @@ class GameStateTree {
      * IMPORTANT NOTE: aux = 0 is reserved to mean "no aux data". Hence, players should avoid
      * storing aux = 0 here.
      */
-    node_aux_t aux[Constants::kNumPlayers] = {};
+    game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
-    Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
+    Node(const State& s, game_tree_index_t p = kNullNodeIx, action_t a = kNullAction)
         : state(s), parent_ix(p), action_from_parent(a) {}
   };
   std::vector<Node> nodes_;

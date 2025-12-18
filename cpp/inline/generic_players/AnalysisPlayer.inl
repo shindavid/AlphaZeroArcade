@@ -24,11 +24,10 @@ typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
 }
 
 template <core::concepts::Game Game>
-void AnalysisPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                core::action_t action,
-                                                core::node_ix_t state_node_ix) {
-  wrapped_player_->receive_state_change(seat, state, action, state_node_ix);
-  this->send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
+void AnalysisPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  wrapped_player_->receive_state_change(update);
+  this->send_state_update(update.seat, update.state, update.action,
+                          Game::Rules::get_action_mode(update.state));
 }
 
 template <core::concepts::Game Game>

@@ -22,10 +22,9 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const State&,
-                                                       core::action_t action, core::node_ix_t state_node_ix) {
-  last_action_ = action;
-  node_ix_history_.push(state_node_ix);
+inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  last_action_ = update.action;
+  node_ix_history_.push(update.game_tree_index);
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
@@ -59,7 +58,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
         // Pop current state and the previous opponent's state
         node_ix_history_.pop();
         node_ix_history_.pop();
-        core::node_ix_t prev_node_ix = node_ix_history_.top();
+        core::game_tree_index_t prev_node_ix = node_ix_history_.top();
         return ActionResponse::backtrack(prev_node_ix);
       }
     }
@@ -87,7 +86,7 @@ inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultT
   } else {
     std::cout << "The game has ended in a draw." << std::endl;
   }
-  node_ix_history_ = std::stack<core::node_ix_t>();
+  node_ix_history_ = std::stack<core::game_tree_index_t>();
 }
 
 template <core::concepts::Game Game>

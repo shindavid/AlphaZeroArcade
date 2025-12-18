@@ -62,7 +62,7 @@ struct GameTypes {
 
   struct ActionRequest {
     ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
-                  node_aux_t a)
+                  game_tree_node_aux_t a)
         : state(s), valid_actions(va), notification_unit(u), aux(a) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
@@ -74,7 +74,7 @@ struct GameTypes {
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
     bool play_noisily = false;
-    node_aux_t aux = 0;
+    game_tree_node_aux_t aux = 0;
   };
 
   /*
@@ -107,7 +107,7 @@ struct GameTypes {
       r.resign_game = true;
       return r;
     }
-    static ActionResponse backtrack(node_ix_t b) {
+    static ActionResponse backtrack(game_tree_index_t b) {
       ActionResponse r;
       r.backtrack_node_ix_ = b;
       return r;
@@ -116,8 +116,8 @@ struct GameTypes {
     void set_aux(T aux);
 
     bool is_aux_set() const { return aux_set_; }
-    node_aux_t aux() const { return aux_; }
-    node_ix_t backtrack_node_ix() const { return backtrack_node_ix_; }
+    game_tree_node_aux_t aux() const { return aux_; }
+    game_tree_index_t backtrack_node_ix() const { return backtrack_node_ix_; }
 
     // TODO: make these private and add access methods
     action_t action = kNullAction;
@@ -127,9 +127,17 @@ struct GameTypes {
     bool resign_game = false;  // If true, the player resigns the game.
 
    private:
-    node_aux_t aux_ = 0;
+    game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
-    node_ix_t backtrack_node_ix_ = kNullNodeIx;
+    game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+  };
+
+  struct StateChangeUpdate {
+    seat_index_t seat;
+    const State& state;
+    action_t action;
+    // This is the index of a state node in GameServer::GameSlot's StateTree.
+    game_tree_index_t game_tree_index;
   };
 };
 

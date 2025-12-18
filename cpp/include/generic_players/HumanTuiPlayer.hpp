@@ -22,6 +22,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using player_array_t = base_t::player_array_t;
 
   static constexpr core::action_t kUndoAction = -2;
@@ -29,8 +30,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t,
-                            core::node_ix_t) override;
+  void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
@@ -51,7 +51,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual void print_state(const State&, bool terminal);
 
   core::action_t last_action_;
-  std::stack<core::node_ix_t> node_ix_history_;
+  std::stack<core::game_tree_index_t> node_ix_history_;
 };
 
 }  // namespace generic

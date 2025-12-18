@@ -34,6 +34,7 @@ class GameServerProxy : public core::GameServerBase {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;
@@ -91,11 +92,11 @@ class GameServerProxy : public core::GameServerBase {
     void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
-    node_aux_t get_player_aux() const {
+    game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);
     }
 
-    void set_player_aux(node_aux_t aux) {
+    void set_player_aux(game_tree_node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, prompted_player_id_, aux);
     }
 
@@ -110,7 +111,7 @@ class GameServerProxy : public core::GameServerBase {
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = kNullNodeIx;
+    game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;

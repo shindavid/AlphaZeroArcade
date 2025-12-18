@@ -22,9 +22,9 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                           core::action_t action, core::node_ix_t) {
-  send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
+void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  send_state_update(update.seat, update.state, update.action,
+                    Game::Rules::get_action_mode(update.state));
 }
 
 template <core::concepts::Game Game>

@@ -27,6 +27,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_slot_index_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
@@ -60,7 +61,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_slot_index_t game_slot_index);
 
   bool start_game() override;
-  void receive_state_change(seat_index_t, const State&, action_t, node_ix_t) override;
+  void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 

@@ -777,8 +777,10 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
+
+  StateChangeUpdate update(active_seat_, state(), chance_action_, state_node_index_);
   for (auto player2 : players_) {
-    player2->receive_state_change(active_seat_, state(), chance_action_, state_node_index_);
+    player2->receive_state_change(update);
   }
 
   GameResultTensor outcome;
@@ -876,8 +878,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
+
+    StateChangeUpdate update(active_seat_, state(), action, state_node_index_);
     for (auto player2 : players_) {
-      player2->receive_state_change(active_seat_, state(), action, state_node_index_);
+      player2->receive_state_change(update);
     }
 
     GameResultTensor outcome;
@@ -958,8 +962,10 @@ bool GameServer<Game>::GameSlot::start_game() {
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
     apply_action(action);
+
+    StateChangeUpdate update(active_seat_, state(), action, state_node_index_);
     for (int p = 0; p < kNumPlayers; ++p) {
-      players_[p]->receive_state_change(active_seat_, state(), action, state_node_index_);
+      players_[p]->receive_state_change(update);
     }
   }
 

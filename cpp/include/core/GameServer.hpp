@@ -6,6 +6,7 @@
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
+#include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -71,6 +72,7 @@ class GameServer
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
@@ -185,7 +187,7 @@ class GameServer
     void apply_action(action_t action) {
       state_node_index_ = state_tree_.advance(state_node_index_, action);
     }
-    void backtrack_to_node(node_ix_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
+    void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -200,11 +202,11 @@ class GameServer
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
 
-    node_aux_t get_player_aux() const {
+    game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, active_seat_);
     }
 
-    void set_player_aux(node_aux_t aux) {
+    void set_player_aux(game_tree_node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, active_seat_, aux);
     }
 
@@ -222,7 +224,7 @@ class GameServer
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = kNullNodeIx;
+    game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;

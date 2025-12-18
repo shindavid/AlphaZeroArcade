@@ -134,9 +134,8 @@ bool RemotePlayerProxy<Game>::start_game() {
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const State& state,
-                                                   action_t action, node_ix_t state_node_ix) {
-  ActionResponse action_response(action);
+void RemotePlayerProxy<Game>::receive_state_change(const StateChangeUpdate& update) {
+  ActionResponse action_response(update.action);
   Packet<StateChange> packet;
   packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
