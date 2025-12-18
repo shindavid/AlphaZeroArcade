@@ -20,4 +20,23 @@ void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
   aux_set_ = true;
 }
 
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::backtrack(
+  game_tree_index_t b) {
+  ActionResponse r;
+  r.backtrack_node_ix_ = b;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::resign() {
+  ActionResponse r;
+  r.resign_game = true;
+  return r;
+}
+
 }  // namespace core

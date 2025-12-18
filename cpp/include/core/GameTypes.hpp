@@ -102,16 +102,8 @@ struct GameTypes {
 
     static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
-    static ActionResponse resign() {
-      ActionResponse r;
-      r.resign_game = true;
-      return r;
-    }
-    static ActionResponse backtrack(game_tree_index_t b) {
-      ActionResponse r;
-      r.backtrack_node_ix_ = b;
-      return r;
-    }
+    static ActionResponse resign();
+    static ActionResponse backtrack(game_tree_index_t b);
     template <typename T>
     void set_aux(T aux);
 
