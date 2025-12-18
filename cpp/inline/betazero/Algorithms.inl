@@ -16,11 +16,14 @@ template <search::concepts::Traits Traits, typename Derived>
 template <typename MutexProtectedFunc>
 void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* node, Edge* edge,
                                                MutexProtectedFunc&& func) {
-  if (!edge) return;
+  if (!edge) {
+    mit::unique_lock lock(node->mutex());
+    func();
+    return;
+  }
 
-  // func is always a no-op in beta0 so we don't need to pass it to Backpropagator.
   using Backpropagator = beta0::Backpropagator<Traits>;
-  Backpropagator backpropagator(context, node, edge);
+  Backpropagator backpropagator(context, node, edge, func);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -34,10 +37,32 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
   stats.W_max.fill(0.f);
+  stats.N = 1;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {
+  node->stats().N++;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::update_node_stats_and_edge(Node* node, Edge* edge,
+                                                                 bool undo_virtual) {
+  node->stats().N++;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
+  const GeneralContext& general_context, const Node* root) {
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  const search::SearchParams& search_params = general_context.search_params;
+  if (!search_params.ponder && root->trivial()) return false;
+  return root->stats().N <= search_params.tree_size_limit;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
 int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
+  // TODO: search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
   throw util::CleanException("get_best_child_index not yet support in beta0");
 }
 
@@ -101,11 +126,11 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.W_max = stats.W_max.cwiseMax(stats.W);
   }
 
-  // const RootInfo& root_info = context.general_context->root_info;
-  // Node* root = lookup_table.get_node(root_info.node_index);
-  // if (root) {
-  //   root->stats().RN = std::max(root->stats().RN, 1);
-  // }
+  const RootInfo& root_info = context.general_context->root_info;
+  Node* root = lookup_table.get_node(root_info.node_index);
+  if (root) {
+    root->stats().N = std::max(root->stats().N, 1);
+  }
 }
 
 template <search::concepts::Traits Traits, typename Derived>

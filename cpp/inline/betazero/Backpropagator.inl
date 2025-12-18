@@ -1,17 +1,22 @@
 #include "betazero/Backpropagator.hpp"
 
+#include <sstream>
+
 namespace beta0 {
 
 template <search::concepts::Traits Traits>
-Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge* edge)
+template <typename MutexProtectedFunc>
+Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge* edge,
+                                       MutexProtectedFunc&& func)
     : context_(context), node_(node), edge_(edge) {
   RELEASE_ASSERT(!node_->stable_data().is_chance_node, "Chance nodes not yet supported");
 
   preload_parent_data();
-  load_parent_data();
+  load_parent_data(func);
   load_remaining_data();
   compute_update_rules();
   apply_updates();
+  print_debug_info();
 }
 
 template <search::concepts::Traits Traits>
@@ -70,11 +75,13 @@ void Backpropagator<Traits>::preload_parent_data() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::load_parent_data() {
+template <typename MutexProtectedFunc>
+void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
   // Now read data that requires locking the parent mutex.
 
   mit::unique_lock lock(node_->mutex());
 
+  func();
   stats_ = node_->stats();  // copy
 
   for (int k = 0; k < n_; k++) {
@@ -170,7 +177,96 @@ void Backpropagator<Traits>::apply_updates() {
     child_edge->pi = full_write_data_(fw_pi, k);
   }
 
+  int N = node_->stats().N;
   node_->stats() = stats_;  // copy back
+  node_->stats().N = N;
+  edge_->RC = N;
+}
+
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::print_debug_info() {
+  if (!search::kEnableSearchDebug) return;
+
+  std::ostringstream ss;
+  ss << std::format("{:>{}}", "", context_.log_prefix_n());
+
+  ValueArray players;
+  ValueArray nQ = stats_.Q;
+  ValueArray CP;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players(p) = p;
+    CP(p) = p == seat_;
+  }
+
+  static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+  auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+
+  eigen_util::PrintArrayFormatMap fmt_map1{
+    {"Seat", [&](float x) { return std::to_string(int(x)); }},
+    {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+  };
+
+  std::stringstream ss1;
+  eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+  std::string line_break =
+    std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context_.log_prefix_n());
+
+  for (const std::string& line : util::splitlines(ss1.str())) {
+    ss << line << line_break;
+  }
+
+  const LocalArray P = read_data_(r_P);
+  const LocalArray pi_before = read_data_(r_pi);
+  const LocalArray lV = read_data_(r_lV);
+  const LocalArray lU = read_data_(r_lU);
+  const LocalArray lQ = read_data_(r_lQ);
+  const LocalArray lW = read_data_(r_lW);
+  const LocalArray Q = read_data2_(r2_Q).col(seat_);
+  const LocalArray W = read_data2_(r2_W).col(seat_);
+  const LocalArray Q_star = read_data2_(r2_Q_star).col(seat_);
+
+  const LocalArray pi_after = full_write_data_(fw_pi);
+
+  const LocalArray S_denom_inv = unsplice(sw_S_denom_inv);
+  const LocalArray S = unsplice(sw_S);
+  const LocalArray c = unsplice(sw_c);
+  const LocalArray z = unsplice(sw_z);
+  const LocalArray tau = unsplice(sw_tau);
+
+  LocalArray actions(n_);
+  LocalArray i_indicator(n_);
+
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(context_.leaf_canonical_sym);
+  for (int e = 0; e < n_; ++e) {
+    auto edge = lookup_table().get_edge(node_, e);
+    core::action_t action = edge->action;
+    Game::Symmetries::apply(action, inv_sym, node_->action_mode());
+    actions(e) = action;
+    i_indicator(e) = (e == i_) ? 1.f : 0.f;
+  }
+
+  static std::vector<std::string> action_columns = {"action", "i",  "P", "pi",  "lV", "lU",
+                                                    "lQ",     "lW", "Q", "W",   "Q*", "S_denom_inv",
+                                                    "S",      "c",  "z", "tau", "PI"};
+
+  auto action_data = eigen_util::sort_rows(
+    eigen_util::concatenate_columns(actions, i_indicator, P, pi_before, lV, lU, lQ, lW, Q, W,
+                                    Q_star, S_denom_inv, S, c, z, tau, pi_after));
+
+  eigen_util::PrintArrayFormatMap fmt_map2{
+    {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
+    {"i", [](float x) { return x == 0.f ? "" : "*"; }},
+  };
+
+  std::stringstream ss2;
+  eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+
+  for (const std::string& line : util::splitlines(ss2.str())) {
+    ss << line << line_break;
+  }
+
+  LOG_INFO(ss.str());
 }
 
 template <search::concepts::Traits Traits>
@@ -273,6 +369,24 @@ void Backpropagator<Traits>::splice(read_col_t from_col, sibling_read_col_t to_c
   if (tail > 0) {
     to.bottomRows(tail) = from.bottomRows(tail);
   }
+}
+
+template <search::concepts::Traits Traits>
+typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::unsplice(
+  sibling_write_col_t from_col) {
+  LocalArray result(n_);
+  const auto from = sibling_write_data_(from_col);
+  if (i_ > 0) {
+    result.topRows(i_) = from.topRows(i_);
+  }
+
+  result[i_] = 0.f;  // unused
+
+  int tail = n_ - i_ - 1;
+  if (tail > 0) {
+    result.bottomRows(tail) = from.bottomRows(tail);
+  }
+  return result;
 }
 
 template <search::concepts::Traits Traits>

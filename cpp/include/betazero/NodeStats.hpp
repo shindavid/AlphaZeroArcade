@@ -21,6 +21,8 @@ struct NodeStats {
   ValueArray Q_max;    // for each player, the max Q ever observed for that player
   ValueArray W;        // uncertainty
   ValueArray W_max;    // for each player, the max W ever observed for that player
+
+  int N = 0;
 };
 
 }  // namespace beta0

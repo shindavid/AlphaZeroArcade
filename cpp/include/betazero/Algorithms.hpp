@@ -54,17 +54,15 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
   static void init_node_stats_from_terminal(Node* node);
-  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {}
-  static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {}
+  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual);
+  static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
   static void virtually_update_node_stats(Node* node) {}
   static void virtually_update_node_stats_and_edge(Node* node, Edge* edge) {}
   static void undo_virtual_update(Node* node, Edge* edge) {}
 
   static void validate_search_path(const SearchContext& context) {}
   static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
-  static bool more_search_iterations_needed(const GeneralContext&, const Node* root) {
-    throw util::Exception("TODO");
-  }
+  static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
 
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);

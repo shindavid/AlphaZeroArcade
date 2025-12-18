@@ -16,6 +16,7 @@ class Backpropagator {
 
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using ValueArray = Game::Types::ValueArray;
 
   using LookupTable = search::LookupTable<Traits>;
   using SearchContext = search::SearchContext<Traits>;
@@ -26,11 +27,10 @@ class Backpropagator {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  // // Aliases for clarity
-  // using LocalArray1D = LocalPolicyArray;
-  // using LocalArray2D = LocalActionValueArray;
+  using LocalArray = LocalPolicyArray;  // Alias for clarity
 
-  Backpropagator(SearchContext& context, Node* node, Edge* edge);
+  template <typename MutexProtectedFunc>
+  Backpropagator(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
  private:
   enum read_col_t : uint8_t {
@@ -141,15 +141,17 @@ class Backpropagator {
   void load_child_stats(int i, const NodeStats& child_stats);
 
   void preload_parent_data();
-  void load_parent_data();
+  template <typename MutexProtectedFunc> void load_parent_data(MutexProtectedFunc&& func);
   void load_remaining_data();
   void compute_update_rules();
   void apply_updates();
+  void print_debug_info();
 
   void compute_policy();
   void update_QW();
 
   void splice(read_col_t from_col, sibling_read_col_t to_col);
+  LocalArray unsplice(sibling_write_col_t from_col);
 
   // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.
   template<typename T>
