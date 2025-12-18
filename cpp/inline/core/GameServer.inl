@@ -804,6 +804,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                int(response.yield_instruction));
 
   if (response.backtrack_node_ix() != kNullNodeIx) {
+    // TODO: assert that the player is allowed to backtrack, based on their generator's declaration
     backtrack_to_node(response.backtrack_node_ix());
     // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
     // Players that maintain internal search/UI history may become inconsistent (e.g. alpha0::Player).

@@ -28,12 +28,12 @@ inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update
 }
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State&, const ActionMask&) {
-  std::cout << "Enter move [1-7] or UD to undo: ";
+  std::cout << "Enter move [1-7] or U to undo: ";
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);
 
-  if (input == "UD" || input == "ud" || input == "Ud" || input == "uD") {
+  if (input == "U" || input == "u") {
     return base_t::kUndoAction;
   }
 

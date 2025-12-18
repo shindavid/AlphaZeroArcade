@@ -16,17 +16,17 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
     std::getline(std::cin, input);
     return kPass;
   }
-  std::cout << "Enter move [A1-H8] or UD to undo: ";
+  std::cout << "Enter move [A1-H8] or U to undo: ";
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);
 
-  if (input.size() < 2) {
-    return core::kNullAction;
+  if (input == "U" || input == "u") {
+    return generic::HumanTuiPlayer<Game>::kUndoAction;
   }
 
-  if (input == "UD" || input == "ud" || input == "Ud" || input == "uD") {
-    return generic::HumanTuiPlayer<Game>::kUndoAction;
+  if (input.size() < 2) {
+    return core::kNullAction;
   }
 
   int col = input[0] - 'A';
