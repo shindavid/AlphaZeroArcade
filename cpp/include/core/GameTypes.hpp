@@ -114,6 +114,7 @@ struct GameTypes {
     bool undo_action() const { return undo_action_; }
     game_tree_node_aux_t aux() const { return aux_; }
     bool is_valid(const ActionMask& valid_actions) const;
+    bool is_valid() const;
 
     // TODO: make these private and add access methods
     action_t action = kNullAction;

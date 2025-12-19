@@ -54,12 +54,19 @@ bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
 
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
+bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::is_valid()
+  const {
+  ActionMask all_valid;
+  all_valid.set();  // all actions valid
+  return is_valid(all_valid);
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::invalid() {
   ActionResponse r;
-  ActionMask all_valid_actions;
-  all_valid_actions.set();  // all actions are valid
-  RELEASE_ASSERT(!r.is_valid(all_valid_actions), "invalid ActionResponse should be invalid");
+  DEBUG_ASSERT(!r.is_valid(), "invalid ActionResponse should be invalid");
   return r;
 }
 
