@@ -189,7 +189,6 @@ class GameServer
     void apply_action(action_t action) {
       state_node_index_ = state_tree_.advance(state_node_index_, action);
     }
-    void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -211,6 +210,11 @@ class GameServer
     void set_player_aux(game_tree_node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, active_seat_, aux);
     }
+
+    void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
+
+    void undo_player_last_action();
+    bool active_player_supports_backtracking() const;
 
     SharedData& shared_data_;
     const game_slot_index_t id_;
