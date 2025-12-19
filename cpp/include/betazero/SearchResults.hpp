@@ -38,4 +38,4 @@ struct SearchResults {
 
 }  // namespace beta0
 
-#include "inline/betazero/SearchResults.inl"
+#include "inline/beta0/SearchResults.inl"

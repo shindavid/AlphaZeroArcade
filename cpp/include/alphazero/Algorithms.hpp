@@ -114,4 +114,4 @@ struct Algorithms : public AlgorithmsBase<Traits, Algorithms<Traits>> {};
 
 }  // namespace alpha0
 
-#include "inline/alphazero/Algorithms.inl"
+#include "inline/alpha0/Algorithms.inl"

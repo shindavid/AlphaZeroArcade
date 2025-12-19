@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alphazero/TrainingInfo.hpp"
+#include "alpha0/TrainingInfo.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace beta0 {

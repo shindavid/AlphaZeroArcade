@@ -1,6 +1,6 @@
 #pragma once
 
-#include "betazero/Algorithms.hpp"
+#include "beta0/Algorithms.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "search/AlgorithmsFor.hpp"

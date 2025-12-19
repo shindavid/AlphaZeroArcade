@@ -1,15 +1,15 @@
 #pragma once
 
-#include "alphazero/AuxState.hpp"
-#include "alphazero/Edge.hpp"
-#include "alphazero/GameLogCompactRecord.hpp"
-#include "alphazero/GameLogFullRecord.hpp"
-#include "alphazero/GameLogView.hpp"
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/NodeStableData.hpp"
-#include "alphazero/NodeStats.hpp"
-#include "alphazero/SearchResults.hpp"
-#include "alphazero/TrainingInfo.hpp"
+#include "alpha0/AuxState.hpp"
+#include "alpha0/Edge.hpp"
+#include "alpha0/GameLogCompactRecord.hpp"
+#include "alpha0/GameLogFullRecord.hpp"
+#include "alpha0/GameLogView.hpp"
+#include "alpha0/ManagerParams.hpp"
+#include "alpha0/NodeStableData.hpp"
+#include "alpha0/NodeStats.hpp"
+#include "alpha0/SearchResults.hpp"
+#include "alpha0/TrainingInfo.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
@@ -38,4 +38,4 @@ struct Traits {
 
 // Include the binding after defining alpha0::Traits so the type is complete when
 // Algorithms and concept machinery get pulled in via the binding include.
-#include "alphazero/AlgorithmsBinding.hpp"  // IWYU pragma: keep
+#include "alpha0/AlgorithmsBinding.hpp"  // IWYU pragma: keep

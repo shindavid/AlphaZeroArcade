@@ -1,5 +1,5 @@
-#include "alphazero/ManagerParams.hpp"
-#include "alphazero/Traits.hpp"
+#include "alpha0/ManagerParams.hpp"
+#include "alpha0/Traits.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"

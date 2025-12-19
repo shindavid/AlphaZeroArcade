@@ -1,4 +1,4 @@
-#include "betazero/Backpropagator.hpp"
+#include "beta0/Backpropagator.hpp"
 
 #include <sstream>
 

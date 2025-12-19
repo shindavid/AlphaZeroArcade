@@ -1,4 +1,4 @@
-#include "alphazero/SearchResults.hpp"
+#include "alpha0/SearchResults.hpp"
 
 #include "util/EigenUtil.hpp"
 

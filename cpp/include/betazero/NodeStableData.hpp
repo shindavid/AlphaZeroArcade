@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alphazero/NodeStableData.hpp"
+#include "alpha0/NodeStableData.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {

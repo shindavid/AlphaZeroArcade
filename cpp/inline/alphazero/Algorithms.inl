@@ -1,4 +1,4 @@
-#include "alphazero/Algorithms.hpp"
+#include "alpha0/Algorithms.hpp"
 
 #include "search/Constants.hpp"
 #include "util/Asserts.hpp"

@@ -35,4 +35,4 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
 
 }  // namespace alpha0
 
-#include "inline/alphazero/NodeStableData.inl"
+#include "inline/alpha0/NodeStableData.inl"

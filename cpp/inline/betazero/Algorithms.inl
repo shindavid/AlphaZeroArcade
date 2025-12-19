@@ -1,6 +1,6 @@
-#include "betazero/Algorithms.hpp"
+#include "beta0/Algorithms.hpp"
 
-#include "betazero/Backpropagator.hpp"
+#include "beta0/Backpropagator.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"

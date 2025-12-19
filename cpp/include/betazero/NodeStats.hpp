@@ -26,4 +26,4 @@ struct NodeStats {
 
 }  // namespace beta0
 
-#include "inline/betazero/NodeStats.inl"
+#include "inline/beta0/NodeStats.inl"

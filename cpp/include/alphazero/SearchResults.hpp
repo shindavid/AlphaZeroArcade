@@ -35,4 +35,4 @@ struct SearchResults {
 
 }  // namespace alpha0
 
-#include "inline/alphazero/SearchResults.inl"
+#include "inline/alpha0/SearchResults.inl"

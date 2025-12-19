@@ -1,7 +1,7 @@
 #pragma once
 
-#include "alphazero/Traits.hpp"
-#include "betazero/Traits.hpp"
+#include "alpha0/Traits.hpp"
+#include "beta0/Traits.hpp"
 #include "core/Constants.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "search/DataLoader.hpp"

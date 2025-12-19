@@ -184,4 +184,4 @@ class Backpropagator {
 
 }  // namespace beta0
 
-#include "inline/betazero/Backpropagator.inl"
+#include "inline/beta0/Backpropagator.inl"

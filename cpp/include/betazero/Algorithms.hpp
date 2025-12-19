@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alphazero/Algorithms.hpp"
+#include "alpha0/Algorithms.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Gaussian1D.hpp"
@@ -85,4 +85,4 @@ struct Algorithms : public AlgorithmsBase<Traits, Algorithms<Traits>> {};
 
 }  // namespace beta0
 
-#include "inline/betazero/Algorithms.inl"
+#include "inline/beta0/Algorithms.inl"

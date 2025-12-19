@@ -1,4 +1,4 @@
-#include "betazero/NodeStats.hpp"
+#include "beta0/NodeStats.hpp"
 
 namespace beta0 {
 

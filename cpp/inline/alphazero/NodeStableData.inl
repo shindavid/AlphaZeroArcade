@@ -1,4 +1,4 @@
-#include "alphazero/NodeStableData.hpp"
+#include "alpha0/NodeStableData.hpp"
 
 namespace alpha0 {
 

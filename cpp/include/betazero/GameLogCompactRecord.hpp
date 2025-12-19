@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alphazero/GameLogCompactRecord.hpp"
+#include "alpha0/GameLogCompactRecord.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace beta0 {
