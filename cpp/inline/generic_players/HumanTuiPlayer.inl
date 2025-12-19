@@ -46,7 +46,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
     }
     complain = true;
     auto response = prompt_for_action(state, valid_actions, request.undo_allowed);
-    if (!response.is_valid(valid_actions)) continue;
+    if (response.type() == ActionResponse::kInvalidResponse) continue;
     return response;
   }
 }

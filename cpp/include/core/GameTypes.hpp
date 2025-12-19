@@ -79,13 +79,6 @@ struct GameTypes {
   };
 
 
-  enum response_type_t : uint8_t {
-    kInvalidResponse,
-    kMakeMove,
-    kUndoLastMove,
-    kBacktrack,
-    kResignGame
-  };
   /*
    * An ActionResponse is an action together with some optional auxiliary information:
    *
@@ -109,6 +102,14 @@ struct GameTypes {
                    core::yield_instruction_t y = core::kContinue)
         : action(a), extra_enqueue_count(e), yield_instruction(y) {}
 
+    enum response_type_t : uint8_t {
+      kInvalidResponse,
+      kMakeMove,
+      kUndoLastMove,
+      kBacktrack,
+      kResignGame
+    };
+
     static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
     static ActionResponse resign() { return ActionResponse(kResignGame); }
@@ -121,6 +122,7 @@ struct GameTypes {
 
     bool is_aux_set() const { return aux_set_; }
     game_tree_node_aux_t aux() const { return aux_; }
+    response_type_t type() const { return type_; }
 
     // TODO: make these private and add access methods
     action_t action = kNullAction;

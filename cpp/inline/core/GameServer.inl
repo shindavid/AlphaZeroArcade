@@ -811,18 +811,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
 
-  if (response.undo_action()) {
-    RELEASE_ASSERT(request.undo_allowed,
-                   "Player {} (seat={}) requested undo but undo is not allowed", player->get_name(),
-                   active_seat_);
-    undo_player_last_action();
-    // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
-    // Players that maintain internal search/UI history may become inconsistent (e.g. alpha0::Player).
-    // The right mechanism is likely an explicit "backtrack" notification or a full state resync,
-    // which depends on how we factor Player/Manager.
-    return true;
-  }
-
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
   switch (response.yield_instruction) {
@@ -848,6 +836,27 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     }
   }
 
+  switch (response.type()) {
+    case ActionResponse::kUndoLastMove:
+      RELEASE_ASSERT(request.undo_allowed,
+                     "Player {} (seat={}) requested undo but undo is not allowed",
+                     player->get_name(), active_seat_);
+      undo_player_last_action();
+      // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
+      // Players that maintain internal search/UI history may become inconsistent (e.g.
+      // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
+      // full state resync, which depends on how we factor Player/Manager.
+      return true;
+
+    case ActionResponse::kResignGame:
+      resign_game(result);
+      return false;
+
+    default:
+      RELEASE_ASSERT(response.type() == ActionResponse::kMakeMove,
+                     "Unexpected ActionResponse type: {}", int(response.type()));
+  }
+
   if (response.is_aux_set()) {
     set_player_aux(response.aux());
   }
@@ -863,19 +872,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     GameResultTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,
-               player->get_name(), active_seat_);
-    }
-    handle_terminal(outcome, result);
-    return false;
-  } else if (response.resign_game) {
-    if (kNumPlayers != 2) {
-      throw util::Exception(
-        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
-        player->get_name(), active_seat_, kNumPlayers);
-    }
-    GameResultTensor outcome = GameResults::win(!active_seat_);
-    if (params().announce_game_results) {
-      LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
                player->get_name(), active_seat_);
     }
     handle_terminal(outcome, result);
@@ -1271,6 +1267,21 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() co
     }
   }
   return kNullNodeIx;
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
+  if (kNumPlayers != 2) {
+    throw util::Exception(
+      "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
+      players_[active_seat_]->get_name(), active_seat_, kNumPlayers);
+  }
+  GameResultTensor outcome = GameResults::win(!active_seat_);
+  if (params().announce_game_results) {
+    LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
+             players_[active_seat_]->get_name(), active_seat_);
+  }
+  handle_terminal(outcome, result);
 }
 
 }  // namespace core
