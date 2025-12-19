@@ -14,8 +14,6 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
 
-
-
   const State& state(game_tree_index_t ix) const;
   void init();
   game_tree_index_t advance(game_tree_index_t ix, action_t action);
@@ -23,6 +21,7 @@ class GameStateTree {
   void set_player_aux(game_tree_index_t ix, seat_index_t seat, game_tree_node_aux_t aux) {
     nodes_[ix].aux[seat] = aux;
   }
+  game_tree_index_t get_parent_index(game_tree_index_t ix) const;
 
  private:
   struct Node {

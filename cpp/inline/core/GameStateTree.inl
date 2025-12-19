@@ -47,4 +47,10 @@ game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t ix, action_t ac
   return new_ix;
 }
 
+template <concepts::Game Game>
+game_tree_index_t GameStateTree<Game>::get_parent_index(game_tree_index_t ix) const {
+  RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
+  return nodes_[ix].parent_ix;
+}
+
 }  // namespace core
