@@ -25,8 +25,6 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using player_array_t = base_t::player_array_t;
 
-  static constexpr core::action_t kUndoAction = -2;
-
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   bool start_game() override;
@@ -43,7 +41,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
    *
    * Derived classes must override this method.
    */
-  virtual core::action_t prompt_for_action(const State&, const ActionMask&) = 0;
+  virtual ActionResponse prompt_for_action(const State&, const ActionMask&, bool undo_allowed) = 0;
 
   /*
    * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.
@@ -51,7 +49,6 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual void print_state(const State&, bool terminal);
 
   core::action_t last_action_;
-  std::stack<core::game_tree_index_t> node_ix_history_;
 };
 
 }  // namespace generic

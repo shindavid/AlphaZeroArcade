@@ -15,7 +15,6 @@ inline bool HumanTuiPlayer<Game>::start_game() {
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
-  node_ix_history_.push(0);  // initial state node ix
 
   util::clearscreen();
   return true;
@@ -24,7 +23,6 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
   last_action_ = update.action;
-  node_ix_history_.push(update.game_tree_index);
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
@@ -42,34 +40,15 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
   }
 
   bool complain = false;
-  core::action_t my_action = -1;
   while (true) {
     if (complain) {
       printf("Invalid input!\n");
     }
     complain = true;
-    my_action = prompt_for_action(state, valid_actions);
-
-    if (my_action == kUndoAction) {
-      if (node_ix_history_.size() < 2) {
-        printf("Cannot undo further!\n");
-        continue;
-      } else {
-        // Pop current state and the previous opponent's state
-        node_ix_history_.pop();
-        node_ix_history_.pop();
-        core::game_tree_index_t prev_node_ix = node_ix_history_.top();
-        return ActionResponse::backtrack(prev_node_ix);
-      }
-    }
-
-    if (my_action < 0 || my_action >= Game::Types::kMaxNumActions || !valid_actions[my_action]) {
-      continue;
-    }
-    break;
+    auto response = prompt_for_action(state, valid_actions, request.undo_allowed);
+    if (!response.is_valid(valid_actions)) continue;
+    return response;
   }
-
-  return my_action;
 }
 
 template <core::concepts::Game Game>
@@ -86,7 +65,6 @@ inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultT
   } else {
     std::cout << "The game has ended in a draw." << std::endl;
   }
-  node_ix_history_ = std::stack<core::game_tree_index_t>();
 }
 
 template <core::concepts::Game Game>
