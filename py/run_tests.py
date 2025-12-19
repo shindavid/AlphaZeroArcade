@@ -48,17 +48,35 @@ def get_default_build():
     return build
 
 
+def get_cpp_bins(targets_file, tests_dir):
+    if not os.path.exists(targets_file):
+        raise Exception(f'Targets file not found: {targets_file}')
+
+    bins = []
+    with open(targets_file, 'r') as f:
+        for line in f:
+            tokens = line.split()
+            assert len(tokens) == 4, line
+            directory = tokens[2]
+            if os.path.samefile(directory, tests_dir):
+                filename = tokens[3]
+                bins.append(filename)
+    return bins
+
+
 def run_cpp_tests(build):
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found. Try exiting and relaunching run_docker.py'
 
-    tests_dir = f'target/{build}/bin/tests'
+    build_dir = f'target/{build}'
+    tests_dir = f'{build_dir}/bin/tests'
 
     if not os.path.isdir(tests_dir):
         print(colored(f'No built tests found for {build}. Please run py/build.py first.', 'red'))
         sys.exit(1)
 
-    bins = os.listdir(tests_dir)
+    targets_file = os.path.join(build_dir, 'targets.txt')
+    bins = get_cpp_bins(targets_file, tests_dir)
 
     if not bins:
         print(colored(f'No built tests found for {build}. Please run py/build.py first.', 'red'))
