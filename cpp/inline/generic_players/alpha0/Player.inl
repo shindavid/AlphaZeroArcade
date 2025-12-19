@@ -194,7 +194,7 @@ auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
   if (search_mode_ == core::kRawPolicy) {
     raw_init(mcts_results, valid_actions, policy);
   } else if (search_params_[search_mode_].tree_size_limit <= 1) {
-    policy = mcts_results->policy_prior;
+    policy = mcts_results->P;
   } else {
     policy = counts;
   }
@@ -221,7 +221,7 @@ void Player<Traits>::raw_init(const SearchResults* mcts_results, const ActionMas
   policy.setConstant(0);
 
   for (int a : valid_actions_subset.on_indices()) {
-    policy(a) = mcts_results->policy_prior(a);
+    policy(a) = mcts_results->P(a);
   }
 }
 
@@ -246,8 +246,9 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
                                PolicyTensor& policy) const {
   const auto& counts = mcts_results->counts;
 
-  PolicyTensor Q_sum = mcts_results->action_symmetry_table.collapse(mcts_results->Q) * policy;
-  PolicyTensor Q_sq_sum = mcts_results->action_symmetry_table.collapse(mcts_results->Q_sq) * policy;
+  PolicyTensor Q_sum = mcts_results->action_symmetry_table.collapse(mcts_results->AQs) * policy;
+  PolicyTensor Q_sq_sum =
+    mcts_results->action_symmetry_table.collapse(mcts_results->AQs_sq) * policy;
 
   Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
   Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);

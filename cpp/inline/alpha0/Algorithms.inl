@@ -274,7 +274,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   group::element_t inv_sym = SymmetryGroup::inverse(sym);
 
   results.valid_actions.reset();
-  results.policy_prior.setZero();
+  results.P.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -285,7 +285,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     actions[i] = action;
 
     auto* edge = lookup_table.get_edge(root, i);
-    results.policy_prior(action) = edge->policy_prior_prob;
+    results.P(action) = edge->policy_prior_prob;
 
     i++;
   }
@@ -301,12 +301,12 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   Symmetries::apply(results.counts, inv_sym, mode);
   Symmetries::apply(results.policy_target, inv_sym, mode);
-  Symmetries::apply(results.Q, inv_sym, mode);
-  Symmetries::apply(results.Q_sq, inv_sym, mode);
-  Symmetries::apply(results.action_values, inv_sym, mode);
+  Symmetries::apply(results.AQs, inv_sym, mode);
+  Symmetries::apply(results.AQs_sq, inv_sym, mode);
+  Symmetries::apply(results.AV, inv_sym, mode);
 
-  results.win_rates = stats.Q;
-  results.value_prior = stable_data.R;
+  results.Q = stats.Q;
+  results.R = stable_data.R;
   results.action_mode = mode;
 }
 
@@ -329,7 +329,7 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
       Derived::validate_and_symmetrize_policy_target(mcts_results, training_info.policy_target);
   }
   if (use_for_training) {
-    training_info.action_values_target = mcts_results->action_values;
+    training_info.action_values_target = mcts_results->AV;
     training_info.action_values_target_valid = true;
   }
 }
@@ -550,14 +550,14 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
   DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
 
   auto& counts = results.counts;
-  auto& action_values = results.action_values;
-  auto& Q = results.Q;
-  auto& Q_sq = results.Q_sq;
+  auto& AV = results.AV;
+  auto& AQs = results.AQs;
+  auto& AQs_sq = results.AQs_sq;
 
   counts.setZero();
-  action_values.setZero();
-  Q.setZero();
-  Q_sq.setZero();
+  AV.setZero();
+  AQs.setZero();
+  AQs_sq.setZero();
 
   const auto& parent_stats = root->stats();  // thread-safe because single-threaded here
 
@@ -584,14 +584,14 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
 
     if (modified_count) {
       counts(action) = modified_count;
-      Q(action) = child_stats.Q(seat);
-      Q_sq(action) = child_stats.Q_sq(seat);
+      AQs(action) = child_stats.Q(seat);
+      AQs_sq(action) = child_stats.Q_sq(seat);
     }
 
     const auto& stable_data = child->stable_data();
     RELEASE_ASSERT(stable_data.R_valid);
     ValueArray V = Game::GameResults::to_value_array(stable_data.R);
-    action_values.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
+    AV.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
   }
 }
 

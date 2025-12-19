@@ -10,7 +10,7 @@ template <search::concepts::Traits Traits>
 auto VerboseData<Traits>::build_action_data() const {
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& mcts_counts = mcts_results.counts;
-  const auto& net_policy = mcts_results.policy_prior;
+  const auto& net_policy = mcts_results.P;
 
   int num_valid = valid_actions.count();
 
@@ -52,8 +52,8 @@ static std::vector<std::string>& get_column_names() {
 
 template <search::concepts::Traits Traits>
 boost::json::object VerboseData<Traits>::to_json() const {
-  const auto& win_rates = mcts_results.win_rates;
-  const auto& net_value = mcts_results.value_prior;
+  const auto& win_rates = mcts_results.Q;
+  const auto& net_value = mcts_results.R;
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{
@@ -78,8 +78,8 @@ template <search::concepts::Traits Traits>
 void VerboseData<Traits>::to_terminal_text() const {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_actions = mcts_results.valid_actions;
-  const auto& win_rates = mcts_results.win_rates;
-  const auto& net_value = mcts_results.value_prior;
+  const auto& win_rates = mcts_results.Q;
+  const auto& net_value = mcts_results.R;
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{

@@ -1,33 +1,22 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "x0/SearchResults.hpp"
 
 #include <boost/json.hpp>
 
 namespace alpha0 {
 
 template <core::concepts::Game Game>
-struct SearchResults {
-  using ActionMask = Game::Types::ActionMask;
-  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+struct SearchResults : public x0::SearchResults<Game> {
+  using Base = x0::SearchResults<Game>;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueArray = Game::Types::ValueArray;
-  using GameResultTensor = Game::Types::GameResultTensor;
 
-  ActionMask valid_actions;
   PolicyTensor counts;
-  PolicyTensor policy_target;
-  PolicyTensor policy_prior;
-  PolicyTensor Q;
-  PolicyTensor Q_sq;
-  ActionValueTensor action_values;
-  ValueArray win_rates;
-  GameResultTensor value_prior;
-  ActionSymmetryTable action_symmetry_table;
-  core::action_mode_t action_mode;
-  bool trivial;  // all actions are symmetrically equivalent
+  PolicyTensor AQs;  // s indicates only for the current seat
+  PolicyTensor AQs_sq;
+  ActionValueTensor AV;
   bool provably_lost = false;
 
   boost::json::object to_json() const;
