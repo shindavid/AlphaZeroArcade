@@ -417,6 +417,10 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
     gen->set_name(gen->get_default_name());
   }
   registrations_.emplace_back(gen, seat, player_id);
+
+  if (gen->supports_backtracking()) {
+    backtracking_support_.set(player_id);
+  }
 }
 
 template <concepts::Game Game>
@@ -675,17 +679,20 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
     : shared_data_(shared_data), id_(id) {
   bool disable_progress_bar = false;
 
-  bool player_supports_backtracking = false;
   for (int p = 0; p < kNumPlayers; ++p) {
     PlayerRegistration& reg = shared_data_.registration_templates()[p];
     instantiations_[p] = reg.instantiate(id);
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
-    player_supports_backtracking |= reg.gen->supports_backtracking();
   }
 
-  if (player_supports_backtracking) {
+  int num_backtracking_supporting_players = shared_data_.backtracking_support().count();
+  if (num_backtracking_supporting_players >= 2) {
     for (auto& inst : instantiations_) {
       inst.player->set_facing_backtracking_opponent();
+    }
+  } else if (num_backtracking_supporting_players == 1) {
+    for (auto ix : shared_data_.backtracking_support().off_indices()) {
+      instantiations_[ix].player->set_facing_backtracking_opponent();
     }
   }
 

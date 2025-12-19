@@ -12,6 +12,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "third_party/ProgressBar.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <array>
@@ -87,6 +88,7 @@ class GameServer
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using action_vec_t = std::vector<action_t>;
   using StateTree = GameStateTree<Game>;
+  using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -298,6 +300,7 @@ class GameServer
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
     void update_perf_stats(PerfStats&);
     const action_vec_t& initial_actions() const { return server_->initial_actions(); }
+    const BacktrackingSupport& backtracking_support() const { return backtracking_support_; }
 
    private:
     void state_loop();
@@ -313,6 +316,7 @@ class GameServer
     registration_vec_t registrations_;
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
     int num_random_seats_ = 0;
+    BacktrackingSupport backtracking_support_;
 
     mit::condition_variable cv_;
     mutable mit::mutex mutex_;
