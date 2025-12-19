@@ -105,7 +105,8 @@ class AlgorithmsBase {
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
-  static bool extract_policy_target(const SearchResults* mcts_results, PolicyTensor& target);
+  static bool validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
+                                                    PolicyTensor& target);
 };
 
 template <search::concepts::Traits Traits>

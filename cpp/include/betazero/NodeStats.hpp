@@ -18,9 +18,8 @@ struct NodeStats {
 
   ValueArray Q;
   ValueArray Q_min;    // min Q observed per player
-  ValueArray Q_max;    // for each player, the max Q ever observed for that player
+  ValueArray Q_max;    // max Q observed per player
   ValueArray W;        // uncertainty
-  ValueArray W_max;    // for each player, the max W ever observed for that player
 
   int N = 0;
 };

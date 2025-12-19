@@ -165,7 +165,6 @@ void Backpropagator<Traits>::compute_update_rules() {
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
-  stats_.W_max = stats_.W_max.cwiseMax(stats_.W);
 }
 
 template <search::concepts::Traits Traits>
@@ -180,7 +179,7 @@ void Backpropagator<Traits>::apply_updates() {
   int N = node_->stats().N;
   node_->stats() = stats_;  // copy back
   node_->stats().N = N;
-  edge_->RC = N;
+  if (edge_->XC == 0) edge_->RC = N;
 }
 
 template <search::concepts::Traits Traits>

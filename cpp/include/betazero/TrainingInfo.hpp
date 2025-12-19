@@ -13,12 +13,12 @@ struct TrainingInfo : public alpha0::TrainingInfo<Game> {
 
   void clear() { *this = TrainingInfo(); }
 
-  ActionValueTensor action_value_uncertainties_target;
-  WinShareTensor Q_posterior;
+  ActionValueTensor AW;
+  WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player
   WinShareTensor Q_max;  // for each player, the maximum value of Q ever observed for that player
-  WinShareTensor W_max;  // for each player, the maximum uncertainty ever observed for that player
-  bool action_value_uncertainties_target_valid = false;
+  WinShareTensor W;
+  bool AW_valid = false;
 };
 
 }  // namespace beta0

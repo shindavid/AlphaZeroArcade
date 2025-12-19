@@ -34,6 +34,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using LookupTable = Base::LookupTable;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
+  using PolicyTensor = Base::PolicyTensor;
   using PolicyTensorData = Base::PolicyTensorData;
   using PuctCalculator = Base::PuctCalculator;
   using RootInfo = Base::RootInfo;
@@ -74,13 +75,9 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
-                            SearchResults& results);
-
   static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
                                            LogitValueArray& lQW);
   static util::Gaussian1D compute_logit_value_belief(float Q, float W);
-  // static void normalize_policy(LocalPolicyArray& pi_arr);
 };
 
 template <search::concepts::Traits Traits>

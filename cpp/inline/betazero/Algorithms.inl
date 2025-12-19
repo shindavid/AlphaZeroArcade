@@ -2,8 +2,8 @@
 
 #include "betazero/Backpropagator.hpp"
 #include "core/BasicTypes.hpp"
+#include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -31,13 +31,12 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
   NodeStats& stats = node->stats();
-  populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
   stats.Q = q;
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
-  stats.W_max.fill(0.f);
   stats.N = 1;
+  populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -62,8 +61,109 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
 
 template <search::concepts::Traits Traits, typename Derived>
 int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
-  // TODO: search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
-  throw util::CleanException("get_best_child_index not yet support in beta0");
+  // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
+  const GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const LookupTable& lookup_table = general_context.lookup_table;
+
+  Node* node = context.visit_node;
+  core::seat_index_t seat = node->stable_data().active_seat;
+  int n = node->stable_data().num_valid_actions;
+
+  using Array = LocalPolicyArray;
+
+  Array W(n);
+  Array pi(n);
+  Array XC(n);
+  Array RC(n);
+  Array S(n);
+  Array score_sq(n);
+  int xi = -1;
+  int N;
+
+  mit::unique_lock lock(node->mutex());
+  N = node->stats().N;
+  for (int i = 0; i < n; ++i) {
+    Edge* edge = lookup_table.get_edge(node, i);
+    Node* child = lookup_table.get_node(edge->child_index);
+    if (child) {
+      W(i) = child->stats().W[seat];
+    } else {
+      W(i) = edge->child_AU[seat];
+    }
+    pi(i) = edge->pi;
+    XC(i) = edge->XC;
+    RC(i) = edge->RC;
+    if (edge->XC > 0 && xi < 0) {
+      xi = i;
+    }
+  }
+  lock.unlock();
+
+  S = N - RC;
+
+  int argmax_index;
+  if (search_params.tree_size_limit == 1) {
+    // net-only, use pi
+    pi.maxCoeff(&argmax_index);
+  } else {
+    if (xi >= 0) {
+      argmax_index = xi;
+    } else {
+      score_sq = W * pi * pi * S * S;
+      score_sq.maxCoeff(&argmax_index);
+    }
+
+    if (search::kEnableSearchDebug) {
+      Array score(n);
+      Array actions(n);
+      Array argmax(n);
+      Array sqrt_W = W.cwiseSqrt();
+
+      if (xi >= 0) {
+        score.fill(0.f);
+        score(xi) = 1.f;
+      } else {
+        score = score_sq.cwiseSqrt();
+      }
+
+      group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
+      for (int e = 0; e < n; ++e) {
+        auto edge = lookup_table.get_edge(node, e);
+        core::action_t action = edge->action;
+        Game::Symmetries::apply(action, inv_sym, node->action_mode());
+        actions(e) = action;
+      }
+      argmax.setZero();
+      argmax(argmax_index) = 1;
+
+      std::ostringstream ss;
+      ss << std::format("{:>{}}", "", context.log_prefix_n());
+
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi",
+                                                        "S",      "score",   "argmax"};
+      auto action_data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, argmax));
+
+      eigen_util::PrintArrayFormatMap fmt_map{
+        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+        {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+      };
+
+      std::stringstream ss2;
+      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
+
+      std::string line_break =
+        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+      for (const std::string& line : util::splitlines(ss2.str())) {
+        ss << line << line_break;
+      }
+
+      LOG_INFO(ss.str());
+    }
+  }
+
+  return argmax_index;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -123,7 +223,6 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
     stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
     stats.W = U;
-    stats.W_max = stats.W_max.cwiseMax(stats.W);
   }
 
   const RootInfo& root_info = context.general_context->root_info;
@@ -149,9 +248,10 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   results.valid_actions.reset();
-  results.policy_prior.setZero();
-  results.policy_posterior.setZero();
-  results.action_value_uncertainties.setZero();
+  results.P.setZero();
+  results.pi.setZero();
+  results.AQ.setZero();
+  results.AW.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -161,64 +261,67 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     results.valid_actions.set(action, true);
     actions[i] = action;
 
-    auto* edge = lookup_table.get_edge(root, i);
-    results.policy_prior(action) = edge->P;
-    results.policy_posterior(action) = edge->pi;
+    const Edge* edge = lookup_table.get_edge(root, i);
+    const Node* child = lookup_table.get_node(edge->child_index);
+
+    results.P(action) = edge->P;
+    results.pi(action) = edge->pi;
+
+    if (child) {
+      results.AQ.chip(action, 0) = eigen_util::reinterpret_as_tensor(child->stats().Q);
+      results.AW.chip(action, 0) = eigen_util::reinterpret_as_tensor(child->stats().W);
+    } else {
+      results.AQ.chip(action, 0) = eigen_util::reinterpret_as_tensor(edge->child_AV);
+      results.AW.chip(action, 0) = eigen_util::reinterpret_as_tensor(edge->child_AU);
+    }
 
     i++;
   }
 
-  for (i = 0; i < root->stable_data().num_valid_actions; i++) {
-    const Edge* edge = lookup_table.get_edge(root, i);
-    const Node* child = lookup_table.get_node(edge->child_index);
-    if (!child) continue;
-
-    core::action_t action = edge->action;
-    results.action_value_uncertainties.chip(action, 0) =
-      eigen_util::reinterpret_as_tensor(child->stable_data().U);
-  }
+  results.R = stable_data.R;
+  results.Q = stats.Q;
+  results.Q_min = stats.Q_min;
+  results.Q_max = stats.Q_max;
+  results.W = stats.W;
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
-  Derived::write_results(general_context, root, inv_sym, results);
-  results.policy_target = results.policy_posterior;
-  results.provably_lost = stats.Q[seat] == Game::GameResults::kMinValue && stats.W[seat] == 0.f;
-  results.trivial = root->trivial();
-
-  // No policy target pruning in BetaZero
-
-  Game::Symmetries::apply(results.counts, inv_sym, mode);
-  Game::Symmetries::apply(results.Q, inv_sym, mode);
-  Game::Symmetries::apply(results.action_values, inv_sym, mode);
-  Game::Symmetries::apply(results.action_value_uncertainties, inv_sym, mode);
-
-  results.win_rates = stats.Q;
-  results.value_prior = stable_data.R;
   results.action_mode = mode;
-
-  results.min_win_rates = stats.Q_min;
-  results.max_win_rates = stats.Q_max;
-  results.max_uncertainties = stats.W_max;
-
-  eigen_util::assert_is_valid_prob_distr(results.policy_posterior);
+  results.trivial = root->trivial();
+  results.provably_lost = stats.Q[seat] == Game::GameResults::kMinValue && stats.W[seat] == 0.f;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoParams& params,
                                                              TrainingInfo& training_info) {
-  Base::write_to_training_info(params, training_info);
-
   const SearchResults* mcts_results = params.mcts_results;
 
-  for (int p = 0; p < kNumPlayers; ++p) {
-    training_info.Q_posterior(p) = mcts_results->win_rates[p];
-    training_info.Q_min(p) = mcts_results->min_win_rates[p];
-    training_info.Q_max(p) = mcts_results->max_win_rates[p];
-    training_info.W_max(p) = mcts_results->max_uncertainties[p];
+  bool use_for_training = params.use_for_training;
+  bool previous_used_for_training = params.previous_used_for_training;
+  core::seat_index_t seat = params.seat;
+
+  training_info.state = params.state;
+  training_info.active_seat = seat;
+  training_info.action = params.action;
+  training_info.use_for_training = use_for_training;
+
+  if (use_for_training || previous_used_for_training) {
+    training_info.policy_target = mcts_results->pi;
+    training_info.policy_target_valid =
+      Derived::validate_and_symmetrize_policy_target(mcts_results, training_info.policy_target);
+  }
+  if (use_for_training) {
+    training_info.action_values_target = mcts_results->AQ;
+    training_info.action_values_target_valid = true;
   }
 
+  training_info.Q = eigen_util::reinterpret_as_tensor(mcts_results->Q);
+  training_info.Q_min = eigen_util::reinterpret_as_tensor(mcts_results->Q_min);
+  training_info.Q_max = eigen_util::reinterpret_as_tensor(mcts_results->Q_max);
+  training_info.W = eigen_util::reinterpret_as_tensor(mcts_results->W);
+
   if (params.use_for_training) {
-    training_info.action_value_uncertainties_target = mcts_results->action_value_uncertainties;
-    training_info.action_value_uncertainties_target_valid = true;
+    training_info.AW = mcts_results->AW;
+    training_info.AW_valid = true;
   }
 }
 
@@ -227,18 +330,17 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
                                                 GameLogFullRecord& full_record) {
   Base::to_record(training_info, full_record);
 
-  full_record.Q_posterior = training_info.Q_posterior;
+  full_record.Q = training_info.Q;
   full_record.Q_min = training_info.Q_min;
   full_record.Q_max = training_info.Q_max;
-  full_record.W_max = training_info.W_max;
+  full_record.W = training_info.W;
 
-  if (training_info.action_value_uncertainties_target_valid) {
-    full_record.action_value_uncertainties = training_info.action_value_uncertainties_target;
+  if (training_info.AW_valid) {
+    full_record.AW = training_info.AW;
   } else {
-    full_record.action_value_uncertainties.setZero();
+    full_record.AW.setZero();
   }
-  full_record.action_value_uncertainties_valid =
-    training_info.action_value_uncertainties_target_valid;
+  full_record.AW_valid = training_info.AW_valid;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -246,23 +348,22 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
                                                        std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
-  compact_record.Q_posterior = full_record.Q_posterior;
+  compact_record.Q = full_record.Q;
   compact_record.Q_min = full_record.Q_min;
   compact_record.Q_max = full_record.Q_max;
-  compact_record.W_max = full_record.W_max;
+  compact_record.W = full_record.W;
   compact_record.active_seat = full_record.active_seat;
   compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
   compact_record.action = full_record.action;
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
-  ActionValueTensorData action_value_uncertainties(full_record.action_value_uncertainties_valid,
-                                                   full_record.action_value_uncertainties);
+  ActionValueTensorData AW(full_record.AW_valid, full_record.AW);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
   action_values.write_to(buf);
-  action_value_uncertainties.write_to(buf);
+  AW.write_to(buf);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -286,15 +387,13 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   const ActionValueTensorData* action_values_data =
     reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
-  const char* action_values_uncertainty_data_addr =
-    action_values_data_addr + action_values_data->size();
-  const ActionValueTensorData* action_values_uncertainty_data =
-    reinterpret_cast<const ActionValueTensorData*>(action_values_uncertainty_data_addr);
+  const char* AW_data_addr = action_values_data_addr + action_values_data->size();
+  const ActionValueTensorData* AW_data =
+    reinterpret_cast<const ActionValueTensorData*>(AW_data_addr);
 
   view.policy_valid = policy_data->load(view.policy);
   view.action_values_valid = action_values_data->load(view.action_values);
-  view.action_value_uncertainties_valid =
-    action_values_uncertainty_data->load(view.action_value_uncertainties);
+  view.AW_valid = AW_data->load(view.AW);
 
   if (view.policy_valid) {
     Game::Symmetries::apply(view.policy, sym, mode);
@@ -304,8 +403,8 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
     Game::Symmetries::apply(view.action_values, sym, mode);
   }
 
-  if (view.action_value_uncertainties_valid) {
-    Game::Symmetries::apply(view.action_value_uncertainties, sym, mode);
+  if (view.AW_valid) {
+    Game::Symmetries::apply(view.AW, sym, mode);
   }
 
   view.next_policy_valid = false;
@@ -326,17 +425,10 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.final_pos = *final_pos;
   view.game_result = *outcome;
   view.active_seat = active_seat;
-  view.Q_posterior = record->Q_posterior;
+  view.Q = record->Q;
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
-  view.W_max = record->W_max;
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& general_context,
-                                                    const Node* root, group::element_t inv_sym,
-                                                    SearchResults& results) {
-  throw util::CleanException("write_results not yet support in beta0");
+  view.W = record->W;
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -364,6 +456,10 @@ util::Gaussian1D AlgorithmsBase<Traits, Derived>::compute_logit_value_belief(flo
     return util::Gaussian1D::neg_inf();
   } else if (Q >= kMax) {
     return util::Gaussian1D::pos_inf();
+  }
+  if (W == 0) {
+    float theta = math::fast_coarse_logit((Q - kMin) * kInvWidth);
+    return util::Gaussian1D(theta, 0.f);
   }
 
   float mu = Q;

@@ -11,12 +11,12 @@ struct GameLogView : public alpha0::GameLogView<Game> {
   using ActionValueTensor = Base::ActionValueTensor;
   using WinShareTensor = Game::Types::WinShareTensor;
 
-  ActionValueTensor action_value_uncertainties;
-  WinShareTensor Q_posterior;
+  ActionValueTensor AW;
+  WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player
   WinShareTensor Q_max;  // for each player, the maximum value of Q ever observed for that player
-  WinShareTensor W_max;  // for each player, the maximum uncertainty ever observed for that player
-  bool action_value_uncertainties_valid;
+  WinShareTensor W;
+  bool AW_valid;
 };
 
 }  // namespace beta0

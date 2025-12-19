@@ -324,8 +324,9 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
   training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
+    training_info.policy_target = mcts_results->policy_target;
     training_info.policy_target_valid =
-      Derived::extract_policy_target(mcts_results, training_info.policy_target);
+      Derived::validate_and_symmetrize_policy_target(mcts_results, training_info.policy_target);
   }
   if (use_for_training) {
     training_info.action_values_target = mcts_results->action_values;
@@ -853,10 +854,8 @@ void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const Searc
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-bool AlgorithmsBase<Traits, Derived>::extract_policy_target(const SearchResults* mcts_results,
-                                                            PolicyTensor& target) {
-  target = mcts_results->policy_target;
-
+bool AlgorithmsBase<Traits, Derived>::validate_and_symmetrize_policy_target(
+  const SearchResults* mcts_results, PolicyTensor& target) {
   float sum = eigen_util::sum(target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
     // python training code will ignore these rows for policy training.

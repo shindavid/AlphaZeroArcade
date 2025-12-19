@@ -16,6 +16,7 @@ struct Edge : public search::EdgeBase {
   float P;
   float pi;
 
+  int XC = 0;  // exploration count
   int RC = 0;  // refresh count
 
   ValueArray child_AV;
