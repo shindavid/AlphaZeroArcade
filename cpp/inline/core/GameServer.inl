@@ -804,7 +804,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
-  request.undo_allowed = active_player_supports_backtracking();
+  request.undo_allowed = undo_allowed();
 
   ActionResponse response = player->get_action_response(request);
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
@@ -1263,6 +1263,25 @@ void GameServer<Game>::GameSlot::undo_player_last_action() {
   game_tree_index_t grandparent = state_tree_.get_parent_index(parent);
   if (grandparent < 0) return;
   state_node_index_ = grandparent;
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::undo_allowed() const {
+  game_tree_index_t ix = state_node_index_;
+
+  while (ix != kNullNodeIx) {
+    ix = state_tree_.get_parent_index(ix);
+
+    bool is_current_player, is_chance;
+    const State& state = state_tree_.state(ix);
+    is_current_player = (Rules::get_current_player(state) == active_seat_);
+    is_chance = Rules::is_chance_mode(Rules::get_action_mode(state));
+
+    if (is_current_player && !is_chance) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace core

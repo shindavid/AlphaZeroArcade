@@ -215,6 +215,7 @@ class GameServer
 
     void undo_player_last_action();
     bool active_player_supports_backtracking() const;
+    bool undo_allowed() const;
 
     SharedData& shared_data_;
     const game_slot_index_t id_;
