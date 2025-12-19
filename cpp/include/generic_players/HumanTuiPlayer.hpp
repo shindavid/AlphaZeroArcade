@@ -4,8 +4,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 
-#include <stack>
-
 namespace generic {
 
 /*

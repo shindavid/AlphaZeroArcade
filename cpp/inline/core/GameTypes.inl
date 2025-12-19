@@ -42,10 +42,6 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
           group::concepts::FiniteGroup SymmetryGroup>
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::is_valid(
   const ActionMask& valid_actions) const {
-  if (purposefully_invalid_) {
-    return false;
-  }
-
   if (undo_action_ || resign_game) {
     return true;
   }
@@ -61,7 +57,9 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::invalid() {
   ActionResponse r;
-  r.purposefully_invalid_ = true;
+  ActionMask all_valid_actions;
+  all_valid_actions.set();  // all actions are valid
+  RELEASE_ASSERT(!r.is_valid(all_valid_actions), "invalid ActionResponse should be invalid");
   return r;
 }
 

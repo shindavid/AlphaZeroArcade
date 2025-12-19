@@ -126,14 +126,12 @@ struct GameTypes {
     game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
     bool undo_action_ = false;
-    bool purposefully_invalid_ = false;
   };
 
   struct StateChangeUpdate {
     seat_index_t seat;
     const State& state;
     action_t action;
-    // This is the index of a state node in GameServer::GameSlot's StateTree.
     game_tree_index_t game_tree_index;
   };
 };
