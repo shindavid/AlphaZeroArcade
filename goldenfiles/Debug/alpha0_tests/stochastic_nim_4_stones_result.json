@@ -11,9 +11,9 @@
 ],
 "action_mode" : 0,
 "trivial" : false,
+"provably_lost" : false,
 "counts" : [5, 16, 79],
 "AQs" : [0.5, 0.615, 0.804762],
 "AQs_sq" : [0.25, 0.5575, 0.802381],
-"AV" : [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-"provably_lost" : false
+"AV" : [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
 }
