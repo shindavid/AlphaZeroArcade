@@ -75,6 +75,7 @@ struct GameTypes {
     // Each player is free to interpret this in their own way.
     bool play_noisily = false;
     game_tree_node_aux_t aux = 0;
+    bool undo_allowed = false;
   };
 
   /*
@@ -103,13 +104,16 @@ struct GameTypes {
     static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
     static ActionResponse resign();
-    static ActionResponse backtrack(game_tree_index_t b);
+    static ActionResponse undo();
+    static ActionResponse invalid();
+
     template <typename T>
     void set_aux(T aux);
 
     bool is_aux_set() const { return aux_set_; }
+    bool undo_action() const { return undo_action_; }
     game_tree_node_aux_t aux() const { return aux_; }
-    game_tree_index_t backtrack_node_ix() const { return backtrack_node_ix_; }
+    bool is_valid(const ActionMask& valid_actions) const;
 
     // TODO: make these private and add access methods
     action_t action = kNullAction;
@@ -121,7 +125,8 @@ struct GameTypes {
    private:
     game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
-    game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+    bool undo_action_ = false;
+    bool purposefully_invalid_ = false;
   };
 
   struct StateChangeUpdate {

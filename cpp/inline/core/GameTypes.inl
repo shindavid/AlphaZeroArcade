@@ -23,10 +23,9 @@ void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::backtrack(
-  game_tree_index_t b) {
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::undo() {
   ActionResponse r;
-  r.backtrack_node_ix_ = b;
+  r.undo_action_ = true;
   return r;
 }
 
@@ -36,6 +35,33 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::resign() {
   ActionResponse r;
   r.resign_game = true;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::is_valid(
+  const ActionMask& valid_actions) const {
+  if (purposefully_invalid_) {
+    return false;
+  }
+
+  if (undo_action_ || resign_game) {
+    return true;
+  }
+
+  if (action < 0 || action >= kMaxNumActions || !valid_actions[action]) {
+    return false;
+  }
+  return true;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::invalid() {
+  ActionResponse r;
+  r.purposefully_invalid_ = true;
   return r;
 }
 
