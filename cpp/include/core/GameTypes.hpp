@@ -78,6 +78,14 @@ struct GameTypes {
     bool undo_allowed = false;
   };
 
+
+  enum response_type_t : uint8_t {
+    kInvalidResponse,
+    kMakeMove,
+    kUndoLastMove,
+    kBacktrack,
+    kResignGame
+  };
   /*
    * An ActionResponse is an action together with some optional auxiliary information:
    *
@@ -103,30 +111,30 @@ struct GameTypes {
 
     static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
     static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
-    static ActionResponse resign();
-    static ActionResponse undo();
-    static ActionResponse invalid();
+    static ActionResponse resign() { return ActionResponse(kResignGame); }
+    static ActionResponse undo() { return ActionResponse(kUndoLastMove); }
+    static ActionResponse invalid() { return ActionResponse(kInvalidResponse); }
+    static ActionResponse backtrack(game_tree_index_t ix);
 
     template <typename T>
     void set_aux(T aux);
 
     bool is_aux_set() const { return aux_set_; }
-    bool undo_action() const { return undo_action_; }
     game_tree_node_aux_t aux() const { return aux_; }
-    bool is_valid(const ActionMask& valid_actions) const;
-    bool is_valid() const;
 
     // TODO: make these private and add access methods
     action_t action = kNullAction;
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
-    bool resign_game = false;  // If true, the player resigns the game.
 
    private:
+    ActionResponse(response_type_t type) : type_(type) {}
+
     game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
-    bool undo_action_ = false;
+    response_type_t type_ = kInvalidResponse;
+    game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
   };
 
   struct StateChangeUpdate {
