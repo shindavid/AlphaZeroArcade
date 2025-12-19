@@ -24,9 +24,8 @@ concept Algorithms = requires(
   const ValueArray& value, GeneralContext& const_general_context,
   GeneralContext& non_const_general_context, SearchResults& search_results, Node* node,
   const Node* root, Edge* edge, search::RootInitPurpose purpose, std::ostream& ss,
-  std::function<void()>& func, typename A::Backpropagator& backpropagator) {
-  typename A::Backpropagator;
-  { backpropagator.run(node, edge, func) };
+  std::function<void()>& func) {
+  { A::backprop(non_const_context, node, edge, func) };
   { A::init_node_stats_from_terminal(node) };
   { A::init_node_stats_from_nn_eval(node, true) };
   { A::update_node_stats_and_edge(node, edge, true) };

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alphazero/SearchResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 #include <boost/json.hpp>
@@ -8,21 +7,31 @@
 namespace beta0 {
 
 template <core::concepts::Game Game>
-struct SearchResults : alpha0::SearchResults<Game> {
-  using Base = alpha0::SearchResults<Game>;
-  using ActionValueTensor = Base::ActionValueTensor;
-  using PolicyTensor = Base::PolicyTensor;
-  using ValueArray = Base::ValueArray;
+struct SearchResults {
+  using ActionMask = Game::Types::ActionMask;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
+  using GameResultTensor = Game::Types::GameResultTensor;
 
-  PolicyTensor policy_posterior;
-  ActionValueTensor action_value_uncertainties;
+  ActionMask valid_actions;
 
-  // For each player, the min and max win-rate ever observed during search.
-  ValueArray min_win_rates;
-  ValueArray max_win_rates;
+  PolicyTensor P;
+  PolicyTensor pi;
+  ActionValueTensor AQ;
+  ActionValueTensor AW;
 
-  // For each player, the max uncertainty ever observed during search.
-  ValueArray max_uncertainties;
+  GameResultTensor R;
+  ValueArray Q;
+  ValueArray Q_min;
+  ValueArray Q_max;
+  ValueArray W;
+
+  ActionSymmetryTable action_symmetry_table;
+  core::action_mode_t action_mode;
+  bool trivial;  // all actions are symmetrically equivalent
+  bool provably_lost = false;
 
   boost::json::object to_json() const;
 };

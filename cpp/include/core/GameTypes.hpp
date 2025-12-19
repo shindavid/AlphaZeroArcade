@@ -8,6 +8,8 @@
 #include "util/CompactBitSet.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
+#include "util/Gaussian1D.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
 
@@ -41,11 +43,11 @@ struct GameTypes {
   using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
   using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
+  using LogitValueArray = std::array<util::Gaussian1D, kNumPlayers>;
   using ValueArray = eigen_util::FArray<kNumPlayers>;
   using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
   using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
-  using LocalPolicyArrayDouble = eigen_util::DArray<kMaxBranchingFactor, double>;
   using LocalActionValueArray =
     Eigen::Array<float, Eigen::Dynamic, kNumPlayers, Eigen::RowMajor, kMaxBranchingFactor>;
 

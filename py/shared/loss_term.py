@@ -168,6 +168,9 @@ class ValueUncertaintyLossTerm(LossTerm):
         Q_max = y[1]  # (B, 2)
         W_max = y[2]  # (B, 2)
 
+        if True:
+            raise Exception('TODO: replace 0.5 * W_max with W_final')
+
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
 
         d1 = (Q_prior - Q_min) ** 2

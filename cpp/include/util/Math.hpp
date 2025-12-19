@@ -47,11 +47,12 @@ void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __res
 // For each i in [0, n), define R[i] to be the set of ratios q0 / (q0 + q[i]), where q0 is a float
 // in the range [p0 - eps, p0 + eps], and q[i] is a float in the range [p[i] - eps, p[i] + eps].
 //
-// Sets y[i] ~= clamp(0, m[i], M[i]), where
+// Sets y[i] ~= clamp(c[i], m[i], M[i]), where
 //
 // m[i] = min_{r in R[i]} f(r)
 // M[i] = max_{r in R[i]} f(r)
-void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p, int n,
+void fast_coarse_batch_inverse_normal_cdf_clamped_range(float p0, const float* __restrict p,
+                                                        const float* __restrict c, int n,
                                                         float* __restrict y, float eps = 0.01f);
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64

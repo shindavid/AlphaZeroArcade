@@ -35,7 +35,7 @@ struct ActionValueTarget {
   static bool tensorize(const GameLogView& view, Tensor&);
 };
 
-// QPosteriorTarget is used to train the ValueUncertainty head, which predicts the squared
+// QTarget is used to train the ValueUncertainty head, which predicts the squared
 // difference between Q prior and Q posterior.
 //
 // We could compute this squared difference directly and export it as a target, but we instead
@@ -43,8 +43,8 @@ struct ActionValueTarget {
 // ValueUncertainty head compute the squared difference based on the output of the Value head
 // (which represents the Q prior).
 template <core::concepts::Game Game>
-struct QPosteriorTarget {
-  static constexpr const char* kName = "Q_posterior";
+struct QTarget {
+  static constexpr const char* kName = "Q";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -71,10 +71,10 @@ struct QMaxTarget {
   static bool tensorize(const GameLogView& view, Tensor&);
 };
 
-// WMaxTarget is used to train the ValueUncertainty head.
+// WTarget is used to train the ValueUncertainty head.
 template <core::concepts::Game Game>
-struct WMaxTarget {
-  static constexpr const char* kName = "W_max";
+struct WTarget {
+  static constexpr const char* kName = "W";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -133,14 +133,14 @@ namespace beta0 {
 
 template <core::concepts::Game Game>
 struct StandardTrainingTargets {
-  using QPosteriorTarget = core::QPosteriorTarget<Game>;
+  using QTarget = core::QTarget<Game>;
   using QMinTarget = core::QMinTarget<Game>;
   using QMaxTarget = core::QMaxTarget<Game>;
-  using WMaxTarget = core::WMaxTarget<Game>;
+  using WTarget = core::WTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
 
   using List1 = alpha0::StandardTrainingTargets<Game>::List;
-  using List2 = mp::TypeList<QPosteriorTarget, QMinTarget, QMaxTarget, WMaxTarget,
+  using List2 = mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget,
                              ActionValueUncertaintyTarget>;
   using List = mp::Concat_t<List1, List2>;
 };

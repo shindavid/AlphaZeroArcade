@@ -11,7 +11,6 @@
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
-#include <ostream>
 #include <vector>
 
 namespace alpha0 {
@@ -66,18 +65,10 @@ class AlgorithmsBase {
   using GameResultTensor = Game::Types::GameResultTensor;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  class Backpropagator {
-   public:
-    Backpropagator(SearchContext& context) : context_(context) {}
-
-    template <typename MutexProtectedFunc>
-    void run(Node* node, Edge* edge, MutexProtectedFunc&& func);
-
-   private:
-    SearchContext& context_;
-  };
-
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+
+  template <typename MutexProtectedFunc>
+  static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
   static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge) {}
   static void init_node_stats_from_terminal(Node* node);
@@ -114,7 +105,8 @@ class AlgorithmsBase {
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
-  static bool extract_policy_target(const SearchResults* mcts_results, PolicyTensor& target);
+  static bool validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
+                                                    PolicyTensor& target);
 };
 
 template <search::concepts::Traits Traits>

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/CppUtil.hpp"
-#include "util/MetaProgramming.hpp"
 
 #include <concepts>
 #include <cstdint>

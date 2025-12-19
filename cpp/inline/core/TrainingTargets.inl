@@ -29,8 +29,8 @@ bool ActionValueTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor)
 
 template <core::concepts::Game Game>
 template <typename GameLogView>
-bool QPosteriorTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  tensor = view.Q_posterior;
+bool QTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+  tensor = view.Q;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
@@ -53,8 +53,8 @@ bool QMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
 
 template <core::concepts::Game Game>
 template <typename GameLogView>
-bool WMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  tensor = view.W_max;
+bool WTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+  tensor = view.W;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
@@ -62,8 +62,8 @@ bool WMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
 template <core::concepts::Game Game>
 template <typename GameLogView>
 bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (!view.action_value_uncertainties_valid) return false;
-  tensor = view.action_value_uncertainties;
+  if (!view.AW_valid) return false;
+  tensor = view.AW;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
