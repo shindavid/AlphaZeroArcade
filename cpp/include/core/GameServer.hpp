@@ -213,9 +213,11 @@ class GameServer
 
     void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
 
-    void undo_player_last_action();
+    game_tree_index_t player_last_action_node_index() const;
     bool active_player_supports_backtracking() const;
-    bool undo_allowed() const;
+
+    bool undo_allowed() const { return player_last_action_node_index() != kNullNodeIx; }
+    void undo_player_last_action() { state_node_index_ = player_last_action_node_index(); }
 
     SharedData& shared_data_;
     const game_slot_index_t id_;

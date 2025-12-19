@@ -812,9 +812,9 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
                int(response.yield_instruction));
 
   if (response.undo_action()) {
-    RELEASE_ASSERT(active_player_supports_backtracking(),
-                   "Player {} (seat={}) requested undo but does not support backtracking",
-                   player->get_name(), active_seat_);
+    RELEASE_ASSERT(request.undo_allowed,
+                   "Player {} (seat={}) requested undo but undo is not allowed", player->get_name(),
+                   active_seat_);
     undo_player_last_action();
     // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
     // Players that maintain internal search/UI history may become inconsistent (e.g. alpha0::Player).
@@ -1256,32 +1256,21 @@ bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::undo_player_last_action() {
-  game_tree_index_t parent = state_tree_.get_parent_index(state_node_index_);
-  if (parent < 0) return;
+game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() const {
 
-  game_tree_index_t grandparent = state_tree_.get_parent_index(parent);
-  if (grandparent < 0) return;
-  state_node_index_ = grandparent;
-}
-
-template <concepts::Game Game>
-bool GameServer<Game>::GameSlot::undo_allowed() const {
-  game_tree_index_t ix = state_node_index_;
-
-  while (ix != kNullNodeIx) {
-    ix = state_tree_.get_parent_index(ix);
+  for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
+       ix = state_tree_.get_parent_index(ix)) {
 
     bool is_current_player, is_chance;
-    const State& state = state_tree_.state(ix);
-    is_current_player = (Rules::get_current_player(state) == active_seat_);
-    is_chance = Rules::is_chance_mode(Rules::get_action_mode(state));
+    const State& s = state_tree_.state(ix);
+    is_current_player = (Rules::get_current_player(s) == active_seat_);
+    is_chance = Rules::is_chance_mode(Rules::get_action_mode(s));
 
     if (is_current_player && !is_chance) {
-      return true;
+      return ix;
     }
   }
-  return false;
+  return kNullNodeIx;
 }
 
 }  // namespace core
