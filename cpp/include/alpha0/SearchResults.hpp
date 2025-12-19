@@ -17,7 +17,6 @@ struct SearchResults : public x0::SearchResults<Game> {
   PolicyTensor AQs;  // s indicates only for the current seat
   PolicyTensor AQs_sq;
   ActionValueTensor AV;
-  bool provably_lost = false;
 
   boost::json::object to_json() const;
 };

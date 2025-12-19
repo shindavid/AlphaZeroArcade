@@ -10,6 +10,7 @@
 #include "search/TrainingInfoParams.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
+#include "x0/Algorithms.hpp"
 
 #include <vector>
 
@@ -22,7 +23,7 @@ namespace alpha0 {
 // To make this work, we need to follow the discipline of always invoking Derived::func() rather
 // than simply func() within alpha0::Algorithms methods.
 template <search::concepts::Traits Traits, typename Derived>
-class AlgorithmsBase {
+class AlgorithmsBase : public x0::Algorithms<Traits> {
  public:
   using Game = Traits::Game;
   using Edge = Traits::Edge;
@@ -105,8 +106,6 @@ class AlgorithmsBase {
   static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
-  static bool validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
-                                                    PolicyTensor& target);
 };
 
 template <search::concepts::Traits Traits>

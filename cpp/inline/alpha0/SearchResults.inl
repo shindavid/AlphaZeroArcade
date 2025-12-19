@@ -11,7 +11,6 @@ boost::json::object SearchResults<Game>::to_json() const {
   results_json["AQs"] = eigen_util::to_json(AQs);
   results_json["AQs_sq"] = eigen_util::to_json(AQs_sq);
   results_json["AV"] = eigen_util::to_json(AV);
-  results_json["provably_lost"] = provably_lost;
   return results_json;
 }
 

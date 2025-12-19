@@ -35,6 +35,6 @@ struct Traits {
 
 }  // namespace beta0
 
-// Include the binding after defining alpha0::Traits so the type is complete when
+// Include the binding after defining beta0::Traits so the type is complete when
 // Algorithms and concept machinery get pulled in via the binding include.
 #include "beta0/AlgorithmsBinding.hpp"  // IWYU pragma: keep

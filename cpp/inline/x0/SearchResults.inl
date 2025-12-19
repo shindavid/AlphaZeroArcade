@@ -15,6 +15,7 @@ boost::json::object SearchResults<Game>::to_json() const {
   results_json["action_symmetry_table"] = action_symmetry_table.to_json();
   results_json["action_mode"] = action_mode;
   results_json["trivial"] = trivial;
+  results_json["provably_lost"] = provably_lost;
   return results_json;
 }
 

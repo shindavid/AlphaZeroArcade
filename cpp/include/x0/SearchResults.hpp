@@ -24,6 +24,7 @@ struct SearchResults {
   ActionSymmetryTable action_symmetry_table;
   core::action_mode_t action_mode;
   bool trivial;  // all actions are symmetrically equivalent
+  bool provably_lost = false;
 
   boost::json::object to_json() const;
 };
