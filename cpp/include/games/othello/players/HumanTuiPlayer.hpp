@@ -9,7 +9,7 @@ namespace othello {
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
   using State = Game::State;
-  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  ActionResponse prompt_for_action(const State&, const ActionMask&, bool undo_allowed) override;
 };
 
 }  // namespace othello

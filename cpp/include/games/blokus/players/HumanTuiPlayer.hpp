@@ -34,7 +34,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   using po_map_t = std::map<piece_orientation_index_t, inner_map_t>;
   using p_map_t = std::map<piece_index_t, po_map_t>;
 
-  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  ActionResponse prompt_for_action(const State&, const ActionMask&, bool) override;
   void prompt_for_piece(const State&, const p_map_t&, Piece&);
   bool prompt_for_orientation(const State&, const p_map_t&, Piece&, PieceOrientation&);
   bool prompt_for_root_location(const State&, const p_map_t&, Piece&, PieceOrientation&,

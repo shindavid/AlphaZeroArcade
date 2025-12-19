@@ -5,8 +5,8 @@
 
 namespace chess {
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
-                                                        const ActionMask& valid_actions) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const State& state, const ActionMask& valid_actions, bool undo_allowed) {
   throw std::runtime_error("Not implemented");
 }
 

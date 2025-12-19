@@ -18,7 +18,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   void receive_state_change(const StateChangeUpdate&) override;
 
  private:
-  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  ActionResponse prompt_for_action(const State&, const ActionMask&, bool undo_allowed) override;
   void print_state(const State&, bool terminal) override;
 
   PerfectOracle* oracle_ = nullptr;
