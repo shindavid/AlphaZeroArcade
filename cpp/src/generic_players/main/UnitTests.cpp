@@ -124,7 +124,7 @@ class PlayerTest : public ::testing::Test {
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir =
-        util::Repo::root() / "sample_search_logs" / "generic_players";
+        util::Repo::root() / "sample_search_logs" / build / "generic_players";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }

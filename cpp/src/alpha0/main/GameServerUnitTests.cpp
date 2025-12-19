@@ -169,7 +169,8 @@ class GameServerTest : public testing::Test {
     }
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "gameserver";
+      boost::filesystem::path log_dir =
+        util::Repo::root() / "sample_search_logs" / build / "gameserver";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(search_log_->json_str(), log_file_path);
     }
