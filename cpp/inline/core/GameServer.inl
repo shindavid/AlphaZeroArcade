@@ -804,15 +804,18 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
+  request.undo_allowed = active_player_supports_backtracking();
 
   ActionResponse response = player->get_action_response(request);
   DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
                int(response.yield_instruction));
 
-  if (response.backtrack_node_ix() != kNullNodeIx) {
-    // TODO: assert that the player is allowed to backtrack, based on their generator's declaration
-    backtrack_to_node(response.backtrack_node_ix());
+  if (response.undo_action()) {
+    RELEASE_ASSERT(active_player_supports_backtracking(),
+                   "Player {} (seat={}) requested undo but does not support backtracking",
+                   player->get_name(), active_seat_);
+    undo_player_last_action();
     // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
     // Players that maintain internal search/UI history may become inconsistent (e.g. alpha0::Player).
     // The right mechanism is likely an explicit "backtrack" notification or a full state resync,
@@ -1244,6 +1247,22 @@ std::string GameServer<Game>::get_results_str(const results_map_t& map) {
   }
   return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);
   ;
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
+  player_id_t player_id = player_order_[active_seat_].player_id;
+  return shared_data_.backtracking_support()[player_id];
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::undo_player_last_action() {
+  game_tree_index_t parent = state_tree_.get_parent_index(state_node_index_);
+  if (parent < 0) return;
+
+  game_tree_index_t grandparent = state_tree_.get_parent_index(parent);
+  if (grandparent < 0) return;
+  state_node_index_ = grandparent;
 }
 
 }  // namespace core
