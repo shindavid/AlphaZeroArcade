@@ -822,6 +822,9 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
                  response.type());
   switch (response.type()) {
+    case ActionResponse::kMakeMove:
+      break;
+
     case ActionResponse::kUndoLastMove:
       undo_player_last_action();
       // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
@@ -829,6 +832,9 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
       // full state resync, which depends on how we factor Player/Manager.
       return true;
+
+    case ActionResponse::kBackTrack:
+      throw util::CleanException("BackTrack not yet implemented in GameServer");
 
     case ActionResponse::kResignGame:
       resign_game(result);
@@ -846,8 +852,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       return false;
 
     default:
-      RELEASE_ASSERT(response.type() == ActionResponse::kMakeMove,
-                     "Unexpected ActionResponse type: {}", int(response.type()));
+      throw util::Exception("Unexpected ActionResponse type: {}", response.type());
   }
 
   if (response.is_aux_set()) {
