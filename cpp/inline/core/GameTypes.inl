@@ -68,6 +68,16 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
   ActionResponse r = construct(kYieldResponse);
   r.extra_enqueue_count = e;
+  r.yield_instruction = core::kYield;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::drop() {
+  ActionResponse r = construct(kDropResponse);
+  r.yield_instruction = core::kDrop;
   return r;
 }
 

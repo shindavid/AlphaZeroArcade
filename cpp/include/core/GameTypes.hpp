@@ -117,7 +117,7 @@ struct GameTypes {
     ActionResponse(action_t a);
 
     static ActionResponse yield(int e = 0);
-    static ActionResponse drop() { return construct(kDropResponse); }
+    static ActionResponse drop();
     static ActionResponse resign() { return construct(kResignGame); }
     static ActionResponse undo() { return construct(kUndoLastMove); }
     static ActionResponse invalid() { return construct(kInvalidResponse); }
