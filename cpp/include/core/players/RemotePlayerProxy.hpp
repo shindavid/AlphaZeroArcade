@@ -66,7 +66,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   void end_game(const State&, const GameResultTensor&) override;
 
  private:
-  ActionResponse action_response_ = kNullAction;
+  ActionResponse action_response_;
   YieldNotificationUnit yield_notification_unit_;
   bool yielding_ = false;
 

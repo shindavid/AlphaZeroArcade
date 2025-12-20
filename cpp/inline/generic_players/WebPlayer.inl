@@ -74,7 +74,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_web_response(
     return action;
   }
 
-  send_action_request(request.valid_actions, proposed_response.action);
+  send_action_request(request.valid_actions, proposed_response.get_action());
   notification_unit_ = request.notification_unit;
   return ActionResponse::yield();
 }

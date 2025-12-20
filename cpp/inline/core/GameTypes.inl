@@ -24,7 +24,7 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ActionResponse(
   action_t a)
-    : action(a) {
+    : action_(a) {
   if (a == kNullAction) {
     type_ = kInvalidResponse;
   } else {
@@ -73,6 +73,19 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yi
 
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
+void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::set_action(
+  action_t a) {
+  action_ = a;
+
+  if (a == kNullAction) {
+    type_ = kInvalidResponse;
+  } else {
+    type_ = kMakeMove;
+  }
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
   const ActionResponse& response) const {
   switch (response.type()) {
@@ -81,7 +94,7 @@ bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest
     case ActionResponse::kUndoLastMove:
       return undo_allowed;
     case ActionResponse::kMakeMove:
-      return valid_actions[response.action];
+      return valid_actions[response.get_action()];
     default:
       return true;
   }

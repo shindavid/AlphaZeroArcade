@@ -81,9 +81,9 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat = Rules::get_current_player(state());
-  ActionResponse action_response = core::kNullAction;
+  ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
-  action_t action = action_response.action;
+  action_t action = action_response.get_action();
   apply_action(action);
 
   Player* player = players_[payload.player_id];
@@ -189,7 +189,7 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   auto& section = decision.dynamic_size_section;
 
   LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
-            prompted_player_id_, response.action);
+            prompted_player_id_, response.get_action());
 
   decision.game_slot_index = id_;
   decision.player_id = prompted_player_id_;

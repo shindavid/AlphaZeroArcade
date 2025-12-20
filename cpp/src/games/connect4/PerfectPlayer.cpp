@@ -18,8 +18,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
   PerfectOracle::QueryResult result = oracle->query(move_history_);
   oracle_pool_->release_oracle(oracle);
 
-  ActionResponse response = core::kNullAction;
-
+  ActionResponse response;
   ActionMask candidates;
 
   // first add clearly winning moves
@@ -62,8 +61,8 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
     std::cout << std::endl;
   }
 
-  response.action = candidates.choose_random_on_index();
-  response.set_aux(response.action + 1);
+  response.set_action(candidates.choose_random_on_index());
+  response.set_aux(response.get_action() + 1);
   return response;
 }
 

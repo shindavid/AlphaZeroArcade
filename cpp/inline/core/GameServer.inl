@@ -859,7 +859,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
   continue_hit_ = false;
   move_number_++;
-  action_t action = response.action;
+  action_t action = response.get_action();
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     GameResultTensor outcome = GameResults::win(active_seat_);

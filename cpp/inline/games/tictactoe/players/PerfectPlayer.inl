@@ -32,7 +32,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   ActionResponse response = get_action_response_helper(request);
-  response.set_aux(response.action + 1);
+  response.set_aux(response.get_action() + 1);
   return response;
 }
 

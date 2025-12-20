@@ -24,14 +24,14 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
-  ActionResponse response = core::kNullAction;
+  ActionResponse response;
 
   if (params_.strength == 0) {
-    response.action = valid_actions.choose_random_on_index();
+    response.set_action(valid_actions.choose_random_on_index());
   } else {
-    response.action = strategy_->get_optimal_action(state.stones_left);
+    response.set_action(strategy_->get_optimal_action(state.stones_left));
   }
-  response.set_aux(response.action + 1);
+  response.set_aux(response.get_action() + 1);
   return response;
 }
 

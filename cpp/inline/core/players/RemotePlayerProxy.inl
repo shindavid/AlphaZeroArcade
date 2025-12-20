@@ -115,7 +115,6 @@ template <concepts::Game Game>
 RemotePlayerProxy<Game>::RemotePlayerProxy(io::Socket* socket, player_id_t player_id,
                                            game_slot_index_t game_slot_index)
     : socket_(socket), player_id_(player_id), game_slot_index_(game_slot_index) {
-  action_response_.action = -1;
   auto dispatcher = PacketDispatcher::create(socket);
   dispatcher->add_player(this);
 }
@@ -135,7 +134,7 @@ bool RemotePlayerProxy<Game>::start_game() {
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::receive_state_change(const StateChangeUpdate& update) {
-  ActionResponse action_response = update.action;
+  ActionResponse action_response(update.action);
   Packet<StateChange> packet;
   packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
@@ -154,7 +153,7 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
   }
   const ActionMask& valid_actions = request.valid_actions;
 
-  action_response_.action = -1;
+  action_response_.set_action(kNullAction);
 
   RELEASE_ASSERT(request.notification_unit.context_id == 0, "Unexpected context_id: {}",
                  request.notification_unit.context_id);

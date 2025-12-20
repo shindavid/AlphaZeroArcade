@@ -48,7 +48,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
 
   core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
-  ActionResponse response = action;
+  ActionResponse response(action);
   response.set_aux(action + 1);
   return response;
 }

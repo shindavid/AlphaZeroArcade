@@ -130,9 +130,11 @@ struct GameTypes {
     bool is_aux_set() const { return aux_set_; }
     game_tree_node_aux_t aux() const { return aux_; }
     response_type_t type() const { return type_; }
+    void set_action(action_t a);
+    action_t get_action() const { return action_; }
 
     // TODO: make these private and add access methods
-    action_t action = kNullAction;
+
     int extra_enqueue_count = 0;
     core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
@@ -140,6 +142,7 @@ struct GameTypes {
    private:
     static ActionResponse construct(response_type_t type);
 
+    action_t action_ = kNullAction;
     game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
     response_type_t type_ = kInvalidResponse;
