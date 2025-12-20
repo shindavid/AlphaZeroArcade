@@ -836,7 +836,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     }
   }
 
-  RELEASE_ASSERT(request.permits(response), "ActionResponse not permitted by ActionRequest");
+  RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
+                 response.type());
   switch (response.type()) {
     case ActionResponse::kUndoLastMove:
       undo_player_last_action();
@@ -1264,7 +1265,7 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() co
       return ix;
     }
   }
-  return kNullNodeIx;
+  throw util::Exception("No previous action found for player {}", active_seat_);
 }
 
 template <concepts::Game Game>
