@@ -69,7 +69,7 @@ struct GameTypes {
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
-    bool permits(ActionResponse response) const;
+    bool permits(const ActionResponse& response) const;
 
     const State& state;
     const ActionMask& valid_actions;

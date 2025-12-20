@@ -27,6 +27,7 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ba
   game_tree_index_t ix) {
   ActionResponse r;
   r.backtrack_node_ix_ = ix;
+  r.type_ = kBacktrack;
   return r;
 }
 
@@ -61,7 +62,7 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::dr
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
-  ActionResponse response) const {
+  const ActionResponse& response) const {
   switch (response.type()) {
     case ActionResponse::kInvalidResponse:
       return false;
