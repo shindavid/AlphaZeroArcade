@@ -22,12 +22,33 @@ void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
 
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ActionResponse(
+  action_t a)
+    : action(a) {
+  if (a == kNullAction) {
+    type_ = kInvalidResponse;
+  } else {
+    type_ = kMakeMove;
+  }
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::construct(
+  response_type_t type) {
+  ActionResponse r;
+  r.type_ = type;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::backtrack(
   game_tree_index_t ix) {
-  ActionResponse r;
+  ActionResponse r = construct(kBacktrack);
   r.backtrack_node_ix_ = ix;
-  r.type_ = kBacktrack;
   return r;
 }
 
@@ -45,17 +66,8 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
-  ActionResponse r(kNullAction, e, core::kYield);
-  r.type_ = kYieldResponse;
-  return r;
-}
-
-template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
-          group::concepts::FiniteGroup SymmetryGroup>
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::drop() {
-  ActionResponse r(kNullAction, 0, core::kDrop);
-  r.type_ = kDropResponse;
+  ActionResponse r = construct(kYieldResponse);
+  r.extra_enqueue_count = e;
   return r;
 }
 

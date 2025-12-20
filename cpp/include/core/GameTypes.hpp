@@ -111,12 +111,16 @@ struct GameTypes {
       kYieldResponse,
       kDropResponse
     };
+    ActionResponse() = default;
+
+    // Construct a kMakeMove response if action is not kNullAction; otherwise a kInvalidResponse.
+    ActionResponse(action_t a);
 
     static ActionResponse yield(int e = 0);
-    static ActionResponse drop();
-    static ActionResponse resign() { return ActionResponse(kResignGame); }
-    static ActionResponse undo() { return ActionResponse(kUndoLastMove); }
-    static ActionResponse invalid() { return ActionResponse(kInvalidResponse); }
+    static ActionResponse drop() { return construct(kDropResponse); }
+    static ActionResponse resign() { return construct(kResignGame); }
+    static ActionResponse undo() { return construct(kUndoLastMove); }
+    static ActionResponse invalid() { return construct(kInvalidResponse); }
     static ActionResponse backtrack(game_tree_index_t ix);
     static ActionResponse make_move(action_t a);
 
@@ -134,10 +138,7 @@ struct GameTypes {
     bool victory_guarantee = false;
 
    private:
-    ActionResponse(action_t a = kNullAction, int e = 0,
-                   core::yield_instruction_t y = core::kContinue)
-        : action(a), extra_enqueue_count(e), yield_instruction(y) {}
-    ActionResponse(response_type_t type) : type_(type) {}
+    static ActionResponse construct(response_type_t type);
 
     game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
