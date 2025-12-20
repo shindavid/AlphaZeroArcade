@@ -39,7 +39,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
    *
    * Derived classes must override this method.
    */
-  virtual ActionResponse prompt_for_action(const State&, const ActionMask&, bool undo_allowed) = 0;
+  virtual ActionResponse prompt_for_action(const ActionRequest&) = 0;
 
   /*
    * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.

@@ -8,7 +8,11 @@
 namespace othello {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const State& state, const ActionMask& valid_actions, bool undo_allowed) {
+  const ActionRequest& request) {
+
+  const ActionMask& valid_actions = request.valid_actions;
+  bool undo_allowed = request.undo_allowed;
+
   if (valid_actions[kPass]) {
     std::cout << "Press Enter to pass: ";
     std::cout.flush();

@@ -29,11 +29,9 @@ inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& 
 template <core::concepts::Game Game>
 typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  const State& state = request.state;
-  const ActionMask& valid_actions = request.valid_actions;
 
   util::clearscreen();
-  print_state(state, false);
+  print_state(request.state, false);
   const VerboseManager* manager = VerboseManager::get_instance();
   if (manager->verbose_data()) {
     manager->verbose_data()->to_terminal_text();
@@ -45,7 +43,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
       printf("Invalid input!\n");
     }
     complain = true;
-    auto response = prompt_for_action(state, valid_actions, request.undo_allowed);
+    auto response = prompt_for_action(request);
     if (!request.permits(response)) continue;
     return response;
   }

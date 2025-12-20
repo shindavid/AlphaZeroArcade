@@ -8,7 +8,10 @@
 namespace stochastic_nim {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const State& state, const ActionMask& valid_actions, bool undo_allowed) {
+  const ActionRequest& request) {
+
+  const ActionMask& valid_actions = request.valid_actions;
+
   int a = -1;
   int b = -1;
   for (int i : valid_actions.on_indices()) {

@@ -27,9 +27,11 @@ inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update
   base_t::receive_state_change(update);
 }
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(const State&,
-                                                                        const ActionMask&,
-                                                                        bool undo_allowed) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
+
+  bool undo_allowed = request.undo_allowed;
+
   if (undo_allowed) {
     std::cout << "Enter move [1-7] or U to undo: ";
   } else {

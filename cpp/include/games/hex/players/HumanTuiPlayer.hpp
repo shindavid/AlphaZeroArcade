@@ -9,7 +9,7 @@ namespace hex {
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
   using State = Game::State;
-  ActionResponse prompt_for_action(const State&, const ActionMask&, bool) override;
+  ActionResponse prompt_for_action(const ActionRequest&) override;
 };
 
 }  // namespace hex
