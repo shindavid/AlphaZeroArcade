@@ -107,11 +107,13 @@ struct GameTypes {
       kMakeMove,
       kUndoLastMove,
       kBacktrack,
-      kResignGame
+      kResignGame,
+      kYieldResponse,
+      kDropResponse
     };
 
-    static ActionResponse yield(int e = 0) { return ActionResponse(kNullAction, e, core::kYield); }
-    static ActionResponse drop() { return ActionResponse(kNullAction, 0, core::kDrop); }
+    static ActionResponse yield(int e = 0);
+    static ActionResponse drop();
     static ActionResponse resign() { return ActionResponse(kResignGame); }
     static ActionResponse undo() { return ActionResponse(kUndoLastMove); }
     static ActionResponse invalid() { return ActionResponse(kInvalidResponse); }

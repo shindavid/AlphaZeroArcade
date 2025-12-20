@@ -813,27 +813,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
-  switch (response.yield_instruction) {
-    case kContinue: {
-      CriticalSectionCheck check(in_critical_section_);
-      mid_yield_ = false;
-      continue_hit_ = true;
-      break;
-    }
-    case kYield: {
-      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
-      mid_yield_ = true;
-      enqueue_request.instruction = kEnqueueLater;
-      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
-      return false;
-    }
-    case kDrop: {
-      enqueue_request.instruction = kEnqueueNever;
-      return false;
-    }
-    default: {
-      throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
-    }
+  if (response.yield_instruction == kContinue) {
+    CriticalSectionCheck check(in_critical_section_);
+    mid_yield_ = false;
+    continue_hit_ = true;
   }
 
   RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
@@ -849,6 +832,17 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
     case ActionResponse::kResignGame:
       resign_game(result);
+      return false;
+
+    case ActionResponse::kYieldResponse:
+      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
+      mid_yield_ = true;
+      enqueue_request.instruction = kEnqueueLater;
+      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
+      return false;
+
+    case ActionResponse::kDropResponse:
+      enqueue_request.instruction = kEnqueueNever;
       return false;
 
     default:

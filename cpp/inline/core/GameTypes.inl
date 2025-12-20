@@ -42,6 +42,24 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ma
 
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
+  ActionResponse r(kNullAction, e, core::kYield);
+  r.type_ = kYieldResponse;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::drop() {
+  ActionResponse r(kNullAction, 0, core::kDrop);
+  r.type_ = kDropResponse;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
   ActionResponse response) const {
   switch (response.type()) {
