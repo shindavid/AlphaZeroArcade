@@ -836,11 +836,9 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     }
   }
 
+  RELEASE_ASSERT(request.permits(response), "ActionResponse not permitted by ActionRequest");
   switch (response.type()) {
     case ActionResponse::kUndoLastMove:
-      RELEASE_ASSERT(request.undo_allowed,
-                     "Player {} (seat={}) requested undo but undo is not allowed",
-                     player->get_name(), active_seat_);
       undo_player_last_action();
       // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
       // Players that maintain internal search/UI history may become inconsistent (e.g.

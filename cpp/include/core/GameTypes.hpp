@@ -60,12 +60,16 @@ struct GameTypes {
     action_t chance_action;
   };
 
+  struct ActionResponse;  // forward declaration
+
   struct ActionRequest {
     ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
                   game_tree_node_aux_t a)
         : state(s), valid_actions(va), notification_unit(u), aux(a) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
+
+    bool permits(ActionResponse response) const;
 
     const State& state;
     const ActionMask& valid_actions;

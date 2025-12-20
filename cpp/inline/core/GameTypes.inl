@@ -30,4 +30,20 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ba
   return r;
 }
 
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
+  ActionResponse response) const {
+  switch (response.type()) {
+    case ActionResponse::kInvalidResponse:
+      return false;
+    case ActionResponse::kUndoLastMove:
+      return undo_allowed;
+    case ActionResponse::kMakeMove:
+      return valid_actions[response.action];
+    default:
+      return true;
+  }
+}
+
 }  // namespace core
