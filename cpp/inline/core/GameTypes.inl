@@ -1,5 +1,6 @@
 #include "core/GameTypes.hpp"
 #include "core/BasicTypes.hpp"
+#include "util/Exceptions.hpp"
 
 namespace core {
 
@@ -68,16 +69,6 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
   ActionResponse r = construct(kYieldResponse);
   r.extra_enqueue_count = e;
-  r.yield_instruction = core::kYield;
-  return r;
-}
-
-template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
-          group::concepts::FiniteGroup SymmetryGroup>
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::drop() {
-  ActionResponse r = construct(kDropResponse);
-  r.yield_instruction = core::kDrop;
   return r;
 }
 
@@ -91,6 +82,29 @@ void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
     type_ = kInvalidResponse;
   } else {
     type_ = kMakeMove;
+  }
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
+core::yield_instruction_t
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::get_yield_instruction()
+  const {
+  switch (type_) {
+    case kMakeMove:
+      return core::kContinue;
+    case kUndoLastMove:
+      return core::kContinue;
+    case kBacktrack:
+      return core::kContinue;
+    case kResignGame:
+      return core::kContinue;
+    case kYieldResponse:
+      return core::kYield;
+    case kDropResponse:
+      return core::kDrop;
+    default:
+      throw util::Exception("ActionResponse type {} does not have a yield instruction", type_);
   }
 }
 

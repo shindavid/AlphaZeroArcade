@@ -807,13 +807,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   request.undo_allowed = undo_allowed();
 
   ActionResponse response = player->get_action_response(request);
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.get_yield_instruction() == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-               int(response.yield_instruction));
+               int(response.get_yield_instruction()));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
-  if (response.yield_instruction == kContinue) {
+  if (response.get_yield_instruction() == kContinue) {
     CriticalSectionCheck check(in_critical_section_);
     mid_yield_ = false;
     continue_hit_ = true;

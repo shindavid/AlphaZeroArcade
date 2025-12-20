@@ -117,7 +117,7 @@ struct GameTypes {
     ActionResponse(action_t a);
 
     static ActionResponse yield(int e = 0);
-    static ActionResponse drop();
+    static ActionResponse drop() { return construct(kDropResponse); }
     static ActionResponse resign() { return construct(kResignGame); }
     static ActionResponse undo() { return construct(kUndoLastMove); }
     static ActionResponse invalid() { return construct(kInvalidResponse); }
@@ -132,11 +132,10 @@ struct GameTypes {
     response_type_t type() const { return type_; }
     void set_action(action_t a);
     action_t get_action() const { return action_; }
+    core::yield_instruction_t get_yield_instruction() const;
 
     // TODO: make these private and add access methods
-
     int extra_enqueue_count = 0;
-    core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
 
    private:

@@ -17,7 +17,7 @@ typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
   const ActionRequest& request) {
   auto proposed_response = wrapped_player_->get_action_response(request);
 
-  if (proposed_response.yield_instruction == core::kYield) {
+  if (proposed_response.get_yield_instruction() == core::kYield) {
     return proposed_response;
   }
   return this->get_web_response(request, proposed_response);
