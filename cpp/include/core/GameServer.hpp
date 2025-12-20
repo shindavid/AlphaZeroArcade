@@ -219,7 +219,6 @@ class GameServer
     bool undo_allowed() const { return player_last_action_node_index() != kNullNodeIx; }
     void undo_player_last_action() { state_node_index_ = player_last_action_node_index(); }
     void resign_game(StepResult& result);
-    void short_circuit_game_due_to_victory_hint(StepResult& result);
 
     SharedData& shared_data_;
     const game_slot_index_t id_;
