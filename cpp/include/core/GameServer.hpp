@@ -214,7 +214,7 @@ class GameServer
     game_tree_index_t player_last_action_node_index() const;
     bool active_player_supports_backtracking() const;
 
-    bool undo_allowed() const { return player_last_action_node_index() != kNullNodeIx; }
+    bool undo_allowed() const { return state_tree_.player_acted(state_node_index_, active_seat_); }
     void undo_player_last_action() { state_node_index_ = player_last_action_node_index(); }
     void resign_game(StepResult& result);
 
