@@ -25,7 +25,9 @@ class GameStateTree {
   const State& state(game_tree_index_t ix) const;
   void init();
   game_tree_index_t advance(AdvanceUpdate update);
-  game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const { return nodes_[ix].aux[seat]; }
+  game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
+    return nodes_[ix].aux[seat];
+  }
   void set_player_aux(game_tree_index_t ix, seat_index_t seat, game_tree_node_aux_t aux) {
     nodes_[ix].aux[seat] = aux;
   }
@@ -33,6 +35,8 @@ class GameStateTree {
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
+  seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
+  bool is_chance_node(game_tree_index_t ix) const { return nodes_[ix].is_chance; }
 
  private:
   struct Node {

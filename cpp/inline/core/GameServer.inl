@@ -833,7 +833,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       // full state resync, which depends on how we factor Player/Manager.
       return true;
 
-    case ActionResponse::kBackTrack:
+    case ActionResponse::kBacktrack:
       throw util::CleanException("BackTrack not yet implemented in GameServer");
 
     case ActionResponse::kResignGame:
@@ -1256,9 +1256,8 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() co
        ix = state_tree_.get_parent_index(ix)) {
 
     bool is_current_player, is_chance;
-    const State& s = state_tree_.state(ix);
-    is_current_player = (Rules::get_current_player(s) == active_seat_);
-    is_chance = Rules::is_chance_mode(Rules::get_action_mode(s));
+    is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
+    is_chance = state_tree_.is_chance_node(ix);
 
     if (is_current_player && !is_chance) {
       return ix;
