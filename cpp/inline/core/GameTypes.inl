@@ -113,14 +113,25 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
   const ActionResponse& response) const {
   switch (response.type()) {
-    case ActionResponse::kInvalidResponse:
-      return false;
-    case ActionResponse::kUndoLastMove:
-      return undo_allowed;
     case ActionResponse::kMakeMove:
       return valid_actions[response.get_action()];
-    default:
+    case ActionResponse::kUndoLastMove:
+      return undo_allowed;
+    case ActionResponse::kBacktrack:
+      throw util::CleanException("BackTrack permission checking not yet implemented");
+    case ActionResponse::kResignGame:
+      if (GameConstants::kNumPlayers != 2) {
+        return false;
+      }
       return true;
+    case ActionResponse::kYieldResponse:
+      return true;
+    case ActionResponse::kDropResponse:
+      return true;
+    case ActionResponse::kInvalidResponse:
+      return false;
+    default:
+      throw util::Exception("Unexpected ActionResponse type: {}", response.type());
   }
 }
 

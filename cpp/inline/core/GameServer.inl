@@ -1268,11 +1268,6 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() co
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
-  if (kNumPlayers != 2) {
-    throw util::Exception(
-      "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
-      players_[active_seat_]->get_name(), active_seat_, kNumPlayers);
-  }
   GameResultTensor outcome = GameResults::win(!active_seat_);
   if (params().announce_game_results) {
     LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
