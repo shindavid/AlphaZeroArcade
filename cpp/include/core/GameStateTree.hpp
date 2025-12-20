@@ -14,6 +14,7 @@ class GameStateTree {
   using State = Game::State;
   using Rules = Game::Rules;
   using Constants = Game::Constants;
+  using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
 
   struct AdvanceUpdate {
     game_tree_index_t ix = kNullNodeIx;
@@ -43,10 +44,15 @@ class GameStateTree {
     const State state;
     const game_tree_index_t parent_ix;
     const action_t action_from_parent;
+    PlayerActed player_acted;
     game_tree_index_t first_child_ix = kNullNodeIx;
     game_tree_index_t next_sibling_ix = kNullNodeIx;
     seat_index_t seat = -1;
     bool is_chance = false;
+
+    Node(const State& s, game_tree_index_t p = kNullNodeIx, action_t a = kNullAction,
+         PlayerActed pa = PlayerActed())
+        : state(s), parent_ix(p), action_from_parent(a), player_acted(pa) {}
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -55,11 +61,6 @@ class GameStateTree {
      * storing aux = 0 here.
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
-
-    util::CompactBitSet<Constants::kNumPlayers> player_acted;
-
-    Node(const State& s, game_tree_index_t p = kNullNodeIx, action_t a = kNullAction)
-        : state(s), parent_ix(p), action_from_parent(a) {}
   };
   std::vector<Node> nodes_;
 };

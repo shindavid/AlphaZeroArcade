@@ -46,12 +46,12 @@ game_tree_index_t GameStateTree<Game>::advance(const AdvanceUpdate& update) {
 
   State new_state = nodes_[ix].state;
   Rules::apply(new_state, action);
-  nodes_.emplace_back(new_state, ix, action);
-  nodes_.back().player_acted = nodes_[ix].player_acted;
 
+  auto player_acted = nodes_[ix].player_acted;
   if (!update.is_chance) {
-    nodes_.back().player_acted.set(update.seat);
+    player_acted.set(update.seat);
   }
+  nodes_.emplace_back(new_state, ix, action, player_acted);
   return new_ix;
 }
 
