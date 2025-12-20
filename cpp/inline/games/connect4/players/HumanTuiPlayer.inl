@@ -51,7 +51,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   }
 
   try {
-    return ActionResponse::make_move(std::stoi(input) - 1);
+    return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
     return ActionResponse::invalid();
   } catch (std::out_of_range& e) {

@@ -22,16 +22,16 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
 
   if (passed_) {
     // no need to keep prompting for moves if we've passed already
-    return ActionResponse::make_move(kPass);
+    return kPass;
   }
 
   if (pending_poc_ >= 0) {
     PieceOrientationCorner poc(pending_poc_);
     pending_poc_ = -1;
-    return ActionResponse::make_move(poc.to_action());
+    return poc.to_action();
   } else {
     if (valid_actions[kPass]) {
-      return ActionResponse::make_move(prompt_for_pass());
+      return prompt_for_pass();
     }
 
     p_map_t p_map;
@@ -56,7 +56,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
 
     value_t value = p_map[p][po][root_loc.flatten()];
     pending_poc_ = value.poc;
-    return ActionResponse::make_move(value.loc.flatten());
+    return value.loc.flatten();
   }
 }
 

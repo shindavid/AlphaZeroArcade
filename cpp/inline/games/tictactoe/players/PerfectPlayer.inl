@@ -28,10 +28,10 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
-    return ActionResponse::make_move(request.aux - 1);
+    return request.aux - 1;
   }
 
-  ActionResponse response = ActionResponse::make_move(get_action_response_helper(request));
+  ActionResponse response = get_action_response_helper(request);
   response.set_aux(response.action + 1);
   return response;
 }

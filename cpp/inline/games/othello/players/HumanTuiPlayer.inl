@@ -18,7 +18,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
     std::cout.flush();
     std::string input;
     std::getline(std::cin, input);
-    return ActionResponse::make_move(kPass);
+    return kPass;
   }
 
   if (undo_allowed) {
@@ -58,7 +58,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
     return ActionResponse::invalid();
   }
 
-  return ActionResponse::make_move(row * kBoardDimension + col);
+  return row * kBoardDimension + col;
 }
 
 }  // namespace othello

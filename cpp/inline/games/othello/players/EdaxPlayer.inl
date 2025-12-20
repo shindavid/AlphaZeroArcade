@@ -28,7 +28,7 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
 
 inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return ActionResponse::make_move(request.aux - 1);
+    return request.aux - 1;
   }
 
   const auto& state = request.state;
@@ -37,7 +37,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
 
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     core::action_t action = valid_actions.get_nth_on_index(0);
-    return ActionResponse::make_move(action);
+    return action;
   }
 
   EdaxOracle* oracle =
@@ -48,7 +48,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
 
   core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
-  ActionResponse response = ActionResponse::make_move(action);
+  ActionResponse response = action;
   response.set_aux(action + 1);
   return response;
 }

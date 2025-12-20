@@ -81,7 +81,7 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat = Rules::get_current_player(state());
-  ActionResponse action_response = ActionResponse::make_move(core::kNullAction);
+  ActionResponse action_response = core::kNullAction;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.action;
   apply_action(action);

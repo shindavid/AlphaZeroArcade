@@ -26,7 +26,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   }
   if (input == "S" || input == "s") {
     if (can_swap) {
-      return ActionResponse::make_move(kSwap);  // swap action
+      return kSwap;  // swap action
     } else {
       return ActionResponse::invalid();  // invalid swap
     }
@@ -52,7 +52,7 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
     return ActionResponse::invalid();
   }
 
-  return ActionResponse::make_move(row * B + col);
+  return row * B + col;
 }
 
 }  // namespace hex

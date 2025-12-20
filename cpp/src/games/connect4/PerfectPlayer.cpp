@@ -8,7 +8,7 @@ namespace c4 {
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return ActionResponse::make_move(request.aux - 1);
+    return request.aux - 1;
   }
 
   PerfectOracle* oracle = oracle_pool_->get_oracle(request.notification_unit);
@@ -18,7 +18,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
   PerfectOracle::QueryResult result = oracle->query(move_history_);
   oracle_pool_->release_oracle(oracle);
 
-  ActionResponse response = ActionResponse::make_move(core::kNullAction);
+  ActionResponse response = core::kNullAction;
 
   ActionMask candidates;
 

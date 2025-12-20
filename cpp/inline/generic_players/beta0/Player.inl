@@ -18,7 +18,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
     VerboseManager::get_instance()->set(this->verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
-  return ActionResponse::make_move(action);
+  return action;
 }
 
 template <search::concepts::Traits Traits>
