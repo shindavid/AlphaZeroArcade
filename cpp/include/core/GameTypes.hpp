@@ -120,6 +120,7 @@ struct GameTypes {
     static ActionResponse undo() { return ActionResponse(kUndoLastMove); }
     static ActionResponse invalid() { return ActionResponse(kInvalidResponse); }
     static ActionResponse backtrack(game_tree_index_t ix);
+    static ActionResponse make_move(action_t a);
 
     template <typename T>
     void set_aux(T aux);

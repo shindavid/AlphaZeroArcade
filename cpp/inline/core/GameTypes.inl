@@ -32,6 +32,16 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ba
 
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::make_move(
+  action_t a) {
+  ActionResponse r(a);
+  r.type_ = kMakeMove;
+  return r;
+}
+
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
+          group::concepts::FiniteGroup SymmetryGroup>
 bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest::permits(
   ActionResponse response) const {
   switch (response.type()) {
@@ -45,5 +55,6 @@ bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest
       return true;
   }
 }
+
 
 }  // namespace core
