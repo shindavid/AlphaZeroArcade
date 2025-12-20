@@ -17,33 +17,38 @@ const GameStateTree<Game>::State& GameStateTree<Game>::state(game_tree_index_t i
 }
 
 template <concepts::Game Game>
-game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t ix, action_t action) {
+game_tree_index_t GameStateTree<Game>::advance(AdvanceUpdate update) {
+  auto ix = update.ix;
+  auto action = update.action;
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
+  RELEASE_ASSERT(update.seat >= 0 && update.seat < Constants::kNumPlayers);
+
   game_tree_index_t last_child_ix = kNullNodeIx;
   for (game_tree_index_t i = nodes_[ix].first_child_ix; i != kNullNodeIx; i = nodes_[i].next_sibling_ix) {
     if (action == nodes_[i].action_from_parent) {
       return i;
     }
-
-    if (nodes_[i].next_sibling_ix == kNullNodeIx) {
-      last_child_ix = i;
-    }
+    last_child_ix = i;
   }
 
-  State new_state = nodes_[ix].state;
-  Rules::apply(new_state, action);
-
-  nodes_.emplace_back(new_state, ix, action);
-  game_tree_index_t new_ix = nodes_.size() - 1;
-
+  game_tree_index_t new_ix = nodes_.size();
   if (nodes_[ix].first_child_ix == kNullNodeIx) {
     nodes_[ix].first_child_ix = new_ix;
+    nodes_[ix].seat = update.seat;
+    nodes_[ix].is_chance = update.is_chance;
+    nodes_[ix].player_acted.set(update.seat);
   }
+  RELEASE_ASSERT(nodes_[ix].seat == update.seat);
+  RELEASE_ASSERT(nodes_[ix].is_chance == update.is_chance);
 
   if (last_child_ix != kNullNodeIx) {
     nodes_[last_child_ix].next_sibling_ix = new_ix;
   }
 
+  State new_state = nodes_[ix].state;
+  Rules::apply(new_state, action);
+  nodes_.emplace_back(new_state, ix, action);
+  nodes_.back().player_acted = nodes_[ix].player_acted;
   return new_ix;
 }
 

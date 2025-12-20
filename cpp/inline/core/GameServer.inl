@@ -1284,4 +1284,12 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
   handle_terminal(outcome, result);
 }
 
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::apply_action(action_t action) {
+  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
+  bool is_chance = Rules::is_chance_mode(action_mode_);
+  AdvanceUpdate update(state_node_index_, action, active_seat_, is_chance);
+  state_node_index_ = state_tree_.advance(update);
+}
+
 }  // namespace core
