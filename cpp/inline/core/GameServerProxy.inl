@@ -88,7 +88,8 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
   Player* player = players_[payload.player_id];
 
-  StateChangeUpdate update(seat, state(), action, state_node_index_);
+  action_mode_t action_mode = Rules::get_action_mode(state());
+  StateChangeUpdate update(seat, state(), action, state_node_index_, action_mode);
   player->receive_state_change(update);
 }
 

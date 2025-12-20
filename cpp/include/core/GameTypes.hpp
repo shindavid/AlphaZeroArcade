@@ -153,6 +153,7 @@ struct GameTypes {
     const State& state;
     action_t action;
     game_tree_index_t game_tree_index;
+    action_mode_t action_mode;
   };
 };
 
