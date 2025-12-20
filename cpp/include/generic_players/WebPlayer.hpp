@@ -42,8 +42,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   ActionResponse get_web_response(const ActionRequest& request,
                                   const ActionResponse& proposed_response);
   void initialize_game();
-  void send_state_update(core::seat_index_t seat, const State& state, core::action_t last_action,
-                         core::action_mode_t last_mode);
+  void send_state_update(const StateChangeUpdate&);
   void send_result_msg(const State& state, const GameResultTensor& outcome);
 
  private:
@@ -89,9 +88,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // }
   //
   // Can be overridden to add more fields, or change the representation.
-  virtual boost::json::object make_state_update_msg(core::seat_index_t seat, const State& state,
-                                                    core::action_t last_action,
-                                                    core::action_mode_t last_mode);
+  virtual boost::json::object make_state_update_msg(const StateChangeUpdate&);
 
   // Optional: override this to provide a game-specific result message.
   // By default, it returns something like:

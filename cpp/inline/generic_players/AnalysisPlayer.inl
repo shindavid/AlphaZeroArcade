@@ -26,8 +26,7 @@ typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
 template <core::concepts::Game Game>
 void AnalysisPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
   wrapped_player_->receive_state_change(update);
-  this->send_state_update(update.seat, update.state, update.action,
-                          Game::Rules::get_action_mode(update.state));
+  this->send_state_update(update);
 }
 
 template <core::concepts::Game Game>
