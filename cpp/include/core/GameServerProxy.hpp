@@ -42,6 +42,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
   using StateTree = GameStateTree<Game>;
+  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
 
   struct SeatGenerator {
     seat_index_t seat;

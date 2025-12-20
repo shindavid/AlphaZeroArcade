@@ -17,7 +17,7 @@ const GameStateTree<Game>::State& GameStateTree<Game>::state(game_tree_index_t i
 }
 
 template <concepts::Game Game>
-game_tree_index_t GameStateTree<Game>::advance(AdvanceUpdate update) {
+game_tree_index_t GameStateTree<Game>::advance(const AdvanceUpdate& update) {
   auto ix = update.ix;
   auto action = update.action;
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));

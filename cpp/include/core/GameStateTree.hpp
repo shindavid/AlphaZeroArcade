@@ -24,7 +24,7 @@ class GameStateTree {
 
   const State& state(game_tree_index_t ix) const;
   void init();
-  game_tree_index_t advance(AdvanceUpdate update);
+  game_tree_index_t advance(const AdvanceUpdate& update);
   game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].aux[seat];
   }

@@ -536,7 +536,6 @@ void GameServerProxy<Game>::join_threads() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::apply_action(action_t action) {
-  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
   AdvanceUpdate update(state_node_index_, action, prompted_player_id_, false);
   state_node_index_ = state_tree_.advance(update);
 }
