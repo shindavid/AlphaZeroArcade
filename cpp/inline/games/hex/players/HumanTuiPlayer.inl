@@ -22,13 +22,13 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   std::getline(std::cin, input);
 
   if (input.empty()) {
-    return -1;  // no input
+    return ActionResponse::invalid();  // no input
   }
   if (input == "S" || input == "s") {
     if (can_swap) {
-      return kSwap;  // swap action
+      return ActionResponse::make_move(kSwap);  // swap action
     } else {
-      return -1;  // invalid swap
+      return ActionResponse::invalid();  // invalid swap
     }
   }
 
@@ -37,22 +37,22 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
     col = input[0] - 'a';  // accept lower-case
   }
   if (col < 0 || col >= B) {
-    return -1;  // invalid column
+    return ActionResponse::invalid();  // invalid column
   }
 
   int row;
   try {
     row = std::stoi(input.substr(1)) - 1;
   } catch (std::invalid_argument& e) {
-    return -1;
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return -1;
+    return ActionResponse::invalid();
   }
   if (row < 0 || row >= B) {
-    return -1;
+    return ActionResponse::invalid();
   }
 
-  return row * B + col;
+  return ActionResponse::make_move(row * B + col);
 }
 
 }  // namespace hex

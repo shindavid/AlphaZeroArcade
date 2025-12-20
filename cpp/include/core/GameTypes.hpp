@@ -102,10 +102,6 @@ struct GameTypes {
    *     engage in multithreaded search. This should only be used for instruction type kYield.
    */
   struct ActionResponse {
-    ActionResponse(action_t a = kNullAction, int e = 0,
-                   core::yield_instruction_t y = core::kContinue)
-        : action(a), extra_enqueue_count(e), yield_instruction(y) {}
-
     enum response_type_t : uint8_t {
       kInvalidResponse,
       kMakeMove,
@@ -136,6 +132,9 @@ struct GameTypes {
     bool victory_guarantee = false;
 
    private:
+    ActionResponse(action_t a = kNullAction, int e = 0,
+                   core::yield_instruction_t y = core::kContinue)
+        : action(a), extra_enqueue_count(e), yield_instruction(y) {}
     ActionResponse(response_type_t type) : type_(type) {}
 
     game_tree_node_aux_t aux_ = 0;

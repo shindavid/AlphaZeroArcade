@@ -17,14 +17,14 @@ inline auto PerfectPlayer::Params::make_options_description() {
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
-    return request.aux - 1;
+    return ActionResponse::make_move(request.aux - 1);
   }
 
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
-  ActionResponse response;
+  ActionResponse response = ActionResponse::make_move(core::kNullAction);
 
   if (params_.strength == 0) {
     response.action = valid_actions.choose_random_on_index();

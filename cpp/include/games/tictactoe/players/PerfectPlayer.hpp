@@ -4,7 +4,6 @@
 #include "core/BasicTypes.hpp"
 #include "games/tictactoe/Constants.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "util/BoostUtil.hpp"
 
 #include <map>
 
@@ -35,7 +34,7 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
     float p[kNumCells];
   };
 
-  ActionResponse get_action_response_helper(const ActionRequest& request);
+  core::action_t get_action_response_helper(const ActionRequest& request);
 
   using lookup_map_t = std::map<uint64_t, policy_t>;
 

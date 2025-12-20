@@ -13,11 +13,11 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   std::string input;
   std::getline(std::cin, input);
   try {
-    return std::stoi(input);
+    return ActionResponse::make_move(std::stoi(input));
   } catch (std::invalid_argument& e) {
-    return -1;
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return -1;
+    return ActionResponse::invalid();
   }
 }
 

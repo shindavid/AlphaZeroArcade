@@ -18,7 +18,7 @@ bool WebPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  return get_web_response(request, -1);
+  return get_web_response(request, ActionResponse::make_move(core::kNullAction));
 }
 
 template <core::concepts::Game Game>
@@ -72,7 +72,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_web_response(
   if (action_ != -1) {
     core::action_t action = action_;
     action_ = -1;
-    return action;
+    return ActionResponse::make_move(action);
   }
 
   send_action_request(request.valid_actions, proposed_response.action);
