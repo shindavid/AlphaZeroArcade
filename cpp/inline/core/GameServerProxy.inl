@@ -146,9 +146,10 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
+  int extra_enqueue_count = response.get_extra_enqueue_count();
   yield_instruction_t yield_instr = response.get_yield_instruction();
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || yield_instr == kYield,
-               "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+  DEBUG_ASSERT(extra_enqueue_count == 0 || yield_instr == kYield,
+               "Invalid response: extra={} instr={}", extra_enqueue_count,
                int(yield_instr));
 
   switch (yield_instr) {
@@ -163,7 +164,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
-      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
+      enqueue_request.extra_enqueue_count = extra_enqueue_count;
       return result;
     }
     case kDrop: {

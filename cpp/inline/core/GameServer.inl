@@ -807,9 +807,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   request.undo_allowed = undo_allowed();
 
   ActionResponse response = player->get_action_response(request);
+  int extra_enqueue_count = response.get_extra_enqueue_count();
   yield_instruction_t yield_instr = response.get_yield_instruction();
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || yield_instr == kYield,
-               "Invalid response: extra={} instr={}", response.extra_enqueue_count,
+  DEBUG_ASSERT(extra_enqueue_count == 0 || yield_instr == kYield,
+               "Invalid response: extra={} instr={}", extra_enqueue_count,
                int(yield_instr));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
@@ -845,7 +846,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
-      enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
+      enqueue_request.extra_enqueue_count = extra_enqueue_count;
       return false;
 
     case ActionResponse::kDropResponse:
@@ -867,7 +868,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   move_number_++;
   action_t action = response.get_action();
 
-  if (response.victory_guarantee && params().respect_victory_hints) {
+  if (response.get_victory_guarantee() && params().respect_victory_hints) {
     GameResultTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,

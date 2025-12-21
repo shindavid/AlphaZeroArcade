@@ -56,9 +56,10 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ba
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
+GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(
+  int extra_enqueue_count) {
   ActionResponse r = construct(kYieldResponse);
-  r.extra_enqueue_count = e;
+  r.extra_enqueue_count_ = extra_enqueue_count;
   return r;
 }
 

@@ -94,7 +94,7 @@ struct GameTypes {
     // Construct a kMakeMove response if action >= 0; otherwise, kInvalidResponse
     ActionResponse(action_t a = kNullAction);
 
-    static ActionResponse yield(int e = 0);
+    static ActionResponse yield(int extra_enqueue_count = 0);
     static ActionResponse drop() { return construct(kDropResponse); }
     static ActionResponse resign() { return construct(kResignGame); }
     static ActionResponse undo() { return construct(kUndoLastMove); }
@@ -110,10 +110,9 @@ struct GameTypes {
     void set_action(action_t a);
     action_t get_action() const { return action_; }
     core::yield_instruction_t get_yield_instruction() const;
-
-    // TODO: make these private and add access methods
-    int extra_enqueue_count = 0;
-    bool victory_guarantee = false;
+    void set_victory_guarantee(bool v) { victory_guarantee_ = v; }
+    bool get_victory_guarantee() const { return victory_guarantee_; }
+    int get_extra_enqueue_count() const { return extra_enqueue_count_; }
 
    private:
     static ActionResponse construct(response_type_t type);
@@ -121,6 +120,8 @@ struct GameTypes {
     action_t action_ = kNullAction;
     game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
     game_tree_node_aux_t aux_ = 0;
+    int extra_enqueue_count_ = 0;
+    bool victory_guarantee_ = false;
     response_type_t type_ = kInvalidResponse;
     bool aux_set_ = false;
   };

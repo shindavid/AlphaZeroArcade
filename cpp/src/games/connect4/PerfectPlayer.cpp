@@ -1,7 +1,5 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
 
-#include "core/BasicTypes.hpp"
-
 #include <iostream>
 
 namespace c4 {
@@ -30,7 +28,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
 
   // if no known winning moves, then add all draws/uncertain moves
   bool known_win = candidates.any();
-  response.victory_guarantee = known_win;
+  response.set_victory_guarantee(known_win);
   if (!known_win) {
     for (int j = 0; j < kNumColumns; ++j) {
       int score = result.scores[j];
