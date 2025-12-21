@@ -34,6 +34,7 @@ class GameServerProxy : public core::GameServerBase {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;
@@ -41,7 +42,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
   using StateTree = GameStateTree<Game>;
-  using node_ix_t = StateTree::node_ix_t;
+  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -82,9 +83,7 @@ class GameServerProxy : public core::GameServerBase {
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action) {
-      state_node_index_ = state_tree_.advance(state_node_index_, action);
-    }
+    void apply_action(action_t action);
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -92,11 +91,11 @@ class GameServerProxy : public core::GameServerBase {
     void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
 
-    node_aux_t get_player_aux() const {
+    game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);
     }
 
-    void set_player_aux(node_aux_t aux) {
+    void set_player_aux(game_tree_node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, prompted_player_id_, aux);
     }
 
@@ -111,7 +110,7 @@ class GameServerProxy : public core::GameServerBase {
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
+    game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;

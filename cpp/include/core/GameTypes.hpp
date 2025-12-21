@@ -62,12 +62,16 @@ struct GameTypes {
     action_t chance_action;
   };
 
+  struct ActionResponse;  // forward declaration
+
   struct ActionRequest {
     ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
-                  node_aux_t a)
+                  game_tree_node_aux_t a)
         : state(s), valid_actions(va), notification_unit(u), aux(a) {}
 
     ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
+
+    bool permits(const ActionResponse& response) const;
 
     const State& state;
     const ActionMask& valid_actions;
@@ -76,8 +80,10 @@ struct GameTypes {
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
     bool play_noisily = false;
-    node_aux_t aux = 0;
+    game_tree_node_aux_t aux = 0;
+    bool undo_allowed = false;
   };
+
 
   /*
    * An ActionResponse is an action together with some optional auxiliary information:
@@ -98,33 +104,58 @@ struct GameTypes {
    *     engage in multithreaded search. This should only be used for instruction type kYield.
    */
   struct ActionResponse {
-    ActionResponse(action_t a = -1, int e = 0, core::yield_instruction_t y = core::kContinue)
-        : action(a), extra_enqueue_count(e), yield_instruction(y) {}
+    enum response_type_t : uint8_t {
+      kInvalidResponse,
+      kMakeMove,
+      kUndoLastMove,
+      kBacktrack,
+      kResignGame,
+      kYieldResponse,
+      kDropResponse
+    };
+    ActionResponse() = default;
 
-    static ActionResponse yield(int e = 0) { return ActionResponse(-1, e, core::kYield); }
-    static ActionResponse drop() { return ActionResponse(-1, 0, core::kDrop); }
-    static ActionResponse resign() {
-      ActionResponse r;
-      r.resign_game = true;
-      return r;
-    }
+    // Construct a kMakeMove response if action is not kNullAction; otherwise a kInvalidResponse.
+    ActionResponse(action_t a);
+
+    static ActionResponse yield(int e = 0);
+    static ActionResponse drop() { return construct(kDropResponse); }
+    static ActionResponse resign() { return construct(kResignGame); }
+    static ActionResponse undo() { return construct(kUndoLastMove); }
+    static ActionResponse invalid() { return construct(kInvalidResponse); }
+    static ActionResponse backtrack(game_tree_index_t ix);
+    static ActionResponse make_move(action_t a);
 
     template <typename T>
     void set_aux(T aux);
 
     bool is_aux_set() const { return aux_set_; }
-    node_aux_t aux() const { return aux_; }
+    game_tree_node_aux_t aux() const { return aux_; }
+    response_type_t type() const { return type_; }
+    void set_action(action_t a);
+    action_t get_action() const { return action_; }
+    core::yield_instruction_t get_yield_instruction() const;
 
     // TODO: make these private and add access methods
-    action_t action = -1;
     int extra_enqueue_count = 0;
-    core::yield_instruction_t yield_instruction = core::kContinue;
     bool victory_guarantee = false;
-    bool resign_game = false;  // If true, the player resigns the game.
 
    private:
-    node_aux_t aux_ = 0;
+    static ActionResponse construct(response_type_t type);
+
+    action_t action_ = kNullAction;
+    game_tree_node_aux_t aux_ = 0;
     bool aux_set_ = false;
+    response_type_t type_ = kInvalidResponse;
+    game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+  };
+
+  struct StateChangeUpdate {
+    seat_index_t seat;
+    const State& state;
+    action_t action;
+    game_tree_index_t game_tree_index;
+    action_mode_t action_mode;
   };
 };
 

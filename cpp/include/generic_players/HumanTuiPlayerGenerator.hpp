@@ -24,6 +24,7 @@ class HumanTuiPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   void start_session() override {
     VerboseManager::get_instance()->disable_auto_terminal_printing();
   }
+  bool supports_backtracking() const override { return true; }
 };
 
 }  // namespace generic

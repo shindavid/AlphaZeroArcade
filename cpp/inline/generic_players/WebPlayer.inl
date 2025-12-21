@@ -18,13 +18,12 @@ bool WebPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  return get_web_response(request, -1);
+  return get_web_response(request, core::kNullAction);
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                           core::action_t action) {
-  send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
+void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  send_state_update(update);
 }
 
 template <core::concepts::Game Game>
@@ -75,7 +74,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_web_response(
     return action;
   }
 
-  send_action_request(request.valid_actions, proposed_response.action);
+  send_action_request(request.valid_actions, proposed_response.get_action());
   notification_unit_ = request.notification_unit;
   return ActionResponse::yield();
 }
@@ -158,30 +157,27 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_state_update(core::seat_index_t seat, const State& state,
-                                        core::action_t last_action, core::action_mode_t last_mode) {
+void WebPlayer<Game>::send_state_update(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object msg;
   msg["type"] = "state_update";
-  msg["payload"] = this->make_state_update_msg(seat, state, last_action, last_mode);
+  msg["payload"] = this->make_state_update_msg(update);
 
   auto* web_manager = core::WebManager<Game>::get_instance();
   web_manager->send_msg(msg);
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_state_update_msg(core::seat_index_t seat,
-                                                           const State& state,
-                                                           core::action_t last_action,
-                                                           core::action_mode_t last_mode) {
+boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;
-  payload["board"] = Game::IO::state_to_json(state);
-  payload["seat"] = seat;
-  payload["last_action"] = Game::IO::action_to_str(last_action, last_mode);
-  Game::IO::add_render_info(state, payload);
+  payload["board"] = Game::IO::state_to_json(update.state);
+  payload["seat"] = update.seat;
+
+  payload["last_action"] = Game::IO::action_to_str(update.action, update.action_mode);
+  Game::IO::add_render_info(update.state, payload);
 
   return payload;
 }

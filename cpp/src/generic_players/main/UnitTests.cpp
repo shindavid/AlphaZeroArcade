@@ -46,6 +46,7 @@ class PlayerTest : public ::testing::Test {
   using State = Game::State;
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using ActionMask = Game::Types::ActionMask;
   using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
@@ -80,7 +81,9 @@ class PlayerTest : public ::testing::Test {
     for (core::action_t action : initial_actions) {
       core::seat_index_t seat = Rules::get_current_player(state);
       Rules::apply(state, action);
-      mcts_player_->receive_state_change(seat, state, action);
+
+      StateChangeUpdate update(seat, state, action, -1);
+      mcts_player_->receive_state_change(update);
     }
     initial_actions_ = initial_actions;
   }

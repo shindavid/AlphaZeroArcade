@@ -20,7 +20,7 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
     }
 
     ActionResponse response(request.valid_actions.choose_random_on_index());
-    response.set_aux(response.action + 1);
+    response.set_aux(response.get_action() + 1);
     return response;
   }
 };

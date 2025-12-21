@@ -6,11 +6,13 @@
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
+#include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "third_party/ProgressBar.hpp"
+#include "util/CompactBitSet.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <array>
@@ -71,6 +73,7 @@ class GameServer
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
@@ -85,7 +88,7 @@ class GameServer
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using action_vec_t = std::vector<action_t>;
   using StateTree = GameStateTree<Game>;
-  using node_ix_t = StateTree::node_ix_t;
+  using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -183,9 +186,7 @@ class GameServer
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action) {
-      state_node_index_ = state_tree_.advance(state_node_index_, action);
-    }
+    void apply_action(action_t action);
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -200,13 +201,22 @@ class GameServer
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
 
-    node_aux_t get_player_aux() const {
+    game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, active_seat_);
     }
 
-    void set_player_aux(node_aux_t aux) {
+    void set_player_aux(game_tree_node_aux_t aux) {
       state_tree_.set_player_aux(state_node_index_, active_seat_, aux);
     }
+
+    void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
+
+    game_tree_index_t player_last_action_node_index() const;
+    bool active_player_supports_backtracking() const;
+
+    bool undo_allowed() const { return state_tree_.player_acted(state_node_index_, active_seat_); }
+    void undo_player_last_action() { state_node_index_ = player_last_action_node_index(); }
+    void resign_game(StepResult& result);
 
     SharedData& shared_data_;
     const game_slot_index_t id_;
@@ -222,11 +232,11 @@ class GameServer
 
     // Updated for each move
     StateTree state_tree_;
-    node_ix_t state_node_index_ = StateTree::kNullNodeIx;
+    game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     int move_number_;  // tracks player-actions, not chance-events
     int step_chance_player_index_ = 0;
-    action_t chance_action_ = -1;
+    action_t chance_action_ = kNullAction;
     core::action_mode_t action_mode_;
     seat_index_t active_seat_;
     bool noisy_mode_;
@@ -296,6 +306,7 @@ class GameServer
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
     void update_perf_stats(PerfStats&);
     const action_vec_t& initial_actions() const { return server_->initial_actions(); }
+    const BacktrackingSupport& backtracking_support() const { return backtracking_support_; }
 
    private:
     void state_loop();
@@ -311,6 +322,7 @@ class GameServer
     registration_vec_t registrations_;
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
     int num_random_seats_ = 0;
+    BacktrackingSupport backtracking_support_;
 
     mit::condition_variable cv_;
     mutable mit::mutex mutex_;

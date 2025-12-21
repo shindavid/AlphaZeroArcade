@@ -66,6 +66,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
 
   struct SharedData {
     template <typename... Ts>
@@ -81,7 +82,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   Manager* get_manager() const { return &shared_data_->manager; }
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
@@ -112,9 +113,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
-
-  // TODO: set this bool properly (in generator start_session())
-  bool facing_backtracking_opponent_ = false;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;

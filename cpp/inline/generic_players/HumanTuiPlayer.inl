@@ -1,5 +1,6 @@
 #include "generic_players/HumanTuiPlayer.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "search/VerboseManager.hpp"
 #include "util/ScreenUtil.hpp"
 
@@ -20,41 +21,32 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const State&,
-                                                       core::action_t action) {
-  last_action_ = action;
+inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  last_action_ = update.action;
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
 template <core::concepts::Game Game>
 typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  const State& state = request.state;
-  const ActionMask& valid_actions = request.valid_actions;
 
   util::clearscreen();
-  print_state(state, false);
+  print_state(request.state, false);
   const VerboseManager* manager = VerboseManager::get_instance();
   if (manager->verbose_data()) {
     manager->verbose_data()->to_terminal_text();
   }
 
   bool complain = false;
-  core::action_t my_action = -1;
   while (true) {
     if (complain) {
       printf("Invalid input!\n");
     }
     complain = true;
-    my_action = prompt_for_action(state, valid_actions);
-
-    if (my_action < 0 || my_action >= Game::Types::kMaxNumActions || !valid_actions[my_action]) {
-      continue;
-    }
-    break;
+    auto response = prompt_for_action(request);
+    if (!request.permits(response)) continue;
+    return response;
   }
-
-  return my_action;
 }
 
 template <core::concepts::Game Game>

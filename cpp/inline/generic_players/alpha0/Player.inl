@@ -114,16 +114,15 @@ inline bool Player<Traits>::start_game() {
 }
 
 template <search::concepts::Traits Traits>
-inline void Player<Traits>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                 core::action_t action) {
+inline void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
-    get_manager()->receive_state_change(seat, state, action);
+    get_manager()->receive_state_change(update.seat, update.state, update.action);
   }
-  if (this->get_my_seat() == seat && params_.verbose) {
+  if (this->get_my_seat() == update.seat && params_.verbose) {
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      IO::print_state(std::cout, state, action, &this->get_player_names());
+      IO::print_state(std::cout, update.state, update.action, &this->get_player_names());
     }
   }
 }
@@ -146,7 +145,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
     return ActionResponse::drop();
   }
 
-  if (facing_backtracking_opponent_) {
+  if (this->is_facing_backtracking_opponent()) {
     const SearchResults* search_result = new SearchResults(*response.results);
     search_result_ptrs_.push_back(search_result);
     ActionResponse action_response = get_action_response_helper(search_result, request);
@@ -182,7 +181,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
     VerboseManager::get_instance()->set(verbose_info_);
   }
   core::action_t action = eigen_util::sample(modified_policy);
-  RELEASE_ASSERT(request.valid_actions[action]);
+
   return action;
 }
 

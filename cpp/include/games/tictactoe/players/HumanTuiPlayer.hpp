@@ -12,7 +12,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   using State = Game::State;
 
  private:
-  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  ActionResponse prompt_for_action(const ActionRequest&) override;
   void print_state(const State&, bool terminal) override;
 };
 

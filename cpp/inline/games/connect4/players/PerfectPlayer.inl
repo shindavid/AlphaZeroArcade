@@ -34,9 +34,8 @@ inline bool PerfectPlayer::start_game() {
   return true;
 }
 
-inline void PerfectPlayer::receive_state_change(core::seat_index_t, const State&,
-                                                core::action_t action) {
-  move_history_.append(action);
+inline void PerfectPlayer::receive_state_change(const StateChangeUpdate& update) {
+  move_history_.append(update.action);
 }
 
 }  // namespace c4

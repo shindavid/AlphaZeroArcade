@@ -83,11 +83,14 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   seat_index_t seat = Rules::get_current_player(state());
   ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
-  action_t action = action_response.action;
+  action_t action = action_response.get_action();
   apply_action(action);
 
   Player* player = players_[payload.player_id];
-  player->receive_state_change(seat, state(), action);
+
+  action_mode_t action_mode = Rules::get_action_mode(state());
+  StateChangeUpdate update(seat, state(), action, state_node_index_, action_mode);
+  player->receive_state_change(update);
 }
 
 template <concepts::Game Game>
@@ -142,11 +145,11 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.get_yield_instruction() == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-               int(response.yield_instruction));
+               int(response.get_yield_instruction()));
 
-  switch (response.yield_instruction) {
+  switch (response.get_yield_instruction()) {
     case kContinue: {
       CriticalSectionCheck check(in_critical_section_);
       mid_yield_ = false;
@@ -166,7 +169,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       return result;
     }
     default: {
-      throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
+      throw util::Exception("Unexpected response: {}", int(response.get_yield_instruction()));
     }
   }
 
@@ -187,7 +190,7 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   auto& section = decision.dynamic_size_section;
 
   LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
-            prompted_player_id_, response.action);
+            prompted_player_id_, response.get_action());
 
   decision.game_slot_index = id_;
   decision.player_id = prompted_player_id_;
@@ -530,6 +533,12 @@ void GameServerProxy<Game>::join_threads() {
   for (auto thread : threads_) {
     thread->join();
   }
+}
+
+template <concepts::Game Game>
+void GameServerProxy<Game>::GameSlot::apply_action(action_t action) {
+  AdvanceUpdate update(state_node_index_, action, prompted_player_id_, false);
+  state_node_index_ = state_tree_.advance(update);
 }
 
 }  // namespace core

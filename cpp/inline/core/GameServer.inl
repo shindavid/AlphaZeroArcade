@@ -417,6 +417,10 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
     gen->set_name(gen->get_default_name());
   }
   registrations_.emplace_back(gen, seat, player_id);
+
+  if (gen->supports_backtracking()) {
+    backtracking_support_.set(player_id);
+  }
 }
 
 template <concepts::Game Game>
@@ -674,9 +678,22 @@ template <concepts::Game Game>
 GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t id)
     : shared_data_(shared_data), id_(id) {
   bool disable_progress_bar = false;
+
   for (int p = 0; p < kNumPlayers; ++p) {
-    instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
+    PlayerRegistration& reg = shared_data_.registration_templates()[p];
+    instantiations_[p] = reg.instantiate(id);
     disable_progress_bar |= instantiations_[p].player->disable_progress_bar();
+  }
+
+  int num_backtracking_supporting_players = shared_data_.backtracking_support().count();
+  if (num_backtracking_supporting_players >= 2) {
+    for (auto& inst : instantiations_) {
+      inst.player->set_facing_backtracking_opponent();
+    }
+  } else if (num_backtracking_supporting_players == 1) {
+    for (auto ix : shared_data_.backtracking_support().off_indices()) {
+      instantiations_[ix].player->set_facing_backtracking_opponent();
+    }
   }
 
   if (!disable_progress_bar) {
@@ -767,8 +784,10 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
+
+  StateChangeUpdate update(active_seat_, state(), chance_action_, state_node_index_, action_mode_);
   for (auto player2 : players_) {
-    player2->receive_state_change(active_seat_, state(), chance_action_);
+    player2->receive_state_change(update);
   }
 
   GameResultTensor outcome;
@@ -785,35 +804,55 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
+  request.undo_allowed = undo_allowed();
 
   ActionResponse response = player->get_action_response(request);
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.yield_instruction == kYield,
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.get_yield_instruction() == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-               int(response.yield_instruction));
+               int(response.get_yield_instruction()));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
-  switch (response.yield_instruction) {
-    case kContinue: {
-      CriticalSectionCheck check(in_critical_section_);
-      mid_yield_ = false;
-      continue_hit_ = true;
+  if (response.get_yield_instruction() == kContinue) {
+    CriticalSectionCheck check(in_critical_section_);
+    mid_yield_ = false;
+    continue_hit_ = true;
+  }
+
+  RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
+                 response.type());
+  switch (response.type()) {
+    case ActionResponse::kMakeMove:
       break;
-    }
-    case kYield: {
+
+    case ActionResponse::kUndoLastMove:
+      undo_player_last_action();
+      // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
+      // Players that maintain internal search/UI history may become inconsistent (e.g.
+      // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
+      // full state resync, which depends on how we factor Player/Manager.
+      return true;
+
+    case ActionResponse::kBacktrack:
+      throw util::CleanException("BackTrack not yet implemented in GameServer");
+
+    case ActionResponse::kResignGame:
+      resign_game(result);
+      return false;
+
+    case ActionResponse::kYieldResponse:
       RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = response.extra_enqueue_count;
       return false;
-    }
-    case kDrop: {
+
+    case ActionResponse::kDropResponse:
       enqueue_request.instruction = kEnqueueNever;
       return false;
-    }
-    default: {
-      throw util::Exception("Unexpected response: {}", int(response.yield_instruction));
-    }
+
+    default:
+      throw util::Exception("Unexpected ActionResponse type: {}", response.type());
   }
 
   if (response.is_aux_set()) {
@@ -825,25 +864,12 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
   continue_hit_ = false;
   move_number_++;
-  action_t action = response.action;
+  action_t action = response.get_action();
 
   if (response.victory_guarantee && params().respect_victory_hints) {
     GameResultTensor outcome = GameResults::win(active_seat_);
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,
-               player->get_name(), active_seat_);
-    }
-    handle_terminal(outcome, result);
-    return false;
-  } else if (response.resign_game) {
-    if (kNumPlayers != 2) {
-      throw util::Exception(
-        "GameServer::{}(): player {} (seat={}) cannot resign in a game with {} players", __func__,
-        player->get_name(), active_seat_, kNumPlayers);
-    }
-    GameResultTensor outcome = GameResults::win(!active_seat_);
-    if (params().announce_game_results) {
-      LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
                player->get_name(), active_seat_);
     }
     handle_terminal(outcome, result);
@@ -857,8 +883,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
+
+    StateChangeUpdate update(active_seat_, state(), action, state_node_index_, action_mode_);
     for (auto player2 : players_) {
-      player2->receive_state_change(active_seat_, state(), action);
+      player2->receive_state_change(update);
     }
 
     GameResultTensor outcome;
@@ -939,8 +967,10 @@ bool GameServer<Game>::GameSlot::start_game() {
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
     apply_action(action);
+
+    StateChangeUpdate update(active_seat_, state(), action, state_node_index_, action_mode_);
     for (int p = 0; p < kNumPlayers; ++p) {
-      players_[p]->receive_state_change(active_seat_, state(), action);
+      players_[p]->receive_state_change(update);
     }
   }
 
@@ -1211,6 +1241,47 @@ std::string GameServer<Game>::get_results_str(const results_map_t& map) {
   }
   return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);
   ;
+}
+
+template <concepts::Game Game>
+bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
+  player_id_t player_id = player_order_[active_seat_].player_id;
+  return shared_data_.backtracking_support()[player_id];
+}
+
+template <concepts::Game Game>
+game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() const {
+
+  for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
+       ix = state_tree_.get_parent_index(ix)) {
+
+    bool is_current_player, is_chance;
+    is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
+    is_chance = state_tree_.is_chance_node(ix);
+
+    if (is_current_player && !is_chance) {
+      return ix;
+    }
+  }
+  throw util::Exception("No previous action found for player {}", active_seat_);
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
+  GameResultTensor outcome = GameResults::win(!active_seat_);
+  if (params().announce_game_results) {
+    LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
+             players_[active_seat_]->get_name(), active_seat_);
+  }
+  handle_terminal(outcome, result);
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::apply_action(action_t action) {
+  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
+  bool is_chance = Rules::is_chance_mode(action_mode_);
+  AdvanceUpdate update(state_node_index_, action, active_seat_, is_chance);
+  state_node_index_ = state_tree_.advance(update);
 }
 
 }  // namespace core

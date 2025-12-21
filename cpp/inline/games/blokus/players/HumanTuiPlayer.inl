@@ -5,7 +5,6 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <vector>
 
 namespace blokus {
 
@@ -15,8 +14,12 @@ inline bool HumanTuiPlayer::start_game() {
   return base_t::start_game();
 }
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
-                                                        const ActionMask& valid_actions) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
+
+  const State& state = request.state;
+  const ActionMask& valid_actions = request.valid_actions;
+
   if (passed_) {
     // no need to keep prompting for moves if we've passed already
     return kPass;

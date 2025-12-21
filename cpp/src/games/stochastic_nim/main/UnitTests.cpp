@@ -20,6 +20,7 @@ using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 using InputTensorizor = core::InputTensorizor<Game>;
+using ActionResponse = stochastic_nim::PerfectPlayer::ActionResponse;
 
 class PerfectPlayerTest : public testing::Test {
  protected:
@@ -34,7 +35,8 @@ class PerfectPlayerTest : public testing::Test {
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
     ActionRequest request(state, valid_actions);
-    return player_.get_action_response(request).action;
+    ActionResponse response = player_.get_action_response(request);
+    return response.get_action();
   }
 
  private:

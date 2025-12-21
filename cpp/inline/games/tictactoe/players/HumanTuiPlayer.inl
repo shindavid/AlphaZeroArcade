@@ -5,8 +5,9 @@
 
 namespace tictactoe {
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
-                                                        const ActionMask& valid_actions) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
+
   std::cout << "Enter move [0-8]: ";
   std::cout.flush();
   std::string input;
@@ -14,9 +15,9 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
   try {
     return std::stoi(input);
   } catch (std::invalid_argument& e) {
-    return -1;
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return -1;
+    return ActionResponse::invalid();
   }
 }
 

@@ -22,23 +22,40 @@ inline bool HumanTuiPlayer::start_game() {
   return base_t::start_game();
 }
 
-inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const State& state,
-                                                 core::action_t action) {
-  if (move_history_) move_history_->append(action);
-  base_t::receive_state_change(seat, state, action);
+inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update) {
+  if (move_history_) move_history_->append(update.action);
+  base_t::receive_state_change(update);
 }
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const State&, const ActionMask&) {
-  std::cout << "Enter move [1-7]: ";
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
+
+  bool undo_allowed = request.undo_allowed;
+
+  if (undo_allowed) {
+    std::cout << "Enter move [1-7] or U to undo: ";
+  } else {
+    std::cout << "Enter move [1-7]: ";
+  }
+
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);
+
+  if (input == "U" || input == "u") {
+    if (undo_allowed) {
+      return ActionResponse::undo();
+    } else {
+      return ActionResponse::invalid();
+    }
+  }
+
   try {
     return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
-    return -1;
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return -1;
+    return ActionResponse::invalid();
   }
 }
 

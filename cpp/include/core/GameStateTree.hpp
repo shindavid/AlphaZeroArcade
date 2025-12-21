@@ -2,8 +2,8 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "util/CompactBitSet.hpp"
 
-#include <cstdint>
 #include <vector>
 
 namespace core {
@@ -11,29 +11,48 @@ namespace core {
 template <concepts::Game Game>
 class GameStateTree {
  public:
-  using node_ix_t = int32_t;
   using State = Game::State;
   using Rules = Game::Rules;
   using Constants = Game::Constants;
+  using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
 
-  static constexpr node_ix_t kNullNodeIx = -1;
-  static constexpr action_t kNullAction = -1;
+  struct AdvanceUpdate {
+    game_tree_index_t ix = kNullNodeIx;
+    action_t action = kNullAction;
+    seat_index_t seat = -1;
+    bool is_chance = false;
+  };
 
-  const State& state(node_ix_t ix) const;
+  const State& state(game_tree_index_t ix) const;
   void init();
-  node_ix_t advance(node_ix_t ix, action_t action);
-  node_aux_t get_player_aux(node_ix_t ix, seat_index_t seat) const { return nodes_[ix].aux[seat]; }
-  void set_player_aux(node_ix_t ix, seat_index_t seat, node_aux_t aux) {
+  game_tree_index_t advance(const AdvanceUpdate& update);
+  game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
+    return nodes_[ix].aux[seat];
+  }
+  void set_player_aux(game_tree_index_t ix, seat_index_t seat, game_tree_node_aux_t aux) {
     nodes_[ix].aux[seat] = aux;
   }
+  game_tree_index_t get_parent_index(game_tree_index_t ix) const;
+  bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
+    return nodes_[ix].player_acted[seat];
+  }
+  seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
+  bool is_chance_node(game_tree_index_t ix) const { return nodes_[ix].is_chance; }
 
  private:
   struct Node {
     const State state;
-    const node_ix_t parent_ix;
+    const game_tree_index_t parent_ix;
     const action_t action_from_parent;
-    node_ix_t first_child_ix = kNullNodeIx;
-    node_ix_t next_sibling_ix = kNullNodeIx;
+    PlayerActed player_acted;
+    game_tree_index_t first_child_ix = kNullNodeIx;
+    game_tree_index_t next_sibling_ix = kNullNodeIx;
+    seat_index_t seat = -1;
+    bool is_chance = false;
+
+    Node(const State& s, game_tree_index_t p = kNullNodeIx, action_t a = kNullAction,
+         PlayerActed pa = PlayerActed())
+        : state(s), parent_ix(p), action_from_parent(a), player_acted(pa) {}
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -41,10 +60,7 @@ class GameStateTree {
      * IMPORTANT NOTE: aux = 0 is reserved to mean "no aux data". Hence, players should avoid
      * storing aux = 0 here.
      */
-    node_aux_t aux[Constants::kNumPlayers] = {};
-
-    Node(const State& s, node_ix_t p = kNullNodeIx, action_t a = kNullAction)
-        : state(s), parent_ix(p), action_from_parent(a) {}
+    game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
   };
   std::vector<Node> nodes_;
 };

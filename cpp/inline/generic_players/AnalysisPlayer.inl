@@ -17,17 +17,16 @@ typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
   const ActionRequest& request) {
   auto proposed_response = wrapped_player_->get_action_response(request);
 
-  if (proposed_response.yield_instruction == core::kYield) {
+  if (proposed_response.get_yield_instruction() == core::kYield) {
     return proposed_response;
   }
   return this->get_web_response(request, proposed_response);
 }
 
 template <core::concepts::Game Game>
-void AnalysisPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
-                                                core::action_t action) {
-  wrapped_player_->receive_state_change(seat, state, action);
-  this->send_state_update(seat, state, action, Game::Rules::get_action_mode(state));
+void AnalysisPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  wrapped_player_->receive_state_change(update);
+  this->send_state_update(update);
 }
 
 template <core::concepts::Game Game>

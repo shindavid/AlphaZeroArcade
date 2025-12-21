@@ -20,12 +20,13 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using player_array_t = base_t::player_array_t;
 
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   bool start_game() override;
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
@@ -38,7 +39,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
    *
    * Derived classes must override this method.
    */
-  virtual core::action_t prompt_for_action(const State&, const ActionMask&) = 0;
+  virtual ActionResponse prompt_for_action(const ActionRequest&) = 0;
 
   /*
    * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.

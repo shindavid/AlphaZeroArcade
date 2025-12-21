@@ -125,6 +125,11 @@ class AbstractPlayerGenerator {
    */
   AbstractPlayer<Game>* generate_with_name(game_slot_index_t);
 
+  /*
+   * Override this to return true if your player generator supports backtracking.
+   */
+  virtual bool supports_backtracking() const { return false; }
+
  protected:
   /*
    * Helper function for parse_args() that some subclasses may find useful.

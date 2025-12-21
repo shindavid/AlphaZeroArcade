@@ -43,6 +43,7 @@ class AbstractPlayer {
   using ActionResponse = Game::Types::ActionResponse;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
@@ -59,7 +60,7 @@ class AbstractPlayer {
   // start_game() should return false if the player refuses to play the game.
   virtual bool start_game() { return true; }
 
-  virtual void receive_state_change(seat_index_t, const State&, action_t) {}
+  virtual void receive_state_change(const StateChangeUpdate& update) {}
 
   /*
    * In games with chance events, this method is called before the chance event occurs. This gives
@@ -84,11 +85,16 @@ class AbstractPlayer {
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }
 
+  bool is_facing_backtracking_opponent() const { return facing_backtracking_opponent_; }
+
+  void set_facing_backtracking_opponent() { facing_backtracking_opponent_ = true; }
+
  private:
   std::string name_;
   player_name_array_t player_names_;
   game_id_t game_id_ = -1;
   seat_index_t my_seat_ = -1;
+  bool facing_backtracking_opponent_ = false;
 };
 
 }  // namespace core
