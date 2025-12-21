@@ -119,10 +119,10 @@ struct GameTypes {
     static ActionResponse construct(response_type_t type);
 
     action_t action_ = kNullAction;
-    game_tree_node_aux_t aux_ = 0;
-    bool aux_set_ = false;
-    response_type_t type_ = kInvalidResponse;
     game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+    game_tree_node_aux_t aux_ = 0;
+    response_type_t type_ = kInvalidResponse;
+    bool aux_set_ = false;
   };
 
   struct ActionRequest {
@@ -137,11 +137,11 @@ struct GameTypes {
     const State& state;
     const ActionMask& valid_actions;
     YieldNotificationUnit notification_unit;
+    game_tree_node_aux_t aux = 0;
 
     // If set to true, the player is being asked to play noisily, in order to add opening diversity.
     // Each player is free to interpret this in their own way.
     bool play_noisily = false;
-    game_tree_node_aux_t aux = 0;
     bool undo_allowed = false;
   };
 
