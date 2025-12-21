@@ -2,6 +2,7 @@
 
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
+#include "core/ChanceEventHandleRequest.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/TrainingDataWriter.hpp"
 #include "search/TrainingInfoParams.hpp"
@@ -27,7 +28,7 @@ class DataExportingPlayer : public BasePlayer {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionRequest = core::ActionRequest<Game>;
-  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
+  using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using TrainingInfo = Traits::TrainingInfo;
   using Algorithms = search::AlgorithmsForT<Traits>;

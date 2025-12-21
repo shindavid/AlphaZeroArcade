@@ -2,6 +2,7 @@
 
 #include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
@@ -52,7 +53,7 @@ class Manager {
   using LookupTable = search::LookupTable<Traits>;
 
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
+  using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using GeneralContext = search::GeneralContext<Traits>;
   using RootInfo = GeneralContext::RootInfo;

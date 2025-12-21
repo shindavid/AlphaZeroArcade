@@ -4,6 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
@@ -46,7 +47,7 @@ class PlayerTest : public ::testing::Test {
   using PolicyTensor = Game::Types::PolicyTensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using ActionMask = Game::Types::ActionMask;
   using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;

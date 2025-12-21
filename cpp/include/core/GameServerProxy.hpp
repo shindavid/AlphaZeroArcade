@@ -7,6 +7,7 @@
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/Packet.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/CppUtil.hpp"
@@ -35,7 +36,7 @@ class GameServerProxy : public core::GameServerBase {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;

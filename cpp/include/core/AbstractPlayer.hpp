@@ -3,6 +3,8 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/ChanceEventHandleRequest.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 #include <array>
@@ -41,9 +43,9 @@ class AbstractPlayer {
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
-  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
+  using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
 

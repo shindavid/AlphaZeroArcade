@@ -1,9 +1,7 @@
 #pragma once
 
 #include "core/ActionSymmetryTable.hpp"
-#include "core/BasicTypes.hpp"
 #include "core/GameDerivedConstants.hpp"
-#include "core/YieldManager.hpp"
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/GameResultsConcept.hpp"
 #include "util/CompactBitSet.hpp"
@@ -54,23 +52,6 @@ struct GameTypes {
     Eigen::Array<float, Eigen::Dynamic, kNumPlayers, Eigen::RowMajor, kMaxBranchingFactor>;
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
-
-  struct ChanceEventHandleRequest {
-    ChanceEventHandleRequest(const YieldNotificationUnit& u, const State& s, action_t ca)
-        : notification_unit(u), state(s), chance_action(ca) {}
-
-    const YieldNotificationUnit& notification_unit;
-    const State& state;
-    action_t chance_action;
-  };
-
-  struct StateChangeUpdate {
-    seat_index_t seat;
-    const State& state;
-    action_t action;
-    game_tree_index_t game_tree_index;
-    action_mode_t action_mode;
-  };
 };
 
 }  // namespace core

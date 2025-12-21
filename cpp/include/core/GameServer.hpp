@@ -3,12 +3,13 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/ActionRequest.hpp"
-#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
@@ -68,12 +69,12 @@ class GameServer
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
-  using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
+  using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionRequest = core::ActionRequest<Game>;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

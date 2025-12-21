@@ -4,6 +4,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace generic {
@@ -21,7 +22,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = base_t::player_array_t;
 
   HumanTuiPlayer() {}

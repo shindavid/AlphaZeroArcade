@@ -4,6 +4,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "generic_players/alpha0/VerboseData.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/Constants.hpp"
@@ -66,7 +67,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   struct SharedData {
     template <typename... Ts>

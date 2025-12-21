@@ -3,6 +3,7 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "generic_players/WebPlayer.hpp"
 
@@ -22,7 +23,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
   ~AnalysisPlayer() { delete wrapped_player_; }

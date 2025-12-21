@@ -4,6 +4,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -23,7 +24,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
   virtual ~WebPlayer() = default;

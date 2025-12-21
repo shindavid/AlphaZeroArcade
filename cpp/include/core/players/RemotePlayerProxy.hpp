@@ -5,6 +5,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/SocketUtil.hpp"
@@ -28,7 +29,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using StateChangeUpdate = Game::Types::StateChangeUpdate;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_slot_index_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
