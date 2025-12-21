@@ -7,22 +7,16 @@
 namespace core {
 
 /*
- * An ActionResponse is an action together with some optional auxiliary information:
+ * An ActionResponse is a player's response to an ActionRequest. Typically, it is simply a
+ * core::action_t specifying the action to take. However, there are some other possible responses:
  *
- * - victory_guarantee: whether the player believes their victory is guaranteed. GameServer can be
- *     configured to trust this guarantee, and immediately end the game. This can speed up
- *     simulations.
+ * - undo last move
+ * - backtrack to a previous game-tree node
+ * - resign the game
+ * - yield (i.e., ask for more thinking time)
+ * - drop (i.e., drop this auxiliary thread / context)
  *
- * - training_info: used to generate targets for NN training.
- *
- * - yield_instruction: Indicates whether the player needs more time to think asynchronously. If
- *     set to a non-kContinue value, then the action/training_info/victory_guarantee fields are
- *     ignored. If set to kDrop, this indicates that this was an auxiliary thread launched for
- *     multithreaded search, and that the multithreaded part is over.
- *
- * - extra_enqueue_count: If set to a nonzero value, this instructs the GameServer to enqueue the
- *     current GameSlot this many additional times. This is useful for players that want to
- *     engage in multithreaded search. This should only be used for instruction type kYield.
+ * See GameServer.hpp for a discussion of how yielding and dropping work.
  */
 struct ActionResponse {
   enum response_type_t : uint8_t {
