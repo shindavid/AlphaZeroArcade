@@ -24,12 +24,12 @@ void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRespons
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ActionResponse(
-  action_t a)
-    : action_(a) {
-  if (a == kNullAction) {
+  action_t a) {
+  if (a < 0) {
     type_ = kInvalidResponse;
   } else {
     type_ = kMakeMove;
+    action_ = a;
   }
 }
 
@@ -56,16 +56,6 @@ GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::ba
 template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::make_move(
-  action_t a) {
-  ActionResponse r(a);
-  r.type_ = kMakeMove;
-  return r;
-}
-
-template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
-          group::concepts::FiniteGroup SymmetryGroup>
-GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::yield(int e) {
   ActionResponse r = construct(kYieldResponse);
   r.extra_enqueue_count = e;
@@ -76,12 +66,12 @@ template <concepts::GameConstants GameConstants, typename State_, concepts::Game
           group::concepts::FiniteGroup SymmetryGroup>
 void GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::set_action(
   action_t a) {
-  action_ = a;
 
-  if (a == kNullAction) {
+  if (a < 0) {
     type_ = kInvalidResponse;
   } else {
     type_ = kMakeMove;
+    action_ = a;
   }
 }
 
@@ -91,20 +81,12 @@ core::yield_instruction_t
 GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionResponse::get_yield_instruction()
   const {
   switch (type_) {
-    case kMakeMove:
-      return core::kContinue;
-    case kUndoLastMove:
-      return core::kContinue;
-    case kBacktrack:
-      return core::kContinue;
-    case kResignGame:
-      return core::kContinue;
     case kYieldResponse:
       return core::kYield;
     case kDropResponse:
       return core::kDrop;
     default:
-      throw util::Exception("ActionResponse type {} does not have a yield instruction", type_);
+      return core::kContinue;
   }
 }
 
@@ -118,12 +100,9 @@ bool GameTypes<GameConstants, State_, GameResults, SymmetryGroup>::ActionRequest
     case ActionResponse::kUndoLastMove:
       return undo_allowed;
     case ActionResponse::kBacktrack:
-      throw util::CleanException("BackTrack permission checking not yet implemented");
+      return false;  // backtrack not yet supported
     case ActionResponse::kResignGame:
-      if (GameConstants::kNumPlayers != 2) {
-        return false;
-      }
-      return true;
+      return GameConstants::kNumPlayers == 2;
     case ActionResponse::kYieldResponse:
       return true;
     case ActionResponse::kDropResponse:

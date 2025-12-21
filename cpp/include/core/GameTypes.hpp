@@ -113,10 +113,9 @@ struct GameTypes {
       kYieldResponse,
       kDropResponse
     };
-    ActionResponse() = default;
 
-    // Construct a kMakeMove response if action is not kNullAction; otherwise a kInvalidResponse.
-    ActionResponse(action_t a);
+    // Construct a kMakeMove response if action >= 0; otherwise, kInvalidResponse
+    ActionResponse(action_t a = kNullAction);
 
     static ActionResponse yield(int e = 0);
     static ActionResponse drop() { return construct(kDropResponse); }
@@ -124,7 +123,6 @@ struct GameTypes {
     static ActionResponse undo() { return construct(kUndoLastMove); }
     static ActionResponse invalid() { return construct(kInvalidResponse); }
     static ActionResponse backtrack(game_tree_index_t ix);
-    static ActionResponse make_move(action_t a);
 
     template <typename T>
     void set_aux(T aux);

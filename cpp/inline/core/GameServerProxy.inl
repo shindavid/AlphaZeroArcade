@@ -1,5 +1,6 @@
 #include "core/GameServerProxy.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/Packet.hpp"
 #include "util/Exceptions.hpp"
@@ -145,11 +146,12 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.get_yield_instruction() == kYield,
+  yield_instruction_t yield_instr = response.get_yield_instruction();
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || yield_instr == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-               int(response.get_yield_instruction()));
+               int(yield_instr));
 
-  switch (response.get_yield_instruction()) {
+  switch (yield_instr) {
     case kContinue: {
       CriticalSectionCheck check(in_critical_section_);
       mid_yield_ = false;
@@ -169,7 +171,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
       return result;
     }
     default: {
-      throw util::Exception("Unexpected response: {}", int(response.get_yield_instruction()));
+      throw util::Exception("Unexpected response: {}", int(yield_instr));
     }
   }
 

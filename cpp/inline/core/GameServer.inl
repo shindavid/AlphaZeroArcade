@@ -807,13 +807,14 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   request.undo_allowed = undo_allowed();
 
   ActionResponse response = player->get_action_response(request);
-  DEBUG_ASSERT(response.extra_enqueue_count == 0 || response.get_yield_instruction() == kYield,
+  yield_instruction_t yield_instr = response.get_yield_instruction();
+  DEBUG_ASSERT(response.extra_enqueue_count == 0 || yield_instr == kYield,
                "Invalid response: extra={} instr={}", response.extra_enqueue_count,
-               int(response.get_yield_instruction()));
+               int(yield_instr));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
-  if (response.get_yield_instruction() == kContinue) {
+  if (yield_instr == kContinue) {
     CriticalSectionCheck check(in_critical_section_);
     mid_yield_ = false;
     continue_hit_ = true;
@@ -1255,9 +1256,8 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() co
   for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
        ix = state_tree_.get_parent_index(ix)) {
 
-    bool is_current_player, is_chance;
-    is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
-    is_chance = state_tree_.is_chance_node(ix);
+    bool is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
+    bool is_chance = state_tree_.is_chance_node(ix);
 
     if (is_current_player && !is_chance) {
       return ix;
