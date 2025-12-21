@@ -1,12 +1,10 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
-#include "core/BasicTypes.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/OraclePool.hpp"
-#include "games/othello/Constants.hpp"
 #include "games/othello/EdaxOracle.hpp"
 #include "games/othello/Game.hpp"
-#include "util/BoostUtil.hpp"
 
 namespace othello {
 
@@ -39,7 +37,7 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
 
   EdaxPlayer(OraclePool* oracle_pool, const Params&);
 
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   OraclePool* const oracle_pool_;

@@ -9,7 +9,7 @@
 namespace generic::beta0 {
 
 template <search::concepts::Traits Traits>
-typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
+core::ActionResponse Player<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = this->get_action_policy(mcts_results, request.valid_actions);
 

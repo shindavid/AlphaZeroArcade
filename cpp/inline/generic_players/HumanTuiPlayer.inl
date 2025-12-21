@@ -27,7 +27,7 @@ inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& 
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
 template <core::concepts::Game Game>
-typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
+core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
   const ActionRequest& request) {
 
   util::clearscreen();

@@ -26,7 +26,7 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
   CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
-inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
+inline core::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     return request.aux - 1;
   }
@@ -43,12 +43,12 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const ActionRe
   EdaxOracle* oracle =
     oracle_pool_->get_oracle(request.notification_unit, params_.verbose, params_.deterministic);
   if (!oracle) {
-    return ActionResponse::yield();
+    return core::ActionResponse::yield();
   }
 
   core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
-  ActionResponse response(action);
+  core::ActionResponse response(action);
   response.set_aux(action + 1);
   return response;
 }

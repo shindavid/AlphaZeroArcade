@@ -1,7 +1,8 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
-#include "core/BasicTypes.hpp"
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
 #include "generic_players/alpha0/VerboseData.hpp"
 #include "search/AlgorithmsFor.hpp"
@@ -59,8 +60,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using ActionMask = Game::Types::ActionMask;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -83,7 +83,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   Manager* get_manager() const { return &shared_data_->manager; }
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  ActionResponse get_action_response(const ActionRequest&) override;
+  core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
  protected:
@@ -91,7 +91,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void init_search_mode(const ActionRequest&);
 
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
-  virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
+  virtual core::ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 

@@ -8,7 +8,7 @@
 
 namespace hex {
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
   const State& state = request.state;
 
@@ -22,13 +22,13 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   std::getline(std::cin, input);
 
   if (input.empty()) {
-    return ActionResponse::invalid();  // no input
+    return core::ActionResponse::invalid();  // no input
   }
   if (input == "S" || input == "s") {
     if (can_swap) {
       return kSwap;  // swap action
     } else {
-      return ActionResponse::invalid();  // invalid swap
+      return core::ActionResponse::invalid();  // invalid swap
     }
   }
 
@@ -37,19 +37,19 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
     col = input[0] - 'a';  // accept lower-case
   }
   if (col < 0 || col >= B) {
-    return ActionResponse::invalid();  // invalid column
+    return core::ActionResponse::invalid();  // invalid column
   }
 
   int row;
   try {
     row = std::stoi(input.substr(1)) - 1;
   } catch (std::invalid_argument& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   }
   if (row < 0 || row >= B) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   }
 
   return row * B + col;

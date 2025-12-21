@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/blokus/Game.hpp"
 #include "generic_players/HumanTuiPlayer.hpp"
@@ -34,7 +35,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   using po_map_t = std::map<piece_orientation_index_t, inner_map_t>;
   using p_map_t = std::map<piece_index_t, po_map_t>;
 
-  ActionResponse prompt_for_action(const ActionRequest&) override;
+  core::ActionResponse prompt_for_action(const ActionRequest&) override;
   void prompt_for_piece(const State&, const p_map_t&, Piece&);
   bool prompt_for_orientation(const State&, const p_map_t&, Piece&, PieceOrientation&);
   bool prompt_for_root_location(const State&, const p_map_t&, Piece&, PieceOrientation&,

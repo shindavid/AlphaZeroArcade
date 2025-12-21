@@ -1,3 +1,5 @@
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "util/GTestUtil.hpp"
@@ -13,14 +15,13 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = stochastic_nim::Game;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
-using ActionRequest = Game::Types::ActionRequest;
+using ActionRequest = core::ActionRequest<Game>;
 using ChanceDistribution = Game::Types::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 using InputTensorizor = core::InputTensorizor<Game>;
-using ActionResponse = stochastic_nim::PerfectPlayer::ActionResponse;
 
 class PerfectPlayerTest : public testing::Test {
  protected:
@@ -35,7 +36,7 @@ class PerfectPlayerTest : public testing::Test {
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
     ActionRequest request(state, valid_actions);
-    ActionResponse response = player_.get_action_response(request);
+    core::ActionResponse response = player_.get_action_response(request);
     return response.get_action();
   }
 

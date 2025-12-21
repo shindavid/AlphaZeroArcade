@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/tictactoe/Constants.hpp"
 #include "games/tictactoe/Game.hpp"
@@ -25,7 +26,7 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
 
   PerfectPlayer(const Params&);
 
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   struct policy_t {

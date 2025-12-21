@@ -13,7 +13,7 @@ bool AnalysisPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-typename Game::Types::ActionResponse AnalysisPlayer<Game>::get_action_response(
+core::ActionResponse AnalysisPlayer<Game>::get_action_response(
   const ActionRequest& request) {
   auto proposed_response = wrapped_player_->get_action_response(request);
 

@@ -1,5 +1,6 @@
 #include "alpha0/SearchResults.hpp"
 #include "alpha0/Traits.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"
@@ -48,7 +49,6 @@ class GameServerTest : public testing::Test {
    public:
     using base_t = generic::alpha0::Player<Traits>;
     using ActionMask = base_t::ActionMask;
-    using ActionResponse = base_t::ActionResponse;
     using ActionRequest = base_t::ActionRequest;
 
     using base_t::base_t;
@@ -64,7 +64,7 @@ class GameServerTest : public testing::Test {
     }
 
    protected:
-    ActionResponse get_action_response_helper(const SearchResults* results,
+    core::ActionResponse get_action_response_helper(const SearchResults* results,
                                               const ActionRequest& request) override {
       if (!test_->is_recorded_) {
         boost_util::pretty_print(test_->ss_result_, results->to_json());

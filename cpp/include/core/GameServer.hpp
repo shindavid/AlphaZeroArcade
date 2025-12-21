@@ -2,11 +2,12 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
-#include "core/Packet.hpp"
 #include "core/PerfStats.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -68,8 +69,7 @@ class GameServer
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/AbstractPlayerGenerator.hpp"
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
@@ -31,8 +33,7 @@ class GameServerProxy : public core::GameServerBase {
   using State = Game::State;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionResponse.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
@@ -20,7 +21,6 @@ class Player : public generic::alpha0::Player<Traits_> {
   using EvalSpec = Traits::EvalSpec;
   using base_t = generic::alpha0::Player<Traits>;
   using ActionRequest = base_t::ActionRequest;
-  using ActionResponse = base_t::ActionResponse;
   using SearchResults = base_t::SearchResults;
 
   using ActionMask = Game::Types::ActionMask;
@@ -29,7 +29,7 @@ class Player : public generic::alpha0::Player<Traits_> {
   using base_t::base_t;
 
  protected:
-  virtual ActionResponse get_action_response_helper(const SearchResults*,
+  virtual core::ActionResponse get_action_response_helper(const SearchResults*,
                                                     const ActionRequest&) override;
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;

@@ -14,7 +14,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
                                          "verbose mode");
 }
 
-inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+inline core::ActionResponse PerfectPlayer::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
     return request.aux - 1;
@@ -24,7 +24,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   const ActionMask& valid_actions = request.valid_actions;
   RELEASE_ASSERT(state.current_mode == kPlayerMode);
 
-  ActionResponse response;
+  core::ActionResponse response;
 
   if (params_.strength == 0) {
     response.set_action(valid_actions.choose_random_on_index());

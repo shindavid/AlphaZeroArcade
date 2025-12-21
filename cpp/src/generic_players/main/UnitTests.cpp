@@ -1,5 +1,6 @@
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Traits.hpp"
+#include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
@@ -44,8 +45,7 @@ class PlayerTest : public ::testing::Test {
   using SearchLog = ::search::SearchLog<Traits>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using State = Game::State;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using ActionMask = Game::Types::ActionMask;
   using Service = search::NNEvaluationServiceBase<Traits>;

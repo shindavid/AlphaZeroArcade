@@ -1,7 +1,8 @@
 #pragma once
 
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/Constants.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 #include <array>
@@ -39,8 +40,7 @@ class AbstractPlayer {
   using State = Game::State;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = Game::Types::StateChangeUpdate;

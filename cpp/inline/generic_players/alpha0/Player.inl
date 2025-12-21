@@ -128,7 +128,7 @@ inline void Player<Traits>::receive_state_change(const StateChangeUpdate& update
 }
 
 template <search::concepts::Traits Traits>
-typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
+core::ActionResponse Player<Traits>::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
     SearchResults* mcts_results = reinterpret_cast<SearchResults*>(request.aux);
@@ -140,15 +140,15 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
   SearchResponse response = get_manager()->search(search_request);
 
   if (response.yield_instruction == core::kYield) {
-    return ActionResponse::yield(response.extra_enqueue_count);
+    return core::ActionResponse::yield(response.extra_enqueue_count);
   } else if (response.yield_instruction == core::kDrop) {
-    return ActionResponse::drop();
+    return core::ActionResponse::drop();
   }
 
   if (this->is_facing_backtracking_opponent()) {
     const SearchResults* search_result = new SearchResults(*response.results);
     search_result_ptrs_.push_back(search_result);
-    ActionResponse action_response = get_action_response_helper(search_result, request);
+    core::ActionResponse action_response = get_action_response_helper(search_result, request);
     action_response.set_aux(search_result);
     return action_response;
   }
@@ -172,7 +172,7 @@ void Player<Traits>::init_search_mode(const ActionRequest& request) {
 }
 
 template <search::concepts::Traits Traits>
-typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
+core::ActionResponse Player<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 

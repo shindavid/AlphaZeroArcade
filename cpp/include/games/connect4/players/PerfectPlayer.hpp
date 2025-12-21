@@ -1,12 +1,10 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
-#include "core/BasicTypes.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/OraclePool.hpp"
-#include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
-#include "util/BoostUtil.hpp"
 
 namespace c4 {
 
@@ -48,7 +46,7 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
 
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   OraclePool* const oracle_pool_;

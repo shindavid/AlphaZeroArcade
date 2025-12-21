@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/TrainingDataWriter.hpp"
 #include "search/TrainingInfoParams.hpp"
@@ -24,8 +26,7 @@ class DataExportingPlayer : public BasePlayer {
   using GameResultTensor = Game::Types::GameResultTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using ChanceEventHandleRequest = Game::Types::ChanceEventHandleRequest;
 
   using TrainingInfo = Traits::TrainingInfo;
@@ -48,9 +49,9 @@ class DataExportingPlayer : public BasePlayer {
   void end_game(const State&, const GameResultTensor&) override;
 
  protected:
-  ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;
+  core::ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;
 
-  void add_to_game_log(const ActionRequest&, const ActionResponse&, const SearchResults*);
+  void add_to_game_log(const ActionRequest&, const core::ActionResponse&, const SearchResults*);
   void extract_policy_target(const SearchResults* results);
 
   TrainingDataWriter* const writer_;

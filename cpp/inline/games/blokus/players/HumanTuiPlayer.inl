@@ -14,7 +14,7 @@ inline bool HumanTuiPlayer::start_game() {
   return base_t::start_game();
 }
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
 
   const State& state = request.state;

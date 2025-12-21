@@ -7,7 +7,7 @@
 
 namespace stochastic_nim {
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
 
   const ActionMask& valid_actions = request.valid_actions;
@@ -34,9 +34,9 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   try {
     return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   }
 }
 

@@ -5,7 +5,7 @@
 
 namespace chess {
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
   throw std::runtime_error("Not implemented");
 }

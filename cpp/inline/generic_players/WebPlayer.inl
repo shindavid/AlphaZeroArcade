@@ -16,7 +16,7 @@ bool WebPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-typename Game::Types::ActionResponse WebPlayer<Game>::get_action_response(
+core::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
   return get_web_response(request, core::kNullAction);
 }
@@ -62,10 +62,10 @@ void WebPlayer<Game>::initialize_game() {
 }
 
 template <core::concepts::Game Game>
-typename Game::Types::ActionResponse WebPlayer<Game>::get_web_response(
-  const ActionRequest& request, const ActionResponse& proposed_response) {
+core::ActionResponse WebPlayer<Game>::get_web_response(
+  const ActionRequest& request, const core::ActionResponse& proposed_response) {
   if (resign_) {
-    return ActionResponse::resign();
+    return core::ActionResponse::resign();
   }
 
   if (action_ != -1) {
@@ -76,7 +76,7 @@ typename Game::Types::ActionResponse WebPlayer<Game>::get_web_response(
 
   send_action_request(request.valid_actions, proposed_response.get_action());
   notification_unit_ = request.notification_unit;
-  return ActionResponse::yield();
+  return core::ActionResponse::yield();
 }
 
 template <core::concepts::Game Game>

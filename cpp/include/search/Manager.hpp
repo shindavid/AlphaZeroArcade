@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
@@ -59,7 +60,7 @@ class Manager {
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using ChanceDistribution = Game::Types::ChanceDistribution;
-  using ActionRequest = Game::Types::ActionRequest;
+  using ActionRequest = core::ActionRequest<Game>;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
   using Symmetries = Game::Symmetries;

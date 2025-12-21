@@ -145,7 +145,7 @@ void RemotePlayerProxy<Game>::receive_state_change(const StateChangeUpdate& upda
 }
 
 template <concepts::Game Game>
-typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
+ActionResponse RemotePlayerProxy<Game>::get_action_response(
   const ActionRequest& request) {
   if (yielding_) {
     yielding_ = false;

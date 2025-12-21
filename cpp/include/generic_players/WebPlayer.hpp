@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
@@ -18,8 +20,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameClass = Game;
   using WebManager = core::WebManager<Game>;
   using State = Game::State;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
   using StateChangeUpdate = Game::Types::StateChangeUpdate;
@@ -30,7 +31,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // AbstractPlayer interface
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  ActionResponse get_action_response(const ActionRequest&) override;
+  core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
   bool disable_progress_bar() const override { return true; }
 
@@ -39,8 +40,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   void handle_resign(core::seat_index_t seat) override;
 
  protected:
-  ActionResponse get_web_response(const ActionRequest& request,
-                                  const ActionResponse& proposed_response);
+  core::ActionResponse get_web_response(const ActionRequest& request,
+                                  const core::ActionResponse& proposed_response);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
   void send_result_msg(const State& state, const GameResultTensor& outcome);

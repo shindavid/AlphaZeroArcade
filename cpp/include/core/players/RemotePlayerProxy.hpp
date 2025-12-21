@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Packet.hpp"
 #include "core/YieldManager.hpp"
@@ -24,8 +26,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
-  using ActionRequest = Game::Types::ActionRequest;
-  using ActionResponse = Game::Types::ActionResponse;
+  using ActionRequest = core::ActionRequest<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using StateChangeUpdate = Game::Types::StateChangeUpdate;
   using Player = AbstractPlayer<Game>;

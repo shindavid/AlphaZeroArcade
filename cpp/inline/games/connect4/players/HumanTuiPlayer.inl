@@ -27,7 +27,7 @@ inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update
   base_t::receive_state_change(update);
 }
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
 
   bool undo_allowed = request.undo_allowed;
@@ -44,18 +44,18 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
 
   if (input == "U" || input == "u") {
     if (undo_allowed) {
-      return ActionResponse::undo();
+      return core::ActionResponse::undo();
     } else {
-      return ActionResponse::invalid();
+      return core::ActionResponse::invalid();
     }
   }
 
   try {
     return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   }
 }
 
