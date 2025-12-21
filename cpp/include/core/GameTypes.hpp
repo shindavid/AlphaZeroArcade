@@ -62,29 +62,6 @@ struct GameTypes {
     action_t chance_action;
   };
 
-  struct ActionResponse;  // forward declaration
-
-  struct ActionRequest {
-    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
-                  game_tree_node_aux_t a)
-        : state(s), valid_actions(va), notification_unit(u), aux(a) {}
-
-    ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
-
-    bool permits(const ActionResponse& response) const;
-
-    const State& state;
-    const ActionMask& valid_actions;
-    YieldNotificationUnit notification_unit;
-
-    // If set to true, the player is being asked to play noisily, in order to add opening diversity.
-    // Each player is free to interpret this in their own way.
-    bool play_noisily = false;
-    game_tree_node_aux_t aux = 0;
-    bool undo_allowed = false;
-  };
-
-
   /*
    * An ActionResponse is an action together with some optional auxiliary information:
    *
@@ -146,6 +123,26 @@ struct GameTypes {
     bool aux_set_ = false;
     response_type_t type_ = kInvalidResponse;
     game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+  };
+
+  struct ActionRequest {
+    ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
+                  game_tree_node_aux_t a)
+        : state(s), valid_actions(va), notification_unit(u), aux(a) {}
+
+    ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
+
+    bool permits(const ActionResponse& response) const;
+
+    const State& state;
+    const ActionMask& valid_actions;
+    YieldNotificationUnit notification_unit;
+
+    // If set to true, the player is being asked to play noisily, in order to add opening diversity.
+    // Each player is free to interpret this in their own way.
+    bool play_noisily = false;
+    game_tree_node_aux_t aux = 0;
+    bool undo_allowed = false;
   };
 
   struct StateChangeUpdate {
