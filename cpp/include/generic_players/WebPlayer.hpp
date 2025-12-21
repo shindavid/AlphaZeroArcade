@@ -41,7 +41,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
  protected:
   core::ActionResponse get_web_response(const ActionRequest& request,
-                                  const core::ActionResponse& proposed_response);
+                                        const core::ActionResponse& proposed_response);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
   void send_result_msg(const State& state, const GameResultTensor& outcome);

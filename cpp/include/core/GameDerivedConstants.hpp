@@ -10,7 +10,6 @@ struct DerivedConstants {
   static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
   static constexpr int kMaxBranchingFactor = GameConstants::kMaxBranchingFactor;
-
 };
 
 }  // namespace core

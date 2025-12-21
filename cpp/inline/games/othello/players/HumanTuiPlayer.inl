@@ -7,9 +7,7 @@
 
 namespace othello {
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const ActionRequest& request) {
-
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   const ActionMask& valid_actions = request.valid_actions;
   bool undo_allowed = request.undo_allowed;
 

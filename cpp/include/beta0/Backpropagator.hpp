@@ -141,7 +141,8 @@ class Backpropagator {
   void load_child_stats(int i, const NodeStats& child_stats);
 
   void preload_parent_data();
-  template <typename MutexProtectedFunc> void load_parent_data(MutexProtectedFunc&& func);
+  template <typename MutexProtectedFunc>
+  void load_parent_data(MutexProtectedFunc&& func);
   void load_remaining_data();
   void compute_update_rules();
   void apply_updates();
@@ -154,9 +155,8 @@ class Backpropagator {
   LocalArray unsplice(sibling_write_col_t from_col);
 
   // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.
-  template<typename T>
-  static void modify_Q_arr(T& Q_arr, int action_index,
-                           core::seat_index_t seat, float q_new);
+  template <typename T>
+  static void modify_Q_arr(T& Q_arr, int action_index, core::seat_index_t seat, float q_new);
 
   template <typename T>
   void normalize_policy(T pi);  // keep pi[i_] fixed, normalize others

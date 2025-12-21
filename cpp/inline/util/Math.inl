@@ -37,9 +37,9 @@ inline const LogitLUT& get_logit_lut() {
 // Sigmoid LUT
 // ----------------------------
 struct SigmoidLUT {
-  static constexpr int   kSize  = 256;
-  static constexpr float kXMin  = -8.0f;
-  static constexpr float kXMax  =  8.0f;
+  static constexpr int kSize = 256;
+  static constexpr float kXMin = -8.0f;
+  static constexpr float kXMax = 8.0f;
   static constexpr float kRange = kXMax - kXMin;
   static constexpr float kScale = (kSize - 4) / kRange;
 

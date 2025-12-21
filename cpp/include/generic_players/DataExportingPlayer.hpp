@@ -49,7 +49,8 @@ class DataExportingPlayer : public BasePlayer {
   void end_game(const State&, const GameResultTensor&) override;
 
  protected:
-  core::ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;
+  core::ActionResponse get_action_response_helper(const SearchResults*,
+                                                  const ActionRequest&) override;
 
   void add_to_game_log(const ActionRequest&, const core::ActionResponse&, const SearchResults*);
   void extract_policy_target(const SearchResults* results);

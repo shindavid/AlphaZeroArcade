@@ -8,8 +8,7 @@
 namespace core {
 
 template <concepts::Game Game>
-bool ActionRequest<Game>::permits(
-  const ActionResponse& response) const {
+bool ActionRequest<Game>::permits(const ActionResponse& response) const {
   switch (response.type()) {
     case ActionResponse::kMakeMove:
       return valid_actions[response.get_action()];

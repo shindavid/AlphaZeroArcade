@@ -17,9 +17,9 @@ struct NodeStats {
   LogitValueArray lQW;
 
   ValueArray Q;
-  ValueArray Q_min;    // min Q observed per player
-  ValueArray Q_max;    // max Q observed per player
-  ValueArray W;        // uncertainty
+  ValueArray Q_min;  // min Q observed per player
+  ValueArray Q_max;  // max Q observed per player
+  ValueArray W;      // uncertainty
 
   int N = 0;
 };

@@ -140,8 +140,8 @@ struct StandardTrainingTargets {
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
 
   using List1 = alpha0::StandardTrainingTargets<Game>::List;
-  using List2 = mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget,
-                             ActionValueUncertaintyTarget>;
+  using List2 =
+    mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget>;
   using List = mp::Concat_t<List1, List2>;
 };
 

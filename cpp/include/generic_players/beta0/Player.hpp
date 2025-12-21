@@ -30,7 +30,7 @@ class Player : public generic::alpha0::Player<Traits_> {
 
  protected:
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                    const ActionRequest&) override;
+                                                          const ActionRequest&) override;
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 };

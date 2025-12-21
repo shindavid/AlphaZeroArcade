@@ -25,8 +25,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline core::ActionResponse PerfectPlayer::get_action_response(
-  const ActionRequest& request) {
+inline core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     return request.aux - 1;
   }
@@ -36,8 +35,7 @@ inline core::ActionResponse PerfectPlayer::get_action_response(
   return response;
 }
 
-inline core::action_t PerfectPlayer::get_action_response_helper(
-  const ActionRequest& request) {
+inline core::action_t PerfectPlayer::get_action_response_helper(const ActionRequest& request) {
   const State& state = request.state;
   const ActionMask& valid_actions = request.valid_actions;
 

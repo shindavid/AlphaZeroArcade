@@ -432,8 +432,9 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::populate_logit_value_beliefs(
-  const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW) {
+void AlgorithmsBase<Traits, Derived>::populate_logit_value_beliefs(const ValueArray& Q,
+                                                                   const ValueArray& W,
+                                                                   LogitValueArray& lQW) {
   if (kNumPlayers == 2) {
     // In this case, we only need to compute for one player, since the other is just negation.
     lQW[0] = compute_logit_value_belief(Q[0], W[0]);

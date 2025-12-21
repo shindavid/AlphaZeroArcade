@@ -3,7 +3,6 @@
 #include "search/concepts/TraitsConcept.hpp"
 #include "x0/SearchResults.hpp"
 
-
 namespace x0 {
 
 // CRTP base class

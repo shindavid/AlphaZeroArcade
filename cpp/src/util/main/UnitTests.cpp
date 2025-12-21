@@ -1350,7 +1350,7 @@ TEST(math, fast_coarse_sigmoid_matches_reference_on_grid) {
   for (int k = -800; k <= 800; ++k) {
     float x = 0.01f * static_cast<float>(k);
 
-    float ref  = ref_sigmoid(x);
+    float ref = ref_sigmoid(x);
     float fast = math::fast_coarse_sigmoid(x);
 
     EXPECT_NEAR(fast, ref, kTol) << "x=" << x;

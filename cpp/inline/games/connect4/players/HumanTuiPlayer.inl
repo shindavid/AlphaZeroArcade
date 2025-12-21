@@ -27,9 +27,7 @@ inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update
   base_t::receive_state_change(update);
 }
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const ActionRequest& request) {
-
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   bool undo_allowed = request.undo_allowed;
 
   if (undo_allowed) {

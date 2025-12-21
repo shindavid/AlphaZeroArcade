@@ -5,9 +5,7 @@
 
 namespace tictactoe {
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const ActionRequest& request) {
-
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   std::cout << "Enter move [0-8]: ";
   std::cout.flush();
   std::string input;

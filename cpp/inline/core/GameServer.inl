@@ -810,8 +810,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   int extra_enqueue_count = response.get_extra_enqueue_count();
   yield_instruction_t yield_instr = response.get_yield_instruction();
   DEBUG_ASSERT(extra_enqueue_count == 0 || yield_instr == kYield,
-               "Invalid response: extra={} instr={}", extra_enqueue_count,
-               int(yield_instr));
+               "Invalid response: extra={} instr={}", extra_enqueue_count, int(yield_instr));
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
 
@@ -1253,10 +1252,8 @@ bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
 
 template <concepts::Game Game>
 game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() const {
-
   for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
        ix = state_tree_.get_parent_index(ix)) {
-
     bool is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
     bool is_chance = state_tree_.is_chance_node(ix);
 

@@ -20,8 +20,7 @@ Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge*
 }
 
 template <search::concepts::Traits Traits>
-bool Backpropagator<Traits>::shares_mutex_with_parent(
-  const Node* child) const {
+bool Backpropagator<Traits>::shares_mutex_with_parent(const Node* child) const {
   return &child->mutex() == &node_->mutex();
 }
 
@@ -390,8 +389,8 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::unsplice(
 
 template <search::concepts::Traits Traits>
 template <typename T>
-void Backpropagator<Traits>::modify_Q_arr(T& Q_arr, int action_index,
-                                          core::seat_index_t seat, float q_new) {
+void Backpropagator<Traits>::modify_Q_arr(T& Q_arr, int action_index, core::seat_index_t seat,
+                                          float q_new) {
   int k = action_index;
   float Q_k = Q_arr(k, seat);
   auto row_k = Q_arr.row(k);

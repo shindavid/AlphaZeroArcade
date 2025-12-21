@@ -51,9 +51,8 @@ void DataExportingPlayer<BasePlayer>::end_game(const State& state,
 }
 
 template <typename BasePlayer>
-core::ActionResponse
-DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults* mcts_results,
-                                                            const ActionRequest& request) {
+core::ActionResponse DataExportingPlayer<BasePlayer>::get_action_response_helper(
+  const SearchResults* mcts_results, const ActionRequest& request) {
   core::ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
   add_to_game_log(request, response, mcts_results);
 

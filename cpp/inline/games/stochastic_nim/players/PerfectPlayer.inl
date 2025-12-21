@@ -14,8 +14,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
                                          "verbose mode");
 }
 
-inline core::ActionResponse PerfectPlayer::get_action_response(
-  const ActionRequest& request) {
+inline core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     return request.aux - 1;
   }

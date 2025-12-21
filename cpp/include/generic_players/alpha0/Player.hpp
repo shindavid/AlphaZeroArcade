@@ -91,7 +91,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void init_search_mode(const ActionRequest&);
 
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
-  virtual core::ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
+  virtual core::ActionResponse get_action_response_helper(const SearchResults*,
+                                                          const ActionRequest&);
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 

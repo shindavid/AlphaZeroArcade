@@ -149,8 +149,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   int extra_enqueue_count = response.get_extra_enqueue_count();
   yield_instruction_t yield_instr = response.get_yield_instruction();
   DEBUG_ASSERT(extra_enqueue_count == 0 || yield_instr == kYield,
-               "Invalid response: extra={} instr={}", extra_enqueue_count,
-               int(yield_instr));
+               "Invalid response: extra={} instr={}", extra_enqueue_count, int(yield_instr));
 
   switch (yield_instr) {
     case kContinue: {

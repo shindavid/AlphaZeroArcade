@@ -209,7 +209,9 @@ class GameServer
       state_tree_.set_player_aux(state_node_index_, active_seat_, aux);
     }
 
-    void backtrack_to_node(game_tree_index_t backtrack_node_ix) { state_node_index_ = backtrack_node_ix; }
+    void backtrack_to_node(game_tree_index_t backtrack_node_ix) {
+      state_node_index_ = backtrack_node_ix;
+    }
 
     game_tree_index_t player_last_action_node_index() const;
     bool active_player_supports_backtracking() const;

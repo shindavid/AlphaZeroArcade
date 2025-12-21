@@ -8,8 +8,7 @@
 
 namespace hex {
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const ActionRequest& request) {
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   const State& state = request.state;
 
   constexpr int B = Constants::kBoardDim;

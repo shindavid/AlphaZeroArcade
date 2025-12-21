@@ -24,7 +24,8 @@ game_tree_index_t GameStateTree<Game>::advance(const AdvanceUpdate& update) {
   RELEASE_ASSERT(update.seat >= 0 && update.seat < Constants::kNumPlayers);
 
   game_tree_index_t last_child_ix = kNullNodeIx;
-  for (game_tree_index_t i = nodes_[ix].first_child_ix; i != kNullNodeIx; i = nodes_[i].next_sibling_ix) {
+  for (game_tree_index_t i = nodes_[ix].first_child_ix; i != kNullNodeIx;
+       i = nodes_[i].next_sibling_ix) {
     if (action == nodes_[i].action_from_parent) {
       return i;
     }

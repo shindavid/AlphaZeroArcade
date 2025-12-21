@@ -128,8 +128,7 @@ inline void Player<Traits>::receive_state_change(const StateChangeUpdate& update
 }
 
 template <search::concepts::Traits Traits>
-core::ActionResponse Player<Traits>::get_action_response(
-  const ActionRequest& request) {
+core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     SearchResults* mcts_results = reinterpret_cast<SearchResults*>(request.aux);
     return get_action_response_helper(mcts_results, request);
@@ -172,8 +171,8 @@ void Player<Traits>::init_search_mode(const ActionRequest& request) {
 }
 
 template <search::concepts::Traits Traits>
-core::ActionResponse Player<Traits>::get_action_response_helper(
-  const SearchResults* mcts_results, const ActionRequest& request) {
+core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
+                                                                const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 
   if (verbose_info_) {
