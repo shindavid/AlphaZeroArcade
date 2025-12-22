@@ -18,13 +18,6 @@ class GameStateTree {
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
   using StateChange = StateChangeUpdate<Game>;
 
-  struct AdvanceUpdate {
-    game_tree_index_t ix = kNullNodeIx;
-    action_t action = kNullAction;
-    seat_index_t seat = -1;
-    bool is_chance = false;
-  };
-
   const State& state(game_tree_index_t ix) const;
   void init();
   game_tree_index_t advance(const StateChange& update);
