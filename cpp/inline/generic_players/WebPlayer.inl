@@ -175,7 +175,7 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   payload["board"] = Game::IO::state_to_json(update.state);
   payload["seat"] = update.seat;
 
-  payload["last_action"] = Game::IO::action_to_str(update.action, update.action_mode);
+  payload["last_action"] = Game::IO::action_to_str(update.action, update.is_chance);
   Game::IO::add_render_info(update.state, payload);
 
   return payload;

@@ -85,7 +85,7 @@ class GameServerProxy : public core::GameServerBase {
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action);
+    void apply_action(action_t action, player_id_t player_id);
 
    private:
     const Params& params() const { return shared_data_.params(); }
