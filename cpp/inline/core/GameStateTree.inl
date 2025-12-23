@@ -36,10 +36,10 @@ game_tree_index_t GameStateTree<Game>::advance(const StateChangeUpdate& update) 
   if (nodes_[ix].first_child_ix == kNullNodeIx) {
     nodes_[ix].first_child_ix = new_ix;
     nodes_[ix].seat = update.seat;
-    nodes_[ix].is_chance = update.is_chance;
+    nodes_[ix].is_chance = Game::Rules::is_chance_mode(update.action_mode);
   }
   RELEASE_ASSERT(nodes_[ix].seat == update.seat);
-  RELEASE_ASSERT(nodes_[ix].is_chance == update.is_chance);
+  RELEASE_ASSERT(nodes_[ix].is_chance == Game::Rules::is_chance_mode(update.action_mode));
 
   if (last_child_ix != kNullNodeIx) {
     nodes_[last_child_ix].next_sibling_ix = new_ix;
@@ -49,7 +49,7 @@ game_tree_index_t GameStateTree<Game>::advance(const StateChangeUpdate& update) 
   Rules::apply(new_state, action);
 
   auto player_acted = nodes_[ix].player_acted;
-  if (!update.is_chance) {
+  if (!Game::Rules::is_chance_mode(update.action_mode)) {
     player_acted.set(update.seat);
   }
   nodes_.emplace_back(new_state, ix, action, player_acted);

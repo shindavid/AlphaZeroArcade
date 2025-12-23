@@ -13,7 +13,7 @@ struct StateChangeUpdate {
   action_t action;
   game_tree_index_t game_tree_index;
   seat_index_t seat;
-  bool is_chance;
+  action_mode_t action_mode;
 };
 
 }  // namespace core
