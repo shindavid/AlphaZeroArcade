@@ -43,7 +43,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_name_array_t = Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
-  using StateTree = GameStateTree<Game>;
+  using GameStateTree = core::GameStateTree<Game>;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -110,7 +110,7 @@ class GameServerProxy : public core::GameServerBase {
     bool game_started_ = false;
 
     // Updated for each move
-    StateTree state_tree_;
+    GameStateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;

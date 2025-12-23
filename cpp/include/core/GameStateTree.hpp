@@ -16,11 +16,11 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
-  using StateChange = StateChangeUpdate<Game>;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   const State& state(game_tree_index_t ix) const;
   void init();
-  game_tree_index_t advance(const StateChange& update);
+  game_tree_index_t advance(const StateChangeUpdate& update);
   game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].aux[seat];
   }
