@@ -43,8 +43,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_name_array_t = Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
-  using StateTree = GameStateTree<Game>;
-  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
+  using GameStateTree = core::GameStateTree<Game>;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -85,7 +84,7 @@ class GameServerProxy : public core::GameServerBase {
     bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action);
+    void apply_action(action_t action, player_id_t player_id);
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -111,7 +110,7 @@ class GameServerProxy : public core::GameServerBase {
     bool game_started_ = false;
 
     // Updated for each move
-    StateTree state_tree_;
+    GameStateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
     ActionMask valid_actions_;
     bool play_noisily_;

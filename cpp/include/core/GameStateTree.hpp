@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/CompactBitSet.hpp"
 
@@ -15,17 +16,11 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
-
-  struct AdvanceUpdate {
-    game_tree_index_t ix = kNullNodeIx;
-    action_t action = kNullAction;
-    seat_index_t seat = -1;
-    bool is_chance = false;
-  };
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   const State& state(game_tree_index_t ix) const;
   void init();
-  game_tree_index_t advance(const AdvanceUpdate& update);
+  game_tree_index_t advance(const StateChangeUpdate& update);
   game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].aux[seat];
   }

@@ -750,7 +750,6 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_action_ < 0) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
     chance_action_ = eigen_util::sample(chance_dist);
-    apply_action(chance_action_);
   }
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
@@ -781,13 +780,10 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
 
   step_chance_player_index_ = 0;  // reset for next chance event
 
+  apply_action(chance_action_);
+
   if (params().print_game_states) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
-  }
-
-  StateChangeUpdate update(active_seat_, state(), chance_action_, state_node_index_, action_mode_);
-  for (auto player2 : players_) {
-    player2->receive_state_change(update);
   }
 
   GameResultTensor outcome;
@@ -885,11 +881,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
 
-    StateChangeUpdate update(active_seat_, state(), action, state_node_index_, action_mode_);
-    for (auto player2 : players_) {
-      player2->receive_state_change(update);
-    }
-
     GameResultTensor outcome;
     if (Game::Rules::is_terminal(state(), active_seat_, action, outcome)) {
       handle_terminal(outcome, result);
@@ -968,11 +959,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
     apply_action(action);
-
-    StateChangeUpdate update(active_seat_, state(), action, state_node_index_, action_mode_);
-    for (int p = 0; p < kNumPlayers; ++p) {
-      players_[p]->receive_state_change(update);
-    }
   }
 
   pre_step();
@@ -1276,10 +1262,14 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::apply_action(action_t action) {
-  using AdvanceUpdate = GameStateTree<Game>::AdvanceUpdate;
   bool is_chance = Rules::is_chance_mode(action_mode_);
-  AdvanceUpdate update(state_node_index_, action, active_seat_, is_chance);
+  StateChangeUpdate update(state(), action, state_node_index_, active_seat_, is_chance);
+
   state_node_index_ = state_tree_.advance(update);
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p]->receive_state_change(update);
+  }
 }
 
 }  // namespace core

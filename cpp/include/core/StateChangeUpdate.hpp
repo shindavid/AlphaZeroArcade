@@ -9,10 +9,10 @@ template <concepts::Game Game>
 struct StateChangeUpdate {
   using State = Game::State;
 
-  seat_index_t seat;
   const State& state;
   action_t action;
   game_tree_index_t game_tree_index;
+  seat_index_t seat;
   action_mode_t action_mode;
 };
 

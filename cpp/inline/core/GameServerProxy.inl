@@ -81,17 +81,10 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat = Rules::get_current_player(state());
   ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   action_t action = action_response.get_action();
-  apply_action(action);
-
-  Player* player = players_[payload.player_id];
-
-  action_mode_t action_mode = Rules::get_action_mode(state());
-  StateChangeUpdate update(seat, state(), action, state_node_index_, action_mode);
-  player->receive_state_change(update);
+  apply_action(action, payload.player_id);
 }
 
 template <concepts::Game Game>
@@ -538,9 +531,13 @@ void GameServerProxy<Game>::join_threads() {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::GameSlot::apply_action(action_t action) {
-  AdvanceUpdate update(state_node_index_, action, prompted_player_id_, false);
+void GameServerProxy<Game>::GameSlot::apply_action(action_t action, player_id_t player_id) {
+  seat_index_t seat = Rules::get_current_player(state());
+  StateChangeUpdate update(state(), action, state_node_index_, seat, false);
   state_node_index_ = state_tree_.advance(update);
+
+  Player* player = players_[player_id];
+  player->receive_state_change(update);
 }
 
 }  // namespace core
