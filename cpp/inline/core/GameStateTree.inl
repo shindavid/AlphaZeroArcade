@@ -20,6 +20,7 @@ template <concepts::Game Game>
 game_tree_index_t GameStateTree<Game>::advance(const StateChangeUpdate& update) {
   auto ix = update.game_tree_index;
   auto action = update.action;
+  bool is_chance = Game::Rules::is_chance_mode(update.action_mode);
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
   RELEASE_ASSERT(update.seat >= 0 && update.seat < Constants::kNumPlayers);
 
@@ -36,10 +37,10 @@ game_tree_index_t GameStateTree<Game>::advance(const StateChangeUpdate& update) 
   if (nodes_[ix].first_child_ix == kNullNodeIx) {
     nodes_[ix].first_child_ix = new_ix;
     nodes_[ix].seat = update.seat;
-    nodes_[ix].is_chance = Game::Rules::is_chance_mode(update.action_mode);
+    nodes_[ix].is_chance = is_chance;
   }
   RELEASE_ASSERT(nodes_[ix].seat == update.seat);
-  RELEASE_ASSERT(nodes_[ix].is_chance == Game::Rules::is_chance_mode(update.action_mode));
+  RELEASE_ASSERT(nodes_[ix].is_chance == is_chance);
 
   if (last_child_ix != kNullNodeIx) {
     nodes_[last_child_ix].next_sibling_ix = new_ix;
