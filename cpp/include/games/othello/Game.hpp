@@ -80,7 +80,6 @@ class Game {
 
   static void static_init() {}
 
-
  private:
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
