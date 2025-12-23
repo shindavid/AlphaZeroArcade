@@ -50,7 +50,7 @@ game_tree_index_t GameStateTree<Game>::advance(const StateChangeUpdate& update) 
   Rules::apply(new_state, action);
 
   auto player_acted = nodes_[ix].player_acted;
-  if (!Game::Rules::is_chance_mode(update.action_mode)) {
+  if (!is_chance) {
     player_acted.set(update.seat);
   }
   nodes_.emplace_back(new_state, ix, action, player_acted);
