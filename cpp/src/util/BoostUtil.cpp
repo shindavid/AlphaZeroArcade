@@ -83,15 +83,24 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
     case boost::json::kind::object: {
       os << "{\n";
       auto const& obj = jv.get_object();
+
       if (!obj.empty()) {
-        auto it = obj.begin();
-        for (;;) {
+        // Collect iterators, sort by key
+        std::vector<boost::json::object::const_iterator> its;
+        its.reserve(obj.size());
+        for (auto it = obj.begin(); it != obj.end(); ++it) its.push_back(it);
+
+        std::sort(its.begin(), its.end(), [](auto a, auto b) { return a->key() < b->key(); });
+
+        // Print in sorted order
+        for (std::size_t i = 0; i < its.size(); ++i) {
+          auto it = its[i];
           os << *indent << boost::json::serialize(it->key()) << " : ";
           pretty_print(os, it->value(), indent);
-          if (++it == obj.end()) break;
-          os << ",\n";
+          if (i + 1 != its.size()) os << ",\n";
         }
       }
+
       os << "\n";
       os << *indent << "}";
       break;
