@@ -1,19 +1,19 @@
 {
-"valid_actions" : "111",
-"policy_target" : [4, 3, 3],
+"AQs" : [0.5, 0.5, 0.5],
+"AQs_sq" : [0.25, 0.25, 0.25],
+"AV" : [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
 "P" : [0.333333, 0.333333, 0.333333],
 "Q" : [0.5, 0.5],
 "R" : [0.5, 0.5],
+"action_mode" : 0,
 "action_symmetry_table" : [
   [2],
   [1],
   [0]
 ],
-"action_mode" : 0,
-"trivial" : false,
-"provably_lost" : false,
 "counts" : [4, 3, 3],
-"AQs" : [0.5, 0.5, 0.5],
-"AQs_sq" : [0.25, 0.25, 0.25],
-"AV" : [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+"policy_target" : [4, 3, 3],
+"provably_lost" : false,
+"trivial" : false,
+"valid_actions" : "111"
 }
