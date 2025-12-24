@@ -17,9 +17,10 @@ namespace generic {
  * - generic::alpha0::Player<Traits>
  * - generic::beta0::Player<Traits>
  */
-template <typename BasePlayer>
-class DataExportingPlayer : public BasePlayer {
+template <typename BasePlayer_>
+class DataExportingPlayer : public BasePlayer_ {
  public:
+  using BasePlayer = BasePlayer_;
   using Traits = BasePlayer::Traits;
   using Game = BasePlayer::Game;
   using State = Game::State;

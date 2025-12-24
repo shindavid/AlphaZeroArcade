@@ -21,6 +21,7 @@ template <search::concepts::Traits Traits_>
 class Player : public generic::x0::Player<Traits_> {
  public:
   using Base = generic::x0::Player<Traits_>;
+  using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
   using Traits = Traits_;
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
@@ -57,7 +58,7 @@ class Player : public generic::x0::Player<Traits_> {
  protected:
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                          const ActionRequest&);
+                                                          const ActionRequest&) override;
 
   auto get_action_policy(const SearchResults*, const ActionMask&) const;
 

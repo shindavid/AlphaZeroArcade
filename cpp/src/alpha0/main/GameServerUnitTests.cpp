@@ -8,7 +8,8 @@
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
-#include "generic_players/alpha0/PlayerGenerator.hpp"
+#include "generic_players/x0/PlayerGenerator.hpp"
+#include "generic_players/x0/PlayerGenerator.hpp"
 #include "search/SearchLog.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -76,10 +77,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerGenerator : public generic::alpha0::PlayerGeneratorBase<Traits, TestPlayer> {
+  class TestPlayerGenerator : public generic::x0::CompetitionPlayerGenerator<TestPlayer> {
    public:
-    using base_t = generic::alpha0::PlayerGeneratorBase<Traits, TestPlayer>;
-
+    using base_t = generic::x0::CompetitionPlayerGenerator<TestPlayer>;
     using base_t::base_t;
 
     void set_test(GameServerTest* test) { test_ = test; }
@@ -90,13 +90,16 @@ class GameServerTest : public testing::Test {
       return player;
     }
 
+    std::vector<std::string> get_types() const override { return {"test"}; }
+    std::string get_description() const override { return "test"; }
+
    private:
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerSubfactory : public generic::alpha0::Subfactory<TestPlayerGenerator> {
+  class TestPlayerSubfactory : public generic::x0::Subfactory<TestPlayerGenerator> {
    public:
-    using base_t = generic::alpha0::Subfactory<TestPlayerGenerator>;
+    using base_t = generic::x0::Subfactory<TestPlayerGenerator>;
 
     TestPlayerSubfactory(GameServerTest* test) : test_(test) {}
 
