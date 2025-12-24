@@ -19,6 +19,10 @@ namespace generic::x0 {
 
 /*
  * A base-class for {alpha0,beta0}::Player.
+ *
+ * Note that when 2 or more identically-configured generic::x0::Player's are playing in the same
+ * game, they can share the same MCTS tree, as an optimization. This implementation supports this
+ * optimization.
  */
 template <search::concepts::Traits Traits_>
 class Player : public core::AbstractPlayer<typename Traits_::Game> {
@@ -75,7 +79,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,
                                                           const ActionRequest&);
 
-  auto get_action_policy(const SearchResults*, const ActionMask&) const;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const = 0;
 
   void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;

@@ -141,29 +141,6 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
 }
 
 template <search::concepts::Traits Traits>
-auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
-                                       const ActionMask& valid_actions) const {
-  PolicyTensor policy;
-  const auto& counts = mcts_results->counts;
-  if (search_mode_ == core::kRawPolicy) {
-    raw_init(mcts_results, valid_actions, policy);
-  } else if (search_params_[search_mode_].tree_size_limit <= 1) {
-    policy = mcts_results->P;
-  } else {
-    policy = counts;
-  }
-
-  if (search_mode_ != core::kRawPolicy && search_params_[search_mode_].tree_size_limit > 1) {
-    policy = mcts_results->action_symmetry_table.collapse(policy);
-    apply_temperature(policy);
-    policy = mcts_results->action_symmetry_table.symmetrize(policy);
-  }
-
-  normalize(valid_actions, policy);
-  return policy;
-}
-
-template <search::concepts::Traits Traits>
 void Player<Traits>::raw_init(const SearchResults* mcts_results, const ActionMask& valid_actions,
                               PolicyTensor& policy) const {
   ActionMask valid_actions_subset = valid_actions;

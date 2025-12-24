@@ -7,6 +7,7 @@ namespace alpha0 {
 template <core::concepts::Game Game>
 boost::json::object SearchResults<Game>::to_json() const {
   boost::json::object results_json = Base::to_json();
+  results_json["policy_target"] = eigen_util::to_json(policy_target);
   results_json["counts"] = eigen_util::to_json(counts);
   results_json["AQs"] = eigen_util::to_json(AQs);
   results_json["AQs_sq"] = eigen_util::to_json(AQs_sq);

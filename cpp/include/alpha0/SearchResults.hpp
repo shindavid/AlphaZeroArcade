@@ -13,6 +13,7 @@ struct SearchResults : public x0::SearchResults<Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
 
+  PolicyTensor policy_target;
   PolicyTensor counts;
   PolicyTensor AQs;  // s indicates only for the current seat
   PolicyTensor AQs_sq;

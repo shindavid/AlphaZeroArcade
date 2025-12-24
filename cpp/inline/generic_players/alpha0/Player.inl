@@ -65,17 +65,29 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
 }
 
 template <search::concepts::Traits Traits>
-auto Player<Traits>::get_action_policy(const SearchResults* mcts_results,
-                                       const ActionMask& valid_actions) const {
-  PolicyTensor policy = Base::get_action_policy(mcts_results, valid_actions);
+typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
+  const SearchResults* mcts_results, const ActionMask& valid_actions) const {
+  PolicyTensor policy;
+  const auto& counts = mcts_results->counts;
+  if (this->search_mode_ == core::kRawPolicy) {
+    this->raw_init(mcts_results, valid_actions, policy);
+  } else if (this->search_params_[this->search_mode_].tree_size_limit <= 1) {
+    policy = mcts_results->P;
+  } else {
+    policy = counts;
+  }
 
   if (this->search_mode_ != core::kRawPolicy &&
       this->search_params_[this->search_mode_].tree_size_limit > 1) {
+    policy = mcts_results->action_symmetry_table.collapse(policy);
+    this->apply_temperature(policy);
+    policy = mcts_results->action_symmetry_table.symmetrize(policy);
     if (params_extra_.LCB_z_score) {
       apply_LCB(mcts_results, valid_actions, policy);
-      this->normalize(valid_actions, policy);
     }
   }
+
+  this->normalize(valid_actions, policy);
   return policy;
 }
 

@@ -10,10 +10,12 @@ namespace beta0 {
 template <core::concepts::Game Game>
 struct SearchResults : public x0::SearchResults<Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
 
   ActionValueTensor AQ;
   ActionValueTensor AW;
+  PolicyTensor pi;
 
   ValueArray Q_min;
   ValueArray Q_max;

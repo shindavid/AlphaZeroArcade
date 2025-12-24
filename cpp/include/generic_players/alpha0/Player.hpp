@@ -12,10 +12,6 @@ namespace generic::alpha0 {
 
 /*
  * The generic::alpha0::Player uses AlphaZero MCTS to select actions.
- *
- * Note that when 2 or more identically-configured generic::alpha0::Player's are playing in the same
- * game, they can share the same MCTS tree, as an optimization. This implementation supports this
- * optimization.
  */
 template <search::concepts::Traits Traits_>
 class Player : public generic::x0::Player<Traits_> {
@@ -60,7 +56,7 @@ class Player : public generic::x0::Player<Traits_> {
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,
                                                           const ActionRequest&) override;
 
-  auto get_action_policy(const SearchResults*, const ActionMask&) const;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
 
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
 

@@ -16,7 +16,6 @@ struct SearchResults {
   using GameResultTensor = Game::Types::GameResultTensor;
 
   ActionMask valid_actions;
-  PolicyTensor policy_target;
   PolicyTensor P;
   ValueArray Q;
   GameResultTensor R;
