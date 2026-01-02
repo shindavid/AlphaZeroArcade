@@ -953,6 +953,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   active_seat_ = -1;
   noisy_mode_ = false;
   mid_yield_ = false;
+  continue_hit_ = false;
 
   state_tree_.init();
   state_node_index_ = 0;
@@ -1263,12 +1264,13 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::apply_action(action_t action) {
   bool is_chance = Rules::is_chance_mode(action_mode_);
-  StateChangeUpdate update(state(), action, state_node_index_, active_seat_, is_chance);
+  StateChangeUpdate update_tree(state(), action, state_node_index_, active_seat_, is_chance);
 
-  state_node_index_ = state_tree_.advance(update);
+  state_node_index_ = state_tree_.advance(update_tree);
 
+  StateChangeUpdate state_update(state(), action, state_node_index_, active_seat_, is_chance);
   for (int p = 0; p < kNumPlayers; ++p) {
-    players_[p]->receive_state_change(update);
+    players_[p]->receive_state_change(state_update);
   }
 }
 
