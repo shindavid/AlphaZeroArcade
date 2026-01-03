@@ -317,7 +317,7 @@ void Backpropagator<Traits>::compute_policy() {
   z -= c;
 
   S_denom_inv = 1.0f / (lW_i + lW).sqrt();
-  const float pi_i_inv = 1.0f / pi_i;
+  const float pi_i_inv = 1.0f / (1.0f - pi_i);
 
   S = (lQ_i - lQ) * S_denom_inv + z;
   math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
