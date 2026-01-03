@@ -8,6 +8,9 @@ class TreePanel {
     int move;
     int lane;
     game_tree_index_t index;
+    game_tree_index_t parent_ix = kNullNodeIx;
+    game_tree_index_t first_child_ix = kNullNodeIx;
+    game_tree_index_t next_sibling_ix = kNullNodeIx;
   };
 
   // look up by game_tree_index_t

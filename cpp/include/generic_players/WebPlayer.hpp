@@ -111,9 +111,10 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
  private:
   core::YieldNotificationUnit notification_unit_;
-  core::action_t action_ = -1;
+  core::action_t action_ = core::kNullAction;
   bool resign_ = false;
   core::TreePanel* tree_panel_ = core::TreePanel::get_instance();
+  core::game_tree_index_t active_node_index_ = core::kNullNodeIx;
 };
 
 }  // namespace generic
