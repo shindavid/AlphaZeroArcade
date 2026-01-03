@@ -31,6 +31,11 @@ void TreePanel::add_node(game_tree_index_t new_node, game_tree_index_t parent_no
 
   int move = nodes_[parent_node].move + 1;
 
+  /*
+   * TODO: The current allocation is monotonic and will result in very sparse/wide trees.
+   * Implement a layout algorithm (outside of add_node())that allows lane reuse for non-overlapping
+   * branches.
+   */
   int lane;
   if (nodes_[parent_node].first_child_ix < 0) {
     lane = nodes_[parent_node].lane;

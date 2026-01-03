@@ -2,8 +2,16 @@
 
 #include "core/BasicTypes.hpp"
 
+#include <vector>
+
 namespace core {
 
+/*
+ * TreePanel maintains a simplified shadow-copy of the game tree for UI visualization.
+ * It maps game_tree_index_t to a layout using "moves" (depth) and "lanes" (width). This is
+ * implemented as a singleton assuming that only one game is active at a time. If multiple games
+ * are active simultanenously, we will need to extend this to support multiple TreePanel instances.
+ */
 class TreePanel {
  public:
   struct Node {
@@ -27,6 +35,8 @@ class TreePanel {
  private:
   TreePanel();
   tree_panel_vec_t nodes_;
+
+  // Number of lanes allocated for the tree layout. Used to assign vertical offsets in add_node().
   int num_lanes_ = 1;
 };
 
