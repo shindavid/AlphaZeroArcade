@@ -122,13 +122,13 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     - Q_min(p): minimum value of Q ever observed for that player during MCTS search
     - Q_max(p): maximum value of Q ever observed for that player during MCTS search
-    - W_max(p): maximum value of W ever observed for that player during MCTS search
+    - W(p): final W observed for that player during MCTS search
 
     Then, let T(p) be the largest of the following 3 quantities:
 
     1. (V(p) - Q_min(p))^2
     2. (Q_max(p) - V(p))^2
-    3. 0.5 * W_max(p)
+    3. W(p)
 
     The ValueUncertaintyHead predicts T.
 
@@ -136,7 +136,7 @@ class ValueUncertaintyLossTerm(LossTerm):
     """
     def __init__(self, name: str, weight: float, value_name: str='value',
                  Q_min_target_name: str='Q_min', Q_max_target_name: str='Q_max',
-                 W_max_target_name: str='W_max'):
+                 W_target_name: str='W'):
         """
         Args:
 
@@ -144,14 +144,14 @@ class ValueUncertaintyLossTerm(LossTerm):
         - value_name: the name of the head/target that provides the value prediction
         - Q_min_target_name: the name of the head that provides the target Q_min
         - Q_max_target_name: the name of the head that provides the target Q_max
-        - W_max_target_name: the name of the head that provides the target W_max
+        - W_target_name: the name of the head that provides the target W
         - weight: the weight to assign to this loss term
         """
         super().__init__(name, weight)
         self._value_name = value_name
         self._Q_min_target_name = Q_min_target_name
         self._Q_max_target_name = Q_max_target_name
-        self._W_max_target_name = W_max_target_name
+        self._W_target_name = W_target_name
         self._value_head = None  # initialized lazily in post_init()
         self._loss_fn = nn.HuberLoss()
 
@@ -160,21 +160,18 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name, self._value_name]
-        y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_max_target_name]
+        y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
         predicted_Dsq, win_value = y_hat
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
-        W_max = y[2]  # (B, 2)
-
-        if True:
-            raise Exception('TODO: replace 0.5 * W_max with W_final')
+        W = y[2]      # (B, 2)
 
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
 
         d1 = (Q_prior - Q_min) ** 2
         d2 = (Q_max - Q_prior) ** 2
-        d3 = 0.5 * W_max
+        d3 = W
         actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
         return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
