@@ -22,6 +22,7 @@ core::ActionResponse WebPlayer<Game>::get_action_response(const ActionRequest& r
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  tree_panel_->update(update.seat, update.game_tree_index, update.action_mode);
   send_state_update(update);
 }
 
