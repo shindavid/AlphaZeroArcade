@@ -9,7 +9,6 @@
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "generic_players/x0/PlayerGenerator.hpp"
-#include "generic_players/x0/PlayerGenerator.hpp"
 #include "search/SearchLog.hpp"
 #include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"

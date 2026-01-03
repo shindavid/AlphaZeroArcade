@@ -20,9 +20,7 @@ class CompetitionPlayerGenerator
   std::vector<std::string> get_types() const override {
     return {"alpha0-C", "AlphaZero-Competition", "MCTS-C"};  // We keep MCTS-C for nostalgic reasons
   }
-  std::string get_description() const override {
-    return "Competition AlphaZero player";
-  }
+  std::string get_description() const override { return "Competition AlphaZero player"; }
 };
 
 template <search::concepts::Traits Traits>
@@ -35,9 +33,7 @@ class TrainingPlayerGenerator
   std::vector<std::string> get_types() const override {
     return {"alpha0-T", "AlphaZero-Training", "MCTS-T"};  // We keep MCTS-T for nostalgic reasons
   }
-  std::string get_description() const override {
-    return "Training AlphaZero player";
-  }
+  std::string get_description() const override { return "Training AlphaZero player"; }
 };
 
 }  // namespace generic::alpha0

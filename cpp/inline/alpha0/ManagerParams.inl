@@ -25,8 +25,7 @@ inline auto ManagerParams<EvalSpec>::make_options_description() {
   po2::options_description desc("Manager options");
 
   auto out =
-    desc
-      .template add_option<"cpuct", 'c'>(po2::default_value("{:.2f}", &cPUCT), "cPUCT value")
+    desc.template add_option<"cpuct", 'c'>(po2::default_value("{:.2f}", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult", 'd'>(po2::default_value("{:.2f}", &dirichlet_mult),
                                                   "dirichlet mult")
       .template add_hidden_option<"starting-root-softmax-temp">(

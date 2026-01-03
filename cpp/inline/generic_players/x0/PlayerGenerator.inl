@@ -10,8 +10,8 @@ namespace generic::x0 {
 // PlayerGeneratorBase
 
 template <typename PlayerT, search::Mode Mode>
-PlayerGeneratorBase<PlayerT, Mode>::PlayerGeneratorBase(
-  core::GameServerBase* server, shared_data_map_t& shared_data_cache)
+PlayerGeneratorBase<PlayerT, Mode>::PlayerGeneratorBase(core::GameServerBase* server,
+                                                        shared_data_map_t& shared_data_cache)
     : server_(server),
       manager_params_(Mode),
       mcts_player_params_(Mode),
@@ -53,7 +53,7 @@ void PlayerGeneratorBase<PlayerT, Mode>::parse_args(const std::vector<std::strin
 
 template <typename PlayerT, search::Mode Mode>
 PlayerT* PlayerGeneratorBase<PlayerT, Mode>::generate_helper(SharedData_sptr& shared_data,
-                                                                     bool owns_shared_data) {
+                                                             bool owns_shared_data) {
   return new PlayerT(this->mcts_player_params_, shared_data, owns_shared_data);
 }
 
