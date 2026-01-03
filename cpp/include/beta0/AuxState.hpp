@@ -1,6 +1,9 @@
 #pragma once
 
 #include "search/concepts/ManagerParamsConcept.hpp"
+#include "util/EigenUtil.hpp"
+
+#include <EigenRand/EigenRand>
 
 namespace beta0 {
 
@@ -10,6 +13,9 @@ struct AuxState {
 
   void clear() {}
   void step() {}
+
+  mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
+  mutable Eigen::Rand::P8_mt19937_64 rng;
 };
 
 }  // namespace beta0

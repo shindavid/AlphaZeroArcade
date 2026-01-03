@@ -128,7 +128,7 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
   bool add_noise = false;
   switch (purpose) {
     case search::kForStandardSearch: {
-      add_noise = search_params.full_search && manager_params.dirichlet_mult > 0;
+      add_noise = search_params.full_search && manager_params.mode == search::kTraining;
       break;
     }
     case search::kToLoadRootActionValues: {

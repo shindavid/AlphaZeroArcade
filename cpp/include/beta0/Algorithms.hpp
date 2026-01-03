@@ -32,6 +32,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using LocalActionValueArray = Base::LocalActionValueArray;
   using LocalPolicyArray = Base::LocalPolicyArray;
   using LookupTable = Base::LookupTable;
+  using ManagerParams = Base::ManagerParams;
   using Node = Base::Node;
   using NodeStats = Base::NodeStats;
   using PolicyTensor = Base::PolicyTensor;

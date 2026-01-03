@@ -168,7 +168,15 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
-  const LookupTable& lookup_table = context.general_context->lookup_table;
+  GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const RootInfo& root_info = general_context.root_info;
+  const ManagerParams& manager_params = general_context.manager_params;
+  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
+  auto& rng = general_context.aux_state.rng;
+  core::node_pool_index_t index = context.initialization_index;
+
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
 
@@ -181,13 +189,13 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     GameResultTensor R;
     ValueArray U;
     LocalActionValueArray AU(n, kNumPlayers);
-    LocalPolicyArray P_raw(n);
+    LocalPolicyArray P(n);
     LocalActionValueArray AV(n, kNumPlayers);
 
     // assumes that heads are in order policy, value, action-value
     //
     // TODO: we should be able to verify this assumption at compile-time
-    std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
+    std::copy_n(eval->data(0), P.size(), P.data());
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());
 
@@ -206,12 +214,32 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stable_data.U = U;
     populate_logit_value_beliefs(V, U, stable_data.lUV);
 
+    int XC[n];
+    for (int i = 0; i < n; ++i) {
+      XC[i] = 0;
+    }
+    if (index == root_info.node_index) {
+      if (search_params.full_search) {
+        if (manager_params.enable_exploratory_visits) {
+          double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+          LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
+          const float* f = noise.data();
+          std::discrete_distribution<int> dist(f, f + n);
+          for (int i = 0; i < manager_params.enable_exploratory_visits; ++i) {
+            int a = dist(rng);
+            XC[a] += 1;
+          }
+        }
+      }
+    }
+
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
-      edge->P = P_raw[i];
+      edge->P = P[i];
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
+      edge->XC = XC[i];
 
       // TODO: move this outside the loop, and do it as a batch calc off AV and AU, to
       // vectorize the division
@@ -225,7 +253,6 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.W = U;
   }
 
-  const RootInfo& root_info = context.general_context->root_info;
   Node* root = lookup_table.get_node(root_info.node_index);
   if (root) {
     root->stats().N = std::max(root->stats().N, 1);
