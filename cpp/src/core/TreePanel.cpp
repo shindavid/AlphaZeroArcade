@@ -10,7 +10,7 @@ TreePanel* TreePanel::get_instance() {
 }
 
 TreePanel::TreePanel() {
-  Node root{0, 0, 0, 0};
+  Node root{0, 0, -1, 0};
   nodes_.push_back(root);
 }
 

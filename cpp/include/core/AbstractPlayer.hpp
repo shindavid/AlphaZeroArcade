@@ -91,6 +91,8 @@ class AbstractPlayer {
 
   void set_facing_backtracking_opponent() { facing_backtracking_opponent_ = true; }
 
+  virtual void backtrack_to_node(game_tree_index_t) {}
+
  private:
   std::string name_;
   player_name_array_t player_names_;

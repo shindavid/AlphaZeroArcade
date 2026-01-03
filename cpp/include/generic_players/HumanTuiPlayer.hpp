@@ -34,6 +34,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   void end_game(const State&, const GameResultTensor&) override;
 
   bool disable_progress_bar() const override { return true; }
+  void backtrack_to_node(core::game_tree_index_t ix) override { active_node_index_ = ix; }
 
  protected:
   /*
@@ -53,7 +54,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
 
  private:
   core::TreePanel* tree_panel_ = core::TreePanel::get_instance();
-  core::game_tree_index_t active_node_index_ = core::kNullNodeIx;
+  core::game_tree_index_t active_node_index_ = 0;
 };
 
 }  // namespace generic

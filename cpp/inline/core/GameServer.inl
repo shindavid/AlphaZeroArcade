@@ -1274,4 +1274,13 @@ void GameServer<Game>::GameSlot::apply_action(action_t action) {
   }
 }
 
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::undo_player_last_action() {
+  state_node_index_ = player_last_action_node_index();
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p]->backtrack_to_node(state_node_index_);
+  }
+}
+
 }  // namespace core
