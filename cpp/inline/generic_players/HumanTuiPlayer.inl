@@ -22,6 +22,9 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
+  tree_panel_->add_node(update.game_tree_index, active_node_index_, update.seat,
+                        update.action_mode);
+  active_node_index_ = update.game_tree_index;
   last_action_ = update.action;
 }
 

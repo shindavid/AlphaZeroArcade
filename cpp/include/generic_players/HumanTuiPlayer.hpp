@@ -5,6 +5,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StateChangeUpdate.hpp"
+#include "core/TreePanel.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace generic {
@@ -49,6 +50,10 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual void print_state(const State&, bool terminal);
 
   core::action_t last_action_;
+
+ private:
+  core::TreePanel* tree_panel_ = core::TreePanel::get_instance();
+  core::game_tree_index_t active_node_index_ = core::kNullNodeIx;
 };
 
 }  // namespace generic

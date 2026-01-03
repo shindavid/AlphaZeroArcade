@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/BasicTypes.hpp"
 
 namespace core {
