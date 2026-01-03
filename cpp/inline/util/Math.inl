@@ -212,6 +212,8 @@ inline double log_odds_normal(double z) {
 }  // namespace detail
 
 inline float fast_coarse_logit(float mu) {
+  if (mu == 0.5f) return 0.0f;
+
   const auto& lut = detail::get_logit_lut();
   using LUT = detail::LogitLUT;
 
@@ -230,6 +232,8 @@ inline float fast_coarse_logit(float mu) {
 }
 
 inline float fast_coarse_sigmoid(float x) {
+  if (x == 0.0f) return 0.5f;
+
   const auto& lut = detail::get_sigmoid_lut();
   using SigmoidLUT = detail::SigmoidLUT;
 
