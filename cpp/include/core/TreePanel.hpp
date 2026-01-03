@@ -20,7 +20,7 @@ class TreePanel {
   using tree_panel_vec_t = std::vector<Node>;
 
   static TreePanel* get_instance();
-  const tree_panel_vec_t& nodes() { return nodes_; }
+  const Node& node(game_tree_index_t ix);
   void add_node(game_tree_index_t new_node, game_tree_index_t parent_node,
                 seat_index_t seat, action_mode_t action_mode);
 

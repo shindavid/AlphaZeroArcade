@@ -14,6 +14,12 @@ TreePanel::TreePanel() {
   nodes_.push_back(root);
 }
 
+const TreePanel::Node& TreePanel::node(game_tree_index_t ix) {
+  RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()),
+                 "Invalid node index: ix={}, size={}", ix, nodes_.size());
+  return nodes_[ix];
+}
+
 void TreePanel::add_node(game_tree_index_t new_node, game_tree_index_t parent_node,
                          seat_index_t seat, action_mode_t action_mode) {
   if (new_node < static_cast<game_tree_index_t>(nodes_.size())) {

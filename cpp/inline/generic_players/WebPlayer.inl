@@ -177,9 +177,12 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   boost::json::object payload;
   payload["board"] = Game::IO::state_to_json(update.state);
   payload["seat"] = update.seat;
-
   payload["last_action"] = Game::IO::action_to_str(update.action, update.action_mode);
   Game::IO::add_render_info(update.state, payload);
+
+  payload["game_tree_index"] = update.game_tree_index;
+  payload["move_number"] = tree_panel_->node(update.game_tree_index).move;
+  payload["lane"] = tree_panel_->node(update.game_tree_index).lane;
 
   return payload;
 }
