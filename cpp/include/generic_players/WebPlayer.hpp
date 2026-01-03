@@ -5,6 +5,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StateChangeUpdate.hpp"
+#include "core/TreePanel.hpp"
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -112,6 +113,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
   bool resign_ = false;
+  core::TreePanel* tree_panel_ = core::TreePanel::get_instance();
 };
 
 }  // namespace generic
