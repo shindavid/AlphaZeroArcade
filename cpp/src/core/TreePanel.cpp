@@ -24,7 +24,14 @@ void TreePanel::add_node(game_tree_index_t new_node, game_tree_index_t parent_no
                  "Nodes must be added in order: new_node={}, size={}", new_node, nodes_.size());
 
   int move = nodes_[parent_node].move + 1;
-  int lane = -1;
+
+  int lane;
+  if (nodes_[parent_node].first_child_ix < 0) {
+    lane = nodes_[parent_node].lane;
+  } else {
+    lane = num_lanes_++;
+  }
+
   nodes_.emplace_back(move, lane, seat, new_node, parent_node);
 
   if (nodes_[parent_node].first_child_ix < 0) {

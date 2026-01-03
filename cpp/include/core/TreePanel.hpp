@@ -27,6 +27,7 @@ class TreePanel {
  private:
   TreePanel();
   tree_panel_vec_t nodes_;
+  int num_lanes_ = 1;
 };
 
 }  // namespace core
