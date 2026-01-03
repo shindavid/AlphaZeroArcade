@@ -3,6 +3,7 @@ add_library(util_core_objs OBJECT
   core/GameServerBase.cpp
   core/LoopControllerClient.cpp
   core/NeuralNet.cpp
+  core/TreePanel.cpp
   util/BoostUtil.cpp
   util/CudaUtil.cpp
   util/GTestUtil.cpp
