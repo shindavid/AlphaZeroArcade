@@ -174,7 +174,7 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
 
   boost::json::object payload;
   payload["board"] = Game::IO::state_to_json(update.state);
-  payload["seat"] = update.seat_before_action;
+  payload["seat"] = std::string(1, Game::IO::kSeatChars[update.seat_before_action]);
   payload["action_mode"] = update.action_mode_before_action;
   payload["game_tree_index"] = update.game_tree_index;
   payload["node_before_action"] = update.node_before_action;

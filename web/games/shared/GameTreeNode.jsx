@@ -1,9 +1,8 @@
+// GameTreeNode.jsx
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 
 export const GameTreeNode = memo(({ data }) => {
-  // data.renderFn is your passed-down seatToHtml function
-  // data.seat is the 'B' or 'W' value
   const content = data.renderFn ? data.renderFn(data.seat) : <span>?</span>;
 
   return (
@@ -11,24 +10,23 @@ export const GameTreeNode = memo(({ data }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      // Optional: Add a subtle border or background if the span is transparent
       minWidth: '20px',
-      minHeight: '20px'
+      minHeight: '20px',
+      position: 'relative' // Ensure handles are positioned relative to this box
     }}>
-      {/* Input Handle (Top) */}
+      {/* TARGET: Where lines enter (Left side) */}
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         style={{ background: '#555', width: '6px', height: '6px' }}
       />
 
-      {/* Your Existing Visualization */}
       {content}
 
-      {/* Output Handle (Bottom) - Only show if we expect children, or always show */}
+      {/* SOURCE: Where lines leave (Right side) */}
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         style={{ background: '#555', width: '6px', height: '6px' }}
       />
     </div>
