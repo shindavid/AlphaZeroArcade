@@ -15,9 +15,9 @@ console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
 // --- CACHE STORAGE ---
 // Snapshot types: we only need the latest one (e.g. 'start_game', 'player_info')
-let lastByType = {};
+let lastByType = {};  // msg_type -> [msgIndex, RawString]
 // History types: we need ALL of them in order (e.g. 'state_update')
-let gameHistory = [];
+let gameHistory = [];  // Array of [msgIndex, RawString]
 // Global counter to maintain order across both types
 let msgIndex = 0;
 
