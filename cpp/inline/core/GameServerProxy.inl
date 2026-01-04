@@ -533,10 +533,11 @@ void GameServerProxy<Game>::join_threads() {
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::apply_action(action_t action, player_id_t player_id) {
   seat_index_t seat = Rules::get_current_player(state());
-  StateChangeUpdate update(state(), action, state_node_index_, seat, false);
-  state_node_index_ = state_tree_.advance(update);
+  state_node_index_ = state_tree_.advance(state_node_index_, action);
 
   Player* player = players_[player_id];
+  action_mode_t action_mode = Rules::get_action_mode(state());
+  StateChangeUpdate update(state(), action, state_node_index_, seat, action_mode);
   player->receive_state_change(update);
 }
 
