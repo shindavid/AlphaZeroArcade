@@ -37,10 +37,10 @@ class GameStateTree {
  private:
   struct Node {
     const State state;
-    const game_tree_index_t parent_ix = -1;
-    const action_t action_from_parent = -1;
-    game_tree_index_t first_child_ix = -1;
-    game_tree_index_t next_sibling_ix = -1;
+    const game_tree_index_t parent_ix = kNullNodeIx;
+    const action_t action_from_parent = kNullAction;
+    game_tree_index_t first_child_ix = kNullNodeIx;
+    game_tree_index_t next_sibling_ix = kNullNodeIx;
     PlayerActed player_acted;
     seat_index_t seat = -1;
     action_mode_t action_mode = -1;
