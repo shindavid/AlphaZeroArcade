@@ -86,7 +86,7 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   clear_search_mode();
   move_temperature_.step();
   if (owns_shared_data_) {
-    get_manager()->receive_state_change(update.seat, update.state, update.action);
+    get_manager()->receive_state_change(update.seat_before_action, update.state, update.action);
   }
 }
 
