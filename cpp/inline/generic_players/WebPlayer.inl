@@ -17,7 +17,7 @@ bool WebPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 core::ActionResponse WebPlayer<Game>::get_action_response(const ActionRequest& request) {
-  return get_web_response(request, -1);
+  return get_web_response(request, core::kNullAction);
 }
 
 template <core::concepts::Game Game>

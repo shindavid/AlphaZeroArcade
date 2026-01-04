@@ -152,7 +152,7 @@ ActionResponse RemotePlayerProxy<Game>::get_action_response(const ActionRequest&
   }
   const ActionMask& valid_actions = request.valid_actions;
 
-  action_response_.set_action(-1);
+  action_response_.set_action(kNullAction);
 
   RELEASE_ASSERT(request.notification_unit.context_id == 0, "Unexpected context_id: {}",
                  request.notification_unit.context_id);

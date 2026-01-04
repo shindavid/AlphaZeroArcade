@@ -1239,7 +1239,7 @@ bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
 
 template <concepts::Game Game>
 game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() const {
-  for (auto ix = state_tree_.get_parent_index(state_node_index_); ix >= 0;
+  for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
        ix = state_tree_.get_parent_index(ix)) {
     bool is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
     bool is_chance = state_tree_.is_chance_node(ix);
