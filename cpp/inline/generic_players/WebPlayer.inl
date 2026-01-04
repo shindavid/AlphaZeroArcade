@@ -1,5 +1,6 @@
 #include "generic_players/WebPlayer.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "core/WebManager.hpp"
 #include "search/VerboseManager.hpp"
 #include "util/Rendering.hpp"
@@ -173,9 +174,11 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
 
   boost::json::object payload;
   payload["board"] = Game::IO::state_to_json(update.state);
-  payload["seat"] = update.seat;
-
-  payload["last_action"] = Game::IO::action_to_str(update.action, update.action_mode);
+  payload["seat"] = update.seat_before_action;
+  payload["action_mode"] = update.action_mode_before_action;
+  payload["game_tree_index"] = update.game_tree_index;
+  payload["node_before_action"] = update.node_before_action;
+  payload["last_action"] = update.action;
   Game::IO::add_render_info(update.state, payload);
 
   return payload;
