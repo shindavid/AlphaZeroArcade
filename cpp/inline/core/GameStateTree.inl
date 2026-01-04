@@ -30,8 +30,8 @@ template <concepts::Game Game>
 game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action_t action) {
   RELEASE_ASSERT(from_ix >= 0 && from_ix < static_cast<game_tree_index_t>(nodes_.size()));
 
-  game_tree_index_t last_child_ix = -1;
-  for (game_tree_index_t i = nodes_[from_ix].first_child_ix; i >= 0;
+  game_tree_index_t last_child_ix = kNullNodeIx;
+  for (game_tree_index_t i = nodes_[from_ix].first_child_ix; i != kNullNodeIx;
        i = nodes_[i].next_sibling_ix) {
     if (action == nodes_[i].action_from_parent) {
       return i;
@@ -40,10 +40,10 @@ game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action
   }
 
   game_tree_index_t new_ix = nodes_.size();
-  if (nodes_[from_ix].first_child_ix < 0) {
+  if (nodes_[from_ix].first_child_ix == kNullNodeIx) {
     nodes_[from_ix].first_child_ix = new_ix;
   } else {
-    RELEASE_ASSERT(last_child_ix >= 0);
+    RELEASE_ASSERT(last_child_ix != kNullNodeIx);
     nodes_[last_child_ix].next_sibling_ix = new_ix;
   }
 
