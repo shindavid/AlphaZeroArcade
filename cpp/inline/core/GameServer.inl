@@ -1265,7 +1265,9 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::apply_action(action_t action) {
   state_node_index_ = state_tree_.advance(state_node_index_, action);
 
-  StateChangeUpdate state_update(state(), action, state_node_index_, active_seat_, action_mode_);
+  auto parent_index = state_tree_.get_parent_index(state_node_index_);
+  StateChangeUpdate state_update(state(), action, state_node_index_, parent_index, active_seat_,
+                                 action_mode_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }

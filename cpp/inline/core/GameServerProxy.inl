@@ -537,7 +537,8 @@ void GameServerProxy<Game>::GameSlot::apply_action(action_t action, player_id_t 
 
   Player* player = players_[player_id];
   action_mode_t action_mode = Rules::get_action_mode(state());
-  StateChangeUpdate update(state(), action, state_node_index_, seat, action_mode);
+  auto parent_index = state_tree_.get_parent_index(state_node_index_);
+  StateChangeUpdate update(state(), action, state_node_index_, parent_index, seat, action_mode);
   player->receive_state_change(update);
 }
 
