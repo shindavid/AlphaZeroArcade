@@ -1,5 +1,6 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
+import { GameTreePanel } from './GameTreePanel';
 
 
 // Make a uniform [{...}, {...}] from any value
@@ -81,6 +82,8 @@ export class GameAppBase extends React.Component {
       verboseInfo: null,
       currentTurn: null,
       proposedAction: null,
+
+      history: [],
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -109,6 +112,7 @@ export class GameAppBase extends React.Component {
       this.handleMessage(msg);
       this.setState({ loading: false });
     };
+    window.myGame = this;
   }
 
   componentWillUnmount() {
@@ -139,16 +143,21 @@ export class GameAppBase extends React.Component {
       playerNames: Array.from(payload.player_names),
       resultCodes: null,
       mySeat: payload.my_seat,
+
+      history: [],
     });
   }
 
   handleStateUpdate(payload) {
-    this.setState({
+    this.setState((prevState) => ({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
-      verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
-    });
+      verboseInfo: payload.verbose_info ? payload.verbose_info : prevState.verboseInfo,
+
+      // Now prevState is defined!
+      history: [...(prevState.history || []), payload]
+    }));
   }
 
   handleActionRequest(payload) {
@@ -271,6 +280,11 @@ export class GameAppBase extends React.Component {
             onNewGame={this.handleNewGame}
             midGame={midGame}
             loading={this.state.loading}
+          />
+
+          <GameTreePanel
+            history={this.state.history}
+            seatToHtml={this.seatToHtml}
           />
         </div>
 
