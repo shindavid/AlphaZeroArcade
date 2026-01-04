@@ -39,6 +39,28 @@
   border-radius: 100%;
 }
 
+.last-action {
+  position: relative;
+}
+
+.last-action::after {
+  content: '';            /* Required to make the element appear */
+  position: absolute;     /* Allows free movement inside the parent */
+
+  /* Size of the red circle */
+  width: 10px;
+  height: 10px;
+
+  /* Appearance */
+  background-color: red;
+  border-radius: 100%;
+
+  /* Centering Logic */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .ghost {
   opacity: 0.6;
 }

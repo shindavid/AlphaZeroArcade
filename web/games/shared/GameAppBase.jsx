@@ -253,7 +253,7 @@ export class GameAppBase extends React.Component {
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
     let midGame = resultCodes === null;
-    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
+    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(seat => this.seatToHtml(seat)) : seatAssignments;
     let currentSeat = this.state.currentTurn;
 
     return (
