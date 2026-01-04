@@ -30,7 +30,7 @@ struct ActionResponse {
   };
 
   // Construct a kMakeMove response if action >= 0; otherwise, kInvalidResponse
-  ActionResponse(action_t a = kNullAction);
+  ActionResponse(action_t a = -1);
 
   static ActionResponse yield(int extra_enqueue_count = 0);
   static ActionResponse drop() { return construct(kDropResponse); }
@@ -55,8 +55,8 @@ struct ActionResponse {
  private:
   static ActionResponse construct(response_type_t type);
 
-  action_t action_ = kNullAction;
-  game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
+  action_t action_ = -1;
+  game_tree_index_t backtrack_node_ix_ = -1;
   game_tree_node_aux_t aux_ = 0;
   int extra_enqueue_count_ = 0;
   bool victory_guarantee_ = false;

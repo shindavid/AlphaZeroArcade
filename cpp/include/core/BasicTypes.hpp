@@ -23,9 +23,6 @@ using generation_t = int32_t;
 using game_tree_node_aux_t = uint64_t;
 using game_tree_index_t = int32_t;
 
-constexpr game_tree_index_t kNullNodeIx = -1;
-constexpr action_t kNullAction = -1;
-
 // A game_slot_index_t specifies a GameSlot within a GameServer/GameServerProxy.
 using game_slot_index_t = int16_t;
 
