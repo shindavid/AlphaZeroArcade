@@ -80,22 +80,16 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
-  boost::json::object msg;
-  msg["type"] = "game_end";
-  msg["payload"] = make_result_msg(state, outcome);
-
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+  Message msg;
+  msg.add_payload(make_result_msg(state, outcome));
+  msg.send();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_start_game() {
-  boost::json::object msg;
-  msg["type"] = "start_game";
-  msg["payload"] = make_start_game_msg();
-
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+  Message msg;
+  msg.add_payload(make_start_game_msg());
+  msg.send();
 }
 
 template <core::concepts::Game Game>
@@ -107,6 +101,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   Game::Rules::init_state(state);
 
   boost::json::object payload;
+  payload["type"] = "start_game";
   payload["board"] = IO::state_to_json(state);
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
@@ -125,11 +120,9 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t action) {
-  boost::json::object msg;
-  msg["type"] = "action_request";
-  msg["payload"] = make_action_request_msg(valid_actions, action);
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+  Message msg;
+  msg.add_payload(make_action_request_msg(valid_actions, action));
+  msg.send();
 }
 
 template <core::concepts::Game Game>
@@ -143,6 +136,7 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
   }
 
   boost::json::object payload;
+  payload["type"] = "action_request";
   payload["legal_moves"] = legal_move_indices;
   payload["seat"] = this->get_my_seat();
   payload["proposed_action"] = action;
@@ -159,12 +153,23 @@ template <core::concepts::Game Game>
 void WebPlayer<Game>::send_state_update(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  boost::json::object msg;
-  msg["type"] = "state_update";
-  msg["payload"] = this->make_state_update_msg(update);
+  Message msg;
+  msg.add_payload(this->make_tree_node_msg(update));
+  msg.add_payload(this->make_state_update_msg(update));
+  msg.send();
+}
 
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::make_tree_node_msg(const StateChangeUpdate& update) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  boost::json::object payload;
+  payload["type"] = "tree_node";
+  payload["index"] = update.index;
+  payload["parent_index"] = update.parent_index;
+  payload["seat"] = std::string(1, Game::IO::kSeatChars[update.seat]);
+
+  return payload;
 }
 
 template <core::concepts::Game Game>
@@ -172,12 +177,11 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;
+  payload["type"] = "state_update";
   payload["board"] = Game::IO::state_to_json(update.state);
-  payload["seat"] = std::string(1, Game::IO::kSeatChars[update.seat_before_action]);
-  payload["action_mode"] = update.action_mode_before_action;
-  payload["game_tree_index"] = update.game_tree_index;
-  payload["node_before_action"] = update.node_before_action;
+  payload["index"] = update.index;
   payload["last_action"] = update.action;
+  payload["mode"] = update.mode;
   Game::IO::add_render_info(update.state, payload);
 
   return payload;
@@ -189,6 +193,8 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::object payload;
+  payload["type"] = "game_end";
+
   constexpr int P = Game::Constants::kNumPlayers;
 
   auto array = Game::GameResults::to_value_array(outcome);
@@ -207,6 +213,12 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
   payload["result_codes"] = std::string(result_codes);
 
   return payload;
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::Message::send() {
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg_);
 }
 
 }  // namespace generic

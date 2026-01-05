@@ -16,10 +16,10 @@ struct StateChangeUpdate {
 
   const State& state;
   action_t action;
-  game_tree_index_t game_tree_index;
-  game_tree_index_t node_before_action;
-  seat_index_t seat_before_action;
-  action_mode_t action_mode_before_action;
+  game_tree_index_t index;
+  game_tree_index_t parent_index;
+  seat_index_t seat;
+  action_mode_t mode;
 };
 
 }  // namespace core

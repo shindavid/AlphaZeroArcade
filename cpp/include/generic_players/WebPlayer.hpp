@@ -8,6 +8,7 @@
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include <boost/json/object.hpp>
 
 namespace generic {
 /*
@@ -48,6 +49,24 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   void send_result_msg(const State& state, const GameResultTensor& outcome);
 
  private:
+  class Message {
+   public:
+    Message() : msg_({{"type", "game_event"}, {"payloads", boost::json::array()}}) {}
+
+    void send();
+
+    void add_payload(boost::json::object&& payload) {
+      msg_["payloads"].as_array().push_back(std::move(payload));
+    }
+
+    void add_payload(const boost::json::object& payload) {
+      msg_["payloads"].as_array().push_back(payload);
+    }
+
+   private:
+    boost::json::object msg_;
+  };
+
   void send_start_game();
   void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
 
@@ -107,6 +126,18 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // In a game like chess, we might specialize by adding detail about why the game ended (e.g.,
   // stalemate, threefold repetition, etc.).
   virtual boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
+
+  // Optional: override this to provide a tree update message.
+  // By default, returns a dict like:
+  //
+  // {
+  //   "index": update.index,
+  //   "parent_index": update.parent_index,
+  //   "seat": std::string(1, Game::IO::kSeatChars[update.seat])
+  //   "mode": update.mode
+  // }
+
+  virtual boost::json::object make_tree_node_msg(const StateChangeUpdate&);
 
  private:
   core::YieldNotificationUnit notification_unit_;
