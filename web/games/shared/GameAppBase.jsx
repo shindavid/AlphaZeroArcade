@@ -130,6 +130,8 @@ export class GameAppBase extends React.Component {
       this.handleGameEnd(msg);
     } else if (msg.type === 'tree_node') {
       this.handleTreeNode(msg);
+    } else if (msg.type === 'tree_node_batch') {
+      this.handleTreeNodeBatch(msg.payloads);
     } else {
       console.warn('Unhandled message type:', msg.type);
     }
@@ -180,6 +182,12 @@ export class GameAppBase extends React.Component {
     this.setState((prevState) => ({
       history: [...(prevState.history || []), payload]
     }));
+  }
+
+  handleTreeNodeBatch(payloads) {
+    this.setState({
+      history: [...payloads]
+    });
   }
 
   gameActive() {

@@ -75,8 +75,35 @@ wss.on('connection', ws => {
   const allMessages = Object.values(lastByTypeIndex);
   allMessages.sort((a, b) => a[0] - b[0]);
 
-  // replay messages
-  allMessages.forEach(([_, jsonString]) => ws.send(jsonString));
+  let treeNodeBatch = [];
+
+  const flushTreeNodes = () => {
+    if (treeNodeBatch.length === 0) return;
+
+    treeNodeBatch.sort((a, b) => a.index - b.index);
+
+    const batchMsg = {
+      type: 'tree_node_batch',
+      payloads: treeNodeBatch
+    };
+    ws.send(JSON.stringify(batchMsg));
+    treeNodeBatch = [];
+  };
+
+  for (const [_, jsonString] of allMessages) {
+    if (jsonString.includes('"type":"tree_node"')) {
+      try {
+        const payload = JSON.parse(jsonString);
+        treeNodeBatch.push(payload);
+      } catch (e) {
+        console.error("Error parsing stored node:", e);
+      }
+    } else {
+      ws.send(jsonString);
+    }
+  }
+
+  flushTreeNodes();
 
   ws.on('message', message => {
     console.log('WS → Bridge:', message.toString());
