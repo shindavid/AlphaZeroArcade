@@ -6,7 +6,10 @@ export const GameTreeNode = memo(({ data }) => {
   const content = data.renderFn ? data.renderFn(data.seat) : <span>?</span>;
 
   return (
-    <div className="game-node-wrapper">
+    <div
+      className="game-node-wrapper"
+      move-number={data.moveNumber}
+    >
       {data.label !== "Start" && (
         <Handle
           type="target"

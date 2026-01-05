@@ -38,7 +38,7 @@ function buildTreeStructure(history) {
     id: "0",
     children: [],
     depth: 0,
-    data: { label: "Start", seat: null }
+    data: { label: "Start", seat: null, moveNumber: 0 }
   });
 
   history.forEach((msg) => {
