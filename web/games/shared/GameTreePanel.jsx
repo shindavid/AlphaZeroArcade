@@ -2,17 +2,15 @@ import React, { useMemo } from 'react';
 import ReactFlow, { Background, Controls } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getLayoutElements } from './GameTreeUtils';
-import { GameTreeNode } from './GameTreeNode'; // <--- Import the new component
+import { GameTreeNode } from './GameTreeNode';
 
-// Define this OUTSIDE the component to prevent unnecessary re-renders
 const nodeTypes = {
   gameNode: GameTreeNode,
 };
 
-export function GameTreePanel({ history, seatToHtml }) { // <--- Accept seatToHtml prop
+export function GameTreePanel({ history, seatToHtml }) {
 
   const { nodes, edges } = useMemo(() => {
-    // Pass seatToHtml into the utility
     return getLayoutElements(history, seatToHtml);
   }, [history, seatToHtml]);
 
@@ -21,7 +19,7 @@ export function GameTreePanel({ history, seatToHtml }) { // <--- Accept seatToHt
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes} // <--- Register it here
+        nodeTypes={nodeTypes}
         fitView
         nodesDraggable={false}
       >
