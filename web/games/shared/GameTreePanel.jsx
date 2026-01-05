@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import ReactFlow, { Background, Controls } from 'reactflow';
 import 'reactflow/dist/style.css';
+import './GameTree.css'
+
 import { getLayoutElements } from './GameTreeUtils';
 import { GameTreeNode } from './GameTreeNode';
 
@@ -15,7 +17,7 @@ export function GameTreePanel({ history, seatToHtml }) {
   }, [history, seatToHtml]);
 
   return (
-    <div style={{ height: '300px', border: '1px solid #444', marginTop: '10px' }}>
+    <div className="game-tree-container">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -23,7 +25,7 @@ export function GameTreePanel({ history, seatToHtml }) {
         fitView
         nodesDraggable={false}
       >
-        <Background color="#555" gap={16} />
+        <Background className="game-tree-background" gap={16} />
         <Controls />
       </ReactFlow>
     </div>
