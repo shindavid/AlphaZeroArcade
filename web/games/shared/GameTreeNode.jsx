@@ -20,7 +20,6 @@ export const GameTreeNode = memo(({ data }) => {
 
       {content}
 
-      {/* SOURCE: Where lines leave (Right side) */}
       <Handle
         type="source"
         position={Position.Right}
