@@ -403,6 +403,9 @@ void Backpropagator<Traits>::modify_Q_arr(T& Q_arr, int action_index, core::seat
     // In two-player zero-sum, we can just adjust both players' Q values symmetrically.
     row_k(seat) = q_new;
     row_k(1 - seat) -= delta;
+    if (row_k(1 - seat) < Game::GameResults::kMinValue) {
+      row_k(1 - seat) = Game::GameResults::kMinValue;
+    }
   } else {
     // For multiplayer games, it's a little more ambiguous how we should adjust the other
     // players' Q values.
