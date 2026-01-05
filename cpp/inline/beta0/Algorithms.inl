@@ -119,6 +119,7 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
       Array actions(n);
       Array argmax(n);
       Array sqrt_W = W.cwiseSqrt();
+      Array Narr(n);
 
       if (xi >= 0) {
         score.fill(0.f);
@@ -133,6 +134,9 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
         core::action_t action = edge->action;
         Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
+
+        auto child = lookup_table.get_node(edge->child_index);
+        Narr(e) = child ? child->stats().N : 0;
       }
       argmax.setZero();
       argmax(argmax_index) = 1;
@@ -140,10 +144,10 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
       std::ostringstream ss;
       ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi",
-                                                        "S",      "score",   "argmax"};
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "S",     "score",
+                                                        "N",      "RC",      "XC", "argmax"};
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, argmax));
+        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, Narr, RC, XC, argmax));
 
       eigen_util::PrintArrayFormatMap fmt_map{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},

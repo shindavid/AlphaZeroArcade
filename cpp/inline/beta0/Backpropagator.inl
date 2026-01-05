@@ -234,6 +234,7 @@ void Backpropagator<Traits>::print_debug_info() {
 
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
+  LocalArray N(n_);
 
   group::element_t inv_sym = Game::SymmetryGroup::inverse(context_.leaf_canonical_sym);
   for (int e = 0; e < n_; ++e) {
@@ -242,14 +243,17 @@ void Backpropagator<Traits>::print_debug_info() {
     Game::Symmetries::apply(action, inv_sym, node_->action_mode());
     actions(e) = action;
     i_indicator(e) = (e == i_) ? 1.f : 0.f;
+
+    auto child = lookup_table().get_node(edge->child_index);
+    N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {"action", "i",  "P", "pi",  "lV", "lU",
-                                                    "lQ",     "lW", "Q", "W",   "Q*", "S_denom_inv",
-                                                    "S",      "c",  "z", "tau", "PI"};
+  static std::vector<std::string> action_columns = {"action",      "i",  "N",  "P", "pi",  "lV",
+                                                    "lU",          "lQ", "lW", "Q", "W",   "Q*",
+                                                    "S_denom_inv", "S",  "c",  "z", "tau", "PI"};
 
   auto action_data = eigen_util::sort_rows(
-    eigen_util::concatenate_columns(actions, i_indicator, P, pi_before, lV, lU, lQ, lW, Q, W,
+    eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, lV, lU, lQ, lW, Q, W,
                                     Q_star, S_denom_inv, S, c, z, tau, pi_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
