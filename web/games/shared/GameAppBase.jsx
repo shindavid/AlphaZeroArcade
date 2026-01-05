@@ -82,7 +82,7 @@ export class GameAppBase extends React.Component {
       verboseInfo: null,
       currentTurn: null,
       proposedAction: null,
-      history: [],
+      history: new Map(),
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -147,8 +147,7 @@ export class GameAppBase extends React.Component {
       playerNames: Array.from(payload.player_names),
       resultCodes: null,
       mySeat: payload.my_seat,
-
-      history: [],
+      history: new Map(),
     });
   }
 
@@ -179,14 +178,24 @@ export class GameAppBase extends React.Component {
   }
 
   handleTreeNode(payload) {
-    this.setState((prevState) => ({
-      history: [...(prevState.history || []), payload]
-    }));
+    this.setState((prevState) => {
+      if (prevState.history.has(payload.index)) {
+        return null;
+      }
+      const nextHistory = new Map(prevState.history);
+      nextHistory.set(payload.index, payload);
+      return { history: nextHistory };
+    });
   }
 
   handleTreeNodeBatch(payloads) {
-    this.setState({
-      history: [...payloads]
+    this.setState(() => {
+      const nextHistory = new Map();
+      payloads.forEach(node => {
+        nextHistory.set(node.index, node);
+      });
+
+      return { history: nextHistory };
     });
   }
 
