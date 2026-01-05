@@ -13,15 +13,13 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
-// --- CACHE STORAGE ---
-// Snapshot types: we only need the latest one (e.g. 'start_game', 'player_info')
+// Snapshot messages: we only need the latest one (e.g. 'start_game', 'player_info')
 let lastByType = {};  // msg_type -> [msgIndex, RawString]
-// History types: we need ALL of them in order (e.g. 'state_update')
+// History messages: we need ALL of them in order (e.g. 'state_update')
 let gameHistory = [];  // Array of [msgIndex, RawString]
 // Global counter to maintain order across both types
 let msgIndex = 0;
 
-// Define which message types should be accumulated instead of overwritten
 const HISTORY_TYPES = new Set(['state_update']);
 
 const app    = express();
@@ -47,26 +45,23 @@ engineSocket.on('data', data => {
     const msg_type = msg.type;
     if (!msg_type) continue;
 
-    // 1. RESET Logic
-    // When a new game starts, clear all previous history and snapshots
+    // when a new game starts, clear all previous history and snapshots
     if (msg_type === 'start_game') {
       lastByType = {};
       gameHistory = [];
       msgIndex = 0;
     }
 
-    // 2. STORAGE Logic
-    const entry = [msgIndex++, line]; // Store [Order, RawString]
+    // store messages
+    const entry = [msgIndex++, line];
 
     if (HISTORY_TYPES.has(msg_type)) {
-      // Accumulate history messages
       gameHistory.push(entry);
     } else {
-      // Overwrite snapshot messages
       lastByType[msg_type] = entry;
     }
 
-    // 3. BROADCAST Logic
+    // broadcast
     for (let client of wss.clients) {
       if (client.readyState === client.OPEN) client.send(line);
     }
@@ -76,17 +71,13 @@ engineSocket.on('data', data => {
 wss.on('connection', ws => {
   console.log('➜ New WebSocket client connected');
 
-  // MERGE & SORT
-  // Combine single-item snapshots with the full history list
   const allMessages = [
     ...Object.values(lastByType),
     ...gameHistory
   ];
-
-  // Sort by the original msgIndex to ensure perfect playback sequence
   allMessages.sort((a, b) => a[0] - b[0]);
 
-  // REPLAY
+  // replay messages
   allMessages.forEach(([_, line]) => ws.send(line));
 
   ws.on('message', message => {
