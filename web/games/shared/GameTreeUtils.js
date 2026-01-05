@@ -75,7 +75,7 @@ function traverse(nodeId, inheritedY, ctx) {
     type: 'gameNode',
     data: {
       ...node.data,
-      renderFn: ctx.renderFn // Access from context
+      renderFn: ctx.renderFn
     },
     style: { width: NODE_WIDTH, height: NODE_HEIGHT }
   });
