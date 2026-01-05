@@ -82,7 +82,6 @@ export class GameAppBase extends React.Component {
       verboseInfo: null,
       currentTurn: null,
       proposedAction: null,
-
       history: [],
     };
     this.socketRef = React.createRef();
@@ -129,6 +128,8 @@ export class GameAppBase extends React.Component {
       this.handleActionRequest(msg);
     } else if (msg.type === 'game_end') {
       this.handleGameEnd(msg);
+    } else if (msg.type === 'tree_node') {
+      this.handleTreeNode(msg);
     } else {
       console.warn('Unhandled message type:', msg.type);
     }
@@ -150,15 +151,12 @@ export class GameAppBase extends React.Component {
   }
 
   handleStateUpdate(payload) {
-    this.setState((prevState) => ({
+    this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
-      verboseInfo: payload.verbose_info ? payload.verbose_info : prevState.verboseInfo,
-
-      // Now prevState is defined!
-      history: [...(prevState.history || []), payload]
-    }));
+      verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
+    });
   }
 
   handleActionRequest(payload) {
@@ -176,6 +174,12 @@ export class GameAppBase extends React.Component {
       legalMoves: [],
       proposedAction: null,
     });
+  }
+
+  handleTreeNode(payload) {
+    this.setState((prevState) => ({
+      history: [...(prevState.history || []), payload]
+    }));
   }
 
   gameActive() {

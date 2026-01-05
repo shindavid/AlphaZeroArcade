@@ -9,6 +9,7 @@ export function getLayoutElements(history, renderFn) {
   if (!history || history.length === 0) return { nodes: [], edges: [] };
 
   const treeMap = buildTreeStructure(history);
+  console.log('Tree Map:', treeMap);
   const { nodes, edges } = calculateCoordinates(treeMap, renderFn);
   return { nodes, edges };
 }
@@ -22,8 +23,8 @@ function buildTreeStructure(history) {
   });
 
   history.forEach((msg) => {
-    const id = String(msg.game_tree_index);
-    const parentId = String(msg.node_before_action);
+    const id = String(msg.index);
+    const parentId = String(msg.parent_index);
     if (!nodeMap.has(parentId)) return;
 
     const parent = nodeMap.get(parentId);
