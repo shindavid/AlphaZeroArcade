@@ -344,8 +344,24 @@ void Backpropagator<Traits>::update_QW() {
   auto W = read_data2_(r2_W);
   auto Q_star = read_data2_(r2_Q_star);
   auto pi_mat = pi.matrix();
+  auto Q = read_data2_(r2_Q);
 
   stats_.Q = (Q_star.matrix().transpose() * pi_mat).array();
+
+  // check that stats_.Q is >= 0 everywhere, dump it and abort if not
+  for (int p = 0; p < kNumPlayers; ++p) {
+    if (stats_.Q(p) < Game::GameResults::kMinValue) {
+      std::ostringstream ss;
+      ss << "Backpropagated Q value is invalid: " << stats_.Q.transpose()
+         << "\nQ_foor_: " << Q_floor_ << "\nseat_: " << int(seat_) << "\ni_:" << i_ << "\nQ:\n"
+         << Q << "\nQ_star:\n"
+         << Q_star << "\nW:\n"
+         << W << "\npi:\n"
+         << pi.transpose();
+      LOG_ERROR(ss.str());
+      throw std::runtime_error("Invalid Q value in Backpropagator");
+    }
+  }
 
   auto W_in_mat = W.matrix();
   auto W_across_mat = (Q_star.rowwise() - stats_.Q.transpose()).square().matrix();
