@@ -1263,12 +1263,9 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::apply_action(action_t action) {
-  bool is_chance = Rules::is_chance_mode(action_mode_);
-  StateChangeUpdate update_tree(state(), action, state_node_index_, active_seat_, is_chance);
+  state_node_index_ = state_tree_.advance(state_node_index_, action);
 
-  state_node_index_ = state_tree_.advance(update_tree);
-
-  StateChangeUpdate state_update(state(), action, state_node_index_, active_seat_, is_chance);
+  StateChangeUpdate state_update(state(), action, state_node_index_, active_seat_, action_mode_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }
