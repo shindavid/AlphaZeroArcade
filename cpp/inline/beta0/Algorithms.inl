@@ -1,11 +1,10 @@
 #include "beta0/Algorithms.hpp"
 
 #include "beta0/Backpropagator.hpp"
+#include "beta0/Calculations.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Gaussian1D.hpp"
-#include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cmath>
@@ -36,7 +35,7 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
   stats.N = 1;
-  populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
+  Calculations<Traits>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -82,7 +81,7 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
   int N;
 
   mit::unique_lock lock(node->mutex());
-  N = node->stats().N;
+  N = node->stats().N + 1;
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table.get_edge(node, i);
     Node* child = lookup_table.get_node(edge->child_index);
@@ -187,6 +186,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     auto& stable_data = node->stable_data();
     auto& stats = node->stats();
     auto eval = item.eval();
+    auto seat = stable_data.active_seat;
 
     int n = stable_data.num_valid_actions;
 
@@ -216,7 +216,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
-    populate_logit_value_beliefs(V, U, stable_data.lUV);
+    Calculations<Traits>::populate_logit_value_beliefs(V, U, stable_data.lUV);
 
     int XC[n];
     for (int i = 0; i < n; ++i) {
@@ -247,7 +247,11 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
       // TODO: move this outside the loop, and do it as a batch calc off AV and AU, to
       // vectorize the division
-      populate_logit_value_beliefs(edge->child_AV, edge->child_AU, edge->child_lAUV);
+      Calculations<Traits>::populate_logit_value_beliefs(edge->child_AV, edge->child_AU,
+                                                         edge->child_lAUV);
+
+      edge->child_lQ = edge->child_lAUV[seat].mean();
+      edge->child_lW = edge->child_lAUV[seat].variance();
     }
 
     stats.Q = V;
@@ -460,55 +464,6 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
   view.W = record->W;
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::populate_logit_value_beliefs(const ValueArray& Q,
-                                                                   const ValueArray& W,
-                                                                   LogitValueArray& lQW) {
-  if (kNumPlayers == 2) {
-    // In this case, we only need to compute for one player, since the other is just negation.
-    lQW[0] = compute_logit_value_belief(Q[0], W[0]);
-    lQW[1] = -lQW[0];
-  } else {
-    for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
-      lQW[p] = compute_logit_value_belief(Q[p], W[p]);
-    }
-  }
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-util::Gaussian1D AlgorithmsBase<Traits, Derived>::compute_logit_value_belief(float Q, float W) {
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
-  constexpr float kWidth = kMax - kMin;
-  constexpr float kInvWidth = 1.0f / kWidth;
-
-  if (Q <= kMin) {
-    return util::Gaussian1D::neg_inf();
-  } else if (Q >= kMax) {
-    return util::Gaussian1D::pos_inf();
-  }
-  if (W == 0) {
-    float theta = math::fast_coarse_logit((Q - kMin) * kInvWidth);
-    return util::Gaussian1D(theta, 0.f);
-  }
-
-  float mu = Q;
-  float sigma_sq = W;
-
-  // Rescale Q and W to reflect [0, 1] range
-  mu = (mu - kMin) * kInvWidth;
-  sigma_sq *= kInvWidth * kInvWidth;
-
-  float mult = 1.0f / (mu * mu * (1 - mu) * (1 - mu));
-
-  float theta1 = math::fast_coarse_logit(mu);
-  float theta2 = (0.5 - mu) * sigma_sq * mult;
-  float theta = theta1 - theta2;
-
-  float omega_sq = sigma_sq * mult;
-  return util::Gaussian1D(theta, omega_sq);
 }
 
 }  // namespace beta0

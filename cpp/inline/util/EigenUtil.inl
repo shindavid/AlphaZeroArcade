@@ -95,7 +95,7 @@ inline int sigfigs(const std::string& s) {
 inline std::string float_to_str8(float x) {
   if (x == 0) return "";
 
-  char buf[32];
+  char buf[128];
 
   std::sprintf(buf, "%.8f", x);  // Standard
   std::string s(buf);

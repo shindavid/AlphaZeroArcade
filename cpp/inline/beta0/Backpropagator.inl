@@ -1,5 +1,7 @@
 #include "beta0/Backpropagator.hpp"
 
+#include "beta0/Calculations.hpp"
+
 #include <sstream>
 
 namespace beta0 {
@@ -82,6 +84,9 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
 
   func();
   stats_ = node_->stats();  // copy
+  lQ_i_old_ = edge_->child_lQ;
+  lW_i_old_ = edge_->child_lW;
+  RELEASE_ASSERT(lW_i_old_ >= 0.f, "Negative variance {}", lW_i_old_);
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -173,6 +178,8 @@ void Backpropagator<Traits>::apply_updates() {
   for (int k = 0; k < n_; k++) {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
+    child_edge->child_lQ = stats_.lQW[seat_].mean();
+    child_edge->child_lW = stats_.lQW[seat_].variance();
   }
 
   int N = node_->stats().N;
@@ -226,17 +233,27 @@ void Backpropagator<Traits>::print_debug_info() {
 
   const LocalArray pi_after = full_write_data_(fw_pi);
 
-  const LocalArray S_denom_inv = unsplice(sw_S_denom_inv);
   const LocalArray S = unsplice(sw_S);
+  const LocalArray S_old = unsplice(sw_S_old);
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
   const LocalArray tau = unsplice(sw_tau);
+  const LocalArray tau_old = unsplice(sw_tau_old);
 
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
   LocalArray N(n_);
 
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(context_.leaf_canonical_sym);
+  auto sym = context_.root_canonical_sym;
+  const auto& search_path = context_.search_path;
+  for (const auto& visitation : search_path) {
+    if (visitation.node == node_) {
+      break;
+    }
+    sym = Game::SymmetryGroup::compose(sym, visitation.edge->sym);
+  }
+
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
   for (int e = 0; e < n_; ++e) {
     auto edge = lookup_table().get_edge(node_, e);
     core::action_t action = edge->action;
@@ -248,13 +265,13 @@ void Backpropagator<Traits>::print_debug_info() {
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {"action",      "i",  "N",  "P", "pi",  "lV",
-                                                    "lU",          "lQ", "lW", "Q", "W",   "Q*",
-                                                    "S_denom_inv", "S",  "c",  "z", "tau", "PI"};
+  static std::vector<std::string> action_columns = {
+    "action", "i",  "N", "P", "pi", "lV",    "lU",  "lQ",      "lW", "Q",
+    "W",      "Q*", "c", "z", "S",  "S_old", "tau", "tau_old", "PI"};
 
   auto action_data = eigen_util::sort_rows(
     eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, lV, lU, lQ, lW, Q, W,
-                                    Q_star, S_denom_inv, S, c, z, tau, pi_after));
+                                    Q_star, c, z, S, S_old, tau, tau_old, pi_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -310,22 +327,36 @@ void Backpropagator<Traits>::compute_policy() {
 
   const int n = n_ - 1;
 
-  auto S_denom_inv = sibling_write_data_(sw_S_denom_inv);
   auto S = sibling_write_data_(sw_S);
+  auto S_old = sibling_write_data_(sw_S_old);
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
   auto tau = sibling_write_data_(sw_tau);
+  auto tau_old = sibling_write_data_(sw_tau_old);
 
   c = (lV_i - lV) / (lU_i + lU).sqrt();
   math::fast_coarse_batch_inverse_normal_cdf_clamped_range(P_i, P.data(), c.data(), n, z.data());
   z -= c;
 
-  S_denom_inv = 1.0f / (lW_i + lW).sqrt();
   const float pi_i_inv = 1.0f / (1.0f - pi_i);
 
-  S = (lQ_i - lQ) * S_denom_inv + z;
+  S = (lQ_i - lQ) / (lW_i + lW).sqrt() + z;
   math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
-  full_write_data_(fw_pi, i_) = (pi * tau).sum() * pi_i_inv;
+
+  S_old = (lQ_i_old_ - lQ) / (lW_i_old_ + lW).sqrt() + z;
+  math::fast_coarse_batch_normal_cdf(S_old.data(), n, tau_old.data());
+
+  float pi_i_new = (pi * tau).sum() * pi_i_inv;
+  float pi_i_old = (pi * tau_old).sum() * pi_i_inv;
+
+  float pi_i_new_logit = math::fast_coarse_logit(pi_i_new);
+  float pi_i_old_logit = math::fast_coarse_logit(pi_i_old);
+  float delta_logit = pi_i_new_logit - pi_i_old_logit;
+
+  float pi_i_logit = math::fast_coarse_logit(pi_i);
+  pi_i_logit += delta_logit;
+  full_write_data_(fw_pi, i_) = math::fast_coarse_sigmoid(pi_i_logit);
+
   normalize_policy(full_write_data_(fw_pi));
 }
 
@@ -372,6 +403,8 @@ void Backpropagator<Traits>::update_QW() {
   auto W_p_mat = (W_in_mat + W_across_mat).transpose() * pi_mat;
 
   stats_.W = W_p_mat.array();
+
+  Calculations<Traits>::populate_logit_value_beliefs(stats_.Q, stats_.W, stats_.lQW);
 }
 
 template <search::concepts::Traits Traits>

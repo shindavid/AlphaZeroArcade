@@ -71,11 +71,12 @@ class Backpropagator {
 
   enum sibling_write_col_t : uint8_t {
     // Corresponds to columns of sibling_write_data_
-    sw_S_denom_inv,
     sw_S,
+    sw_S_old,
     sw_c,
     sw_z,
     sw_tau,
+    sw_tau_old,
     swSize
   };
 
@@ -169,6 +170,8 @@ class Backpropagator {
   Edge* edge_;
   int n_;  // number of valid actions
   int i_;  // current action index
+  float lQ_i_old_;
+  float lW_i_old_;
   float Q_floor_;
   core::seat_index_t seat_;
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/Algorithms.hpp"
-#include "core/BasicTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Gaussian1D.hpp"
 

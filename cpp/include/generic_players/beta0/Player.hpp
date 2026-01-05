@@ -23,6 +23,7 @@ class Player : public generic::x0::Player<Traits_> {
   using SearchResults = Traits::SearchResults;
   using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
  protected:
   virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
