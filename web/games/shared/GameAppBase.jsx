@@ -107,6 +107,7 @@ export class GameAppBase extends React.Component {
     };
     ws.onmessage = e => {
       let msg;
+      console.log(e);
       try { msg = JSON.parse(e.data) }
       catch (err) { return console.error('Bad JSON', err); }
       this.handleMessage(msg);
@@ -121,13 +122,13 @@ export class GameAppBase extends React.Component {
 
   handleMessage(msg) {
     if (msg.type === 'start_game') {
-      this.handleStartGame(msg.payload);
+      this.handleStartGame(msg);
     } else if (msg.type === 'state_update') {
-      this.handleStateUpdate(msg.payload);
+      this.handleStateUpdate(msg);
     } else if (msg.type === 'action_request') {
-      this.handleActionRequest(msg.payload);
+      this.handleActionRequest(msg);
     } else if (msg.type === 'game_end') {
-      this.handleGameEnd(msg.payload);
+      this.handleGameEnd(msg);
     } else {
       console.warn('Unhandled message type:', msg.type);
     }

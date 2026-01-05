@@ -13,14 +13,8 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
-// Snapshot messages: we only need the latest one (e.g. 'start_game', 'player_info')
-let lastByType = {};  // msg_type -> [msgIndex, RawString]
-// History messages: we need ALL of them in order (e.g. 'state_update')
-let gameHistory = [];  // Array of [msgIndex, RawString]
-// Global counter to maintain order across both types
+let lastByTypeIndex = {}; // (type, index) -> [msgIndex, msgLine]
 let msgIndex = 0;
-
-const HISTORY_TYPES = new Set(['state_update']);
 
 const app    = express();
 const server = http.createServer(app);
@@ -39,31 +33,38 @@ engineSocket.on('data', data => {
     try {
       msg = JSON.parse(line);
     } catch (e) {
+      console.error('JSON Parse Error:', e, 'Line:', line);
       continue;
     }
 
-    const msg_type = msg.type;
-    if (!msg_type) continue;
-
-    // when a new game starts, clear all previous history and snapshots
-    if (msg_type === 'start_game') {
-      lastByType = {};
-      gameHistory = [];
-      msgIndex = 0;
+    if (!msg.payloads || !Array.isArray(msg.payloads)) {
+      continue;
     }
 
-    // store messages
-    const entry = [msgIndex++, line];
+    for (const payload of msg.payloads) {
+      if (!payload.type) continue;
 
-    if (HISTORY_TYPES.has(msg_type)) {
-      gameHistory.push(entry);
-    } else {
-      lastByType[msg_type] = entry;
-    }
+      if (payload.type === 'start_game') {
+        console.log('Resetting Game History...');
+        lastByTypeIndex = {};
+        msgIndex = 0;
+      }
 
-    // broadcast
-    for (let client of wss.clients) {
-      if (client.readyState === client.OPEN) client.send(line);
+      let key;
+      if (payload.type === 'tree_node') {
+        key = `${payload.type}:${payload.index}`;
+      } else {
+        key = `${payload.type}:-1`;
+      }
+      const payloadStr = JSON.stringify(payload);
+      lastByTypeIndex[key] = [msgIndex++, payloadStr];
+
+      for (let client of wss.clients) {
+        if (client.readyState === client.OPEN) {
+          console.log('Bridge → WS Client:', payloadStr);
+          client.send(payloadStr);
+        }
+      }
     }
   }
 });
@@ -71,14 +72,11 @@ engineSocket.on('data', data => {
 wss.on('connection', ws => {
   console.log('➜ New WebSocket client connected');
 
-  const allMessages = [
-    ...Object.values(lastByType),
-    ...gameHistory
-  ];
+  const allMessages = Object.values(lastByTypeIndex);
   allMessages.sort((a, b) => a[0] - b[0]);
 
   // replay messages
-  allMessages.forEach(([_, line]) => ws.send(line));
+  allMessages.forEach(([_, jsonString]) => ws.send(jsonString));
 
   ws.on('message', message => {
     console.log('WS → Bridge:', message.toString());
