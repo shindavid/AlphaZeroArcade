@@ -18,7 +18,6 @@ export function GameTreePanel({ history, seatToHtml, onBacktrack }) {
 
   const onNodeClick = useCallback((event, node) => {
     if (onBacktrack && node.data && typeof node.data.index !== 'undefined') {
-      console.log('Node clicked:', node.data.index);
       onBacktrack(node.data.index);
     }
   }, [onBacktrack]);

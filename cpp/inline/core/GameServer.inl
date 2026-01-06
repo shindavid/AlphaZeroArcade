@@ -1276,4 +1276,19 @@ void GameServer<Game>::GameSlot::apply_action(action_t action) {
   }
 }
 
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
+  state_node_index_ = index;
+
+  action_t action = state_tree_.get_action(index);
+  game_tree_index_t parent_index = state_tree_.get_parent_index(index);
+  seat_index_t seat = state_tree_.get_active_seat(index);
+  action_mode_t action_mode = state_tree_.get_action_mode(index);
+
+  StateChangeUpdate update(state(), action, index, parent_index, seat, action_mode);
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p]->receive_state_change(update);
+  }
+}
+
 }  // namespace core

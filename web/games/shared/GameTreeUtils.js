@@ -9,10 +9,7 @@ export function getLayoutElements(history, renderFn) {
   if (!history || history.length === 0) return { nodes: [], edges: [] };
 
   const treeMap = buildTreeStructure(history);
-  console.log('Tree Map:', treeMap);
   const { nodes, edges } = calculateCoordinates(treeMap, renderFn);
-  console.log('Layout Nodes:', nodes);
-  console.log('Layout Edges:', edges);
   return { nodes, edges };
 }
 

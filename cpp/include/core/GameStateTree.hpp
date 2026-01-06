@@ -32,6 +32,8 @@ class GameStateTree {
     return nodes_[ix].player_acted[seat];
   }
   seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
+  action_mode_t get_action_mode(game_tree_index_t ix) const { return nodes_[ix].action_mode; }
+  action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
   bool is_chance_node(game_tree_index_t ix) const;
 
  private:
