@@ -1282,7 +1282,7 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
 
   action_t action = state_tree_.get_action(index);
   game_tree_index_t parent_index = state_tree_.get_parent_index(index);
-  seat_index_t seat = state_tree_.get_active_seat(index);
+  seat_index_t seat = state_tree_.get_parent_seat(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
   StateChangeUpdate update(state(), action, index, parent_index, seat, action_mode);

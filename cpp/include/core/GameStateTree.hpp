@@ -28,6 +28,7 @@ class GameStateTree {
     nodes_[ix].aux[seat] = aux;
   }
   game_tree_index_t get_parent_index(game_tree_index_t ix) const;
+  seat_index_t get_parent_seat(game_tree_index_t ix) const;
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
