@@ -229,7 +229,7 @@ export class GameAppBase extends React.Component {
     this.setState({ loading: true, resultCodes: null });
   }
 
-  seatToHtml = (seat) => {
+  seatToHtml = (seat, last_action=false) => {
     // Default implementation, can be overridden by subclasses
     return seat;
   }

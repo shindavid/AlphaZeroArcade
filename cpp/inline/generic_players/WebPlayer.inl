@@ -117,8 +117,8 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   Game::Rules::init_state(state);
 
   Payload payload(Payload::Type::START_GAME);
-
   payload.add_field("board", IO::state_to_json(state));
+
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
