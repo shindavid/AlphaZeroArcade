@@ -50,6 +50,14 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   void send_result_msg(const State& state, const GameResultTensor& outcome);
 
  private:
+  /*
+   * Payload encapsulates a single payload to be sent to the web frontend. It looks like:
+   * {
+   *   "type": "start_game" | "action_request" | "state_update" | "game_end" | "tree_node",
+   *   "cache_key": "<type>:<index>",
+   *   ... other fields depending on type ...
+   * }
+   */
   class Payload {
    public:
     enum Type { START_GAME, ACTION_REQUEST, STATE_UPDATE, GAME_END, TREE_NODE };
