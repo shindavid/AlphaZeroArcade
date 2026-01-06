@@ -83,7 +83,7 @@ class PlayerTest : public ::testing::Test {
       core::seat_index_t seat = Rules::get_current_player(state);
       Rules::apply(state, action);
 
-      StateChangeUpdate update(state, action, -1, -1, seat, -1);
+      StateChangeUpdate update(state, action, seat);
       mcts_player_->receive_state_change(update);
     }
     initial_actions_ = initial_actions;

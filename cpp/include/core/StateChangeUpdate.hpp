@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/Packet.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace core {
@@ -20,6 +21,13 @@ struct StateChangeUpdate {
   game_tree_index_t parent_index;
   seat_index_t seat;
   action_mode_t mode;
+
+  StateChangeUpdate(const State& s, action_t a, game_tree_index_t i, game_tree_index_t pi,
+                    seat_index_t se, action_mode_t m)
+      : state(s), action(a), index(i), parent_index(pi), seat(se), mode(m) {}
+
+  StateChangeUpdate(const State& s, action_t a, seat_index_t se)
+      : state(s), action(a), index(-1), parent_index(-1), seat(se), mode(-1) {}
 };
 
 }  // namespace core
