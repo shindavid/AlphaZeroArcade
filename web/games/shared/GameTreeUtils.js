@@ -1,4 +1,4 @@
-import { MarkerType } from 'reactflow';
+import { MarkerType, Position } from 'reactflow';
 
 const NODE_WIDTH = 40;
 const NODE_HEIGHT = 40;
@@ -11,6 +11,8 @@ export function getLayoutElements(history, renderFn) {
   const treeMap = buildTreeStructure(history);
   console.log('Tree Map:', treeMap);
   const { nodes, edges } = calculateCoordinates(treeMap, renderFn);
+  console.log('Layout Nodes:', nodes);
+  console.log('Layout Edges:', edges);
   return { nodes, edges };
 }
 
@@ -19,7 +21,7 @@ function buildTreeStructure(history) {
   nodeMap.set("0", {
     id: "0",
     children: [],
-    data: { label: "Start", seat: null, moveNumber: 0 }
+    data: { label: "Start", seat: null, moveNumber: 0, index: 0 }
   });
 
   history.forEach((msg) => {
@@ -74,6 +76,8 @@ function traverse(nodeId, inheritedY, ctx) {
     id: node.id,
     position: { x, y },
     type: 'gameNode',
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
     data: {
       ...node.data,
       renderFn: ctx.renderFn
@@ -87,7 +91,7 @@ function traverse(nodeId, inheritedY, ctx) {
       id: `e${node.parentId}-${node.id}`,
       source: node.parentId,
       target: node.id,
-      type: 'smoothstep',
+      type: 'default',
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { stroke: '#b1b1b7' }
     });

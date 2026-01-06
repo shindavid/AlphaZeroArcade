@@ -18,6 +18,7 @@ struct WebManagerClient {
   void handle_start_game();
   virtual void handle_action(const boost::json::object& payload, seat_index_t seat) = 0;
   virtual void handle_resign(seat_index_t seat) = 0;
+  virtual void handle_backtrack(game_tree_index_t index, seat_index_t seat) {}
 
  protected:
   void wait_for_new_game();

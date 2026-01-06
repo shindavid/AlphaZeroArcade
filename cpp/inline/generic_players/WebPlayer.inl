@@ -49,6 +49,16 @@ void WebPlayer<Game>::handle_resign(core::seat_index_t seat) {
 }
 
 template <core::concepts::Game Game>
+void WebPlayer<Game>::handle_backtrack(core::game_tree_index_t index, core::seat_index_t seat) {
+  if (seat != this->get_my_seat()) {
+    return;
+  }
+
+  backtrack_index_ = index;
+  notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
 void WebPlayer<Game>::initialize_game() {
   action_ = -1;
   resign_ = false;
@@ -67,13 +77,19 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
     return core::ActionResponse::resign();
   }
 
+  if (backtrack_index_ >= 0) {
+    int index = backtrack_index_;
+    backtrack_index_ = -1;
+    return core::ActionResponse::backtrack(index);
+  }
+
   if (action_ != -1) {
     core::action_t action = action_;
     action_ = -1;
     return action;
   }
 
-  send_action_request(request.valid_actions, proposed_response.get_action());
+  send_action_request(request, proposed_response.get_action());
   notification_unit_ = request.notification_unit;
   return core::ActionResponse::yield();
 }
@@ -119,27 +135,27 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t action) {
+void WebPlayer<Game>::send_action_request(const ActionRequest& request, core::action_t proposed_action) {
   Message msg;
-  msg.add_payload(make_action_request_msg(valid_actions, action));
+  msg.add_payload(make_action_request_msg(request, proposed_action));
   msg.send();
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions,
-                                                             core::action_t action) {
+boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionRequest& request, core::action_t proposed_action) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
-  for (int i : valid_actions.on_indices()) {
+  for (int i : request.valid_actions.on_indices()) {
     legal_move_indices.push_back(i);
   }
 
   boost::json::object payload;
   payload["type"] = "action_request";
+  payload["board"] = Game::IO::state_to_json(request.state);
   payload["legal_moves"] = legal_move_indices;
   payload["seat"] = this->get_my_seat();
-  payload["proposed_action"] = action;
+  payload["proposed_action"] = proposed_action;
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
   if (verbose_data) {

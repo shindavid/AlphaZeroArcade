@@ -40,6 +40,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // WebManagerClient interface
   void handle_action(const boost::json::object& payload, core::seat_index_t seat) override;
   void handle_resign(core::seat_index_t seat) override;
+  void handle_backtrack(core::game_tree_index_t index, core::seat_index_t seat) override;
 
  protected:
   core::ActionResponse get_web_response(const ActionRequest& request,
@@ -68,7 +69,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   };
 
   void send_start_game();
-  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
+  void send_action_request(const ActionRequest&, core::action_t proposed_action);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -95,8 +96,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
-  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
-                                                      core::action_t proposed_action);
+  virtual boost::json::object make_action_request_msg(const ActionRequest&, core::action_t proposed_action);
 
   // Construct json object that the frontend can use to display the state.
   //
@@ -143,6 +143,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   core::YieldNotificationUnit notification_unit_;
   core::action_t action_ = -1;
   bool resign_ = false;
+  core::game_tree_index_t backtrack_index_ = -1;
 };
 
 }  // namespace generic

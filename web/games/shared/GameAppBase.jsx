@@ -162,6 +162,7 @@ export class GameAppBase extends React.Component {
 
   handleActionRequest(payload) {
     this.setState({
+      board: Array.from(payload.board),
       legalMoves: payload.legal_moves,
       currentTurn: payload.seat,
       proposedAction: payload.proposed_action,
@@ -270,6 +271,14 @@ export class GameAppBase extends React.Component {
     );
   };
 
+  handleBacktrack = (index) => {
+    this.sendMsg({
+      type: 'backtrack',
+      seat: this.state.currentTurn,
+      index: index
+    });
+  }
+
   render() {
     if (!this.port) return <PortError port={this.port} />;
     if (this.state.wsClosed) {
@@ -307,6 +316,7 @@ export class GameAppBase extends React.Component {
           <GameTreePanel
             history={this.state.history}
             seatToHtml={this.seatToHtml}
+            onBacktrack={this.handleBacktrack}
           />
         </div>
 

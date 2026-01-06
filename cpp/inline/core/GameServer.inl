@@ -828,10 +828,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       // Players that maintain internal search/UI history may become inconsistent (e.g.
       // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
       // full state resync, which depends on how we factor Player/Manager.
+      continue_hit_ = false;
       return true;
 
     case ActionResponse::kBacktrack:
-      throw util::CleanException("BackTrack not yet implemented in GameServer");
+      backtrack_to_node(response.backtrack_node_index());
+      continue_hit_ = false;
+      return true;
 
     case ActionResponse::kResignGame:
       resign_game(result);
