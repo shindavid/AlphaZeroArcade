@@ -21,7 +21,9 @@ function buildTreeStructure(history) {
     data: { label: "Start", seat: null, moveNumber: 0, index: 0 }
   });
 
-  history.forEach((msg) => {
+  const sortedHistory = Array.from(history.values()).sort((a, b) => a.index - b.index);
+
+  sortedHistory.forEach((msg) => {
     const id = String(msg.index);
     const parentId = String(msg.parent_index);
     if (!nodeMap.has(parentId)) return;

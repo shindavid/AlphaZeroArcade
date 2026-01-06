@@ -50,10 +50,35 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   void send_result_msg(const State& state, const GameResultTensor& outcome);
 
  private:
+  class Payload {
+   public:
+    enum Type { START_GAME, ACTION_REQUEST, STATE_UPDATE, GAME_END, TREE_NODE };
+    Payload(Type t, int cache_key_index = -1) : type_(t), cache_key_index_(cache_key_index) {};
+
+    boost::json::object to_json() const;
+    template <typename T>
+    void add_field(const std::string& key, T&& value);
+
+   private:
+    Type type_;
+    int cache_key_index_;
+    boost::json::object obj_;
+  };
+  /*
+   * Message encapsulates a message to be sent to the web frontend. It can contain multiple
+   * payloads. It looks like:
+   * {
+   *   "bridge_action": "reset" | "update",
+   *   "payloads": [
+   *     {"type": "start_game", ...},
+   *     {"type": "state_update", ...},
+   *     ...
+   *   ]
+   */
   class Message {
    public:
-    Message() : msg_({{"type", "game_event"}, {"payloads", boost::json::array()}}) {}
-
+    enum BridgeAction {RESET, UPDATE};
+    Message(BridgeAction bridge_action);
     void send();
 
     void add_payload(boost::json::object&& payload) {

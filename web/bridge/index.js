@@ -13,7 +13,7 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
-let lastByTypeIndex = {}; // (type, index) -> [msgIndex, msgLine]
+let lastByTypeIndex = {}; // ("type:index") -> [counter, msg]
 let msgIndex = 0;
 
 const app    = express();
@@ -37,31 +37,27 @@ engineSocket.on('data', data => {
       continue;
     }
 
+    if (msg.bridge_action === 'reset') {
+      console.log('Action: RESET - Clearing Cache');
+      lastByTypeIndex = {};
+      msgIndex = 0;
+    }
+
     if (!msg.payloads || !Array.isArray(msg.payloads)) {
       continue;
     }
 
     for (const payload of msg.payloads) {
-      if (!payload.type) continue;
-
-      if (payload.type === 'start_game') {
-        console.log('Resetting Game History...');
-        lastByTypeIndex = {};
-        msgIndex = 0;
+      if (!payload.cache_key) {
+        console.warn('Skipping payload without cache_key:', payload);
+        continue;
       }
 
-      let key;
-      if (payload.type === 'tree_node') {
-        key = `${payload.type}:${payload.index}`;
-      } else {
-        key = `${payload.type}:-1`;
-      }
       const payloadStr = JSON.stringify(payload);
-      lastByTypeIndex[key] = [msgIndex++, payloadStr];
+      lastByTypeIndex[payload.cache_key] = [msgIndex++, payloadStr];
 
       for (let client of wss.clients) {
         if (client.readyState === client.OPEN) {
-          console.log('Bridge → WS Client:', payloadStr);
           client.send(payloadStr);
         }
       }
@@ -71,47 +67,16 @@ engineSocket.on('data', data => {
 
 wss.on('connection', ws => {
   console.log('➜ New WebSocket client connected');
-
-  const allMessages = Object.values(lastByTypeIndex);
-  allMessages.sort((a, b) => a[0] - b[0]);
-
-  let treeNodeBatch = [];
-
-  const flushTreeNodes = () => {
-    if (treeNodeBatch.length === 0) return;
-
-    treeNodeBatch.sort((a, b) => a.index - b.index);
-
-    const batchMsg = {
-      type: 'tree_node_batch',
-      payloads: treeNodeBatch
-    };
-    ws.send(JSON.stringify(batchMsg));
-    treeNodeBatch = [];
-  };
-
-  for (const [_, jsonString] of allMessages) {
-    if (jsonString.includes('"type":"tree_node"')) {
-      try {
-        const payload = JSON.parse(jsonString);
-        treeNodeBatch.push(payload);
-      } catch (e) {
-        console.error("Error parsing stored node:", e);
-      }
-    } else {
-      ws.send(jsonString);
-    }
-  }
-
-  flushTreeNodes();
-
+  // Replay stored messages in strict chronological order using the sequence counter
+  Object.values(lastByTypeIndex)
+    .sort((a, b) => a[0] - b[0])
+    .forEach(([_, msg]) => ws.send(msg));
   ws.on('message', message => {
     console.log('WS → Bridge:', message.toString());
     engineSocket.write(message + '\n');
   });
-
   ws.on('close', () => {
-    console.log('WebSocket client disconnected');
+    console.log('WebSocket client disconnected (but engine stays up)');
   });
 });
 

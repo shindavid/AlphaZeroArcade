@@ -69,6 +69,7 @@ function fmt(v) {
 export class GameAppBase extends React.Component {
   constructor(props) {
     super(props);
+    this.historyBuffer = new Map();
     this.state = {
       loading: true,
       board: null,
@@ -130,14 +131,13 @@ export class GameAppBase extends React.Component {
       this.handleGameEnd(msg);
     } else if (msg.type === 'tree_node') {
       this.handleTreeNode(msg);
-    } else if (msg.type === 'tree_node_batch') {
-      this.handleTreeNodeBatch(msg.payloads);
     } else {
       console.warn('Unhandled message type:', msg.type);
     }
   }
 
   handleStartGame(payload) {
+    this.historyBuffer.clear();
     this.setState({
       loading: false,
       board: Array.from(payload.board),
@@ -152,11 +152,13 @@ export class GameAppBase extends React.Component {
   }
 
   handleStateUpdate(payload) {
+    const newHistory = new Map(this.historyBuffer);
     this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
       verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
+      history: newHistory,
     });
   }
 
@@ -178,14 +180,9 @@ export class GameAppBase extends React.Component {
   }
 
   handleTreeNode(payload) {
-    this.setState((prevState) => {
-      if (prevState.history.has(payload.index)) {
-        return null;
-      }
-      const nextHistory = new Map(prevState.history);
-      nextHistory.set(payload.index, payload);
-      return { history: nextHistory };
-    });
+    if (!this.historyBuffer.has(payload.index)) {
+      this.historyBuffer.set(payload.index, payload);
+    }
   }
 
   handleTreeNodeBatch(payloads) {
