@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/Packet.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace core {

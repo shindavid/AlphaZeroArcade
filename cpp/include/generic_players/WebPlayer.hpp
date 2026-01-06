@@ -134,7 +134,6 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //   "index": update.index,
   //   "parent_index": update.parent_index,
   //   "seat": std::string(1, Game::IO::kSeatChars[update.seat])
-  //   "mode": update.mode
   // }
 
   virtual boost::json::object make_tree_node_msg(const StateChangeUpdate&);
