@@ -162,7 +162,6 @@ export class GameAppBase extends React.Component {
 
   handleActionRequest(payload) {
     this.setState({
-      board: Array.from(payload.board),
       legalMoves: payload.legal_moves,
       currentTurn: payload.seat,
       proposedAction: payload.proposed_action,
