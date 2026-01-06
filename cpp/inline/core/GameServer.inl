@@ -833,6 +833,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
     case ActionResponse::kBacktrack:
       backtrack_to_node(response.backtrack_node_index());
+      // TODO: Simiar to the undo case, we need to propagate backtrack to players that maintain
+      // internal history (e.g. alpha0::Player).
       continue_hit_ = false;
       return true;
 

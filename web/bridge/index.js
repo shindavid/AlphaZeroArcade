@@ -13,7 +13,7 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
-let lastByTypeIndex = {}; // ("type:index") -> [counter, msg]
+let lastByTypeIndex = {}; // ("{type}:{index}") -> [counter, msg]
 let msgIndex = 0;
 
 const app    = express();
