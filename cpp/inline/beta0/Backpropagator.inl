@@ -1,6 +1,7 @@
 #include "beta0/Backpropagator.hpp"
 
 #include "beta0/Calculations.hpp"
+#include "util/Gaussian1D.hpp"
 
 #include <sstream>
 
@@ -84,9 +85,7 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
 
   func();
   stats_ = node_->stats();  // copy
-  lQ_i_old_ = edge_->child_lQ;
-  lW_i_old_ = edge_->child_lW;
-  RELEASE_ASSERT(lW_i_old_ >= 0.f, "Negative variance {}", lW_i_old_);
+  lQW_i_old_ = edge_->child_lQW;
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -178,8 +177,7 @@ void Backpropagator<Traits>::apply_updates() {
   for (int k = 0; k < n_; k++) {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
-    child_edge->child_lQ = stats_.lQW[seat_].mean();
-    child_edge->child_lW = stats_.lQW[seat_].variance();
+    child_edge->child_lQW = stats_.lQW[seat_];
   }
 
   int N = node_->stats().N;
@@ -233,11 +231,9 @@ void Backpropagator<Traits>::print_debug_info() {
 
   const LocalArray pi_after = full_write_data_(fw_pi);
 
-  const LocalArray S = unsplice(sw_S);
-  const LocalArray S_old = unsplice(sw_S_old);
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
-  const LocalArray tau = unsplice(sw_tau);
+  const LocalArray tau_new = unsplice(sw_tau_new);
   const LocalArray tau_old = unsplice(sw_tau_old);
 
   LocalArray actions(n_);
@@ -265,13 +261,13 @@ void Backpropagator<Traits>::print_debug_info() {
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {
-    "action", "i",  "N", "P", "pi", "lV",    "lU",  "lQ",      "lW", "Q",
-    "W",      "Q*", "c", "z", "S",  "S_old", "tau", "tau_old", "PI"};
+  static std::vector<std::string> action_columns = {"action", "i",  "N",   "P",       "pi", "lV",
+                                                    "lU",     "lQ", "lW",  "Q",       "W",  "Q*",
+                                                    "c",      "z",  "tau_old", "tau_new", "PI"};
 
   auto action_data = eigen_util::sort_rows(
     eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, lV, lU, lQ, lW, Q, W,
-                                    Q_star, c, z, S, S_old, tau, tau_old, pi_after));
+                                    Q_star, c, z, tau_old, tau_new, pi_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -302,6 +298,19 @@ void Backpropagator<Traits>::compute_policy() {
     return;
   }
 
+  if (read_data_(r_lW).isZero()) {
+    // all actions have zero variance - put all policy mass on the best action(s)
+    float max_lQ = read_data_(r_lQ).maxCoeff();
+    full_write_data_(fw_pi).fill(0.f);
+    for (int k = 0; k < n_; k++) {
+      if (read_data_(r_lQ, k) == max_lQ) {
+        full_write_data_(fw_pi, k) = 1.f;
+      }
+    }
+    normalize_policy(full_write_data_(fw_pi));
+    return;
+  }
+
   RELEASE_ASSERT(lQW_i.valid());
 
   full_write_data_(fw_pi) = read_data_(r_pi);
@@ -327,26 +336,20 @@ void Backpropagator<Traits>::compute_policy() {
 
   const int n = n_ - 1;
 
-  auto S = sibling_write_data_(sw_S);
-  auto S_old = sibling_write_data_(sw_S_old);
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
-  auto tau = sibling_write_data_(sw_tau);
+  auto tau_new = sibling_write_data_(sw_tau_new);
   auto tau_old = sibling_write_data_(sw_tau_old);
 
   c = (lV_i - lV) / (lU_i + lU).sqrt();
   math::fast_coarse_batch_inverse_normal_cdf_clamped_range(P_i, P.data(), c.data(), n, z.data());
   z -= c;
 
+  tau_new = compute_tau(lQ_i, lQ, lW_i, lW, z);
+  tau_old = compute_tau(lQW_i_old_.mean(), lQ, lQW_i_old_.variance(), lW, z);
+
   const float pi_i_inv = 1.0f / (1.0f - pi_i);
-
-  S = (lQ_i - lQ) / (lW_i + lW).sqrt() + z;
-  math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
-
-  S_old = (lQ_i_old_ - lQ) / (lW_i_old_ + lW).sqrt() + z;
-  math::fast_coarse_batch_normal_cdf(S_old.data(), n, tau_old.data());
-
-  float pi_i_new = (pi * tau).sum() * pi_i_inv;
+  float pi_i_new = (pi * tau_new).sum() * pi_i_inv;
   float pi_i_old = (pi * tau_old).sum() * pi_i_inv;
 
   float pi_i_new_logit = math::fast_coarse_logit(pi_i_new);
@@ -358,6 +361,48 @@ void Backpropagator<Traits>::compute_policy() {
   full_write_data_(fw_pi, i_) = math::fast_coarse_sigmoid(pi_i_logit);
 
   normalize_policy(full_write_data_(fw_pi));
+}
+
+template <search::concepts::Traits Traits>
+typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
+  float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z) {
+  // Effectively computes:
+  //
+  // return (lQ_i - lQ) / (lW_i + lW).sqrt();
+  //
+  // But does some special casing for infinities and zero variances. Each (lQ, lW) pair comes from
+  // a util::Gaussian1D, so we need to handle the various edge cases corresponding to how
+  // util::Gaussian1D represents +/- infinity.
+
+  if (lW_i == util::Gaussian1D::kVarianceNegInf) {
+    return lQ * 0;
+  } else if (lW_i == util::Gaussian1D::kVariancePosInf) {
+    return lQ * 0 + 1.0f;
+  } else {
+    LocalArray S = (lQ_i - lQ) / (lW_i + lW).sqrt() + z;
+
+    int n = S.size();
+    for (int k = 0; k < n; k++) {
+      float lW_k = lW(k);
+      if (lW_k == util::Gaussian1D::kVarianceNegInf) {
+        S[k] = -999.f;
+      } else if (lW_k == util::Gaussian1D::kVariancePosInf) {
+        S[k] = +999.f;
+      } else if (lW_i == 0.f && lW_k == 0.f) {
+        if (lQ_i > lQ(k)) {
+          S[k] = +999.f;
+        } else if (lQ_i < lQ(k)) {
+          S[k] = -999.f;
+        } else {
+          S[k] = z[k];
+        }
+      }
+    }
+
+    LocalArray tau = S;
+    math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
+    return tau;
+  }
 }
 
 template <search::concepts::Traits Traits>

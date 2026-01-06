@@ -4,6 +4,7 @@
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
+#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -71,11 +72,9 @@ class Backpropagator {
 
   enum sibling_write_col_t : uint8_t {
     // Corresponds to columns of sibling_write_data_
-    sw_S,
-    sw_S_old,
     sw_c,
     sw_z,
-    sw_tau,
+    sw_tau_new,
     sw_tau_old,
     swSize
   };
@@ -150,6 +149,8 @@ class Backpropagator {
   void print_debug_info();
 
   void compute_policy();
+  LocalArray compute_tau(float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW,
+                         const LocalArray& z);
   void update_QW();
 
   void splice(read_col_t from_col, sibling_read_col_t to_col);
@@ -170,8 +171,7 @@ class Backpropagator {
   Edge* edge_;
   int n_;  // number of valid actions
   int i_;  // current action index
-  float lQ_i_old_;
-  float lW_i_old_;
+  util::Gaussian1D lQW_i_old_;
   float Q_floor_;
   core::seat_index_t seat_;
 

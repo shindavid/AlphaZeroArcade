@@ -250,8 +250,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       Calculations<Traits>::populate_logit_value_beliefs(edge->child_AV, edge->child_AU,
                                                          edge->child_lAUV);
 
-      edge->child_lQ = edge->child_lAUV[seat].mean();
-      edge->child_lW = edge->child_lAUV[seat].variance();
+      edge->child_lQW = edge->child_lAUV[seat];
     }
 
     stats.Q = V;
