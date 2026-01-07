@@ -60,7 +60,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
    */
   class Payload {
    public:
-    enum Type { START_GAME, ACTION_REQUEST, STATE_UPDATE, GAME_END, TREE_NODE };
+    enum Type { kStartGame, kActionRequest, kStateUpdate, kGameEnd, kTreeNode };
     Payload(Type t, int cache_key_index = -1) : type_(t), cache_key_index_(cache_key_index) {};
 
     boost::json::object to_json() const;
@@ -85,7 +85,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
    */
   class Message {
    public:
-    enum BridgeAction {RESET, UPDATE};
+    enum BridgeAction {kReset, kUpdate};
     Message(BridgeAction bridge_action);
     void send();
 

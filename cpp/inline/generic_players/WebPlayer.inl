@@ -96,14 +96,14 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
-  Message msg(Message::BridgeAction::UPDATE);
+  Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_result_msg(state, outcome));
   msg.send();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_start_game() {
-  Message msg(Message::BridgeAction::RESET);
+  Message msg(Message::BridgeAction::kReset);
   msg.add_payload(make_start_game_msg());
   msg.send();
 }
@@ -116,7 +116,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   State state;
   Game::Rules::init_state(state);
 
-  Payload payload(Payload::Type::START_GAME);
+  Payload payload(Payload::Type::kStartGame);
   payload.add_field("board", IO::state_to_json(state));
 
   auto seat_assignments = boost::json::array();
@@ -138,7 +138,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t proposed_action) {
-  Message msg(Message::BridgeAction::UPDATE);
+  Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_action_request_msg(valid_actions, proposed_action));
   msg.send();
 }
@@ -153,7 +153,7 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
     legal_move_indices.push_back(i);
   }
 
-  Payload payload(Payload::Type::ACTION_REQUEST);
+  Payload payload(Payload::Type::kActionRequest);
   payload.add_field("legal_moves", legal_move_indices);
   payload.add_field("seat", this->get_my_seat());
   payload.add_field("proposed_action", proposed_action);
@@ -170,7 +170,7 @@ template <core::concepts::Game Game>
 void WebPlayer<Game>::send_state_update(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  Message msg(Message::BridgeAction::UPDATE);
+  Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(this->make_tree_node_msg(update));
   msg.add_payload(this->make_state_update_msg(update));
   msg.send();
@@ -180,7 +180,7 @@ template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_tree_node_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  Payload payload(Payload::Type::TREE_NODE, update.index);
+  Payload payload(Payload::Type::kTreeNode, update.index);
   payload.add_field("index", update.index);
   payload.add_field("parent_index", update.parent_index);
   payload.add_field("seat", std::string(1, Game::IO::kSeatChars[update.seat]));
@@ -191,7 +191,7 @@ template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  Payload payload(Payload::Type::STATE_UPDATE);
+  Payload payload(Payload::Type::kStateUpdate);
   payload.add_field("board", Game::IO::state_to_json(update.state));
   payload.add_field("index", update.index);
   payload.add_field("last_action", update.action);
@@ -207,7 +207,7 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
                                                      const GameResultTensor& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  Payload payload(Payload::Type::GAME_END);
+  Payload payload(Payload::Type::kGameEnd);
   constexpr int P = Game::Constants::kNumPlayers;
 
   auto array = Game::GameResults::to_value_array(outcome);
@@ -229,7 +229,7 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
 
 template <core::concepts::Game Game>
 WebPlayer<Game>::Message::Message(BridgeAction bridge_action) {
-  msg_["bridge_action"] = (bridge_action == RESET) ? "reset" : "update";
+  msg_["bridge_action"] = (bridge_action == kReset) ? "reset" : "update";
   msg_["payloads"] = boost::json::array();
 }
 
@@ -244,19 +244,19 @@ boost::json::object WebPlayer<Game>::Payload::to_json() const {
   boost::json::object obj = obj_;
   std::string t;
   switch (type_) {
-    case START_GAME:
+    case kStartGame:
       t = "start_game";
       break;
-    case ACTION_REQUEST:
+    case kActionRequest:
       t = "action_request";
       break;
-    case STATE_UPDATE:
+    case kStateUpdate:
       t = "state_update";
       break;
-    case GAME_END:
+    case kGameEnd:
       t = "game_end";
       break;
-    case TREE_NODE:
+    case kTreeNode:
       t = "tree_node";
       break;
   }
