@@ -477,18 +477,17 @@ void GameServer<Game>::SharedData::debug_dump() const {
   for (int i = 0; i < (int)game_slots_.size(); ++i) {
     GameSlot* slot = game_slots_[i];
     bool mid_yield = slot->mid_yield();
-    bool continue_hit = slot->continue_hit();
     bool in_critical_section = slot->in_critical_section();
 
-    if (mid_yield || continue_hit || in_critical_section) {
+    if (mid_yield || in_critical_section) {
       std::ostringstream ss;
       Game::IO::print_state(ss, slot->state());
 
       Player* player = slot->active_player();
       LOG_WARN(
-        "GameServer {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "GameServer {} game_slot[{}] mid_yield:{} in_critical_section:{} "
         "active_seat:{} active_player:{} state:\n{}",
-        __func__, i, mid_yield, continue_hit, in_critical_section, slot->active_seat(),
+        __func__, i, mid_yield, in_critical_section, slot->active_seat(),
         player ? player->get_name() : "-", ss.str());
     }
   }
@@ -813,7 +812,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   if (yield_instr == kContinue) {
     CriticalSectionCheck check(in_critical_section_);
     mid_yield_ = false;
-    continue_hit_ = true;
   }
 
   RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
@@ -828,14 +826,12 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       // Players that maintain internal search/UI history may become inconsistent (e.g.
       // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
       // full state resync, which depends on how we factor Player/Manager.
-      continue_hit_ = false;
       return true;
 
     case ActionResponse::kBacktrack:
       backtrack_to_node(response.backtrack_node_index());
       // TODO: Simiar to the undo case, we need to propagate backtrack to players that maintain
       // internal history (e.g. alpha0::Player).
-      continue_hit_ = false;
       return true;
 
     case ActionResponse::kResignGame:
@@ -843,7 +839,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       return false;
 
     case ActionResponse::kYieldResponse:
-      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = extra_enqueue_count;
@@ -864,7 +859,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   CriticalSectionCheck check2(in_critical_section_);
   RELEASE_ASSERT(!mid_yield_);
 
-  continue_hit_ = false;
   move_number_++;
   action_t action = response.get_action();
 
@@ -958,7 +952,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   active_seat_ = -1;
   noisy_mode_ = false;
   mid_yield_ = false;
-  continue_hit_ = false;
 
   state_tree_.init();
   state_node_index_ = 0;

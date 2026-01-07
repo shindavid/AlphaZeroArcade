@@ -184,7 +184,6 @@ class GameServer
     Player* active_player() const { return active_seat_ < 0 ? nullptr : players_[active_seat_]; }
 
     bool mid_yield() const { return mid_yield_; }
-    bool continue_hit() const { return continue_hit_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
     void apply_action(action_t action);
@@ -243,7 +242,6 @@ class GameServer
     bool mid_yield_;
 
     // Defensive programming
-    bool continue_hit_ = false;
     std::atomic<bool> in_critical_section_ = false;
   };
 
