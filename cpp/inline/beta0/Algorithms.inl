@@ -229,7 +229,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
           LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
           const float* f = noise.data();
           std::discrete_distribution<int> dist(f, f + n);
-          for (int i = 0; i < manager_params.enable_exploratory_visits; ++i) {
+          for (int i = 0; i < 30; ++i) {  // TODO: make this 30 configurable
             int a = dist(rng);
             XC[a] += 1;
           }
