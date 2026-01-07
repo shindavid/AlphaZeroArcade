@@ -258,6 +258,78 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
     stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
     stats.W = U;
+
+    if (search::kEnableSearchDebug) {
+      std::ostringstream ss;
+      ss << std::format("{:>{}}", "", context.log_prefix_n());
+
+      std::string line_break = std::format(
+        "\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+
+      ss << "NN EVAL" << line_break;
+      ValueArray players;
+      ValueArray CP;
+      ValueArray lU;
+      ValueArray lV;
+      for (int p = 0; p < kNumPlayers; ++p) {
+        players(p) = p;
+        CP(p) = p == seat;
+        lU(p) = stable_data.lUV[p].variance();
+        lV(p) = stable_data.lUV[p].mean();
+      }
+
+      static std::vector<std::string> player_columns = {"Seat", "V", "U", "lV", "lU", "CurP"};
+      auto player_data = eigen_util::concatenate_columns(players, V, U, lV, lU, CP);
+
+      eigen_util::PrintArrayFormatMap fmt_map1{
+        {"Seat", [&](float x) { return std::to_string(int(x)); }},
+        {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+      };
+
+      std::stringstream ss1;
+      eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+      for (const std::string& line : util::splitlines(ss1.str())) {
+        ss << line << line_break;
+      }
+
+      ss << line_break;
+
+      LocalPolicyArray actions(n);
+      LocalPolicyArray AVs(n);
+      LocalPolicyArray AUs(n);
+      LocalPolicyArray lAVs(n);
+      LocalPolicyArray lAUs(n);
+
+      for (int e = 0; e < n; ++e) {
+        auto edge = lookup_table.get_edge(node, e);
+        core::action_t action = edge->action;
+        // Game::Symmetries::apply(action, inv_sym, node->action_mode());
+        actions(e) = action;
+        AVs(e) = edge->child_AV[seat];
+        AUs(e) = edge->child_AU[seat];
+        lAVs(e) = edge->child_lAUV[seat].mean();
+        lAUs(e) = edge->child_lAUV[seat].variance();
+      }
+
+      static std::vector<std::string> action_columns = {"action", "AV", "AU", "lAV", "lAU", "P"};
+
+      auto action_data =
+        eigen_util::sort_rows(eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P));
+
+      eigen_util::PrintArrayFormatMap fmt_map2{
+        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+      };
+
+      std::stringstream ss2;
+      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+
+      for (const std::string& line : util::splitlines(ss2.str())) {
+        ss << line << line_break;
+      }
+
+      LOG_INFO(ss.str());
+    }
   }
 
   Node* root = lookup_table.get_node(root_info.node_index);
