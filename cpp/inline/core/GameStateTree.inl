@@ -70,4 +70,15 @@ game_tree_index_t GameStateTree<Game>::get_parent_index(game_tree_index_t ix) co
   return nodes_[ix].parent_ix;
 }
 
+template <concepts::Game Game>
+seat_index_t GameStateTree<Game>::get_parent_seat(game_tree_index_t ix) const {
+  RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
+  game_tree_index_t parent_ix = nodes_[ix].parent_ix;
+  if (parent_ix < 0) {
+    return -1;
+  } else {
+    return nodes_[parent_ix].seat;
+  }
+}
+
 }  // namespace core

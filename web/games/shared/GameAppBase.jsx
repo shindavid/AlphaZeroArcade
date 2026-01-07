@@ -1,5 +1,6 @@
 import React from 'react';
 import { PortError, Loading, StatusBar, ActionButtons } from './SharedUI';
+import { GameTreePanel } from './GameTreePanel';
 
 
 // Make a uniform [{...}, {...}] from any value
@@ -68,6 +69,7 @@ function fmt(v) {
 export class GameAppBase extends React.Component {
   constructor(props) {
     super(props);
+    this.historyBuffer = new Map();
     this.state = {
       loading: true,
       board: null,
@@ -81,6 +83,7 @@ export class GameAppBase extends React.Component {
       verboseInfo: null,
       currentTurn: null,
       proposedAction: null,
+      history: new Map(),
     };
     this.socketRef = React.createRef();
     this.port = import.meta.env.VITE_BRIDGE_PORT;
@@ -104,11 +107,13 @@ export class GameAppBase extends React.Component {
     };
     ws.onmessage = e => {
       let msg;
+      console.log(e);
       try { msg = JSON.parse(e.data) }
       catch (err) { return console.error('Bad JSON', err); }
       this.handleMessage(msg);
       this.setState({ loading: false });
     };
+    window.myGame = this;
   }
 
   componentWillUnmount() {
@@ -117,19 +122,22 @@ export class GameAppBase extends React.Component {
 
   handleMessage(msg) {
     if (msg.type === 'start_game') {
-      this.handleStartGame(msg.payload);
+      this.handleStartGame(msg);
     } else if (msg.type === 'state_update') {
-      this.handleStateUpdate(msg.payload);
+      this.handleStateUpdate(msg);
     } else if (msg.type === 'action_request') {
-      this.handleActionRequest(msg.payload);
+      this.handleActionRequest(msg);
     } else if (msg.type === 'game_end') {
-      this.handleGameEnd(msg.payload);
+      this.handleGameEnd(msg);
+    } else if (msg.type === 'tree_node') {
+      this.handleTreeNode(msg);
     } else {
       console.warn('Unhandled message type:', msg.type);
     }
   }
 
   handleStartGame(payload) {
+    this.historyBuffer.clear();
     this.setState({
       loading: false,
       board: Array.from(payload.board),
@@ -139,15 +147,18 @@ export class GameAppBase extends React.Component {
       playerNames: Array.from(payload.player_names),
       resultCodes: null,
       mySeat: payload.my_seat,
+      history: new Map(),
     });
   }
 
   handleStateUpdate(payload) {
+    const newHistory = new Map(this.historyBuffer);
     this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
       lastAction: payload.last_action,
       verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
+      history: newHistory,
     });
   }
 
@@ -165,6 +176,23 @@ export class GameAppBase extends React.Component {
       resultCodes: payload.result_codes,
       legalMoves: [],
       proposedAction: null,
+    });
+  }
+
+  handleTreeNode(payload) {
+    if (!this.historyBuffer.has(payload.index)) {
+      this.historyBuffer.set(payload.index, payload);
+    }
+  }
+
+  handleTreeNodeBatch(payloads) {
+    this.setState(() => {
+      const nextHistory = new Map();
+      payloads.forEach(node => {
+        nextHistory.set(node.index, node);
+      });
+
+      return { history: nextHistory };
     });
   }
 
@@ -201,7 +229,7 @@ export class GameAppBase extends React.Component {
     this.setState({ loading: true, resultCodes: null });
   }
 
-  seatToHtml = (seat) => {
+  seatToHtml = (seat, last_action=false) => {
     // Default implementation, can be overridden by subclasses
     return seat;
   }
@@ -239,6 +267,14 @@ export class GameAppBase extends React.Component {
     );
   };
 
+  handleBacktrack = (index) => {
+    this.sendMsg({
+      type: 'backtrack',
+      seat: this.state.currentTurn,
+      index: index
+    });
+  }
+
   render() {
     if (!this.port) return <PortError port={this.port} />;
     if (this.state.wsClosed) {
@@ -253,7 +289,7 @@ export class GameAppBase extends React.Component {
     let playerNames = this.state.playerNames;
     let seatAssignments = this.state.seatAssignments;
     let midGame = resultCodes === null;
-    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(this.seatToHtml) : seatAssignments;
+    const seatAssignmentsHtml = seatAssignments ? seatAssignments.map(seat => this.seatToHtml(seat)) : seatAssignments;
     let currentSeat = this.state.currentTurn;
 
     return (
@@ -271,6 +307,12 @@ export class GameAppBase extends React.Component {
             onNewGame={this.handleNewGame}
             midGame={midGame}
             loading={this.state.loading}
+          />
+
+          <GameTreePanel
+            history={this.state.history}
+            seatToHtml={this.seatToHtml}
+            onBacktrack={this.handleBacktrack}
           />
         </div>
 

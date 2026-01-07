@@ -51,6 +51,7 @@ struct ActionResponse {
   void set_victory_guarantee(bool v) { victory_guarantee_ = v; }
   bool get_victory_guarantee() const { return victory_guarantee_; }
   int get_extra_enqueue_count() const { return extra_enqueue_count_; }
+  game_tree_index_t backtrack_node_index() const { return backtrack_node_ix_; }
 
  private:
   static ActionResponse construct(response_type_t type);

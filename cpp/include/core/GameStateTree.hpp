@@ -28,10 +28,13 @@ class GameStateTree {
     nodes_[ix].aux[seat] = aux;
   }
   game_tree_index_t get_parent_index(game_tree_index_t ix) const;
+  seat_index_t get_parent_seat(game_tree_index_t ix) const;
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
   seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
+  action_mode_t get_action_mode(game_tree_index_t ix) const { return nodes_[ix].action_mode; }
+  action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
   bool is_chance_node(game_tree_index_t ix) const;
 
  private:

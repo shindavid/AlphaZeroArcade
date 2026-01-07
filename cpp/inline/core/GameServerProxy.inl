@@ -148,12 +148,10 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
     case kContinue: {
       CriticalSectionCheck check(in_critical_section_);
       mid_yield_ = false;
-      continue_hit_ = true;
       enqueue_request.instruction = kEnqueueLater;
       break;
     }
     case kYield: {
-      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = extra_enqueue_count;
@@ -173,7 +171,6 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   }
 
   CriticalSectionCheck check2(in_critical_section_);
-  continue_hit_ = false;
   send_action_packet(response);
   return result;
 }
@@ -313,18 +310,17 @@ void GameServerProxy<Game>::SharedData::debug_dump() const {
   for (int i = 0; i < (int)game_slots_.size(); ++i) {
     GameSlot* slot = game_slots_[i];
     bool mid_yield = slot->mid_yield();
-    bool continue_hit = slot->continue_hit();
     bool in_critical_section = slot->in_critical_section();
 
-    if (mid_yield || continue_hit || in_critical_section) {
+    if (mid_yield || in_critical_section) {
       std::ostringstream ss;
       Game::IO::print_state(ss, slot->state());
 
       Player* player = slot->prompted_player();
       LOG_WARN(
-        "GameServerProxy {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "GameServerProxy {} game_slot[{}] mid_yield:{} in_critical_section:{} "
         "prompted_player_id:{} prompted_player:{} state:\n{}",
-        __func__, i, mid_yield, continue_hit, in_critical_section, slot->prompted_player_id(),
+        __func__, i, mid_yield, in_critical_section, slot->prompted_player_id(),
         player ? player->get_name() : "-", ss.str());
     }
   }
@@ -537,7 +533,8 @@ void GameServerProxy<Game>::GameSlot::apply_action(action_t action, player_id_t 
 
   Player* player = players_[player_id];
   action_mode_t action_mode = Rules::get_action_mode(state());
-  StateChangeUpdate update(state(), action, state_node_index_, seat, action_mode);
+  auto parent_index = state_tree_.get_parent_index(state_node_index_);
+  StateChangeUpdate update(state(), action, state_node_index_, parent_index, seat, action_mode);
   player->receive_state_change(update);
 }
 

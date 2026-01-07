@@ -15,7 +15,7 @@ bool ActionRequest<Game>::permits(const ActionResponse& response) const {
     case ActionResponse::kUndoLastMove:
       return undo_allowed;
     case ActionResponse::kBacktrack:
-      return false;  // backtrack not yet supported
+      return true;
     case ActionResponse::kResignGame:
       return GameConstants::kNumPlayers == 2;
     case ActionResponse::kYieldResponse:

@@ -49,6 +49,16 @@ void WebPlayer<Game>::handle_resign(core::seat_index_t seat) {
 }
 
 template <core::concepts::Game Game>
+void WebPlayer<Game>::handle_backtrack(core::game_tree_index_t index, core::seat_index_t seat) {
+  if (seat != this->get_my_seat()) {
+    return;
+  }
+
+  backtrack_index_ = index;
+  notification_unit_.yield_manager->notify(notification_unit_);
+}
+
+template <core::concepts::Game Game>
 void WebPlayer<Game>::initialize_game() {
   action_ = -1;
   resign_ = false;
@@ -67,6 +77,12 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
     return core::ActionResponse::resign();
   }
 
+  if (backtrack_index_ >= 0) {
+    int index = backtrack_index_;
+    backtrack_index_ = -1;
+    return core::ActionResponse::backtrack(index);
+  }
+
   if (action_ != -1) {
     core::action_t action = action_;
     action_ = -1;
@@ -80,22 +96,16 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
-  boost::json::object msg;
-  msg["type"] = "game_end";
-  msg["payload"] = make_result_msg(state, outcome);
-
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+  Message msg(Message::BridgeAction::kUpdate);
+  msg.add_payload(make_result_msg(state, outcome));
+  msg.send();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_start_game() {
-  boost::json::object msg;
-  msg["type"] = "start_game";
-  msg["payload"] = make_start_game_msg();
-
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+  Message msg(Message::BridgeAction::kReset);
+  msg.add_payload(make_start_game_msg());
+  msg.send();
 }
 
 template <core::concepts::Game Game>
@@ -106,8 +116,9 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   State state;
   Game::Rules::init_state(state);
 
-  boost::json::object payload;
-  payload["board"] = IO::state_to_json(state);
+  Payload payload(Payload::Type::kStartGame);
+  payload.add_field("board", IO::state_to_json(state));
+
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
@@ -115,26 +126,26 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
     seat_assignments.push_back(boost::json::value(seat));
     player_names.push_back(boost::json::value(this->get_player_names()[p]));
   }
-  payload["my_seat"] = std::string(1, Game::IO::kSeatChars[this->get_my_seat()]);
-  payload["seat_assignments"] = seat_assignments;
-  payload["player_names"] = player_names;
-  Game::IO::add_render_info(state, payload);
+  payload.add_field("my_seat", std::string(1, Game::IO::kSeatChars[this->get_my_seat()]));
+  payload.add_field("seat_assignments", seat_assignments);
+  payload.add_field("player_names", player_names);
 
-  return payload;
+  auto obj = payload.to_json();
+  Game::IO::add_render_info(state, obj);
+
+  return obj;
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t action) {
-  boost::json::object msg;
-  msg["type"] = "action_request";
-  msg["payload"] = make_action_request_msg(valid_actions, action);
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t proposed_action) {
+  Message msg(Message::BridgeAction::kUpdate);
+  msg.add_payload(make_action_request_msg(valid_actions, proposed_action));
+  msg.send();
 }
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions,
-                                                             core::action_t action) {
+                                                             core::action_t proposed_action) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
@@ -142,43 +153,53 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
     legal_move_indices.push_back(i);
   }
 
-  boost::json::object payload;
-  payload["legal_moves"] = legal_move_indices;
-  payload["seat"] = this->get_my_seat();
-  payload["proposed_action"] = action;
+  Payload payload(Payload::Type::kActionRequest);
+  payload.add_field("legal_moves", legal_move_indices);
+  payload.add_field("seat", this->get_my_seat());
+  payload.add_field("proposed_action", proposed_action);
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
   if (verbose_data) {
-    payload["verbose_info"] = verbose_data->to_json();
+    payload.add_field("verbose_info", verbose_data->to_json());
   }
 
-  return payload;
+  return payload.to_json();
 }
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_state_update(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  boost::json::object msg;
-  msg["type"] = "state_update";
-  msg["payload"] = this->make_state_update_msg(update);
+  Message msg(Message::BridgeAction::kUpdate);
+  msg.add_payload(this->make_tree_node_msg(update));
+  msg.add_payload(this->make_state_update_msg(update));
+  msg.send();
+}
 
-  auto* web_manager = core::WebManager<Game>::get_instance();
-  web_manager->send_msg(msg);
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::make_tree_node_msg(const StateChangeUpdate& update) {
+  util::Rendering::Guard guard(util::Rendering::kText);
+
+  Payload payload(Payload::Type::kTreeNode, update.index);
+  payload.add_field("index", update.index);
+  payload.add_field("parent_index", update.parent_index);
+  payload.add_field("seat", std::string(1, Game::IO::kSeatChars[update.seat]));
+  return payload.to_json();
 }
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  boost::json::object payload;
-  payload["board"] = Game::IO::state_to_json(update.state);
-  payload["seat"] = update.seat;
+  Payload payload(Payload::Type::kStateUpdate);
+  payload.add_field("board", Game::IO::state_to_json(update.state));
+  payload.add_field("index", update.index);
+  payload.add_field("last_action", update.action);
+  payload.add_field("mode", update.mode);
 
-  payload["last_action"] = Game::IO::action_to_str(update.action, update.action_mode);
-  Game::IO::add_render_info(update.state, payload);
-
-  return payload;
+  auto obj = payload.to_json();
+  Game::IO::add_render_info(update.state, obj);
+  return obj;
 }
 
 template <core::concepts::Game Game>
@@ -186,7 +207,7 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
                                                      const GameResultTensor& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
-  boost::json::object payload;
+  Payload payload(Payload::Type::kGameEnd);
   constexpr int P = Game::Constants::kNumPlayers;
 
   auto array = Game::GameResults::to_value_array(outcome);
@@ -202,9 +223,55 @@ boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
     }
   }
   result_codes[P] = '\0';  // Null-terminate the string
-  payload["result_codes"] = std::string(result_codes);
+  payload.add_field("result_codes", std::string(result_codes));
+  return payload.to_json();
+}
 
-  return payload;
+template <core::concepts::Game Game>
+WebPlayer<Game>::Message::Message(BridgeAction bridge_action) {
+  msg_["bridge_action"] = (bridge_action == kReset) ? "reset" : "update";
+  msg_["payloads"] = boost::json::array();
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::Message::send() {
+  auto* web_manager = core::WebManager<Game>::get_instance();
+  web_manager->send_msg(msg_);
+}
+
+template <core::concepts::Game Game>
+boost::json::object WebPlayer<Game>::Payload::to_json() const {
+  boost::json::object obj = obj_;
+  std::string t;
+  switch (type_) {
+    case kStartGame:
+      t = "start_game";
+      break;
+    case kActionRequest:
+      t = "action_request";
+      break;
+    case kStateUpdate:
+      t = "state_update";
+      break;
+    case kGameEnd:
+      t = "game_end";
+      break;
+    case kTreeNode:
+      t = "tree_node";
+      break;
+  }
+  obj["type"] = t;
+  obj["cache_key"] = std::format("{}:{}", t, cache_key_index_);
+  return obj;
+}
+
+template <core::concepts::Game Game>
+template <typename T>
+void WebPlayer<Game>::Payload::add_field(const std::string& key, T&& value) {
+  if (key == "type" || key == "cache_key") {
+    throw util::Exception("Cannot add field with reserved key: {}", key);
+  }
+  obj_[key] = std::forward<T>(value);
 }
 
 }  // namespace generic

@@ -151,6 +151,11 @@ void WebManager<Game>::response_loop() {
           handle_action(payload, seat_index);
         } else if (msg_type == "resign") {
           handle_resign(seat_index);
+        } else if (msg_type == "backtrack") {
+          int index = boost::json::value_to<int>(obj.at("index"));
+          for (auto& client : clients_) {
+            client->handle_backtrack(index, seat_index);
+          }
         } else {
           throw util::Exception("Unknown message type: {}", msg_type);
         }

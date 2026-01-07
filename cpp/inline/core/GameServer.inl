@@ -477,18 +477,17 @@ void GameServer<Game>::SharedData::debug_dump() const {
   for (int i = 0; i < (int)game_slots_.size(); ++i) {
     GameSlot* slot = game_slots_[i];
     bool mid_yield = slot->mid_yield();
-    bool continue_hit = slot->continue_hit();
     bool in_critical_section = slot->in_critical_section();
 
-    if (mid_yield || continue_hit || in_critical_section) {
+    if (mid_yield || in_critical_section) {
       std::ostringstream ss;
       Game::IO::print_state(ss, slot->state());
 
       Player* player = slot->active_player();
       LOG_WARN(
-        "GameServer {} game_slot[{}] mid_yield:{} continue_hit:{} in_critical_section:{} "
+        "GameServer {} game_slot[{}] mid_yield:{} in_critical_section:{} "
         "active_seat:{} active_player:{} state:\n{}",
-        __func__, i, mid_yield, continue_hit, in_critical_section, slot->active_seat(),
+        __func__, i, mid_yield, in_critical_section, slot->active_seat(),
         player ? player->get_name() : "-", ss.str());
     }
   }
@@ -813,7 +812,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   if (yield_instr == kContinue) {
     CriticalSectionCheck check(in_critical_section_);
     mid_yield_ = false;
-    continue_hit_ = true;
   }
 
   RELEASE_ASSERT(request.permits(response), "ActionResponse {} not permitted by ActionRequest",
@@ -831,14 +829,16 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       return true;
 
     case ActionResponse::kBacktrack:
-      throw util::CleanException("BackTrack not yet implemented in GameServer");
+      backtrack_to_node(response.backtrack_node_index());
+      // TODO: Simiar to the undo case, we need to propagate backtrack to players that maintain
+      // internal history (e.g. alpha0::Player).
+      return true;
 
     case ActionResponse::kResignGame:
       resign_game(result);
       return false;
 
     case ActionResponse::kYieldResponse:
-      RELEASE_ASSERT(!continue_hit_, "kYield after continue hit!");
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = extra_enqueue_count;
@@ -859,7 +859,6 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   CriticalSectionCheck check2(in_critical_section_);
   RELEASE_ASSERT(!mid_yield_);
 
-  continue_hit_ = false;
   move_number_++;
   action_t action = response.get_action();
 
@@ -953,7 +952,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   active_seat_ = -1;
   noisy_mode_ = false;
   mid_yield_ = false;
-  continue_hit_ = false;
 
   state_tree_.init();
   state_node_index_ = 0;
@@ -1265,9 +1263,26 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::apply_action(action_t action) {
   state_node_index_ = state_tree_.advance(state_node_index_, action);
 
-  StateChangeUpdate state_update(state(), action, state_node_index_, active_seat_, action_mode_);
+  auto parent_index = state_tree_.get_parent_index(state_node_index_);
+  StateChangeUpdate state_update(state(), action, state_node_index_, parent_index, active_seat_,
+                                 action_mode_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
+  }
+}
+
+template <concepts::Game Game>
+void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
+  state_node_index_ = index;
+
+  action_t action = state_tree_.get_action(index);
+  game_tree_index_t parent_index = state_tree_.get_parent_index(index);
+  seat_index_t seat = state_tree_.get_parent_seat(index);
+  action_mode_t action_mode = state_tree_.get_action_mode(index);
+
+  StateChangeUpdate update(state(), action, index, parent_index, seat, action_mode);
+  for (int p = 0; p < kNumPlayers; ++p) {
+    players_[p]->receive_state_change(update);
   }
 }
 

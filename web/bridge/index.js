@@ -1,4 +1,3 @@
-
 import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
@@ -14,14 +13,17 @@ const ENGINE_PORT   = process.env.ENGINE_PORT || 4000;
 console.log(`Bridge starting on ws://0.0.0.0:${BRIDGE_PORT}`);
 console.log(`Will proxy to engine at tcp://127.0.0.1:${ENGINE_PORT}`);
 
-// Store last message of each type, in order received
-
-let lastByType = {}; // type -> [counter, msg]
+let lastByTypeIndex = {}; // ("{type}:{index}") -> [counter, msg]
 let msgIndex = 0;
+
+const app    = express();
+const server = http.createServer(app);
+const wss    = new WebSocketServer({ server });
 
 const engineSocket = net.connect(ENGINE_PORT, '127.0.0.1', () => {
   console.log(`Connected to engine on port ${ENGINE_PORT}`);
 });
+
 engineSocket.on('error', err => console.error('Engine socket error:', err));
 
 engineSocket.on('data', data => {
@@ -31,33 +33,43 @@ engineSocket.on('data', data => {
     try {
       msg = JSON.parse(line);
     } catch (e) {
+      console.error('JSON Parse Error:', e, 'Line:', line);
       continue;
     }
-    const msg_type = msg.type;
-    if (!msg_type) continue;
-    if (msg_type === 'start_game') {
-      lastByType = {};
+
+    if (msg.bridge_action === 'reset') {
+      console.log('Action: RESET - Clearing Cache');
+      lastByTypeIndex = {};
       msgIndex = 0;
     }
-    // Store or update last message of this type as [counter, msg]
-    lastByType[msg_type] = [msgIndex++, line];
-    // Broadcast to all connected WebSocket clients
-    for (let client of wss.clients) {
-      if (client.readyState === client.OPEN) client.send(line);
+
+    if (!msg.payloads || !Array.isArray(msg.payloads)) {
+      continue;
+    }
+
+    for (const payload of msg.payloads) {
+      if (!payload.cache_key) {
+        console.warn('Skipping payload without cache_key:', payload);
+        continue;
+      }
+
+      const payloadStr = JSON.stringify(payload);
+      lastByTypeIndex[payload.cache_key] = [msgIndex++, payloadStr];
+
+      for (let client of wss.clients) {
+        if (client.readyState === client.OPEN) {
+          client.send(payloadStr);
+        }
+      }
     }
   }
 });
 
-const app    = express();
-const server = http.createServer(app);
-const wss    = new WebSocketServer({ server });
-
-
 wss.on('connection', ws => {
   console.log('➜ New WebSocket client connected');
-  // Replay each stored message, lexicographically by [counter, msg]
-  Object.values(lastByType)
-    .sort()
+  // Replay stored messages in strict chronological order using the sequence counter
+  Object.values(lastByTypeIndex)
+    .sort((a, b) => a[0] - b[0])
     .forEach(([_, msg]) => ws.send(msg));
   ws.on('message', message => {
     console.log('WS → Bridge:', message.toString());

@@ -9,23 +9,24 @@ namespace core {
  * StateChangeUpdate is sent to players to notify them of changes in game state. Depending on the
  * type of player, they may use a subset of the information provided here. For example, an alpha0
  * player may only need the action. Webplayer may need the full state to render it on the frontend.
- * NOTE:
- * 1.`state` is the new state AFTER the `action` has been applied.
- * 2.'game_tree_index` is the index of the new state in the game tree.
- * 3.`seat` is the seat index of the player who made the action and NOT the active player for
-`state`.
- * 4. similarly, `action_mode` is the action mode used by the player who made the action.
  */
-
 template <concepts::Game Game>
 struct StateChangeUpdate {
   using State = Game::State;
 
   const State& state;
   action_t action;
-  game_tree_index_t game_tree_index;
+  game_tree_index_t index;
+  game_tree_index_t parent_index;
   seat_index_t seat;
-  action_mode_t action_mode;
+  action_mode_t mode;
+
+  StateChangeUpdate(const State& s, action_t a, game_tree_index_t i, game_tree_index_t pi,
+                    seat_index_t se, action_mode_t m)
+      : state(s), action(a), index(i), parent_index(pi), seat(se), mode(m) {}
+
+  StateChangeUpdate(const State& s, action_t a, seat_index_t se)
+      : state(s), action(a), index(-1), parent_index(-1), seat(se), mode(-1) {}
 };
 
 }  // namespace core

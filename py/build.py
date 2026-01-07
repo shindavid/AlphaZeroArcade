@@ -86,7 +86,7 @@ def main():
     run('cd extra_deps && ./build.py')
 
     # build npm packages unconditionally
-    run('cd web && npm ci --omit=optional --no-audit --no-fund')
+    run('cd web && npm ci --no-audit --no-fund')
 
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
 

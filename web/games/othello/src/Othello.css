@@ -39,6 +39,25 @@
   border-radius: 100%;
 }
 
+.last-action {
+  position: relative;
+}
+
+.last-action::after {
+  content: '';
+  position: absolute;
+
+  width: 10px;
+  height: 10px;
+
+  background-color: red;
+  border-radius: 100%;
+
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .ghost {
   opacity: 0.6;
 }
