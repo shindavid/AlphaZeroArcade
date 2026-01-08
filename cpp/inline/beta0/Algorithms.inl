@@ -263,8 +263,8 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       std::ostringstream ss;
       ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      std::string line_break = std::format(
-        "\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+      std::string line_break =
+        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
 
       ss << "NN EVAL" << line_break;
       ValueArray players;
@@ -373,14 +373,13 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     results.P(action) = edge->P;
     results.pi(action) = edge->pi;
 
-    if (child) {
-      results.AQ.chip(action, 0) = eigen_util::reinterpret_as_tensor(child->stats().Q);
-      results.AW.chip(action, 0) = eigen_util::reinterpret_as_tensor(child->stats().W);
-    } else {
-      results.AQ.chip(action, 0) = eigen_util::reinterpret_as_tensor(edge->child_AV);
-      results.AW.chip(action, 0) = eigen_util::reinterpret_as_tensor(edge->child_AU);
-    }
+    const auto& AQ = child ? child->stats().Q : edge->child_AV;
+    const auto& AW = child ? child->stats().W : edge->child_AU;
 
+    for (int p = 0; p < kNumPlayers; ++p) {
+      results.AQ(action, p) = AQ[p];
+      results.AW(action, p) = AW[p];
+    }
     i++;
   }
 
@@ -394,6 +393,69 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.action_mode = mode;
   results.trivial = root->trivial();
   results.provably_lost = stats.Q[seat] == Game::GameResults::kMinValue && stats.W[seat] == 0.f;
+
+  if (search::kEnableSearchDebug) {
+    std::ostringstream ss;
+    std::string line_break = std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength);
+
+    ss << "SEARCH RESULTS" << line_break;
+
+    ValueArray players;
+    ValueArray V = Game::GameResults::to_value_array(results.R);
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == seat;
+    }
+
+    static std::vector<std::string> player_columns = {"Seat",  "V", "Q",   "Q_min",
+                                                      "Q_max", "W", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, V, results.Q, results.Q_min,
+                                                       results.Q_max, results.W, CP);
+
+    eigen_util::PrintArrayFormatMap fmt_map1{
+      {"Seat", [&](float x) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+    };
+
+    std::stringstream ss1;
+    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+
+    for (const std::string& line : util::splitlines(ss1.str())) {
+      ss << line << line_break;
+    }
+
+    LocalPolicyArray action_array(stable_data.num_valid_actions);
+    LocalPolicyArray pi_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_array(stable_data.num_valid_actions);
+    LocalPolicyArray AW_array(stable_data.num_valid_actions);
+
+    for (int e = 0; e < stable_data.num_valid_actions; ++e) {
+      core::action_t action = actions[e];
+
+      action_array(e) = action;
+      pi_array(e) = results.pi(action);
+      AQ_array(e) = results.AQ(action, seat);
+      AW_array(e) = results.AW(action, seat);
+    }
+
+    static std::vector<std::string> action_columns = {"action", "pi", "AQ", "AW"};
+    auto action_data = eigen_util::sort_rows(
+      eigen_util::concatenate_columns(action_array, pi_array, AQ_array, AW_array));
+
+    eigen_util::PrintArrayFormatMap fmt_map{
+      {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+    };
+
+    std::stringstream ss2;
+    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
+
+    for (const std::string& line : util::splitlines(ss2.str())) {
+      ss << line << line_break;
+    }
+
+    LOG_INFO(ss.str());
+  }
 }
 
 template <search::concepts::Traits Traits, typename Derived>
