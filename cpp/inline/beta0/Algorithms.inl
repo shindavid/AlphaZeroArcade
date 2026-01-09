@@ -5,6 +5,8 @@
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Gaussian1D.hpp"
+#include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cmath>
@@ -172,13 +174,8 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   GeneralContext& general_context = *context.general_context;
-  const search::SearchParams& search_params = general_context.search_params;
   const LookupTable& lookup_table = general_context.lookup_table;
   const RootInfo& root_info = general_context.root_info;
-  const ManagerParams& manager_params = general_context.manager_params;
-  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
-  auto& rng = general_context.aux_state.rng;
-  core::node_pool_index_t index = context.initialization_index;
 
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
@@ -209,33 +206,18 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(3), U.size(), U.data());
     std::copy_n(eval->data(4), AU.size(), AU.data());
 
-    // TODO: perform a massaging step here so that (P_raw, AU, AV) are consistent with R and U.
-
     ValueArray V = Game::GameResults::to_value_array(R);
 
-    stable_data.R = R;
-    stable_data.R_valid = true;
-    stable_data.U = U;
-    Calculations<Traits>::populate_logit_value_beliefs(V, U, stable_data.lUV);
+    ValueArray U_original = U;
+    LocalActionValueArray AV_original = AV;
+
+    LocalActionValueArray lAV(n, kNumPlayers);
+    LocalActionValueArray lAU(n, kNumPlayers);
+
+    Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU, lAV, lAU);
 
     int XC[n];
-    for (int i = 0; i < n; ++i) {
-      XC[i] = 0;
-    }
-    if (index == root_info.node_index) {
-      if (search_params.full_search) {
-        if (manager_params.enable_exploratory_visits) {
-          double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
-          LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
-          const float* f = noise.data();
-          std::discrete_distribution<int> dist(f, f + n);
-          for (int i = 0; i < 30; ++i) {  // TODO: make this 30 configurable
-            int a = dist(rng);
-            XC[a] += 1;
-          }
-        }
-      }
-    }
+    populate_XC(context, XC, n);
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
@@ -245,13 +227,17 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->pi = edge->P;
       edge->XC = XC[i];
 
-      // TODO: move this outside the loop, and do it as a batch calc off AV and AU, to
-      // vectorize the division
-      Calculations<Traits>::populate_logit_value_beliefs(edge->child_AV, edge->child_AU,
-                                                         edge->child_lAUV);
+      for (int p = 0; p < kNumPlayers; ++p) {
+        edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
+      }
 
       edge->child_lQW = edge->child_lAUV[seat];
     }
+
+    stable_data.R = R;
+    stable_data.R_valid = true;
+    stable_data.U = U;
+    Calculations<Traits>::populate_logit_value_beliefs(V, U, stable_data.lUV);
 
     stats.Q = V;
     stats.lQW = stable_data.lUV;
@@ -278,8 +264,9 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         lV(p) = stable_data.lUV[p].mean();
       }
 
-      static std::vector<std::string> player_columns = {"Seat", "V", "U", "lV", "lU", "CurP"};
-      auto player_data = eigen_util::concatenate_columns(players, V, U, lV, lU, CP);
+      static std::vector<std::string> player_columns = {"Seat", "V",  "U_orig", "U",
+                                                        "lV",   "lU", "CurP"};
+      auto player_data = eigen_util::concatenate_columns(players, V, U_original, U, lV, lU, CP);
 
       eigen_util::PrintArrayFormatMap fmt_map1{
         {"Seat", [&](float x) { return std::to_string(int(x)); }},
@@ -296,6 +283,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       ss << line_break;
 
       LocalPolicyArray actions(n);
+      LocalPolicyArray AVs_original(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
       LocalPolicyArray lAVs(n);
@@ -306,16 +294,18 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         core::action_t action = edge->action;
         // Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
+        AVs_original(e) = AV_original(e, seat);
         AVs(e) = edge->child_AV[seat];
         AUs(e) = edge->child_AU[seat];
         lAVs(e) = edge->child_lAUV[seat].mean();
         lAUs(e) = edge->child_lAUV[seat].variance();
       }
 
-      static std::vector<std::string> action_columns = {"action", "AV", "AU", "lAV", "lAU", "P"};
+      static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU",
+                                                        "lAV",    "lAU",     "P"};
 
-      auto action_data =
-        eigen_util::sort_rows(eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P));
+      auto action_data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, AVs_original, AVs, AUs, lAVs, lAUs, P));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
@@ -597,6 +587,35 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
   view.W = record->W;
+}
+
+template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::populate_XC(SearchContext& context, int* XC, int n) {
+  GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const RootInfo& root_info = general_context.root_info;
+  const ManagerParams& manager_params = general_context.manager_params;
+  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
+  auto& rng = general_context.aux_state.rng;
+  core::node_pool_index_t index = context.initialization_index;
+
+  for (int i = 0; i < n; ++i) {
+    XC[i] = 0;
+  }
+  if (index == root_info.node_index) {
+    if (search_params.full_search) {
+      if (manager_params.enable_exploratory_visits) {
+        double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+        LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
+        const float* f = noise.data();
+        std::discrete_distribution<int> dist(f, f + n);
+        for (int i = 0; i < 30; ++i) {  // TODO: make this 30 configurable
+          int a = dist(rng);
+          XC[a] += 1;
+        }
+      }
+    }
+  }
 }
 
 }  // namespace beta0

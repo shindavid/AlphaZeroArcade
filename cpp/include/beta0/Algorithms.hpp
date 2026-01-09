@@ -75,9 +75,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
-                                           LogitValueArray& lQW);
-  static util::Gaussian1D compute_logit_value_belief(float Q, float W);
+  static void populate_XC(SearchContext& context, int* XC, int n);
 };
 
 template <search::concepts::Traits Traits>
