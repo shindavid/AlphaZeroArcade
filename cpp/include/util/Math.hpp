@@ -15,6 +15,9 @@ finiteness_t get_finiteness(T x) {
 
 inline float normal_cdf(float x) { return 0.5f * (1.0f + std::erff(x * 0.7071067811865475244f)); }
 
+// Approximates log(x) for x in the range (0, 1)
+float fast_coarse_log_less_than_1(float x);
+
 // Approximates logit(x).
 //
 // Returns a value close to log(x / (1 - x)), but uses a fast approximation that is less accurate

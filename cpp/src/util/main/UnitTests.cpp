@@ -1266,6 +1266,70 @@ TEST(cuda_util, cuda_device_to_ordinal) {
   EXPECT_EQ(cuda_util::cuda_device_to_ordinal("1"), 1);
 }
 
+TEST(math, fast_coarse_log_less_than_1_basic_half) {
+  // log(0.5) = -ln(2)
+  const float exact = std::log(0.5f);
+  EXPECT_NEAR(math::fast_coarse_log_less_than_1(0.5f), exact, 2e-3f);
+}
+
+TEST(math, fast_coarse_log_less_than_1_sign_sanity) {
+  // On (0,1), log(x) is always negative.
+  const float xs[] = {0.999f, 0.9f, 0.75f, 0.5f, 0.25f, 0.1f, 0.01f};
+
+  for (float x : xs) {
+    float v = math::fast_coarse_log_less_than_1(x);
+    EXPECT_LT(v, 0.0f) << "x=" << x;
+  }
+}
+
+TEST(math, fast_coarse_log_less_than_1_monotonic_on_dense_grid) {
+  // log is strictly increasing on (0,1).
+  // Avoid exact 0/1; test a dense grid in (0,1).
+  float prev = math::fast_coarse_log_less_than_1(0.001f);
+
+  for (int k = 2; k <= 999; ++k) {
+    float x = 0.001f * k;  // 0.002 .. 0.999
+    float cur = math::fast_coarse_log_less_than_1(x);
+
+    // Allow tiny numerical wobble from LUT/interpolation/fast-math.
+    EXPECT_LE(prev, cur + 1e-4f) << "x=" << x;
+    prev = cur;
+  }
+}
+
+TEST(math, fast_coarse_log_less_than_1_matches_std_log_on_0p01_grid) {
+  // Compare against std::log at x = 0.01*k for k=1..99
+  const float tol = 0.02f;
+
+  for (int k = 1; k <= 99; ++k) {
+    float x = 0.01f * k;  // 0.01 .. 0.99
+    float fast = math::fast_coarse_log_less_than_1(x);
+    float exact = std::log(x);
+
+    EXPECT_NEAR(fast, exact, tol) << "x=" << x;
+  }
+}
+
+TEST(math, fast_coarse_log_less_than_1_edge_behavior_is_finite_and_ordered) {
+  // We don't insist on accuracy at extremes, but want sane ordering:
+  // smaller x => more negative log(x)
+  const float xs[] = {1e-6f, 1e-4f, 1e-3f, 1e-2f, 0.1f, 0.5f, 0.9f, 0.99f, 0.999f};
+
+  float prev = math::fast_coarse_log_less_than_1(xs[0]);
+  for (int i = 1; i < static_cast<int>(sizeof(xs) / sizeof(xs[0])); ++i) {
+    float cur = math::fast_coarse_log_less_than_1(xs[i]);
+
+    // Increasing as x increases.
+    EXPECT_LE(prev, cur + 1e-3f) << "x_prev=" << xs[i - 1] << " x_cur=" << xs[i];
+    prev = cur;
+  }
+
+  // And values near 1 should be close-ish to 0 (still negative).
+  float near1 = math::fast_coarse_log_less_than_1(0.999999f);
+  EXPECT_LT(near1, 0.0f);
+  EXPECT_GT(near1, -1e-2f);  // very loose; adjust if your LUT is coarser
+}
+
 TEST(math, fast_coarse_logit_basic_midpoint) {
   EXPECT_NEAR(math::fast_coarse_logit(0.5f), 0.0f, 1e-5f);
 }
