@@ -2,7 +2,6 @@
 
 #include "alpha0/Algorithms.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -41,6 +40,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   using SearchContext = Base::SearchContext;
   using SearchResults = Base::SearchResults;
   using State = Base::State;
+  using StateHistory = Base::StateHistory;
   using TrainingInfo = Base::TrainingInfo;
   using TrainingInfoParams = Base::TrainingInfoParams;
   using ValueArray = Base::ValueArray;
@@ -64,6 +64,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void validate_search_path(const SearchContext& context) {}
   static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
+  static void init_root_info(GeneralContext&, search::RootInitPurpose);
 
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);

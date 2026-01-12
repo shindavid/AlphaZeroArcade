@@ -61,6 +61,33 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
 }
 
 template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_context,
+                                                     search::RootInitPurpose purpose) {
+  RootInfo& root_info = general_context.root_info;
+  LookupTable& lookup_table = general_context.lookup_table;
+
+  if (root_info.node_index < 0) {
+    root_info.node_index = lookup_table.alloc_node();
+    Node* root = lookup_table.get_node(root_info.node_index);
+
+    StateHistory history = root_info.history;  // copy
+    for (auto& state : history) {
+      Game::Symmetries::apply(state, root_info.canonical_sym);
+    }
+    State& cur_state = history.current();
+    core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
+    RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
+    root_info.active_seat = active_seat;
+    new (root) Node(lookup_table.get_random_mutex(), cur_state, active_seat);
+  }
+
+  if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
+    const auto& state = root_info.history.current();
+    Game::IO::print_state(std::cout, state);
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
 int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
   // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
   const GeneralContext& general_context = *context.general_context;
