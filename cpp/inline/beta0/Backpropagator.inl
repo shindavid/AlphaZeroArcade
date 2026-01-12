@@ -62,6 +62,7 @@ void Backpropagator<Traits>::preload_parent_data() {
 
     if (child_edge == edge_) {
       i = k;
+      child_i_ = child;
     }
 
     if (child) {
@@ -463,9 +464,9 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
     for (int j = 0; j < n; j++) {
       float lW_j = lW(j);
       if (lW_j == util::Gaussian1D::kVarianceNegInf) {
-        tau[j] = 0.0f;
-      } else if (lW_j == util::Gaussian1D::kVariancePosInf) {
         tau[j] = 1.0f;
+      } else if (lW_j == util::Gaussian1D::kVariancePosInf) {
+        tau[j] = 0.0f;
       } else if (lW_i == 0.f && lW_j == 0.f) {
         if (lQ_i > lQ(j)) {
           tau[j] = 1.0f;

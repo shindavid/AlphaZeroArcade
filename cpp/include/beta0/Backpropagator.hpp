@@ -181,6 +181,7 @@ class Backpropagator {
   float Q_floor_;
   core::seat_index_t seat_;
 
+  const Node* child_i_ = nullptr;
   int num_deferred_child_stats_load_indices_ = 0;
   int deferred_child_stats_load_indices_[Game::Constants::kMaxBranchingFactor];
 
