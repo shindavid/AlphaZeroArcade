@@ -95,6 +95,7 @@ void Manager<Traits>::update(core::action_t action) {
 
   Node* root = lookup_table()->get_node(root_index);
   root_info()->node_index = lookup_child_by_action(root, transformed_action);  // tree reuse
+  root_info()->active_seat = Rules::get_current_player(raw_state);
 }
 
 template <search::concepts::Traits Traits>
