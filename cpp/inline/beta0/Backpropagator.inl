@@ -458,40 +458,26 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
   } else if (lW_i == util::Gaussian1D::kVariancePosInf) {
     return lQ * 0 + 1.0f;
   } else {
-    LocalArray S = kBeta * ((lQ_i - lQ) / (lW_i + lW).sqrt() + z);
-    int n = S.size();
-
-    math::finiteness_t f[n];
+    int n = z.size();
+    LocalArray tau(n);
     for (int j = 0; j < n; j++) {
       float lW_j = lW(j);
       if (lW_j == util::Gaussian1D::kVarianceNegInf) {
-        f[j] = math::kNegInf;
+        tau[j] = 0.0f;
       } else if (lW_j == util::Gaussian1D::kVariancePosInf) {
-        f[j] = math::kPosInf;
+        tau[j] = 1.0f;
       } else if (lW_i == 0.f && lW_j == 0.f) {
         if (lQ_i > lQ(j)) {
-          f[j] = math::kPosInf;
-        } else if (lQ_i < lQ(j)) {
-          f[j] = math::kNegInf;
-        } else {
-          f[j] = math::kFinite;
-          S[j] = kBeta * z[j];
-        }
-      }
-    }
-
-    LocalArray tau(n);
-    for (int j = 0; j < n; j++) {
-      switch (f[j]) {
-        case math::kFinite:
-          tau[j] = math::fast_coarse_sigmoid(S[j]);
-          break;
-        case math::kNegInf:
-          tau[j] = 0.0f;
-          break;
-        case math::kPosInf:
           tau[j] = 1.0f;
-          break;
+        } else if (lQ_i < lQ(j)) {
+          tau[j] = 0.0f;
+        } else {
+          tau[j] = math::fast_coarse_sigmoid(kBeta * z[j]);
+        }
+      } else {
+        float lQ_j = lQ(j);
+        float S_j = kBeta * ((lQ_i - lQ_j) / std::sqrt(lW_i + lW_j) + z[j]);
+        tau[j] = math::fast_coarse_sigmoid(S_j);
       }
     }
     return tau;
