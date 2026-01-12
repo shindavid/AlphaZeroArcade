@@ -38,6 +38,7 @@ class Backpropagator {
     // Corresponds to columns of read_data_
     r_P,
     r_pi,
+    r_A,
     r_lV,
     r_lU,
     r_lQ,
@@ -56,6 +57,7 @@ class Backpropagator {
   enum full_write_col_t : uint8_t {
     // Corresponds to columns of full_write_data_
     fw_pi,
+    fw_A,
     fwSize
   };
 
@@ -63,6 +65,7 @@ class Backpropagator {
     // Corresponds to columns of sibling_read_data_
     sr_P,
     sr_pi,
+    sr_A,
     sr_lV,
     sr_lU,
     sr_lQ,
@@ -74,8 +77,8 @@ class Backpropagator {
     // Corresponds to columns of sibling_write_data_
     sw_c,
     sw_z,
-    sw_tau_new,
-    sw_tau_old,
+    sw_w,
+    sw_tau,
     swSize
   };
 
@@ -148,9 +151,12 @@ class Backpropagator {
   void apply_updates();
   void print_debug_info();
 
+  void compute_ratings();
+  void calibrate_ratings();
   void compute_policy();
   LocalArray compute_tau(float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW,
                          const LocalArray& z);
+  void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
   void update_QW();
 
   void splice(read_col_t from_col, sibling_read_col_t to_col);

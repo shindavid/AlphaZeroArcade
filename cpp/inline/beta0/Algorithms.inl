@@ -219,9 +219,16 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     int XC[n];
     populate_XC(context, XC, n);
 
+    LocalPolicyArray A = P;
+    for (int i = 0; i < n; ++i) {
+      A(i) = math::fast_coarse_log_less_than_1(P(i));
+    }
+    A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
+
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
       edge->P = P[i];
+      edge->A = A[i];
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
@@ -283,6 +290,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       ss << line_break;
 
       LocalPolicyArray actions(n);
+      LocalPolicyArray A2(n);
       LocalPolicyArray AVs_original(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
@@ -294,6 +302,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         core::action_t action = edge->action;
         // Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
+        A2(e) = edge->A;
         AVs_original(e) = AV_original(e, seat);
         AVs(e) = edge->child_AV[seat];
         AUs(e) = edge->child_AU[seat];
@@ -302,10 +311,10 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       }
 
       static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU",
-                                                        "lAV",    "lAU",     "P"};
+                                                        "lAV",    "lAU",     "P",  "A"};
 
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, AVs_original, AVs, AUs, lAVs, lAUs, P));
+        eigen_util::concatenate_columns(actions, AVs_original, AVs, AUs, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},

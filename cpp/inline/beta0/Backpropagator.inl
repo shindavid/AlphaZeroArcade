@@ -1,11 +1,18 @@
 #include "beta0/Backpropagator.hpp"
 
 #include "beta0/Calculations.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
+#include "util/Math.hpp"
 
 #include <sstream>
 
 namespace beta0 {
+
+static constexpr float kBeta = 1.702f;  // logistic approximation constant
+static constexpr float kInvBeta = 1.0f / kBeta;
+
+static constexpr float kLambda = 0.f;  // pi contribution to w_{ij}
 
 template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
@@ -91,6 +98,7 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
     read_data_(r_P, k) = child_edge->P;
     read_data_(r_pi, k) = child_edge->pi;
+    read_data_(r_A, k) = child_edge->A;
 
     const Node* child = lookup_table().get_node(child_edge->child_index);
     if (child) {
@@ -153,6 +161,7 @@ void Backpropagator<Traits>::load_remaining_data() {
 
   splice(r_P, sr_P);
   splice(r_pi, sr_pi);
+  splice(r_A, sr_A);
   splice(r_lV, sr_lV);
   splice(r_lU, sr_lU);
   splice(r_lQ, sr_lQ);
@@ -163,6 +172,7 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
   sibling_write_data_.resize(n_ - 1);
+  compute_ratings();
   compute_policy();
   update_QW();
 
@@ -177,6 +187,7 @@ void Backpropagator<Traits>::apply_updates() {
   for (int k = 0; k < n_; k++) {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
+    child_edge->A = full_write_data_(fw_A, k);
     child_edge->child_lQW = stats_.lQW[seat_];
   }
 
@@ -224,6 +235,7 @@ void Backpropagator<Traits>::print_debug_info() {
 
   const LocalArray P = read_data_(r_P);
   const LocalArray pi_before = read_data_(r_pi);
+  const LocalArray A_before = read_data_(r_A);
   const LocalArray lV = read_data_(r_lV);
   const LocalArray lU = read_data_(r_lU);
   const LocalArray lQ = read_data_(r_lQ);
@@ -233,11 +245,12 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray Q_star = read_data2_(r2_Q_star).col(seat_);
 
   const LocalArray pi_after = full_write_data_(fw_pi);
+  const LocalArray A_after = full_write_data_(fw_A);
 
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
-  const LocalArray tau_new = unsplice(sw_tau_new);
-  const LocalArray tau_old = unsplice(sw_tau_old);
+  const LocalArray w = unsplice(sw_w);
+  const LocalArray tau = unsplice(sw_tau);
 
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
@@ -269,13 +282,12 @@ void Backpropagator<Traits>::print_debug_info() {
   }
 
   static std::vector<std::string> action_columns = {
-    "action", "i", "N", "P",  "pi", "lV", "lU",      "lQo",     "lWo", "lQ",
-    "lW",     "Q", "W", "Q*", "c",  "z",  "tau_old", "tau_new", "PI"};
-
+    "action", "i", "N", "P",  "pi", "A", "lV", "lU",  "lQo", "lWo", "lQ",
+    "lW",     "Q", "W", "Q*", "c",  "z", "w",  "tau", "pi*", "a*"};
 
   auto action_data = eigen_util::sort_rows(
-    eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, lV, lU, lQ_old, lW_old,
-                                    lQ, lW, Q, W, Q_star, c, z, tau_old, tau_new, pi_after));
+    eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, A_before, lV, lU, lQ_old,
+                                    lW_old, lQ, lW, Q, W, Q_star, c, z, w, tau, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -293,35 +305,34 @@ void Backpropagator<Traits>::print_debug_info() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::compute_policy() {
+void Backpropagator<Traits>::compute_ratings() {
   const util::Gaussian1D lQW_i(read_data_(r_lQ, i_), read_data_(r_lW, i_));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
-    full_write_data_(fw_pi) = read_data_(r_pi);
-    full_write_data_(fw_pi, i_) = 0.f;
-    normalize_policy(full_write_data_(fw_pi));
+    full_write_data_(fw_A) = read_data_(r_A);
+    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+    calibrate_ratings();
     return;
   } else if (lQW_i == util::Gaussian1D::pos_inf()) {
-    full_write_data_(fw_pi).fill(0.f);
-    full_write_data_(fw_pi, i_) = 1.f;
+    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
+    full_write_data_(fw_A, i_) = -1.f;
     return;
   }
 
   if (read_data_(r_lW).isZero()) {
     // all actions have zero variance - put all policy mass on the best action(s)
     float max_lQ = read_data_(r_lQ).maxCoeff();
-    full_write_data_(fw_pi).fill(0.f);
+    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lQ, k) == max_lQ) {
-        full_write_data_(fw_pi, k) = 1.f;
+        full_write_data_(fw_A, k) = -1.f;
       }
     }
-    normalize_policy(full_write_data_(fw_pi));
     return;
   }
 
   RELEASE_ASSERT(lQW_i.valid());
 
-  full_write_data_(fw_pi) = read_data_(r_pi);
+  full_write_data_(fw_A) = read_data_(r_A);
 
   if (read_data_(r_pi, i_) >= 1.f) {
     // all policy mass is already on this action
@@ -330,6 +341,7 @@ void Backpropagator<Traits>::compute_policy() {
 
   const float P_i = read_data_(r_P, i_);
   const float pi_i = read_data_(r_pi, i_);
+  float A_i = read_data_(r_A, i_);
   const float lQ_i = read_data_(r_lQ, i_);
   const float lW_i = read_data_(r_lW, i_);
   const float lV_i = read_data_(r_lV, i_);
@@ -337,6 +349,7 @@ void Backpropagator<Traits>::compute_policy() {
 
   const auto P = sibling_read_data_(sr_P);
   const auto pi = sibling_read_data_(sr_pi);
+  const auto A = sibling_read_data_(sr_A);
   const auto lV = sibling_read_data_(sr_lV);
   const auto lU = sibling_read_data_(sr_lU);
   const auto lQ = sibling_read_data_(sr_lQ);
@@ -346,29 +359,87 @@ void Backpropagator<Traits>::compute_policy() {
 
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
-  auto tau_new = sibling_write_data_(sw_tau_new);
-  auto tau_old = sibling_write_data_(sw_tau_old);
+  auto w = sibling_write_data_(sw_w);
+  auto tau = sibling_write_data_(sw_tau);
 
   c = (lV_i - lV) / (lU_i + lU).sqrt();
-  math::fast_coarse_batch_inverse_normal_cdf_clamped_range(P_i, P.data(), c.data(), n, z.data());
+  auto P_i_ratio = P_i / (P_i + P);
+  for (int j = 0; j < n; j++) {
+    z[j] = kInvBeta * math::fast_coarse_logit(P_i_ratio[j]);
+  }
   z -= c;
+  // TODO: replace above with a clamped calculation for z
 
-  tau_new = compute_tau(lQ_i, lQ, lW_i, lW, z);
-  tau_old = compute_tau(lQW_i_old_.mean(), lQ, lQW_i_old_.variance(), lW, z);
+  tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
+  w = P;
+  if (kLambda > 0) {
+    w *= P_i;
+    w += kLambda * pi_i * pi;
+  }
 
-  const float pi_i_inv = 1.0f / (1.0f - pi_i);
-  float pi_i_new = (pi * tau_new).sum() * pi_i_inv;
-  float pi_i_old = (pi * tau_old).sum() * pi_i_inv;
+  solve_for_A_i(w, tau, A, A_i);
+  full_write_data_(fw_A, i_) = A_i;
+  calibrate_ratings();
+}
 
-  float pi_i_new_logit = math::fast_coarse_logit(pi_i_new);
-  float pi_i_old_logit = math::fast_coarse_logit(pi_i_old);
-  float delta_logit = pi_i_new_logit - pi_i_old_logit;
+// Add c to all nonzero A values to ensure max A is -1
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::calibrate_ratings() {
+  bool nonzero_found = false;
+  float max_A = 0.f;
 
-  float pi_i_logit = math::fast_coarse_logit(pi_i);
-  pi_i_logit += delta_logit;
-  full_write_data_(fw_pi, i_) = math::fast_coarse_sigmoid(pi_i_logit);
+  for (int k = 0; k < n_; k++) {
+    float A_k = full_write_data_(fw_A, k);
+    if (A_k == 0.f) continue;
+    if (nonzero_found) {
+      if (A_k > max_A) {
+        max_A = A_k;
+      }
+    } else {
+      max_A = A_k;
+      nonzero_found = true;
+    }
+  }
 
-  normalize_policy(full_write_data_(fw_pi));
+  RELEASE_ASSERT(nonzero_found, "All A values are zero - cannot calibrate ratings");
+  float c = -1.f - max_A;
+  for (int k = 0; k < n_; k++) {
+    float& A_k = full_write_data_(fw_A, k);
+    if (A_k != 0.f) {
+      A_k += c;
+    }
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::compute_policy() {
+  // pi obtained by softmaxing the nonzero A values
+  full_write_data_(fw_pi).fill(0.f);
+
+  int m = 0;  // count nonzero
+  for (int k = 0; k < n_; k++) {
+    if (full_write_data_(fw_A, k) != 0.f) {
+      m++;
+    }
+  }
+
+  RELEASE_ASSERT(m > 0, "All A values are zero - cannot compute policy");
+  LocalPolicyArray pi_nonzero(m);
+  int w = 0;
+  for (int k = 0; k < n_; k++) {
+    if (full_write_data_(fw_A, k) != 0.f) {
+      pi_nonzero(w++) = full_write_data_(fw_A, k);
+    }
+  }
+
+  eigen_util::softmax_in_place(pi_nonzero);
+
+  int r = 0;
+  for (int k = 0; k < n_; k++) {
+    if (full_write_data_(fw_A, k) != 0.f) {
+      full_write_data_(fw_pi, k) = pi_nonzero(r++);
+    }
+  }
 }
 
 template <search::concepts::Traits Traits>
@@ -376,7 +447,7 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
   float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z) {
   // Effectively computes:
   //
-  // return (lQ_i - lQ) / (lW_i + lW).sqrt();
+  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() + z ])
   //
   // But does some special casing for infinities and zero variances. Each (lQ, lW) pair comes from
   // a util::Gaussian1D, so we need to handle the various edge cases corresponding to how
@@ -387,29 +458,97 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
   } else if (lW_i == util::Gaussian1D::kVariancePosInf) {
     return lQ * 0 + 1.0f;
   } else {
-    LocalArray S = (lQ_i - lQ) / (lW_i + lW).sqrt() + z;
-
+    LocalArray S = kBeta * ((lQ_i - lQ) / (lW_i + lW).sqrt() + z);
     int n = S.size();
-    for (int k = 0; k < n; k++) {
-      float lW_k = lW(k);
-      if (lW_k == util::Gaussian1D::kVarianceNegInf) {
-        S[k] = -999.f;
-      } else if (lW_k == util::Gaussian1D::kVariancePosInf) {
-        S[k] = +999.f;
-      } else if (lW_i == 0.f && lW_k == 0.f) {
-        if (lQ_i > lQ(k)) {
-          S[k] = +999.f;
-        } else if (lQ_i < lQ(k)) {
-          S[k] = -999.f;
+
+    math::finiteness_t f[n];
+    for (int j = 0; j < n; j++) {
+      float lW_j = lW(j);
+      if (lW_j == util::Gaussian1D::kVarianceNegInf) {
+        f[j] = math::kNegInf;
+      } else if (lW_j == util::Gaussian1D::kVariancePosInf) {
+        f[j] = math::kPosInf;
+      } else if (lW_i == 0.f && lW_j == 0.f) {
+        if (lQ_i > lQ(j)) {
+          f[j] = math::kPosInf;
+        } else if (lQ_i < lQ(j)) {
+          f[j] = math::kNegInf;
         } else {
-          S[k] = z[k];
+          f[j] = math::kFinite;
+          S[j] = kBeta * z[j];
         }
       }
     }
 
-    LocalArray tau = S;
-    math::fast_coarse_batch_normal_cdf(S.data(), n, tau.data());
+    LocalArray tau(n);
+    for (int j = 0; j < n; j++) {
+      switch (f[j]) {
+        case math::kFinite:
+          tau[j] = math::fast_coarse_sigmoid(S[j]);
+          break;
+        case math::kNegInf:
+          tau[j] = 0.0f;
+          break;
+        case math::kPosInf:
+          tau[j] = 1.0f;
+          break;
+      }
+    }
     return tau;
+  }
+}
+
+// Solves for A_i such that:
+//   sum_j w[j] * (tau[j] - sigmoid(kBeta * (A_i - A[j]))) = 0
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray& tau,
+                                           const LocalArray& A, float& A_i) {
+  RELEASE_ASSERT(!tau.isZero(), "All tau values are zero - cannot solve for A_i");
+  RELEASE_ASSERT(!tau.isConstant(1.f), "All tau values are one - cannot solve for A_i");
+  constexpr float kSat = math::detail::SigmoidLUT::kXMax;
+  const int n = w.size();
+
+  float minA = A[0], maxA = A[0];
+  for (int j = 1; j < n; ++j) {
+    const float a_j = A[j];
+    minA = a_j < minA ? a_j : minA;
+    maxA = a_j > maxA ? a_j : maxA;
+  }
+  float lo = std::min(A_i, minA) - kSat * kInvBeta;
+  float hi = std::max(A_i, maxA) + kSat * kInvBeta;
+
+  // Fixed iterations: tune for accuracy/speed tradeoff. ChatGPT suggests 6-8.
+  constexpr int kIters = 6;
+
+  for (int it = 0; it < kIters; ++it) {
+    float F = 0.0f;   // sum w*(tau - s)
+    float Sd = 0.0f;  // sum w*s*(1-s), used for derivative
+
+    for (int j = 0; j < n; ++j) {
+      const float x = kBeta * (A_i - A[j]);
+      const float s = math::fast_coarse_sigmoid(x);
+      const float wj = w[j];
+
+      F += wj * (tau[j] - s);
+      Sd += wj * (s * (1.0f - s));
+    }
+
+    // Maintain bracket via monotonicity:
+    // F(c) decreases with c. If F>0 -> c too small -> move lo up. Else move hi down.
+    if (F > 0.0f) {
+      lo = A_i;
+    } else {
+      hi = A_i;
+    }
+
+    // Newton step with safeguard to bracket.
+    // dF/dc = -kBeta * Sd  (negative). So Newton:
+    //   c_new = c - F / dF = c + F / (kBeta*Sd)
+    const float denom = kBeta * (Sd + 1e-12f);
+    const float c_newton = A_i + F / denom;
+
+    // Safeguard: if Newton jumps outside bracket, bisect.
+    A_i = (c_newton <= lo || c_newton >= hi) ? (0.5f * (lo + hi)) : c_newton;
   }
 }
 

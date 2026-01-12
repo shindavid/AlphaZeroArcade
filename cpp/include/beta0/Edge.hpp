@@ -20,6 +20,14 @@ struct Edge : public search::EdgeBase {
   int XC = 0;  // exploration count
   int RC = 0;  // refresh count
 
+  // A is a Bradley-Terry rating.
+  //
+  // pi is derived from A via pi = softmax(A)
+  //
+  // A = 0 means negative infinity; otherwise score should be < 0. For consistency, A is calibrated
+  // so that the maximum A among sibling edges is always -1.
+  float A = 0;
+
   util::Gaussian1D child_lQW;  // last belief about child value for active seat
   ValueArray child_AV;
   ValueArray child_AU;
