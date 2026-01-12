@@ -90,7 +90,7 @@ class Backpropagator {
   using SiblingWriteArray = Eigen::Array<float, Eigen::Dynamic, swSize, 0, kMaxBranchingFactor>;
 
   struct ReadData {
-    void resize(int n) { array_.resize(n, rSize); }
+    void resize(int n) { array_.resize(n, rSize); zero_out_in_debug_mode(array_); }
 
     auto operator()(read_col_t c) { return array_.col(c); }
     float& operator()(read_col_t c, int k) { return array_(k, c); }
@@ -100,7 +100,7 @@ class Backpropagator {
 
   struct ReadData2D {
     static constexpr int P = kNumPlayers;
-    void resize(int n) { array_.resize(n, P * rSize2); }
+    void resize(int n) { array_.resize(n, P * rSize2); zero_out_in_debug_mode(array_); }
 
     // Returns a (N, P) shaped block
     auto operator()(read_col_2d_t c) { return array_.middleCols(P * c, P); }
@@ -114,7 +114,7 @@ class Backpropagator {
   };
 
   struct FullWriteData {
-    void resize(int n) { array_.resize(n, fwSize); }
+    void resize(int n) { array_.resize(n, fwSize); zero_out_in_debug_mode(array_); }
 
     auto operator()(full_write_col_t c) { return array_.col(c); }
     float& operator()(full_write_col_t c, int k) { return array_(k, c); }
@@ -123,7 +123,7 @@ class Backpropagator {
   };
 
   struct SiblingReadData {
-    void resize(int n) { array_.resize(n, srSize); }
+    void resize(int n) { array_.resize(n, srSize); zero_out_in_debug_mode(array_); }
 
     auto operator()(sibling_read_col_t c) { return array_.col(c); }
     float& operator()(sibling_read_col_t c, int k) { return array_(k, c); }
@@ -132,13 +132,19 @@ class Backpropagator {
   };
 
   struct SiblingWriteData {
-    void resize(int n) { array_.resize(n, swSize); }
+    void resize(int n) { array_.resize(n, swSize); zero_out_in_debug_mode(array_); }
 
     auto operator()(sibling_write_col_t c) { return array_.col(c); }
     float& operator()(sibling_write_col_t c, int k) { return array_(k, c); }
 
     SiblingWriteArray array_;
   };
+
+  static void zero_out_in_debug_mode(auto& array) {
+    if (IS_DEFINED(DEBUG_BUILD) || search::kEnableSearchDebug) {
+      array.setZero();
+    }
+  }
 
   bool shares_mutex_with_parent(const Node* child) const;
   void load_child_stats(int i, const NodeStats& child_stats);
@@ -181,7 +187,7 @@ class Backpropagator {
   float Q_floor_;
   core::seat_index_t seat_;
 
-  const Node* child_i_ = nullptr;
+  const Node* child_i_ = nullptr;  // useful for debugging
   int num_deferred_child_stats_load_indices_ = 0;
   int deferred_child_stats_load_indices_[Game::Constants::kMaxBranchingFactor];
 

@@ -311,7 +311,12 @@ void Backpropagator<Traits>::compute_ratings() {
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     full_write_data_(fw_A) = read_data_(r_A);
     full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
-    calibrate_ratings();
+    if (full_write_data_(fw_A).isZero()) {
+      // all actions have -inf rating. This is a losing position. Arbitrarily set an action to -1
+      full_write_data_(fw_A, i_) = -1.f;
+    } else {
+      calibrate_ratings();
+    }
     return;
   } else if (lQW_i == util::Gaussian1D::pos_inf()) {
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
@@ -355,6 +360,19 @@ void Backpropagator<Traits>::compute_ratings() {
   const auto lU = sibling_read_data_(sr_lU);
   const auto lQ = sibling_read_data_(sr_lQ);
   const auto lW = sibling_read_data_(sr_lW);
+
+  if (lW.isConstant(util::Gaussian1D::kVarianceNegInf)) {
+    // all other actions are -inf. Put all policy mass on this action
+    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
+    full_write_data_(fw_A, i_) = -1.f;
+    return;
+  }
+  if (lW.isConstant(util::Gaussian1D::kVariancePosInf)) {
+    // all other actions are +inf. Put no policy mass on this action
+    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+    calibrate_ratings();
+    return;
+  }
 
   const int n = n_ - 1;
 
@@ -490,6 +508,9 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray& tau,
                                            const LocalArray& A, float& A_i) {
+  if (tau.isZero() || tau.isConstant(1.f)) {
+    print_debug_info();
+  }
   RELEASE_ASSERT(!tau.isZero(), "All tau values are zero - cannot solve for A_i");
   RELEASE_ASSERT(!tau.isConstant(1.f), "All tau values are one - cannot solve for A_i");
   constexpr float kSat = math::detail::SigmoidLUT::kXMax;
