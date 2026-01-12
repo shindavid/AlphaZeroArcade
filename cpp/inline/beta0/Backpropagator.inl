@@ -284,7 +284,7 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "N", "P",  "pi", "A", "lV", "lU",  "lQo", "lWo", "lQ",
-    "lW",     "Q", "W", "Q*", "c",  "z", "w",  "tau", "pi*", "a*"};
+    "lW",     "Q", "W", "Q*", "c",  "z", "w",  "tau", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(
     eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, A_before, lV, lU, lQ_old,
@@ -311,7 +311,7 @@ void Backpropagator<Traits>::compute_ratings() {
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     full_write_data_(fw_A) = read_data_(r_A);
     full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
-    if (full_write_data_(fw_A).isZero()) {
+    if (full_write_data_(fw_A).isZero(0.f)) {
       // all actions have -inf rating. This is a losing position. Arbitrarily set an action to -1
       full_write_data_(fw_A, i_) = -1.f;
     } else {
@@ -324,7 +324,7 @@ void Backpropagator<Traits>::compute_ratings() {
     return;
   }
 
-  if (read_data_(r_lW).isZero()) {
+  if (read_data_(r_lW).isZero(0.f)) {
     // all actions have zero variance - put all policy mass on the best action(s)
     float max_lQ = read_data_(r_lQ).maxCoeff();
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
@@ -361,13 +361,13 @@ void Backpropagator<Traits>::compute_ratings() {
   const auto lQ = sibling_read_data_(sr_lQ);
   const auto lW = sibling_read_data_(sr_lW);
 
-  if (lW.isConstant(util::Gaussian1D::kVarianceNegInf)) {
+  if (lW.isConstant(util::Gaussian1D::kVarianceNegInf, 0.f)) {
     // all other actions are -inf. Put all policy mass on this action
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
     full_write_data_(fw_A, i_) = -1.f;
     return;
   }
-  if (lW.isConstant(util::Gaussian1D::kVariancePosInf)) {
+  if (lW.isConstant(util::Gaussian1D::kVariancePosInf, 0.f)) {
     // all other actions are +inf. Put no policy mass on this action
     full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
     calibrate_ratings();
@@ -508,11 +508,11 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray& tau,
                                            const LocalArray& A, float& A_i) {
-  if (tau.isZero() || tau.isConstant(1.f)) {
+  if (tau.isZero(0.f) || tau.isConstant(1.f, 0.f)) {
     print_debug_info();
   }
-  RELEASE_ASSERT(!tau.isZero(), "All tau values are zero - cannot solve for A_i");
-  RELEASE_ASSERT(!tau.isConstant(1.f), "All tau values are one - cannot solve for A_i");
+  RELEASE_ASSERT(!tau.isZero(0.f), "All tau values are zero - cannot solve for A_i");
+  RELEASE_ASSERT(!tau.isConstant(1.f, 0.f), "All tau values are one - cannot solve for A_i");
   constexpr float kSat = math::detail::SigmoidLUT::kXMax;
   const int n = w.size();
 
