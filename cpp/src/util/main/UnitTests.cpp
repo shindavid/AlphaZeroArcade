@@ -1426,8 +1426,8 @@ TEST(math, fast_coarse_sigmoid_saturates_in_tails) {
   float y_neg = math::fast_coarse_sigmoid(-100.0f);
   float y_pos = math::fast_coarse_sigmoid(100.0f);
 
-  EXPECT_NEAR(y_neg, 0.0f, 1e-6f);
-  EXPECT_NEAR(y_pos, 1.0f, 1e-6f);
+  EXPECT_NEAR(y_neg, 0.0f, 1e-5f);
+  EXPECT_NEAR(y_pos, 1.0f, 1e-5f);
 }
 
 // Sanity check: function should be (almost) monotone increasing.

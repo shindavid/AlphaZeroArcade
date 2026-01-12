@@ -22,7 +22,6 @@ struct LogLUT {
     for (int i = 0; i < kSize; ++i) {
       float t = static_cast<float>(i) / static_cast<float>(kSize - 1);  // 0..1
       float mu = kMuMin + t * kRange;
-      // exact log for the LUT construction
       table[i] = std::log(mu);
     }
   }
@@ -49,7 +48,6 @@ struct LogitLUT {
     for (int i = 0; i < kSize; ++i) {
       float t = static_cast<float>(i) / static_cast<float>(kSize - 1);  // 0..1
       float mu = kMuMin + t * kRange;
-      // exact logit for the LUT construction
       table[i] = std::log(mu / (1.0f - mu));
     }
   }
@@ -64,28 +62,21 @@ inline const LogitLUT& get_logit_lut() {
 // Sigmoid LUT
 // ----------------------------
 struct SigmoidLUT {
-  static constexpr int kSize = 256;
-  static constexpr float kXMin = -8.0f;
-  static constexpr float kXMax = 8.0f;
+  static constexpr int kSize = 512;
+  static constexpr float kXMin = -12.0f;
+  static constexpr float kXMax = 12.0f;
   static constexpr float kRange = kXMax - kXMin;
   static constexpr float kScale = (kSize - 4) / kRange;
 
   alignas(64) float table[kSize];
 
   SigmoidLUT() {
-    // Exact left tail
-    table[0] = 0.0f;
-
-    for (int i = 1; i < kSize - 2; ++i) {
+    for (int i = 0; i < kSize; ++i) {
       float t = float(i - 1) / float(kSize - 4);
       float x = kXMin + t * kRange;
       float s = 1.0f / (1.0f + std::exp(-x));
       table[i] = s;
     }
-
-    // Exact right tail (two slots)
-    table[kSize - 2] = 1.0f;
-    table[kSize - 1] = 1.0f;
   }
 };
 

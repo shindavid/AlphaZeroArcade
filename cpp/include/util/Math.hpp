@@ -24,7 +24,7 @@ float fast_coarse_log_less_than_1(float x);
 // when x is very close to 0 or 1.
 float fast_coarse_logit(float x);
 
-// Approximates sigmoid(x).
+// Approximates sigmoid(x). Returns value in the range (0, 1).
 //
 // Returns a value close to 1 / (1 + exp(-x)), but uses a fast approximation that is less accurate
 // when x is very large positive or negative.
