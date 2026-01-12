@@ -516,14 +516,24 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
   constexpr float kSat = math::detail::SigmoidLUT::kXMax;
   const int n = w.size();
 
-  float minA = A[0], maxA = A[0];
-  for (int j = 1; j < n; ++j) {
-    const float a_j = A[j];
-    minA = a_j < minA ? a_j : minA;
-    maxA = a_j > maxA ? a_j : maxA;
+  bool nonzero_found = false;
+  float max_A = 0.f;
+  float min_A = 0.f;
+  for (int j = 0; j < n; ++j) {
+    const float A_j = A[j];
+    if (A_j == 0.f) continue;
+    if (nonzero_found) {
+      min_A = A_j < min_A ? A_j : min_A;
+      max_A = A_j > max_A ? A_j : max_A;
+    } else {
+      min_A = A_j;
+      max_A = A_j;
+      nonzero_found = true;
+    }
   }
-  float lo = std::min(A_i, minA) - kSat * kInvBeta;
-  float hi = std::max(A_i, maxA) + kSat * kInvBeta;
+  RELEASE_ASSERT(nonzero_found, "All A values are zero - cannot solve for A_i");
+  float lo = std::min(A_i, min_A) - kSat * kInvBeta;
+  float hi = std::max(A_i, max_A) + kSat * kInvBeta;
 
   // Fixed iterations: tune for accuracy/speed tradeoff. ChatGPT suggests 6-8.
   constexpr int kIters = 6;
@@ -533,7 +543,10 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
     float Sd = 0.0f;  // sum w*s*(1-s), used for derivative
 
     for (int j = 0; j < n; ++j) {
-      const float x = kBeta * (A_i - A[j]);
+      float A_j = A[j];
+      if (A_j == 0.f) continue;  // skip -inf actions
+
+      const float x = kBeta * (A_i - A_j);
       const float s = math::fast_coarse_sigmoid(x);
       const float wj = w[j];
 
