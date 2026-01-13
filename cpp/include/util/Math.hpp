@@ -38,6 +38,8 @@ float fast_coarse_sigmoid(float x);
 // [-4, +4], and clamp to 0 or 1 outside that range.
 void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y);
 
+inline float sigmoid(float x) { return 0.5f * (std::tanh(0.5f * x) + 1.0f); }  // avoids overflow
+
 // Very-fast coarse approximation of a specialized clamped-range inverse normal CDF calculation for
 // batch processing.
 //

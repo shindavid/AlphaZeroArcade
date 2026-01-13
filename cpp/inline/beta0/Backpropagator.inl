@@ -256,8 +256,6 @@ void Backpropagator<Traits>::print_debug_info() {
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
   LocalArray N(n_);
-  LocalArray lQ_old(n_);
-  LocalArray lW_old(n_);
 
   auto sym = context_.root_canonical_sym;
   const auto& search_path = context_.search_path;
@@ -275,20 +273,18 @@ void Backpropagator<Traits>::print_debug_info() {
     Game::Symmetries::apply(action, inv_sym, node_->action_mode());
     actions(e) = action;
     i_indicator(e) = (e == i_) ? 1.f : 0.f;
-    lQ_old(e) = (e == i_) ? lQW_i_old_.mean() : 0;
-    lW_old(e) = (e == i_) ? lQW_i_old_.variance() : 0;
 
     auto child = lookup_table().get_node(edge->child_index);
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {
-    "action", "i", "N", "P",  "pi", "A", "lV", "lU",  "lQo", "lWo", "lQ",
-    "lW",     "Q", "W", "Q*", "c",  "z", "w",  "tau", "pi*", "A*"};
+  static std::vector<std::string> action_columns = {"action", "i",  "N",   "P",   "pi", "A",  "lV",
+                                                    "lU",     "lQ", "lW",  "Q",   "W",  "Q*", "c",
+                                                    "z",      "w",  "tau", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(
-    eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, A_before, lV, lU, lQ_old,
-                                    lW_old, lQ, lW, Q, W, Q_star, c, z, w, tau, pi_after, A_after));
+    eigen_util::concatenate_columns(actions, i_indicator, N, P, pi_before, A_before, lV, lU, lQ, lW,
+                                    Q, W, Q_star, c, z, w, tau, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -346,7 +342,6 @@ void Backpropagator<Traits>::compute_ratings() {
   }
 
   const float P_i = read_data_(r_P, i_);
-  const float pi_i = read_data_(r_pi, i_);
   float A_i = read_data_(r_A, i_);
   const float lQ_i = read_data_(r_lQ, i_);
   const float lW_i = read_data_(r_lW, i_);
@@ -390,11 +385,7 @@ void Backpropagator<Traits>::compute_ratings() {
   // TODO: replace above with a clamped calculation for z
 
   tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
-  w = P;
-  if (kLambda > 0) {
-    w *= P_i;
-    w += kLambda * pi_i * pi;
-  }
+  w = P + kLambda * pi;
 
   solve_for_A_i(w, tau, A, A_i);
   full_write_data_(fw_A, i_) = A_i;

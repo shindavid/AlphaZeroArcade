@@ -5,7 +5,6 @@
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -238,10 +237,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     ValueArray U_original = U;
     LocalActionValueArray AV_original = AV;
 
-    LocalActionValueArray lAV(n, kNumPlayers);
-    LocalActionValueArray lAU(n, kNumPlayers);
-
-    Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU, lAV, lAU);
+    Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU);
 
     int XC[n];
     populate_XC(context, XC, n);
@@ -260,11 +256,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
       edge->XC = XC[i];
-
-      for (int p = 0; p < kNumPlayers; ++p) {
-        edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
-      }
-
+      Calculations<Traits>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
       edge->child_lQW = edge->child_lAUV[seat];
     }
 
@@ -321,6 +313,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       LocalPolicyArray AVs_original(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
+      LocalPolicyArray lAVs_original(n);
       LocalPolicyArray lAVs(n);
       LocalPolicyArray lAUs(n);
 
@@ -335,13 +328,18 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         AUs(e) = edge->child_AU[seat];
         lAVs(e) = edge->child_lAUV[seat].mean();
         lAUs(e) = edge->child_lAUV[seat].variance();
+
+        LogitValueArray child_lAUV;
+        Calculations<Traits>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e),
+                                                           child_lAUV);
+        lAVs_original(e) = child_lAUV[seat].mean();
       }
 
-      static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU",
+      static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU", "lAV_orig",
                                                         "lAV",    "lAU",     "P",  "A"};
 
-      auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, AVs_original, AVs, AUs, lAVs, lAUs, P, A2));
+      auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+        actions, AVs_original, AVs, AUs, lAVs_original, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},

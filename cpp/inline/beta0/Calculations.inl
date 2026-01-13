@@ -1,6 +1,8 @@
 #include "beta0/Calculations.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "util/CppUtil.hpp"
+#include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
@@ -10,30 +12,18 @@ template <search::concepts::Traits Traits>
 void Calculations<Traits>::calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
                                             const ValueArray& V, ValueArray& U,
                                             LocalActionValueArray& AV,
-                                            const LocalActionValueArray& AU,
-                                            LocalActionValueArray& lAV,
-                                            LocalActionValueArray& lAU) {
+                                            const LocalActionValueArray& AU) {
   int n = P.size();
-  LocalPolicyArray lAVs(n);
+  LocalPolicyArray AVs(n);
   for (int i = 0; i < n; ++i) {
-    LogitValueArray child_lAUV;
-    populate_logit_value_beliefs(AV.row(i), AU.row(i), child_lAUV);
-    for (int p = 0; p < kNumPlayers; ++p) {
-      lAV(i, p) = child_lAUV[p].mean();
-      lAU(i, p) = child_lAUV[p].variance();
-    }
-    lAVs(i) = lAV(i, seat);
+    AVs(i) = AV(i, seat);
   }
-  float c = monotone_solve(V[seat], P, lAVs);
+  shift_AVs(V[seat], P, AVs);
+
   for (int i = 0; i < n; ++i) {
-    float shifted_lAVs = lAVs(i) + c;
-    lAV(i, seat) = shifted_lAVs;
-
+    AV(i, seat) = AVs(i);
     static_assert(kNumPlayers == 2, "Assuming 2 players here");
-    lAV(i, 1 - seat) = -shifted_lAVs;
-
-    AV(i, seat) = math::fast_coarse_sigmoid(shifted_lAVs);
-    AV(i, 1 - seat) = 1.0f - AV(i, seat);
+    AV(i, 1 - seat) = 1.0f - AVs(i);
   }
 
   // Recompute U from adjusted AV and original AU
@@ -43,72 +33,84 @@ void Calculations<Traits>::calibrate_priors(core::seat_index_t seat, const Local
   U = U_mat.array();
 }
 
+// TODO: This implementation conservatively prioritizes correctness over performance by using
+// std::log() and math::sigmoid() in favor of faster approximations. Later, we can consider
+// switching to faster approximations if needed.
 template <search::concepts::Traits Traits>
-float Calculations<Traits>::monotone_solve(float V, const LocalPolicyArray& P,
-                                           const LocalPolicyArray& lAVs) {
+void Calculations<Traits>::shift_AVs(float V, const LocalPolicyArray& P, LocalPolicyArray& AVs) {
   const int n = P.size();
 
-  const float maxL = lAVs.maxCoeff();
-  const float minL = lAVs.minCoeff();
+  // Compute logits once.
+  LocalPolicyArray lAVs(n);
+  for (int i = 0; i < n; ++i) {
+    const float a = AVs[i];
+    lAVs[i] = std::log(a / (1.0f - a));  // logit
+  }
 
-  // Bracket using "sigmoid saturation" constant.
-  // 12 is already very saturated (sigmoid(±12) ~ 6e-6 / 0.999994).
-  // You can tune this based on your LUT's clamping behavior.
+  // Monotone function:
+  //   F(c) = sum_i P[i] * sigmoid(lAVs[i] + c) - V
+  // F is strictly increasing in c, so we bracket and do safeguarded Newton.
+  float minL = lAVs.minCoeff();
+  float maxL = lAVs.maxCoeff();
+
+  // Bracket: make all (lAVs+c) very negative / very positive.
+  // 12 is already strongly saturated for sigmoid.
   constexpr float kSat = 12.0f;
   float lo = -maxL - kSat;
   float hi = -minL + kSat;
 
-  // Start at 0 clamped into the bracket (often a good guess).
   float c = 0.0f;
   if (c < lo) c = lo;
   if (c > hi) c = hi;
 
-  const float* pP = P.data();
-  const float* pL = lAVs.data();
-
-  // Fixed iterations: typically enough for single-precision policy work.
-  // 6–8 is a good sweet spot.
-  constexpr int kIters = 8;
+  constexpr int kIters = 16;      // conservative; usually converges faster
+  constexpr float kTolF = 1e-7f;  // in value units (since sum(P)=1)
 
   for (int it = 0; it < kIters; ++it) {
     float F = 0.0f;
     float dF = 0.0f;
 
-    // Accumulate F(c) and F'(c)
     for (int i = 0; i < n; ++i) {
-      const float s = math::fast_coarse_sigmoid(pL[i] + c);
-      const float w = pP[i];
+      const float s = math::sigmoid(lAVs[i] + c);
+      const float w = P[i];
       F += w * s;
       dF += w * (s * (1.0f - s));
     }
 
     const float err = F - V;
+    if (std::fabs(err) <= kTolF) break;
 
-    // Maintain bracket (monotone F).
-    if (err < 0.0f) {
+    // Maintain bracket (monotone increasing).
+    if (err < 0.0f)
       lo = c;
-    } else {
+    else
       hi = c;
-    }
-
-    if (dF <= 1e-12f) {
-      c = 0.5f * (lo + hi);
-      continue;
-    }
 
     // Safeguarded Newton.
-    // dF should be > 0 unless everything is numerically saturated.
-    const float c_newton = c - err / dF;
-
-    // If Newton step leaves the bracket, fall back to bisection.
-    if (c_newton <= lo || c_newton >= hi) {
-      c = 0.5f * (lo + hi);
-    } else {
-      c = c_newton;
-    }
+    const float c_newton = c - err / (dF + 1e-12f);
+    c = (c_newton <= lo || c_newton >= hi) ? (0.5f * (lo + hi)) : c_newton;
   }
 
-  return c;
+  // Apply shift in-place: AVs[i] = sigmoid(lAVs[i] + c)
+  for (int i = 0; i < n; ++i) {
+    AVs[i] = math::sigmoid(lAVs[i] + c);
+  }
+
+  if (IS_DEFINED(DEBUG_BUILD)) {
+    // Check that P * AVs = V
+    float check = 0.0f;
+    for (int i = 0; i < n; ++i) {
+      check += P[i] * AVs[i];
+    }
+    if (std::fabs(check - V) > .01f) {
+      LOG_ERROR("calibrate_priors failed:");
+      LOG_ERROR("V: {}", V);
+      LOG_ERROR("check: {}", check);
+      LOG_ERROR("P: {}", fmt::streamed(P.transpose()));
+      LOG_ERROR("AVs: {}", fmt::streamed(AVs.transpose()));
+      throw util::Exception("calibrate_priors failed");
+    }
+  }
 }
 
 template <search::concepts::Traits Traits>

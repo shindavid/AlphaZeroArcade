@@ -25,9 +25,7 @@ struct Calculations {
   //
   // However, in practice these equalities do not hold exactly.
   //
-  // This function rewrites AV and U in place to ensure these equalities hold. It also populates
-  // lAU and lAV with the logit-value belief mean/variance pairs corresponding to the adjusted AV
-  // and AU.
+  // This function rewrites AV and U in place to ensure these equalities hold.
   //
   // The rewriting is done by applying a constant shift to the logit-value beliefs underlying AV:
   //
@@ -39,13 +37,10 @@ struct Calculations {
   // recompute U from the adjusted AV and the original AU.
   static void calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
                                const ValueArray& V, ValueArray& U, LocalActionValueArray& AV,
-                               const LocalActionValueArray& AU, LocalActionValueArray& lAV,
-                               LocalActionValueArray& lAU);
+                               const LocalActionValueArray& AU);
 
-  // Solves for a constant c that satisfies:
-  //
-  // sum_i P[i] * sigmoid(lAVs[i] + c) = V
-  static float monotone_solve(float V, const LocalPolicyArray& P, const LocalPolicyArray& lAVs);
+  // Replaces AVs with sigmoid(logit(AVs) + c) where c is chosen so that sum_i P[i] * AVs[i] = V
+  static void shift_AVs(float V, const LocalPolicyArray& P, LocalPolicyArray& AVs);
 
   static void populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
                                            LogitValueArray& lQW);
