@@ -8,6 +8,7 @@
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
+
 #include <boost/json/object.hpp>
 
 namespace generic {
@@ -85,7 +86,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
    */
   class Message {
    public:
-    enum BridgeAction {kReset, kUpdate};
+    enum BridgeAction { kReset, kUpdate };
     Message(BridgeAction bridge_action);
     void send();
 
@@ -129,7 +130,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
-  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions, core::action_t proposed_action);
+  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
+                                                      core::action_t proposed_action);
 
   // Construct json object that the frontend can use to display the state.
   //

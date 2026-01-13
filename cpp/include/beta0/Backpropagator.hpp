@@ -90,7 +90,10 @@ class Backpropagator {
   using SiblingWriteArray = Eigen::Array<float, Eigen::Dynamic, swSize, 0, kMaxBranchingFactor>;
 
   struct ReadData {
-    void resize(int n) { array_.resize(n, rSize); zero_out_in_debug_mode(array_); }
+    void resize(int n) {
+      array_.resize(n, rSize);
+      zero_out_in_debug_mode(array_);
+    }
 
     auto operator()(read_col_t c) { return array_.col(c); }
     float& operator()(read_col_t c, int k) { return array_(k, c); }
@@ -100,7 +103,10 @@ class Backpropagator {
 
   struct ReadData2D {
     static constexpr int P = kNumPlayers;
-    void resize(int n) { array_.resize(n, P * rSize2); zero_out_in_debug_mode(array_); }
+    void resize(int n) {
+      array_.resize(n, P * rSize2);
+      zero_out_in_debug_mode(array_);
+    }
 
     // Returns a (N, P) shaped block
     auto operator()(read_col_2d_t c) { return array_.middleCols(P * c, P); }
@@ -114,7 +120,10 @@ class Backpropagator {
   };
 
   struct FullWriteData {
-    void resize(int n) { array_.resize(n, fwSize); zero_out_in_debug_mode(array_); }
+    void resize(int n) {
+      array_.resize(n, fwSize);
+      zero_out_in_debug_mode(array_);
+    }
 
     auto operator()(full_write_col_t c) { return array_.col(c); }
     float& operator()(full_write_col_t c, int k) { return array_(k, c); }
@@ -123,7 +132,10 @@ class Backpropagator {
   };
 
   struct SiblingReadData {
-    void resize(int n) { array_.resize(n, srSize); zero_out_in_debug_mode(array_); }
+    void resize(int n) {
+      array_.resize(n, srSize);
+      zero_out_in_debug_mode(array_);
+    }
 
     auto operator()(sibling_read_col_t c) { return array_.col(c); }
     float& operator()(sibling_read_col_t c, int k) { return array_(k, c); }
@@ -132,7 +144,10 @@ class Backpropagator {
   };
 
   struct SiblingWriteData {
-    void resize(int n) { array_.resize(n, swSize); zero_out_in_debug_mode(array_); }
+    void resize(int n) {
+      array_.resize(n, swSize);
+      zero_out_in_debug_mode(array_);
+    }
 
     auto operator()(sibling_write_col_t c) { return array_.col(c); }
     float& operator()(sibling_write_col_t c, int k) { return array_(k, c); }

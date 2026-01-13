@@ -47,8 +47,8 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
         r++;
       }
 
-      static std::vector<std::string> columns = {"action",  "P",   "pi",
-                                                 "c_pi", "t_pi", "s_pi", "pi*"};
+      static std::vector<std::string> columns = {"action", "P",    "pi", "c_pi",
+                                                 "t_pi",   "s_pi", "pi*"};
       auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
         actions_arr, P, pi, collapsed_pi, temped_pi, symmed_pi, final_pi));
 

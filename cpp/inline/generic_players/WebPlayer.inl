@@ -137,7 +137,8 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions, core::action_t proposed_action) {
+void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions,
+                                          core::action_t proposed_action) {
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_action_request_msg(valid_actions, proposed_action));
   msg.send();
