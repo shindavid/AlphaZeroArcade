@@ -76,7 +76,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void populate_XC(SearchContext& context, int* XC, int n);
+  static void populate_XC(SearchContext& context, bool is_root, int* XC, int n);
 };
 
 template <search::concepts::Traits Traits>

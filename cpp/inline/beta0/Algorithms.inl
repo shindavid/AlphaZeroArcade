@@ -202,6 +202,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   GeneralContext& general_context = *context.general_context;
   const LookupTable& lookup_table = general_context.lookup_table;
   const RootInfo& root_info = general_context.root_info;
+  Node* root = lookup_table.get_node(root_info.node_index);
 
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
@@ -239,8 +240,9 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU);
 
+    bool is_root = node == root;
     int XC[n];
-    populate_XC(context, XC, n);
+    populate_XC(context, is_root, XC, n);
 
     LocalPolicyArray A = P;
     for (int i = 0; i < n; ++i) {
@@ -356,7 +358,6 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     }
   }
 
-  Node* root = lookup_table.get_node(root_info.node_index);
   if (root) {
     root->stats().N = std::max(root->stats().N, 1);
   }
@@ -624,19 +625,18 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::populate_XC(SearchContext& context, int* XC, int n) {
+void AlgorithmsBase<Traits, Derived>::populate_XC(SearchContext& context, bool is_root, int* XC,
+                                                  int n) {
   GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
-  const RootInfo& root_info = general_context.root_info;
   const ManagerParams& manager_params = general_context.manager_params;
   auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
   auto& rng = general_context.aux_state.rng;
-  core::node_pool_index_t index = context.initialization_index;
 
   for (int i = 0; i < n; ++i) {
     XC[i] = 0;
   }
-  if (index == root_info.node_index) {
+  if (is_root) {
     if (search_params.full_search) {
       if (manager_params.enable_exploratory_visits) {
         double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
