@@ -88,7 +88,8 @@ void Calculations<Traits>::shift_AVs(float V, const LocalPolicyArray& P, LocalPo
 
     // Safeguarded Newton.
     const float c_newton = c - err / (dF + 1e-12f);
-    c = (c_newton <= lo || c_newton >= hi) ? (0.5f * (lo + hi)) : c_newton;
+    bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
+    c = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
   }
 
   // Apply shift in-place: AVs[i] = sigmoid(lAVs[i] + c)
