@@ -1,6 +1,5 @@
 #include "games/othello/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
 #include "util/BitMapUtil.hpp"
 
 #include <boost/lexical_cast.hpp>
