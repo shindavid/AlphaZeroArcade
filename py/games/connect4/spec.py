@@ -166,8 +166,8 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 5.0),
-            ValueUncertaintyLossTerm('value_uncertainty', 50.0),
-            BasicLossTerm('action_value_uncertainty', 50.0),
+            ValueUncertaintyLossTerm('value_uncertainty', 10.0),  # currently not used in c++
+            BasicLossTerm('action_value_uncertainty', 150.0),
             BasicLossTerm('opp_policy', 0.03),
         ]
 
