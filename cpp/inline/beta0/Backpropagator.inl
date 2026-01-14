@@ -1,6 +1,7 @@
 #include "beta0/Backpropagator.hpp"
 
 #include "beta0/Calculations.hpp"
+#include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
@@ -532,6 +533,7 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
   for (int it = 0; it < kIters; ++it) {
     float F = 0.0f;   // sum w*(tau - s)
     float Sd = 0.0f;  // sum w*s*(1-s), used for derivative
+    float sw = 0.0f;  // sum w
 
     for (int j = 0; j < n; ++j) {
       float A_j = A[j];
@@ -543,7 +545,10 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
 
       F += wj * (tau[j] - s);
       Sd += wj * (s * (1.0f - s));
+      sw += wj;
     }
+
+    if (std::abs(F) < 1e-7f * sw) break;
 
     // Maintain bracket via monotonicity:
     // F(c) decreases with c. If F>0 -> c too small -> move lo up. Else move hi down.
@@ -559,8 +564,16 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
     const float denom = kBeta * (Sd + 1e-12f);
     const float c_newton = A_i + F / denom;
 
+    float old_A_i = A_i;
+
     // Safeguard: if Newton jumps outside bracket, bisect.
-    A_i = (c_newton <= lo || c_newton >= hi) ? (0.5f * (lo + hi)) : c_newton;
+    bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
+    A_i = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
+
+    if (search::kEnableSearchDebug) {
+      LOG_INFO(" solve_for_A_i: it={} A_i={}->{} out={} F={} Sd={} lo={} hi={}", it, old_A_i, A_i,
+               out_of_bounds, F, Sd, lo, hi);
+    }
   }
 }
 
