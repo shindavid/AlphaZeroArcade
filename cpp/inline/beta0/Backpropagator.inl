@@ -14,6 +14,7 @@ static constexpr float kBeta = 1.702f;  // logistic approximation constant
 static constexpr float kInvBeta = 1.0f / kBeta;
 
 static constexpr float kLambda = 0.f;  // pi contribution to w_{ij}
+static constexpr bool kDisableZMargining = true;
 
 template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
@@ -370,20 +371,23 @@ void Backpropagator<Traits>::compute_ratings() {
     return;
   }
 
-  const int n = n_ - 1;
-
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
   auto w = sibling_write_data_(sw_w);
   auto tau = sibling_write_data_(sw_tau);
 
-  c = (lV_i - lV) / (lU_i + lU).sqrt();
-  auto P_i_ratio = P_i / (P_i + P);
-  for (int j = 0; j < n; j++) {
-    z[j] = kInvBeta * math::fast_coarse_logit(P_i_ratio[j]);
+  if (kDisableZMargining) {
+    z.setZero();
+  } else {
+    const int n = n_ - 1;
+    c = (lV_i - lV) / (lU_i + lU).sqrt();
+    auto P_i_ratio = P_i / (P_i + P);
+    for (int j = 0; j < n; j++) {
+      z[j] = kInvBeta * math::fast_coarse_logit(P_i_ratio[j]);
+    }
+    z -= c;
+    // TODO: replace above with a clamped calculation for z
   }
-  z -= c;
-  // TODO: replace above with a clamped calculation for z
 
   tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
   w = P + kLambda * pi;
