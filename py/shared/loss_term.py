@@ -168,6 +168,7 @@ class ValueUncertaintyLossTerm(LossTerm):
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
 
+        win_value = win_value.detach()
         Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
 
         d1 = (Q_prior - Q_min) ** 2
