@@ -32,7 +32,6 @@ struct GeneralContext {
     void clear();
 
     StateHistory history;
-    group::element_t canonical_sym = -1;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;

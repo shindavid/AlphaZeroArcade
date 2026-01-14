@@ -39,12 +39,8 @@ struct SearchContext {
   search_path_t search_path;
 
   EvalRequest eval_request;
-  StateHistory raw_history;
-  StateHistoryArray history_array;      // used in expand_all_children() only
-  StateHistory leaf_canonical_history;  // only initialized when needed for nn eval
+  StateHistory history;
   core::seat_index_t active_seat;
-  group::element_t root_canonical_sym;
-  group::element_t leaf_canonical_sym;
 
   bool mid_expansion = false;
   bool mid_visit = false;

@@ -194,12 +194,9 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
         score = score_sq.cwiseSqrt();
       }
 
-      group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
       for (int e = 0; e < n; ++e) {
         auto edge = lookup_table.get_edge(node, e);
-        core::action_t action = edge->action;
-        Game::Symmetries::apply(action, inv_sym, node->action_mode());
-        actions(e) = action;
+        actions(e) = edge->action;
       }
       argmax.setZero();
       argmax(argmax_index) = 1;
@@ -406,8 +403,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   core::seat_index_t seat = stable_data.active_seat;
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   results.valid_actions.reset();
   results.P.setZero();
@@ -419,7 +414,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   int i = 0;
   for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    Game::Symmetries::apply(action, inv_sym, mode);
     results.valid_actions.set(action, true);
     actions[i] = action;
 

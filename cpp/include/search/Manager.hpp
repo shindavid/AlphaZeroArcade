@@ -234,7 +234,6 @@ class Manager {
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);
-  void set_leaf_canonical_history(SearchContext& context);
   int sample_chance_child_index(const SearchContext& context);
 
   void prune_policy_target(group::element_t inv_sym);
