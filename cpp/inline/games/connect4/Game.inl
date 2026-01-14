@@ -1,7 +1,5 @@
 #include "games/connect4/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
-
 #include <boost/lexical_cast.hpp>
 
 #include <bit>
@@ -76,11 +74,6 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
       throw util::Exception("Unknown group element: {}", sym);
     }
   }
-}
-
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
-  return DefaultCanonicalizer::get(state);
 }
 
 inline void Game::Rules::init_state(State& state) {

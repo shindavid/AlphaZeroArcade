@@ -1,6 +1,5 @@
 #include "games/hex/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
 #include "games/hex/Constants.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/EigenUtil.hpp"
@@ -45,11 +44,6 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
     default:
       throw util::Exception("Unknown group element: {}", sym);
   }
-}
-
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
-  return DefaultCanonicalizer::get(state);
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
