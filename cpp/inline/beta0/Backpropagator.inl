@@ -387,8 +387,19 @@ void Backpropagator<Traits>::compute_ratings() {
   }
 
   tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
-  w = P + kLambda * pi;
+  if (tau.isConstant(1.0f, 0.0f)) {
+    // all tau are 1 - put all policy mass on this action
+    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
+    full_write_data_(fw_A, i_) = -1.f;
+    return;
+  } else if (tau.isZero(0.f)) {
+    // all tau are 0 - put no policy mass on this action
+    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+    calibrate_ratings();
+    return;
+  }
 
+  w = P + kLambda * pi;
   solve_for_A_i(w, tau, A, A_i);
   full_write_data_(fw_A, i_) = A_i;
   calibrate_ratings();
@@ -501,9 +512,6 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray& tau,
                                            const LocalArray& A, float& A_i) {
-  if (tau.isZero(0.f) || tau.isConstant(1.f, 0.f)) {
-    print_debug_info();
-  }
   RELEASE_ASSERT(!tau.isZero(0.f), "All tau values are zero - cannot solve for A_i");
   RELEASE_ASSERT(!tau.isConstant(1.f, 0.f), "All tau values are one - cannot solve for A_i");
   constexpr float kSat = math::detail::SigmoidLUT::kXMax;
