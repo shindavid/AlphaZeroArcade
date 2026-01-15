@@ -87,6 +87,42 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
 }
 
 template <search::concepts::Traits Traits, typename Derived>
+void AlgorithmsBase<Traits, Derived>::init_root_edges(GeneralContext& general_context) {
+  const search::SearchParams& search_params = general_context.search_params;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  if (!search_params.full_search) return;
+  if (!manager_params.enable_exploratory_visits) return;
+
+  RootInfo& root_info = general_context.root_info;
+  LookupTable& lookup_table = general_context.lookup_table;
+  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
+  auto& rng = general_context.aux_state.rng;
+
+  Node* root = lookup_table.get_node(root_info.node_index);
+  int n = root->stable_data().num_valid_actions;
+
+  RELEASE_ASSERT(n > 0);
+  int XC[n];
+  for (int i = 0; i < n; ++i) {
+    XC[i] = 0;
+  }
+  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+  LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
+  const float* f = noise.data();
+  std::discrete_distribution<int> dist(f, f + n);
+  for (int i = 0; i < 30; ++i) {  // TODO: make this 30 configurable
+    int a = dist(rng);
+    XC[a] += 1;
+  }
+
+  for (int i = 0; i < n; ++i) {
+    Edge* edge = lookup_table.get_edge(root, i);
+    edge->XC = XC[i];
+  }
+}
+
+template <search::concepts::Traits Traits, typename Derived>
 int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
   // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
   const GeneralContext& general_context = *context.general_context;
@@ -102,40 +138,45 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
   Array W(n);
   Array pi(n);
   Array XC(n);
+  Array XM(n);
   Array RC(n);
   Array S(n);
+  Array N(n);
   Array score_sq(n);
-  int xi = -1;
-  int N;
+  int pN;
+  bool XM_any = false;
 
   mit::unique_lock lock(node->mutex());
-  N = node->stats().N + 1;
+  pN = node->stats().N + 1;
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table.get_edge(node, i);
     Node* child = lookup_table.get_node(edge->child_index);
     if (child) {
       W(i) = child->stats().W[seat];
+      N(i) = child->stats().N;
     } else {
       W(i) = edge->child_AU[seat];
+      N(i) = 0;
     }
     pi(i) = edge->pi;
     XC(i) = edge->XC;
     RC(i) = edge->RC;
-    if (edge->XC > 0 && xi < 0) {
-      xi = i;
-    }
+
+    bool xc_active = XC(i) > N(i);
+    XM(i) = xc_active;
+    XM_any |= xc_active;
   }
   lock.unlock();
 
-  S = N - RC;
+  S = pN - RC;
 
   int argmax_index;
   if (search_params.tree_size_limit == 1) {
     // net-only, use pi
     pi.maxCoeff(&argmax_index);
   } else {
-    if (xi >= 0) {
-      argmax_index = xi;
+    if (XM_any) {
+      XM.maxCoeff(&argmax_index);
     } else {
       score_sq = W * pi * pi * S * S;
       score_sq.maxCoeff(&argmax_index);
@@ -146,11 +187,9 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
       Array actions(n);
       Array argmax(n);
       Array sqrt_W = W.cwiseSqrt();
-      Array Narr(n);
 
-      if (xi >= 0) {
-        score.fill(0.f);
-        score(xi) = 1.f;
+      if (XM_any) {
+        score = XM;
       } else {
         score = score_sq.cwiseSqrt();
       }
@@ -161,9 +200,6 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
         core::action_t action = edge->action;
         Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
-
-        auto child = lookup_table.get_node(edge->child_index);
-        Narr(e) = child ? child->stats().N : 0;
       }
       argmax.setZero();
       argmax(argmax_index) = 1;
@@ -171,10 +207,10 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
       std::ostringstream ss;
       ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "S",     "score",
-                                                        "N",      "RC",      "XC", "argmax"};
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "S",  "score",
+                                                        "N",      "RC",      "XC", "XM", "argmax"};
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, Narr, RC, XC, argmax));
+        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, N, RC, XC, XM, argmax));
 
       eigen_util::PrintArrayFormatMap fmt_map{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
@@ -240,10 +276,6 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
 
     Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU);
 
-    bool is_root = node == root;
-    int XC[n];
-    populate_XC(context, is_root, XC, n);
-
     LocalPolicyArray A = P;
     for (int i = 0; i < n; ++i) {
       A(i) = math::fast_coarse_log_less_than_1(P(i));
@@ -257,7 +289,6 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
-      edge->XC = XC[i];
       Calculations<Traits>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
       edge->child_lQW = edge->child_lAUV[seat];
     }
@@ -622,34 +653,6 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.Q_min = record->Q_min;
   view.Q_max = record->Q_max;
   view.W = record->W;
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::populate_XC(SearchContext& context, bool is_root, int* XC,
-                                                  int n) {
-  GeneralContext& general_context = *context.general_context;
-  const search::SearchParams& search_params = general_context.search_params;
-  const ManagerParams& manager_params = general_context.manager_params;
-  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
-  auto& rng = general_context.aux_state.rng;
-
-  for (int i = 0; i < n; ++i) {
-    XC[i] = 0;
-  }
-  if (is_root) {
-    if (search_params.full_search) {
-      if (manager_params.enable_exploratory_visits) {
-        double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
-        LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
-        const float* f = noise.data();
-        std::discrete_distribution<int> dist(f, f + n);
-        for (int i = 0; i < 30; ++i) {  // TODO: make this 30 configurable
-          int a = dist(rng);
-          XC[a] += 1;
-        }
-      }
-    }
-  }
 }
 
 }  // namespace beta0

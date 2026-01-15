@@ -65,6 +65,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
+  static void init_root_edges(GeneralContext&);
 
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
@@ -74,9 +75,6 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
-
- protected:
-  static void populate_XC(SearchContext& context, bool is_root, int* XC, int n);
 };
 
 template <search::concepts::Traits Traits>

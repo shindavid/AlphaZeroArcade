@@ -317,6 +317,8 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     initialize_edges(root);
   }
 
+  Algorithms::init_root_edges(general_context_);
+
   if (all_children_edges_initialized(root)) {
     return core::kContinue;
   }

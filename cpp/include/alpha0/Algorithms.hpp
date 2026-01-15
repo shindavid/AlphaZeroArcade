@@ -83,6 +83,7 @@ class AlgorithmsBase : public x0::Algorithms<Traits> {
   static bool should_short_circuit(const Edge* edge, const Node* child);
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
+  static void init_root_edges(GeneralContext&) {}
   static int get_best_child_index(const SearchContext& context);
   static void load_evaluations(SearchContext& context);
 

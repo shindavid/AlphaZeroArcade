@@ -198,9 +198,6 @@ void Backpropagator<Traits>::apply_updates() {
   node_->stats() = stats_;  // copy back
   node_->stats().N = N;
   edge_->RC = N;
-  if (edge_->XC > 0) {
-    edge_->XC--;
-  }
 }
 
 template <search::concepts::Traits Traits>
