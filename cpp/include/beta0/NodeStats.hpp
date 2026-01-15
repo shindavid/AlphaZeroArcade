@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/Constants.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {
@@ -22,6 +23,7 @@ struct NodeStats {
   ValueArray W;      // uncertainty
 
   int N = 0;
+  OutcomeCertainty certainty = OutcomeCertainty::kUncertain;
 };
 
 }  // namespace beta0

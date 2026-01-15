@@ -1,6 +1,7 @@
 #include "beta0/Backpropagator.hpp"
 
 #include "beta0/Calculations.hpp"
+#include "beta0/Constants.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
@@ -181,6 +182,11 @@ void Backpropagator<Traits>::compute_update_rules() {
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
+  if (stats_.lQW[seat_] == util::Gaussian1D::neg_inf()) {
+    stats_.certainty = OutcomeCertainty::kCertainLoss;
+  } else if (stats_.lQW[seat_] == util::Gaussian1D::pos_inf()) {
+    stats_.certainty = OutcomeCertainty::kCertainWin;
+  }
 }
 
 template <search::concepts::Traits Traits>
