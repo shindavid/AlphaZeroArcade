@@ -14,7 +14,7 @@ static constexpr float kBeta = 1.702f;  // logistic approximation constant
 static constexpr float kInvBeta = 1.0f / kBeta;
 
 static constexpr float kLambda = 0.f;  // pi contribution to w_{ij}
-static constexpr bool kDisableZMargining = true;
+static constexpr bool kDisableZMargining = false;
 
 template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
