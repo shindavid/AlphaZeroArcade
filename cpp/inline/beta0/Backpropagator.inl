@@ -491,7 +491,7 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
         }
       } else {
         float lQ_j = lQ(j);
-        float S_j = kBeta * ((lQ_i - lQ_j) / std::sqrt(lW_i + lW_j) + z[j]);
+        float S_j = kBeta * ((lQ_i - lQ_j) / std::sqrt(lW_i + lW_j) - z[j]);
         tau[j] = math::fast_coarse_sigmoid(S_j);
       }
     }
