@@ -70,9 +70,6 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
     Node* root = lookup_table.get_node(root_info.node_index);
 
     StateHistory history = root_info.history;  // copy
-    for (auto& state : history) {
-      Game::Symmetries::apply(state, root_info.canonical_sym);
-    }
     State& cur_state = history.current();
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
