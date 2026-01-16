@@ -663,7 +663,6 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   mit::unique_lock lock(parent->mutex());
   set_edge_state(context, edge, Edge::kExpanded);
-  update_child_expand_count(parent);
   lock.unlock();
 
   context.mid_expansion = false;
@@ -792,23 +791,6 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node
     ++i;
   }
   return -1;
-}
-
-template <search::concepts::Traits Traits>
-void Manager<Traits>::update_child_expand_count(Node* node, int k) {
-  if (!node->increment_child_expand_count(k)) return;
-
-  // all children have been expanded, check for triviality
-
-  const LookupTable& lookup_table = general_context_.lookup_table;
-  int n = node->stable_data().num_valid_actions;
-
-  core::node_pool_index_t first_child_index = lookup_table.get_edge(node, 0)->child_index;
-  for (int i = 1; i < n; i++) {
-    if (lookup_table.get_edge(node, i)->child_index != first_child_index) return;
-  }
-
-  node->mark_as_trivial();
 }
 
 template <search::concepts::Traits Traits>
@@ -941,8 +923,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
     context.eval_request.emplace_back(child, context.history, child_state, sym, incorporate);
   }
-
-  update_child_expand_count(node, expand_count);
 }
 
 template <search::concepts::Traits Traits>

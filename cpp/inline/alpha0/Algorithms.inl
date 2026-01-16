@@ -287,7 +287,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   Derived::write_results(general_context, root, results);
   results.policy_target = results.counts;
   results.provably_lost = stats.provably_losing[stable_data.active_seat];
-  results.trivial = root->trivial();
   if (manager_params.forced_playouts && root_info.add_noise) {
     Derived::prune_policy_target(general_context, results);
   }

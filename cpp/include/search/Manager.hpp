@@ -228,7 +228,6 @@ class Manager {
   static void short_circuit_backprop(SearchContext& context);
 
   core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
-  void update_child_expand_count(Node* node, int k = 1);
   void initialize_edges(Node* node);
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
