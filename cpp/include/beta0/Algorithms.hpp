@@ -55,7 +55,7 @@ class AlgorithmsBase : public alpha0::AlgorithmsBase<Traits, Derived> {
   static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
   static void init_node_stats_from_terminal(Node* node);
-  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual);
+  static void update_node_stats(Node* node, bool undo_virtual);
   static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
   static void virtually_update_node_stats(Node* node) {}
   static void virtually_update_node_stats_and_edge(Node* node, Edge* edge) {}

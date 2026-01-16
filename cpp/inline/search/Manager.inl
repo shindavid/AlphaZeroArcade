@@ -442,7 +442,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    pure_backprop(context);
+    standard_backprop(context);
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -492,10 +492,8 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
 
       if (Algorithms::should_short_circuit(edge, child)) {
         short_circuit_backprop(context);
-      } else if (child->is_terminal()) {
-        pure_backprop(context);
       } else {
-        standard_backprop(context, false);
+        standard_backprop(context);
       }
 
       lock.lock();
@@ -646,11 +644,7 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       }
       context.expanded_new_node = false;
     } else {
-      if (terminal) {
-        pure_backprop(context);
-      } else {
-        standard_backprop(context, do_virtual);
-      }
+      standard_backprop(context, do_virtual);
     }
   } else {
     edge->child_index = context.initialization_index;
@@ -668,29 +662,6 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
 
   context.mid_expansion = false;
   return core::kContinue;
-}
-
-template <search::concepts::Traits Traits>
-void Manager<Traits>::pure_backprop(SearchContext& context) {
-  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  if (search::kEnableSearchDebug) {
-    LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
-  }
-
-  RELEASE_ASSERT(!context.search_path.empty());
-  Node* last_node = context.search_path.back().node;
-
-  Algorithms::backprop(context, last_node, nullptr,
-                       [&] { Algorithms::init_node_stats_from_terminal(last_node); });
-
-  for (int i = context.search_path.size() - 2; i >= 0; --i) {
-    Edge* edge = context.search_path[i].edge;
-    Node* node = context.search_path[i].node;
-
-    Algorithms::backprop(context, node, edge,
-                         [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
-  }
-  Algorithms::validate_search_path(context);
 }
 
 template <search::concepts::Traits Traits>
@@ -740,7 +711,6 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
-  RELEASE_ASSERT(!last_node->is_terminal());
   auto value = GameResults::to_value_array(last_node->stable_data().R);
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
@@ -750,7 +720,7 @@ void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtua
   }
 
   Algorithms::backprop(context, last_node, nullptr,
-                       [&] { Algorithms::init_node_stats_from_nn_eval(last_node, undo_virtual); });
+                       [&] { Algorithms::update_node_stats(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;

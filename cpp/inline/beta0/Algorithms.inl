@@ -32,18 +32,17 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
   NodeStats& stats = node->stats();
-  if (stats.N) return;
+  RELEASE_ASSERT(stats.N == 0);
 
   stats.Q = q;
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
-  stats.N = 1;
   Calculations<Game>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW, kAllowInf);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_node_stats_from_nn_eval(Node* node, bool undo_virtual) {
+void AlgorithmsBase<Traits, Derived>::update_node_stats(Node* node, bool undo_virtual) {
   node->stats().N++;
 }
 

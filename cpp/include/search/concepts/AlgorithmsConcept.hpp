@@ -27,7 +27,7 @@ concept Algorithms =
            search::RootInitPurpose purpose, std::ostream& ss, std::function<void()>& func) {
     { A::backprop(non_const_context, node, edge, func) };
     { A::init_node_stats_from_terminal(node) };
-    { A::init_node_stats_from_nn_eval(node, true) };
+    { A::update_node_stats(node, true) };
     { A::update_node_stats_and_edge(node, edge, true) };
     { A::virtually_update_node_stats(node) };
     { A::virtually_update_node_stats_and_edge(node, edge) };

@@ -73,7 +73,7 @@ class AlgorithmsBase : public x0::Algorithms<Traits> {
 
   static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge) {}
   static void init_node_stats_from_terminal(Node* node);
-  static void init_node_stats_from_nn_eval(Node* node, bool undo_virtual);
+  static void update_node_stats(Node* node, bool undo_virtual);
   static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
   static void virtually_update_node_stats(Node* node);
   static void virtually_update_node_stats_and_edge(Node* node, Edge* edge);
