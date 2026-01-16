@@ -1,5 +1,7 @@
 #include "games/tictactoe/Game.hpp"
 
+#include "core/DefaultCanonicalizer.hpp"
+
 namespace tictactoe {
 
 namespace detail {
@@ -159,6 +161,11 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   };
 
   action = lookup[sym * 9 + action];
+}
+
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
+  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
+  return DefaultCanonicalizer::get(state);
 }
 
 inline void Game::Rules::init_state(State& state) {

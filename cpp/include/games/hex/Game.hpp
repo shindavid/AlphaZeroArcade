@@ -29,6 +29,7 @@ struct Game {
     template <eigen_util::concepts::FTensor Tensor>
     static void apply(Tensor& tensor, group::element_t sym, core::action_mode_t);
     static void apply(core::action_t& action, group::element_t sym, core::action_mode_t);
+    static group::element_t get_canonical_symmetry(const State& state);
   };
 
   struct Rules : public core::RulesBase<Types> {
