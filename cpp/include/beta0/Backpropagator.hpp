@@ -172,6 +172,7 @@ class Backpropagator {
   void apply_updates();
   void print_debug_info();
 
+  bool yield_to_inf_A_j();
   void compute_ratings();
   void calibrate_ratings();
   void compute_policy();

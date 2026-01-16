@@ -1,6 +1,8 @@
 #pragma once
 
 #include "alpha0/NodeStableData.hpp"
+#include "beta0/Calculations.hpp"
+#include "beta0/Constants.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {
@@ -14,11 +16,18 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using State = Game::State;
   using Base = alpha0::NodeStableData<EvalSpec>;
   using ValueArray = Game::Types::ValueArray;
+  using GameResultTensor = Game::Types::GameResultTensor;
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
 
-  template <typename... Ts>
-  NodeStableData(Ts&&... args) : Base(std::forward<Ts>(args)...) {
+  // non-terminal states - U and lUV will be initialized later
+  NodeStableData(const State& state, core::seat_index_t seat) : Base(state, seat) {}
+
+  // terminal states - initialize U and lUV here
+  NodeStableData(const State& state, const GameResultTensor& game_outcome)
+      : Base(state, game_outcome) {
     U.setZero();
+    ValueArray V = Game::GameResults::to_value_array(game_outcome);
+    Calculations<Game>::populate_logit_value_beliefs(V, U, lUV, kAllowInf);
   }
 
   ValueArray U;  // uncertainty

@@ -4,9 +4,11 @@
 #include "beta0/Constants.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
+#include <limits>
 #include <sstream>
 
 namespace beta0 {
@@ -29,7 +31,7 @@ Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge*
   load_remaining_data();
   compute_update_rules();
   apply_updates();
-  print_debug_info();
+  if (search::kEnableSearchDebug) print_debug_info();
 }
 
 template <search::concepts::Traits Traits>
@@ -43,6 +45,7 @@ void Backpropagator<Traits>::load_child_stats(int k, const NodeStats& child_stat
   read_data_(r_lW, k) = child_stats.lQW[seat_].variance();
   read_data2_(r2_Q, k) = child_stats.Q.transpose();
   read_data2_(r2_W, k) = child_stats.W.transpose();
+  RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value");
 }
 
 template <search::concepts::Traits Traits>
@@ -72,6 +75,7 @@ void Backpropagator<Traits>::preload_parent_data() {
       const auto& lUV_k = child->stable_data().lUV[seat_];
       read_data_(r_lV, k) = lUV_k.mean();
       read_data_(r_lU, k) = lUV_k.variance();
+      RELEASE_ASSERT(lUV_k.variance() != util::Gaussian1D::kVarianceUnset, "Invalid lU value");
     } else {
       const auto& lUV_k = child_edge->child_lAUV[seat_];
       read_data_(r_lV, k) = lUV_k.mean();
@@ -80,6 +84,8 @@ void Backpropagator<Traits>::preload_parent_data() {
       read_data_(r_lW, k) = read_data_(r_lU, k);
       read_data2_(r2_Q, k) = child_edge->child_AV.transpose();
       read_data2_(r2_W, k) = child_edge->child_AU.transpose();
+      RELEASE_ASSERT(lUV_k.variance() != util::Gaussian1D::kVarianceUnset, "Invalid lU value2");
+      RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value2");
     }
   }
 
@@ -182,11 +188,6 @@ void Backpropagator<Traits>::compute_update_rules() {
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
-  if (stats_.lQW[seat_] == util::Gaussian1D::neg_inf()) {
-    stats_.certainty = OutcomeCertainty::kCertainLoss;
-  } else if (stats_.lQW[seat_] == util::Gaussian1D::pos_inf()) {
-    stats_.certainty = OutcomeCertainty::kCertainWin;
-  }
 }
 
 template <search::concepts::Traits Traits>
@@ -208,8 +209,6 @@ void Backpropagator<Traits>::apply_updates() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::print_debug_info() {
-  if (!search::kEnableSearchDebug) return;
-
   std::ostringstream ss;
   ss << std::format("{:>{}}", "", context_.log_prefix_n());
 
@@ -302,26 +301,56 @@ void Backpropagator<Traits>::print_debug_info() {
 }
 
 template <search::concepts::Traits Traits>
+bool Backpropagator<Traits>::yield_to_inf_A_j() {
+  // Due to transpositions, we could have other actions that are already +inf. If so, put the
+  // weight on them instead of respecting read_data_(r_A).
+  bool any_pos_inf = false;
+  for (int k = 0; k < n_; k++) {
+    if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
+      any_pos_inf = true;
+      break;
+    }
+  }
+  if (!any_pos_inf) return false;
+
+  for (int k = 0; k < n_; k++) {
+    if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
+      full_write_data_(fw_A, k) = -1.f;
+    } else {
+      full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+    }
+  }
+  calibrate_ratings();
+  return true;
+}
+
+template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
   const util::Gaussian1D lQW_i(read_data_(r_lQ, i_), read_data_(r_lW, i_));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     full_write_data_(fw_A) = read_data_(r_A);
     full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+
     if (full_write_data_(fw_A).isZero(0.f)) {
-      // all actions have -inf rating. This is a losing position. Arbitrarily set an action to -1
+      // All actions have -inf rating. This is a losing position. Arbitrarily set an action to -1.
       full_write_data_(fw_A, i_) = -1.f;
     } else {
-      calibrate_ratings();
+      yield_to_inf_A_j();
     }
     return;
   } else if (lQW_i == util::Gaussian1D::pos_inf()) {
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
-    full_write_data_(fw_A, i_) = -1.f;
+    for (int k = 0; k < n_; k++) {
+      if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
+        full_write_data_(fw_A, k) = -1.f;
+      }
+    }
+    calibrate_ratings();
     return;
   }
 
   if (read_data_(r_lW).isZero(0.f)) {
-    // all actions have zero variance - put all policy mass on the best action(s)
+    // all actions have finite Q with zero variance - put all policy mass on the best action(s)
     float max_lQ = read_data_(r_lQ).maxCoeff();
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
     for (int k = 0; k < n_; k++) {
@@ -362,10 +391,7 @@ void Backpropagator<Traits>::compute_ratings() {
     full_write_data_(fw_A, i_) = -1.f;
     return;
   }
-  if (lW.isConstant(util::Gaussian1D::kVariancePosInf, 0.f)) {
-    // all other actions are +inf. Put no policy mass on this action
-    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
-    calibrate_ratings();
+  if (yield_to_inf_A_j()) {
     return;
   }
 
@@ -602,36 +628,50 @@ void Backpropagator<Traits>::update_QW() {
   //
   // Q_floor is the maximum Q_k over all actions k with W_k = 0 (i.e. no uncertainty).
 
+  ComputationCheckMethod method = kAllowInf;
+
   auto pi = full_write_data_(fw_pi);
   auto W = read_data2_(r2_W);
   auto Q_star = read_data2_(r2_Q_star);
-  auto pi_mat = pi.matrix();
-  auto Q = read_data2_(r2_Q);
 
-  stats_.Q = (Q_star.matrix().transpose() * pi_mat).array();
-
-  // check that stats_.Q is >= 0 everywhere, dump it and abort if not
-  for (int p = 0; p < kNumPlayers; ++p) {
-    if (stats_.Q(p) < Game::GameResults::kMinValue) {
-      std::ostringstream ss;
-      ss << "Backpropagated Q value is invalid: " << stats_.Q.transpose()
-         << "\nQ_foor_: " << Q_floor_ << "\nseat_: " << int(seat_) << "\ni_:" << i_ << "\nQ:\n"
-         << Q << "\nQ_star:\n"
-         << Q_star << "\nW:\n"
-         << W << "\npi:\n"
-         << pi.transpose();
-      LOG_ERROR(ss.str());
-      throw std::runtime_error("Invalid Q value in Backpropagator");
+  float Q_k_check = -1.f;
+  float pi_k_check = -1.f;
+  int k_check = -1;
+  for (int k = 0; k < n_; ++k) {
+    float Q_k = Q_star(k, seat_);
+    float pi_k = pi(k);
+    if (pi_k > 0.f) {
+      if (Q_k > Game::GameResults::kMinValue && Q_k < Game::GameResults::kMaxValue) {
+        method = kAssertFinite;
+        k_check = k;
+        pi_k_check = pi_k;
+        Q_k_check = Q_k;
+        break;
+      }
     }
   }
 
+  Calculations<Game>::dot_product(Q_star, pi, stats_.Q);
+
   auto W_in_mat = W.matrix();
   auto W_across_mat = (Q_star.rowwise() - stats_.Q.transpose()).square().matrix();
-  auto W_p_mat = (W_in_mat + W_across_mat).transpose() * pi_mat;
+  Calculations<Game>::dot_product(W_in_mat + W_across_mat, pi, stats_.W);
 
-  stats_.W = W_p_mat.array();
-
-  Calculations<Traits>::populate_logit_value_beliefs(stats_.Q, stats_.W, stats_.lQW);
+  try {
+    Calculations<Game>::populate_logit_value_beliefs(stats_.Q, stats_.W, stats_.lQW, method);
+  } catch (util::ReleaseAssertionError& e) {
+    LOG_ERROR("Backpropagator Q/W update failed computation check");
+    print_debug_info();
+    LOG_ERROR(" Q_k_check:  {}", Q_k_check);
+    LOG_ERROR(" pi_k_check: {}", pi_k_check);
+    LOG_ERROR(" k_check:    {}", k_check);
+    LOG_ERROR(" pi:         {}", fmt::streamed(pi.transpose()));
+    LOG_ERROR(" Q*:         {}", fmt::streamed(Q_star.transpose()));
+    LOG_ERROR(" W:          {}", fmt::streamed(W.transpose()));
+    LOG_ERROR(" stats_.Q:   {}", fmt::streamed(stats_.Q.transpose()));
+    LOG_ERROR(" stats_.W:   {}", fmt::streamed(stats_.W.transpose()));
+    throw e;
+  }
 }
 
 template <search::concepts::Traits Traits>

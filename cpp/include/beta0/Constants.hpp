@@ -4,11 +4,9 @@
 
 namespace beta0 {
 
-enum OutcomeCertainty : uint8_t {
-  kUncertain = 0,
-  kCertainDraw = 1,
-  kCertainWin = 2,
-  kCertainLoss = 3
+enum ComputationCheckMethod : uint8_t {
+  kAllowInf = 0,
+  kAssertFinite = 1
 };
 
 }  // namespace beta0

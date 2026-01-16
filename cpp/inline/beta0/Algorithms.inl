@@ -2,6 +2,7 @@
 
 #include "beta0/Backpropagator.hpp"
 #include "beta0/Calculations.hpp"
+#include "beta0/Constants.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
@@ -31,21 +32,14 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
   NodeStats& stats = node->stats();
+  if (stats.N) return;
+
   stats.Q = q;
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
   stats.N = 1;
-  Calculations<Traits>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW);
-
-  auto seat = node->stable_data().active_seat;
-  if (stats.Q[seat] == Game::GameResults::kMaxValue) {
-    stats.certainty = OutcomeCertainty::kCertainWin;
-  } else if (stats.Q[seat] == Game::GameResults::kMinValue) {
-    stats.certainty = OutcomeCertainty::kCertainLoss;
-  } else {
-    stats.certainty = OutcomeCertainty::kCertainDraw;
-  }
+  Calculations<Game>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW, kAllowInf);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
@@ -65,7 +59,7 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
   if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
-  if (root->stats().certainty != OutcomeCertainty::kUncertain) return false;
+  if (root->stats().W.isZero(0.f)) return false;
   return root->stats().N <= search_params.tree_size_limit;
 }
 
@@ -277,7 +271,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     ValueArray U_original = U;
     LocalActionValueArray AV_original = AV;
 
-    Calculations<Traits>::calibrate_priors(seat, P, V, U, AV, AU);
+    Calculations<Game>::calibrate_priors(seat, P, V, U, AV, AU);
 
     LocalPolicyArray A = P;
     for (int i = 0; i < n; ++i) {
@@ -292,14 +286,14 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
-      Calculations<Traits>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
+      Calculations<Game>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
       edge->child_lQW = edge->child_lAUV[seat];
     }
 
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
-    Calculations<Traits>::populate_logit_value_beliefs(V, U, stable_data.lUV);
+    Calculations<Game>::populate_logit_value_beliefs(V, U, stable_data.lUV);
 
     stats.Q = V;
     stats.lQW = stable_data.lUV;
@@ -366,7 +360,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         lAUs(e) = edge->child_lAUV[seat].variance();
 
         LogitValueArray child_lAUV;
-        Calculations<Traits>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e),
+        Calculations<Game>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e),
                                                            child_lAUV);
         lAVs_original(e) = child_lAUV[seat].mean();
       }
@@ -418,6 +412,8 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   core::action_t actions[stable_data.num_valid_actions];
 
+  bool provably_lost = stats.Q[seat] == Game::GameResults::kMinValue;
+
   int i = 0;
   for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
     results.valid_actions.set(action, true);
@@ -428,7 +424,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
     results.P(action) = edge->P;
 
-    if (stats.certainty == OutcomeCertainty::kCertainLoss) {
+    if (provably_lost) {
       // if losing, just play according to prior
       results.pi(action) = edge->P;
     } else {
@@ -455,7 +451,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
   results.action_mode = mode;
-  results.provably_lost = stats.certainty == OutcomeCertainty::kCertainLoss;
+  results.provably_lost = provably_lost;
 
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
@@ -516,7 +512,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     for (const std::string& line : util::splitlines(ss2.str())) {
       ss << line << line_break;
     }
-    ss << "certainty: " << std::format("{}", stats.certainty) << std::endl;
 
     LOG_INFO(ss.str());
   }

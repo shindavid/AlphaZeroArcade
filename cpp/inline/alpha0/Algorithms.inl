@@ -46,16 +46,18 @@ void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* nod
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) {
   NodeStats& stats = node->stats();
-  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
+  if (stats.RN == 0) {
+    const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
-  stats.Q = q;
-  stats.Q_sq = q * q;
-  stats.RN++;
+    stats.Q = q;
+    stats.Q_sq = q * q;
 
-  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    stats.provably_winning[p] = q(p) >= Game::GameResults::kMaxValue;
-    stats.provably_losing[p] = q(p) <= Game::GameResults::kMinValue;
+    for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+      stats.provably_winning[p] = q(p) >= Game::GameResults::kMaxValue;
+      stats.provably_losing[p] = q(p) <= Game::GameResults::kMinValue;
+    }
   }
+  stats.RN++;
 }
 
 template <search::concepts::Traits Traits, typename Derived>

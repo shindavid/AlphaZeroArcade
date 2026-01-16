@@ -8,36 +8,41 @@
 
 namespace beta0 {
 
-template <search::concepts::Traits Traits>
-void Calculations<Traits>::calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
-                                            const ValueArray& V, ValueArray& U,
-                                            LocalActionValueArray& AV,
-                                            const LocalActionValueArray& AU) {
+template <core::concepts::Game Game>
+void Calculations<Game>::calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
+                                          ValueArray& V, ValueArray& U,
+                                          LocalActionValueArray& AV,
+                                          const LocalActionValueArray& AU) {
+  constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
+  constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    V(p) = std::clamp(V(p), kMin, kMax);
+  }
   int n = P.size();
   LocalPolicyArray AVs(n);
   for (int i = 0; i < n; ++i) {
-    AVs(i) = AV(i, seat);
+    AVs(i) = std::clamp(AV(i, seat), kMin, kMax);
   }
   shift_AVs(V[seat], P, AVs);
 
   for (int i = 0; i < n; ++i) {
-    AV(i, seat) = AVs(i);
+    float x = std::clamp(AVs(i), kMin, kMax);
+    AV(i, seat) = x;
     static_assert(kNumPlayers == 2, "Assuming 2 players here");
-    AV(i, 1 - seat) = 1.0f - AVs(i);
+    AV(i, 1 - seat) = 1.0f - x;
   }
 
   // Recompute U from adjusted AV and original AU
   auto U_in_mat = AU.matrix();
   auto U_across_mat = (AV.rowwise() - V.transpose()).square().matrix();
-  auto U_mat = (U_in_mat + U_across_mat).transpose() * P.matrix();
-  U = U_mat.array();
+  dot_product(U_in_mat + U_across_mat, P, U);
 }
 
 // TODO: This implementation conservatively prioritizes correctness over performance by using
 // std::log() and math::sigmoid() in favor of faster approximations. Later, we can consider
 // switching to faster approximations if needed.
-template <search::concepts::Traits Traits>
-void Calculations<Traits>::shift_AVs(float V, const LocalPolicyArray& P, LocalPolicyArray& AVs) {
+template <core::concepts::Game Game>
+void Calculations<Game>::shift_AVs(float V, const LocalPolicyArray& P, LocalPolicyArray& AVs) {
   const int n = P.size();
 
   // Compute logits once.
@@ -114,30 +119,38 @@ void Calculations<Traits>::shift_AVs(float V, const LocalPolicyArray& P, LocalPo
   }
 }
 
-template <search::concepts::Traits Traits>
-void Calculations<Traits>::populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
-                                                        LogitValueArray& lQW) {
+template <core::concepts::Game Game>
+void Calculations<Game>::populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
+                                                      LogitValueArray& lQW,
+                                                      ComputationCheckMethod method) {
   if (kNumPlayers == 2) {
     // In this case, we only need to compute for one player, since the other is just negation.
-    lQW[0] = compute_logit_value_belief(Q[0], W[0]);
+    lQW[0] = compute_logit_value_belief(Q[0], W[0], method);
     lQW[1] = -lQW[0];
+    if (lQW[1].variance() < 0.f) {
+      RELEASE_ASSERT(W[1] == 0.f, "Q: [{}, {}] W: [{}, {}]", Q[0], Q[1], W[0], W[1]);
+      RELEASE_ASSERT(Q[1] == 0.f || Q[1] == 1.f, "Q: [{}, {}] W: [{}, {}]", Q[0], Q[1], W[0], W[1]);
+    }
   } else {
     for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
-      lQW[p] = compute_logit_value_belief(Q[p], W[p]);
+      lQW[p] = compute_logit_value_belief(Q[p], W[p], method);
     }
   }
 }
 
-template <search::concepts::Traits Traits>
-util::Gaussian1D Calculations<Traits>::compute_logit_value_belief(float Q, float W) {
+template <core::concepts::Game Game>
+util::Gaussian1D Calculations<Game>::compute_logit_value_belief(float Q, float W,
+                                                                ComputationCheckMethod method) {
   constexpr float kMin = Game::GameResults::kMinValue;
   constexpr float kMax = Game::GameResults::kMaxValue;
   constexpr float kWidth = kMax - kMin;
   constexpr float kInvWidth = 1.0f / kWidth;
 
   if (Q <= kMin) {
+    RELEASE_ASSERT(method != kAssertFinite, "(Q, W): ({}, {})", Q, W);
     return util::Gaussian1D::neg_inf();
   } else if (Q >= kMax) {
+    RELEASE_ASSERT(method != kAssertFinite, "(Q, W): ({}, {})", Q, W);
     return util::Gaussian1D::pos_inf();
   }
   if (W == 0) {
@@ -152,6 +165,9 @@ util::Gaussian1D Calculations<Traits>::compute_logit_value_belief(float Q, float
   mu = (mu - kMin) * kInvWidth;
   sigma_sq *= kInvWidth * kInvWidth;
 
+  mu = std::clamp(mu, 1e-6f, 1.0f - 1e-6f);
+  sigma_sq = std::max(sigma_sq, 1e-6f);
+
   float mult = 1.0f / (mu * mu * (1 - mu) * (1 - mu));
 
   float theta1 = math::fast_coarse_logit(mu);
@@ -159,7 +175,38 @@ util::Gaussian1D Calculations<Traits>::compute_logit_value_belief(float Q, float
   float theta = theta1 - theta2;
 
   float omega_sq = sigma_sq * mult;
+  RELEASE_ASSERT(omega_sq > 0.f, "(Q, W, theta, omega_sq): ({}, {}, {}, {})", Q, W, theta,
+                 omega_sq);
   return util::Gaussian1D(theta, omega_sq);
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::dot_product(const LocalActionValueArray& X, const LocalPolicyArray& pi,
+                                     ValueArray& out) {
+  out = (X.matrix().transpose() * pi.matrix()).array();
+
+  const auto support = (pi != 0.0f);
+  const bool full_support = support.all();
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    const auto xcol = X.col(p);
+
+    float x_min;
+    float x_max;
+    if (full_support) {
+      x_min = xcol.minCoeff();
+      x_max = xcol.maxCoeff();
+    } else {
+      x_min = support.select(xcol, std::numeric_limits<float>::max()).minCoeff();
+      x_max = support.select(xcol, std::numeric_limits<float>::lowest()).maxCoeff();
+    }
+
+    if (x_min == x_max) {
+      out(p) = x_min;
+    } else {
+      out(p) = std::clamp(out(p), 1e-6f, 1.0f - 1e-6f);  // avoid extreme values
+    }
+  }
 }
 
 }  // namespace beta0

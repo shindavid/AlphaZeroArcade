@@ -597,6 +597,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
 
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), state, game_outcome);
+      Algorithms::init_node_stats_from_terminal(child);
     } else {
       new (child) Node(lookup_table.get_random_mutex(), state, context.active_seat);
     }
@@ -872,7 +873,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
-  int expand_count = 0;
   for (int e = 0; e < n_actions; e++) {
     Edge* edge = lookup_table.get_edge(node, e);
     if (edge->child_index >= 0) continue;
@@ -887,7 +887,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
       child_active_seat = Rules::get_current_player(child_state);
     }
 
-    expand_count++;
     set_edge_state(context, edge, Edge::kPreExpanded);
 
     TransposeKey transpose_key = Keys::transpose_key(child_state);
@@ -903,11 +902,11 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     Node* child = lookup_table.get_node(edge->child_index);
 
     core::seat_index_t parent_active_seat = node->stable_data().active_seat;
-    DEBUG_ASSERT(parent_active_seat == context.active_seat);
 
     GameResultTensor game_outcome;
     if (Rules::is_terminal(child_state, parent_active_seat, edge->action, game_outcome)) {
       new (child) Node(lookup_table.get_random_mutex(), child_state, game_outcome);
+      Algorithms::init_node_stats_from_terminal(child);
     } else {
       new (child) Node(lookup_table.get_random_mutex(), child_state, child_active_seat);
     }
