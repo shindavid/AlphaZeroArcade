@@ -69,8 +69,7 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
 
-    StateHistory history = root_info.history;  // copy
-    State& cur_state = history.current();
+    const State& cur_state = root_info.history.current();
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
