@@ -174,6 +174,5 @@ class ValueUncertaintyLossTerm(LossTerm):
         d1 = (Q_prior - Q_min) ** 2
         d2 = (Q_max - Q_prior) ** 2
         d3 = W
-        actual_Dsq = torch.max(torch.max(d1, d2), 0.5 * d3)  # (B, 2)
-        # actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
+        actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
         return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
