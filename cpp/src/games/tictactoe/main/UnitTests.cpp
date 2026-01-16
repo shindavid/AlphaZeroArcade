@@ -279,4 +279,31 @@ TEST(Symmetry, flip_anti_diag) {
 
 TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
+TEST(Symmetry, canonicalization) {
+  State state = make_state(2, 1);
+
+  std::string expected_repr =
+    "0 1 2  | |O|X|\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | | |\n";
+
+  std::string repr = get_repr(state);
+
+  EXPECT_EQ(repr, expected_repr);
+
+  group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
+  EXPECT_EQ(e, groups::D4::kMirrorHorizontal);
+
+  Game::Symmetries::apply(state, e);
+
+  expected_repr =
+    "0 1 2  |X|O| |\n"
+    "3 4 5  | | | |\n"
+    "6 7 8  | | | |\n";
+
+  repr = get_repr(state);
+
+  EXPECT_EQ(repr, expected_repr);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
