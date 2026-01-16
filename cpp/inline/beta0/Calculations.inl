@@ -10,8 +10,7 @@ namespace beta0 {
 
 template <core::concepts::Game Game>
 void Calculations<Game>::calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
-                                          ValueArray& V, ValueArray& U,
-                                          LocalActionValueArray& AV,
+                                          ValueArray& V, ValueArray& U, LocalActionValueArray& AV,
                                           const LocalActionValueArray& AU) {
   constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
   constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;

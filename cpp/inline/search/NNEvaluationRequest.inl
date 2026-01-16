@@ -13,8 +13,7 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const
       history_(&history),
       split_history_(true),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
-      sym_(sym) {
-}
+      sym_(sym) {}
 
 template <search::concepts::Traits Traits>
 NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
@@ -24,8 +23,7 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group
       history_(&history),
       split_history_(false),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
-      sym_(sym) {
-}
+      sym_(sym) {}
 
 template <search::concepts::Traits Traits>
 template <typename Func>

@@ -19,8 +19,8 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-bool Algorithms<Traits>::validate_and_symmetrize_policy_target(
-  const SearchResults* mcts_results, PolicyTensor& target) {
+bool Algorithms<Traits>::validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
+                                                               PolicyTensor& target) {
   float sum = eigen_util::sum(target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
     // python training code will ignore these rows for policy training.

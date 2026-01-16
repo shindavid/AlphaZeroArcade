@@ -34,8 +34,8 @@ struct Calculations {
   //
   // We cannot do the same for AU due to the structure of the Law of Variance, so we instead
   // recompute U from the adjusted AV and the original AU.
-  static void calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
-                               ValueArray& V, ValueArray& U, LocalActionValueArray& AV,
+  static void calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P, ValueArray& V,
+                               ValueArray& U, LocalActionValueArray& AV,
                                const LocalActionValueArray& AU);
 
   // Replaces AVs with sigmoid(logit(AVs) + c) where c is chosen so that sum_i P[i] * AVs[i] = V

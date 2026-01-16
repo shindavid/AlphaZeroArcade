@@ -8,7 +8,6 @@
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
-#include <limits>
 #include <sstream>
 
 namespace beta0 {
