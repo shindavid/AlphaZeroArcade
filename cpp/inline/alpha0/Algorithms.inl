@@ -7,6 +7,7 @@
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
+#include "x0/Algorithms.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <spdlog/spdlog.h>
@@ -19,17 +20,17 @@
 
 namespace alpha0 {
 
-template <search::concepts::Traits Traits, typename Derived>
+template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* node, Edge* edge,
-                                               MutexProtectedFunc&& func) {
+void Algorithms<Traits>::backprop(SearchContext& context, Node* node, Edge* edge,
+                                  MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  Derived::update_stats(stats, node, context.general_context->lookup_table);
+  update_stats(stats, node, context.general_context->lookup_table);
 
   lock.lock();
 
@@ -43,8 +44,8 @@ void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* nod
   lock.unlock();
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.RN == 0);
   const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
@@ -58,17 +59,16 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_node_stats(Node* node, bool undo_virtual) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_node_stats(Node* node, bool undo_virtual) {
   auto& stats = node->stats();
 
   stats.RN++;
   stats.VN -= undo_virtual;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_node_stats_and_edge(Node* node, Edge* edge,
-                                                                 bool undo_virtual) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {
   auto& stats = node->stats();
 
   edge->E += !undo_virtual;
@@ -76,53 +76,53 @@ void AlgorithmsBase<Traits, Derived>::update_node_stats_and_edge(Node* node, Edg
   stats.VN -= undo_virtual;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::virtually_update_node_stats(Node* node) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::virtually_update_node_stats(Node* node) {
   node->stats().VN++;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
   edge->E++;
   node->stats().VN++;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::undo_virtual_update(Node* node, Edge* edge) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::undo_virtual_update(Node* node, Edge* edge) {
   edge->E--;
   node->stats().VN--;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::validate_search_path(const SearchContext& context) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::validate_search_path(const SearchContext& context) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
 
   LookupTable& lookup_table = context.general_context->lookup_table;
   int N = context.search_path.size();
   for (int i = N - 1; i >= 0; --i) {
-    Derived::validate_state(lookup_table, context.search_path[i].node);
+    validate_state(lookup_table, context.search_path[i].node);
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-bool AlgorithmsBase<Traits, Derived>::should_short_circuit(const Edge* edge, const Node* child) {
+template <search::concepts::Traits Traits>
+bool Algorithms<Traits>::should_short_circuit(const Edge* edge, const Node* child) {
   int edge_count = edge->E;
   int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
   return edge_count < child_count;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
-  const GeneralContext& general_context, const Node* root) {
+template <search::concepts::Traits Traits>
+bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
+                                                       const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
   if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_context,
-                                                     search::RootInitPurpose purpose) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
+                                        search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;
   const search::SearchParams& search_params = general_context.search_params;
 
@@ -162,8 +162,8 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
+template <search::concepts::Traits Traits>
+int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;
@@ -200,12 +200,12 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
     PUCT.maxCoeff(&argmax_index);
   }
 
-  Derived::print_action_selection_details(context, action_selector, argmax_index);
+  print_action_selection_details(context, action_selector, argmax_index);
   return argmax_index;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   const LookupTable& lookup_table = context.general_context->lookup_table;
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
@@ -229,7 +229,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(2), AV.size(), AV.data());
 
     LocalPolicyArray P_adjusted = P_raw;
-    Derived::transform_policy(context, P_adjusted);
+    transform_policy(context, P_adjusted);
 
     stable_data.R = R;
     stable_data.R_valid = true;
@@ -255,9 +255,8 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
-                                                 SearchResults& results) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
   const ManagerParams& manager_params = general_context.manager_params;
@@ -284,12 +283,12 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
     i++;
   }
 
-  Derived::load_action_symmetries(general_context, root, &actions[0], results);
-  Derived::write_results(general_context, root, results);
+  x0::Algorithms<Traits>::load_action_symmetries(general_context, root, &actions[0], results);
+  write_results(general_context, root, results);
   results.policy_target = results.counts;
   results.provably_lost = stats.provably_losing[stable_data.active_seat];
   if (manager_params.forced_playouts && root_info.add_noise) {
-    Derived::prune_policy_target(general_context, results);
+    prune_policy_target(general_context, results);
   }
 
   results.Q = stats.Q;
@@ -297,9 +296,9 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.action_mode = mode;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoParams& params,
-                                                             TrainingInfo& training_info) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
+                                                TrainingInfo& training_info) {
   const SearchResults* mcts_results = params.mcts_results;
   bool use_for_training = params.use_for_training;
   bool previous_used_for_training = params.previous_used_for_training;
@@ -313,7 +312,8 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
   if (use_for_training || previous_used_for_training) {
     training_info.policy_target = mcts_results->policy_target;
     training_info.policy_target_valid =
-      Derived::validate_and_symmetrize_policy_target(mcts_results, training_info.policy_target);
+      x0::Algorithms<Traits>::validate_and_symmetrize_policy_target(mcts_results,
+                                                                    training_info.policy_target);
   }
   if (use_for_training) {
     training_info.action_values_target = mcts_results->AV;
@@ -321,9 +321,9 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_info,
-                                                GameLogFullRecord& full_record) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
+                                   GameLogFullRecord& full_record) {
   full_record.position = training_info.state;
 
   if (training_info.policy_target_valid) {
@@ -345,9 +345,9 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   full_record.action_values_valid = training_info.action_values_target_valid;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& full_record,
-                                                       std::vector<char>& buf) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
+                                          std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
   compact_record.active_seat = full_record.active_seat;
@@ -362,8 +362,8 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   action_values.write_to(buf);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, GameLogView& view) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
   const GameLogCompactRecord* record = params.record;
   const GameLogCompactRecord* next_record = params.next_record;
   const State* cur_pos = params.cur_pos;
@@ -414,18 +414,9 @@ void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, G
   view.active_seat = active_seat;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::print_visit_info(const SearchContext& context) {
-  if (search::kEnableSearchDebug) {
-    const Node* node = context.visit_node;
-    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
-             node->stable_data().active_seat);
-  }
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node* node,
-                                                   LookupTable& lookup_table) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
+                                      LookupTable& lookup_table) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -523,9 +514,9 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& general_context,
-                                                    const Node* root, SearchResults& results) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::write_results(const GeneralContext& general_context, const Node* root,
+                                       SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -581,8 +572,8 @@ void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& genera
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::validate_state(LookupTable& lookup_table, Node* node) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::validate_state(LookupTable& lookup_table, Node* node) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (node->is_terminal()) return;
 
@@ -604,9 +595,8 @@ void AlgorithmsBase<Traits, Derived>::validate_state(LookupTable& lookup_table, 
   DEBUG_ASSERT(stats_copy.VN >= 0);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::transform_policy(SearchContext& context,
-                                                       LocalPolicyArray& P) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
   core::node_pool_index_t index = context.initialization_index;
   GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
@@ -616,7 +606,7 @@ void AlgorithmsBase<Traits, Derived>::transform_policy(SearchContext& context,
   if (index == root_info.node_index) {
     if (search_params.full_search) {
       if (manager_params.dirichlet_mult) {
-        Derived::add_dirichlet_noise(general_context, P);
+        add_dirichlet_noise(general_context, P);
       }
       float temp = general_context.aux_state.root_softmax_temperature.value();
       if (temp > 0.0f) {
@@ -627,9 +617,8 @@ void AlgorithmsBase<Traits, Derived>::transform_policy(SearchContext& context,
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::add_dirichlet_noise(GeneralContext& general_context,
-                                                          LocalPolicyArray& P) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::add_dirichlet_noise(GeneralContext& general_context, LocalPolicyArray& P) {
   const ManagerParams& manager_params = general_context.manager_params;
   auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
   auto& rng = general_context.aux_state.rng;
@@ -640,41 +629,9 @@ void AlgorithmsBase<Traits, Derived>::add_dirichlet_noise(GeneralContext& genera
   P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::load_action_symmetries(const GeneralContext& general_context,
-                                                             const Node* root,
-                                                             core::action_t* actions,
-                                                             SearchResults& results) {
-  const auto& stable_data = root->stable_data();
-  const LookupTable& lookup_table = general_context.lookup_table;
-  const State& root_state = general_context.root_info.history.current();
-
-  using Item = ActionSymmetryTable::Item;
-  std::vector<Item> items;
-  items.reserve(stable_data.num_valid_actions);
-
-  using equivalence_class_t = int;
-  using map_t = std::unordered_map<State, equivalence_class_t>;
-  map_t map;
-
-  for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    State state = root_state;
-    Edge* edge = lookup_table.get_edge(root, e);
-    Game::Rules::apply(state, edge->action);
-    group::element_t sym = Symmetries::get_canonical_symmetry(state);
-    Symmetries::apply(state, sym);
-
-    auto [it, inserted] = map.try_emplace(state, map.size());
-    items.emplace_back(it->second, actions[e]);
-  }
-
-  results.action_symmetry_table.load(items);
-  results.trivial = (map.size() <= 1);
-}
-
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::prune_policy_target(const GeneralContext& general_context,
-                                                          SearchResults& results) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_context,
+                                             SearchResults& results) {
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -754,10 +711,10 @@ void AlgorithmsBase<Traits, Derived>::prune_policy_target(const GeneralContext& 
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const SearchContext& context,
-                                                                     const PuctCalculator& selector,
-                                                                     int argmax_index) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::print_action_selection_details(const SearchContext& context,
+                                                        const PuctCalculator& selector,
+                                                        int argmax_index) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {

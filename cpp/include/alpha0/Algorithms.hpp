@@ -16,14 +16,8 @@
 
 namespace alpha0 {
 
-// CRTP base class
-//
-// This allows us to effectively have alpha0::Algorithms methods invoke beta0::Algorithms methods.
-//
-// To make this work, we need to follow the discipline of always invoking Derived::func() rather
-// than simply func() within alpha0::Algorithms methods.
-template <search::concepts::Traits Traits, typename Derived>
-class AlgorithmsBase : public x0::Algorithms<Traits> {
+template <search::concepts::Traits Traits>
+class Algorithms : public x0::Algorithms<Traits> {
  public:
   using Game = Traits::Game;
   using Edge = Traits::Edge;
@@ -71,7 +65,6 @@ class AlgorithmsBase : public x0::Algorithms<Traits> {
   template <typename MutexProtectedFunc>
   static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
-  static void init_edge_from_child(const GeneralContext&, Node* parent, Edge* edge) {}
   static void init_node_stats_from_terminal(Node* node);
   static void update_node_stats(Node* node, bool undo_virtual);
   static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
@@ -93,23 +86,16 @@ class AlgorithmsBase : public x0::Algorithms<Traits> {
   static void serialize_record(const GameLogFullRecord&, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
 
-  static void print_visit_info(const SearchContext&);
-
  protected:
   static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds
   static void transform_policy(SearchContext&, LocalPolicyArray& P);
   static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
-  static void load_action_symmetries(const GeneralContext&, const Node* root,
-                                     core::action_t* actions, SearchResults&);
   static void prune_policy_target(const GeneralContext&, SearchResults&);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
 };
-
-template <search::concepts::Traits Traits>
-struct Algorithms : public AlgorithmsBase<Traits, Algorithms<Traits>> {};
 
 }  // namespace alpha0
 

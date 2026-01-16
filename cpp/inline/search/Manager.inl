@@ -638,7 +638,6 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
       // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
       // when the lookup_table is defragmented.
       context.search_path.pop_back();
-      Algorithms::init_edge_from_child(general_context_, parent, edge);
       if (do_virtual) {
         undo_virtual_backprop(context);
       }
@@ -648,7 +647,6 @@ core::yield_instruction_t Manager<Traits>::resume_expansion(SearchContext& conte
     }
   } else {
     edge->child_index = context.initialization_index;
-    Algorithms::init_edge_from_child(general_context_, parent, edge);
   }
 
   // TODO: in the !expanded_new_node case, we should check to see if there are sister edges from the
@@ -863,7 +861,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
-      Algorithms::init_edge_from_child(general_context_, node, edge);
       context.history.undo();
       continue;
     }

@@ -1,5 +1,6 @@
 #include "beta0/Algorithms.hpp"
 
+#include "alpha0/Algorithms.hpp"
 #include "beta0/Backpropagator.hpp"
 #include "beta0/Calculations.hpp"
 #include "beta0/Constants.hpp"
@@ -8,15 +9,16 @@
 #include "util/EigenUtil.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
+#include "x0/Algorithms.hpp"
 
 #include <cmath>
 
 namespace beta0 {
 
-template <search::concepts::Traits Traits, typename Derived>
+template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
-void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* node, Edge* edge,
-                                               MutexProtectedFunc&& func) {
+void Algorithms<Traits>::backprop(SearchContext& context, Node* node, Edge* edge,
+                                  MutexProtectedFunc&& func) {
   if (!edge) {
     mit::unique_lock lock(node->mutex());
     func();
@@ -27,8 +29,8 @@ void AlgorithmsBase<Traits, Derived>::backprop(SearchContext& context, Node* nod
   Backpropagator backpropagator(context, node, edge, func);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
   const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
 
   NodeStats& stats = node->stats();
@@ -41,20 +43,19 @@ void AlgorithmsBase<Traits, Derived>::init_node_stats_from_terminal(Node* node) 
   Calculations<Game>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW, kAllowInf);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_node_stats(Node* node, bool undo_virtual) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_node_stats(Node* node, bool undo_virtual) {
   node->stats().N++;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::update_node_stats_and_edge(Node* node, Edge* edge,
-                                                                 bool undo_virtual) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {
   node->stats().N++;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
-  const GeneralContext& general_context, const Node* root) {
+template <search::concepts::Traits Traits>
+bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& general_context,
+                                                       const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
   if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
@@ -62,9 +63,9 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   return root->stats().N <= search_params.tree_size_limit;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_context,
-                                                     search::RootInitPurpose purpose) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
+                                        search::RootInitPurpose purpose) {
   RootInfo& root_info = general_context.root_info;
   LookupTable& lookup_table = general_context.lookup_table;
 
@@ -85,8 +86,8 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::init_root_edges(GeneralContext& general_context) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::init_root_edges(GeneralContext& general_context) {
   const search::SearchParams& search_params = general_context.search_params;
   const ManagerParams& manager_params = general_context.manager_params;
 
@@ -121,8 +122,8 @@ void AlgorithmsBase<Traits, Derived>::init_root_edges(GeneralContext& general_co
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& context) {
+template <search::concepts::Traits Traits>
+int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
@@ -229,8 +230,8 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
   return argmax_index;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::load_evaluations(SearchContext& context) {
   GeneralContext& general_context = *context.general_context;
   const LookupTable& lookup_table = general_context.lookup_table;
   const RootInfo& root_info = general_context.root_info;
@@ -359,8 +360,7 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
         lAUs(e) = edge->child_lAUV[seat].variance();
 
         LogitValueArray child_lAUV;
-        Calculations<Game>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e),
-                                                           child_lAUV);
+        Calculations<Game>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e), child_lAUV);
         lAVs_original(e) = child_lAUV[seat].mean();
       }
 
@@ -390,9 +390,8 @@ void AlgorithmsBase<Traits, Derived>::load_evaluations(SearchContext& context) {
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_context,
-                                                 SearchResults& results) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_results(const GeneralContext& general_context, SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
   const LookupTable& lookup_table = general_context.lookup_table;
 
@@ -448,7 +447,7 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   results.Q_max = stats.Q_max;
   results.W = stats.W;
 
-  Derived::load_action_symmetries(general_context, root, &actions[0], results);
+  x0::Algorithms<Traits>::load_action_symmetries(general_context, root, &actions[0], results);
   results.action_mode = mode;
   results.provably_lost = provably_lost;
 
@@ -516,9 +515,9 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoParams& params,
-                                                             TrainingInfo& training_info) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params,
+                                                TrainingInfo& training_info) {
   const SearchResults* mcts_results = params.mcts_results;
 
   bool use_for_training = params.use_for_training;
@@ -533,7 +532,8 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
   if (use_for_training || previous_used_for_training) {
     training_info.policy_target = mcts_results->pi;
     training_info.policy_target_valid =
-      Derived::validate_and_symmetrize_policy_target(mcts_results, training_info.policy_target);
+      x0::Algorithms<Traits>::validate_and_symmetrize_policy_target(mcts_results,
+                                                                    training_info.policy_target);
   }
   if (use_for_training) {
     training_info.action_values_target = mcts_results->AQ;
@@ -551,10 +551,10 @@ void AlgorithmsBase<Traits, Derived>::write_to_training_info(const TrainingInfoP
   }
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_info,
-                                                GameLogFullRecord& full_record) {
-  Base::to_record(training_info, full_record);
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
+                                   GameLogFullRecord& full_record) {
+  alpha0::Algorithms<Traits>::to_record(training_info, full_record);
 
   full_record.Q = training_info.Q;
   full_record.Q_min = training_info.Q_min;
@@ -569,9 +569,9 @@ void AlgorithmsBase<Traits, Derived>::to_record(const TrainingInfo& training_inf
   full_record.AW_valid = training_info.AW_valid;
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& full_record,
-                                                       std::vector<char>& buf) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
+                                          std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
   compact_record.Q = full_record.Q;
@@ -592,8 +592,8 @@ void AlgorithmsBase<Traits, Derived>::serialize_record(const GameLogFullRecord& 
   AW.write_to(buf);
 }
 
-template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::to_view(const GameLogViewParams& params, GameLogView& view) {
+template <search::concepts::Traits Traits>
+void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
   const GameLogCompactRecord* record = params.record;
   const GameLogCompactRecord* next_record = params.next_record;
   const State* cur_pos = params.cur_pos;
