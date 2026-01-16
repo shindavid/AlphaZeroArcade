@@ -656,7 +656,6 @@ void AlgorithmsBase<Traits, Derived>::load_action_symmetries(const GeneralContex
   using map_t = std::unordered_map<State, equivalence_class_t>;
   map_t map;
 
-  bool trivial = true;
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     State state = root_state;
     Edge* edge = lookup_table.get_edge(root, e);
@@ -664,23 +663,12 @@ void AlgorithmsBase<Traits, Derived>::load_action_symmetries(const GeneralContex
     group::element_t sym = Symmetries::get_canonical_symmetry(state);
     Symmetries::apply(state, sym);
 
-    equivalence_class_t equiv_class;
-    if (map.count(state)) {
-      equiv_class = map[state];
-    } else {
-      equiv_class = map.size();
-      map[state] = equiv_class;
-
-      if (equiv_class > 0) {
-        trivial = false;
-      }
-    }
-
-    items.emplace_back(equiv_class, actions[e]);
+    auto [it, inserted] = map.try_emplace(state, map.size());
+    items.emplace_back(it->second, actions[e]);
   }
 
   results.action_symmetry_table.load(items);
-  results.trivial = trivial;
+  results.trivial = (map.size() <= 1);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
