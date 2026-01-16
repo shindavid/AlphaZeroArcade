@@ -61,7 +61,6 @@ class Node : public NodeBase {
   core::edge_pool_index_t first_edge_index_ = -1;
 
   int child_expand_count_ = 0;
-  bool trivial_ = false;  // set to true if all actions discovered to be symmetrically equivalent
 };
 
 }  // namespace core
