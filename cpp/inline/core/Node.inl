@@ -1,16 +1,6 @@
 #include "core/Node.hpp"
 
-#include "util/Asserts.hpp"
-
 namespace core {
-
-template <typename StableData, typename Stats>
-bool Node<StableData, Stats>::increment_child_expand_count(int n) {
-  if (n <= 0) return false;
-  child_expand_count_ += n;
-  DEBUG_ASSERT(child_expand_count_ <= this->stable_data_.num_valid_actions);
-  return child_expand_count_ == this->stable_data_.num_valid_actions;
-}
 
 template <typename StableData, typename Stats>
 Stats Node<StableData, Stats>::stats_safe() const {

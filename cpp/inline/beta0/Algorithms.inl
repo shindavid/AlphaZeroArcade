@@ -55,7 +55,7 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   const GeneralContext& general_context, const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
-  if (!search_params.ponder && root->trivial()) return false;
+  if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
   return root->stats().N <= search_params.tree_size_limit;
 }
 
@@ -69,11 +69,7 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
 
-    StateHistory history = root_info.history;  // copy
-    for (auto& state : history) {
-      Game::Symmetries::apply(state, root_info.canonical_sym);
-    }
-    State& cur_state = history.current();
+    const State& cur_state = root_info.history.current();
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
@@ -194,12 +190,9 @@ int AlgorithmsBase<Traits, Derived>::get_best_child_index(const SearchContext& c
         score = score_sq.cwiseSqrt();
       }
 
-      group::element_t inv_sym = Game::SymmetryGroup::inverse(context.leaf_canonical_sym);
       for (int e = 0; e < n; ++e) {
         auto edge = lookup_table.get_edge(node, e);
-        core::action_t action = edge->action;
-        Game::Symmetries::apply(action, inv_sym, node->action_mode());
-        actions(e) = action;
+        actions(e) = edge->action;
       }
       argmax.setZero();
       argmax(argmax_index) = 1;
@@ -406,8 +399,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   core::seat_index_t seat = stable_data.active_seat;
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   results.valid_actions.reset();
   results.P.setZero();
@@ -419,7 +410,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   int i = 0;
   for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    Game::Symmetries::apply(action, inv_sym, mode);
     results.valid_actions.set(action, true);
     actions[i] = action;
 
@@ -447,7 +437,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
   results.action_mode = mode;
-  results.trivial = root->trivial();
   results.provably_lost = stats.Q[seat] == Game::GameResults::kMinValue && stats.W[seat] == 0.f;
 
   if (search::kEnableSearchDebug) {

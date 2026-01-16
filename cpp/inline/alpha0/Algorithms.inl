@@ -115,7 +115,7 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   const GeneralContext& general_context, const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
-  if (!search_params.ponder && root->trivial()) return false;
+  if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
@@ -148,11 +148,7 @@ void AlgorithmsBase<Traits, Derived>::init_root_info(GeneralContext& general_con
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
 
-    StateHistory history = root_info.history;  // copy
-    for (auto& state : history) {
-      Symmetries::apply(state, root_info.canonical_sym);
-    }
-    State& cur_state = history.current();
+    const State& cur_state = root_info.history.current();
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
@@ -270,8 +266,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   const auto& stats = root->stats();  // thread-safe since single-threaded here
 
   core::action_mode_t mode = root->action_mode();
-  group::element_t sym = root_info.canonical_sym;
-  group::element_t inv_sym = SymmetryGroup::inverse(sym);
 
   results.valid_actions.reset();
   results.P.setZero();
@@ -280,7 +274,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   int i = 0;
   for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    Symmetries::apply(action, inv_sym, mode);
     results.valid_actions.set(action, true);
     actions[i] = action;
 
@@ -291,19 +284,12 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
   }
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
-  Derived::write_results(general_context, root, inv_sym, results);
+  Derived::write_results(general_context, root, results);
   results.policy_target = results.counts;
   results.provably_lost = stats.provably_losing[stable_data.active_seat];
-  results.trivial = root->trivial();
   if (manager_params.forced_playouts && root_info.add_noise) {
-    Derived::prune_policy_target(inv_sym, general_context, results);
+    Derived::prune_policy_target(general_context, results);
   }
-
-  Symmetries::apply(results.counts, inv_sym, mode);
-  Symmetries::apply(results.policy_target, inv_sym, mode);
-  Symmetries::apply(results.AQs, inv_sym, mode);
-  Symmetries::apply(results.AQs_sq, inv_sym, mode);
-  Symmetries::apply(results.AV, inv_sym, mode);
 
   results.Q = stats.Q;
   results.R = stable_data.R;
@@ -538,8 +524,7 @@ void AlgorithmsBase<Traits, Derived>::update_stats(NodeStats& stats, const Node*
 
 template <search::concepts::Traits Traits, typename Derived>
 void AlgorithmsBase<Traits, Derived>::write_results(const GeneralContext& general_context,
-                                                    const Node* root, group::element_t inv_sym,
-                                                    SearchResults& results) {
+                                                    const Node* root, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -661,27 +646,33 @@ void AlgorithmsBase<Traits, Derived>::load_action_symmetries(const GeneralContex
                                                              SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
+  const State& root_state = general_context.root_info.history.current();
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;
   items.reserve(stable_data.num_valid_actions);
 
-  int neg_equivalent_class = -1;
+  using equivalence_class_t = int;
+  using map_t = std::unordered_map<State, equivalence_class_t>;
+  map_t map;
+
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
+    State state = root_state;
     Edge* edge = lookup_table.get_edge(root, e);
-    if (edge->child_index < 0) {
-      items.emplace_back(neg_equivalent_class--, actions[e]);
-    } else {
-      items.emplace_back(edge->child_index, actions[e]);
-    }
+    Game::Rules::apply(state, edge->action);
+    group::element_t sym = Symmetries::get_canonical_symmetry(state);
+    Symmetries::apply(state, sym);
+
+    auto [it, inserted] = map.try_emplace(state, map.size());
+    items.emplace_back(it->second, actions[e]);
   }
 
   results.action_symmetry_table.load(items);
+  results.trivial = (map.size() <= 1);
 }
 
 template <search::concepts::Traits Traits, typename Derived>
-void AlgorithmsBase<Traits, Derived>::prune_policy_target(group::element_t inv_sym,
-                                                          const GeneralContext& general_context,
+void AlgorithmsBase<Traits, Derived>::prune_policy_target(const GeneralContext& general_context,
                                                           SearchResults& results) {
   const search::SearchParams& search_params = general_context.search_params;
   const RootInfo& root_info = general_context.root_info;
@@ -741,11 +732,9 @@ void AlgorithmsBase<Traits, Derived>::prune_policy_target(group::element_t inv_s
 
     core::action_mode_t mode = root->action_mode();
     for (int i = 0; i < n_actions; ++i) {
-      core::action_t raw_action = lookup_table.get_edge(root, i)->action;
-      core::action_t action = raw_action;
-      Symmetries::apply(action, inv_sym, mode);
+      core::action_t action = lookup_table.get_edge(root, i)->action;
       actions(i) = action;
-      pruned(i) = results.policy_target(raw_action);
+      pruned(i) = results.policy_target(action);
     }
 
     LocalPolicyArray target = pruned / pruned.sum();
@@ -822,12 +811,9 @@ void AlgorithmsBase<Traits, Derived>::print_action_selection_details(const Searc
     argmax.setZero();
     argmax(argmax_index) = 1;
 
-    group::element_t inv_sym = SymmetryGroup::inverse(context.leaf_canonical_sym);
     for (int e = 0; e < n_actions; ++e) {
       auto edge = lookup_table.get_edge(node, e);
-      core::action_t action = edge->action;
-      Symmetries::apply(action, inv_sym, node->action_mode());
-      actions(e) = action;
+      actions(e) = edge->action;
       child_addr(e) = edge->child_index;
     }
 

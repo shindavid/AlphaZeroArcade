@@ -97,14 +97,13 @@ class AlgorithmsBase : public x0::Algorithms<Traits> {
 
  protected:
   static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
-  static void write_results(const GeneralContext&, const Node* root, group::element_t inv_sym,
-                            SearchResults& results);
+  static void write_results(const GeneralContext&, const Node* root, SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds
   static void transform_policy(SearchContext&, LocalPolicyArray& P);
   static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
   static void load_action_symmetries(const GeneralContext&, const Node* root,
                                      core::action_t* actions, SearchResults&);
-  static void prune_policy_target(group::element_t inv_sym, const GeneralContext&, SearchResults&);
+  static void prune_policy_target(const GeneralContext&, SearchResults&);
   static void print_action_selection_details(const SearchContext& context,
                                              const PuctCalculator& selector, int argmax_index);
 };

@@ -256,21 +256,16 @@ void Backpropagator<Traits>::print_debug_info() {
   LocalArray i_indicator(n_);
   LocalArray N(n_);
 
-  auto sym = context_.root_canonical_sym;
   const auto& search_path = context_.search_path;
   for (const auto& visitation : search_path) {
     if (visitation.node == node_) {
       break;
     }
-    sym = Game::SymmetryGroup::compose(sym, visitation.edge->sym);
   }
 
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
   for (int e = 0; e < n_; ++e) {
     auto edge = lookup_table().get_edge(node_, e);
-    core::action_t action = edge->action;
-    Game::Symmetries::apply(action, inv_sym, node_->action_mode());
-    actions(e) = action;
+    actions(e) = edge->action;
     i_indicator(e) = (e == i_) ? 1.f : 0.f;
 
     auto child = lookup_table().get_node(edge->child_index);

@@ -10,7 +10,6 @@ void GeneralContext<Traits>::RootInfo::clear() {
   Rules::init_state(state);
   history.clear();
   history.update(state);
-  canonical_sym = Symmetries::get_canonical_symmetry(state);
 }
 
 template <search::concepts::Traits Traits>
