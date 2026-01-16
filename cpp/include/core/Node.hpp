@@ -32,12 +32,6 @@ class Node : public NodeBase {
   mit::mutex& mutex() const { return *mutex_; }
   int child_expand_count() const { return child_expand_count_; }
 
-  // Increment child_expand_count_ by n. Returns true if n>0 and if all children are now expanded.
-  bool increment_child_expand_count(int n);
-
-  void mark_as_trivial() { trivial_ = true; }
-  bool trivial() const { return trivial_; }
-
   bool is_terminal() const { return stable_data_.terminal; }
   core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
