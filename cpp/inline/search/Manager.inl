@@ -888,9 +888,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LookupTable& lookup_table = general_context_.lookup_table;
   const ManagerParams& manager_params = general_context_.manager_params;
 
-  // keep track of which entries of context.history_array have been initialized
-  SymmetryMask history_array_initialized;
-
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
   int expand_count = 0;
