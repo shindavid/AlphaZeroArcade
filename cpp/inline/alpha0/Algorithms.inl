@@ -115,7 +115,7 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   const GeneralContext& general_context, const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
-  if (!search_params.ponder && root->trivial()) return false;
+  if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 

@@ -55,7 +55,7 @@ bool AlgorithmsBase<Traits, Derived>::more_search_iterations_needed(
   const GeneralContext& general_context, const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
-  if (!search_params.ponder && root->trivial()) return false;
+  if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
   return root->stats().N <= search_params.tree_size_limit;
 }
 
@@ -437,7 +437,6 @@ void AlgorithmsBase<Traits, Derived>::to_results(const GeneralContext& general_c
 
   Derived::load_action_symmetries(general_context, root, &actions[0], results);
   results.action_mode = mode;
-  results.trivial = root->trivial();
   results.provably_lost = stats.Q[seat] == Game::GameResults::kMinValue && stats.W[seat] == 0.f;
 
   if (search::kEnableSearchDebug) {
