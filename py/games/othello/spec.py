@@ -9,7 +9,6 @@ from shared.transformer_modules import TransformerBlockParams
 from torch import optim
 
 from dataclasses import dataclass
-import math
 from typing import List
 
 

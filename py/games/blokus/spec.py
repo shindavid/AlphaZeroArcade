@@ -8,7 +8,6 @@ from shared.training_params import TrainingParams
 from torch import optim
 
 from dataclasses import dataclass
-import math
 from typing import List
 
 
