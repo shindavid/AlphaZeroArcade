@@ -2,6 +2,7 @@
 
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
+#include "core/BacktrackUpdate.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/StateChangeUpdate.hpp"
@@ -48,6 +49,7 @@ class AbstractPlayer {
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
+  using BacktrackUpdate = core::BacktrackUpdate<Game>;
 
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string& name) { name_ = name; }
@@ -63,6 +65,8 @@ class AbstractPlayer {
   virtual bool start_game() { return true; }
 
   virtual void receive_state_change(const StateChangeUpdate& update) {}
+
+  virtual void backtrack(const BacktrackUpdate& update) {}
 
   /*
    * In games with chance events, this method is called before the chance event occurs. This gives

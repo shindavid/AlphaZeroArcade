@@ -21,6 +21,7 @@ namespace core {
 template <typename State, int kNumPastStatesNeeded>
 class SimpleStateHistory {
  public:
+  constexpr static int kHistoryLength = kNumPastStatesNeeded;
   void clear() { buf_.clear(); }
 
   /*

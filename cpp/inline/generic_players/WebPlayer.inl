@@ -31,6 +31,20 @@ void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outco
 }
 
 template <core::concepts::Game Game>
+void WebPlayer<Game>::backtrack(const BacktrackUpdate& update) {
+  send_backtrack_msg(update);
+}
+
+template <core::concepts::Game Game>
+void WebPlayer<Game>::send_backtrack_msg(const BacktrackUpdate& update) {
+  StateChangeUpdate state_update(*update.history.back(), update.action, update.index, update.mode);
+
+  Message msg(Message::BridgeAction::kUpdate);
+  msg.add_payload(this->make_state_update_msg(state_update));
+  msg.send();
+}
+
+template <core::concepts::Game Game>
 void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::seat_index_t seat) {
   if (seat != this->get_my_seat()) {
     return;

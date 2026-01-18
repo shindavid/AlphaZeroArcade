@@ -25,6 +25,9 @@ struct StateChangeUpdate {
                     seat_index_t se, action_mode_t m)
       : state(s), action(a), index(i), parent_index(pi), seat(se), mode(m) {}
 
+  StateChangeUpdate(const State& s, action_t a, game_tree_index_t i, action_mode_t m)
+      : state(s), action(a), index(i), parent_index(-1), seat(-1), mode(m) {}
+
   StateChangeUpdate(const State& s, action_t a, seat_index_t se)
       : state(s), action(a), index(-1), parent_index(-1), seat(se), mode(-1) {}
 };
