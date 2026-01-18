@@ -72,4 +72,8 @@ using mutex_vec_sptr_t = std::shared_ptr<mutex_vec_t>;
 using node_pool_index_t = util::pool_index_t;
 using edge_pool_index_t = util::pool_index_t;
 
+// A vector of State pointers in reverse order i.e., ReverseHistory[0] is the most recent state.
+template <typename State>
+using ReverseHistory = std::vector<const State*>;
+
 }  // namespace core

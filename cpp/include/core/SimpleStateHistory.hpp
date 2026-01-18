@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "core/BacktrackUpdate.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/StaticCircularBuffer.hpp"
 
 namespace core {
