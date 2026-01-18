@@ -37,7 +37,7 @@ void WebPlayer<Game>::backtrack(const BacktrackUpdate& update) {
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_backtrack_msg(const BacktrackUpdate& update) {
-  StateChangeUpdate state_update(*update.history[0], update.action, update.index, update.mode);
+  StateChangeUpdate state_update(*update.reverse_history[0], update.action, update.index, update.mode);
 
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(this->make_state_update_msg(state_update));

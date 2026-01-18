@@ -9,10 +9,10 @@ template <concepts::Game Game>
 struct BacktrackUpdate {
   using State = Game::State;
 
-  // History is in reverse chronological order: History[0] is the latest state
-  using History = std::vector<const State*>;
+  // ReverseHistory is in reverse chronological order: ReverseHistory[0] is the latest state
+  using ReverseHistory = std::vector<const State*>;
 
-  const History& history;
+  const ReverseHistory& reverse_history;
   action_t action;
   game_tree_index_t index;
   step_t step;

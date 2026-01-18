@@ -1279,13 +1279,13 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   action_t action = state_tree_.get_action(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
-  BacktrackHistory history;
+  ReverseHistory reverse_history;
   for (game_tree_index_t ix = index; ix >= 0; ix = state_tree_.get_parent_index(ix)) {
-    history.push_back(&state_tree_.state(ix));
+    reverse_history.push_back(&state_tree_.state(ix));
   }
 
-  step_t step = history.size() - 1;
-  BacktrackUpdate update(history, action, index, step, action_mode);
+  step_t step = reverse_history.size() - 1;
+  BacktrackUpdate update(reverse_history, action, index, step, action_mode);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->backtrack(update);
   }

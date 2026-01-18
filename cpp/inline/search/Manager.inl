@@ -81,7 +81,7 @@ void Manager<Traits>::backtrack(const StateHistory& history, core::step_t step) 
   root_info()->history = history;
   general_context_.jump_to(step);
 
-  State& state = root_info()->history.current();
+  const State& state = root_info()->history.current();
   TransposeKey key = Keys::transpose_key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   RELEASE_ASSERT(node_index >= 0, "Backtrack failed to find node");

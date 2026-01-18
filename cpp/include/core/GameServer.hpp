@@ -77,7 +77,7 @@ class GameServer
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using BacktrackUpdate = core::BacktrackUpdate<Game>;
-  using BacktrackHistory = BacktrackUpdate::History;
+  using ReverseHistory = BacktrackUpdate::ReverseHistory;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

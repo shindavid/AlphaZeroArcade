@@ -56,7 +56,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateHistory = search::TraitsTypes<Traits>::StateHistory;
-  using BacktrackHistory = core::BacktrackUpdate<Game>::History;
+  using ReverseHistory = core::BacktrackUpdate<Game>::ReverseHistory;
 
   struct SharedData {
     template <typename... Ts>
@@ -88,7 +88,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
   void normalize(const ActionMask&, PolicyTensor& policy) const;
-  static StateHistory create_state_history(const BacktrackHistory& history);
+  static StateHistory create_state_history(const ReverseHistory&);
 
   core::SearchMode get_random_search_mode() const;
 
