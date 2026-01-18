@@ -56,7 +56,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateHistory = search::TraitsTypes<Traits>::StateHistory;
-  using ReverseHistory = core::BacktrackUpdate<Game>::ReverseHistory;
+  using ReverseHistory = core::ReverseHistory<State>;
 
   struct SharedData {
     template <typename... Ts>
