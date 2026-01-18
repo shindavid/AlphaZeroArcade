@@ -5,10 +5,13 @@
 
 namespace core {
 
+template <typename State>
+using ReverseHistory = std::vector<const State*>;  // ReverseHistory[0] is the most recent state.
+
 template <concepts::Game Game>
 struct BacktrackUpdate {
   using State = Game::State;
-  using ReverseHistory = std::vector<const State*>;  // ReverseHistory[0] is the most recent state.
+  using ReverseHistory = core::ReverseHistory<State>;
 
   const ReverseHistory& reverse_history;
   action_t action;

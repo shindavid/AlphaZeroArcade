@@ -61,4 +61,13 @@ auto SimpleStateHistory<State, kNumPastStatesNeeded>::begin() {
   return it;
 }
 
+template <typename State, int kNumPastStatesNeeded>
+SimpleStateHistory<State, kNumPastStatesNeeded>::SimpleStateHistory(
+  const ReverseHistory& reverse_history) {
+  int k = std::min(kNumPastStatesNeeded + 1, static_cast<int>(reverse_history.size()));
+  for (int i = k - 1; i >= 0; --i) {
+    buf_.push_back(*reverse_history[i]);
+  }
+}
+
 }  // namespace core

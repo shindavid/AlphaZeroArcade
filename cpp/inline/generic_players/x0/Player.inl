@@ -95,21 +95,9 @@ void Player<Traits>::backtrack(const core::BacktrackUpdate<Game>& update) {
   clear_search_mode();
   move_temperature_.jump_to(update.step);
   if (owns_shared_data_) {
-    StateHistory history = create_state_history(update.reverse_history);
+    StateHistory history(update.reverse_history);
     get_manager()->backtrack(history, update.step);
   }
-}
-
-template <search::concepts::Traits Traits>
-typename Player<Traits>::StateHistory Player<Traits>::create_state_history(
-  const ReverseHistory& reverse_history) {
-  StateHistory state_history;
-  int k = std::min(StateHistory::kHistoryLength + 1, static_cast<int>(reverse_history.size()));
-
-  for (int i = k - 1; i >= 0; --i) {
-    state_history.update(*reverse_history[i]);
-  }
-  return state_history;
 }
 
 template <search::concepts::Traits Traits>
