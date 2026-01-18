@@ -1284,9 +1284,8 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
     history.push_back(&state_tree_.state(ix));
   }
 
-  uint32_t step = history.size() - 1;
-
-  BacktrackUpdate update(history, action, index, action_mode, step);
+  step_t step = history.size() - 1;
+  BacktrackUpdate update(history, action, index, step, action_mode);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->backtrack(update);
   }

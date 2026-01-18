@@ -15,8 +15,9 @@ struct BacktrackUpdate {
   const History& history;
   action_t action;
   game_tree_index_t index;
+  step_t step;
   action_mode_t mode;
-  uint32_t step;
+
 };
 
 }  // namespace core
