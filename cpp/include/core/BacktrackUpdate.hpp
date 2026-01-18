@@ -8,9 +8,7 @@ namespace core {
 template <concepts::Game Game>
 struct BacktrackUpdate {
   using State = Game::State;
-
-  // ReverseHistory is in reverse chronological order: ReverseHistory[0] is the latest state
-  using ReverseHistory = std::vector<const State*>;
+  using ReverseHistory = std::vector<const State*>;  // ReverseHistory[0] is the most recent state.
 
   const ReverseHistory& reverse_history;
   action_t action;

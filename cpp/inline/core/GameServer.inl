@@ -6,6 +6,7 @@
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
 #include "generic_players/AnalysisPlayerGenerator.hpp"
+#include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -24,7 +25,6 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include <algorithm>
 #include <format>
 #include <iostream>
 #include <string>
@@ -1285,6 +1285,7 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   }
 
   step_t step = reverse_history.size() - 1;
+  RELEASE_ASSERT(step >= 0, "step < 0 from empty reverse_history when backtracking.");
   BacktrackUpdate update(reverse_history, action, index, step, action_mode);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->backtrack(update);
