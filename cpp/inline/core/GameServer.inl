@@ -24,6 +24,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#include <algorithm>
 #include <format>
 #include <iostream>
 #include <string>
@@ -1276,14 +1277,16 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   state_node_index_ = index;
 
   action_t action = state_tree_.get_action(index);
-  // game_tree_index_t parent_index = state_tree_.get_parent_index(index);
-  // seat_index_t seat = state_tree_.get_parent_seat(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
   BacktrackHistory history;
-  history.push_back(&state());
+  for (game_tree_index_t ix = index; ix >= 0; ix = state_tree_.get_parent_index(ix)) {
+    history.push_back(&state_tree_.state(ix));
+  }
 
-  BacktrackUpdate update(history, action, index, action_mode);
+  uint32_t step = history.size() - 1;
+
+  BacktrackUpdate update(history, action, index, action_mode, step);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->backtrack(update);
   }
