@@ -14,7 +14,7 @@ struct AuxState {
 
   void clear() {}
   void step() {}
-  void step(core::step_t) {}
+  void jump_to(core::step_t) {}
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
   mutable Eigen::Rand::P8_mt19937_64 rng;
