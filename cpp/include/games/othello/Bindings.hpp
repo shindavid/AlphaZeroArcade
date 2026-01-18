@@ -17,7 +17,7 @@ struct TrainingTargets {
   using ScoreMarginShape = Eigen::Sizes<2, 2 * kNumCells + 1>;  // pdf/cdf, score-margin
 
   struct ScoreMarginTarget {
-    static constexpr const char* kName = "score_margin";
+    static constexpr char kName[] = "score_margin";
     using Tensor = eigen_util::FTensor<ScoreMarginShape>;
 
     template <typename GameLogView>
@@ -25,7 +25,7 @@ struct TrainingTargets {
   };
 
   struct OwnershipTarget {
-    static constexpr const char* kName = "ownership";
+    static constexpr char kName[] = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>
@@ -44,6 +44,18 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 }  // namespace othello::alpha0
 
+namespace othello::beta0 {
+
+struct TrainingTargets {
+  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<Game>,
+                            othello::alpha0::TrainingTargets::AuxList>;
+};
+
+using NetworkHeads = core::beta0::StandardNetworkHeads<Game>;
+using MctsConfiguration = alpha0::MctsConfiguration;
+
+}  // namespace othello::beta0
+
 namespace core {
 
 template <>
@@ -59,13 +71,12 @@ struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = othello::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
   using Game = othello::Game;
-  using TrainingTargets = othello::alpha0::TrainingTargets;
-  using NetworkHeads = othello::alpha0::NetworkHeads;
-  using MctsConfiguration = othello::alpha0::MctsConfiguration;
+  using TrainingTargets = othello::beta0::TrainingTargets;
+  using NetworkHeads = othello::beta0::NetworkHeads;
+  using MctsConfiguration = othello::beta0::MctsConfiguration;
 };
 
 }  // namespace core

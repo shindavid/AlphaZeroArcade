@@ -8,6 +8,7 @@
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Math.hpp"
+#include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 #include "x0/Algorithms.hpp"
 
@@ -253,16 +254,22 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     LocalPolicyArray P(n);
     LocalActionValueArray AV(n, kNumPlayers);
 
-    // assumes that heads are in order policy, value, action-value
-    //
-    // TODO: we should be able to verify this assumption at compile-time
+    using NetworkHeadsList = Traits::EvalSpec::NetworkHeads::List;
+    using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
+    using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
+    using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
+    using Head3 = mp::TypeAt_t<NetworkHeadsList, 3>;
+    using Head4 = mp::TypeAt_t<NetworkHeadsList, 4>;
+
+    static_assert(util::str_equal<Head0::kName, "policy">());
+    static_assert(util::str_equal<Head1::kName, "value">());
+    static_assert(util::str_equal<Head2::kName, "action_value">());
+    static_assert(util::str_equal<Head3::kName, "value_uncertainty">());
+    static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
+
     std::copy_n(eval->data(0), P.size(), P.data());
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());
-
-    // assumes that heads[3:4] are [value-uncertainty, action-value-uncertainty]
-    //
-    // TODO: we should be able to verify this assumption at compile-time
     std::copy_n(eval->data(3), U.size(), U.data());
     std::copy_n(eval->data(4), AU.size(), AU.data());
 

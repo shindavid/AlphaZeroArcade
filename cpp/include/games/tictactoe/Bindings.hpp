@@ -16,7 +16,7 @@ struct TrainingTargets {
   using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
 
   struct OwnershipTarget {
-    static constexpr const char* kName = "ownership";
+    static constexpr char kName[] = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>

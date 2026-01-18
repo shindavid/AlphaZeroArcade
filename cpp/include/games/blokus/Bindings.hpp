@@ -19,7 +19,7 @@ struct TrainingTargets {
   using UnplayedPiecesShape = Eigen::Sizes<kNumPlayers, kNumPieces>;
 
   struct ScoreTarget {
-    static constexpr const char* kName = "score";
+    static constexpr char kName[] = "score";
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
     template <typename GameLogView>
@@ -30,7 +30,7 @@ struct TrainingTargets {
    * Who owns which square at the end of the game.
    */
   struct OwnershipTarget {
-    static constexpr const char* kName = "ownership";
+    static constexpr char kName[] = "ownership";
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>
@@ -41,7 +41,7 @@ struct TrainingTargets {
    * Which pieces are unplayed at the end of the game.
    */
   struct UnplayedPiecesTarget {
-    static constexpr const char* kName = "unplayed_pieces";
+    static constexpr char kName[] = "unplayed_pieces";
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
     template <typename GameLogView>

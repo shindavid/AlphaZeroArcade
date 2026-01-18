@@ -7,6 +7,7 @@
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/MetaProgramming.hpp"
 #include "x0/Algorithms.hpp"
 
 #include <boost/algorithm/string/join.hpp>
@@ -221,9 +222,15 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     auto eval = item.eval();
 
-    // assumes that heads are in order policy, value, action-value
-    //
-    // TODO: we should be able to verify this assumption at compile-time
+    using NetworkHeadsList = Traits::EvalSpec::NetworkHeads::List;
+    using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
+    using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
+    using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
+
+    static_assert(util::str_equal<Head0::kName, "policy">());
+    static_assert(util::str_equal<Head1::kName, "value">());
+    static_assert(util::str_equal<Head2::kName, "action_value">());
+
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());

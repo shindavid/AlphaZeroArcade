@@ -17,7 +17,7 @@ struct NetworkHeadBase {
 
 template <core::concepts::Game Game>
 struct PolicyNetworkHead : public NetworkHeadBase {
-  static constexpr const char* kName = "policy";
+  static constexpr char kName[] = "policy";
   static constexpr bool kPerActionBased = true;
   using Tensor = Game::Types::PolicyTensor;
 
@@ -32,7 +32,7 @@ struct PolicyNetworkHead : public NetworkHeadBase {
 // allow customization. We will likely need this in single-player games.
 template <core::concepts::Game Game>
 struct ValueNetworkHead : public NetworkHeadBase {
-  static constexpr const char* kName = "value";
+  static constexpr char kName[] = "value";
   static constexpr bool kGameResultBased = true;
   using Tensor = Game::Types::GameResultTensor;
 
@@ -45,7 +45,7 @@ struct ValueNetworkHead : public NetworkHeadBase {
 
 template <core::concepts::Game Game>
 struct ActionValueNetworkHead : public NetworkHeadBase {
-  static constexpr const char* kName = "action_value";
+  static constexpr char kName[] = "action_value";
   static constexpr bool kPerActionBased = true;
   static constexpr bool kWinShareBased = true;
   using Tensor = Game::Types::ActionValueTensor;
@@ -59,7 +59,7 @@ struct ActionValueNetworkHead : public NetworkHeadBase {
 
 template <core::concepts::Game Game>
 struct ValueUncertaintyNetworkHead : public NetworkHeadBase {
-  static constexpr const char* kName = "value_uncertainty";
+  static constexpr char kName[] = "value_uncertainty";
   static constexpr bool kWinShareBased = true;
 
   using Tensor = Game::Types::WinShareTensor;
@@ -74,7 +74,7 @@ struct ValueUncertaintyNetworkHead : public NetworkHeadBase {
 
 template <core::concepts::Game Game>
 struct ActionValueUncertaintyNetworkHead : public NetworkHeadBase {
-  static constexpr const char* kName = "action_value_uncertainty";
+  static constexpr char kName[] = "action_value_uncertainty";
   static constexpr bool kPerActionBased = true;
   static constexpr bool kWinShareBased = true;
   using Tensor = Game::Types::ActionValueTensor;

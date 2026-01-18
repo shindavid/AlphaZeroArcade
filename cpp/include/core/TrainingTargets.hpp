@@ -6,7 +6,7 @@ namespace core {
 
 template <core::concepts::Game Game>
 struct PolicyTarget {
-  static constexpr const char* kName = "policy";
+  static constexpr char kName[] = "policy";
   using Tensor = Game::Types::PolicyTensor;
 
   template <typename GameLogView>
@@ -17,7 +17,7 @@ struct PolicyTarget {
 // allow customization. We will likely need this in single-player games.
 template <core::concepts::Game Game>
 struct ValueTarget {
-  static constexpr const char* kName = "value";
+  static constexpr char kName[] = "value";
   using Tensor = Game::Types::GameResultTensor;
 
   template <typename GameLogView>
@@ -28,7 +28,7 @@ struct ValueTarget {
 // each action from the current position.
 template <core::concepts::Game Game>
 struct ActionValueTarget {
-  static constexpr const char* kName = "action_value";
+  static constexpr char kName[] = "action_value";
   using Tensor = Game::Types::ActionValueTensor;
 
   template <typename GameLogView>
@@ -44,7 +44,7 @@ struct ActionValueTarget {
 // (which represents the Q prior).
 template <core::concepts::Game Game>
 struct QTarget {
-  static constexpr const char* kName = "Q";
+  static constexpr char kName[] = "Q";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -54,7 +54,7 @@ struct QTarget {
 // QMinTarget is used to train the ValueUncertainty head.
 template <core::concepts::Game Game>
 struct QMinTarget {
-  static constexpr const char* kName = "Q_min";
+  static constexpr char kName[] = "Q_min";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -64,7 +64,7 @@ struct QMinTarget {
 // QMaxTarget is used to train the ValueUncertainty head.
 template <core::concepts::Game Game>
 struct QMaxTarget {
-  static constexpr const char* kName = "Q_max";
+  static constexpr char kName[] = "Q_max";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -74,7 +74,7 @@ struct QMaxTarget {
 // WTarget is used to train the ValueUncertainty head.
 template <core::concepts::Game Game>
 struct WTarget {
-  static constexpr const char* kName = "W";
+  static constexpr char kName[] = "W";
   using Tensor = Game::Types::WinShareTensor;
 
   template <typename GameLogView>
@@ -85,7 +85,7 @@ struct WTarget {
 // that result from taking each action from the current position.
 template <core::concepts::Game Game>
 struct ActionValueUncertaintyTarget {
-  static constexpr const char* kName = "action_value_uncertainty";
+  static constexpr char kName[] = "action_value_uncertainty";
   using Tensor = Game::Types::ActionValueTensor;
 
   template <typename GameLogView>
@@ -94,7 +94,7 @@ struct ActionValueUncertaintyTarget {
 
 template <core::concepts::Game Game>
 struct ValidActionsTarget {
-  static constexpr const char* kName = "valid_actions";
+  static constexpr char kName[] = "valid_actions";
   using Tensor = Game::Types::PolicyTensor;
 
   template <typename GameLogView>
@@ -103,7 +103,7 @@ struct ValidActionsTarget {
 
 template <core::concepts::Game Game>
 struct OppPolicyTarget {
-  static constexpr const char* kName = "opp_policy";
+  static constexpr char kName[] = "opp_policy";
   using Tensor = Game::Types::PolicyTensor;
 
   template <typename GameLogView>

@@ -45,7 +45,6 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Game = c4::Game;
