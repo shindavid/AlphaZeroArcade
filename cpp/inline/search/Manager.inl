@@ -77,6 +77,17 @@ void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
 }
 
 template <search::concepts::Traits Traits>
+void Manager<Traits>::backtrack(const StateHistory& history, core::step_t step) {
+  general_context_.history = history;
+  general_context_.step(static_cast<float>(step));
+
+  State& state = general_context_.history.current();
+  TransposeKey key = Keys::transpose_key(state);
+  core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
+  root_info()->node_index = node_index;
+}
+
+template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
   State& state = root_info()->history.extend();
   Rules::apply(state, action);

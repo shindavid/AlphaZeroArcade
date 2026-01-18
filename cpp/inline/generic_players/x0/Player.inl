@@ -91,6 +91,27 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <search::concepts::Traits Traits>
+void Player<Traits>::backtrack(const core::BacktrackUpdate<Game>& update) {
+  clear_search_mode();
+  move_temperature_.step(static_cast<float>(update.step));
+  if (owns_shared_data_) {
+    StateHistory history = create_state_history(update.history);
+    get_manager()->backtrack(history, update.step);
+  }
+}
+
+template <search::concepts::Traits Traits>
+typename Player<Traits>::StateHistory Player<Traits>::create_state_history(const BacktrackHistory& history) {
+  StateHistory state_history;
+  int k = std::min(StateHistory::kMaxHistoryLength, static_cast<int>(history.size()));
+
+  for (int i = k - 1; i >= 0; --i) {
+    state_history.update(*history[i]);
+  }
+  return state_history;
+}
+
+template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     SearchResults* mcts_results = reinterpret_cast<SearchResults*>(request.aux);

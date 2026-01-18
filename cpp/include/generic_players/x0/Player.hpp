@@ -9,6 +9,7 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -54,6 +55,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
+  using StateHistory = search::TraitsTypes<Traits>::StateHistory;
+  using BacktrackHistory = core::BacktrackUpdate<Game>::History;
 
   struct SharedData {
     template <typename... Ts>
@@ -71,6 +74,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void receive_state_change(const StateChangeUpdate&) override;
   core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
+  void backtrack(const core::BacktrackUpdate<Game>& update) override;
 
  protected:
   void clear_search_mode();
@@ -84,6 +88,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
   void normalize(const ActionMask&, PolicyTensor& policy) const;
+  static StateHistory create_state_history(const BacktrackHistory& history);
 
   core::SearchMode get_random_search_mode() const;
 
