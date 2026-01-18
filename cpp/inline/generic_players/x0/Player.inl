@@ -103,7 +103,7 @@ void Player<Traits>::backtrack(const core::BacktrackUpdate<Game>& update) {
 template <search::concepts::Traits Traits>
 typename Player<Traits>::StateHistory Player<Traits>::create_state_history(const BacktrackHistory& history) {
   StateHistory state_history;
-  int k = std::min(StateHistory::kMaxHistoryLength, static_cast<int>(history.size()));
+  int k = std::min(StateHistory::kHistoryLength + 1, static_cast<int>(history.size()));
 
   for (int i = k - 1; i >= 0; --i) {
     state_history.update(*history[i]);
