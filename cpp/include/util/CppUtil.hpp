@@ -133,6 +133,11 @@ struct StringLiteral {
 template <StringLiteral...>
 struct StringLiteralSequence {};
 
+template <StringLiteral S, StringLiteral T>
+static constexpr bool str_equal() {
+  return S == T;
+}
+
 /*
  * The following are equivalent:
  *
