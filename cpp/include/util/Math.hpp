@@ -91,8 +91,8 @@ class ExponentialDecay {
   void reset() { cur_value_ = start_value_; }
   float value() const { return cur_value_; }
   void step() { cur_value_ = end_value_ + (cur_value_ - end_value_) * decay_factor_; }
-  void step(float k) {
-    cur_value_ = end_value_ + (cur_value_ - end_value_) * std::pow(decay_factor_, k);
+  void jump_to(int k) {
+    cur_value_ = end_value_ + (start_value_ - end_value_) * std::pow(decay_factor_, k);
   }
 
  private:

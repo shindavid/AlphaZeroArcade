@@ -18,7 +18,7 @@ struct AuxState {
 
   void clear() { root_softmax_temperature.reset(); }
   void step() { root_softmax_temperature.step(); }
-  void step(core::step_t step) { root_softmax_temperature.step(static_cast<float>(step)); }
+  void jump_to(core::step_t step) { root_softmax_temperature.jump_to(step); }
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
   math::ExponentialDecay root_softmax_temperature;

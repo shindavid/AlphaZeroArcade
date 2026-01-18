@@ -93,7 +93,7 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 template <search::concepts::Traits Traits>
 void Player<Traits>::backtrack(const core::BacktrackUpdate<Game>& update) {
   clear_search_mode();
-  move_temperature_.step(static_cast<float>(update.step));
+  move_temperature_.jump_to(update.step);
   if (owns_shared_data_) {
     StateHistory history = create_state_history(update.history);
     get_manager()->backtrack(history, update.step);

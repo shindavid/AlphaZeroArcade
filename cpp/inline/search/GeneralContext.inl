@@ -33,8 +33,8 @@ void GeneralContext<Traits>::step() {
 }
 
 template <search::concepts::Traits Traits>
-void GeneralContext<Traits>::step(core::step_t step) {
-  aux_state.step(step);
+void GeneralContext<Traits>::jump_to(core::step_t step) {
+  aux_state.jump_to(step);
 }
 
 }  // namespace search
