@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/CompactBitSet.hpp"
 
@@ -16,7 +15,6 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
-  using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   const State& state(game_tree_index_t ix) const;
   void init();
@@ -29,6 +27,7 @@ class GameStateTree {
   }
   game_tree_index_t get_parent_index(game_tree_index_t ix) const;
   seat_index_t get_parent_seat(game_tree_index_t ix) const;
+  step_t get_step(game_tree_index_t ix) const { return nodes_[ix].step; }
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
@@ -44,6 +43,7 @@ class GameStateTree {
     const action_t action_from_parent = kNullAction;
     game_tree_index_t first_child_ix = kNullNodeIx;
     game_tree_index_t next_sibling_ix = kNullNodeIx;
+    step_t step = -1;
     PlayerActed player_acted;
     seat_index_t seat = -1;
     action_mode_t action_mode = -1;
@@ -56,13 +56,15 @@ class GameStateTree {
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
-    Node(const State& s, seat_index_t se, action_mode_t am) : state(s), seat(se), action_mode(am) {}
+    Node(const State& s, step_t st, seat_index_t se, action_mode_t am)
+        : state(s), step(st), seat(se), action_mode(am) {}
 
-    Node(const State& s, game_tree_index_t p, action_t a, seat_index_t se, action_mode_t am,
-         PlayerActed pa)
+    Node(const State& s, game_tree_index_t p, action_t a, step_t st, seat_index_t se,
+         action_mode_t am, PlayerActed pa)
         : state(s),
           parent_ix(p),
           action_from_parent(a),
+          step(st),
           player_acted(pa),
           seat(se),
           action_mode(am) {}

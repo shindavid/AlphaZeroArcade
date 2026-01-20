@@ -31,20 +31,6 @@ void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outco
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::backtrack(const BacktrackUpdate& update) {
-  send_backtrack_msg(update);
-}
-
-template <core::concepts::Game Game>
-void WebPlayer<Game>::send_backtrack_msg(const BacktrackUpdate& update) {
-  StateChangeUpdate state_update(*update.reverse_history[0], update.action, update.index, update.mode);
-
-  Message msg(Message::BridgeAction::kUpdate);
-  msg.add_payload(this->make_state_update_msg(state_update));
-  msg.send();
-}
-
-template <core::concepts::Game Game>
 void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::seat_index_t seat) {
   if (seat != this->get_my_seat()) {
     return;
@@ -207,13 +193,13 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   util::Rendering::Guard guard(util::Rendering::kText);
 
   Payload payload(Payload::Type::kStateUpdate);
-  payload.add_field("board", Game::IO::state_to_json(update.state));
+  payload.add_field("board", Game::IO::state_to_json(*update.state_it));
   payload.add_field("index", update.index);
   payload.add_field("last_action", update.action);
   payload.add_field("mode", update.mode);
 
   auto obj = payload.to_json();
-  Game::IO::add_render_info(update.state, obj);
+  Game::IO::add_render_info(*update.state_it, obj);
   return obj;
 }
 

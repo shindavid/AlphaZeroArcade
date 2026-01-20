@@ -11,7 +11,7 @@ void GameStateTree<Game>::init() {
   Rules::init_state(state);
   seat_index_t seat = Rules::get_current_player(state);
   action_mode_t action_mode = Rules::get_action_mode(state);
-  nodes_.emplace_back(state, seat, action_mode);
+  nodes_.emplace_back(state, 0, seat, action_mode);
 }
 
 template <concepts::Game Game>
@@ -60,7 +60,9 @@ game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action
     player_acted.set(parent_seat);
   }
 
-  nodes_.emplace_back(new_state, from_ix, action, seat, action_mode, player_acted);
+  step_t step = nodes_[from_ix].step + 1;
+
+  nodes_.emplace_back(new_state, from_ix, action, step, seat, action_mode, player_acted);
   return new_ix;
 }
 

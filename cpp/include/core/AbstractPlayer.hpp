@@ -66,8 +66,6 @@ class AbstractPlayer {
 
   virtual void receive_state_change(const StateChangeUpdate& update) {}
 
-  virtual void backtrack(const BacktrackUpdate& update) {}
-
   /*
    * In games with chance events, this method is called before the chance event occurs. This gives
    * the player a chance to output action value targets to be used for training.

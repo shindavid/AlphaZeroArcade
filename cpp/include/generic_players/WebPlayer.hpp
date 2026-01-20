@@ -39,7 +39,6 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
   bool disable_progress_bar() const override { return true; }
-  void backtrack(const BacktrackUpdate& update) override;
 
   // WebManagerClient interface
   void handle_action(const boost::json::object& payload, core::seat_index_t seat) override;
@@ -175,8 +174,6 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // }
 
   virtual boost::json::object make_tree_node_msg(const StateChangeUpdate&);
-
-  virtual void send_backtrack_msg(const BacktrackUpdate& update);
 
  private:
   core::YieldNotificationUnit notification_unit_;

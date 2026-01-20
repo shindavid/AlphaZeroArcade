@@ -9,19 +9,21 @@ namespace core {
 template <concepts::Game Game>
 class StateIterator {
  public:
-  StateIterator(const GameStateTree<Game>& tree, game_tree_index_t current_index)
+  StateIterator(const GameStateTree<Game>* tree, game_tree_index_t current_index)
       : tree_(tree), index_(current_index) {}
 
-  const Game::State& operator*() const { return tree_.state(index_); }
+  const Game::State& operator*() const { return tree_->state(index_); }
 
   StateIterator& operator++() {
-    index_ = tree_.get_parent_index(index_);
+    index_ = tree_->get_parent_index(index_);
     return *this;
   }
 
+  bool end() const { return index_ < 0; }
+
  private:
-  const GameStateTree<Game>& tree_;
-  game_tree_index_t index_;
+  const GameStateTree<Game>* tree_ = nullptr;
+  game_tree_index_t index_ = -1;
 };
 
 }  // namespace core

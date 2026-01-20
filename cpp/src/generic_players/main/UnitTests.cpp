@@ -4,7 +4,9 @@
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/GameStateTree.hpp"
 #include "core/StateChangeUpdate.hpp"
+#include "core/StateIterator.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
@@ -52,6 +54,8 @@ class PlayerTest : public ::testing::Test {
   using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
+  using StateTree = core::GameStateTree<Game>;
+  using StateIterator = core::StateIterator<Game>;
 
  public:
   PlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetition) {
@@ -77,13 +81,15 @@ class PlayerTest : public ::testing::Test {
   void start_manager(const std::vector<core::action_t>& initial_actions) {
     mcts_player_->start_game();
 
-    State state;
-    Rules::init_state(state);
-    for (core::action_t action : initial_actions) {
-      core::seat_index_t seat = Rules::get_current_player(state);
-      Rules::apply(state, action);
+    StateTree state_tree;
+    state_tree.init();
+    core::game_tree_index_t ix = 0;
 
-      StateChangeUpdate update(state, action, seat);
+    for (core::action_t action : initial_actions) {
+      core::seat_index_t seat = Rules::get_current_player(state_tree.state(ix));
+      ix = state_tree.advance(ix, action);
+      StateIterator state_it(&state_tree, ix);
+      StateChangeUpdate update(state_it, action, seat);
       mcts_player_->receive_state_change(update);
     }
     initial_actions_ = initial_actions;

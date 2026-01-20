@@ -1265,8 +1265,8 @@ void GameServer<Game>::GameSlot::apply_action(action_t action) {
   state_node_index_ = state_tree_.advance(state_node_index_, action);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate state_update(state(), action, state_node_index_, parent_index, active_seat_,
-                                 action_mode_);
+  StateChangeUpdate state_update(state_iterator(), action, state_node_index_, parent_index, step(),
+                                 active_seat_, action_mode_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }
@@ -1277,18 +1277,14 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   state_node_index_ = index;
 
   action_t action = state_tree_.get_action(index);
+  game_tree_index_t parent_index = state_tree_.get_parent_index(index);
+  seat_index_t seat = state_tree_.get_parent_seat(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
-  ReverseHistory reverse_history;
-  for (game_tree_index_t ix = index; ix >= 0; ix = state_tree_.get_parent_index(ix)) {
-    reverse_history.push_back(&state_tree_.state(ix));
-  }
-
-  step_t step = reverse_history.size() - 1;
-  RELEASE_ASSERT(step >= 0, "step < 0 from empty reverse_history when backtracking.");
-  BacktrackUpdate update(reverse_history, action, index, step, action_mode);
+  StateChangeUpdate update(state_iterator(), action, index, parent_index, step(), seat,
+                           action_mode, true);
   for (int p = 0; p < kNumPlayers; ++p) {
-    players_[p]->backtrack(update);
+    players_[p]->receive_state_change(update);
   }
 }
 

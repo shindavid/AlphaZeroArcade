@@ -4,6 +4,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
+#include "core/StateIterator.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
@@ -56,7 +57,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateHistory = search::TraitsTypes<Traits>::StateHistory;
-  using ReverseHistory = core::ReverseHistory<State>;
+  using StateIterator = core::StateIterator<Game>;
 
   struct SharedData {
     template <typename... Ts>
@@ -74,7 +75,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void receive_state_change(const StateChangeUpdate&) override;
   core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
-  void backtrack(const core::BacktrackUpdate<Game>& update) override;
 
  protected:
   void clear_search_mode();
@@ -90,6 +90,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void normalize(const ActionMask&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
+
+  static StateHistory state_history_from_iterator(StateIterator state_it);
 
   const Params params_;
 

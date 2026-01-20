@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include "core/BasicTypes.hpp"
 #include "util/StaticCircularBuffer.hpp"
 
 namespace core {
@@ -23,11 +21,7 @@ namespace core {
 template <typename State, int kNumPastStatesNeeded>
 class SimpleStateHistory {
  public:
-  using ReverseHistory = core::ReverseHistory<State>;
-
-  SimpleStateHistory() = default;
-  SimpleStateHistory(const ReverseHistory&);
-
+  static constexpr int kPastHistoryLength = kNumPastStatesNeeded;
   void clear() { buf_.clear(); }
 
   /*
