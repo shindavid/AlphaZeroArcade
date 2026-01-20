@@ -3,7 +3,6 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/ActionRequest.hpp"
-#include "core/BacktrackUpdate.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
@@ -77,8 +76,6 @@ class GameServer
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using BacktrackUpdate = core::BacktrackUpdate<Game>;
-  using ReverseHistory = core::ReverseHistory<State>;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

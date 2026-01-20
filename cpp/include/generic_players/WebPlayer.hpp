@@ -3,7 +3,6 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
-#include "core/BacktrackUpdate.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "core/WebManager.hpp"
@@ -28,7 +27,6 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using BacktrackUpdate = core::BacktrackUpdate<Game>;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
   virtual ~WebPlayer() = default;
