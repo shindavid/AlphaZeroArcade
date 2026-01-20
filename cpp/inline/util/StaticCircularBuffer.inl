@@ -15,6 +15,27 @@ void StaticCircularBuffer<T, N>::push_back(const T& value) {
 }
 
 template <typename T, int N>
+void StaticCircularBuffer<T, N>::push_front(const T& value) {
+  start_ = (start_ + N - 1) % N;
+  buffer_[start_] = value;
+  if (count_ < N) {
+    ++count_;
+  }
+}
+
+template <typename T, int N>
+T& StaticCircularBuffer<T, N>::front() {
+  if (empty()) throw std::out_of_range("StaticCircularBuffer: front() on empty buffer");
+  return buffer_[start_];
+}
+
+template <typename T, int N>
+const T& StaticCircularBuffer<T, N>::front() const {
+  if (empty()) throw std::out_of_range("StaticCircularBuffer: front() on empty buffer");
+  return buffer_[start_];
+}
+
+template <typename T, int N>
 void StaticCircularBuffer<T, N>::pop_back() {
   if (empty()) throw std::out_of_range("StaticCircularBuffer: pop_back() on empty buffer");
   --count_;
