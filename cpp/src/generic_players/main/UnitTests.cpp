@@ -89,7 +89,7 @@ class PlayerTest : public ::testing::Test {
       core::seat_index_t seat = Rules::get_current_player(state_tree.state(ix));
       ix = state_tree.advance(ix, action);
       StateIterator state_it(&state_tree, ix);
-      StateChangeUpdate update(state_it, action, seat);
+      StateChangeUpdate update(state_it, action, state_tree.get_step(ix), seat);
       mcts_player_->receive_state_change(update);
     }
     initial_actions_ = initial_actions;

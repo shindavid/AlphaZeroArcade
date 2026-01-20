@@ -29,8 +29,8 @@ struct StateChangeUpdate {
                     step_t st, seat_index_t se, action_mode_t m, bool j = false)
       : state_it(it), action(a), index(i), parent_index(pi), step(st), seat(se), mode(m), jump(j) {}
 
-  StateChangeUpdate(StateIterator it, action_t a, seat_index_t se)
-      : state_it(it), action(a), index(-1), parent_index(-1), step(-1), seat(se), mode(-1) {}
+  StateChangeUpdate(StateIterator it, action_t a, step_t st, seat_index_t se)
+      : state_it(it), action(a), index(-1), parent_index(-1), step(st), seat(se), mode(-1) {}
 };
 
 }  // namespace core

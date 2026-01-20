@@ -56,8 +56,8 @@ class GameStateTree {
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
-    Node(const State& s, step_t st, seat_index_t se, action_mode_t am)
-        : state(s), step(st), seat(se), action_mode(am) {}
+    Node(const State& s, seat_index_t se, action_mode_t am)
+        : state(s), step(0), seat(se), action_mode(am) {}
 
     Node(const State& s, game_tree_index_t p, action_t a, step_t st, seat_index_t se,
          action_mode_t am, PlayerActed pa)
