@@ -13,11 +13,8 @@ class StateIterator {
       : tree_(tree), index_(current_index) {}
 
   const Game::State& operator*() const { return tree_->state(index_); }
-
-  StateIterator& operator++() {
-    index_ = tree_->get_parent_index(index_);
-    return *this;
-  }
+  StateIterator& operator++();
+  StateIterator operator++(int);
 
   bool end() const { return index_ < 0; }
 
@@ -27,3 +24,5 @@ class StateIterator {
 };
 
 }  // namespace core
+
+#include "inline/core/StateIterator.inl"
