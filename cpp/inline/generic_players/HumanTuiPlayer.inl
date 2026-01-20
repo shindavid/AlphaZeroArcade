@@ -22,7 +22,7 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
-  last_action_ = update.action;
+  last_action_ = update.action();
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread

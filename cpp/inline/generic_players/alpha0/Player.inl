@@ -44,9 +44,10 @@ template <search::concepts::Traits Traits>
 void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 
-  if (this->get_my_seat() == update.seat && params_extra_.verbose) {
+  if (this->get_my_seat() == update.seat() && params_extra_.verbose) {
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      Game::IO::print_state(std::cout, *update.state_it(), update.action, &this->get_player_names());
+      Game::IO::print_state(std::cout, *update.state_it(), update.action(),
+                            &this->get_player_names());
     }
   }
 }

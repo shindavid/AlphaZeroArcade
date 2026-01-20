@@ -17,39 +17,46 @@ struct StateChangeUpdate {
   using StateIterator = core::StateIterator<Game>;
 
   // TODO: move to private and make getters
-  action_t action;
-  game_tree_index_t index;
-  game_tree_index_t parent_index;
-  step_t step;
-  seat_index_t seat;
-  action_mode_t mode;
-  bool jump;
 
   StateChangeUpdate(StateIterator it, action_t a, game_tree_index_t i, game_tree_index_t pi,
                     step_t st, seat_index_t se, action_mode_t m, bool j = false)
-      : action(a),
-        index(i),
-        parent_index(pi),
-        step(st),
-        seat(se),
-        mode(m),
-        jump(j),
-        state_it_(it) {}
+      : state_it_(it),
+        action_(a),
+        index_(i),
+        parent_index_(pi),
+        step_(st),
+        seat_(se),
+        mode_(m),
+        jump_(j) {}
 
   StateChangeUpdate(StateIterator it, action_t a, step_t st, seat_index_t se)
-      : action(a),
-        index(-1),
-        parent_index(-1),
-        step(st),
-        seat(se),
-        mode(-1),
-        jump(false),
-        state_it_(it) {}
+      : state_it_(it),
+        action_(a),
+        index_(-1),
+        parent_index_(-1),
+        step_(st),
+        seat_(se),
+        mode_(-1),
+        jump_(false) {}
 
   StateIterator state_it() const { return state_it_; }
+  action_t action() const { return action_; }
+  game_tree_index_t index() const { return index_; }
+  game_tree_index_t parent_index() const { return parent_index_; }
+  step_t step() const { return step_; }
+  seat_index_t seat() const { return seat_; }
+  action_mode_t mode() const { return mode_; }
+  bool is_jump() const { return jump_; }
 
  private:
   StateIterator state_it_;
+  action_t action_;
+  game_tree_index_t index_;
+  game_tree_index_t parent_index_;
+  step_t step_;
+  seat_index_t seat_;
+  action_mode_t mode_;
+  bool jump_;
 };
 
 }  // namespace core

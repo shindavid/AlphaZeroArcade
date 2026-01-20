@@ -23,7 +23,7 @@ inline bool HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update) {
-  if (move_history_) move_history_->append(update.action);
+  if (move_history_) move_history_->append(update.action());
   base_t::receive_state_change(update);
 }
 
