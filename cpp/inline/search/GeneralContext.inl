@@ -9,7 +9,7 @@ void GeneralContext<Traits>::RootInfo::clear() {
   State state;
   Rules::init_state(state);
   history.clear();
-  history.update(state);
+  history.push_back(state);
 }
 
 template <search::concepts::Traits Traits>

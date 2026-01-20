@@ -91,8 +91,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   core::SearchMode get_random_search_mode() const;
 
-  static StateHistory state_history_from_iterator(StateIterator state_it);
-
   const Params params_;
 
   const search::SearchParams search_params_[core::kNumSearchModes];

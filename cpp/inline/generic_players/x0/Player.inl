@@ -87,7 +87,12 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   move_temperature_.jump_to(update.step);
   if (owns_shared_data_) {
     if (update.jump) {
-      StateHistory history = state_history_from_iterator(update.state_it());
+      StateHistory history;
+      auto it = update.state_it();
+      while (!it.end() && !history.full()) {
+        history.push_front(*it);
+        ++it;
+      }
       get_manager()->backtrack(history, update.step);
     } else {
       get_manager()->receive_state_change(update.seat, *update.state_it(), update.action);
@@ -202,24 +207,6 @@ void Player<Traits>::end_game(const State& state, const GameResultTensor& result
     delete ptr;
   }
   search_result_ptrs_.clear();
-}
-
-template <search::concepts::Traits Traits>
-typename Player<Traits>::StateHistory Player<Traits>::state_history_from_iterator(
-  StateIterator state_it) {
-  std::vector<StateIterator> reverse_history;
-  reverse_history.reserve(StateHistory::kPastHistoryLength + 1);
-  for (int i = 0; i < StateHistory::kPastHistoryLength + 1; ++i) {
-    if (state_it.end()) break;
-    reverse_history.push_back(state_it);
-    ++state_it;
-  }
-
-  StateHistory history;
-  for (auto it = reverse_history.rbegin(); it != reverse_history.rend(); ++it) {
-    history.update(**it);
-  }
-  return history;
 }
 
 }  // namespace generic::x0

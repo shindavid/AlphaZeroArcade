@@ -21,7 +21,6 @@ namespace core {
 template <typename State, int kNumPastStatesNeeded>
 class SimpleStateHistory {
  public:
-  static constexpr int kPastHistoryLength = kNumPastStatesNeeded;
   void clear() { buf_.clear(); }
 
   /*
@@ -42,7 +41,17 @@ class SimpleStateHistory {
   /*
    * Push back the given state.
    */
-  void update(const State& state);
+  void push_back(const State& state) { buf_.push_back(state); }
+
+  /*
+   * Push front the given state.
+   */
+  void push_front(const State& state) { buf_.push_front(state); }
+
+  /*
+   * Return true if the history is full (i.e., contains all past states + current state).
+   */
+  bool full() const { return buf_.size() >= kMaxSize - 1; }
 
   /*
    * Undo the most recent update() call. Assumes that the history is not empty, and that any two
