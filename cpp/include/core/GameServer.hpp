@@ -11,6 +11,7 @@
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "core/StateChangeUpdate.hpp"
+#include "core/StateIterator.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"

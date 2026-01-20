@@ -1,0 +1,27 @@
+#pragma once
+
+#include "core/BasicTypes.hpp"
+#include "core/GameStateTree.hpp"
+#include "core/concepts/GameConcept.hpp"
+
+namespace core {
+
+template <concepts::Game Game>
+class StateIterator {
+ public:
+  StateIterator(const GameStateTree<Game>& tree, game_tree_index_t current_index)
+      : tree_(tree), index_(current_index) {}
+
+  const Game::State& operator*() const { return tree_.state(index_); }
+
+  StateIterator& operator++() {
+    index_ = tree_.get_parent_index(index_);
+    return *this;
+  }
+
+ private:
+  const GameStateTree<Game>& tree_;
+  game_tree_index_t index_;
+};
+
+}  // namespace core
