@@ -14,7 +14,7 @@ struct SearchResults : public x0::SearchResults<Game> {
   using ValueArray = Game::Types::ValueArray;
 
   ActionValueTensor AQ;
-  ActionValueTensor AW;
+  ActionValueTensor AU;
   PolicyTensor pi;
 
   ValueArray Q_min;

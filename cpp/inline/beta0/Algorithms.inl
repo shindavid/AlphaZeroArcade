@@ -413,7 +413,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   results.P.setZero();
   results.pi.setZero();
   results.AQ.setZero();
-  results.AW.setZero();
+  results.AU.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -437,11 +437,11 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     }
 
     const auto& AQ = child ? child->stats().Q : edge->child_AV;
-    const auto& AW = child ? child->stats().W : edge->child_AU;
+    const auto& AU = child ? child->stable_data().U : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
       results.AQ(action, p) = AQ[p];
-      results.AW(action, p) = AW[p];
+      results.AU(action, p) = AU[p];
     }
     i++;
   }
@@ -492,7 +492,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     LocalPolicyArray action_array(stable_data.num_valid_actions);
     LocalPolicyArray pi_array(stable_data.num_valid_actions);
     LocalPolicyArray AQ_array(stable_data.num_valid_actions);
-    LocalPolicyArray AW_array(stable_data.num_valid_actions);
+    LocalPolicyArray AU_array(stable_data.num_valid_actions);
 
     for (int e = 0; e < stable_data.num_valid_actions; ++e) {
       core::action_t action = actions[e];
@@ -500,12 +500,12 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       action_array(e) = action;
       pi_array(e) = results.pi(action);
       AQ_array(e) = results.AQ(action, seat);
-      AW_array(e) = results.AW(action, seat);
+      AU_array(e) = results.AU(action, seat);
     }
 
-    static std::vector<std::string> action_columns = {"action", "pi", "AQ", "AW"};
+    static std::vector<std::string> action_columns = {"action", "pi", "AQ", "AU"};
     auto action_data = eigen_util::sort_rows(
-      eigen_util::concatenate_columns(action_array, pi_array, AQ_array, AW_array));
+      eigen_util::concatenate_columns(action_array, pi_array, AQ_array, AU_array));
 
     eigen_util::PrintArrayFormatMap fmt_map{
       {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
@@ -553,8 +553,8 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.W = eigen_util::reinterpret_as_tensor(mcts_results->W);
 
   if (params.use_for_training) {
-    training_info.AW = mcts_results->AW;
-    training_info.AW_valid = true;
+    training_info.AU = mcts_results->AU;
+    training_info.AU_valid = true;
   }
 }
 
@@ -568,12 +568,12 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   full_record.Q_max = training_info.Q_max;
   full_record.W = training_info.W;
 
-  if (training_info.AW_valid) {
-    full_record.AW = training_info.AW;
+  if (training_info.AU_valid) {
+    full_record.AU = training_info.AU;
   } else {
-    full_record.AW.setZero();
+    full_record.AU.setZero();
   }
-  full_record.AW_valid = training_info.AW_valid;
+  full_record.AU_valid = training_info.AU_valid;
 }
 
 template <search::concepts::Traits Traits>
@@ -591,12 +591,12 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
-  ActionValueTensorData AW(full_record.AW_valid, full_record.AW);
+  ActionValueTensorData AU(full_record.AU_valid, full_record.AU);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
   action_values.write_to(buf);
-  AW.write_to(buf);
+  AU.write_to(buf);
 }
 
 template <search::concepts::Traits Traits>
@@ -620,13 +620,13 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   const ActionValueTensorData* action_values_data =
     reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
-  const char* AW_data_addr = action_values_data_addr + action_values_data->size();
-  const ActionValueTensorData* AW_data =
-    reinterpret_cast<const ActionValueTensorData*>(AW_data_addr);
+  const char* AU_data_addr = action_values_data_addr + action_values_data->size();
+  const ActionValueTensorData* AU_data =
+    reinterpret_cast<const ActionValueTensorData*>(AU_data_addr);
 
   view.policy_valid = policy_data->load(view.policy);
   view.action_values_valid = action_values_data->load(view.action_values);
-  view.AW_valid = AW_data->load(view.AW);
+  view.AU_valid = AU_data->load(view.AU);
 
   if (view.policy_valid) {
     Game::Symmetries::apply(view.policy, sym, mode);
@@ -636,8 +636,8 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
     Game::Symmetries::apply(view.action_values, sym, mode);
   }
 
-  if (view.AW_valid) {
-    Game::Symmetries::apply(view.AW, sym, mode);
+  if (view.AU_valid) {
+    Game::Symmetries::apply(view.AU, sym, mode);
   }
 
   view.next_policy_valid = false;
