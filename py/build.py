@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument("-c", '--clear-core-dumps', action='store_true',
                         help='rm core.* from cwd and ~/scratch/runs/*/*/*/ before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
+    parser.add_argument("-p", '--prefix', help='build prefix (target/{prefix}Release)')
     parser.add_argument('-D', '--macro-defines', action='append',
                         help='macro definitions to forward to make cmd (-D FOO -D BAR=2)')
     return parser.parse_args()
@@ -99,6 +100,8 @@ def main():
     extra_definitions = ' '.join(f'-D{d}' for d in macro_defines)
 
     build_name = 'Debug' if debug else 'Release'
+    if args.prefix:
+        build_name = f'{args.prefix}{build_name}'
     target_dir = f'target/{build_name}'
 
     if args.clean:
