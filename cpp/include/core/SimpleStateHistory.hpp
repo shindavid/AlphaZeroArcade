@@ -51,7 +51,7 @@ class SimpleStateHistory {
   /*
    * Return true if the history is full (i.e., contains all past states + current state).
    */
-  bool full() const { return buf_.size() >= kMaxSize - 1; }
+  bool full() const { return buf_.size() >= kNumPastStatesNeeded + 1; }
 
   /*
    * Undo the most recent update() call. Assumes that the history is not empty, and that any two
