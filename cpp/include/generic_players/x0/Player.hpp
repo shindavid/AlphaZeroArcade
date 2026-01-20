@@ -4,11 +4,13 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
+#include "core/StateIterator.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -54,6 +56,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
+  using StateHistory = search::TraitsTypes<Traits>::StateHistory;
+  using StateIterator = core::StateIterator<Game>;
 
   struct SharedData {
     template <typename... Ts>

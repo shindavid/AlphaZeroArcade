@@ -9,7 +9,7 @@ void GeneralContext<Traits>::RootInfo::clear() {
   State state;
   Rules::init_state(state);
   history.clear();
-  history.update(state);
+  history.push_back(state);
 }
 
 template <search::concepts::Traits Traits>
@@ -30,6 +30,11 @@ void GeneralContext<Traits>::clear() {
 template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::step() {
   aux_state.step();
+}
+
+template <search::concepts::Traits Traits>
+void GeneralContext<Traits>::jump_to(core::step_t step) {
+  aux_state.jump_to(step);
 }
 
 }  // namespace search

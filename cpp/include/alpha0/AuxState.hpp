@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "search/concepts/ManagerParamsConcept.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Math.hpp"
@@ -17,6 +18,7 @@ struct AuxState {
 
   void clear() { root_softmax_temperature.reset(); }
   void step() { root_softmax_temperature.step(); }
+  void jump_to(core::step_t step) { root_softmax_temperature.jump_to(step); }
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
   math::ExponentialDecay root_softmax_temperature;

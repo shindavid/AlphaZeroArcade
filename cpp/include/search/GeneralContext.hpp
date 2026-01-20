@@ -40,6 +40,7 @@ struct GeneralContext {
   GeneralContext(const ManagerParams& mparams, core::mutex_vec_sptr_t node_mutex_pool);
   void clear();
   void step();
+  void jump_to(core::step_t step);
 
   const ManagerParams manager_params;
   const SearchParams pondering_search_params;

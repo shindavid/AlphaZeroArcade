@@ -5,6 +5,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/StateIterator.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/Packet.hpp"
 #include "core/StateChangeUpdate.hpp"
@@ -44,6 +45,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
   using GameStateTree = core::GameStateTree<Game>;
+  using StateIterator = core::StateIterator<Game>;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -90,6 +92,9 @@ class GameServerProxy : public core::GameServerBase {
 
     void handle_terminal(const GameResultTensor& outcome);
     void send_action_packet(const ActionResponse&);
+
+    StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
+    step_t step() const { return state_tree_.get_step(state_node_index_); }
 
     game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);

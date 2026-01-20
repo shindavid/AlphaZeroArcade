@@ -19,9 +19,12 @@ class StaticCircularBuffer {
   std::size_t size() const { return count_; }
 
   void push_back(const T& value);
+  void push_front(const T& value);
   void pop_back();
   T& back();
   const T& back() const;
+  T& front();
+  const T& front() const;
   void clear();
 
   class iterator {

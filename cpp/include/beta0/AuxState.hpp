@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "search/concepts/ManagerParamsConcept.hpp"
 #include "util/EigenUtil.hpp"
 
@@ -13,6 +14,7 @@ struct AuxState {
 
   void clear() {}
   void step() {}
+  void jump_to(core::step_t) {}
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
   mutable Eigen::Rand::P8_mt19937_64 rng;

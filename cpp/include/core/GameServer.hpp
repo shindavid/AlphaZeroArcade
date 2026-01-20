@@ -6,6 +6,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/StateIterator.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
@@ -89,6 +90,7 @@ class GameServer
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using action_vec_t = std::vector<action_t>;
   using StateTree = GameStateTree<Game>;
+  using StateIterator = core::StateIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
 
   /*
@@ -186,6 +188,8 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
+    StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
+    step_t step() const { return state_tree_.get_step(state_node_index_); }
     void apply_action(action_t action);
 
    private:

@@ -84,9 +84,19 @@ bool Player<Traits>::start_game() {
 template <search::concepts::Traits Traits>
 void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   clear_search_mode();
-  move_temperature_.step();
+  move_temperature_.jump_to(update.step());
   if (owns_shared_data_) {
-    get_manager()->receive_state_change(update.seat, update.state, update.action);
+    if (update.is_jump()) {
+      StateHistory history;
+      auto it = update.state_it();
+      while (!it.end() && !history.full()) {
+        history.push_front(*it);
+        ++it;
+      }
+      get_manager()->backtrack(history, update.step());
+    } else {
+      get_manager()->receive_state_change(update.seat(), *update.state_it(), update.action());
+    }
   }
 }
 

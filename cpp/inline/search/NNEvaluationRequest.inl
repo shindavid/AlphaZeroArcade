@@ -29,7 +29,7 @@ template <search::concepts::Traits Traits>
 template <typename Func>
 auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
   if (split_history_) {
-    history_->update(state_);  // temporary append
+    history_->push_back(state_);  // temporary append
   }
 
   auto begin = history_->begin();

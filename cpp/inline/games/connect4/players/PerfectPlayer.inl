@@ -35,7 +35,7 @@ inline bool PerfectPlayer::start_game() {
 }
 
 inline void PerfectPlayer::receive_state_change(const StateChangeUpdate& update) {
-  move_history_.append(update.action);
+  move_history_.append(update.action());
 }
 
 }  // namespace c4

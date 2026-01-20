@@ -6,6 +6,7 @@
 #include "core/PerfStats.hpp"
 #include "core/players/RemotePlayerProxy.hpp"
 #include "generic_players/AnalysisPlayerGenerator.hpp"
+#include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/CppUtil.hpp"
@@ -1264,8 +1265,8 @@ void GameServer<Game>::GameSlot::apply_action(action_t action) {
   state_node_index_ = state_tree_.advance(state_node_index_, action);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate state_update(state(), action, state_node_index_, parent_index, active_seat_,
-                                 action_mode_);
+  StateChangeUpdate state_update(state_iterator(), action, state_node_index_, parent_index, step(),
+                                 active_seat_, action_mode_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }
@@ -1280,7 +1281,8 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   seat_index_t seat = state_tree_.get_parent_seat(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
-  StateChangeUpdate update(state(), action, index, parent_index, seat, action_mode);
+  StateChangeUpdate update(state_iterator(), action, index, parent_index, step(), seat,
+                           action_mode, true);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }

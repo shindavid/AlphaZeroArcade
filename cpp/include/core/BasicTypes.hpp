@@ -22,6 +22,7 @@ using pipeline_index_t = int32_t;
 using generation_t = int32_t;
 using game_tree_node_aux_t = uint64_t;
 using game_tree_index_t = int32_t;
+using step_t = int32_t;
 
 constexpr game_tree_index_t kNullNodeIx = -1;
 constexpr action_t kNullAction = -1;
