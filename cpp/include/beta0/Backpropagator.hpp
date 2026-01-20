@@ -65,7 +65,6 @@ class Backpropagator {
     // Corresponds to columns of sibling_read_data_
     sr_P,
     sr_pi,
-    sr_A,
     sr_lV,
     sr_lU,
     sr_lQ,
@@ -75,6 +74,7 @@ class Backpropagator {
 
   enum sibling_write_col_t : uint8_t {
     // Corresponds to columns of sibling_write_data_
+    sw_A,
     sw_c,
     sw_z,
     sw_w,
@@ -172,7 +172,7 @@ class Backpropagator {
   void apply_updates();
   void print_debug_info();
 
-  bool yield_to_inf_A_j();
+  bool handle_edge_cases();
   void compute_ratings();
   void calibrate_ratings();
   void compute_policy();
@@ -181,7 +181,8 @@ class Backpropagator {
   void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
   void update_QW();
 
-  void splice(read_col_t from_col, sibling_read_col_t to_col);
+  void r_splice(read_col_t from_col, sibling_read_col_t to_col);
+  void w_splice(full_write_col_t from_col, sibling_write_col_t to_col);
   LocalArray unsplice(sibling_write_col_t from_col);
 
   // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.

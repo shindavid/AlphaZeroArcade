@@ -168,13 +168,12 @@ void Backpropagator<Traits>::load_remaining_data() {
 
   sibling_read_data_.resize(n_ - 1);
 
-  splice(r_P, sr_P);
-  splice(r_pi, sr_pi);
-  splice(r_A, sr_A);
-  splice(r_lV, sr_lV);
-  splice(r_lU, sr_lU);
-  splice(r_lQ, sr_lQ);
-  splice(r_lW, sr_lW);
+  r_splice(r_P, sr_P);
+  r_splice(r_pi, sr_pi);
+  r_splice(r_lV, sr_lV);
+  r_splice(r_lU, sr_lU);
+  r_splice(r_lQ, sr_lQ);
+  r_splice(r_lW, sr_lW);
 }
 
 template <search::concepts::Traits Traits>
@@ -182,6 +181,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
   sibling_write_data_.resize(n_ - 1);
   compute_ratings();
+  calibrate_ratings();
   compute_policy();
   update_QW();
 
@@ -300,74 +300,94 @@ void Backpropagator<Traits>::print_debug_info() {
 }
 
 template <search::concepts::Traits Traits>
-bool Backpropagator<Traits>::yield_to_inf_A_j() {
-  // Due to transpositions, we could have other actions that are already +inf. If so, put the
-  // weight on them instead of respecting read_data_(r_A).
-  bool any_pos_inf = false;
-  for (int k = 0; k < n_; k++) {
-    if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
-      any_pos_inf = true;
-      break;
-    }
-  }
-  if (!any_pos_inf) return false;
+bool Backpropagator<Traits>::handle_edge_cases() {
+  int pos_inf_count = 0;
+  int neg_inf_count = 0;
+  int zero_lW_count = 0;
+  float max_zero_lW_value = std::numeric_limits<float>::lowest();
 
   for (int k = 0; k < n_; k++) {
-    if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
-      full_write_data_(fw_A, k) = -1.f;
-    } else {
+    float lW_k = read_data_(r_lW, k);
+    bool pos_inf = (lW_k == util::Gaussian1D::kVariancePosInf);
+    bool neg_inf = (lW_k == util::Gaussian1D::kVarianceNegInf);
+    bool zero = (lW_k == 0.f);
+
+    pos_inf_count += pos_inf;
+    neg_inf_count += neg_inf;
+    zero_lW_count += zero;
+
+    if (pos_inf_count) break;
+    if (neg_inf) {
       full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
     }
+    if (zero) {
+      float lQ_k = read_data_(r_lQ, k);
+      if (lQ_k > max_zero_lW_value) {
+        max_zero_lW_value = lQ_k;
+      }
+    }
   }
-  calibrate_ratings();
-  return true;
+
+  if (pos_inf_count) {
+    for (int k = 0; k < n_; k++) {
+      if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
+        full_write_data_(fw_A, k) = -1.f;
+      } else {
+        full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+      }
+    }
+    return true;
+  }
+
+  if (neg_inf_count == n_) {
+    // All actions have -inf rating. This is a losing position. Arbitrarily set an action to -1.
+    full_write_data_(fw_A, i_) = -1.f;
+    return true;
+  }
+
+  if (neg_inf_count + 1 == n_) {
+    // All but one action have -inf rating. Put all policy mass on the remaining action.
+    for (int k = 0; k < n_; k++) {
+      if (read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf) {
+        full_write_data_(fw_A, k) = -1.f;
+        break;
+      }
+    }
+    return true;
+  }
+
+  // If we got here, there are no +inf actions, and at least two finite actions.
+
+  if (zero_lW_count) {
+    // Zero out zero-variance actions dominated by other zero-variance actions
+    for (int k = 0; k < n_; k++) {
+      float lW_k = read_data_(r_lW, k);
+      float lQ_k = read_data_(r_lQ, k);
+      if (lW_k == 0.f && lQ_k < max_zero_lW_value) {
+        full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+      }
+    }
+    if (zero_lW_count + neg_inf_count == n_) {
+      // There are no uncertain actions
+      return true;
+    }
+  }
+
+  return false;
 }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
   const util::Gaussian1D lQW_i(read_data_(r_lQ, i_), read_data_(r_lW, i_));
-  if (lQW_i == util::Gaussian1D::neg_inf()) {
-    full_write_data_(fw_A) = read_data_(r_A);
-    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+  full_write_data_(fw_A) = read_data_(r_A);
+  if (handle_edge_cases()) return;
 
-    if (full_write_data_(fw_A).isZero(0.f)) {
-      // All actions have -inf rating. This is a losing position. Arbitrarily set an action to -1.
-      full_write_data_(fw_A, i_) = -1.f;
-    } else {
-      yield_to_inf_A_j();
-    }
-    return;
-  } else if (lQW_i == util::Gaussian1D::pos_inf()) {
-    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
-    for (int k = 0; k < n_; k++) {
-      if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
-        full_write_data_(fw_A, k) = -1.f;
-      }
-    }
-    calibrate_ratings();
-    return;
-  }
+  if (lQW_i == util::Gaussian1D::neg_inf()) return;
+  if (read_data_(r_pi, i_) >= 1.f) return;  // all policy mass is already on this action
 
-  if (read_data_(r_lW).isZero(0.f)) {
-    // all actions have finite Q with zero variance - put all policy mass on the best action(s)
-    float max_lQ = read_data_(r_lQ).maxCoeff();
-    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
-    for (int k = 0; k < n_; k++) {
-      if (read_data_(r_lQ, k) == max_lQ) {
-        full_write_data_(fw_A, k) = -1.f;
-      }
-    }
-    return;
-  }
+  w_splice(fw_A, sw_A);
 
   RELEASE_ASSERT(lQW_i.valid());
-
-  full_write_data_(fw_A) = read_data_(r_A);
-
-  if (read_data_(r_pi, i_) >= 1.f) {
-    // all policy mass is already on this action
-    return;
-  }
 
   const float P_i = read_data_(r_P, i_);
   float A_i = read_data_(r_A, i_);
@@ -378,31 +398,21 @@ void Backpropagator<Traits>::compute_ratings() {
 
   const auto P = sibling_read_data_(sr_P);
   const auto pi = sibling_read_data_(sr_pi);
-  const auto A = sibling_read_data_(sr_A);
   const auto lV = sibling_read_data_(sr_lV);
   const auto lU = sibling_read_data_(sr_lU);
   const auto lQ = sibling_read_data_(sr_lQ);
   const auto lW = sibling_read_data_(sr_lW);
 
-  if (lW.isConstant(util::Gaussian1D::kVarianceNegInf, 0.f)) {
-    // all other actions are -inf. Put all policy mass on this action
-    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
-    full_write_data_(fw_A, i_) = -1.f;
-    return;
-  }
-  if (yield_to_inf_A_j()) {
-    return;
-  }
-
+  auto A = sibling_write_data_(sw_A);
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
   auto w = sibling_write_data_(sw_w);
   auto tau = sibling_write_data_(sw_tau);
 
+  const int n = n_ - 1;
   if (kDisableZMargining) {
     z.setZero();
   } else {
-    const int n = n_ - 1;
     c = (lV_i - lV) / (lU_i + lU).sqrt();
     auto P_i_ratio = P_i / (P_i + P);
     for (int j = 0; j < n; j++) {
@@ -421,14 +431,19 @@ void Backpropagator<Traits>::compute_ratings() {
   } else if (tau.isZero(0.f)) {
     // all tau are 0 - put no policy mass on this action
     full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
-    calibrate_ratings();
     return;
+  }
+
+  for (int j = 0; j < n; j++) {
+    if (tau[j] == 1.0f) {
+      // this action is dominated, zero its rating
+      full_write_data_(fw_A, j >= i_ ? j + 1 : j) = 0.f;  // 0 means -inf
+    }
   }
 
   w = P + kLambda * pi;
   solve_for_A_i(w, tau, A, A_i);
   full_write_data_(fw_A, i_) = A_i;
-  calibrate_ratings();
 }
 
 // Add c to all nonzero A values to ensure max A is -1
@@ -599,16 +614,9 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
     const float denom = kBeta * (Sd + 1e-12f);
     const float c_newton = A_i + F / denom;
 
-    float old_A_i = A_i;
-
     // Safeguard: if Newton jumps outside bracket, bisect.
     bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
     A_i = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
-
-    if (search::kEnableSearchDebug) {
-      LOG_INFO(" solve_for_A_i: it={} A_i={}->{} out={} F={} Sd={} lo={} hi={}", it, old_A_i, A_i,
-               out_of_bounds, F, Sd, lo, hi);
-    }
   }
 }
 
@@ -674,9 +682,24 @@ void Backpropagator<Traits>::update_QW() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::splice(read_col_t from_col, sibling_read_col_t to_col) {
+void Backpropagator<Traits>::r_splice(read_col_t from_col, sibling_read_col_t to_col) {
   const auto from = read_data_(from_col);
   auto to = sibling_read_data_(to_col);
+
+  if (i_ > 0) {
+    to.topRows(i_) = from.topRows(i_);
+  }
+
+  int tail = n_ - i_ - 1;
+  if (tail > 0) {
+    to.bottomRows(tail) = from.bottomRows(tail);
+  }
+}
+
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::w_splice(full_write_col_t from_col, sibling_write_col_t to_col) {
+  const auto from = full_write_data_(from_col);
+  auto to = sibling_write_data_(to_col);
 
   if (i_ > 0) {
     to.topRows(i_) = from.topRows(i_);
