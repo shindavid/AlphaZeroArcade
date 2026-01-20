@@ -10,6 +10,7 @@
 #include "search/TrainingInfoParams.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
+#include "util/Exceptions.hpp"
 #include "x0/Algorithms.hpp"
 
 namespace beta0 {
@@ -69,9 +70,15 @@ class Algorithms : public x0::Algorithms<Traits> {
   static void init_node_stats_from_terminal(Node* node);
   static void update_node_stats(Node* node, bool undo_virtual);
   static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
-  static void virtually_update_node_stats(Node* node) {}
-  static void virtually_update_node_stats_and_edge(Node* node, Edge* edge) {}
-  static void undo_virtual_update(Node* node, Edge* edge) {}
+  static void virtually_update_node_stats(Node* node) {
+    throw util::CleanException("beta0 virtual updates not implemented");
+  }
+  static void virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
+    throw util::CleanException("beta0 virtual updates not implemented");
+  }
+  static void undo_virtual_update(Node* node, Edge* edge) {
+    throw util::CleanException("beta0 virtual updates not implemented");
+  }
 
   static void validate_search_path(const SearchContext& context) {}
   static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
