@@ -16,8 +16,6 @@ struct StateChangeUpdate {
   using State = Game::State;
   using StateIterator = core::StateIterator<Game>;
 
-  // TODO: move to private and make getters
-
   StateChangeUpdate(StateIterator it, action_t a, game_tree_index_t i, game_tree_index_t pi,
                     step_t st, seat_index_t se, action_mode_t m, bool j = false)
       : state_it_(it),
