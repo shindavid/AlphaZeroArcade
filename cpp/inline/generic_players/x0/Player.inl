@@ -87,10 +87,10 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   move_temperature_.jump_to(update.step);
   if (owns_shared_data_) {
     if (update.jump) {
-      StateHistory history = state_history_from_iterator(update.state_it);
+      StateHistory history = state_history_from_iterator(update.state_it());
       get_manager()->backtrack(history, update.step);
     } else {
-      get_manager()->receive_state_change(update.seat, *update.state_it, update.action);
+      get_manager()->receive_state_change(update.seat, *update.state_it(), update.action);
     }
   }
 }

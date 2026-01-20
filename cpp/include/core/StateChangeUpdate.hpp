@@ -16,7 +16,7 @@ struct StateChangeUpdate {
   using State = Game::State;
   using StateIterator = core::StateIterator<Game>;
 
-  StateIterator state_it;
+  // TODO: move to private and make getters
   action_t action;
   game_tree_index_t index;
   game_tree_index_t parent_index;
@@ -27,10 +27,29 @@ struct StateChangeUpdate {
 
   StateChangeUpdate(StateIterator it, action_t a, game_tree_index_t i, game_tree_index_t pi,
                     step_t st, seat_index_t se, action_mode_t m, bool j = false)
-      : state_it(it), action(a), index(i), parent_index(pi), step(st), seat(se), mode(m), jump(j) {}
+      : action(a),
+        index(i),
+        parent_index(pi),
+        step(st),
+        seat(se),
+        mode(m),
+        jump(j),
+        state_it_(it) {}
 
   StateChangeUpdate(StateIterator it, action_t a, step_t st, seat_index_t se)
-      : state_it(it), action(a), index(-1), parent_index(-1), step(st), seat(se), mode(-1) {}
+      : action(a),
+        index(-1),
+        parent_index(-1),
+        step(st),
+        seat(se),
+        mode(-1),
+        jump(false),
+        state_it_(it) {}
+
+  StateIterator state_it() const { return state_it_; }
+
+ private:
+  StateIterator state_it_;
 };
 
 }  // namespace core
