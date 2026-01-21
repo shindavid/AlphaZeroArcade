@@ -26,18 +26,8 @@ auto Player<Traits>::Params::make_options_description() {
 }
 
 template <search::concepts::Traits Traits>
-Player<Traits>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
-    : Base(params, shared_data, owns_shared_data), params_extra_(params) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseData<Traits>(params.verbose_num_rows_to_display);
-  }
-}
-
-template <search::concepts::Traits Traits>
 Player<Traits>::~Player() {
-  if (verbose_info_) {
-    delete verbose_info_;
-  }
+  verbose_info_.clear();
 }
 
 template <search::concepts::Traits Traits>
@@ -57,9 +47,10 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
 
-  if (verbose_info_) {
-    verbose_info_->set(modified_policy, *mcts_results);
-    VerboseManager::get_instance()->set(verbose_info_);
+  if (store_verbose() && !verbose_info_.contains(request.state)) {
+    verbose_info_[request.state] = std::make_unique<VerboseData>(n_rows_to_display_verbose());
+    verbose_info_[request.state]->set(modified_policy, *mcts_results);
+    VerboseManager::get_instance()->set(verbose_info_[request.state].get());
   }
 
   return eigen_util::sample(modified_policy);

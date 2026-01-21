@@ -8,6 +8,8 @@
 #include "generic_players/x0/Player.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
+#include <unordered_map>
+
 namespace generic::alpha0 {
 
 /*
@@ -20,8 +22,12 @@ class Player : public generic::x0::Player<Traits_> {
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
   using Traits = Traits_;
   using Game = Traits::Game;
+  using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
   using BaseParams = Base::Params;
+  using VerboseData = generic::alpha0::VerboseData<Traits>;
+  using VerboseData_sptr = std::unique_ptr<VerboseData>;
+  using VerboseInfoMap = std::unordered_map<State, VerboseData_sptr>;
 
   struct ParamsExtra {
     float LCB_z_score = 2.0;
@@ -36,8 +42,6 @@ class Player : public generic::x0::Player<Traits_> {
   };
 
   using SearchResults = Traits::SearchResults;
-
-  using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -46,7 +50,8 @@ class Player : public generic::x0::Player<Traits_> {
 
   using SharedData_sptr = Base::SharedData_sptr;
 
-  Player(const Params&, SharedData_sptr, bool owns_shared_data);
+  Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
+      : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
   ~Player();
 
   void receive_state_change(const StateChangeUpdate&) override;
@@ -61,10 +66,13 @@ class Player : public generic::x0::Player<Traits_> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
-  VerboseData<Traits>* verbose_info_ = nullptr;
+  VerboseInfoMap verbose_info_;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;
+
+  bool store_verbose() const { return params_extra_.verbose; }
+  int n_rows_to_display_verbose() const { return params_extra_.verbose_num_rows_to_display; }
 };
 
 }  // namespace generic::alpha0
