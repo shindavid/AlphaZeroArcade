@@ -46,14 +46,18 @@ template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
+  core::action_t action = eigen_util::sample(modified_policy);
 
   if (store_verbose() && !verbose_info_.contains(request.from_ix)) {
     verbose_info_[request.from_ix] = std::make_unique<VerboseData>(n_rows_to_display_verbose());
     verbose_info_[request.from_ix]->set(modified_policy, *mcts_results);
+    core::ActionResponse action_response(action);
+    action_response.set_verbose(verbose_info_[request.from_ix].get());
     VerboseManager::get_instance()->set(verbose_info_[request.from_ix].get());
+    return action_response;
   }
 
-  return eigen_util::sample(modified_policy);
+  return action;
 }
 
 template <search::concepts::Traits Traits>
