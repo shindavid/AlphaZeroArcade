@@ -4,6 +4,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
+#include "core/StateIterator.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "generic_players/alpha0/VerboseData.hpp"
 #include "generic_players/x0/Player.hpp"
@@ -29,6 +30,7 @@ class Player : public generic::x0::Player<Traits_> {
   using VerboseData = generic::alpha0::VerboseData<Traits>;
   using VerboseData_sptr = std::unique_ptr<VerboseData>;
   using VerboseInfoMap = std::unordered_map<core::game_tree_index_t, VerboseData_sptr>;
+  using VerboseDataIterator = core::VerboseDataIterator<Game>;
 
   struct ParamsExtra {
     float LCB_z_score = 2.0;

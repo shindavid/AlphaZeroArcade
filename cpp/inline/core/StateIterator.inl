@@ -15,4 +15,17 @@ StateIterator<Game> StateIterator<Game>::operator++(int) {
   return temp;
 }
 
+template <concepts::Game Game>
+VerboseDataIterator<Game>& VerboseDataIterator<Game>::operator++() {
+  index_ = tree_->get_parent_index(index_);
+  return *this;
+}
+
+template <concepts::Game Game>
+VerboseDataIterator<Game> VerboseDataIterator<Game>::operator++(int) {
+  VerboseDataIterator temp = *this;
+  ++(*this);
+  return temp;
+}
+
 }  // namespace core

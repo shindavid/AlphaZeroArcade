@@ -43,6 +43,8 @@ class GameStateTree {
   action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
   bool is_chance_node(game_tree_index_t ix) const;
 
+  VerboseData* verbose_data(game_tree_index_t ix) const { return nodes_[ix].verbose_data; }
+
  private:
   struct Node {
     const State state;

@@ -94,6 +94,7 @@ class GameServer
   using StateIterator = core::StateIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
   using VerboseData = generic::VerboseDataBase;
+  using VerboseDataIterator = core::VerboseDataIterator<Game>;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for
@@ -191,6 +192,9 @@ class GameServer
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
     StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
+    VerboseDataIterator verbose_data_iterator() const {
+      return VerboseDataIterator(&state_tree_, state_node_index_);
+    }
     step_t step() const { return state_tree_.get_step(state_node_index_); }
     void apply_action(action_t action, VerboseData* verbose_data = nullptr);
 

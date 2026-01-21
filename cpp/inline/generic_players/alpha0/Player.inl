@@ -48,12 +48,15 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
   core::action_t action = eigen_util::sample(modified_policy);
 
-  if (store_verbose() && !verbose_info_.contains(request.from_ix)) {
-    verbose_info_[request.from_ix] = std::make_unique<VerboseData>(n_rows_to_display_verbose());
-    verbose_info_[request.from_ix]->set(modified_policy, *mcts_results);
+  VerboseDataIterator it = request.verbose_data_iterator;
+
+  if (store_verbose() && !verbose_info_.contains(it.index())) {
+    verbose_info_[it.index()] = std::make_unique<VerboseData>(n_rows_to_display_verbose());
+    verbose_info_[it.index()]->set(modified_policy, *mcts_results);
     core::ActionResponse action_response(action);
-    action_response.set_verbose(verbose_info_[request.from_ix].get());
-    VerboseManager::get_instance()->set(verbose_info_[request.from_ix].get());
+    *it = verbose_info_[it.index()].get();
+
+    VerboseManager::get_instance()->set(verbose_info_[it.index()].get());
     return action_response;
   }
 
