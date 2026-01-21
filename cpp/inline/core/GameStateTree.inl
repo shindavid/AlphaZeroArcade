@@ -9,9 +9,7 @@ void GameStateTree<Game>::init() {
   nodes_.clear();
   State state;
   Rules::init_state(state);
-  seat_index_t seat = Rules::get_current_player(state);
-  action_mode_t action_mode = Rules::get_action_mode(state);
-  nodes_.emplace_back(state, seat, action_mode);
+  nodes_.emplace_back(state);
 }
 
 template <concepts::Game Game>
@@ -47,17 +45,15 @@ game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action
     nodes_[last_child_ix].next_sibling_ix = new_ix;
   }
 
+  seat_index_t seat = Rules::get_current_player(nodes_[from_ix].state);
+  action_mode_t action_mode = Rules::get_action_mode(nodes_[from_ix].state);
+
   State new_state = nodes_[from_ix].state;
   Rules::apply(new_state, action);
 
-  seat_index_t seat = Rules::get_current_player(new_state);
-  action_mode_t action_mode = Rules::get_action_mode(new_state);
-
   auto player_acted = nodes_[from_ix].player_acted;
-  seat_index_t parent_seat = nodes_[from_ix].seat;
-  bool parent_is_chance = Rules::is_chance_mode(nodes_[from_ix].action_mode);
-  if (!parent_is_chance) {
-    player_acted.set(parent_seat);
+  if (!Rules::is_chance_mode(action_mode)) {
+    player_acted.set(seat);
   }
 
   step_t step = nodes_[from_ix].step + 1;

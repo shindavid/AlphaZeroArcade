@@ -31,8 +31,12 @@ class GameStateTree {
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
-  seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
-  action_mode_t get_action_mode(game_tree_index_t ix) const { return nodes_[ix].action_mode; }
+  seat_index_t get_active_seat(game_tree_index_t ix) const {
+    return Rules::get_current_player(nodes_[ix].state);
+  }
+  action_mode_t get_action_mode(game_tree_index_t ix) const {
+    return Rules::get_action_mode(nodes_[ix].state);
+  }
   action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
   bool is_chance_node(game_tree_index_t ix) const;
 
@@ -56,8 +60,8 @@ class GameStateTree {
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
-    Node(const State& s, seat_index_t se, action_mode_t am)
-        : state(s), step(0), seat(se), action_mode(am) {}
+    Node(const State& s)
+        : state(s), step(0) {}
 
     Node(const State& s, game_tree_index_t p, action_t a, step_t st, seat_index_t se,
          action_mode_t am, PlayerActed pa)
