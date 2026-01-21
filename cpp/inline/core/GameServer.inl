@@ -1281,8 +1281,8 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   seat_index_t seat = state_tree_.get_parent_seat(index);
   action_mode_t action_mode = state_tree_.get_action_mode(index);
 
-  StateChangeUpdate update(state_iterator(), action, index, parent_index, step(), seat,
-                           action_mode, true);
+  StateChangeUpdate update(state_iterator(), action, index, parent_index, step(), seat, action_mode,
+                           true);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }

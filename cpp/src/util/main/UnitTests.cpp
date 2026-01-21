@@ -2324,22 +2324,20 @@ TEST(ExponentialDecay, JumpToMatchesIterativeStep) {
     int steps;
   };
 
-  std::vector<TestCase> cases = {
-      // 1. Standard Case
-      {5.0f, 1.0f, 0.5f, 10},
+  std::vector<TestCase> cases = {// 1. Standard Case
+                                 {5.0f, 1.0f, 0.5f, 10},
 
-      // 2. Zero Steps (Should remain at start_value)
-      {5.0f, 1.0f, 0.5f, 0},
+                                 // 2. Zero Steps (Should remain at start_value)
+                                 {5.0f, 1.0f, 0.5f, 0},
 
-      // 3. Large Jump (Check for stability/drift)
-      {100.0f, 0.0f, 10.0f, 50},
+                                 // 3. Large Jump (Check for stability/drift)
+                                 {100.0f, 0.0f, 10.0f, 50},
 
-      // 4. No Decay (Start == End)
-      {1.0f, 1.0f, 5.0f, 10},
+                                 // 4. No Decay (Start == End)
+                                 {1.0f, 1.0f, 5.0f, 10},
 
-      // 5. Fast Decay (Short half life)
-      {10.0f, 0.0f, 0.1f, 5}
-  };
+                                 // 5. Fast Decay (Short half life)
+                                 {10.0f, 0.0f, 0.1f, 5}};
 
   for (const auto& tc : cases) {
     math::ExponentialDecay iterative(tc.start, tc.end, tc.half_life);
@@ -2351,7 +2349,7 @@ TEST(ExponentialDecay, JumpToMatchesIterativeStep) {
     jumping.jump_to(tc.steps);
 
     EXPECT_NEAR(iterative.value(), jumping.value(), 1e-5)
-        << "Failed for half_life=" << tc.half_life << ", steps=" << tc.steps;
+      << "Failed for half_life=" << tc.half_life << ", steps=" << tc.steps;
   }
 }
 
@@ -2391,7 +2389,6 @@ TEST(StaticCircularBuffer, PushFront) {
   EXPECT_EQ(buffer.size(), 3);
   EXPECT_EQ(buffer.front(), 3);
   EXPECT_EQ(buffer.back(), 5);
-
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
