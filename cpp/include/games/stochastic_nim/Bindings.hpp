@@ -29,6 +29,7 @@ struct InputTensorizor<stochastic_nim::Game> : public stochastic_nim::InputTenso
 
 template <>
 struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = stochastic_nim::Game;
   using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
   using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;
@@ -38,6 +39,7 @@ struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<stochastic_nim::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = stochastic_nim::Game;
   using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
   using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;

@@ -65,6 +65,7 @@ struct InputTensorizor<othello::Game> : public othello::InputTensorizor {
 
 template <>
 struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = othello::Game;
   using TrainingTargets = othello::alpha0::TrainingTargets;
   using NetworkHeads = othello::alpha0::NetworkHeads;
@@ -73,6 +74,7 @@ struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
 
 template <>
 struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = othello::Game;
   using TrainingTargets = othello::beta0::TrainingTargets;
   using NetworkHeads = othello::beta0::NetworkHeads;

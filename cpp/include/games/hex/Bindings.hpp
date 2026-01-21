@@ -29,6 +29,7 @@ struct InputTensorizor<hex::Game> : public hex::InputTensorizor {
 
 template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
@@ -38,6 +39,7 @@ struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = hex::Game;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;

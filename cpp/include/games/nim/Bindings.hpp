@@ -29,6 +29,7 @@ struct InputTensorizor<nim::Game> : public nim::InputTensorizor {
 
 template <>
 struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = nim::Game;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
@@ -38,6 +39,7 @@ struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<nim::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = nim::Game;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;

@@ -44,6 +44,7 @@ struct InputTensorizor<tictactoe::Game> : public tictactoe::InputTensorizor {
 
 template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = tictactoe::Game;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;
@@ -53,6 +54,7 @@ struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = tictactoe::Game;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;

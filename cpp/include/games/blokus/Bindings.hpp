@@ -75,6 +75,7 @@ struct InputTensorizor<blokus::Game> : public blokus::InputTensorizor {
 
 template <>
 struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
@@ -84,6 +85,7 @@ struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = blokus::Game;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;

@@ -1,5 +1,6 @@
 #include "generic_players/x0/PlayerGenerator.hpp"
 
+#include "core/Constants.hpp"
 #include "search/Constants.hpp"
 #include "search/TrainingDataWriter.hpp"
 
@@ -49,6 +50,12 @@ std::string PlayerGeneratorBase<PlayerT, Mode>::get_default_name() const {
 template <typename PlayerT, search::Mode Mode>
 void PlayerGeneratorBase<PlayerT, Mode>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
+  if (Traits::EvalSpec::kParadigm == core::SearchParadigm::kParadigmBetaZero) {
+    if (manager_params_.num_search_threads > 1) {
+      LOG_INFO("Overriding num_search_threads to 1 for beta0 paradigm");
+      manager_params_.num_search_threads = 1;
+    }
+  }
 }
 
 template <typename PlayerT, search::Mode Mode>

@@ -47,6 +47,7 @@ struct InputTensorizor<chess::Game> : public chess::InputTensorizor {
 
 template <>
 struct EvalSpec<chess::Game, core::kParadigmAlphaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
   using NetworkHeads = chess::alpha0::NetworkHeads;
@@ -56,6 +57,7 @@ struct EvalSpec<chess::Game, core::kParadigmAlphaZero> {
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
 struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
+  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = chess::Game;
   using TrainingTargets = chess::alpha0::TrainingTargets;
   using NetworkHeads = chess::alpha0::NetworkHeads;
