@@ -798,7 +798,8 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
+  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux(),
+                        state_node_index_);
   request.play_noisily = noisy_mode_;
   request.undo_allowed = undo_allowed();
 

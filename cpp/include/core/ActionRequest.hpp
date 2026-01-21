@@ -17,8 +17,8 @@ struct ActionRequest {
   using ActionMask = util::CompactBitSet<kMaxNumActions>;
 
   ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
-                game_tree_node_aux_t a)
-      : state(s), valid_actions(va), notification_unit(u), aux(a) {}
+                game_tree_node_aux_t a, game_tree_index_t i)
+      : state(s), valid_actions(va), notification_unit(u), aux(a), from_ix(i) {}
 
   ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
@@ -28,6 +28,7 @@ struct ActionRequest {
   const ActionMask& valid_actions;
   YieldNotificationUnit notification_unit;
   game_tree_node_aux_t aux = 0;
+  game_tree_index_t from_ix = -1;
 
   // If set to true, the player is being asked to play noisily, in order to add opening diversity.
   // Each player is free to interpret this in their own way.
