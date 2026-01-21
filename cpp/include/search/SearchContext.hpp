@@ -7,7 +7,6 @@
 #include "search/SearchRequest.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/FiniteGroups.hpp"
 
 #include <string>
 #include <vector>
