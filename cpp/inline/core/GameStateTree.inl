@@ -25,7 +25,8 @@ bool GameStateTree<Game>::is_chance_node(game_tree_index_t ix) const {
 }
 
 template <concepts::Game Game>
-game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action_t action) {
+game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action_t action,
+                                               VerboseData* verbose_data) {
   RELEASE_ASSERT(from_ix >= 0 && from_ix < static_cast<game_tree_index_t>(nodes_.size()));
 
   game_tree_index_t last_child_ix = kNullNodeIx;
@@ -58,7 +59,8 @@ game_tree_index_t GameStateTree<Game>::advance(game_tree_index_t from_ix, action
 
   step_t step = nodes_[from_ix].step + 1;
 
-  nodes_.emplace_back(new_state, from_ix, action, step, seat, action_mode, player_acted);
+  nodes_.emplace_back(new_state, from_ix, action, step, seat, action_mode, player_acted,
+                      verbose_data);
   return new_ix;
 }
 

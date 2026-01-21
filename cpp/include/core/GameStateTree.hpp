@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "search/VerboseDataBase.hpp"
 #include "util/CompactBitSet.hpp"
 
 #include <vector>
@@ -15,10 +16,12 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
+  using VerboseData = generic::VerboseDataBase;
 
   const State& state(game_tree_index_t ix) const;
   void init();
-  game_tree_index_t advance(game_tree_index_t from_ix, action_t action);
+  game_tree_index_t advance(game_tree_index_t from_ix, action_t action,
+                            VerboseData* verbose_data = nullptr);
   game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].aux[seat];
   }
@@ -51,6 +54,7 @@ class GameStateTree {
     PlayerActed player_acted;
     seat_index_t seat = -1;
     action_mode_t action_mode = -1;
+    VerboseData* verbose_data = nullptr;
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -64,14 +68,15 @@ class GameStateTree {
         : state(s), step(0) {}
 
     Node(const State& s, game_tree_index_t p, action_t a, step_t st, seat_index_t se,
-         action_mode_t am, PlayerActed pa)
+         action_mode_t am, PlayerActed pa, VerboseData* vd)
         : state(s),
           parent_ix(p),
           action_from_parent(a),
           step(st),
           player_acted(pa),
           seat(se),
-          action_mode(am) {}
+          action_mode(am),
+          verbose_data(vd) {}
   };
 
   std::vector<Node> nodes_;

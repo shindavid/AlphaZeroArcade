@@ -877,7 +877,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
     // the server.
     RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
 
-    apply_action(action);
+    apply_action(action, response.get_verbose());
     if (params().print_game_states) {
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
@@ -1262,8 +1262,8 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::apply_action(action_t action) {
-  state_node_index_ = state_tree_.advance(state_node_index_, action);
+void GameServer<Game>::GameSlot::apply_action(action_t action, VerboseData* verbose_data) {
+  state_node_index_ = state_tree_.advance(state_node_index_, action, verbose_data);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
   StateChangeUpdate state_update(state_iterator(), action, state_node_index_, parent_index, step(),
