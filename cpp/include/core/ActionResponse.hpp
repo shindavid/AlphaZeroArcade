@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/VerboseDataBase.hpp"
 
 #include <cstdint>
 
@@ -53,8 +52,6 @@ struct ActionResponse {
   bool get_victory_guarantee() const { return victory_guarantee_; }
   int get_extra_enqueue_count() const { return extra_enqueue_count_; }
   game_tree_index_t backtrack_node_index() const { return backtrack_node_ix_; }
-  void set_verbose(generic::VerboseDataBase* verbose_data) { verbose_data_ = verbose_data; }
-  generic::VerboseDataBase* get_verbose() const { return verbose_data_; }
 
  private:
   static ActionResponse construct(response_type_t type);
@@ -62,7 +59,6 @@ struct ActionResponse {
   action_t action_ = kNullAction;
   game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
   game_tree_node_aux_t aux_ = 0;
-  generic::VerboseDataBase* verbose_data_ = nullptr;
   int extra_enqueue_count_ = 0;
   bool victory_guarantee_ = false;
   response_type_t type_ = kInvalidResponse;
