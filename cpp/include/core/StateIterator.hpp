@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameStateTree.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "search/VerboseDataBase.hpp"
 
 namespace core {
 
@@ -27,11 +28,13 @@ class StateIterator {
 template <concepts::Game Game>
 class VerboseDataIterator {
  public:
-  VerboseDataIterator(const GameStateTree<Game>* tree, game_tree_index_t current_index)
+  using VerboseDataPtr = generic::VerboseDataBase*;
+  VerboseDataIterator() = default;
+  VerboseDataIterator(GameStateTree<Game>* tree, game_tree_index_t current_index)
       : tree_(tree), index_(current_index) {}
 
-  generic::VerboseDataBase* operator*() const {
-    return tree_->verbose_data(index_).verbose_data;
+  VerboseDataPtr& operator*() const {
+    return tree_->verbose_data(index_);
   }
   VerboseDataIterator& operator++();
   VerboseDataIterator operator++(int);
@@ -40,7 +43,7 @@ class VerboseDataIterator {
   game_tree_index_t index() const { return index_; }
 
  private:
-  const GameStateTree<Game>* tree_ = nullptr;
+  GameStateTree<Game>* tree_ = nullptr;
   game_tree_index_t index_ = -1;
 };
 
