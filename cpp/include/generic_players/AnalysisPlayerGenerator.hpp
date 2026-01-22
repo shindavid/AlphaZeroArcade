@@ -5,7 +5,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "generic_players/AnalysisPlayer.hpp"
-#include "search/VerboseManager.hpp"
 
 namespace generic {
 
@@ -24,9 +23,6 @@ class AnalysisPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   virtual core::AbstractPlayer<Game>* generate(core::game_slot_index_t id) override {
     auto* wrapped_player = wrapped_generator_->generate_with_name(id);
     return new AnalysisPlayer<Game>(wrapped_player);
-  }
-  void start_session() override {
-    VerboseManager::get_instance()->disable_auto_terminal_printing();
   }
 
  private:

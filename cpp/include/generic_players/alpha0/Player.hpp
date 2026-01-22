@@ -2,9 +2,7 @@
 
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
-#include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
-#include "core/StateIterator.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "generic_players/alpha0/VerboseData.hpp"
 #include "generic_players/x0/Player.hpp"
@@ -24,7 +22,6 @@ class Player : public generic::x0::Player<Traits_> {
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
   using Traits = Traits_;
   using Game = Traits::Game;
-  using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
   using BaseParams = Base::Params;
   using VerboseData = generic::alpha0::VerboseData<Traits>;
@@ -45,6 +42,8 @@ class Player : public generic::x0::Player<Traits_> {
   };
 
   using SearchResults = Traits::SearchResults;
+
+  using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -55,7 +54,6 @@ class Player : public generic::x0::Player<Traits_> {
 
   Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
-  ~Player();
 
   void receive_state_change(const StateChangeUpdate&) override;
 

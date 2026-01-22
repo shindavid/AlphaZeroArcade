@@ -23,8 +23,6 @@ class StateIterator {
   game_tree_index_t index_ = -1;
 };
 
-
-
 }  // namespace core
 
 #include "inline/core/StateIterator.inl"
