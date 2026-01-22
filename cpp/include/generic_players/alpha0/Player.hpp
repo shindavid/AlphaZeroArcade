@@ -59,6 +59,8 @@ class Player : public generic::x0::Player<Traits_> {
 
   void receive_state_change(const StateChangeUpdate&) override;
 
+  bool start_game() override;
+
  protected:
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,

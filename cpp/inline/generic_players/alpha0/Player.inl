@@ -186,4 +186,10 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
   }
 }
 
+template <search::concepts::Traits Traits>
+bool Player<Traits>::start_game() {
+  verbose_info_.clear();
+  return Base::start_game();
+}
+
 }  // namespace generic::alpha0
