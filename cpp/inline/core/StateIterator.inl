@@ -28,4 +28,17 @@ VerboseDataIterator<Game> VerboseDataIterator<Game>::operator++(int) {
   return temp;
 }
 
+template <concepts::Game Game>
+typename VerboseDataIterator<Game>::VerboseDataPtr VerboseDataIterator<Game>::most_recent_data() const {
+  auto ix = index_;
+  while (ix >= 0) {
+    VerboseDataPtr data = tree_->verbose_data(ix);
+    if (data != nullptr) {
+      return data;
+    }
+    ix = tree_->get_parent_index(ix);
+  }
+  return nullptr;
+}
+
 }  // namespace core

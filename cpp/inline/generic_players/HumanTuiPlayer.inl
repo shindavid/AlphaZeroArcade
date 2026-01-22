@@ -30,9 +30,10 @@ template <core::concepts::Game Game>
 core::ActionResponse HumanTuiPlayer<Game>::get_action_response(const ActionRequest& request) {
   util::clearscreen();
   print_state(request.state, false);
-  const VerboseManager* manager = VerboseManager::get_instance();
-  if (manager->verbose_data()) {
-    manager->verbose_data()->to_terminal_text();
+
+  auto verbose_data = request.verbose_data_iterator.most_recent_data();
+  if (verbose_data) {
+    verbose_data->to_terminal_text();
   }
 
   bool complain = false;

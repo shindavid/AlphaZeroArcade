@@ -89,7 +89,8 @@ core::ActionResponse WebPlayer<Game>::get_web_response(
     return action;
   }
 
-  send_action_request(request.valid_actions, proposed_response.get_action());
+  auto verbose_data = request.verbose_data_iterator.most_recent_data();
+  send_action_request(request.valid_actions, proposed_response.get_action(), verbose_data);
   notification_unit_ = request.notification_unit;
   return core::ActionResponse::yield();
 }
@@ -138,15 +139,17 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions,
-                                          core::action_t proposed_action) {
+                                          core::action_t proposed_action,
+                                          VerboseDataPtr verbose_data) {
   Message msg(Message::BridgeAction::kUpdate);
-  msg.add_payload(make_action_request_msg(valid_actions, proposed_action));
+  msg.add_payload(make_action_request_msg(valid_actions, proposed_action, verbose_data));
   msg.send();
 }
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions,
-                                                             core::action_t proposed_action) {
+                                                             core::action_t proposed_action,
+                                                             VerboseDataPtr verbose_data) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
@@ -159,7 +162,6 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
   payload.add_field("seat", this->get_my_seat());
   payload.add_field("proposed_action", proposed_action);
 
-  const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
   if (verbose_data) {
     payload.add_field("verbose_info", verbose_data->to_json());
   }

@@ -8,6 +8,7 @@
 #include "core/WebManager.hpp"
 #include "core/WebManagerClient.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "search/VerboseDataBase.hpp"
 
 #include <boost/json/object.hpp>
 
@@ -27,6 +28,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameResultTensor = Game::Types::GameResultTensor;
   using ActionMask = Game::Types::ActionMask;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
+  using VerboseDataPtr = generic::VerboseDataBase*;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
   virtual ~WebPlayer() = default;
@@ -103,7 +105,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   };
 
   void send_start_game();
-  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
+  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action,
+                           VerboseDataPtr verbose_data);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -131,7 +134,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
   virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
-                                                      core::action_t proposed_action);
+                                                      core::action_t proposed_action,
+                                                      VerboseDataPtr verbose_data);
 
   // Construct json object that the frontend can use to display the state.
   //

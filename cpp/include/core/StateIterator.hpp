@@ -32,9 +32,8 @@ class VerboseDataIterator {
   VerboseDataIterator(GameStateTree<Game>* tree, game_tree_index_t current_index)
       : tree_(tree), index_(current_index) {}
 
-  VerboseDataPtr& operator*() const {
-    return tree_->verbose_data(index_);
-  }
+  VerboseDataPtr& operator*() const { return tree_->verbose_data(index_); }
+  VerboseDataPtr most_recent_data() const;
   VerboseDataIterator& operator++();
   VerboseDataIterator operator++(int);
 
