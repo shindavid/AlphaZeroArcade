@@ -18,7 +18,6 @@ class StateIterator {
   StateIterator operator++(int);
 
   bool end() const { return index_ < 0; }
-  game_tree_index_t index() const { return index_; }
 
  private:
   const GameStateTree<Game>* tree_ = nullptr;
