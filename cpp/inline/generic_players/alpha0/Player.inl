@@ -50,11 +50,9 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
 
   VerboseDataIterator it = request.verbose_data_iterator;
   if (store_verbose() && !verbose_info_.contains(it.index())) {
-    verbose_info_[it.index()] = std::make_unique<VerboseData>(n_rows_to_display_verbose());
+    verbose_info_[it.index()] = std::make_shared<VerboseData>(n_rows_to_display_verbose());
     verbose_info_[it.index()]->set(modified_policy, *mcts_results);
-    *it = verbose_info_[it.index()].get();
-
-    VerboseManager::get_instance()->set(verbose_info_[it.index()].get());
+    *it = verbose_info_[it.index()];
   }
   return action;
 }

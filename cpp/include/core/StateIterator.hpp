@@ -27,13 +27,13 @@ class StateIterator {
 template <concepts::Game Game>
 class VerboseDataIterator {
  public:
-  using VerboseDataPtr = generic::VerboseDataBase*;
+  using VerboseData_sptr = std::shared_ptr<generic::VerboseDataBase>;
   VerboseDataIterator() = default;
   VerboseDataIterator(GameStateTree<Game>* tree, game_tree_index_t current_index)
       : tree_(tree), index_(current_index) {}
 
-  VerboseDataPtr& operator*() const { return tree_->verbose_data(index_); }
-  VerboseDataPtr most_recent_data() const;
+  VerboseData_sptr& operator*() const { return tree_->verbose_data(index_); }
+  VerboseData_sptr most_recent_data() const;
   VerboseDataIterator& operator++();
   VerboseDataIterator operator++(int);
 

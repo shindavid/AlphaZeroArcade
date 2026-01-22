@@ -140,7 +140,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 template <core::concepts::Game Game>
 void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions,
                                           core::action_t proposed_action,
-                                          VerboseDataPtr verbose_data) {
+                                          VerboseData_sptr verbose_data) {
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_action_request_msg(valid_actions, proposed_action, verbose_data));
   msg.send();
@@ -149,7 +149,7 @@ void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions,
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions,
                                                              core::action_t proposed_action,
-                                                             VerboseDataPtr verbose_data) {
+                                                             VerboseData_sptr verbose_data) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;

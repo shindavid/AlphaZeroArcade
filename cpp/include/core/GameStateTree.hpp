@@ -16,7 +16,7 @@ class GameStateTree {
   using Rules = Game::Rules;
   using Constants = Game::Constants;
   using PlayerActed = util::CompactBitSet<Constants::kNumPlayers>;
-  using VerboseDataPtr = generic::VerboseDataBase*;
+  using VerboseData_sptr = std::shared_ptr<generic::VerboseDataBase>;
 
   const State& state(game_tree_index_t ix) const;
   void init();
@@ -42,7 +42,7 @@ class GameStateTree {
   action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
   bool is_chance_node(game_tree_index_t ix) const;
 
-  VerboseDataPtr& verbose_data(game_tree_index_t ix) { return nodes_[ix].verbose_data; }
+  VerboseData_sptr& verbose_data(game_tree_index_t ix) { return nodes_[ix].verbose_data; }
 
  private:
   struct Node {
@@ -51,7 +51,7 @@ class GameStateTree {
     const action_t action_from_parent = kNullAction;
     game_tree_index_t first_child_ix = kNullNodeIx;
     game_tree_index_t next_sibling_ix = kNullNodeIx;
-    VerboseDataPtr verbose_data = nullptr;
+    VerboseData_sptr verbose_data = nullptr;
     step_t step = -1;
     PlayerActed player_acted;
     seat_index_t seat = -1;

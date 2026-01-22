@@ -29,10 +29,10 @@ VerboseDataIterator<Game> VerboseDataIterator<Game>::operator++(int) {
 }
 
 template <concepts::Game Game>
-typename VerboseDataIterator<Game>::VerboseDataPtr VerboseDataIterator<Game>::most_recent_data() const {
+typename VerboseDataIterator<Game>::VerboseData_sptr VerboseDataIterator<Game>::most_recent_data() const {
   auto ix = index_;
   while (ix >= 0) {
-    VerboseDataPtr data = tree_->verbose_data(ix);
+    VerboseData_sptr data = tree_->verbose_data(ix);
     if (data != nullptr) {
       return data;
     }
