@@ -14,7 +14,6 @@
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include "search/VerboseDataBase.hpp"
 #include "third_party/ProgressBar.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -93,7 +92,6 @@ class GameServer
   using StateTree = GameStateTree<Game>;
   using StateIterator = core::StateIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
-  using VerboseData = generic::VerboseDataBase;
   using VerboseDataIterator = core::VerboseDataIterator<Game>;
 
   /*
@@ -196,7 +194,7 @@ class GameServer
       return VerboseDataIterator(&state_tree_, state_node_index_);
     }
     step_t step() const { return state_tree_.get_step(state_node_index_); }
-    void apply_action(action_t action, VerboseData* verbose_data = nullptr);
+    void apply_action(action_t action);
 
    private:
     const Params& params() const { return shared_data_.params(); }
