@@ -2,7 +2,7 @@
 
 #include "core/ActionResponse.hpp"
 #include "core/GameDerivedConstants.hpp"
-#include "core/StateIterator.hpp"
+#include "core/VerboseDataIterator.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 
