@@ -1,17 +1,16 @@
 #pragma once
 
+#include "alpha0/SearchResults.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "search/VerboseDataBase.hpp"
-#include "search/concepts/TraitsConcept.hpp"
 
-namespace generic::alpha0 {
+namespace alpha0 {
 
-template <search::concepts::Traits Traits_>
-struct VerboseData : public VerboseDataBase {
-  using Traits = Traits_;
-  using Game = Traits::Game;
+template <core::concepts::Game Game>
+struct VerboseData : public generic::VerboseDataBase {
   using IO = Game::IO;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using SearchResults = Traits::SearchResults;
+  using SearchResults = alpha0::SearchResults<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   VerboseData(int n_rows_to_display) : n_rows_to_display_(n_rows_to_display) {}
@@ -28,6 +27,6 @@ struct VerboseData : public VerboseDataBase {
   auto build_action_data() const;
 };
 
-}  // namespace generic::alpha0
+}  // namespace alpha0
 
-#include "inline/generic_players/alpha0/VerboseData.inl"
+#include "inline/alpha0/VerboseData.inl"

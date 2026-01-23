@@ -28,16 +28,10 @@ auto Player<Traits>::Params::make_options_description() {
 template <search::concepts::Traits Traits>
 Player<Traits>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
     : Base(params, shared_data, owns_shared_data), params_extra_(params) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseData<Traits>(params.verbose_num_rows_to_display);
-  }
 }
 
 template <search::concepts::Traits Traits>
 Player<Traits>::~Player() {
-  if (verbose_info_) {
-    delete verbose_info_;
-  }
 }
 
 template <search::concepts::Traits Traits>
@@ -52,11 +46,8 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
     }
 
     if (it->aux) {
-      SearchResults* mcts_results = reinterpret_cast<SearchResults*>(it->aux);
-      ActionMask valid_actions = Game::Rules::get_legal_moves(it->state);
-      PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
-      verbose_info_->set(modified_policy, *mcts_results);
-      VerboseManager::get_instance()->set(verbose_info_);
+      AuxData* aux_data = reinterpret_cast<AuxData*>(it->aux);
+      VerboseManager::get_instance()->set(&aux_data->verbose_data);
     }
   }
 }
@@ -65,13 +56,17 @@ template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
+  core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
-  if (verbose_info_) {
-    verbose_info_->set(modified_policy, *mcts_results);
-    VerboseManager::get_instance()->set(verbose_info_);
+  if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
+    VerboseData verbose_data(params_extra_.verbose_num_rows_to_display);
+    verbose_data.set(modified_policy, *mcts_results);
+    AuxData* aux_data = new AuxData(action_response, verbose_data);
+    this->push_back_aux_data_ptr(aux_data);
+    action_response.set_aux(aux_data);
+    VerboseManager::get_instance()->set(&aux_data->verbose_data);
   }
-
-  return eigen_util::sample(modified_policy);
+  return action_response;
 }
 
 template <search::concepts::Traits Traits>

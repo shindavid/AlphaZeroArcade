@@ -4,7 +4,7 @@
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
 #include "core/StateChangeUpdate.hpp"
-#include "generic_players/alpha0/VerboseData.hpp"
+#include "alpha0/VerboseData.hpp"
 #include "generic_players/x0/Player.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
@@ -43,6 +43,8 @@ class Player : public generic::x0::Player<Traits_> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
+  using AuxData = Traits::AuxData;
+  using VerboseData = Traits::VerboseData;
 
   using SharedData_sptr = Base::SharedData_sptr;
 
@@ -61,7 +63,6 @@ class Player : public generic::x0::Player<Traits_> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
-  VerboseData<Traits>* verbose_info_ = nullptr;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;
