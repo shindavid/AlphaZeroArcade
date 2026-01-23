@@ -26,15 +26,6 @@ auto Player<Traits>::Params::make_options_description() {
 }
 
 template <search::concepts::Traits Traits>
-Player<Traits>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
-    : Base(params, shared_data, owns_shared_data), params_extra_(params) {
-}
-
-template <search::concepts::Traits Traits>
-Player<Traits>::~Player() {
-}
-
-template <search::concepts::Traits Traits>
 void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 

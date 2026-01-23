@@ -48,8 +48,8 @@ class Player : public generic::x0::Player<Traits_> {
 
   using SharedData_sptr = Base::SharedData_sptr;
 
-  Player(const Params&, SharedData_sptr, bool owns_shared_data);
-  ~Player();
+  Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
+      : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
 
   void receive_state_change(const StateChangeUpdate&) override;
 
