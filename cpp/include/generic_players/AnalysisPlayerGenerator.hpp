@@ -29,6 +29,8 @@ class AnalysisPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
     VerboseManager::get_instance()->disable_auto_terminal_printing();
   }
 
+  bool supports_backtracking() const override { return true; }
+
  private:
   core::AbstractPlayerGenerator<Game>* const wrapped_generator_;
 };
