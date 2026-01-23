@@ -38,9 +38,17 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 
     if (it->aux) {
       AuxData* aux_data = reinterpret_cast<AuxData*>(it->aux);
-      VerboseManager::get_instance()->set(&aux_data->verbose_data);
+      VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
   }
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+  for (auto ptr : aux_data_ptrs_) {
+    delete ptr;
+  }
+  aux_data_ptrs_.clear();
 }
 
 template <search::concepts::Traits Traits>
@@ -49,23 +57,17 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
   core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
-  // NOTE: Performance Trade-off
-  // We prioritize code simplicity over heap efficiency here because this path only runs in
-  // Human/Analysis modes, not during self-play.
-  //
-  // Optimization opportunities if this becomes a bottleneck:
-  // 1. Pure Verbose Mode: We could reuse a single 'current_verbose_' buffer instead of
-  //    allocating new heap memory every turn.
-  // 2. Pure Backtracking Mode: We could store VerboseData as a nullable pointer
-  //    in AuxData. This would allow us to store only the ActionResponse when backtracking
-  //    is required but verbose is disabled.
   if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
-    VerboseData verbose_data(params_extra_.verbose_num_rows_to_display);
-    verbose_data.set(modified_policy, *mcts_results);
-    AuxData* aux_data = new AuxData(action_response, verbose_data);
-    this->push_back_aux_data_ptr(aux_data);
+    if (this->is_facing_backtracking_opponent() || this->aux_data_ptrs_.empty()) {
+      this->aux_data_ptrs_.push_back(new AuxData(action_response));
+    }
+    AuxData* aux_data = this->aux_data_ptrs_.back();
+    if (params_extra_.verbose) {
+      aux_data->verbose_data = std::make_shared<VerboseData>(
+        modified_policy, *mcts_results, params_extra_.verbose_num_rows_to_display);
+      VerboseManager::get_instance()->set(aux_data->verbose_data);
+    }
     action_response.set_aux(aux_data);
-    VerboseManager::get_instance()->set(&aux_data->verbose_data);
   }
   return action_response;
 }

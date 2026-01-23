@@ -159,7 +159,7 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& v
   payload.add_field("seat", this->get_my_seat());
   payload.add_field("proposed_action", proposed_action);
 
-  const auto* verbose_data = VerboseManager::get_instance()->verbose_data();
+  const auto* verbose_data = VerboseManager::get_instance()->verbose_data().get();
   if (verbose_data) {
     payload.add_field("verbose_info", verbose_data->to_json());
   }
