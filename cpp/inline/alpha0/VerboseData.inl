@@ -113,4 +113,10 @@ void VerboseData<Game>::to_terminal_text() const {
   std::cout << "******************************" << std::endl;
 }
 
+template <core::concepts::Game Game>
+void VerboseData<Game>::set(const PolicyTensor& policy, const SearchResults& results) {
+  action_policy = policy;
+  mcts_results = results;
+}
+
 }  // namespace alpha0

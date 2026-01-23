@@ -7,10 +7,7 @@ inline VerboseManager* VerboseManager::get_instance() {
   return &instance;
 }
 
-void VerboseManager::set(VerboseDataBase_sptr verbose_data) {
-  if (verbose_data == nullptr) {
-    return;
-  }
+void VerboseManager::set(VerboseDataBase* verbose_data) {
   if (auto_terminal_printing_enabled_) {
     verbose_data->to_terminal_text();
   } else {

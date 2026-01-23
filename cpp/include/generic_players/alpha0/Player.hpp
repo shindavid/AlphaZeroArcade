@@ -4,10 +4,9 @@
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
 #include "core/StateChangeUpdate.hpp"
+#include "alpha0/VerboseData.hpp"
 #include "generic_players/x0/Player.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-
-#include <vector>
 
 namespace generic::alpha0 {
 
@@ -42,7 +41,6 @@ class Player : public generic::x0::Player<Traits_> {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using GameResultTensor = Game::GameResults::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using AuxData = Traits::AuxData;
@@ -54,7 +52,6 @@ class Player : public generic::x0::Player<Traits_> {
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
 
   void receive_state_change(const StateChangeUpdate&) override;
-  void end_game(const State&, const GameResultTensor&) override;
 
  protected:
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
@@ -66,7 +63,6 @@ class Player : public generic::x0::Player<Traits_> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
-  std::vector<AuxData*> aux_data_ptrs_;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;
