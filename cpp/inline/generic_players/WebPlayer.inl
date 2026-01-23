@@ -192,14 +192,16 @@ template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
+  const State& state = (*update.state_it()).state;
+
   Payload payload(Payload::Type::kStateUpdate);
-  payload.add_field("board", Game::IO::state_to_json(*update.state_it()));
+  payload.add_field("board", Game::IO::state_to_json(state));
   payload.add_field("index", update.index());
   payload.add_field("last_action", update.action());
   payload.add_field("mode", update.mode());
 
   auto obj = payload.to_json();
-  Game::IO::add_render_info(*update.state_it(), obj);
+  Game::IO::add_render_info(state, obj);
   return obj;
 }
 
