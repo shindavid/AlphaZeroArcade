@@ -49,6 +49,14 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
       Game::IO::print_state(std::cout, *update.state_it(), update.action(),
                             &this->get_player_names());
     }
+    auto aux = update.state_it().get_player_aux();
+    if (aux) {
+      SearchResults* mcts_results = reinterpret_cast<SearchResults*>(aux);
+      ActionMask valid_actions = Game::Rules::get_legal_moves(*update.state_it());
+      PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
+      verbose_info_->set(modified_policy, *mcts_results);
+      VerboseManager::get_instance()->set(verbose_info_);
+    }
   }
 }
 
