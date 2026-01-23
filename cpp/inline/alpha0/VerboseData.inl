@@ -1,13 +1,13 @@
-#include "generic_players/alpha0/VerboseData.hpp"
+#include "alpha0/VerboseData.hpp"
 
 #include "util/EigenUtil.hpp"
 
 #include <iostream>
 
-namespace generic::alpha0 {
+namespace alpha0 {
 
-template <search::concepts::Traits Traits>
-auto VerboseData<Traits>::build_action_data() const {
+template <core::concepts::Game Game>
+auto VerboseData<Game>::build_action_data() const {
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.P;
@@ -50,8 +50,8 @@ static std::vector<std::string>& get_column_names() {
   return columns;
 }
 
-template <search::concepts::Traits Traits>
-boost::json::object VerboseData<Traits>::to_json() const {
+template <core::concepts::Game Game>
+boost::json::object VerboseData<Game>::to_json() const {
   const auto& win_rates = mcts_results.Q;
   const auto& net_value = mcts_results.R;
   core::action_mode_t action_mode = mcts_results.action_mode;
@@ -74,8 +74,8 @@ boost::json::object VerboseData<Traits>::to_json() const {
   return obj;
 }
 
-template <search::concepts::Traits Traits>
-void VerboseData<Traits>::to_terminal_text() const {
+template <core::concepts::Game Game>
+void VerboseData<Game>::to_terminal_text() const {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& win_rates = mcts_results.Q;
@@ -113,10 +113,10 @@ void VerboseData<Traits>::to_terminal_text() const {
   std::cout << "******************************" << std::endl;
 }
 
-template <search::concepts::Traits Traits>
-void VerboseData<Traits>::set(const PolicyTensor& policy, const SearchResults& results) {
+template <core::concepts::Game Game>
+void VerboseData<Game>::set(const PolicyTensor& policy, const SearchResults& results) {
   action_policy = policy;
   mcts_results = results;
 }
 
-}  // namespace generic::alpha0
+}  // namespace alpha0

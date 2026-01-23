@@ -90,12 +90,13 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
       StateHistory history;
       auto it = update.state_it();
       while (!it.end() && !history.full()) {
-        history.push_front(*it);
+        history.push_front(it->state);
         ++it;
       }
       get_manager()->backtrack(history, update.step());
     } else {
-      get_manager()->receive_state_change(update.seat(), *update.state_it(), update.action());
+      const State& state = update.state_it()->state;
+      get_manager()->receive_state_change(update.seat(), state, update.action());
     }
   }
 }
@@ -103,8 +104,8 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    SearchResults* mcts_results = reinterpret_cast<SearchResults*>(request.aux);
-    return get_action_response_helper(mcts_results, request);
+    AuxData* aux_data = reinterpret_cast<AuxData*>(request.aux);
+    return aux_data->action_response;
   }
 
   init_search_mode(request);
@@ -115,14 +116,6 @@ core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& re
     return core::ActionResponse::yield(response.extra_enqueue_count);
   } else if (response.yield_instruction == core::kDrop) {
     return core::ActionResponse::drop();
-  }
-
-  if (this->is_facing_backtracking_opponent()) {
-    const SearchResults* search_result = new SearchResults(*response.results);
-    search_result_ptrs_.push_back(search_result);
-    core::ActionResponse action_response = get_action_response_helper(search_result, request);
-    action_response.set_aux(search_result);
-    return action_response;
   }
 
   return get_action_response_helper(response.results, request);
@@ -203,10 +196,10 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
 
 template <search::concepts::Traits Traits>
 void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
-  for (auto* ptr : search_result_ptrs_) {
+  for (auto* ptr : aux_data_ptrs_) {
     delete ptr;
   }
-  search_result_ptrs_.clear();
+  aux_data_ptrs_.clear();
 }
 
 }  // namespace generic::x0

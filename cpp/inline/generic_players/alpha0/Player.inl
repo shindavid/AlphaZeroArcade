@@ -26,28 +26,19 @@ auto Player<Traits>::Params::make_options_description() {
 }
 
 template <search::concepts::Traits Traits>
-Player<Traits>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
-    : Base(params, shared_data, owns_shared_data), params_extra_(params) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseData<Traits>(params.verbose_num_rows_to_display);
-  }
-}
-
-template <search::concepts::Traits Traits>
-Player<Traits>::~Player() {
-  if (verbose_info_) {
-    delete verbose_info_;
-  }
-}
-
-template <search::concepts::Traits Traits>
 void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 
   if (this->get_my_seat() == update.seat() && params_extra_.verbose) {
+    auto it = update.state_it();
+
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      Game::IO::print_state(std::cout, *update.state_it(), update.action(),
-                            &this->get_player_names());
+      Game::IO::print_state(std::cout, it->state, update.action(), &this->get_player_names());
+    }
+
+    if (it->aux) {
+      AuxData* aux_data = reinterpret_cast<AuxData*>(it->aux);
+      VerboseManager::get_instance()->set(&aux_data->verbose_data);
     }
   }
 }
@@ -56,13 +47,27 @@ template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
+  core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
-  if (verbose_info_) {
-    verbose_info_->set(modified_policy, *mcts_results);
-    VerboseManager::get_instance()->set(verbose_info_);
+  // NOTE: Performance Trade-off
+  // We prioritize code simplicity over heap efficiency here because this path only runs in
+  // Human/Analysis modes, not during self-play.
+  //
+  // Optimization opportunities if this becomes a bottleneck:
+  // 1. Pure Verbose Mode: We could reuse a single 'current_verbose_' buffer instead of
+  //    allocating new heap memory every turn.
+  // 2. Pure Backtracking Mode: We could store VerboseData as a nullable pointer
+  //    in AuxData. This would allow us to store only the ActionResponse when backtracking
+  //    is required but verbose is disabled.
+  if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
+    VerboseData verbose_data(params_extra_.verbose_num_rows_to_display);
+    verbose_data.set(modified_policy, *mcts_results);
+    AuxData* aux_data = new AuxData(action_response, verbose_data);
+    this->push_back_aux_data_ptr(aux_data);
+    action_response.set_aux(aux_data);
+    VerboseManager::get_instance()->set(&aux_data->verbose_data);
   }
-
-  return eigen_util::sample(modified_policy);
+  return action_response;
 }
 
 template <search::concepts::Traits Traits>
