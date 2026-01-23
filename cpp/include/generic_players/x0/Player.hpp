@@ -55,7 +55,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using GameResultTensor = Game::GameResults::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateHistory = search::TraitsTypes<Traits>::StateHistory;
   using StateIterator = core::StateIterator<Game>;
@@ -76,7 +75,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   core::ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const GameResultTensor&) override;
 
  protected:
   void clear_search_mode();
@@ -90,7 +88,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
   void normalize(const ActionMask&, PolicyTensor& policy) const;
-  void push_back_aux_data_ptr(const AuxData* ptr) { aux_data_ptrs_.push_back(ptr); }
 
   core::SearchMode get_random_search_mode() const;
 
@@ -100,7 +97,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   math::ExponentialDecay move_temperature_;
   SharedData_sptr shared_data_;
   const bool owns_shared_data_;
-  std::vector<const AuxData*> aux_data_ptrs_;
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;

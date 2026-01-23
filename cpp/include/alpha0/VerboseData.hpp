@@ -13,14 +13,14 @@ struct VerboseData : public generic::VerboseDataBase {
   using SearchResults = alpha0::SearchResults<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
-  VerboseData(int n_rows_to_display) : n_rows_to_display_(n_rows_to_display) {}
+  VerboseData(const PolicyTensor& p, const SearchResults& s, int n)
+      :  action_policy(p), mcts_results(s), n_rows_to_display_(n) {}
 
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
   boost::json::object to_json() const;
   void to_terminal_text() const;
-  void set(const PolicyTensor& policy, const SearchResults& results);
 
  private:
   const int n_rows_to_display_;

@@ -2,6 +2,8 @@
 
 #include "search/VerboseDataBase.hpp"
 
+#include <memory>
+
 namespace generic {
 /*
  * VerboseManager is a singleton that maintains a pointer to the current VerboseData instance.
@@ -14,15 +16,17 @@ namespace generic {
  * calling disable_auto_terminal_printing().
  */
 struct VerboseManager {
-  static VerboseManager* get_instance();
-  void set(VerboseDataBase* verbose_data);
+  using VerboseDataBase_sptr = std::shared_ptr<VerboseDataBase>;
 
-  VerboseDataBase* verbose_data() const { return verbose_data_; }
+  static VerboseManager* get_instance();
+  void set(VerboseDataBase_sptr verbose_data);
+
+  VerboseDataBase_sptr verbose_data() const { return verbose_data_; }
   void disable_auto_terminal_printing() { auto_terminal_printing_enabled_ = false; }
   bool auto_terminal_printing_enabled() const { return auto_terminal_printing_enabled_; }
 
  private:
-  VerboseDataBase* verbose_data_ = nullptr;
+  VerboseDataBase_sptr verbose_data_ = nullptr;
   bool auto_terminal_printing_enabled_ = true;
 };
 

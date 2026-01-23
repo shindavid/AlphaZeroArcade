@@ -4,15 +4,18 @@
 #include "alpha0/VerboseData.hpp"
 #include "x0/AuxData.hpp"
 
+#include <memory>
+
 namespace alpha0 {
 
 template <core::concepts::Game Game>
 struct AuxData : public x0::AuxData {
   using Base = x0::AuxData;
-  VerboseData<Game> verbose_data;
+  using Base::Base;
+  using VerboseData = alpha0::VerboseData<Game>;
+  using VerboseData_sptr = std::shared_ptr<VerboseData>;
 
-  AuxData(const core::ActionResponse& ar, const VerboseData<Game>& vd)
-      : Base(ar), verbose_data(vd) {}
+  VerboseData_sptr verbose_data;
 };
 
 }  // namespace alpha0
