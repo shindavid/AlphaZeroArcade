@@ -90,12 +90,12 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
       StateHistory history;
       auto it = update.state_it();
       while (!it.end() && !history.full()) {
-        history.push_front((*it).state);
+        history.push_front(it->state);
         ++it;
       }
       get_manager()->backtrack(history, update.step());
     } else {
-      const State& state = (*update.state_it()).state;
+      const State& state = update.state_it()->state;
       get_manager()->receive_state_change(update.seat(), state, update.action());
     }
   }

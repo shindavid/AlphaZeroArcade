@@ -49,6 +49,16 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
   core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
+  // NOTE: Performance Trade-off
+  // We prioritize code simplicity over heap efficiency here because this path only runs in
+  // Human/Analysis modes, not during self-play.
+  //
+  // Optimization opportunities if this becomes a bottleneck:
+  // 1. Pure Verbose Mode: We could reuse a single 'current_verbose_' buffer instead of
+  //    allocating new heap memory every turn.
+  // 2. Pure Backtracking Mode: We could store VerboseData as a nullable pointer
+  //    in AuxData. This would allow us to store only the ActionResponse when backtracking
+  //    is required but verbose is disabled.
   if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
     VerboseData verbose_data(params_extra_.verbose_num_rows_to_display);
     verbose_data.set(modified_policy, *mcts_results);
